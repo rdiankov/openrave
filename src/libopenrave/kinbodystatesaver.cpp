@@ -92,11 +92,13 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
         for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
-            if( !pbody->GetLink(pGrabbed->_pGrabbingLink->GetName()) ) {
-                RAVELOG_WARN_FORMAT("env=%s, could not restore grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)", pbody->GetEnv()->GetNameId()%pGrabbed->_pGrabbingLink->GetName()%pGrabbedBody->GetName()%pbody->GetName()%pbody->GetLinks().size());
-                continue;
-            }
             if( !!pGrabbedBody ) {
+                KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
+                if( !!pGrabbingLink && !pbody->GetLink(pGrabbingLink->GetName()) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)"),
+                                                    pbody->GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%pbody->GetName()%pbody->GetLinks().size(),
+                                                    ORE_Failed);
+                }
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
                     pbody->_AttachBody(pGrabbedBody);
                     pbody->_vGrabbedBodies.push_back(pGrabbed);
@@ -115,7 +117,6 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                             // pbody is supposed to already be set to some "proper" configuration as the newly
                             // initialized Grabbed objects will save the current state of pbody for later computation of
                             // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
-                            KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
                             if( !pGrabbingLink ) {
                                 RAVELOG_WARN_FORMAT("env=%s, could not restore grabbing link for grabbed body '%s'", pbody->GetEnv()->GetNameId()%pGrabbedBody->GetName());
                             }
