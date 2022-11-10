@@ -71,7 +71,7 @@ inline bool ExtractContiguousArrayToVector(py::object oContiguousArray,
     }
 
     PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
-    AutoPyArrayObjectDereferencer psaver(openravepy::AutoPyArrayObjectDereferencer(arrPtr));
+    AutoPyArrayObjectDereferencer psaver(arrPtr);
     if( !arrPtr || !arrPtr->data) {
         RAVELOG_WARN("Input data is not contigous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return false;
@@ -106,7 +106,7 @@ inline int ExtractContiguousArrayToPointer(py::object oContiguousArray,
     }
 
     PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
-    AutoPyArrayObjectDereferencer psaver(openravepy::AutoPyArrayObjectDereferencer(arrPtr));
+    AutoPyArrayObjectDereferencer psaver(arrPtr);
     if( !arrPtr || !arrPtr->data) {
         RAVELOG_WARN("Input data is not contigous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return -1;
