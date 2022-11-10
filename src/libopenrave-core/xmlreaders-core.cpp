@@ -2669,7 +2669,7 @@ public:
             }
         }
         else if( xmlname == "closingdirection" || xmlname == "closingdir" || xmlname == "chuckingdirection" ) {
-            _manipinfo._vChuckingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+            _manipinfo._vChuckingDirection = vector<int>((istream_iterator<int>(_ss)), istream_iterator<int>());
             FOREACH(it, _manipinfo._vChuckingDirection) {
                 if( *it > 0 ) {
                     *it = 1;

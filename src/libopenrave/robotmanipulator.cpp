@@ -207,7 +207,7 @@ int RobotBase::Manipulator::GetGripperDOF() const
     return static_cast<int>(__vgripperdofindices.size());
 }
 
-void RobotBase::Manipulator::SetChuckingDirection(const std::vector<dReal>& chuckingdirection)
+void RobotBase::Manipulator::SetChuckingDirection(const std::vector<int>& chuckingdirection)
 {
     OPENRAVE_ASSERT_OP((int)chuckingdirection.size(),==,GetGripperDOF());
     _info._vChuckingDirection = chuckingdirection;
@@ -1631,7 +1631,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
             o << *it << " ";
         }
         FOREACHC(it,_info._vChuckingDirection) {
-            SerializeRound(o,*it);
+            o << *it << " ";
         }
         SerializeRound(o,_info._tLocalTool);
     }
@@ -1813,7 +1813,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
 
-    std::vector<dReal> vChuckingDirection;
+    std::vector<int> vChuckingDirection;
 
     GripperInfoPtr pGripperInfo;
     if( !_info._grippername.empty() ) {

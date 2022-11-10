@@ -163,7 +163,7 @@ public:
         params->vtargetdirection = Vector(0,0,1);
         params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetLocalToolDirection();
 
-        std::vector<dReal> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
+        std::vector<int> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
         string cmd;
@@ -311,7 +311,7 @@ public:
             params->vgoalconfig.resize(_robot->GetActiveDOF()); // chucking direction
             for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 params->vgoalconfig[i] = 0;
-                vector<dReal>::const_iterator itchucking = vchuckingdir.begin();
+                vector<int>::const_iterator itchucking = vchuckingdir.begin();
                 FOREACHC(itgripper,_robot->GetActiveManipulator()->GetGripperIndices()) {
                     if(( *itchucking != 0) &&( *itgripper == _robot->GetActiveDOFIndices().at(i)) ) {
                         params->vgoalconfig[i] = *itchucking;
@@ -1492,7 +1492,7 @@ protected:
         //make sure we get the right chucking direction and don't look at irrelevant joints
         vector<dReal> chuckingdir(_robot->GetDOF(),0);
         FOREACH(itmanip,_robot->GetManipulators()) {
-            vector<dReal>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
+            vector<int>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
             FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
                 chuckingdir.at(*itgripper) = *itchucking++;
             }
