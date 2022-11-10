@@ -109,12 +109,36 @@ object toPyObject(const rapidjson::Value& value)
             return py::to_object(py::handle<>(PyFloat_FromDouble(value.GetDouble())));
 #endif
         }
-        else {
+        else if( value.IsInt64() ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             return py::int_(value.GetInt64());
 #else
             return py::to_object(py::handle<>(PyInt_FromLong(value.GetInt64())));
 #endif
+        }
+        else if( value.IsUint64() ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::int_(value.GetUint64());
+#else
+            return py::to_object(py::handle<>(PyInt_FromLong(value.GetUint64())));
+#endif
+        }
+        else if( value.IsInt() ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::int_(value.GetInt());
+#else
+            return py::to_object(py::handle<>(PyInt_FromLong(value.GetInt())));
+#endif
+        }
+        else if( value.IsUint() ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::int_(value.GetUint());
+#else
+            return py::to_object(py::handle<>(PyInt_FromLong(value.GetUint())));
+#endif
+        }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("Failed to convert rapidjson value '%s' to a python object."), orjson::DumpJson(value), ORE_InvalidArguments);
         }
     }
     case rapidjson::kNullType: {
