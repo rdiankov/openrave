@@ -69,10 +69,10 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
         _vChuckingDirection.resize(vLocalChuckingDirection.size());
         for (size_t index = 0; index < vLocalChuckingDirection.size(); ++index) {
             int direction = 0;
-            if (vLocalChuckingDirection[index] > 1e-7) {
+            if (vLocalChuckingDirection[index] > 0) {
                 direction = 1;
             }
-            else if (vLocalChuckingDirection[index] < -1e-7) {
+            else if (vLocalChuckingDirection[index] < 0) {
                 direction = -1;
             }
             _vChuckingDirection[index] = direction;
