@@ -63,7 +63,7 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     }
     catch(const std::exception& e) {
         // backward compatiblity with float chucking directions
-        RAVELOG_WARN_FORMAT("encountered error while loading 'chuckingDirections' as integers, try to load it as doubles: %s", e.what());
+        RAVELOG_DEBUG_FORMAT("encountered error while loading 'chuckingDirections' as integers, try to load it as doubles: %s", e.what());
         vector<double> vLocalChuckingDirection;
         orjson::LoadJsonValueByKey(value, "chuckingDirections", vLocalChuckingDirection);
         _vChuckingDirection.resize(vLocalChuckingDirection.size());
