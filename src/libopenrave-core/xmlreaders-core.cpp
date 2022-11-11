@@ -2669,13 +2669,17 @@ public:
             }
         }
         else if( xmlname == "closingdirection" || xmlname == "closingdir" || xmlname == "chuckingdirection" ) {
-            _manipinfo._vChuckingDirection = vector<int>((istream_iterator<int>(_ss)), istream_iterator<int>());
-            FOREACH(it, _manipinfo._vChuckingDirection) {
-                if( *it > 0 ) {
-                    *it = 1;
+            vector<dReal> vChuckingDirectionReal = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+            _manipinfo._vChuckingDirection.resize(vChuckingDirectionReal.size());
+            for (size_t index = 0; index < vChuckingDirectionReal.size(); ++index) {
+                const dReal realVal = vChuckingDirectionReal[index];
+                int& intVal = _manipinfo._vChuckingDirection[index];
+                intVal = 0;
+                if( realVal > 0 ) {
+                    intVal = 1;
                 }
-                else if( *it < 0 ) {
-                    *it = -1;
+                else if( realVal < 0 ) {
+                    intVal = -1;
                 }
             }
         }
