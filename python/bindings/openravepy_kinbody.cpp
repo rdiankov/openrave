@@ -2331,6 +2331,16 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_isPartial = _isPartial;
 
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
+
+    if( !IS_PYTHONOBJECT_NONE(_files) ) {
+        if( !pInfo->_prFiles ) {
+            pInfo->_prFiles.reset(new rapidjson::Document());
+        }
+        else {
+            *pInfo->_prFiles = rapidjson::Document();
+        }
+        toRapidJSONValue(_files, *pInfo->_prFiles, pInfo->_prFiles->GetAllocator());
+    }
     return pInfo;
 }
 
@@ -2390,6 +2400,13 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _isPartial = info._isPartial;
     _dofValues = ReturnDOFValues(info._dofValues);
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
+
+    if( !info._prFiles ) {
+        _files = py::none_();
+    }
+    else {
+        _files = toPyObject(*info._prFiles);
+    }
 }
 
 std::string PyKinBody::PyKinBodyInfo::__str__() {
@@ -5157,6 +5174,7 @@ void init_openravepy_kinbody()
                          .def_readwrite("_referenceUri", &PyKinBody::PyKinBodyInfo::_referenceUri)
                          .def_readwrite("_dofValues", &PyKinBody::PyKinBodyInfo::_dofValues)
                          .def_readwrite("_readableInterfaces", &PyKinBody::PyKinBodyInfo::_readableInterfaces)
+                         .def_readwrite("_files", &PyKinBody::PyKinBodyInfo::_files)
                          .def_readwrite("_transform", &PyKinBody::PyKinBodyInfo::_transform)
                          .def_readwrite("_isRobot", &PyKinBody::PyKinBodyInfo::_isRobot)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
