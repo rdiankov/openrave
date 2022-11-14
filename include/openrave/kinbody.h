@@ -3472,6 +3472,7 @@ protected:
 
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
+    boost::shared_ptr<rapidjson::Document> _prFiles; ///< files tag maintaining entries of data files associated with this object
 
 private:
     mutable std::string __hashkinematics;

@@ -519,6 +519,7 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prFiles.reset();
     return true;
 }
 
@@ -563,6 +564,7 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prFiles.reset();
     return true;
 }
 
@@ -594,6 +596,7 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prFiles.reset();
     return true;
 }
 
@@ -618,6 +621,7 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prFiles.reset();
     return true;
 }
 
@@ -649,6 +653,7 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prFiles.reset();
     return true;
 }
 
@@ -714,6 +719,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prFiles.reset();
     return true;
 }
 
@@ -746,6 +752,7 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prFiles.reset();
 }
 
 bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
@@ -766,6 +773,16 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
 
     if( GetXMLId() != info._interfaceType ) {
         RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
+    }
+
+    if( !!info._prFiles ) {
+        if( !_prFiles ) {
+            _prFiles.reset(new rapidjson::Document());
+        }
+        else {
+            *_prFiles = rapidjson::Document();
+        }
+        _prFiles->CopyFrom(*info._prFiles, _prFiles->GetAllocator());
     }
 
     return true;
@@ -6046,6 +6063,16 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
             info._mReadableInterfaces[it->first] = it->second->CloneSelf();
         }
     }
+
+    if( !!_prFiles ) {
+        if( !info._prFiles ) {
+            info._prFiles.reset(new rapidjson::Document());
+        }
+        else {
+            *info._prFiles = rapidjson::Document();
+        }
+        info._prFiles->CopyFrom(*_prFiles, info._prFiles->GetAllocator());
+    }
 }
 
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
@@ -6210,6 +6237,17 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     if( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface change", _id);
+    }
+
+    if( !!info._prFiles ) {
+        if( !_prFiles ) {
+            _prFiles.reset(new rapidjson::Document());
+            _prFiles->CopyFrom(*info._prFiles, _prFiles->GetAllocator());
+        }
+        if( *_prFiles != *info._prFiles ) {
+            *_prFiles = rapidjson::Document();
+            _prFiles->CopyFrom(*info._prFiles, _prFiles->GetAllocator());
+        }
     }
 
     return updateFromInfoResult;
