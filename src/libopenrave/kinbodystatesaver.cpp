@@ -94,7 +94,12 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
                 KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
-                if( !!pGrabbingLink && !pbody->GetLink(pGrabbingLink->GetName()) ) {
+                if( !pGrabbingLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link for grabbed body '%s'"),
+                                                    pbody->GetEnv()->GetNameId()%pGrabbedBody->GetName(),
+                                                    ORE_Failed);
+                }
+                else if( !pbody->GetLink(pGrabbingLink->GetName()) ) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)"),
                                                     pbody->GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%pbody->GetName()%pbody->GetLinks().size(),
                                                     ORE_Failed);
