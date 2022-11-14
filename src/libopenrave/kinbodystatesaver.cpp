@@ -135,15 +135,6 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                                     else {
                                         pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(pbody->GetLinks().at((*itLinkRef)->GetIndex()));
                                     }
-                                    CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
-
-                                    pbody->_AttachBody(pNewGrabbedBody);
-                                    pbody->_vGrabbedBodies.push_back(pNewGrabbed);
-
-                                    CollisionCheckerBasePtr collisionchecker = pbody->GetSelfCollisionChecker();
-                                    if (!!collisionchecker) {
-                                        collisionchecker->InitKinBody(pNewGrabbedBody);
-                                    }
                                 }
                                 pNewGrabbed->_SetLinkNonCollidingIsValid(true);
                             }
@@ -151,6 +142,10 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
 
                             pbody->_AttachBody(pNewGrabbedBody);
                             pbody->_vGrabbedBodies.push_back(pNewGrabbed);
+                            CollisionCheckerBasePtr collisionchecker = pbody->GetSelfCollisionChecker();
+                            if (!!collisionchecker) {
+                                collisionchecker->InitKinBody(pNewGrabbedBody);
+                            }
                         }
                     }
                     else {
