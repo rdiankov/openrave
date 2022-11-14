@@ -58,7 +58,7 @@ public:
         std::string _name;
         std::string _sBaseLinkName, _sIkChainEndLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
-        std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
+        std::vector<int> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
         Vector _vdirection = Vector(0,0,1);
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
@@ -261,12 +261,12 @@ public:
         /// \brief returns the number of DOF for the gripper indices. Equivalent to GetGripperIndices().size()
         int GetGripperDOF() const;
 
-        inline const std::vector<dReal>& GetChuckingDirection() const {
+        inline const std::vector<int>& GetChuckingDirection() const {
             return _info._vChuckingDirection;
         }
 
         /// \brief sets the normal gripper direction to move joints to close/chuck the hand
-        void SetChuckingDirection(const std::vector<dReal>& chuckingdirection);
+        void SetChuckingDirection(const std::vector<int>& chuckingdirection);
 
         /// \brief Sets the local tool direction with respect to the end effector link.
         ///

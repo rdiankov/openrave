@@ -111,7 +111,7 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
         pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
     }
     if( !IS_PYTHONOBJECT_NONE(_vChuckingDirection) ) {
-        pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
+        pinfo->_vChuckingDirection = ExtractArray<int>(_vChuckingDirection);
     }
     if( !IS_PYTHONOBJECT_NONE(_vdirection) ) {
         pinfo->_vdirection = ExtractVector3(_vdirection);
@@ -771,11 +771,11 @@ void PyRobotBase::PyManipulator::SetLocalToolDirection(object odirection) {
 void PyRobotBase::PyManipulator::SetClosingDirection(object oclosingdirection)
 {
     RAVELOG_WARN("SetClosingDirection is deprecated, use SetChuckingDirection\n");
-    _pmanip->SetChuckingDirection(ExtractArray<dReal>(oclosingdirection));
+    _pmanip->SetChuckingDirection(ExtractArray<int>(oclosingdirection));
 }
 void PyRobotBase::PyManipulator::SetChuckingDirection(object ochuckingdirection)
 {
-    _pmanip->SetChuckingDirection(ExtractArray<dReal>(ochuckingdirection));
+    _pmanip->SetChuckingDirection(ExtractArray<int>(ochuckingdirection));
 }
 py::array_int PyRobotBase::PyManipulator::GetGripperJoints() {
     RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n");

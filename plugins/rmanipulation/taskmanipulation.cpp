@@ -1117,7 +1117,13 @@ protected:
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = directions[index];
+            }
+        }
 
         vector<dReal> voffset;
         string cmd;
@@ -1237,9 +1243,13 @@ protected:
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
-        FOREACH(it,graspparams->vgoalconfig) {
-            *it = -*it;
+
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = -directions[index];
+            }
         }
         string cmd;
         while(!sinput.eof()) {
