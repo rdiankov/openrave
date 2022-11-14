@@ -113,7 +113,8 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
-           && _mReadableInterfaces == other._mReadableInterfaces;
+           && _mReadableInterfaces == other._mReadableInterfaces
+           && (!_prFiles ? !other._prFiles : (!!other._prFiles && *_prFiles == *other._prFiles));
 }
 
 void KinBody::KinBodyInfo::Reset()
@@ -129,6 +130,7 @@ void KinBody::KinBodyInfo::Reset()
     _vLinkInfos.clear();
     _vJointInfos.clear();
     _mReadableInterfaces.clear();
+    _prFiles.reset();
     _isRobot = false;
     _isPartial = true;
 }
@@ -234,6 +236,12 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     }
 
     rKinBodyInfo.AddMember("__isPartial__", _isPartial, allocator);
+
+    if( !!_prFiles ) {
+        rapidjson::Value rFiles;
+        rFiles.CopyFrom(*_prFiles, allocator);
+        rKinBodyInfo.AddMember("files", rFiles, allocator);
+    }
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -384,6 +392,17 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         orjson::LoadJsonValueByKey(value, "transform", _transform);
         _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
         AddModifiedField(KinBodyInfo::KBIF_Transform);
+    }
+
+    rapidjson::Value::ConstMemberIterator itFiles = value.FindMember("files");
+    if( itFiles != value.MemberEnd() ) {
+        if( !_prFiles ) {
+            _prFiles.reset(new rapidjson::Document());
+        }
+        else {
+            *_prFiles = rapidjson::Document();
+        }
+        _prFiles->CopyFrom(itFiles->value, _prFiles->GetAllocator());
     }
 }
 
