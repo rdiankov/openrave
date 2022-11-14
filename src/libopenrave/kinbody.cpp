@@ -6244,7 +6244,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             _prFiles.reset(new rapidjson::Document());
             _prFiles->CopyFrom(*info._prFiles, _prFiles->GetAllocator());
         }
-        if( *_prFiles != *info._prFiles ) {
+        else if( *_prFiles != *info._prFiles ) {
             *_prFiles = rapidjson::Document();
             _prFiles->CopyFrom(*info._prFiles, _prFiles->GetAllocator());
         }
