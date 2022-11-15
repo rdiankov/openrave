@@ -90,9 +90,12 @@ const std::list<EnvironmentBase::CollisionCallbackFn>& IVShMemInterface::Collisi
 
 IVShMemInterface::IVShMemInterface(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
     : OpenRAVE::CollisionCheckerBase(penv)
+    , _shmem(4 * 1024 * 1024)
+    , _ivshmem_server()
     , _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
     , _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
 {
+    _ivshmem_thread = std::thread(&IVShMemServer::Thread, &_ivshmem_server);
     _bParentlessCollisionObject = false;
     _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
     _fclspace = boost::make_shared<FCLSpace>(penv, _userdatakey);
@@ -127,7 +130,7 @@ IVShMemInterface::~IVShMemInterface() {
     if (_maxNumEnvManagers > 0) {
         RAVELOG_DEBUG_FORMAT("env=%s IVShMemInterface=%s, number of env managers is current:%d, max:%d", GetEnv()->GetNameId()%_userdatakey%_envmanagers.size()%_maxNumEnvManagers);
     }
-
+    _ivshmem_thread.join();
     DestroyEnvironment();
 }
 
