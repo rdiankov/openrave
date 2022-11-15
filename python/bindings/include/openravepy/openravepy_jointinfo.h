@@ -146,6 +146,8 @@ public:
 
     std::string controllerType;
     object robotControllerAxisIndex = toPyVector3(Vector(-1, -1, -1));
+    object robotControllerAxisMult = toPyVector3(Vector(1, 1, 1));
+    object robotControllerAxisOffset = toPyVector3(Vector(0, 0, 0));
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
 

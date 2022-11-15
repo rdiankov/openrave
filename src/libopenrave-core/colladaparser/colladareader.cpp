@@ -1757,6 +1757,20 @@ public:
                                             }
                                             jci.robotControllerAxisIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
                                         }
+                                        else if( pchild->getElementName() == std::string("robotControllerAxisMult") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            jci.robotControllerAxisMult.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                        }
+                                        else if( pchild->getElementName() == std::string("robotControllerAxisOffset") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            jci.robotControllerAxisOffset.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                        }
                                     }
                                     continue;
                                 }

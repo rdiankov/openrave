@@ -654,11 +654,21 @@ PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const Joi
 {
     controllerType = jci.controllerType;
 
-    py::list _robotControllerAxisIndex;
+    py::list _robotControllerAxisIndex, _robotControllerAxisMult, _robotControllerAxisOffset;
     FOREACHC(itdofindex, jci.robotControllerAxisIndex) {
         _robotControllerAxisIndex.append(*itdofindex);
     }
     robotControllerAxisIndex = _robotControllerAxisIndex;
+
+    FOREACHC(itdofindex, jci.robotControllerAxisMult) {
+        _robotControllerAxisMult.append(*itdofindex);
+    }
+    robotControllerAxisMult = _robotControllerAxisMult;
+
+    FOREACHC(itdofindex, jci.robotControllerAxisOffset) {
+        _robotControllerAxisOffset.append(*itdofindex);
+    }
+    robotControllerAxisOffset = _robotControllerAxisOffset;
 }
 
 JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJointControlInfo()
@@ -671,6 +681,20 @@ JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJoint
         OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisIndex.size(), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
             info.robotControllerAxisIndex[i] = py::extract<int>(robotControllerAxisIndex[i]);
+        }
+    }
+    if( !IS_PYTHONOBJECT_NONE(robotControllerAxisMult) ) {
+        size_t num = len(robotControllerAxisMult);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisMult.size(), ORE_InvalidState);
+        for( size_t i = 0; i < num; ++i ) {
+            info.robotControllerAxisMult[i] = py::extract<int>(robotControllerAxisMult[i]);
+        }
+    }
+    if( !IS_PYTHONOBJECT_NONE(robotControllerAxisOffset) ) {
+        size_t num = len(robotControllerAxisOffset);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisOffset.size(), ORE_InvalidState);
+        for( size_t i = 0; i < num; ++i ) {
+            info.robotControllerAxisOffset[i] = py::extract<int>(robotControllerAxisOffset[i]);
         }
     }
     return pinfo;
@@ -4363,11 +4387,13 @@ class JointControlInfo_RobotController_pickle_suite
 public:
     static py::tuple getstate(const PyJointControlInfo_RobotController& r)
     {
-        return py::make_tuple(r.controllerType, r.robotControllerAxisIndex);
+        return py::make_tuple(r.controllerType, r.robotControllerAxisIndex, r.robotControllerAxisMult, r.robotControllerAxisOffset);
     }
     static void setstate(PyJointControlInfo_RobotController& r, py::tuple state) {
         r.controllerType = py::extract<int>(state[0]);
         r.robotControllerAxisIndex = state[1];
+        r.robotControllerAxisMult = state[2];
+        r.robotControllerAxisOffset = state[3];
     }
 };
 
@@ -4888,6 +4914,8 @@ void init_openravepy_kinbody()
 #endif
         .def_readwrite("controllerType", &PyJointControlInfo_RobotController::controllerType)
         .def_readwrite("robotControllerAxisIndex", &PyJointControlInfo_RobotController::robotControllerAxisIndex)
+        .def_readwrite("robotControllerAxisMult", &PyJointControlInfo_RobotController::robotControllerAxisMult)
+        .def_readwrite("robotControllerAxisOffset", &PyJointControlInfo_RobotController::robotControllerAxisOffset)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
                  [](const PyJointControlInfo_RobotController &pyinfo) {
