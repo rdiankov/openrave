@@ -12,6 +12,9 @@
 #include "fclspace.h"
 #include "fclmanagercache.h"
 
+#include "triple_buffered_shared_memory.hpp"
+#include "ivshmem_server.hpp"
+
 namespace ivshmem {
 
 #define START_TIMING_OPT(statistics, label, options, isRobot);           \
@@ -211,6 +214,10 @@ private:
 
         return false;
     }
+
+    TripleBufferedSharedIOMemory _shmem;
+    IVShMemServer _ivshmem_server;
+    std::thread _ivshmem_thread;
 
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
