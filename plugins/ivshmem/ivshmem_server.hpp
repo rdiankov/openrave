@@ -113,7 +113,9 @@ private:
 
     std::function<size_t(int16_t, uint8_t*, size_t)> _onNewPeer = default_on_new_peer_fn;
 
-    static constexpr auto default_on_new_peer_fn = [](int16_t, uint8_t*, size_t) -> size_t { return 0; };
+    static size_t default_on_new_peer_fn(int16_t, uint8_t*, size_t) {
+        return 0;
+    }
 };
 
 #endif // OPENRAVE_IVSHMEM_SERVER_HPP

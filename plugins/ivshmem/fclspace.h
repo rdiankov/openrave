@@ -6,7 +6,7 @@
 #include <memory> // c++11
 #include <vector>
 
-namespace fclrave {
+namespace ivshmem {
 
 typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
@@ -351,13 +351,6 @@ private:
     bool _bIsSelfCollisionChecker; // Currently not used
 };
 
-#ifdef RAVE_REGISTER_BOOST
-#include BOOST_TYPEOF_REGISTRATION_GROUP()
-BOOST_TYPEOF_REGISTER_TYPE(FCLSpace)
-BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::FCLKinBodyInfo)
-BOOST_TYPEOF_REGISTER_TYPE(FCLSpace::FCLKinBodyInfo::LinkInfo)
-#endif
-
-}
+} // namespace ivshmem
 
 #endif

@@ -5,7 +5,7 @@
 #include "plugindefs.h"
 #include "fclspace.h"
 
-namespace fclrave {
+namespace ivshmem {
 
 //static bool CheckForObj(fcl::DynamicAABBTreeCollisionManager::DynamicAABBNode* root, fcl::CollisionObject* pobj)
 //{
@@ -229,6 +229,6 @@ private:
 typedef boost::shared_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstancePtr;
 typedef boost::weak_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstanceWeakPtr;
 
-} // end namespace fclrave
+} // namespace ivshmem
 
 #endif

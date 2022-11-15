@@ -1,6 +1,6 @@
 #include "fclmanagercache.h"
 
-namespace fclrave {
+namespace ivshmem {
 
 FCLCollisionManagerInstance::KinBodyCache::KinBodyCache()
     : nLastStamp(0)
@@ -808,4 +808,4 @@ void FCLCollisionManagerInstance::_UpdateActiveLinks(const RobotBase& robot) {
     }
 }
 
-} // namespace fclrave
+} // namespace ivshmem

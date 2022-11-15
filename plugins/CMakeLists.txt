@@ -47,6 +47,8 @@ if( OPT_FCL_COLLISION )
   set(PLUGINS ${PLUGINS} fclrave)
 endif()
 
+set(PLUGINS ${PLUGINS} ivshmem)
+
 foreach(PLUGIN ${PLUGINS})
   string(TOUPPER ${PLUGIN} PLUGIN_UPPER)
   option(OPENRAVE_PLUGIN_${PLUGIN_UPPER} "Build the ${PLUGIN} plugin" ON)
