@@ -158,7 +158,6 @@ void TripleBufferedSharedIOMemory::write_ready() noexcept {
 
 uintptr_t TripleBufferedSharedIOMemory::get_writable() const noexcept {
     uintptr_t offset = static_cast<uintptr_t*>(_mmap)[0];
-    RAVELOG_DEBUG("Active write offset is %p", offset);
     return reinterpret_cast<uintptr_t>(_mmap) + offset;
 }
 
@@ -171,6 +170,5 @@ void TripleBufferedSharedIOMemory::read_ready() noexcept {
 
 uintptr_t TripleBufferedSharedIOMemory::get_readable() const noexcept {
     uintptr_t offset = static_cast<uintptr_t*>(_mmap)[3];
-    RAVELOG_DEBUG("Active read offset is %p", offset);
     return reinterpret_cast<uintptr_t>(_mmap) + offset;
 }

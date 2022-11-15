@@ -98,10 +98,9 @@ void IVShMemServer::Thread() try {
     }
 
     ::epoll_event events[MAX_EPOLL_EVENTS];
-    std::atomic_bool stop(false);
     int16_t guest_id = 0; // ivshmem only provides 16 bits of client ID.
 
-    while (!stop) {
+    while (!_stop) {
         int num_fds = ::epoll_wait(ep_fd.get(), events, MAX_EPOLL_EVENTS, -1);
         if (num_fds <= 0) {
             throw std::runtime_error("Error caught in epoll_wait: "s + strerror(errno));
@@ -110,7 +109,7 @@ void IVShMemServer::Thread() try {
             int fd = events[i].data.fd;
             // Signal event, it's time to stop
             if (fd == sig_fd.get()) {
-                stop = true;
+                _stop = true;
                 RAVELOG_INFO("Stop signal caught.");
                 break;
             }
@@ -285,8 +284,8 @@ int IVShMemServer::_ShMem_SendMsg(int sock_fd, int64_t peer_id, int message) noe
     };
 
     // If `message` is a value greater than 0, then add it as control content
+    char control[CMSG_SPACE(sizeof(int))]; // Buffer must live outside the if block below
     if (message >= 0) {
-        char control[CMSG_SPACE(sizeof(int))];
         ::memset(control, 0, sizeof(control));
         msg.msg_control = control;
         msg.msg_controllen = sizeof(control);

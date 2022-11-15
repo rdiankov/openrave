@@ -1,6 +1,6 @@
 // -*- coding: utf-8 -*-
-#ifndef OPENRAVE_FCL_MANAGERCACHE
-#define OPENRAVE_FCL_MANAGERCACHE
+#ifndef OPENRAVE_IVSHMEM_FCL_MANAGERCACHE
+#define OPENRAVE_IVSHMEM_FCL_MANAGERCACHE
 
 #include "plugindefs.h"
 #include "fclspace.h"
@@ -231,4 +231,4 @@ typedef boost::weak_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstance
 
 } // namespace ivshmem
 
-#endif
+#endif // OPENRAVE_IVSHMEM_FCL_MANAGERCACHE

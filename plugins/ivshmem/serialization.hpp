@@ -14,70 +14,45 @@ namespace ivshmem {
 
 /// Serialization ====================================================================================================
 
-// Writes an arithmetic value in its binary form to the output stream.
-template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, bool> = true>
-size_t Serialize(std::ostream& os, T value) {
-    os.write(reinterpret_cast<char*>(&value), sizeof(T));
+// Basic template for primitive types.
+template <typename T, typename std::enable_if<std::is_arithmetic<T>::value, bool>::type = true>
+uint64_t serialize(uint8_t* const mem, const T& v) noexcept {
+    ::memcpy(mem, &v, sizeof(T));
     return sizeof(T);
 }
 
 template <>
-size_t Serialize<bool>(std::ostream&, bool);
-
-// Writes a length-prefixed, null-terminated string to the output stream.
-// Always writes a null terminator even if string length is 0.
-size_t Serialize(std::ostream& , const char*, size_t length);
-size_t Serialize(std::ostream& , const std::string&);
-
-size_t Serialize(std::ostream&, const fcl::Vec3f&);
-size_t Serialize(std::ostream&, const fcl::Quaternion3f&);
-size_t Serialize(std::ostream&, const fcl::Triangle&);
-size_t Serialize(std::ostream&, const fcl::Transform3f&);
-size_t Serialize(std::ostream&, const fcl::AABB&);
-size_t Serialize(std::ostream&, const fcl::BVHModel<fcl::OBB>&);
+uint64_t serialize<bool, false>(uint8_t* const, const bool&) noexcept;
+uint64_t serialize(uint8_t* const, const char*, size_t) noexcept;
+uint64_t serialize(uint8_t* const, const std::string&) noexcept;
+uint64_t serialize(uint8_t* const, const fcl::Vec3f&) noexcept;
+uint64_t serialize(uint8_t* const, const fcl::Quaternion3f&) noexcept;
+uint64_t serialize(uint8_t* const, const fcl::Triangle&) noexcept;
+uint64_t serialize(uint8_t* const, const fcl::Transform3f&) noexcept;
+uint64_t serialize(uint8_t* const, const fcl::AABB&) noexcept;
 
 // Convenience overloads for collision geometry
-size_t Serialize(std::ostream&, const std::shared_ptr<const fcl::CollisionGeometry>&);
-size_t Serialize(std::ostream&, const fcl::CollisionGeometry*);
-size_t Serialize(std::ostream&, const fcl::CollisionObject&);
-size_t Serialize(std::ostream&, const fcl::CollisionRequest&);
-size_t Serialize(std::ostream&, const fcl::DistanceRequest&);
+size_t serialize(uint8_t* const, const fcl::CollisionObject&) noexcept;
+size_t serialize(uint8_t* const, const fcl::CollisionRequest&) noexcept;
+size_t serialize(uint8_t* const, const fcl::DistanceRequest&) noexcept;
 
 /// Deserialization ==================================================================================================
 
-/// A long, long time ago, FILE* pointers and C++ streams lived in harmony
-/// But everything changed when the fire nation attacked, so we have to write these adapters now.
-/// To use this filebuf, construct an istream with it: istream is(&fb);
-/// The filebuf object must stay in scope for the duration of the deserialization.
-std::filebuf OpenMemoryAsFile(void* memptr, size_t size);
-
 template <typename T, typename U = typename std::remove_reference<T>::type>
-inline U DeSerialize(std::istream& is) {
-    U value;
-    is.read(reinterpret_cast<char*>(&value), sizeof(U));
-    return value;
+inline uint64_t deserialize(const uint8_t* const mem, U& value) {
+    memcpy(&value, mem, sizeof(U));
+    return sizeof(U);
 }
 
 template <>
-bool DeSerialize<bool>(std::istream&);
+uint64_t deserialize<bool>(const uint8_t* const, bool&);
 
-template <>
-fcl::Vec3f DeSerialize<fcl::Vec3f>(std::istream&);
-
-template <>
-fcl::Quaternion3f DeSerialize<fcl::Quaternion3f>(std::istream&);
-
-template <>
-fcl::Contact DeSerialize<fcl::Contact>(std::istream&);
-
-template <>
-fcl::CostSource DeSerialize<fcl::CostSource>(std::istream&);
-
-template <>
-fcl::CollisionResult DeSerialize<fcl::CollisionResult>(std::istream&);
-
-template <>
-fcl::DistanceResult DeSerialize<fcl::DistanceResult>(std::istream&);
+uint64_t deserialize(const uint8_t* const, fcl::Vec3f&);
+uint64_t deserialize(const uint8_t* const, fcl::Quaternion3f&);
+uint64_t deserialize(const uint8_t* const, fcl::Contact&);
+uint64_t deserialize(const uint8_t* const, fcl::CostSource&);
+uint64_t deserialize(const uint8_t* const, fcl::CollisionResult&);
+uint64_t deserialize(const uint8_t* const, fcl::DistanceResult&);
 
 } // namespace ivshmem
 

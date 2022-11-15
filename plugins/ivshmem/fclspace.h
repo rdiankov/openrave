@@ -1,6 +1,6 @@
 // -*- coding: utf-8 -*-
-#ifndef OPENRAVE_FCL_SPACE
-#define OPENRAVE_FCL_SPACE
+#ifndef OPENRAVE_IVSHMEM_FCL_SPACE
+#define OPENRAVE_IVSHMEM_FCL_SPACE
 
 #include <boost/shared_ptr.hpp>
 #include <memory> // c++11
@@ -353,4 +353,4 @@ private:
 
 } // namespace ivshmem
 
-#endif
+#endif // OPENRAVE_IVSHMEM_FCL_SPACE

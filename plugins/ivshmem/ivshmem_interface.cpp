@@ -1,6 +1,7 @@
 #include "plugindefs.h"
 
 #include "ivshmem_interface.hpp"
+#include "serialization.hpp"
 
 namespace ivshmem {
 
@@ -90,14 +91,15 @@ const std::list<EnvironmentBase::CollisionCallbackFn>& IVShMemInterface::Collisi
 
 IVShMemInterface::IVShMemInterface(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
     : OpenRAVE::CollisionCheckerBase(penv)
-    , _shmem(4 * 1024 * 1024)
+    , _shmem(1 * 1024 * 1024)
     , _ivshmem_server()
+    , _query_id(1)
     , _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
     , _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
 {
     _ivshmem_thread = std::thread(&IVShMemServer::Thread, &_ivshmem_server);
     _bParentlessCollisionObject = false;
-    _userdatakey = std::string("fclcollision") + boost::lexical_cast<std::string>(this);
+    _userdatakey = std::string("ivshmem") + boost::lexical_cast<std::string>(this);
     _fclspace = boost::make_shared<FCLSpace>(penv, _userdatakey);
     _options = 0;
     // TODO : Should we put a more reasonable arbitrary value ?
@@ -130,6 +132,7 @@ IVShMemInterface::~IVShMemInterface() {
     if (_maxNumEnvManagers > 0) {
         RAVELOG_DEBUG_FORMAT("env=%s IVShMemInterface=%s, number of env managers is current:%d, max:%d", GetEnv()->GetNameId()%_userdatakey%_envmanagers.size()%_maxNumEnvManagers);
     }
+    _ivshmem_server.Stop();
     _ivshmem_thread.join();
     DestroyEnvironment();
 }
@@ -830,7 +833,7 @@ bool IVShMemInterface::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, f
 
     auto checker = pcb->_pchecker;
 
-    size_t numContacts = fcl::collide(o1, o2, pcb->_request, pcb->_result);
+    size_t numContacts = checker->collide(o1, o2, pcb->_request, pcb->_result); // Diverted
 
     if( numContacts > 0 ) {
         if( !!pcb->_report ) {
@@ -1109,6 +1112,78 @@ FCLCollisionManagerInstance& IVShMemInterface::_GetEnvManager(const std::vector<
     //it->second->PrintStatus(OpenRAVE::Level_Info);
     //RAVELOG_VERBOSE_FORMAT("env=%d, returning env manager cache %x (self=%d)", GetEnv()->GetId()%it->second.get()%_bIsSelfCollisionChecker);
     return *it->second;
+}
+
+enum class QueryType : uint16_t {
+    ObjectCollision = 1,
+    GeometryCollision = 2,
+    ObjectDistance = 3,
+    GeometryDistance = 4
+};
+
+// ===== Diverted collision functions
+std::size_t IVShMemInterface::collide(const fcl::CollisionObject* o1, const fcl::CollisionObject* o2, const fcl::CollisionRequest& request, fcl::CollisionResult& result)
+{
+
+    if (_ivshmem_server.NumPeers() == 0) {
+        RAVELOG_WARN("No collision checkers are online. Skip calculation and sleep for 1 second.");
+        std::this_thread::sleep_for(std::chrono::seconds{1});
+        return 0;
+    }
+
+    uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
+    size_t offset = 0;
+    offset += ivshmem::serialize(write_addr + offset, _query_id);
+    offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::ObjectCollision));
+    offset += ivshmem::serialize(write_addr + offset, *o1);
+    offset += ivshmem::serialize(write_addr + offset, *o2);
+    offset += ivshmem::serialize(write_addr + offset, request);
+    RAVELOG_INFO("Query %lu, wrote %lu bytes", _query_id++, offset);
+    _shmem.write_ready();
+    _ivshmem_server.InterruptPeer();
+
+    //uintptr_t read_addr = _shmem.get_readable();
+    //std::filebuf ifb = ivshmem::OpenMemoryAsFile(reinterpret_cast<void*>(read_addr), _shmem.readable_size());
+    //std::istream is(&ifb);
+    //uint64_t query_id = query_id = ivshmem::DeSerialize<uint64_t>(is);
+    //RAVELOG_DEBUG("Got back query ID %lu", query_id);
+    //result = ivshmem::DeSerialize<fcl::CollisionResult>(is);
+    //return result.numContacts();
+    return 0;
+}
+
+std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fcl::Transform3f& tf1,
+                                    const fcl::CollisionGeometry* o2, const fcl::Transform3f& tf2,
+                                    const fcl::CollisionRequest& request, fcl::CollisionResult& result)
+{
+
+    if (_ivshmem_server.NumPeers() == 0) {
+        RAVELOG_WARN("No collision checkers are online. Skip calculation and sleep for 1 second.");
+        std::this_thread::sleep_for(std::chrono::seconds{1});
+        return 0;
+    }
+
+    uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
+    size_t offset = 0;
+    offset += ivshmem::serialize(write_addr + offset, _query_id);
+    offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::GeometryCollision));
+    offset += ivshmem::serialize(write_addr + offset, o1);
+    offset += ivshmem::serialize(write_addr + offset, tf1);
+    offset += ivshmem::serialize(write_addr + offset, o2);
+    offset += ivshmem::serialize(write_addr + offset, tf2);
+    offset += ivshmem::serialize(write_addr + offset, request);
+    RAVELOG_INFO("Query %lu, wrote %lu bytes", _query_id++, offset);
+    _shmem.write_ready();
+    _ivshmem_server.InterruptPeer();
+
+    //uintptr_t read_addr = _shmem.get_readable();
+    //std::filebuf ifb = ivshmem::OpenMemoryAsFile(reinterpret_cast<void*>(read_addr), _shmem.readable_size());
+    //std::istream is(&ifb);
+    //uint64_t query_id = query_id = ivshmem::DeSerialize<uint64_t>(is);
+    //RAVELOG_DEBUG("Got back query ID %lu", query_id);
+    //result = ivshmem::DeSerialize<fcl::CollisionResult>(is);
+    //return result.numContacts();
+    return 0;
 }
 
 } // namespace

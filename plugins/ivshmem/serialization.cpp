@@ -1,93 +1,121 @@
+#include <type_traits>
+#include <fcl/shape/geometric_shapes.h>
+
 #include "serialization.hpp"
+#include <openrave/openrave.h>
+
+static_assert(std::is_same<fcl::FCL_REAL, double>::value, "FCL_REAL is not 64-bit float!");
+static_assert(sizeof(void*) == 8, "Size of pointer is not 8 bytes!");
 
 namespace ivshmem {
 
 /// Serialization ====================================================================================================
 
 template <>
-size_t Serialize<bool>(std::ostream& os, bool value) {
-    return Serialize(os, uint8_t(value ? 1 : 0));
+uint64_t serialize<bool, false>(uint8_t* const mem, const bool& v) noexcept {
+    uint8_t bval = v ? 1 : 0;
+    ::memcpy(mem, &bval, sizeof(uint8_t));
+    return sizeof(uint8_t);
 }
 
-size_t Serialize(std::ostream& os, const char* str, size_t length) {
-    size_t size = 0;
-    size += Serialize(os, length);
-    os.write(str, length);
-    size += length;
-    return size;
+uint64_t serialize(uint8_t* const mem, const char* str, size_t len) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, len);
+    ::memcpy(mem + offset, str, len);
+    offset += len;
+    return offset;
 }
-
-size_t Serialize(std::ostream& os, const std::string& str) {
-    return Serialize(os, str.c_str(), str.size());
+uint64_t serialize(uint8_t* const mem, const std::string& str) noexcept {
+    return serialize(mem, str.c_str(), str.size());
 }
-
-size_t Serialize(std::ostream& os, const fcl::Vec3f& v) {
-    size_t size = 0;
-    size += Serialize(os, v[0]);
-    size += Serialize(os, v[1]);
-    size += Serialize(os, v[2]);
-    return size;
+uint64_t serialize(uint8_t* const mem, const fcl::Vec3f& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v[0]);
+    offset += serialize(mem + offset, v[1]);
+    offset += serialize(mem + offset, v[2]);
+    return offset;
 }
-
-size_t Serialize(std::ostream& os, const fcl::Quaternion3f& v) {
-    size_t size = 0;
-    size += Serialize(os, v[0]);
-    size += Serialize(os, v[1]);
-    size += Serialize(os, v[2]);
-    size += Serialize(os, v[3]);
-    return size;
+size_t serialize(uint8_t* const mem, const fcl::Quaternion3f& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v[0]);
+    offset += serialize(mem + offset, v[1]);
+    offset += serialize(mem + offset, v[2]);
+    offset += serialize(mem + offset, v[3]);
+    return offset;
 }
-
-size_t Serialize(std::ostream& os, const fcl::Triangle& v) {
-    size_t size = 0;
-    size += Serialize(os, v[0]);
-    size += Serialize(os, v[1]);
-    size += Serialize(os, v[2]);
-    return size;
+uint64_t serialize(uint8_t* const mem, const fcl::Triangle& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v[0]);
+    offset += serialize(mem + offset, v[1]);
+    offset += serialize(mem + offset, v[2]);
+    return offset;
 }
-
-size_t Serialize(std::ostream& os, const fcl::Transform3f& v) {
-    size_t size = 0;
-    size += Serialize(os, v.getTranslation());
-    size += Serialize(os, v.getQuatRotation());
-    return size;
+uint64_t serialize(uint8_t* const mem, const fcl::Transform3f& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v.getTranslation());
+    offset += serialize(mem + offset, v.getQuatRotation());
+    return offset;
 }
-
-size_t Serialize(std::ostream& os, const fcl::AABB& v) {
-    size_t size = 0;
-    size += Serialize(os, v.min_);
-    size += Serialize(os, v.max_);
-    return size;
+uint64_t serialize(uint8_t* const mem, const fcl::AABB& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v.min_);
+    offset += serialize(mem + offset, v.max_);
+    return offset;
 }
-
-size_t Serialize(std::ostream& os, const fcl::BVHModel<fcl::OBB>& v) {
-    size_t size = 0;
-    size += Serialize(os, v.num_vertices);
-    for (decltype(v.num_vertices) i = 0; i < v.num_vertices; ++i) {
-        size += Serialize(os, v.vertices[i]);
+uint64_t serialize(uint8_t* const mem, const fcl::BVHModel<fcl::OBB>& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v.num_vertices);
+    for (int i = 0; i < v.num_vertices; ++i) {
+        offset += serialize(mem + offset, v.vertices[i]);
     }
-    size += Serialize(os, v.num_tris);
-    for (decltype(v.num_tris) i = 0; i < v.num_tris; ++i) {
-        size += Serialize(os, v.tri_indices[i]);
+    offset += serialize(mem + offset, v.num_tris);
+    for (int i = 0; i < v.num_tris; ++i) {
+        offset += serialize(mem + offset, v.tri_indices[i]);
     }
-    return size;
+    return offset;
+}
+uint64_t serialize(uint8_t* const mem, const fcl::Box& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v.side);
+    return offset;
+}
+uint64_t serialize(uint8_t* const mem, const fcl::Cylinder& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize(mem + offset, v.radius);
+    offset += serialize(mem + offset, v.lz);
+    return offset;
 }
 
-size_t Serialize(std::ostream& os, const std::shared_ptr<const fcl::CollisionGeometry>& v) {
-    const fcl::BVHModel<fcl::OBB>* const ptr = static_cast<const fcl::BVHModel<fcl::OBB>* const>(v.get());
-    return Serialize(os, *ptr);
+uint64_t serialize(uint8_t* const mem, const std::shared_ptr<const fcl::CollisionGeometry>& v) noexcept {
+    uint64_t offset = 0;
+    offset += serialize<uint16_t>(mem, v->getNodeType());
+    RAVELOG_INFO("Node type is %d", static_cast<uint16_t>(v->getNodeType()));
+    switch (v->getNodeType()) {
+    case fcl::NODE_TYPE::BV_OBB: {
+        offset += serialize(mem, *static_cast<const fcl::BVHModel<fcl::OBB>*>(v.get()));
+        break;
+    }
+    case fcl::NODE_TYPE::GEOM_BOX: {
+        offset += serialize(mem, *static_cast<const fcl::Box*>(v.get()));
+        break;
+    }
+    case fcl::NODE_TYPE::GEOM_CYLINDER: {
+        offset += serialize(mem, *static_cast<const fcl::Cylinder*>(v.get()));
+        break;
+    }
+    default: {
+        RAVELOG_WARN("Unsupported object type %d or node type %d.", v->getObjectType(), v->getNodeType());
+        break;
+    }
+    }
+    return offset;
 }
 
-size_t Serialize(std::ostream& os, const fcl::CollisionGeometry* v) {
-    const fcl::BVHModel<fcl::OBB>* obj = static_cast<const fcl::BVHModel<fcl::OBB>*>(v);
-    return Serialize(os, *obj);
-}
-
-size_t Serialize(std::ostream& os, const fcl::CollisionObject& obj) {
-    size_t size = 0;
-    size += Serialize(os, obj.getTransform());
-    size += Serialize(os, obj.collisionGeometry());
-    return size;
+uint64_t serialize(uint8_t* const mem, const fcl::CollisionObject& obj) noexcept {
+    size_t offset = 0;
+    offset += serialize(mem + offset, obj.getTransform());
+    offset += serialize(mem + offset, obj.collisionGeometry());
+    return offset;
 }
 
 uint8_t Cast(fcl::GJKSolverType v) {
@@ -98,101 +126,94 @@ uint8_t Cast(fcl::GJKSolverType v) {
     return -1;
 }
 
-size_t Serialize(std::ostream& os, const fcl::CollisionRequest& v) {
-    size_t size = 0;
-    size += Serialize(os, v.num_max_contacts);
-    size += Serialize(os, v.enable_contact);
-    //size += Serialize(os, v.num_max_cost_sources);
-    //size += Serialize(os, v.enable_cost);
-    //size += Serialize(os, v.use_approximate_cost);
-    //size += Serialize(os, Cast(v.gjk_solver_type));
-    return size;
+uint64_t serialize(uint8_t* const mem, const fcl::CollisionRequest& v) noexcept {
+    size_t offset = 0;
+    offset += serialize(mem + offset, v.num_max_contacts);
+    offset += serialize(mem + offset, v.enable_contact);
+    //offset += serialize(mem + offset, v.num_max_cost_sources);
+    //offset += serialize(mem + offset, v.enable_cost);
+    //offset += serialize(mem + offset, v.use_approximate_cost);
+    //offset += serialize(mem + offset, Cast(v.gjk_solver_type));
+    return offset;
 }
 
-size_t Serialize(std::ostream& os, const fcl::DistanceRequest& v) {
-    size_t size = 0;
-    size += Serialize(os, v.enable_nearest_points);
-    size += Serialize(os, v.rel_err);
-    size += Serialize(os, v.abs_err);
-    //size += Serialize(os, Cast(v.gjk_solver_type));
-    return size;
+uint64_t serialize(uint8_t* const mem, const fcl::DistanceRequest& v) noexcept {
+    size_t offset = 0;
+    offset += serialize(mem + offset, v.enable_nearest_points);
+    offset += serialize(mem + offset, v.rel_err);
+    offset += serialize(mem + offset, v.abs_err);
+    //offset += serialize(mem + offset, Cast(v.gjk_solver_type));
+    return offset;
 }
 
 /// Deserialization ==================================================================================================
 
-std::filebuf OpenMemoryAsFile(void* memptr, size_t size) {
-    FILE* fileptr = ::fmemopen(memptr, size, "r");
-    return __gnu_cxx::stdio_filebuf<char>(fileptr, std::ios::binary, size);
+template <>
+uint64_t deserialize<bool>(const uint8_t* const mem, bool& v) {
+    uint8_t val;
+    uint64_t offset = deserialize<uint8_t>(mem, val);
+    v = (val != 0);
+    return offset;
 }
 
-template <>
-bool DeSerialize<bool>(std::istream& is) {
-    return (DeSerialize<uint8_t>(is) != 0);
+uint64_t deserialize(const uint8_t* const mem, fcl::Vec3f& v) {
+    uint64_t offset = 0;
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, v[0]);
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, v[1]);
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, v[2]);
+    return offset;
 }
-
-template <>
-fcl::Vec3f DeSerialize<fcl::Vec3f>(std::istream& is) {
-    fcl::Vec3f v;
-    v[0] = DeSerialize<decltype(v[0])>(is);
-    v[1] = DeSerialize<decltype(v[1])>(is);
-    v[2] = DeSerialize<decltype(v[2])>(is);
-    return v;
+uint64_t deserialize(const uint8_t* const mem, fcl::Quaternion3f& v) {
+    uint64_t offset = 0;
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getW());
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getX());
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getY());
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getZ());
+    return offset;
 }
-
-template <>
-fcl::Quaternion3f DeSerialize<fcl::Quaternion3f>(std::istream& is) {
-    fcl::Quaternion3f v;
-    v.getW() = DeSerialize<decltype(v.getW())>(is);
-    v.getX() = DeSerialize<decltype(v.getX())>(is);
-    v.getY() = DeSerialize<decltype(v.getY())>(is);
-    v.getZ() = DeSerialize<decltype(v.getZ())>(is);
-    return v;
+uint64_t deserialize(const uint8_t* const mem, fcl::Contact& v) {
+    uint64_t offset = 0;
+    offset = deserialize<decltype(v.b1)>(mem + offset, v.b1);
+    offset = deserialize<decltype(v.b2)>(mem + offset, v.b2);
+    offset = deserialize<decltype(v.normal)>(mem + offset, v.normal);
+    offset = deserialize<decltype(v.pos)>(mem + offset, v.pos);
+    offset = deserialize<decltype(v.penetration_depth)>(mem + offset, v.penetration_depth);
+    return offset;
 }
-
-template <>
-fcl::Contact DeSerialize<fcl::Contact>(std::istream& is) {
-    fcl::Contact v;
-    v.b1 = DeSerialize<decltype(v.b1)>(is);
-    v.b2 = DeSerialize<decltype(v.b2)>(is);
-    v.normal = DeSerialize<decltype(v.normal)>(is);
-    v.pos = DeSerialize<decltype(v.pos)>(is);
-    v.penetration_depth = DeSerialize<decltype(v.penetration_depth)>(is);
-    return v;
+uint64_t deserialize(const uint8_t* const mem, fcl::CostSource& v) {
+    uint64_t offset = 0;
+    offset = deserialize<decltype(v.aabb_min)>(mem + offset, v.aabb_min);
+    offset = deserialize<decltype(v.aabb_max)>(mem + offset, v.aabb_max);
+    offset = deserialize<decltype(v.cost_density)>(mem + offset, v.cost_density);
+    offset = deserialize<decltype(v.total_cost)>(mem + offset, v.total_cost);
+    return offset;
 }
-
-template <>
-fcl::CostSource DeSerialize<fcl::CostSource>(std::istream& is) {
-    fcl::CostSource v;
-    v.aabb_min = DeSerialize<decltype(v.aabb_min)>(is);
-    v.aabb_max = DeSerialize<decltype(v.aabb_max)>(is);
-    v.cost_density = DeSerialize<decltype(v.cost_density)>(is);
-    v.total_cost = DeSerialize<decltype(v.total_cost)>(is);
-    return v;
-}
-
-template <>
-fcl::CollisionResult DeSerialize<fcl::CollisionResult>(std::istream& is) {
-    fcl::CollisionResult result;
-    result.clear();
-    size_t numContacts = DeSerialize<size_t>(is);
+uint64_t deserialize(const uint8_t* const mem, fcl::CollisionResult& v) {
+    uint64_t offset = 0;
+    v.clear();
+    size_t numContacts = 0;
+    offset += deserialize<size_t>(mem + offset, numContacts);
     while (numContacts-- > 0) {
-        result.addContact(DeSerialize<fcl::Contact>(is));
+        fcl::Contact contact;
+        offset += deserialize<fcl::Contact>(mem + offset, contact);
+        v.addContact(std::move(contact));
     }
-    size_t numCostSources = DeSerialize<size_t>(is);
-    while (numCostSources-- > 0) {
-        result.addCostSource(DeSerialize<fcl::CostSource>(is), std::numeric_limits<size_t>::max());
+    size_t numCostSource = 0;
+    offset += deserialize<size_t>(mem + offset, numCostSource);
+    while (numCostSource-- > 0) {
+        fcl::CostSource costSource;
+        offset += deserialize<fcl::CostSource>(mem + offset, costSource);
+        v.addCostSource(std::move(costSource), std::numeric_limits<size_t>::max());
     }
-    return result;
+    return offset;
 }
-
-template <>
-fcl::DistanceResult DeSerialize<fcl::DistanceResult>(std::istream& is) {
-    fcl::DistanceResult result;
-    result.clear();
-    result.min_distance = DeSerialize<decltype(result.min_distance)>(is);
-    result.b1 = DeSerialize<decltype(result.b1)>(is);
-    result.b2 = DeSerialize<decltype(result.b2)>(is);
-    return result;
+uint64_t deserialize(const uint8_t* const mem, fcl::DistanceResult& v) {
+    uint64_t offset = 0;
+    v.clear();
+    offset += deserialize<decltype(v.min_distance)>(mem + offset, v.min_distance);
+    offset = deserialize<decltype(v.b1)>(mem + offset, v.b1);
+    offset = deserialize<decltype(v.b2)>(mem + offset, v.b2);
+    return offset;
 }
 
 } // namespace ivshmem
