@@ -1,6 +1,6 @@
 // -*- coding: utf-8 -*-
-#ifndef OPENRAVE_FCL_COLLISION
-#define OPENRAVE_FCL_COLLISION
+#ifndef OPENRAVE_IVSHMEM_INTERFACE
+#define OPENRAVE_IVSHMEM_INTERFACE
 
 #include <boost/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
@@ -215,9 +215,20 @@ private:
         return false;
     }
 
+    // ===== Diverted collision functions
+    std::size_t collide(const fcl::CollisionObject* o1, const fcl::CollisionObject* o2,
+                        const fcl::CollisionRequest& request,
+                        fcl::CollisionResult& result);
+
+    std::size_t collide(const fcl::CollisionGeometry* o1, const fcl::Transform3f& tf1,
+                        const fcl::CollisionGeometry* o2, const fcl::Transform3f& tf2,
+                        const fcl::CollisionRequest& request,
+                        fcl::CollisionResult& result);
+
     TripleBufferedSharedIOMemory _shmem;
     IVShMemServer _ivshmem_server;
     std::thread _ivshmem_thread;
+    uint64_t _query_id;
 
     int _options;
     boost::shared_ptr<FCLSpace> _fclspace;
@@ -252,4 +263,4 @@ BroadPhaseCollisionManagerPtr CreateManagerFromBroadphaseAlgorithm(std::string c
 
 } // namespace ivshmem
 
-#endif
+#endif // OPENRAVE_IVSHMEM_INTERFACE

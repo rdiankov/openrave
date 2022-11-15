@@ -19,6 +19,7 @@
 
 #include <array>
 #include <atomic>
+#include <condition_variable>
 #include <string>
 #include <vector>
 
@@ -62,6 +63,15 @@ public:
     // Convenience overload: Assume there is only one peer.
     void InterruptPeer() const noexcept {
         InterruptPeer(_peers[0].id);
+    }
+
+    // Need to wait until at least one collision system comes online.
+    void Wait(std::mutex& mutex) {
+        std::unique_lock<std::mutex> lock(mutex);
+        std::condition_variable cv;
+        cv.wait(lock, [this]() {
+            return (!_peers.empty()) || _stop.load();
+        });
     }
 
     /// This object is in an invalid state if:
