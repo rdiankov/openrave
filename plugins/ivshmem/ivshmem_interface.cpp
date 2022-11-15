@@ -249,12 +249,6 @@ void IVShMemInterface::RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     _fclspace->RemoveUserData(pbody);
 }
 
-bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
-{
-    // TODO : tailor this case when stuff become stable enough
-    return CheckCollision(pbody1, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
-}
-
 bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
 {
     if( !!report ) {
@@ -292,12 +286,6 @@ bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pb
     };
     body1Manager.GetManager()->collide(body2Manager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseCollision);
     return query._bCollision;
-}
-
-bool IVShMemInterface::CheckCollision(LinkConstPtr plink,CollisionReportPtr report)
-{
-    // TODO : tailor this case when stuff become stable enough
-    return CheckCollision(plink, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
 }
 
 bool IVShMemInterface::CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report)
@@ -389,6 +377,12 @@ bool IVShMemInterface::CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,
     return query._bCollision;
 }
 
+bool IVShMemInterface::CheckCollision(LinkConstPtr plink,CollisionReportPtr report)
+{
+    // TODO : tailor this case when stuff become stable enough
+    return CheckCollision(plink, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
+}
+
 bool IVShMemInterface::CheckCollision(LinkConstPtr plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report)
 {
     if( !!report ) {
@@ -420,6 +414,12 @@ bool IVShMemInterface::CheckCollision(LinkConstPtr plink, std::vector<KinBodyCon
     return query._bCollision;
 }
 
+bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
+{
+    // TODO : tailor this case when stuff become stable enough
+    return CheckCollision(pbody1, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
+}
+
 bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report)
 {
     if( !!report ) {
@@ -447,24 +447,6 @@ bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody, std::vector<KinBody
     envManager.GetManager()->collide(bodyManager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseCollision);
 
     return query._bCollision;
-}
-
-bool IVShMemInterface::CheckCollision(const RAY& ray, LinkConstPtr plink,CollisionReportPtr report)
-{
-    RAVELOG_WARN("fcl doesn't support Ray collisions\n");
-    return false; //TODO
-}
-
-bool IVShMemInterface::CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
-{
-    RAVELOG_WARN("fcl doesn't support Ray collisions\n");
-    return false; //TODO
-}
-
-bool IVShMemInterface::CheckCollision(const RAY& ray, CollisionReportPtr report)
-{
-    RAVELOG_WARN("fcl doesn't support Ray collisions\n");
-    return false; //TODO
 }
 
 bool IVShMemInterface::CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
@@ -731,24 +713,21 @@ bool IVShMemInterface::CheckStandaloneSelfCollision(LinkConstPtr plink, Collisio
 
 bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
     CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
-    return pcb->_pchecker->CheckNarrowPhaseCollision(o1, o2, pcb);
-}
-
-bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
-{
+    auto checker = pcb->_pchecker;
     if( pcb->_bStopChecking ) {
         return true;     // don't test anymore
     }
 
 //        _o1 = o1;
 //        _o2 = o2;
-    std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = GetCollisionLink(*o1), o2info = GetCollisionLink(*o2);
+    std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = checker->GetCollisionLink(*o1);
+    std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o2info = checker->GetCollisionLink(*o2);
 
     if( !o1info.second ) {
         if( !o1info.first ) {
-            if( _bParentlessCollisionObject ) {
+            if( checker->_bParentlessCollisionObject ) {
                 if( !!o2info.second ) {
-                    RAVELOG_WARN_FORMAT("env=%s, fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", GetEnv()->GetNameId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
+                    RAVELOG_WARN_FORMAT("env=%s, fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", checker->GetEnv()->GetNameId() % o1 % o2info.second->GetParent()->GetName() % o2info.second->GetName());
                 }
             }
             return false;
@@ -757,9 +736,9 @@ bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::
     }
     if( !o2info.second ) {
         if( !o2info.first ) {
-            if( _bParentlessCollisionObject ) {
+            if( checker->_bParentlessCollisionObject ) {
                 if( !!o1info.second ) {
-                    RAVELOG_WARN_FORMAT("env=%s, link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", GetEnv()->GetNameId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
+                    RAVELOG_WARN_FORMAT("env=%s, link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", checker->GetEnv()->GetNameId() % o1info.second->GetParent()->GetName() % o1info.second->GetName() % o2);
                 }
             }
             return false;
@@ -793,7 +772,8 @@ bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::
             return false;
         }
 
-        LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1), pLINK2 = _fclspace->GetLinkInfo(*plink2);
+        LinkInfoPtr pLINK1 = checker->_fclspace->GetLinkInfo(*plink1);
+        LinkInfoPtr pLINK2 = checker->_fclspace->GetLinkInfo(*plink2);
 
         //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
         FOREACH(itgeompair1, pLINK1->vgeoms) {
@@ -808,7 +788,7 @@ bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::
         }
     }
     else if( !!plink1 ) {
-        LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1);
+        LinkInfoPtr pLINK1 = checker->_fclspace->GetLinkInfo(*plink1);
         FOREACH(itgeompair1, pLINK1->vgeoms) {
             if( itgeompair1->second->getAABB().overlap(o2->getAABB()) ) {
                 CheckNarrowPhaseGeomCollision(itgeompair1->second.get(), o2, pcb);
@@ -819,7 +799,7 @@ bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::
         }
     }
     else if( !!plink2 ) {
-        LinkInfoPtr pLINK2 = _fclspace->GetLinkInfo(*plink2);
+        LinkInfoPtr pLINK2 = checker->_fclspace->GetLinkInfo(*plink2);
         FOREACH(itgeompair2, pLINK2->vgeoms) {
             if( itgeompair2->second->getAABB().overlap(o1->getAABB()) ) {
                 CheckNarrowPhaseGeomCollision(o1, itgeompair2->second.get(), pcb);
@@ -830,7 +810,7 @@ bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::
         }
     }
 
-    if( pcb->_bCollision && !(_options & OpenRAVE::CO_AllLinkCollisions) ) {
+    if( pcb->_bCollision && !(checker->_options & OpenRAVE::CO_AllLinkCollisions) ) {
         pcb->_bStopChecking = true; // stop checking collision
     }
 
@@ -840,60 +820,51 @@ bool IVShMemInterface::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::
 
 bool IVShMemInterface::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
     CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
-    return pcb->_pchecker->CheckNarrowPhaseGeomCollision(o1, o2, pcb);
-}
-
-bool IVShMemInterface::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb)
-{
     if( pcb->_bStopChecking ) {
         return true; // don't test anymore
     }
-
     pcb->_result.clear();
+
+    auto checker = pcb->_pchecker;
 
     size_t numContacts = fcl::collide(o1, o2, pcb->_request, pcb->_result);
 
     if( numContacts > 0 ) {
         if( !!pcb->_report ) {
-            std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = GetCollisionLink(*o1), o2info = GetCollisionLink(*o2);
-            std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> o1geominfo = GetCollisionGeometry(*o1), o2geominfo = GetCollisionGeometry(*o2);
+            std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = checker->GetCollisionLink(*o1);
+            std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o2info = checker->GetCollisionLink(*o2);
+            std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> o1geominfo = checker->GetCollisionGeometry(*o1);
+            std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> o2geominfo = checker->GetCollisionGeometry(*o2);
 
             LinkConstPtr& plink1 = o1info.second;
             LinkConstPtr& plink2 = o2info.second;
             GeometryConstPtr& pgeom1 = o1geominfo.second;
             GeometryConstPtr& pgeom2 = o2geominfo.second;
 
-            // plink1 or plink2 can be None if object is standalone (ie coming from trimesh)
-
-            //LinkConstPtr plink1 = GetCollisionLink(*o1), plink2 = GetCollisionLink(*o2);
-
-            // these should be useless, just to make sure I haven't messed up
-            //BOOST_ASSERT( plink1 && plink2 );
-            //BOOST_ASSERT( plink1->IsEnabled() && plink2->IsEnabled() );
             if( !!plink1 && !!plink2 ) {
                 BOOST_ASSERT( pcb->bselfCollision || !plink1->GetParent()->IsAttached(*plink2->GetParent()));
             }
 
-            _reportcache.Reset(_options);
-            _reportcache.plink1 = plink1;
-            _reportcache.plink2 = plink2;
-            _reportcache.pgeom1 = pgeom1;
-            _reportcache.pgeom2 = pgeom2;
+            checker->_reportcache.Reset(checker->_options);
+            checker->_reportcache.plink1 = plink1;
+            checker->_reportcache.plink2 = plink2;
+            checker->_reportcache.pgeom1 = pgeom1;
+            checker->_reportcache.pgeom2 = pgeom2;
 
             // TODO : eliminate the contacts points (insertion sort (std::lower) + binary_search ?) duplicated
             // How comes that there are duplicated contacts points ?
-            if( _options & (OpenRAVE::CO_Contacts | OpenRAVE::CO_AllGeometryContacts) ) {
-                _reportcache.contacts.resize(numContacts);
+            if( checker->_options & (OpenRAVE::CO_Contacts | OpenRAVE::CO_AllGeometryContacts) ) {
+                checker->_reportcache.contacts.resize(numContacts);
                 for(size_t i = 0; i < numContacts; ++i) {
                     fcl::Contact const &c = pcb->_result.getContact(i);
-                    _reportcache.contacts[i] = CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
+                    checker->_reportcache.contacts[i] = CollisionReport::CONTACT(ConvertVectorFromFCL(c.pos), ConvertVectorFromFCL(c.normal), c.penetration_depth);
                 }
             }
 
 
             if( pcb->_bHasCallbacks ) {
                 OpenRAVE::CollisionAction action = OpenRAVE::CA_DefaultAction;
-                CollisionReportPtr preport(&_reportcache, OpenRAVE::utils::null_deleter());
+                CollisionReportPtr preport(&checker->_reportcache, OpenRAVE::utils::null_deleter());
                 FOREACH(callback, pcb->GetCallbacks()) {
                     action = (*callback)(preport, false);
                     if( action == OpenRAVE::CA_Ignore ) {
@@ -902,18 +873,18 @@ bool IVShMemInterface::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, f
                 }
             }
 
-            pcb->_report->plink1 = _reportcache.plink1;
-            pcb->_report->plink2 = _reportcache.plink2;
-            pcb->_report->pgeom1 = _reportcache.pgeom1;
-            pcb->_report->pgeom2 = _reportcache.pgeom2;
+            pcb->_report->plink1 = checker->_reportcache.plink1;
+            pcb->_report->plink2 = checker->_reportcache.plink2;
+            pcb->_report->pgeom1 = checker->_reportcache.pgeom1;
+            pcb->_report->pgeom2 = checker->_reportcache.pgeom2;
             if( pcb->_report->contacts.size() == 0) {
-                pcb->_report->contacts.swap(_reportcache.contacts);
+                pcb->_report->contacts.swap(checker->_reportcache.contacts);
             } else {
                 pcb->_report->contacts.reserve(pcb->_report->contacts.size() + numContacts);
-                copy(_reportcache.contacts.begin(),_reportcache.contacts.end(), back_inserter(pcb->_report->contacts));
+                std::copy(checker->_reportcache.contacts.begin(), checker->_reportcache.contacts.end(), back_inserter(pcb->_report->contacts));
             }
 
-            if( _options & OpenRAVE::CO_AllLinkCollisions ) {
+            if( checker->_options & OpenRAVE::CO_AllLinkCollisions ) {
                 // We maintain vLinkColliding ordered
                 LinkPair linkPair = MakeLinkPair(plink1, plink2);
                 typedef std::vector< std::pair< LinkConstPtr, LinkConstPtr > >::iterator PairIterator;
@@ -924,7 +895,7 @@ bool IVShMemInterface::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, f
             }
 
             pcb->_bCollision = true;
-            if( !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts)) ) {
+            if( !(checker->_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts)) ) {
                 pcb->_bStopChecking = true; // stop checking collision
             }
             return pcb->_bStopChecking;
@@ -941,23 +912,21 @@ bool IVShMemInterface::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, f
 bool IVShMemInterface::CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data, fcl::FCL_REAL& dist)
 {
     CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
-    return pcb->_pchecker->CheckNarrowPhaseDistance(o1, o2, pcb, dist);
-}
-
-bool IVShMemInterface::CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb, fcl::FCL_REAL& dist) {
-    std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = GetCollisionLink(*o1), o2info = GetCollisionLink(*o2);
+    auto checker = pcb->_pchecker;
+    std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = checker->GetCollisionLink(*o1);
+    std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o2info = checker->GetCollisionLink(*o2);
 
     if( !o1info.second && !o1info.first ) {
         // o1 is standalone object
-        if( _bParentlessCollisionObject && !!o2info.second ) {
-            RAVELOG_WARN_FORMAT("env=%s, fcl::CollisionObject o1 %x collides with link2 %s:%s, but is ignored for distance computation", GetEnv()->GetNameId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
+        if( checker->_bParentlessCollisionObject && !!o2info.second ) {
+            RAVELOG_WARN_FORMAT("env=%s, fcl::CollisionObject o1 %x collides with link2 %s:%s, but is ignored for distance computation", checker->GetEnv()->GetNameId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
         }
         return false;
     }
     if( !o2info.second && !o2info.first ) {
         // o2 is standalone object
-        if( _bParentlessCollisionObject && !!o1info.second ) {
-            RAVELOG_WARN_FORMAT("env=%s, link1 %s:%s collides with fcl::CollisionObject o2 %x, but is ignored for distance computation", GetEnv()->GetNameId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
+        if( checker->_bParentlessCollisionObject && !!o1info.second ) {
+            RAVELOG_WARN_FORMAT("env=%s, link1 %s:%s collides with fcl::CollisionObject o2 %x, but is ignored for distance computation", checker->GetEnv()->GetNameId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
         }
         return false;
     }
@@ -985,7 +954,8 @@ bool IVShMemInterface::CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::C
 
     if( !!plink1 && !!plink2 ) {
 
-        LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1), pLINK2 = _fclspace->GetLinkInfo(*plink2);
+        LinkInfoPtr pLINK1 = checker->_fclspace->GetLinkInfo(*plink1);
+        LinkInfoPtr pLINK2 = checker->_fclspace->GetLinkInfo(*plink2);
 
         //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
         FOREACH(itgeompair1, pLINK1->vgeoms) {
@@ -995,13 +965,13 @@ bool IVShMemInterface::CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::C
         }
     }
     else if( !!plink1 ) {
-        LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1);
+        LinkInfoPtr pLINK1 = checker->_fclspace->GetLinkInfo(*plink1);
         FOREACH(itgeompair1, pLINK1->vgeoms) {
             CheckNarrowPhaseGeomDistance(itgeompair1->second.get(), o2, pcb, dist);
         }
     }
     else if( !!plink2 ) {
-        LinkInfoPtr pLINK2 = _fclspace->GetLinkInfo(*plink2);
+        LinkInfoPtr pLINK2 = checker->_fclspace->GetLinkInfo(*plink2);
         FOREACH(itgeompair2, pLINK2->vgeoms) {
             CheckNarrowPhaseGeomDistance(o1, itgeompair2->second.get(), pcb, dist);
         }
@@ -1012,11 +982,8 @@ bool IVShMemInterface::CheckNarrowPhaseDistance(fcl::CollisionObject *o1, fcl::C
 
 bool IVShMemInterface::CheckNarrowPhaseGeomDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data, fcl::FCL_REAL& dist) {
     CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
-    return pcb->_pchecker->CheckNarrowPhaseGeomDistance(o1, o2, pcb, dist);
-}
+    auto checker = pcb->_pchecker;
 
-
-bool IVShMemInterface::CheckNarrowPhaseGeomDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb, fcl::FCL_REAL& dist) {
     // Compute the min distance between the objects.
     fcl::distance(o1, o2, pcb->_distanceRequest, pcb->_distanceResult);
 
@@ -1074,16 +1041,12 @@ std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> IVShMemI
     return std::make_pair(geom_raw, GeometryConstPtr());
 }
 
-BroadPhaseCollisionManagerPtr IVShMemInterface::_CreateManager() {
-    return CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
-}
-
 FCLCollisionManagerInstance& IVShMemInterface::_GetBodyManager(KinBodyConstPtr pbody, bool bactiveDOFs)
 {
     _bParentlessCollisionObject = false;
     BODYMANAGERSMAP::iterator it = _bodymanagers.find(std::make_pair(pbody.get(), (int)bactiveDOFs));
     if( it == _bodymanagers.end() ) {
-        FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
+        FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm)));
         p->InitBodyManager(pbody, bactiveDOFs);
         it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody.get(), (int)bactiveDOFs), p)).first;
         
@@ -1124,7 +1087,7 @@ FCLCollisionManagerInstance& IVShMemInterface::_GetEnvManager(const std::vector<
 
     EnvManagersMap::iterator it = _envmanagers.find(excludedBodyEnvIndices);
     if( it == _envmanagers.end() ) {
-        FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
+        FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm)));
         vector<int8_t> vecExcludedBodyEnvIndices(GetEnv()->GetMaxEnvironmentBodyIndex() + 1, 0);
         for (int excludeBodyIndex : excludedBodyEnvIndices) {
             vecExcludedBodyEnvIndices.at(excludeBodyIndex) = 1;
