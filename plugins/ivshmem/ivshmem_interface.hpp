@@ -12,42 +12,10 @@
 #include "fclspace.h"
 #include "fclmanagercache.h"
 
-#include "fclstatistics.h"
-
-#define FCLRAVE_CHECKPARENTLESS
-
-namespace fclrave {
+namespace ivshmem {
 
 #define START_TIMING_OPT(statistics, label, options, isRobot);           \
     START_TIMING(statistics, boost::str(boost::format("%s,%x,%d")%label%options%isRobot))
-
-#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
-static EnvironmentMutex log_collision_use_mutex;
-#endif // FCLRAVE_COLLISION_OBJECTS_STATISTIC
-
-#ifdef NARROW_COLLISION_CACHING
-typedef std::pair<fcl::CollisionObject*, fcl::CollisionObject*> CollisionPair;
-
-} // fclrave
-
-namespace std {
-template<>
-struct hash<fclrave::CollisionPair>
-{
-    size_t operator()(const fclrave::CollisionPair& collpair) const {
-        static const size_t shift = (size_t)log2(1 + sizeof(fcl::CollisionObject*));
-        size_t seed = (size_t)(collpair.first) >> shift;
-        boost::hash_combine(seed, (size_t)(collpair.second) >> shift);
-        return seed;
-    }
-
-};
-} // std
-
-namespace fclrave {
-
-typedef std::unordered_map<CollisionPair, fcl::Vec3f> NarrowCollisionCache;
-#endif // NARROW_COLLISION_CACHING
 
 typedef FCLSpace::FCLKinBodyInfoConstPtr FCLKinBodyInfoConstPtr;
 typedef FCLSpace::FCLKinBodyInfoPtr FCLKinBodyInfoPtr;
@@ -58,16 +26,16 @@ inline bool IsIn(T const& x, std::vector<T> const &collection) {
     return std::find(collection.begin(), collection.end(), x) != collection.end();
 }
 
-class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
+class IVShMemInterface : public OpenRAVE::CollisionCheckerBase
 {
 public:
     class CollisionCallbackData {
 public:
-        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded);
+        CollisionCallbackData(boost::shared_ptr<IVShMemInterface> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded);
 
         const std::list<EnvironmentBase::CollisionCallbackFn>& GetCallbacks();
 
-        boost::shared_ptr<FCLCollisionChecker> _pchecker;
+        boost::shared_ptr<IVShMemInterface> _pchecker;
         fcl::CollisionRequest _request;
         fcl::CollisionResult _result;
         fcl::DistanceRequest _distanceRequest;
@@ -87,9 +55,9 @@ public:
 
     typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
 
-    FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+    IVShMemInterface(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 
-    ~FCLCollisionChecker() override;
+    ~IVShMemInterface() override;
 
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
@@ -196,8 +164,8 @@ public:
 
 
 private:
-    inline boost::shared_ptr<FCLCollisionChecker> shared_checker() {
-        return boost::static_pointer_cast<FCLCollisionChecker>(shared_from_this());
+    inline boost::shared_ptr<IVShMemInterface> shared_checker() {
+        return boost::static_pointer_cast<IVShMemInterface>(shared_from_this());
     }
 
     static bool CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data);
@@ -217,10 +185,6 @@ private:
 
     bool CheckNarrowPhaseGeomDistance(fcl::CollisionObject *o1, fcl::CollisionObject *o2, CollisionCallbackData* pcb, fcl::FCL_REAL& dist);
 
-#ifdef NARROW_COLLISION_CACHING
-    static CollisionPair MakeCollisionPair(fcl::CollisionObject* o1, fcl::CollisionObject* o2);
-#endif
-
     static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2);
 
     std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> GetCollisionLink(const fcl::CollisionObject &collObj);
@@ -234,18 +198,6 @@ private:
     /// \brief gets environment manager corresponding to excludedBodyEnvIndices
     /// \param excludedBodyEnvIndices vector of environment body indices for excluded bodies. sorted in ascending order
     FCLCollisionManagerInstance& _GetEnvManager(const std::vector<int>& excludedBodyEnvIndices);
-
-    void _PrintCollisionManagerInstanceB(const KinBody& body, FCLCollisionManagerInstance& manager);
-
-    void _PrintCollisionManagerInstanceSelf(const KinBody& body);
-
-    void _PrintCollisionManagerInstanceBL(const KinBody& body, FCLCollisionManagerInstance& manager, const KinBody::Link& link);
-
-    void _PrintCollisionManagerInstanceBE(const KinBody& body, FCLCollisionManagerInstance& manager, FCLCollisionManagerInstance& envManager);
-
-    void _PrintCollisionManagerInstance(const KinBody& body1, FCLCollisionManagerInstance& manager1, const KinBody& body2, FCLCollisionManagerInstance& manager2);
-
-    void _PrintCollisionManagerInstanceLE(const KinBody::Link& link, FCLCollisionManagerInstance& envManager);
 
     inline bool _IsEnabled(const KinBody& body)
     {
@@ -279,19 +231,6 @@ private:
     int _nGetEnvManagerCacheClearCount; ///< count down until cache can be cleared
     int _maxNumEnvManagers = 0; ///< for debug, record max size of _envmanagers.
 
-#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
-    std::map<fcl::CollisionObject*, int> _currentlyused;
-    std::map<fcl::CollisionObject*, std::map<int, int> > _usestatistics;
-#endif
-
-#ifdef NARROW_COLLISION_CACHING
-    NarrowCollisionCache mCollisionCachedGuesses;
-#endif
-
-#ifdef FCLUSESTATISTICS
-    FCLStatisticsPtr _statistics;
-#endif
-
     // In order to reduce allocations during collision checking
 
     CollisionReport _reportcache;
@@ -308,6 +247,6 @@ private:
 // TODO : This is becoming really stupid, I should just add optional additional data for DynamicAABBTree
 BroadPhaseCollisionManagerPtr CreateManagerFromBroadphaseAlgorithm(std::string const &algorithm);
 
-} // fclrave
+} // namespace ivshmem
 
 #endif

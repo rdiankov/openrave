@@ -98,7 +98,7 @@ void IVShMemServer::Thread() try {
     }
 
     ::epoll_event events[MAX_EPOLL_EVENTS];
-    std::atomic_bool stop = false;
+    std::atomic_bool stop(false);
     int16_t guest_id = 0; // ivshmem only provides 16 bits of client ID.
 
     while (!stop) {

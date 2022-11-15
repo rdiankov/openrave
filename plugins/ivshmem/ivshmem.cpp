@@ -13,37 +13,37 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "fclrave.h"
+#include "ivshmem.h"
 #include "plugindefs.h"
-#include "fclcollision.h"
+#include "ivshmem_interface.hpp"
 
-const std::string FCLRavePlugin::_pluginname = "FCLRavePlugin";
+const std::string IVShMem::_pluginname = "ivshmem";
 
-FCLRavePlugin::FCLRavePlugin()
+IVShMem::IVShMem()
 {
-    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("fcl_");
+    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("ivshmem");
 }
 
-FCLRavePlugin::~FCLRavePlugin() {}
+IVShMem::~IVShMem() {}
 
-OpenRAVE::InterfaceBasePtr FCLRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr IVShMem::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
-    if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-        return boost::make_shared<fclrave::FCLCollisionChecker>(penv, sinput);
+    if( type == OpenRAVE::PT_CollisionChecker && interfacename == "ivshmem" ) {
+        return boost::make_shared<ivshmem::IVShMemInterface>(penv, sinput);
     }
     return OpenRAVE::InterfaceBasePtr();
 }
 
-const RavePlugin::InterfaceMap& FCLRavePlugin::GetInterfaces() const
+const RavePlugin::InterfaceMap& IVShMem::GetInterfaces() const
 {
     return _interfaces;
 }
 
-const std::string& FCLRavePlugin::GetPluginName() const
+const std::string& IVShMem::GetPluginName() const
 {
     return _pluginname;
 }
 
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
-    return new FCLRavePlugin();
+    return new IVShMem();
 }

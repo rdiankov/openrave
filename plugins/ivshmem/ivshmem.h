@@ -18,9 +18,9 @@
 
 #include <openrave/plugin.h>
 
-struct FCLRavePlugin : public RavePlugin {
-    FCLRavePlugin();
-    ~FCLRavePlugin() override;
+struct IVShMem : public RavePlugin {
+    IVShMem();
+    ~IVShMem() override;
     OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
     const InterfaceMap& GetInterfaces() const override;
     const std::string& GetPluginName() const override;

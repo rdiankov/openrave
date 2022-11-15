@@ -2,7 +2,7 @@
 
 #include "fclspace.h"
 
-namespace fclrave {
+namespace ivshmem {
 
 FCLSpace::FCLKinBodyInfo::FCLKinBodyInfo()
     : nLastStamp(0)
@@ -152,9 +152,6 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
         //link->nLastStamp = pinfo->nLastStamp;
         linkinfo->bodylinkname = pbody->GetName() + "/" + plink->GetName();
         pinfo->vlinks.push_back(linkinfo);
-#ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
-        RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", linkinfo->linkBV.second.get()%linkinfo->bodylinkname);
-#endif
     }
 
     pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
