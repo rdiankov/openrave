@@ -672,7 +672,7 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
     return _vGeometries.at(index);
 }
 
-void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoPtr>& geometries, bool bForceRecomputeMeshCollision)
+void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
 {
     _vGeometries.resize(geometries.size());
     for(size_t i = 0; i < geometries.size(); ++i) {

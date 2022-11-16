@@ -1533,7 +1533,7 @@ object PyLink::GetGeometries() {
 
 void PyLink::InitGeometries(object ogeometryinfos)
 {
-    std::vector<KinBody::GeometryInfoPtr> geometries(len(ogeometryinfos));
+    std::vector<KinBody::GeometryInfoConstPtr> geometries(len(ogeometryinfos));
     for(size_t i = 0; i < geometries.size(); ++i) {
         PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometryinfos[i]);
         if( !pygeom ) {
