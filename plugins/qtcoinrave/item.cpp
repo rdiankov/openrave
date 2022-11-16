@@ -239,6 +239,7 @@ void KinBodyItem::Load()
                     psep->addChild(s);
                     break;
                 }
+                case GT_CalibrationBoard:
                 case GT_Box: {
                     Vector v;
                     SoCube* c = new SoCube();
