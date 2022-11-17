@@ -159,6 +159,9 @@ public:
         bool _isPartial = true;
         py::object _dofValues = py::none_();
         py::object _readableInterfaces = py::none_();
+
+        py::object _files = py::none_();
+
         virtual std::string __str__();
         virtual py::object __unicode__();
 
