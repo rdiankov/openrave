@@ -290,6 +290,14 @@ bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pb
         }
         body1Manager.GetManager()->distance(body2Manager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseDistance);
     };
+
+    // Block until a collision checker comes online.
+    // TODO: Need to figure out a better way to do this somehow.
+    while (_ivshmem_server.NumPeers() == 0) {
+        RAVELOG_WARN("No collision checkers are online. Skip calculation and sleep for 1 second.");
+        std::this_thread::sleep_for(std::chrono::seconds{1});
+    }
+
     body1Manager.GetManager()->collide(body2Manager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseCollision);
     return query._bCollision;
 }
@@ -1124,13 +1132,6 @@ enum class QueryType : uint16_t {
 // ===== Diverted collision functions
 std::size_t IVShMemInterface::collide(const fcl::CollisionObject* o1, const fcl::CollisionObject* o2, const fcl::CollisionRequest& request, fcl::CollisionResult& result)
 {
-
-    if (_ivshmem_server.NumPeers() == 0) {
-        RAVELOG_WARN("No collision checkers are online. Skip calculation and sleep for 1 second.");
-        std::this_thread::sleep_for(std::chrono::seconds{1});
-        return 0;
-    }
-
     uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id);
@@ -1142,14 +1143,18 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionObject* o1, const fcl:
     _shmem.write_ready();
     _ivshmem_server.InterruptPeer();
 
-    //uintptr_t read_addr = _shmem.get_readable();
-    //std::filebuf ifb = ivshmem::OpenMemoryAsFile(reinterpret_cast<void*>(read_addr), _shmem.readable_size());
-    //std::istream is(&ifb);
-    //uint64_t query_id = query_id = ivshmem::DeSerialize<uint64_t>(is);
-    //RAVELOG_DEBUG("Got back query ID %lu", query_id);
-    //result = ivshmem::DeSerialize<fcl::CollisionResult>(is);
-    //return result.numContacts();
-    return 0;
+    _shmem.read_ready();
+    const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
+    offset = 0;
+    uint64_t query_id = 0; // returned query ID
+    //do {
+        offset = ivshmem::deserialize<uint64_t>(read_addr, query_id);
+        RAVELOG_INFO("Got back query ID %lu", query_id);
+    //} while(query_id != _query_id);
+    offset += ivshmem::deserialize(read_addr + offset, result);
+    RAVELOG_INFO("Query %lu, read %lu bytes", query_id, offset);
+    RAVELOG_INFO("num contacts %lu", result.numContacts());
+    return result.numContacts();
 }
 
 std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fcl::Transform3f& tf1,
