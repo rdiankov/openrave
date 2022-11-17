@@ -88,19 +88,18 @@ uint64_t serialize(uint8_t* const mem, const fcl::Cylinder& v) noexcept {
 
 uint64_t serialize(uint8_t* const mem, const std::shared_ptr<const fcl::CollisionGeometry>& v) noexcept {
     uint64_t offset = 0;
-    offset += serialize<uint16_t>(mem, v->getNodeType());
-    RAVELOG_INFO("Node type is %d", static_cast<uint16_t>(v->getNodeType()));
+    offset += serialize<uint16_t>(mem + offset, v->getNodeType());
     switch (v->getNodeType()) {
     case fcl::NODE_TYPE::BV_OBB: {
-        offset += serialize(mem, *static_cast<const fcl::BVHModel<fcl::OBB>*>(v.get()));
+        offset += serialize(mem + offset, *static_cast<const fcl::BVHModel<fcl::OBB>*>(v.get()));
         break;
     }
     case fcl::NODE_TYPE::GEOM_BOX: {
-        offset += serialize(mem, *static_cast<const fcl::Box*>(v.get()));
+        offset += serialize(mem + offset, *static_cast<const fcl::Box*>(v.get()));
         break;
     }
     case fcl::NODE_TYPE::GEOM_CYLINDER: {
-        offset += serialize(mem, *static_cast<const fcl::Cylinder*>(v.get()));
+        offset += serialize(mem + offset, *static_cast<const fcl::Cylinder*>(v.get()));
         break;
     }
     default: {
