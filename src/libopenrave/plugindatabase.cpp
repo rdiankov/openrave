@@ -306,7 +306,7 @@ bool DynamicRaveDatabase::_LoadPlugin(const std::string& strpath)
     }
     RavePlugin* plugin = nullptr;
     try {
-        plugin = static_cast<PluginExportFn_Create>(psym)();
+        plugin = reinterpret_cast<PluginExportFn_Create>(psym)();
     } catch (const std::exception& e) {
         RAVELOG_WARN_FORMAT("Failed to construct a RavePlugin from %s: %s", strpath % e.what());
     }
