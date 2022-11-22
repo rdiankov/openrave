@@ -60,6 +60,14 @@ static bool AddToEpoll(const FileDescriptor& fd, const FileDescriptor& ep_fd, ui
     return AddToEpoll(fd.get(), ep_fd.get(), flags);
 }
 
+static bool RemoveFromEpoll(int fd, int ep_fd) {
+    return ::epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, NULL) != -1;
+}
+
+static bool RemoveFromEpoll(const FileDescriptor& fd, const FileDescriptor& ep_fd) {
+    return RemoveFromEpoll(fd.get(), ep_fd.get());
+}
+
 IVShMemServer::IVShMemServer(std::string shmem_path)
     : _stop(false)
     , _shmem_path(std::move(shmem_path))
@@ -110,6 +118,7 @@ void IVShMemServer::Thread() try {
             // Signal event, it's time to stop
             if (fd == sig_fd.get()) {
                 _stop = true;
+                _cv.notify_all();
                 RAVELOG_INFO("Stop signal caught.");
                 break;
             }
@@ -120,16 +129,17 @@ void IVShMemServer::Thread() try {
                 if (!AddToEpoll(_peers.back().sock_fd, ep_fd)) {
                     throw std::runtime_error("Failed to register epoll event: "s + strerror(errno));
                 }
+                _cv.notify_one();
                 continue;
             }
             // Any event from guest socket means the guest has exited.
-            for (const auto& peer : _peers) {
+            for (const IVShMemPeer& peer : _peers) {
                 if (peer.sock_fd == fd) {
                     int msgdata = 0;
                     int msg = _ShMem_RecvMsg(fd, peer.id, msgdata);
                     if (msg == 0 && msgdata == -1) {
                         _RemoveGuest(peer.id);
-                        ::epoll_ctl(ep_fd.get(), EPOLL_CTL_DEL, fd, NULL);
+                        RemoveFromEpoll(fd, ep_fd.get());
                         ::close(fd);
                     }
                     break;

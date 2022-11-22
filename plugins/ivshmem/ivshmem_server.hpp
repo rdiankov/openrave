@@ -65,12 +65,12 @@ public:
         InterruptPeer(_peers[0].id);
     }
 
-    // Need to wait until at least one collision system comes online.
-    void Wait(std::mutex& mutex) {
-        std::unique_lock<std::mutex> lock(mutex);
-        std::condition_variable cv;
-        cv.wait(lock, [this]() {
-            return (!_peers.empty()) || _stop.load();
+    // Block calling thread until some condition becomes true.
+    template <typename Pred>
+    void Wait(Pred&& predicate) {
+        std::unique_lock<std::mutex> lock(_mtx);
+        _cv.wait(lock, [this, pred = std::move(predicate)]() {
+            return pred(*this) || _stop.load();
         });
     }
 
@@ -92,9 +92,6 @@ private:
 
     // Remove a guest from the peers list
     int _RemoveGuest(int64_t guest_id);
-
-    // Handle a signal from a guest, including exit signals (which will result in _RemoveGuest)
-    void _HandleGuest(int64_t guest_id);
 
     /// \brief Sends a signal to the peer. `message` must be a positive value if it is a control signal; otherwise it is ignored.
     /// Usually this message is the fd of the shared memory.
@@ -120,6 +117,9 @@ private:
         std::array<FileDescriptor, IVSHMEM_VECTOR_COUNT> vectors;
     };
     std::vector<IVShMemPeer> _peers;
+
+    std::mutex _mtx;
+    std::condition_variable _cv;
 
     std::function<size_t(int16_t, uint8_t*, size_t)> _onNewPeer = default_on_new_peer_fn;
 

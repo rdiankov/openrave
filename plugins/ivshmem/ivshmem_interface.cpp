@@ -257,6 +257,7 @@ void IVShMemInterface::RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
 
 bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
 {
+    RAVELOG_INFO("CheckCollision Kinbody Kinbody");
     if( !!report ) {
         report->Reset(_options);
     }
@@ -292,11 +293,9 @@ bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pb
     };
 
     // Block until a collision checker comes online.
-    // TODO: Need to figure out a better way to do this somehow.
-    while (_ivshmem_server.NumPeers() == 0) {
-        RAVELOG_WARN("No collision checkers are online. Skip calculation and sleep for 1 second.");
-        std::this_thread::sleep_for(std::chrono::seconds{1});
-    }
+    _ivshmem_server.Wait([](const IVShMemServer& srv) -> bool {
+        return srv.NumPeers() != 0;
+    });
 
     body1Manager.GetManager()->collide(body2Manager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseCollision);
     return query._bCollision;
@@ -1143,14 +1142,20 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionObject* o1, const fcl:
     _shmem.write_ready();
     _ivshmem_server.InterruptPeer();
 
+    //_ivshmem_server.Wait([this](const IVShMemServer& srv) -> bool {
+    //    _shmem.read_ready();
+    //    const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
+    //    uint64_t query_id = 0; // returned query ID
+    //    ivshmem::deserialize<uint64_t>(read_addr, query_id); // Read at offset 0
+    //    RAVELOG_INFO("Got back query ID %lu", query_id);
+    //    return query_id == this->_query_id;
+    //});
     _shmem.read_ready();
-    const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
     offset = 0;
+    const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
     uint64_t query_id = 0; // returned query ID
-    //do {
-        offset = ivshmem::deserialize<uint64_t>(read_addr, query_id);
-        RAVELOG_INFO("Got back query ID %lu", query_id);
-    //} while(query_id != _query_id);
+    offset = ivshmem::deserialize<uint64_t>(read_addr, query_id);
+
     offset += ivshmem::deserialize(read_addr + offset, result);
     RAVELOG_INFO("Query %lu, read %lu bytes", query_id, offset);
     RAVELOG_INFO("num contacts %lu", result.numContacts());
