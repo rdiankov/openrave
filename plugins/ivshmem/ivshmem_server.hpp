@@ -45,19 +45,6 @@ public:
         return _peers[0].id;
     }
 
-    // Set the callback fn when a new peer is registered.
-    // Function signature: peer_id, pointer to memory block, size of memory available.
-    // Function should return: number of bytes written, and -1 if there was an error.
-    // If the return value is > 0, an interrupt signal is also sent to the peer.
-    void OnNewPeer(std::function<size_t(int16_t, uint8_t*, size_t)> doOnNewPeer) {
-        _onNewPeer = std::move(doOnNewPeer);
-    }
-
-    // Overload of OnNewPeer to unset any existing callback function.
-    void OnNewPeer() {
-        _onNewPeer = default_on_new_peer_fn;
-    }
-
     void InterruptPeer(int64_t peerid) const noexcept;
 
     // Convenience overload: Assume there is only one peer.
@@ -88,17 +75,17 @@ private:
     void _InitSocket();
 
     // Add a new guest to the peers list
-    void _NewGuest(int64_t guest_id);
+    void _NewGuest(int16_t guest_id);
 
     // Remove a guest from the peers list
-    int _RemoveGuest(int64_t guest_id);
+    void _RemoveGuest(int16_t guest_id);
 
     /// \brief Sends a signal to the peer. `message` must be a positive value if it is a control signal; otherwise it is ignored.
     /// Usually this message is the fd of the shared memory.
     /// If peer_id is -1, then message is broadcast.
     /// Returns the result of ::sendmsg.
-    static int _ShMem_SendMsg(int sock_fd, int64_t peer_id, int message) noexcept;
-
+    // NOTE: peer_id is widened on purpose from 16 bits to 64 bits.
+    static int _ShMem_SendMsg(int sock_fd, int64_t peer_id, int  message) noexcept;
     static int _ShMem_RecvMsg(int sock_fd, int64_t peer_id, int& message) noexcept;
 
 private:
@@ -112,20 +99,14 @@ private:
 
     static constexpr int IVSHMEM_VECTOR_COUNT = 2;
     struct IVShMemPeer final {
+        int16_t id; // ivshmem only provides 16 bits of client ID.
         FileDescriptor sock_fd;
-        int64_t id;
         std::array<FileDescriptor, IVSHMEM_VECTOR_COUNT> vectors;
     };
     std::vector<IVShMemPeer> _peers;
 
     std::mutex _mtx;
     std::condition_variable _cv;
-
-    std::function<size_t(int16_t, uint8_t*, size_t)> _onNewPeer = default_on_new_peer_fn;
-
-    static size_t default_on_new_peer_fn(int16_t, uint8_t*, size_t) {
-        return 0;
-    }
 };
 
 #endif // OPENRAVE_IVSHMEM_SERVER_HPP

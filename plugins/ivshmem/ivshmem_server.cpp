@@ -106,7 +106,9 @@ void IVShMemServer::Thread() try {
     }
 
     ::epoll_event events[MAX_EPOLL_EVENTS];
-    int16_t guest_id = 0; // ivshmem only provides 16 bits of client ID.
+    // ivshmem only provides 16 bits of client ID.
+    // Start from 1 because 0 is reserved.
+    int16_t guest_id = 1;
 
     while (!_stop) {
         int num_fds = ::epoll_wait(ep_fd.get(), events, MAX_EPOLL_EVENTS, -1);
@@ -114,6 +116,7 @@ void IVShMemServer::Thread() try {
             throw std::runtime_error("Error caught in epoll_wait: "s + strerror(errno));
         }
         for (int i = 0; i < num_fds; ++i) {
+            if (_stop) break;
             int fd = events[i].data.fd;
             // Signal event, it's time to stop
             if (fd == sig_fd.get()) {
@@ -140,11 +143,9 @@ void IVShMemServer::Thread() try {
                     if (msg == 0 && msgdata == -1) {
                         _RemoveGuest(peer.id);
                         RemoveFromEpoll(fd, ep_fd.get());
-                        ::close(fd);
                     }
                     break;
                 }
-
             }
         }
     }
@@ -190,7 +191,7 @@ void IVShMemServer::_InitSocket() {
     }
 }
 
-void IVShMemServer::_NewGuest(int64_t guest_id) {
+void IVShMemServer::_NewGuest(int16_t guest_id) {
     IVShMemPeer peer;
     peer.id = guest_id;
 
@@ -236,8 +237,7 @@ void IVShMemServer::_NewGuest(int64_t guest_id) {
             if (ret == -1) {
                 RAVELOG_WARN("Failed to send msg: %s", strerror(errno));
                 RAVELOG_WARN("Peer %d will be removed.", otherpeer.id);
-                int fd = _RemoveGuest(otherpeer.id);
-                ::close(fd);
+                _RemoveGuest(otherpeer.id);
             }
         }
     }
@@ -264,17 +264,15 @@ void IVShMemServer::_NewGuest(int64_t guest_id) {
     _peers.emplace_back(std::move(peer));
 }
 
-int IVShMemServer::_RemoveGuest(int64_t guest_id) {
-    auto guestiter = std::find_if(_peers.begin(), _peers.end(), [guest_id](const IVShMemPeer& peer) {
+void IVShMemServer::_RemoveGuest(int16_t guest_id) {
+    auto guestiter = std::remove_if(_peers.begin(), _peers.end(), [guest_id](const IVShMemPeer& peer) {
         return peer.id == guest_id;
     });
     if (guestiter == _peers.end()) {
-        return -1;
+        return;
     }
     RAVELOG_INFO("Removing guest ID %d", guest_id);
-    auto fd = std::move(guestiter->sock_fd);
     _peers.erase(guestiter);
-    return fd.release();
 }
 
 int IVShMemServer::_ShMem_SendMsg(int sock_fd, int64_t peer_id, int message) noexcept {
