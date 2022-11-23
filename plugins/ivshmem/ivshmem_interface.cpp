@@ -132,6 +132,7 @@ IVShMemInterface::~IVShMemInterface() {
     if (_maxNumEnvManagers > 0) {
         RAVELOG_DEBUG_FORMAT("env=%s IVShMemInterface=%s, number of env managers is current:%d, max:%d", GetEnv()->GetNameId()%_userdatakey%_envmanagers.size()%_maxNumEnvManagers);
     }
+    exit(); // Exit signal for collision checker
     _ivshmem_server.Stop();
     _ivshmem_thread.join();
     DestroyEnvironment();
@@ -1122,6 +1123,7 @@ FCLCollisionManagerInstance& IVShMemInterface::_GetEnvManager(const std::vector<
 }
 
 enum class QueryType : uint16_t {
+    Exit = 0,
     ObjectCollision = 1,
     GeometryCollision = 2,
     ObjectDistance = 3,
@@ -1194,6 +1196,16 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
     //result = ivshmem::DeSerialize<fcl::CollisionResult>(is);
     //return result.numContacts();
     return 0;
+}
+
+void IVShMemInterface::exit()
+{
+    uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
+    size_t offset = 0;
+    offset += ivshmem::serialize(write_addr + offset, _query_id);
+    offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::Exit));
+    _shmem.write_ready();
+    _ivshmem_server.InterruptPeer();
 }
 
 } // namespace
