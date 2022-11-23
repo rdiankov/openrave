@@ -104,6 +104,8 @@ private:
         std::array<FileDescriptor, IVSHMEM_VECTOR_COUNT> vectors;
     };
     std::vector<IVShMemPeer> _peers;
+    IVShMemPeer _vpeer;
+    FileDescriptor _vpeer_sock_fd;
 
     std::mutex _mtx;
     std::condition_variable _cv;

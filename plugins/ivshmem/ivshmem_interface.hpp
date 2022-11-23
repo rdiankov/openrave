@@ -225,6 +225,9 @@ private:
                         const fcl::CollisionRequest& request,
                         fcl::CollisionResult& result);
 
+    // Sends the exit signal to the collision checker
+    void exit();
+
     TripleBufferedSharedIOMemory _shmem;
     IVShMemServer _ivshmem_server;
     std::thread _ivshmem_thread;
@@ -256,6 +259,8 @@ private:
 
     bool _bIsSelfCollisionChecker; // Currently not used
     bool _bParentlessCollisionObject; ///< if set to true, the last collision command ran into colliding with an unknown object
+
+    std::mutex _collisoncheck_mutex;
 };
 
 // TODO : This is becoming really stupid, I should just add optional additional data for DynamicAABBTree

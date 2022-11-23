@@ -96,6 +96,14 @@ void IVShMemServer::Thread() try {
         throw std::runtime_error("Failed to register epoll event: "s + strerror(errno));
     }
 
+    if (!AddToEpoll(_vpeer.vectors[0], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP)) {
+        throw std::runtime_error("Failed to register _vpeer.vectors[0] with epoll event: "s + strerror(errno));
+    }
+    if (!AddToEpoll(_vpeer.vectors[1], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP)) {
+        throw std::runtime_error("Failed to register _vpeer.vectors[1] with epoll event: "s + strerror(errno));
+    }
+    RAVELOG_WARN("FDs %d %d are the vectors", _vpeer.vectors[0].get(), _vpeer.vectors[1].get());
+
     // Add a signalfd to epoll as part of exit criteria.
     sigset_t mask;
     sigemptyset(&mask);
@@ -115,8 +123,7 @@ void IVShMemServer::Thread() try {
         if (num_fds <= 0) {
             throw std::runtime_error("Error caught in epoll_wait: "s + strerror(errno));
         }
-        for (int i = 0; i < num_fds; ++i) {
-            if (_stop) break;
+        for (int i = 0; (i < num_fds) && !_stop; ++i) {
             int fd = events[i].data.fd;
             // Signal event, it's time to stop
             if (fd == sig_fd.get()) {
@@ -125,6 +132,7 @@ void IVShMemServer::Thread() try {
                 RAVELOG_INFO("Stop signal caught.");
                 break;
             }
+            RAVELOG_WARN("fd %d", fd);
             // Event on the socket fd, there's a new guest.
             if (fd == _sock_fd.get()) {
                 _NewGuest(guest_id);
@@ -135,12 +143,22 @@ void IVShMemServer::Thread() try {
                 _cv.notify_one();
                 continue;
             }
+            // Interrupts from peers received on vpeer
+            if (fd == _vpeer.vectors[0].get()) {
+                RAVELOG_WARN("fd == _vpeer.vectors[0]");
+                continue;
+            }
+            if (fd == _vpeer.vectors[1].get()) {
+                RAVELOG_WARN("fd == _vpeer.vectors[1]");
+                continue;
+            }
             // Any event from guest socket means the guest has exited.
             for (const IVShMemPeer& peer : _peers) {
-                if (peer.sock_fd == fd) {
+                if (fd == peer.sock_fd.get()) {
                     int msgdata = 0;
                     int msg = _ShMem_RecvMsg(fd, peer.id, msgdata);
                     if (msg == 0 && msgdata == -1) {
+                        RAVELOG_WARN("Peer %d disconnected.", peer.id);
                         _RemoveGuest(peer.id);
                         RemoveFromEpoll(fd, ep_fd.get());
                     }
@@ -189,6 +207,29 @@ void IVShMemServer::_InitSocket() {
     if (::listen(_sock_fd.get(), 4) == -1) {
         throw std::runtime_error("Failed to listen on socket: "s + strerror(errno));
     }
+
+    // Add fds for virtual peer
+    _vpeer_sock_fd = FileDescriptor(::socket, AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    if (::connect(_vpeer_sock_fd.get(), reinterpret_cast<struct sockaddr*>(&local), sizeof(local)) == -1) {
+        throw std::runtime_error("Failed to initiate connection to sock_fd from vpeer.");
+    }
+    struct sockaddr_un remote;
+    socklen_t t = sizeof(remote);
+    _vpeer = IVShMemPeer();
+    _vpeer.id = 0;
+    _vpeer.sock_fd = FileDescriptor(accept, _sock_fd.get(), reinterpret_cast<struct sockaddr*>(&remote), &t);
+    if (!_vpeer.sock_fd) {
+        RAVELOG_ERROR("Failed to accept connection on sock_fd for vpeer.");
+    }
+    for (int i = 0; i < IVSHMEM_VECTOR_COUNT; ++i) {
+        _vpeer.vectors[i] = FileDescriptor(eventfd, 0, 0);
+        if (!_vpeer.vectors[i]) {
+            RAVELOG_WARN("Failed to create event fd #%d for vpeer.", i);
+        }
+    }
+    // Basically, _vpeer.sock_fd and _vpeer_sock_fd are never used,
+    // because we only need the presence of an eventfd interrupt to do work.
+    // It is possible to obtain data from those sockets, but the data is not meaningful.
 }
 
 void IVShMemServer::_NewGuest(int16_t guest_id) {
@@ -243,9 +284,17 @@ void IVShMemServer::_NewGuest(int16_t guest_id) {
     }
 
     // Advertise all other peers to the new peer, excluding itself.
+    // Including virtual peer
+    for (const auto& vector : _vpeer.vectors) {
+        ret = _ShMem_SendMsg(peer.sock_fd.get(), _vpeer.id, vector.get());
+        if (ret == -1) {
+            RAVELOG_WARN("Failed to send msg: %s", strerror(errno));
+        }
+    }
+    // All other peers
     for (const auto& otherpeer : _peers) {
-        for (int i = 0; i < peer.vectors.size(); ++i) {
-            ret = _ShMem_SendMsg(peer.sock_fd.get(), otherpeer.id, otherpeer.vectors[i].get());
+        for (const auto& vector : otherpeer.vectors) {
+            ret = _ShMem_SendMsg(peer.sock_fd.get(), otherpeer.id, vector.get());
             if (ret == -1) {
                 RAVELOG_WARN("Failed to send msg: %s", strerror(errno));
             }
@@ -333,7 +382,6 @@ int IVShMemServer::_ShMem_RecvMsg(int sock_fd, int64_t peer_id, int& message) no
     }
     // Any empty message from guest means a disconnect.
     else if (len == 0) {
-        RAVELOG_WARN("Peer %d disconnected.", peer_id);
         message = -1;
         return 0;
     }
