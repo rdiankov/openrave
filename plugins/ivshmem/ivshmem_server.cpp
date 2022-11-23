@@ -102,7 +102,6 @@ void IVShMemServer::Thread() try {
     if (!AddToEpoll(_vpeer.vectors[1], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP)) {
         throw std::runtime_error("Failed to register _vpeer.vectors[1] with epoll event: "s + strerror(errno));
     }
-    RAVELOG_WARN("FDs %d %d are the vectors", _vpeer.vectors[0].get(), _vpeer.vectors[1].get());
 
     // Add a signalfd to epoll as part of exit criteria.
     sigset_t mask;
@@ -132,7 +131,6 @@ void IVShMemServer::Thread() try {
                 RAVELOG_INFO("Stop signal caught.");
                 break;
             }
-            RAVELOG_WARN("fd %d", fd);
             // Event on the socket fd, there's a new guest.
             if (fd == _sock_fd.get()) {
                 _NewGuest(guest_id);
@@ -145,11 +143,19 @@ void IVShMemServer::Thread() try {
             }
             // Interrupts from peers received on vpeer
             if (fd == _vpeer.vectors[0].get()) {
-                RAVELOG_WARN("fd == _vpeer.vectors[0]");
+                if (events[i].events & EPOLLIN) {
+                    int64_t num_interrupts = 0;
+                    ssize_t bytes = ::read(fd, &num_interrupts, sizeof(num_interrupts));
+                    RAVELOG_WARN("Vector 0 was interrupted %ld times.", num_interrupts);
+                }
                 continue;
             }
             if (fd == _vpeer.vectors[1].get()) {
-                RAVELOG_WARN("fd == _vpeer.vectors[1]");
+                if (events[i].events & EPOLLIN) {
+                    int64_t num_interrupts = 0;
+                    ssize_t bytes = ::read(fd, &num_interrupts, sizeof(num_interrupts));
+                    RAVELOG_WARN("Vector 1 was interrupted %ld times.", num_interrupts);
+                }
                 continue;
             }
             // Any event from guest socket means the guest has exited.
