@@ -40,7 +40,7 @@ enum IkFilterOptions
 };
 
 /// \brief Return value for the ik filter that can be optionally set on an ik solver.
-enum IkReturnAction
+enum IkReturnAction : uint64_t
 {
     IKRA_Success = 0, ///< the ik solution is good
     IKRA_Reject = 1, ///< reject the ik solution

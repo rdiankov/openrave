@@ -111,7 +111,7 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
         pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
     }
     if( !IS_PYTHONOBJECT_NONE(_vChuckingDirection) ) {
-        pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
+        pinfo->_vChuckingDirection = ExtractArray<int>(_vChuckingDirection);
     }
     if( !IS_PYTHONOBJECT_NONE(_vdirection) ) {
         pinfo->_vdirection = ExtractVector3(_vdirection);
@@ -781,11 +781,11 @@ void PyRobotBase::PyManipulator::SetLocalToolDirection(object odirection) {
 void PyRobotBase::PyManipulator::SetClosingDirection(object oclosingdirection)
 {
     RAVELOG_WARN("SetClosingDirection is deprecated, use SetChuckingDirection\n");
-    _pmanip->SetChuckingDirection(ExtractArray<dReal>(oclosingdirection));
+    _pmanip->SetChuckingDirection(ExtractArray<int>(oclosingdirection));
 }
 void PyRobotBase::PyManipulator::SetChuckingDirection(object ochuckingdirection)
 {
-    _pmanip->SetChuckingDirection(ExtractArray<dReal>(ochuckingdirection));
+    _pmanip->SetChuckingDirection(ExtractArray<int>(ochuckingdirection));
 }
 py::array_int PyRobotBase::PyManipulator::GetGripperJoints() {
     RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n");
@@ -2100,7 +2100,7 @@ object PyRobotBase::CalculateActiveAngularVelocityJacobian(int index) const
 }
 
 bool PyRobotBase::Grab(PyKinBodyPtr pbody) {
-    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody());
+    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody(), rapidjson::Value());
 }
 
 // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
@@ -2110,25 +2110,30 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore)
     CHECK_POINTER(pylink_or_linkstoignore);
     KinBody::LinkPtr plink = GetKinBodyLink(pylink_or_linkstoignore);
     if( !!plink ) {
-        return _probot->Grab(pbody->GetBody(), plink);
+        return _probot->Grab(pbody->GetBody(), plink, rapidjson::Value());
     }
     // maybe it is a set?
     std::set<int> setlinkstoignore = ExtractSet<int>(pylink_or_linkstoignore);
-    return _probot->Grab(pbody->GetBody(), setlinkstoignore);
+    return _probot->Grab(pbody->GetBody(), setlinkstoignore, rapidjson::Value());
 }
 
-bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
+bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object grabbedUserData)
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
+    rapidjson::Document rGrabbedUserData;
+    if( !IS_PYTHONOBJECT_NONE(grabbedUserData) ) {
+        toRapidJSONValue(grabbedUserData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
+    }
+
     if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
         // linkstoignore is a list of link names
         std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
-        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString);
+        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString, rGrabbedUserData);
     }
     // linkstoignore is a list of link indices
     std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt);
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt, rGrabbedUserData);
 }
 
 bool PyRobotBase::CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport)
@@ -2531,8 +2536,8 @@ void init_openravepy_robot()
         void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
 
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab2)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object, object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab5)(PyKinBodyPtr, object, object, object) = &PyRobotBase::Grab;
 
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
@@ -2712,8 +2717,8 @@ void init_openravepy_robot()
                        .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian, PY_ARGS("linkindex","quat") DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; std::vector"))
                        .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian, PY_ARGS("linkindex") DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"))
                        .def("Grab",pgrab1, PY_ARGS("body") DOXY_FN(RobotBase,Grab "KinBodyPtr"))
-                       .def("Grab",pgrab2, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
-                       .def("Grab",pgrab3, PY_ARGS("body","grablink", "linkstoignore") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; LinkPtr"))
+                       .def("Grab",pgrab3, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
+                       .def("Grab",pgrab5, PY_ARGS("body","grablink","linkstoignore","grabbedUserData") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; Linkptr; rapidjson::Document"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
                             "linkindex"_a,

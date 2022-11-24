@@ -88,7 +88,7 @@ class Grasper:
         if chuckingdirection is not None:
             cmd += 'chuckingdirection '
             for value in chuckingdirection:
-                cmd += '%.15e '%value
+                cmd += '%d '%value
         if execute is not None:
             cmd += 'execute %d '%execute
         if ordereddofindices is not None:
