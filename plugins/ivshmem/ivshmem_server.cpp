@@ -92,14 +92,14 @@ void IVShMemServer::Thread() try {
     static constexpr size_t MAX_EPOLL_EVENTS = 4;
     auto ep_fd = FileDescriptor(epoll_create, MAX_EPOLL_EVENTS);
 
-    if (!AddToEpoll(_sock_fd, ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP)) {
+    if (!AddToEpoll(_sock_fd, ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
         throw std::runtime_error("Failed to register epoll event: "s + strerror(errno));
     }
 
-    if (!AddToEpoll(_vpeer.vectors[0], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP)) {
+    if (!AddToEpoll(_vpeer.vectors[0], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
         throw std::runtime_error("Failed to register _vpeer.vectors[0] with epoll event: "s + strerror(errno));
     }
-    if (!AddToEpoll(_vpeer.vectors[1], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP)) {
+    if (!AddToEpoll(_vpeer.vectors[1], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
         throw std::runtime_error("Failed to register _vpeer.vectors[1] with epoll event: "s + strerror(errno));
     }
 
@@ -108,7 +108,7 @@ void IVShMemServer::Thread() try {
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
     auto sig_fd = FileDescriptor(signalfd, -1, &mask, 0);
-    if (!AddToEpoll(sig_fd, ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLHUP)) {
+    if (!AddToEpoll(sig_fd, ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
         throw std::runtime_error("Failed to register epoll event: "s + strerror(errno));
     }
 
@@ -126,37 +126,31 @@ void IVShMemServer::Thread() try {
             int fd = events[i].data.fd;
             // Signal event, it's time to stop
             if (fd == sig_fd.get()) {
-                _stop = true;
-                _cv.notify_all();
-                RAVELOG_INFO("Stop signal caught.");
+                _OnStop();
                 break;
             }
             // Event on the socket fd, there's a new guest.
             if (fd == _sock_fd.get()) {
                 _NewGuest(guest_id);
                 guest_id++;
-                if (!AddToEpoll(_peers.back().sock_fd, ep_fd)) {
+                if (!AddToEpoll(_peers.back().sock_fd, ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
                     throw std::runtime_error("Failed to register epoll event: "s + strerror(errno));
                 }
-                _cv.notify_one();
                 continue;
             }
             // Interrupts from peers received on vpeer
-            if (fd == _vpeer.vectors[0].get()) {
-                if (events[i].events & EPOLLIN) {
-                    int64_t num_interrupts = 0;
-                    ssize_t bytes = ::read(fd, &num_interrupts, sizeof(num_interrupts));
-                    RAVELOG_WARN("Vector 0 was interrupted %ld times.", num_interrupts);
+            for (size_t j = 0; j < _vpeer.vectors.size(); ++j) {
+                if (fd == _vpeer.vectors[j].get()) {
+                    if (events[i].events & EPOLLIN) {
+                        uint64_t num_interrupts = 0;
+                        ssize_t bytes = ::read(fd, &num_interrupts, sizeof(num_interrupts));
+                        RAVELOG_DEBUG("Vector %lu was interrupted %ld times.", j, num_interrupts);
+                        _vpeer.vector_cvs[j].notify_one();
+                        break;
+                    } else {
+                        RAVELOG_WARN("Unhandled epoll condition on fd %d: %lu", fd, events[i].events);
+                    }
                 }
-                continue;
-            }
-            if (fd == _vpeer.vectors[1].get()) {
-                if (events[i].events & EPOLLIN) {
-                    int64_t num_interrupts = 0;
-                    ssize_t bytes = ::read(fd, &num_interrupts, sizeof(num_interrupts));
-                    RAVELOG_WARN("Vector 1 was interrupted %ld times.", num_interrupts);
-                }
-                continue;
             }
             // Any event from guest socket means the guest has exited.
             for (const IVShMemPeer& peer : _peers) {
@@ -214,14 +208,14 @@ void IVShMemServer::_InitSocket() {
         throw std::runtime_error("Failed to listen on socket: "s + strerror(errno));
     }
 
+    ////// Setup virtual peer
     // Add fds for virtual peer
-    _vpeer_sock_fd = FileDescriptor(::socket, AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
-    if (::connect(_vpeer_sock_fd.get(), reinterpret_cast<struct sockaddr*>(&local), sizeof(local)) == -1) {
+    _vpeer.send_fd = FileDescriptor(::socket, AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    if (::connect(_vpeer.send_fd.get(), reinterpret_cast<struct sockaddr*>(&local), sizeof(local)) == -1) {
         throw std::runtime_error("Failed to initiate connection to sock_fd from vpeer.");
     }
     struct sockaddr_un remote;
     socklen_t t = sizeof(remote);
-    _vpeer = IVShMemPeer();
     _vpeer.id = 0;
     _vpeer.sock_fd = FileDescriptor(accept, _sock_fd.get(), reinterpret_cast<struct sockaddr*>(&remote), &t);
     if (!_vpeer.sock_fd) {
@@ -328,6 +322,14 @@ void IVShMemServer::_RemoveGuest(int16_t guest_id) {
     }
     RAVELOG_INFO("Removing guest ID %d", guest_id);
     _peers.erase(guestiter);
+}
+
+void IVShMemServer::_OnStop() {
+    RAVELOG_INFO("Stop signal caught.");
+    _stop.store(true);
+    for (std::condition_variable& cv : _vpeer.vector_cvs) {
+        cv.notify_all();
+    }
 }
 
 int IVShMemServer::_ShMem_SendMsg(int sock_fd, int64_t peer_id, int message) noexcept {

@@ -52,13 +52,17 @@ public:
         InterruptPeer(_peers[0].id);
     }
 
-    // Block calling thread until some condition becomes true.
+    // Awaits on interrupt vector by ID (only 0 or 1 for now);
+    inline void WaitVector(uint16_t vector_id, std::mutex& mtx) {
+        std::unique_lock<std::mutex> lock(mtx);
+        _vpeer.vector_cvs[vector_id].wait(lock);
+    }
+
+    // Overload of WaitVector that allows the setting of a wait condition.
     template <typename Pred>
-    void Wait(Pred&& predicate) {
-        std::unique_lock<std::mutex> lock(_mtx);
-        _cv.wait(lock, [this, pred = std::move(predicate)]() {
-            return pred(*this) || _stop.load();
-        });
+    inline void WaitVector(uint16_t vector_id, std::mutex& mtx, Pred&& predicate) {
+        std::unique_lock<std::mutex> lock(mtx);
+        _vpeer.vector_cvs[vector_id].wait(lock, std::forward<Pred>(predicate));
     }
 
     /// This object is in an invalid state if:
@@ -80,6 +84,11 @@ private:
     // Remove a guest from the peers list
     void _RemoveGuest(int16_t guest_id);
 
+    // When the signal to stop is received.
+    // NOT when the _stop flag is manually raised.
+    // Internally sets the _stop flag to true.
+    void _OnStop();
+
     /// \brief Sends a signal to the peer. `message` must be a positive value if it is a control signal; otherwise it is ignored.
     /// Usually this message is the fd of the shared memory.
     /// If peer_id is -1, then message is broadcast.
@@ -89,7 +98,7 @@ private:
     static int _ShMem_RecvMsg(int sock_fd, int64_t peer_id, int& message) noexcept;
 
 private:
-    std::atomic_bool _stop; // Signals the thread to stop.
+    mutable std::atomic_bool _stop; // Signals the thread to stop.
 
     std::string _shmem_path;
 
@@ -98,17 +107,20 @@ private:
     FileDescriptor _sock_fd;
 
     static constexpr int IVSHMEM_VECTOR_COUNT = 2;
-    struct IVShMemPeer final {
+    struct IVShMemPeer {
+    public:
         int16_t id; // ivshmem only provides 16 bits of client ID.
-        FileDescriptor sock_fd;
-        std::array<FileDescriptor, IVSHMEM_VECTOR_COUNT> vectors;
+        FileDescriptor sock_fd; // To receive data from peers when there is an event
+        std::array<FileDescriptor, IVSHMEM_VECTOR_COUNT> vectors; // eventfds to listen for events, but can't receive data
     };
     std::vector<IVShMemPeer> _peers;
-    IVShMemPeer _vpeer;
-    FileDescriptor _vpeer_sock_fd;
 
-    std::mutex _mtx;
-    std::condition_variable _cv;
+    struct VirtualPeer final : public IVShMemPeer {
+    public:
+        FileDescriptor send_fd; // Allows us to send something for sock_fd to receive, but we will not use this
+        // Condition variables that wait on each vector
+        std::array<std::condition_variable, IVSHMEM_VECTOR_COUNT> vector_cvs;
+    } _vpeer;
 };
 
 #endif // OPENRAVE_IVSHMEM_SERVER_HPP
