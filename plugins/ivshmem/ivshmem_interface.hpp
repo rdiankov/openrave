@@ -260,7 +260,7 @@ private:
     bool _bIsSelfCollisionChecker; // Currently not used
     bool _bParentlessCollisionObject; ///< if set to true, the last collision command ran into colliding with an unknown object
 
-    std::mutex _collisoncheck_mutex;
+    mutable std::mutex _collisoncheck_mutex;
 };
 
 // TODO : This is becoming really stupid, I should just add optional additional data for DynamicAABBTree

@@ -115,11 +115,12 @@ private:
     };
     std::vector<IVShMemPeer> _peers;
 
+    // The IVShMem server normally cannot receive interrupt events from peers.
+    // Adding a virtual peer allows us to masquerade as a fellow peer and receive events from them.
     struct VirtualPeer final : public IVShMemPeer {
     public:
         FileDescriptor send_fd; // Allows us to send something for sock_fd to receive, but we will not use this
-        // Condition variables that wait on each vector
-        std::array<std::condition_variable, IVSHMEM_VECTOR_COUNT> vector_cvs;
+        std::array<std::condition_variable, IVSHMEM_VECTOR_COUNT> vector_cvs; // Condition variables that wait on each vector
     } _vpeer;
 };
 
