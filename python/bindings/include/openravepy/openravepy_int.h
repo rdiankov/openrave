@@ -596,7 +596,7 @@ OPENRAVEPY_API py::object toPyAABB(const AABB& ab);
 /// \brief PyAABB -> AABB
 OPENRAVEPY_API AABB ExtractAABB(py::object o);
 OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
-OPENRAVEPY_API OrientedBox ExtractPyOrientedBox(py::object o);
+OPENRAVEPY_API OrientedBox ExtractOrientedBox(py::object o);
 OPENRAVEPY_API std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList);
 OPENRAVEPY_API py::object toPyRay(const RAY& r);
 OPENRAVEPY_API RAY ExtractRay(py::object o);

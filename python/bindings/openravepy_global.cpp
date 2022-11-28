@@ -338,7 +338,7 @@ object toPyOrientedBox(const OrientedBox& obb)
     return py::to_object(OPENRAVE_SHARED_PTR<PyOrientedBox>(new PyOrientedBox(obb)));
 }
 
-OrientedBox ExtractPyOrientedBox(py::object o)
+OrientedBox ExtractOrientedBox(py::object o)
 {
     extract_<OPENRAVE_SHARED_PTR<PyOrientedBox> > pyobb(o);
     return ((OPENRAVE_SHARED_PTR<PyOrientedBox>)pyobb)->obb;
@@ -352,8 +352,7 @@ std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList)
     const size_t arraySize = len(pyOrientedBoxList);
     std::vector<OrientedBox> vOrientedBox(arraySize);
     for(size_t iOrientedBox = 0; iOrientedBox < arraySize; ++iOrientedBox) {
-        extract_<OPENRAVE_SHARED_PTR<PyOrientedBox> > pyobb(pyOrientedBoxList[iOrientedBox]);
-        vOrientedBox[iOrientedBox] = ((OPENRAVE_SHARED_PTR<PyOrientedBox>)pyobb)->obb;
+        vOrientedBox[iOrientedBox] = ExtractOrientedBox(pyOrientedBoxList[iOrientedBox]);
     }
     return vOrientedBox;
 }
