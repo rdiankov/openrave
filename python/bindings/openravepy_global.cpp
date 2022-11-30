@@ -338,6 +338,25 @@ object toPyOrientedBox(const OrientedBox& obb)
     return py::to_object(OPENRAVE_SHARED_PTR<PyOrientedBox>(new PyOrientedBox(obb)));
 }
 
+OrientedBox ExtractOrientedBox(py::object o)
+{
+    extract_<OPENRAVE_SHARED_PTR<PyOrientedBox> > pyobb(o);
+    return ((OPENRAVE_SHARED_PTR<PyOrientedBox>)pyobb)->obb;
+}
+
+std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyOrientedBoxList) ) {
+        return {};
+    }
+    const size_t arraySize = len(pyOrientedBoxList);
+    std::vector<OrientedBox> vOrientedBox(arraySize);
+    for(size_t iOrientedBox = 0; iOrientedBox < arraySize; ++iOrientedBox) {
+        vOrientedBox[iOrientedBox] = ExtractOrientedBox(pyOrientedBoxList[iOrientedBox]);
+    }
+    return vOrientedBox;
+}
+
 class OrientedBox_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
