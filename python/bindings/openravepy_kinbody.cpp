@@ -2333,13 +2333,13 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
 
     if( !IS_PYTHONOBJECT_NONE(_files) ) {
-        if( !pInfo->_prFiles ) {
-            pInfo->_prFiles.reset(new rapidjson::Document());
+        if( !pInfo->_prAssociatedFileEntries ) {
+            pInfo->_prAssociatedFileEntries.reset(new rapidjson::Document());
         }
         else {
-            *pInfo->_prFiles = rapidjson::Document();
+            *pInfo->_prAssociatedFileEntries = rapidjson::Document();
         }
-        toRapidJSONValue(_files, *pInfo->_prFiles, pInfo->_prFiles->GetAllocator());
+        toRapidJSONValue(_files, *pInfo->_prAssociatedFileEntries, pInfo->_prAssociatedFileEntries->GetAllocator());
     }
     return pInfo;
 }
@@ -2401,11 +2401,11 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _dofValues = ReturnDOFValues(info._dofValues);
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 
-    if( !info._prFiles ) {
+    if( !info._prAssociatedFileEntries ) {
         _files = py::none_();
     }
     else {
-        _files = toPyObject(*info._prFiles);
+        _files = toPyObject(*info._prAssociatedFileEntries);
     }
 }
 
@@ -3499,7 +3499,7 @@ void PyKinBody::SetDOFValues(object ovalues)
         return;
     }
     // check before extracting since something can be passing in different objects
-    if( len(ovalues) != _pbody->GetDOF() ) {
+    if( (int)len(ovalues) != _pbody->GetDOF() ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("Passed in values to SetDOFValues have %d elements, but robot has %d dof"), ((int)len(ovalues))%_pbody->GetDOF(), ORE_InvalidArguments);
     }
     std::vector<dReal> values = ExtractArray<dReal>(ovalues);
@@ -3910,9 +3910,9 @@ int PyKinBody::GetEnvironmentBodyIndex() const
     return _pbody->GetEnvironmentBodyIndex();
 }
 
-int PyKinBody::GetEnvironmentId() const
+int PyKinBody::GetEnvironmentId() const // deprecated
 {
-    return _pbody->GetEnvironmentId();
+    return _pbody->GetEnvironmentBodyIndex();
 }
 
 int PyKinBody::DoesAffect(int jointindex, int linkindex ) const
@@ -4015,6 +4015,16 @@ object PyKinBody::ExtractInfo() const {
     KinBody::KinBodyInfo info;
     _pbody->ExtractInfo(info);
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
+}
+
+py::object PyKinBody::GetAssociatedFileEntries() const
+{
+    const boost::shared_ptr<rapidjson::Document const>& prAssociatedFileEntries = _pbody->GetAssociatedFileEntries();
+    if( !!prAssociatedFileEntries ) {
+        return toPyObject(*prAssociatedFileEntries);
+    }
+
+    return py::none_();
 }
 
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
@@ -5659,6 +5669,7 @@ void init_openravepy_kinbody()
                          .def("serialize",&PyKinBody::serialize,PY_ARGS("options") DOXY_FN(KinBody,serialize))
                          .def("UpdateFromKinBodyInfo",&PyKinBody::UpdateFromKinBodyInfo,PY_ARGS("info") DOXY_FN(KinBody,UpdateFromKinBodyInfo))
                          .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
+                         .def("GetAssociatedFileEntries",&PyKinBody::GetAssociatedFileEntries, DOXY_FN(KinBody,GetAssociatedFileEntries))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CreateKinBodyStateSaver", &PyKinBody::CreateKinBodyStateSaver,
                               "options"_a = py::none_(),
