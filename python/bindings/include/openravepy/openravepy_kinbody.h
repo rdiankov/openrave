@@ -339,6 +339,7 @@ public:
     UpdateFromInfoResult UpdateFromKinBodyInfo(py::object oInfo);
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
+    py::object GetAssociatedFileEntries() const;
 
     py::object ExtractInfo() const;
 

@@ -516,7 +516,13 @@ protected:
             KinBody::KinBodyInfoPtr& pKinBodyInfo = *itBodyInfo;
             // ensure uri is set
             if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
-                pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
+                // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
+                if( !currentUri.empty() || !currentFilename.empty() ) {
+                    pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
+                }
+                else {
+                    RAVELOG_VERBOSE_FORMAT("Could not set uri for body '%s' since currentUri and currentFilename are empty", pKinBodyInfo->_name);
+                }
             }
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if( !!pRobotBaseInfo ) {

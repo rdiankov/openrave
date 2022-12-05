@@ -766,7 +766,7 @@ void ConfigurationSpecification::ExtractUsedIndices(const char* pBodyName, int n
             }
         }
 
-        if( curtokens.at(1).size() == nBodyNameLength && strncmp(curtokens.at(1).c_str(), pBodyName, nBodyNameLength) == 0 ) {
+        if( (int)curtokens.at(1).size() == nBodyNameLength && strncmp(curtokens.at(1).c_str(), pBodyName, nBodyNameLength) == 0 ) {
             for(size_t i = 2; i < curtokens.size(); ++i) {
                 int index = boost::lexical_cast<int>(curtokens.at(i));
                 if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
