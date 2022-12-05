@@ -147,6 +147,8 @@ public:
     aiSceneManaged(const std::string& dataorfilename, bool bIsFilename=true, const std::string& formathint=std::string(), unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
         std::call_once(__onceSetAssimpLog, __SetAssimpLog);
         _importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT|aiPrimitiveType_LINE);
+        _importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, aiComponent_NORMALS);
+        flags |= aiProcess_RemoveComponent;
         if( bIsFilename ) {
             _scene = _importer.ReadFile(dataorfilename.c_str(),flags);
         }
