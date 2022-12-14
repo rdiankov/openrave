@@ -289,23 +289,22 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 geomhulls = []
                 geometries = link.GetGeometries()
                 for ig,geom in enumerate(geometries):
-                    if geom.GetType() == KinBody.Link.GeomType.Trimesh or padding > 0:
+                    trimesh = geom.GetCollisionMesh()
+                    if len(trimesh.indices) == 0:
+                        geom.InitCollisionMesh()
                         trimesh = geom.GetCollisionMesh()
-                        if len(trimesh.indices) == 0:
-                            geom.InitCollisionMesh()
-                            trimesh = geom.GetCollisionMesh()
-                        if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
-                            log.info(u'computing hull for link %d/%d geom %d/%d: vertices=%d, indices=%d',il,len(links), ig, len(geometries), len(trimesh.vertices), len(trimesh.indices))
-                            orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
-                        else:
-                            log.info(u'computing decomposition for link %d/%d geom %d/%d type %s',il,len(links), ig, len(geometries), geom.GetType())
-                            orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
-                        cdhulls = []
-                        for hull in orghulls:
-                            if any(isnan(hull[0])):
-                                raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
-                            cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
-                        geomhulls.append((ig,cdhulls))
+                    if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
+                        log.info(u'computing hull for link %d/%d geom %d/%d: vertices=%d, indices=%d',il,len(links), ig, len(geometries), len(trimesh.vertices), len(trimesh.indices))
+                        orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
+                    else:
+                        log.info(u'computing decomposition for link %d/%d geom %d/%d type %s',il,len(links), ig, len(geometries), geom.GetType())
+                        orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
+                    cdhulls = []
+                    for hull in orghulls:
+                        if any(isnan(hull[0])):
+                            raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
+                        cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
+                    geomhulls.append((ig,cdhulls))
                 self.linkgeometry.append(geomhulls)
         self._padding = padding
         log.info(u'all convex decomposition finished in %fs',time.time()-starttime)
