@@ -530,26 +530,8 @@ if( ASSIMP_FOUND )
   endif()
 endif()
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  check_cxx_source_runs("
-  int main()
-  {
-    int a = 0;
-    int*pa = &a;
-    asm(\".intel_syntax\\\\n\"
-	\"mov %%rax, %0\\\\n\"
-    \"mov %%eax, [%%rax]\\\\n\"
-    \".att_syntax\\\\n\"
-    : : \"r\"(pa) : \"%rax\");
-    return 0;
-  }"
-  IS_X86_64)
-
-  if( IS_X86_64 )
-    add_definitions("-D__x86_64__")
-  endif()
-else()
-  set(IS_X86_64 0)
+if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64" )
+  add_definitions("-D__x86_64__")
 endif()
 
 check_library_exists(rt clock_gettime "" CLOCK_GETTIME_FOUND)
