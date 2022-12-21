@@ -530,10 +530,6 @@ if( ASSIMP_FOUND )
   endif()
 endif()
 
-if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64" OR ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64" )
-  add_definitions("-D__x86_64__")
-endif()
-
 check_library_exists(rt clock_gettime "" CLOCK_GETTIME_FOUND)
 if( CLOCK_GETTIME_FOUND )
   add_definitions(-DCLOCK_GETTIME_FOUND)
