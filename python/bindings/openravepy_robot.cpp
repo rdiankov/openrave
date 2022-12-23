@@ -249,6 +249,16 @@ void PyAttachedSensorInfo::DeserializeJSON(object obj, dReal fUnitScale, object 
     _Update(info);
 }
 
+PyRobotBase::PyAttachedSensorPtr toPyAttachedSensor(RobotBase::AttachedSensorPtr pAttachedSensor, PyEnvironmentBasePtr pyenv)
+{
+    if( !!pAttachedSensor ) {
+        return PyRobotBase::PyAttachedSensorPtr(new PyRobotBase::PyAttachedSensor(pAttachedSensor, pyenv));
+    }
+    else {
+        return PyRobotBase::PyAttachedSensorPtr();
+    }
+}
+
 PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo)
 {
     return PyAttachedSensorInfoPtr(new PyAttachedSensorInfo(attachedSensorinfo));
@@ -1451,7 +1461,7 @@ object PyRobotBase::PyConnectedBody::GetResolvedAttachedSensors()
     std::vector<RobotBase::AttachedSensorPtr> vattachedSensors;
     _pconnected->GetResolvedAttachedSensors(vattachedSensors);
     FOREACH(itattachedSensor, vattachedSensors) {
-        //oattachedSensors.append(toPyRobotAttachedSensorulator(*itattachedSensor, _pyenv));
+        oattachedSensors.append(toPyAttachedSensor(*itattachedSensor, _pyenv));
     }
     return oattachedSensors;
 }

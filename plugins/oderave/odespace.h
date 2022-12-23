@@ -644,6 +644,7 @@ private:
             break;
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_Cage:
+        case OpenRAVE::GT_CalibrationBoard: // calibration board is box-shaped but has z-offset. so have to use trimesh.
         case OpenRAVE::GT_TriMesh:
             if( info._meshcollision.indices.size() > 0 ) {
                 dTriIndex* pindices = new dTriIndex[info._meshcollision.indices.size()];

@@ -2186,7 +2186,7 @@ public:
 
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
-        boost::shared_ptr<rapidjson::Document> _prFiles; ///< files tag maintaining entries of data files associated with this object
+        boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
@@ -3328,6 +3328,11 @@ private:
     /// \brief Associate the kinbody's current kinematics geometry hash with a forward kinematics generator
     virtual void SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator);
 
+    /// \brief gets the associated file entries
+    inline const boost::shared_ptr<rapidjson::Document>& GetAssociatedFileEntries() const {
+        return _prAssociatedFileEntries;
+    }
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -3474,7 +3479,7 @@ protected:
 
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
-    boost::shared_ptr<rapidjson::Document> _prFiles; ///< files tag maintaining entries of data files associated with this object
+    boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 
 private:
     mutable std::string __hashkinematics;

@@ -138,7 +138,20 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
         if (!_docSensorGeometry.IsObject()) {
             _docSensorGeometry.SetObject();
         }
-        orjson::UpdateJson(_docSensorGeometry, value["sensorGeometry"]);
+        const rapidjson::Value& rSensorGeometry = value["sensorGeometry"];
+        if( rSensorGeometry.IsObject() ) {
+            for (rapidjson::Value::ConstMemberIterator it = rSensorGeometry.MemberBegin(); it != rSensorGeometry.MemberEnd(); ++it) {
+                if( it->value.IsObject() && _docSensorGeometry.HasMember(it->name.GetString()) ) {
+                    // have to update recursively
+                    for (rapidjson::Value::ConstMemberIterator it2 = it->value.MemberBegin(); it2 != it->value.MemberEnd(); ++it2) {
+                        orjson::SetJsonValueByKey(_docSensorGeometry[it->name.GetString()], it2->name.GetString(), it2->value, _docSensorGeometry.GetAllocator());
+                    }
+                }
+                else {
+                    orjson::SetJsonValueByKey(_docSensorGeometry, it->name.GetString(), it->value);
+                }
+            }
+        }
     }
 }
 

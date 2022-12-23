@@ -2764,13 +2764,13 @@ private:
         domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
         ptec->setProfile("OpenRAVE");
         const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
-        for (int linkIndex0 = 0; linkIndex0 < links.size(); ++linkIndex0) {
+        for (int linkIndex0 = 0; linkIndex0 < (int)links.size(); ++linkIndex0) {
             const KinBody::LinkPtr plink0 = links.at(linkIndex0);
             if (!plink0) {
                 RAVELOG_WARN_FORMAT("env=%d body \"%s\" link %d / %d is null so skip writing ignore link pair.", pbody->GetEnv()->GetId()%pbody->GetName()%linkIndex0%links.size());
                 continue;
             }
-            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < links.size(); ++linkIndex1) {
+            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < (int)links.size(); ++linkIndex1) {
                 if (pbody->AreAdjacentLinks(linkIndex0, linkIndex1)) {
                     const KinBody::LinkPtr plink1 = links.at(linkIndex1);
                     if (!plink1) {
