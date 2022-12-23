@@ -106,8 +106,8 @@ void JointControlInfo_RobotController::Reset()
 {
     controllerType.clear();
     robotControllerAxisIndex[0] = robotControllerAxisIndex[1] = robotControllerAxisIndex[2] = -1;
-    robotControllerAxisMult[0] = robotControllerAxisMult[1] = robotControllerAxisMult[2] = 1;
-    robotControllerAxisOffset[0] = robotControllerAxisOffset[1] = robotControllerAxisOffset[2] = 0;
+    robotControllerAxisMult[0] = robotControllerAxisMult[1] = robotControllerAxisMult[2] = 1.0;
+    robotControllerAxisOffset[0] = robotControllerAxisOffset[1] = robotControllerAxisOffset[2] = 0.0;
 }
 
 void JointControlInfo_RobotController::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const

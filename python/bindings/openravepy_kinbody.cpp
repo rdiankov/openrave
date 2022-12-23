@@ -687,14 +687,14 @@ JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJoint
         size_t num = len(robotControllerAxisMult);
         OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisMult.size(), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
-            info.robotControllerAxisMult[i] = py::extract<int>(robotControllerAxisMult[i]);
+            info.robotControllerAxisMult[i] = py::extract<dReal>(robotControllerAxisMult[i]);
         }
     }
     if( !IS_PYTHONOBJECT_NONE(robotControllerAxisOffset) ) {
         size_t num = len(robotControllerAxisOffset);
         OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisOffset.size(), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
-            info.robotControllerAxisOffset[i] = py::extract<int>(robotControllerAxisOffset[i]);
+            info.robotControllerAxisOffset[i] = py::extract<dReal>(robotControllerAxisOffset[i]);
         }
     }
     return pinfo;
