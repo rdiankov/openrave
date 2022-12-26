@@ -1,24 +1,3 @@
-# - Find Open Robotics Automation Virtual Enviornment (OpenRAVE) Installation
-# http://www.openrave.org
-#
-# OpenRAVE provides an environment for testing, developing, and deploying motion planning algorithms
-# in real-world robotics applications. The main focus is on simulation and analysis of kinematic and
-# geometric information related to motion planning. OpenRAVE’s stand-alone nature allows is to be easily
-# integrated into existing robotics systems. An important target application is industrial robotics automation.
-#
-# Users can set the following variables before calling the module:
-#  OpenRAVE_DIR - The preferred installation prefix for searching for OpenRAVE. Set by the user.
-#
-# OpenRAVE_ROOT_DIR - the root directory where the installation can be found
-# OpenRAVE_CXX_FLAGS - extra flags for compilation
-# OpenRAVE_LINK_FLAGS - extra flags for linking
-# OpenRAVE_INCLUDE_DIRS - include directories
-# OpenRAVE_LIBRARY_DIRS - link directories
-# OpenRAVE_LIBRARIES - libraries to link plugins with
-# OpenRAVE_CORE_LIBRARIES - libraries to link openrave run-time with
-# OpenRAVE_PYTHON_DIR - the version-specific path where openravepy.__init__ is, necessary for using shared resources like linking with openravepy_int.so or using ikfast.h
-# OpenRAVE_Boost_VERSION - the boost version openrave was compiled with
-
 #==================================================================================
 # Copyright (C) 2009-2011 Rosen Diankov
 #
@@ -32,76 +11,13 @@
 # (To distributed this file outside of CMake, substitute the full
 #  License text for the above reference.)
 #==================================================================================
-get_filename_component(_PREFIX "${CMAKE_CURRENT_LIST_FILE}" PATH)
-get_filename_component(_PREFIX "${_PREFIX}" PATH)
-get_filename_component(_PREFIX "${_PREFIX}" PATH)
-get_filename_component(OpenRAVE_ROOT_DIR "${_PREFIX}" PATH)
 
-if( MSVC )
-  # in order to prevent DLL hell, each of the DLLs have to be suffixed with the major version and msvc prefix
-  if( MSVC70 OR MSVC71 )
-    set(MSVC_PREFIX "vc70")
-  elseif( MSVC80 )
-    set(MSVC_PREFIX "vc80")
-  elseif( MSVC90 )
-    set(MSVC_PREFIX "vc90")
-  else()
-    set(MSVC_PREFIX "vc100")
-  endif()
-  set(OpenRAVE_LIBRARY_SUFFIX "${OpenRAVE_VERSION_MAJOR}.${OpenRAVE_VERSION_MINOR}-${MSVC_PREFIX}-mt" CACHE STRING "the suffix for the openrave libraries" FORCE)
-else()
-  set(OpenRAVE_LIBRARY_SUFFIX "@OPENRAVE_LIBRARY_SUFFIX@" CACHE STRING "the suffix for the openrave libraries" FORCE)
-endif()
-  
-set( OpenRAVE_CXX_FLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL @OPENRAVE_EXPORT_CXXFLAGS@ @OPENRAVE_BOOST_INCLUDE_DIRS@ @OPENRAVE_LOG4CXX_INCLUDE_DIRS@" )
-if( WIN32 )
-  set( OpenRAVE_CXX_FLAGS "${OpenRAVE_CXX_FLAGS} -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
-endif()
-if( MSVC )
-  set( OpenRAVE_CXX_FLAGS "${OpenRAVE_CXX_FLAGS} /EHc-")
-endif()
-set( OpenRAVE_CXXFLAGS "${OpenRAVE_CXX_FLAGS}") # deprecated
-set( OpenRAVE_LINK_FLAGS "@OPENRAVE_BOOST_LIB_DIRS@ @OPENRAVE_LOG4CXX_LIB_DIRS@" )
-set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_ROOT_DIR}/include/@OPENRAVE_INCLUDE_INSTALL_DIR@" "@RAPIDJSON_INCLUDES@")
-set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_ROOT_DIR}/lib@LIB_SUFFIX@")
-set( OpenRAVE_LIBRARIES openrave${OpenRAVE_LIBRARY_SUFFIX})
-set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_LIBRARIES} openrave${OpenRAVE_LIBRARY_SUFFIX}-core @Boost_THREAD_LIBRARY@ @LOG4CXX_LIBRARIES@)
-# c-bindings only
-set( OpenRAVE_C_LIBRARIES openrave${OpenRAVE_LIBRARY_SUFFIX}_c)
-set( OpenRAVE_CORE_C_LIBRARIES ${OpenRAVE_C_LIBRARIES} openrave${OpenRAVE_LIBRARY_SUFFIX}-core_c)
-set( OpenRAVE_PYTHON_INCLUDE_DIRS @PYTHON_INCLUDE_DIRS@)
+@PACKAGE_INIT@
 
-if(@USE_OPENRAVEPY@)
-  set( OpenRAVE_PYTHON_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY_VER_INSTALL_DIR@")
-  mark_as_advanced(OpenRAVE_PYTHON_DIR)
-  set( OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS @USE_PYBIND11_PYTHON_BINDINGS@)
-endif()
+message(STATUS "@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@/@OPENRAVE_INCLUDE_INSTALL_DIR@")
+set_and_check(OpenRAVE_INCLUDE_DIR @CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@/@OPENRAVE_INCLUDE_INSTALL_DIR@)
+set_and_check(OpenRAVE_RAPIDJSON_INCLUDE_DIR "@RAPIDJSON_INCLUDES@")
+set(OpenRAVE_INCLUDE_DIRS ${OpenRAVE_INCLUDE_DIR} ${OpenRAVE_RAPIDJSON_INCLUDE_DIR})
 
-set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
-set( OpenRAVE_BLA_VENDOR "@BLA_VENDOR@" )
-
-if( WIN32 )
-  # search for the boost version openrave was compiled with
-  set(Boost_USE_MULTITHREAD ON)
-  set(Boost_USE_STATIC_LIBS OFF)
-  set(Boost_USE_STATIC_RUNTIME OFF)
-  find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS thread date_time)
-  if(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-    set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_INCLUDE_DIRS}" ${Boost_INCLUDE_DIRS})
-    set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_LIBRARY_DIRS}" ${Boost_LIBRARY_DIRS})
-    set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_CORE_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY})
-  else(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-    message(WARNING "Failed to find Boost ${OpenRAVE_Boost_VERSION} necessary OpenRAVE")
-  endif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-endif( WIN32 )
-
-mark_as_advanced(
-  OpenRAVE_ROOT_DIR
-  OpenRAVE_CXXFLAGS
-  OpenRAVE_CXX_FLAGS
-  OpenRAVE_LINK_FLAGS
-  OpenRAVE_INCLUDE_DIRS
-  OpenRAVE_LIBRARIES
-  OpenRAVE_CORE_LIBRARIES
-  OpenRAVE_Boost_VERSION
-)
+set(OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
+message(STATUS "OpenRAVE was compiled with Boost ${OpenRAVE_Boost_VERSION}.")

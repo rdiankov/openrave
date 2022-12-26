@@ -95,7 +95,7 @@ include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
 include(InstallSymlink)
-#include(FindIntl)
+include(GNUInstallDirs)
 
 find_package(PkgConfig) # pkg_check_modules
 
@@ -235,12 +235,6 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_DEBUG "-g3 -D_DEBUG")
-
-  # the _GLIBCXX_DEBUG flag is very helpful in bounds checking for vector[] and iterators, however it requires all
-  # libraries linking with openrave to use it
-#  if( CMAKE_BUILD_TYPE STREQUAL "Debug")
-#    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -D_GLIBCXX_DEBUG")
-#  endif()
 endif()
 
 if( MSVC )
@@ -469,6 +463,7 @@ add_custom_command(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h)
 
 add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTRA_MSVC_DEPEND})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
 
 # math libraries
 find_package(GMP)
@@ -483,6 +478,7 @@ if( MPFR_FOUND )
 endif()
 find_package(MPFI)
 
+add_subdirectory(3rdparty/md5)
 
 if( OPT_ACCURATEMATH AND NOT MSVC AND NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES aarch64 )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)
@@ -823,8 +819,6 @@ if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   add_definitions(-DHAVE_BOOST_FILESYSTEM)
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
-
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
 add_subdirectory(locale)
@@ -907,10 +901,33 @@ if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
   InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-config ${CMAKE_INSTALL_PREFIX}/bin/openrave-config)
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" IMMEDIATE @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" IMMEDIATE @ONLY)
+# Write and install cmake export control files
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake
+  INSTALL_DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/openrave-${OPENRAVE_SOVERSION}
+  PATH_VARS
+    RAPIDJSON_INCLUDES
+)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake
+  VERSION ${OPENRAVE_SOVERSION}
+  COMPATIBILITY AnyNewerVersion
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake ${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/openrave-${OPENRAVE_SOVERSION})
+install(EXPORT openrave-targets FILE openrave-targets.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/openrave-${OPENRAVE_SOVERSION})
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/${OPENRAVE_CMAKE_INSTALL_DIR}" COMPONENT ${COMPONENT_PREFIX}dev)
+# Install header files
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/openrave/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
+if (OPT_CBINDINGS)
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/openrave_c/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave_c)
+endif()
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
+# Install license file
+install(FILES COPYING LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 
 if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave_completion.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" @ONLY IMMEDIATE)
@@ -940,18 +957,6 @@ if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave.bash" IMMEDIATE @ONLY)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.bash DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 endif()
-
-file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
-install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
-if( OPT_CBINDINGS )
-  file(GLOB rave_cheader_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave_c/*.h)
-  install(FILES ${rave_cheader_files} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave_c COMPONENT ${COMPONENT_PREFIX}cbindings-dev)
-endif()
-
-install(FILES rave/rave.h rave/plugin.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/rave COMPONENT ${COMPONENT_PREFIX}dev) # deprecated
-install(FILES COPYING LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
-
-#install(EXPORT openrave-targets DESTINATION lib/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 # add make uninstall capability
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)

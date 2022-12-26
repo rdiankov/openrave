@@ -1,7 +1,11 @@
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0005
 cmake_policy(SET CMP0005 NEW)
+project(crlibm)
 add_definitions(-DPACKAGE=\"crlibm\")
 add_definitions(-DVERSION=\"1.0beta4\")
+
+include(CheckIncludeFile)
+include(CheckTypeSize)
 
 # Compile the filib-compatible interval functions
 # BUILD_INTERVAL_FUNCTIONS

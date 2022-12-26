@@ -50,7 +50,7 @@ link_directories(${OPENRAVE_LINK_DIRS} ${FPARSER_LIBRARY_DIRS})
 
 include_directories(${FPARSER_INCLUDE_DIRS})
 add_library(libopenrave SHARED ${openrave_lib_SOURCES})
-add_dependencies(libopenrave interfacehashes_target openrave-md5)
+add_dependencies(libopenrave interfacehashes_target)
 if( CRLIBM_FOUND )
   add_dependencies(libopenrave check_libm_accuracy-native) # forces check to be run before libopenrave is compile
 endif()
@@ -61,12 +61,12 @@ set_target_properties(libopenrave PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBR
                                   CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL_EXPORTS -DOPENRAVE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
-target_link_libraries(libopenrave PRIVATE boost_assertion_failed PUBLIC Boost::filesystem ${openrave_libraries} ${FPARSER_LIBRARIES} ${Intl_LIBRARIES} ${CMAKE_DL_LIBS})
-if( MSVC )
-  install(TARGETS libopenrave EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
-else()
-  install(TARGETS libopenrave EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
-endif()
+target_link_libraries(libopenrave PRIVATE boost_assertion_failed crlibm openrave-md5 PUBLIC Boost::filesystem ${openrave_libraries} ${FPARSER_LIBRARIES} ${Intl_LIBRARIES} ${CMAKE_DL_LIBS})
+install(TARGETS libopenrave
+  EXPORT openrave-targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave
+)
 
 if( OPT_CBINDINGS )
   add_library(libopenrave_c SHARED libopenrave_c.cpp)
@@ -79,35 +79,31 @@ if( OPT_CBINDINGS )
     COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS} -DOPENRAVE_DLL -DOPENRAVE_C_DLL -DOPENRAVE_C_DLL_EXPORTS"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
   target_link_libraries(libopenrave_c PRIVATE boost_assertion_failed PUBLIC libopenrave ${openrave_libraries} ${FPARSER_LIBRARIES})
-  if( MSVC )
-    install(TARGETS libopenrave_c EXPORT openrave-targets RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
-  else()
-    install(TARGETS libopenrave_c EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
-  endif()
+  install(TARGETS libopenrave_c
+    EXPORT openrave-targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave_c
+  )
 endif()
 
 
 if( OPT_STATIC )
-  # visual studio needs static lib built
-  if( MSVC )
-    # static version needs to have different name
-    set(LIBOPENRAVE_NAME libopenrave${OPENRAVE_LIBRARY_SUFFIX})
-  else()
-    set(LIBOPENRAVE_NAME openrave${OPENRAVE_LIBRARY_SUFFIX})
-  endif()
-
   add_library(libopenrave_static STATIC ${openrave_lib_SOURCES})
-  set_target_properties(libopenrave_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_NAME}
+  set_target_properties(libopenrave_static PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}
                                            SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                            VERSION ${OPENRAVE_VERSION}
                                            CLEAN_DIRECT_OUTPUT 1
                                            COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${FPARSER_CXX_FLAGS}"
                                            LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${FPARSER_LINK_FLAGS}")
 
-  target_link_libraries(libopenrave_static PRIVATE boost_assertion_failed PUBLIC ${openrave_libraries} ${FPARSER_LIBRARIES})
-  add_dependencies(libopenrave_static interfacehashes_target openrave-md5)
+  target_link_libraries(libopenrave_static PRIVATE boost_assertion_failed crlibm openrave-md5 PUBLIC ${openrave_libraries} ${FPARSER_LIBRARIES})
+  add_dependencies(libopenrave_static interfacehashes_target)
   if( CRLIBM_FOUND )
     add_dependencies(libopenrave_static check_libm_accuracy-native) # forces check to be run before libopenrave is compilde
   endif()
-  install(TARGETS libopenrave_static EXPORT openrave-targets DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
+  install(TARGETS libopenrave_static
+    EXPORT openrave-targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave
+  )
 endif()

@@ -3,12 +3,12 @@ set (openrave_SOURCES openrave.cpp)
 
 include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS})
 
-set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} openrave-md5)
+set(openrave_libraries ${LIBXML2_LIBRARIES} ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY})
 if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
   set(openrave_libraries ${openrave_libraries} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
 endif()
 if( CRLIBM_FOUND )
-  set(openrave_libraries ${openrave_libraries} ${CRLIBM_LIBRARY})
+  #set(openrave_libraries ${openrave_libraries} ${CRLIBM_LIBRARY})
   if( CRLIBM_INCLUDE_DIR )
     include_directories(${CRLIBM_INCLUDE_DIR})
   endif()
@@ -109,10 +109,8 @@ endif()
 
 target_link_libraries(openrave PRIVATE boost_assertion_failed PUBLIC ${Boost_DATE_TIME_LIBRARY} ${Boost_THREAD_LIBRARY} ${SOCKET_LIBS} ${openrave_libraries} libopenrave libopenrave-core)
 
-install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
-if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
-endif()
+install(TARGETS openrave EXPORT openrave-targets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
 
 # always extract the models since we don't know when models.tgz has been changed
 if( EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../models.tgz" )
