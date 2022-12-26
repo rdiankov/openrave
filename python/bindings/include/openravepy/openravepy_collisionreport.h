@@ -46,6 +46,7 @@ public:
 
     std::string __str__();
     object __unicode__();
+    void Reset(int coloptions=0);
 
     int options;
     object plink1 = py::none_();

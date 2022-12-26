@@ -125,6 +125,10 @@ void PyCollisionReport::init(PyEnvironmentBasePtr pyenv)
     vLinkColliding = newLinkColliding;
 }
 
+void PyCollisionReport::Reset(int coloptions)
+{
+    return report->Reset(coloptions);
+}
 std::string PyCollisionReport::__str__()
 {
     return report->__str__();
@@ -720,6 +724,7 @@ PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv,
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -790,6 +795,16 @@ void init_openravepy_collisionchecker()
     .def_readonly("nKeepPrevious", &PyCollisionReport::nKeepPrevious)
     .def("__str__",&PyCollisionReport::__str__)
     .def("__unicode__",&PyCollisionReport::__unicode__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("Reset", &PyCollisionReport::Reset,
+         "coloptions"_a = 0,
+         "Reset report"
+        )
+#else
+    .def("Reset",&PyCollisionReport::Reset,
+         Reset_overloads(PY_ARGS("coloptions")
+                                      "Reset report"))
+#endif
     ;
 
     bool (PyCollisionCheckerBase::*pcolb)(PyKinBodyPtr) = &PyCollisionCheckerBase::CheckCollision;
