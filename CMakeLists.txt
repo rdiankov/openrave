@@ -411,10 +411,8 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
 endforeach()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
-  set(EXTRA_COMPILE_FLAGS "")
   set(NATIVE_COMPILE_FLAGS "" CACHE STRING "compilation flags to pass to tools that are executed at build-time. For example '-march=native -mtune=native'. By default this is empty.")
 else()
-  set(EXTRA_COMPILE_FLAGS "")
   set(NATIVE_COMPILE_FLAGS "")
 endif()
 

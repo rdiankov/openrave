@@ -31,7 +31,7 @@ endif()
 
 add_dependencies(collada15reader libopenrave)
 target_link_libraries(collada15reader ${COLLADA_LIBS})
-set_target_properties(collada15reader PROPERTIES COMPILE_FLAGS "${libpcrecpp_CFLAGS_OTHERS} ${EXTRA_COMPILE_FLAGS} -DDOM_INCLUDE_LIBXML -DCOLLADA_DOM_DAEFLOAT_IS64 -DCOLLADA_DOM_SUPPORT150 ${Boost_CFLAGS}"
+set_target_properties(collada15reader PROPERTIES COMPILE_FLAGS "${libpcrecpp_CFLAGS_OTHERS} -DDOM_INCLUDE_LIBXML -DCOLLADA_DOM_DAEFLOAT_IS64 -DCOLLADA_DOM_SUPPORT150 ${Boost_CFLAGS}"
   LINK_FLAGS "${libpcrecpp_LDFLAGS_OTHERS}")
 
 else()
