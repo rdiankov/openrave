@@ -1711,6 +1711,9 @@ private:
                         param_controllerType->setCharData(pjoint->_info._jci_robotcontroller->controllerType.c_str());
                         // robotControllerAxis[Index, Mult, Offset]
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
+                            daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
+                            param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
                             daeElementRef param_robotControllerAxisIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisIndex");
                             param_robotControllerAxisIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisIndex[iaxis]).c_str());
@@ -1720,6 +1723,12 @@ private:
                             daeElementRef param_robotControllerAxisOffset = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisOffset");
                             param_robotControllerAxisOffset->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisOffset->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisOffset[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisFeedforwardVelocityOffsetMult = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisFeedforwardVelocityOffsetMult");
+                            param_robotControllerAxisFeedforwardVelocityOffsetMult->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisFeedforwardVelocityOffsetMult->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisFeedforwardVelocityOffsetMult[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisFeedforwardTorqueOffsetMult = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisFeedforwardTorqueOffsetMult");
+                            param_robotControllerAxisFeedforwardTorqueOffsetMult->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisFeedforwardTorqueOffsetMult->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisFeedforwardTorqueOffsetMult[iaxis]).c_str());
                         }
                         break;
                     } // end case JCM_RobotController

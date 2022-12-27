@@ -1750,6 +1750,13 @@ public:
                                         if( pchild->getElementName() == std::string("controllerType") ) {
                                             jci.controllerType = pchild->getCharData();
                                         }
+                                        else if( pchild->getElementName() == std::string("robotControllerAxisProductCode") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            jci.robotControllerAxisProductCode.at(ijointaxis) = std::string(pchild->getCharData());
+                                        }
                                         else if( pchild->getElementName() == std::string("robotControllerAxisIndex") ) {
                                             int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
@@ -1770,6 +1777,20 @@ public:
                                                 continue;
                                             }
                                             jci.robotControllerAxisOffset.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
+                                        }
+                                        else if( pchild->getElementName() == std::string("robotControllerAxisFeedforwardVelocityOffsetMult") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            jci.robotControllerAxisFeedforwardVelocityOffsetMult.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
+                                        }
+                                        else if( pchild->getElementName() == std::string("robotControllerAxisFeedforwardTorqueOffsetMult") ) {
+                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                continue;
+                                            }
+                                            jci.robotControllerAxisFeedforwardTorqueOffsetMult.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
                                         }
                                     }
                                     continue;

@@ -654,21 +654,35 @@ PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const Joi
 {
     controllerType = jci.controllerType;
 
-    py::list _robotControllerAxisIndex, _robotControllerAxisMult, _robotControllerAxisOffset;
+    py::list _robotControllerAxisProductCode, _robotControllerAxisIndex, _robotControllerAxisMult, _robotControllerAxisOffset, _robotControllerAxisFeedforwardVelocityOffsetMult, _robotControllerAxisFeedforwardTorqueOffsetMult;
+    FOREACHC(itdofindex, jci.robotControllerAxisProductCode) {
+        _robotControllerAxisProductCode.append(*itdofindex);
+    }
+    robotControllerAxisIndex = _robotControllerAxisIndex;
     FOREACHC(itdofindex, jci.robotControllerAxisIndex) {
         _robotControllerAxisIndex.append(*itdofindex);
     }
     robotControllerAxisIndex = _robotControllerAxisIndex;
 
-    FOREACHC(itdofindex, jci.robotControllerAxisMult) {
-        _robotControllerAxisMult.append(*itdofindex);
+    FOREACHC(itdofmult, jci.robotControllerAxisMult) {
+        _robotControllerAxisMult.append(*itdofmult);
     }
     robotControllerAxisMult = _robotControllerAxisMult;
 
-    FOREACHC(itdofindex, jci.robotControllerAxisOffset) {
-        _robotControllerAxisOffset.append(*itdofindex);
+    FOREACHC(itdofoffset, jci.robotControllerAxisOffset) {
+        _robotControllerAxisOffset.append(*itdofoffset);
     }
     robotControllerAxisOffset = _robotControllerAxisOffset;
+
+    FOREACHC(itdofffvelmult, jci.robotControllerAxisFeedforwardVelocityOffsetMult) {
+        _robotControllerAxisFeedforwardVelocityOffsetMult.append(*itdofffvelmult);
+    }
+    robotControllerAxisFeedforwardVelocityOffsetMult = _robotControllerAxisFeedforwardVelocityOffsetMult;
+
+    FOREACHC(itdoffftrqmult, jci.robotControllerAxisFeedforwardTorqueOffsetMult) {
+        _robotControllerAxisFeedforwardTorqueOffsetMult.append(*itdoffftrqmult);
+    }
+    robotControllerAxisFeedforwardTorqueOffsetMult = _robotControllerAxisFeedforwardTorqueOffsetMult;
 }
 
 JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJointControlInfo()
@@ -676,6 +690,13 @@ JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJoint
     JointControlInfo_RobotControllerPtr pinfo(new JointControlInfo_RobotController());
     JointControlInfo_RobotController& info = *pinfo;
     info.controllerType = controllerType;
+    if( !IS_PYTHONOBJECT_NONE(robotControllerAxisProductCode) ) {
+        size_t num = len(robotControllerAxisProductCode);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisProductCode.size(), ORE_InvalidState);
+        for( size_t i = 0; i < num; ++i ) {
+            info.robotControllerAxisProductCode[i] = py::extract<std::string>(robotControllerAxisProductCode[i]);
+        }
+    }
     if( !IS_PYTHONOBJECT_NONE(robotControllerAxisIndex) ) {
         size_t num = len(robotControllerAxisIndex);
         OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisIndex.size(), ORE_InvalidState);
@@ -695,6 +716,20 @@ JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJoint
         OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisOffset.size(), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
             info.robotControllerAxisOffset[i] = py::extract<dReal>(robotControllerAxisOffset[i]);
+        }
+    }
+    if( !IS_PYTHONOBJECT_NONE(robotControllerAxisFeedforwardVelocityOffsetMult) ) {
+        size_t num = len(robotControllerAxisFeedforwardVelocityOffsetMult);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisFeedforwardVelocityOffsetMult.size(), ORE_InvalidState);
+        for( size_t i = 0; i < num; ++i ) {
+            info.robotControllerAxisFeedforwardVelocityOffsetMult[i] = py::extract<dReal>(robotControllerAxisFeedforwardVelocityOffsetMult[i]);
+        }
+    }
+    if( !IS_PYTHONOBJECT_NONE(robotControllerAxisFeedforwardTorqueOffsetMult) ) {
+        size_t num = len(robotControllerAxisFeedforwardTorqueOffsetMult);
+        OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisFeedforwardTorqueOffsetMult.size(), ORE_InvalidState);
+        for( size_t i = 0; i < num; ++i ) {
+            info.robotControllerAxisFeedforwardTorqueOffsetMult[i] = py::extract<dReal>(robotControllerAxisFeedforwardTorqueOffsetMult[i]);
         }
     }
     return pinfo;
@@ -4397,13 +4432,16 @@ class JointControlInfo_RobotController_pickle_suite
 public:
     static py::tuple getstate(const PyJointControlInfo_RobotController& r)
     {
-        return py::make_tuple(r.controllerType, r.robotControllerAxisIndex, r.robotControllerAxisMult, r.robotControllerAxisOffset);
+        return py::make_tuple(r.controllerType, r.robotControllerAxisProductCode, r.robotControllerAxisIndex, r.robotControllerAxisMult, r.robotControllerAxisOffset, r.robotControllerAxisFeedforwardVelocityOffsetMult, r.robotControllerAxisFeedforwardTorqueOffsetMult);
     }
     static void setstate(PyJointControlInfo_RobotController& r, py::tuple state) {
         r.controllerType = py::extract<int>(state[0]);
-        r.robotControllerAxisIndex = state[1];
-        r.robotControllerAxisMult = state[2];
-        r.robotControllerAxisOffset = state[3];
+        r.robotControllerAxisProductCode = state[1];
+        r.robotControllerAxisIndex = state[2];
+        r.robotControllerAxisMult = state[3];
+        r.robotControllerAxisOffset = state[4];
+        r.robotControllerAxisFeedforwardVelocityOffsetMult = state[5];
+        r.robotControllerAxisFeedforwardTorqueOffsetMult = state[6];
     }
 };
 
@@ -4923,9 +4961,12 @@ void init_openravepy_kinbody()
         class_<PyJointControlInfo_RobotController, OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> >("JointControlInfo_RobotController", DOXY_CLASS(KinBody::JointInfo::JointControlInfo_RobotController))
 #endif
         .def_readwrite("controllerType", &PyJointControlInfo_RobotController::controllerType)
+        .def_readwrite("robotControllerAxisProductCode", &PyJointControlInfo_RobotController::robotControllerAxisProductCode)
         .def_readwrite("robotControllerAxisIndex", &PyJointControlInfo_RobotController::robotControllerAxisIndex)
         .def_readwrite("robotControllerAxisMult", &PyJointControlInfo_RobotController::robotControllerAxisMult)
         .def_readwrite("robotControllerAxisOffset", &PyJointControlInfo_RobotController::robotControllerAxisOffset)
+        .def_readwrite("robotControllerAxisFeedforwardVelocityOffsetMult", &PyJointControlInfo_RobotController::robotControllerAxisFeedforwardVelocityOffsetMult)
+        .def_readwrite("robotControllerAxisFeedforwardTorqueOffsetMult", &PyJointControlInfo_RobotController::robotControllerAxisFeedforwardTorqueOffsetMult)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
                  [](const PyJointControlInfo_RobotController &pyinfo) {
