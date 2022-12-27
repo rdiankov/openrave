@@ -803,7 +803,7 @@ void init_openravepy_collisionchecker()
 #else
     .def("Reset",&PyCollisionReport::Reset,
          Reset_overloads(PY_ARGS("coloptions")
-                                      "Reset report"))
+                         "Reset report"))
 #endif
     ;
 
