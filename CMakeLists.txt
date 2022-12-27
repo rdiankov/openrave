@@ -222,6 +222,12 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-Werror=return-type")
 endif()
 
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+  add_definitions("-Werror=return-local-addr")
+elseif( COMPILER_IS_CLANG )
+  add_definitions("-Werror=return-stack-address")
+endif()
+
 set(OPENRAVE_EXPORT_CXXFLAGS)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
