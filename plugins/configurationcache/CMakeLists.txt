@@ -7,12 +7,7 @@ set_target_properties(configurationcache PROPERTIES COMPILE_FLAGS "${PLUGIN_COMP
 install(TARGETS configurationcache DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 
 # python bindings
-if( OPT_PYTHON AND HAVE_ALL_PYTHON_HEADERS )
-  # include
-  include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
-    ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}
-  )
-
+if( OPT_PYTHON )
   # link
   set(OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES openravepy_int configurationcache ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
   if(NOT USE_PYBIND11_PYTHON_BINDINGS)
@@ -20,8 +15,16 @@ if( OPT_PYTHON AND HAVE_ALL_PYTHON_HEADERS )
   endif()
 
   add_library(openravepy_configurationcache SHARED openravepy_configurationcache.cpp)
-
-  target_link_libraries(openravepy_configurationcache PRIVATE boost_assertion_failed PUBLIC ${OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES})
+  target_include_directories(openravepy_configurationcache PUBLIC ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS})
+  target_link_libraries(openravepy_configurationcache
+    PRIVATE
+      boost_assertion_failed
+    PUBLIC
+      ${OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES}
+      Python2::Module
+      Python2::NumPy
+      pybind11::module
+    )
 
   set(OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS "")
   if(USE_PYBIND11_PYTHON_BINDINGS)

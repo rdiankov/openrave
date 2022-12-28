@@ -56,7 +56,7 @@ if( IVCON_FOUND )
   message(STATUS "Geometry Parsing: Using ivcon")
   include_directories(${IVCON_INCLUDE_DIR})
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_IVCON")
-  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${IVCON_LIBRARY})
+  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES})
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
@@ -66,9 +66,6 @@ add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 if( COLLADA_DOM_FOUND )
   set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
 endif()
-if( IVCON_FOUND )
-  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${IVCON_LIBRARY})
-endif()
 
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
@@ -77,8 +74,8 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 
-target_link_libraries(libopenrave-core PRIVATE boost_assertion_failed PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES})
-install(TARGETS libopenrave-core LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+target_link_libraries(libopenrave-core PRIVATE boost_assertion_failed ivcon PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES})
+install(TARGETS libopenrave-core EXPORT openrave-targets LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install(FILES openrave-core.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR})
 
 if( OPT_CBINDINGS )
@@ -92,7 +89,7 @@ if( OPT_CBINDINGS )
     COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_C_CORE_DLL_EXPORTS -DOPENRAVE_C_CORE_DLL -DOPENRAVE_CORE_DLL"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   target_link_libraries (libopenrave-core_c PRIVATE boost_assertion_failed PUBLIC libopenrave-core ${OPENRAVE_CORE_LIBRARIES})
-  install(TARGETS libopenrave-core_c LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS libopenrave-core_c EXPORT openrave-targets LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
   install(FILES openrave-core_c.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR})
 endif()
 
@@ -107,6 +104,6 @@ if( OPT_STATIC )
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 
-  target_link_libraries(libopenrave-core_static PRIVATE boost_assertion_failed PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES})
-  install(TARGETS libopenrave-core_static LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  target_link_libraries(libopenrave-core_static PRIVATE boost_assertion_failed ivcon PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES})
+  install(TARGETS libopenrave-core_static EXPORT openrave-targets LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

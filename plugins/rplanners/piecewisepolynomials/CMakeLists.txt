@@ -11,12 +11,7 @@ install(TARGETS piecewisepolynomials DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR}
 add_dependencies(piecewisepolynomials interfacehashes_target)		
 
 # python bindings
-if( HAVE_ALL_PYTHON_HEADERS )
-  # include
-  include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
-    ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}
-  )
-
+if( OPT_PYTHON )
   # link
   set(OPENRAVEPY_PIECEWISEPOLYNOMIALS_LINKED_LIBRARIES openravepy_int piecewisepolynomials rampoptimizer ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
   if(NOT USE_PYBIND11_PYTHON_BINDINGS)
@@ -24,8 +19,16 @@ if( HAVE_ALL_PYTHON_HEADERS )
   endif()
 
   add_library(openravepy_piecewisepolynomials SHARED openravepy_piecewisepolynomials.cpp)
-
-  target_link_libraries(openravepy_piecewisepolynomials PUBLIC ${OPENRAVEPY_PIECEWISEPOLYNOMIALS_LINKED_LIBRARIES} PRIVATE boost_assertion_failed)
+  target_include_directories(openravepy_piecewisepolynomials PUBLIC ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS})
+  target_link_libraries(openravepy_piecewisepolynomials
+    PRIVATE
+      boost_assertion_failed
+    PUBLIC
+      ${OPENRAVEPY_PIECEWISEPOLYNOMIALS_LINKED_LIBRARIES}
+      Python2::Module
+      Python2::NumPy
+      pybind11::module
+    )
 
   set(OPENRAVEPY_PIECEWISEPOLYNOMIALS_COMPILE_FLAGS "")
   if(USE_PYBIND11_PYTHON_BINDINGS)

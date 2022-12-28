@@ -1,3 +1,7 @@
+if (NOT OPT_PYTHON)
+  return()
+endif()
+
 add_subdirectory(bindings)
 set(HAVE_ALL_PYTHON_HEADERS ${HAVE_ALL_PYTHON_HEADERS} PARENT_SCOPE)
 

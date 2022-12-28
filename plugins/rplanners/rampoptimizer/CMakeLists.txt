@@ -7,12 +7,7 @@ install(TARGETS rampoptimizer DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPON
 add_dependencies(rampoptimizer interfacehashes_target)		
 
 # python bindings
-if( HAVE_ALL_PYTHON_HEADERS )
-  # include
-  include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
-    ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}
-  )
-
+if( OPT_PYTHON )
   # link
   set(OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES openravepy_int rampoptimizer ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
   if(NOT USE_PYBIND11_PYTHON_BINDINGS)
@@ -20,8 +15,16 @@ if( HAVE_ALL_PYTHON_HEADERS )
   endif()
 
   add_library(openravepy_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
-
-  target_link_libraries(openravepy_rampoptimizer PUBLIC ${OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES} PRIVATE boost_assertion_failed)
+  target_include_directories(openravepy_rampoptimizer PUBLIC ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS})
+  target_link_libraries(openravepy_rampoptimizer
+    PRIVATE
+      boost_assertion_failed
+    PUBLIC
+      ${OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES}
+      Python2::Module
+      Python2::NumPy
+      pybind11::module
+  )
 
   set(OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS "")
   if(USE_PYBIND11_PYTHON_BINDINGS)

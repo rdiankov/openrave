@@ -99,68 +99,6 @@ include(GNUInstallDirs)
 
 find_package(PkgConfig) # pkg_check_modules
 
-set(OPENRAVE_PYTHON_INSTALL_DIR)
-
-if( OPT_PYTHON )
-  include(FindPythonInterp)
-  ## check python
-  find_package(PythonLibs 2) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIRS?
-  if( NOT PYTHON_EXECUTABLE )
-    # look specifically for 2.6
-    find_program(PYTHON_EXECUTABLE NAMES python2.6 python PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
-  endif()
-
-  # back compat?
-  if( NOT PYTHON_INCLUDE_DIRS )
-    set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_PATH})
-  endif()
-
-  if( PYTHON_EXECUTABLE )
-    get_filename_component(PYTHON_EXECUTABLE_NAME ${PYTHON_EXECUTABLE} NAME)
-    # architecture independent
-#    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(0))"
-#      OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
-#      RESULT_VARIABLE _python_failed0)
-#    # architexture dependent
-#    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(1))"
-#      OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
-#      RESULT_VARIABLE _python_failed1)
-    execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print(numpy.get_include())"
-      OUTPUT_VARIABLE _python_numpy_include OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _python_failed0)
-    execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print(relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}'))"
-      OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      RESULT_VARIABLE _python_failed2)
-
-    if( ${_python_failed0} EQUAL 0 AND ${_python_failed2} EQUAL 0 )
-      if( NOT IS_DIRECTORY "${_python_numpy_include}" )
-        set(PYTHON_EXECUTABLE)
-      else()
-        set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_numpy_include})
-      endif()
-
-      # get the major.minor python version
-      execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print('%d.%d'%sys.version_info[0:2])"
-        OUTPUT_VARIABLE _python_version OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE _python_failed)
-      if( ${_python_failed} EQUAL 0 )
-        string(REGEX REPLACE "[\r\n]" "" PYTHON_MAJORMINOR_VERSION "${_python_version}")
-      else()
-        message(STATUS "failed to get python version")
-      endif()
-    else()
-      message(STATUS "failed to get python site-package directories via get_python_lib")
-      set(PYTHON_EXECUTABLE)
-    endif()
-  endif()
-endif()
-
 if( WIN32 )
   # does not support symlinks
   set(OPENRAVE_BIN_SUFFIX)
@@ -171,7 +109,6 @@ endif()
 set(OPENRAVE_SHARE_DIR "share/openrave-${OPENRAVE_SOVERSION}" CACHE PATH "Relative path for shared OpenRAVE data")
 set(OPENRAVE_DATA_INSTALL_DIR "${OPENRAVE_SHARE_DIR}" CACHE PATH "Scene and robot files installation directory")
 set(OPENRAVE_PLUGINS_INSTALL_DIR "lib${LIB_SUFFIX}/openrave${OPENRAVE_SOVERSION}-plugins" CACHE PATH "OpenRAVE plugins installation directory")
-set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
 set(OPENRAVE_LOCALE_INSTALL_DIR "share/locale" CACHE PATH "Relative path for OpenRAVE translation files")
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
@@ -184,7 +121,6 @@ endif()
 
 set(OPENRAVE_PLUGINS_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PLUGINS_INSTALL_DIR}" CACHE PATH "Absolute dir for plugins on target OS path, used to write to header file")
 set(OPENRAVE_DATA_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_DATA_INSTALL_DIR}" CACHE PATH "Absolute dir for data on target OS path, used to write to header file")
-set(OPENRAVE_PYTHON_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PYTHON_INSTALL_DIR}" CACHE PATH "Absolute dir for python on target OS path, used to write to header file")
 set(OPENRAVE_LOCALE_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_LOCALE_INSTALL_DIR}" CACHE PATH "Absolute dir for translation files on target OS path, used to write to header file")
 
 # The RPATH to be used when installing
@@ -192,15 +128,12 @@ set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" "${OPENRAVE_P
 
 #define OPENRAVE_PLUGINS_INSTALL_DIR 
 #define OPENRAVE_DATA_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_DATA_INSTALL_DIR@"
-#define OPENRAVE_PYTHON_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON_INSTALL_DIR@"
 
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
 set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_BINARY_DIR}/python/bindings/include ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include)
 
 message(STATUS "CMAKE_INSTALL_PREFIX          = ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "PYTHON_EXECUTABLE             = ${PYTHON_EXECUTABLE}")
-message(STATUS "OPENRAVE_PYTHON_INSTALL_DIR   = ${OPENRAVE_PYTHON_INSTALL_DIR}")
 message(STATUS "OPENRAVE_BIN_SUFFIX           = ${OPENRAVE_BIN_SUFFIX}")
 message(STATUS "OPENRAVE_INCLUDE_LOCAL_DIRS   = ${OPENRAVE_INCLUDE_LOCAL_DIRS}")
 message(STATUS "OPENRAVEPY_INCLUDE_LOCAL_DIRS = ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}")
@@ -823,38 +756,32 @@ add_subdirectory(src)
 add_subdirectory(octave_matlab)
 add_subdirectory(locale)
 
-if(OPT_PYTHON AND PYTHON_EXECUTABLE)
-  set(OPENRAVE_USE_LOCAL_SYMPY 1)
-  if( PYTHON_EXECUTABLE )
-    # get the sympy version
-    execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
-      OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _sympy_version_failed)
-    if( ${_sympy_version_failed} EQUAL 0 )
-      string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
-      message(STATUS "Found sympy version '${_sympy_version}'")
-      if( "${_sympy_version}" VERSION_GREATER "0.6.3" OR "${_sympy_version}" VERSION_EQUAL "0.6.3" )
-        set(OPENRAVE_USE_LOCAL_SYMPY 0)
-        if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
-          message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
-        else()
-          message(STATUS "Assuming sympy version 0.7.x or greater")
-        endif()
-      endif()
-    else()
-      message(STATUS "failed to find python sympy system installation")
-    endif()
-  endif()
+if(OPT_PYTHON)
+  find_package(Python2 REQUIRED COMPONENTS Interpreter Development NumPy)
+  string(REGEX REPLACE "^/usr/" "" OPENRAVE_PYTHON_INSTALL_DIR "${Python2_SITEARCH}")
+  set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy")
 
-      # check if sympy substitution is ok
-#      execute_process(
-#        COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
-#        OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
-#        RESULT_VARIABLE _sympy_check_failed)
-#      if( ${_sympy_check_failed} EQUAL 0 )
-#        set(OPENRAVE_USE_LOCAL_SYMPY 0)
-#      else()
+  set(OPENRAVE_USE_LOCAL_SYMPY 1)
+    # get the sympy version
+  execute_process(
+    COMMAND ${Python2_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
+    OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _sympy_version_failed)
+  message(STATUS "_sympy_version ${_sympy_version}")
+  if( ${_sympy_version_failed} EQUAL 0 )
+    string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
+    message(STATUS "Found sympy version '${_sympy_version}'")
+    if( "${_sympy_version}" VERSION_GREATER "0.6.3" OR "${_sympy_version}" VERSION_EQUAL "0.6.3" )
+      set(OPENRAVE_USE_LOCAL_SYMPY 0)
+      if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
+        message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
+      else()
+        message(STATUS "Assuming sympy version 0.7.x or greater")
+      endif()
+    endif()
+  else()
+    message(STATUS "failed to find python sympy system installation")
+  endif()
 
   if( OPENRAVE_USE_LOCAL_SYMPY )
     message(STATUS "System sympy (v=${_sympy_version}) is not right version, using local sympy")
@@ -868,7 +795,6 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE)
   endif()
 
-  set( USE_OPENRAVEPY 1)
   if( NOT WIN32 AND OPENRAVE_BIN_SUFFIX )
     set(OPENRAVEPY_VER_NAME "_openravepy_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
   else()

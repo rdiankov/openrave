@@ -14,10 +14,35 @@
 
 @PACKAGE_INIT@
 
-message(STATUS "@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@/@OPENRAVE_INCLUDE_INSTALL_DIR@")
 set_and_check(OpenRAVE_INCLUDE_DIR @CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@/@OPENRAVE_INCLUDE_INSTALL_DIR@)
 set_and_check(OpenRAVE_RAPIDJSON_INCLUDE_DIR "@RAPIDJSON_INCLUDES@")
-set(OpenRAVE_INCLUDE_DIRS ${OpenRAVE_INCLUDE_DIR} ${OpenRAVE_RAPIDJSON_INCLUDE_DIR})
+set_and_check(OpenRAVE_PYTHON_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVEPY_INSTALL_DIR@")
 
+set(OpenRAVE_INCLUDE_DIRS ${OpenRAVE_INCLUDE_DIR} ${OpenRAVE_RAPIDJSON_INCLUDE_DIR})
+set(OpenRAVE_PYTHON @OPT_PYTHON@)
+set(OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS @USE_PYBIND11_PYTHON_BINDINGS@)
 set(OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
 message(STATUS "OpenRAVE was compiled with Boost ${OpenRAVE_Boost_VERSION}.")
+
+include(${CMAKE_CURRENT_LIST_DIR}/openrave-targets.cmake)
+
+find_package(Boost REQUIRED COMPONENTS filesystem)
+if (${OpenRAVE_PYTHON})
+    find_package(Python2 REQUIRED COMPONENTS Interpreter Development NumPy)
+
+    # Backward compatibility shim. Remove this line once we finally migrate to modern CMake.
+    # Ideally we should be linking against the target Python2::Development to gain access to headers, instead of doing this.
+    set(OpenRAVE_PYTHON_INCLUDE_DIRS ${Python2_INCLUDE_DIRS} CACHE STRING "This is for backward compatibility with deprecated CMake declarations." FORCE)
+    set(OpenRAVE_PYTHON_DIR @CMAKE_INSTALL_PREFIX@/@OPENRAVEPY_VER_INSTALL_DIR@)
+
+    if (${OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS})
+        find_package(pybind11 REQUIRED)
+    else()
+        find_package(Boost REQUIRED COMPONENTS python)
+    endif()
+endif()
+
+# Backward compatibility only.
+get_target_property(libopenrave_LOCATION libopenrave LOCATION)
+get_target_property(libopenrave-core_LOCATION libopenrave-core LOCATION)
+set(OpenRAVE_CORE_LIBRARIES "${libopenrave_LOCATION};${libopenrave-core_LOCATION}")
