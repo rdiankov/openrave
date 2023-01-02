@@ -93,6 +93,17 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
+                KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
+                if( !pGrabbingLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link for grabbed body '%s'"),
+                                                    pbody->GetEnv()->GetNameId()%pGrabbedBody->GetName(),
+                                                    ORE_Failed);
+                }
+                else if( !pbody->GetLink(pGrabbingLink->GetName()) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)"),
+                                                    pbody->GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%pbody->GetName()%pbody->GetLinks().size(),
+                                                    ORE_Failed);
+                }
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
                     pbody->_AttachBody(pGrabbedBody);
                     pbody->_vGrabbedBodies.push_back(pGrabbed);
@@ -111,34 +122,29 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                             // pbody is supposed to already be set to some "proper" configuration as the newly
                             // initialized Grabbed objects will save the current state of pbody for later computation of
                             // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
-                            KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
-                            if( !pGrabbingLink ) {
-                                RAVELOG_WARN_FORMAT("env=%s, could not restore grabbing link for grabbed body '%s'", pbody->GetEnv()->GetNameId()%pGrabbedBody->GetName());
-                            }
-                            else {
-                                if( pGrabbingLink->GetIndex() < 0 || pGrabbingLink->GetIndex() >= (int)pbody->GetLinks().size() ) {
-                                    RAVELOG_WARN_FORMAT("env=%s, could not restore grabbing link '%s' for grabbed body '%s' since its index %d is out of range (body num links is %d)", pbody->GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%pGrabbingLink->GetIndex()%pbody->GetLinks().size());
-                                }
-                                else {
-                                    GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pbody->GetLinks().at(pGrabbingLink->GetIndex())));
-                                    pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-                                    pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
-                                    if( pGrabbed->IsListNonCollidingLinksValid() ) {
-                                        FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
-                                            int linkindex = (*itLinkRef)->GetIndex();
-                                            if( linkindex < 0 || linkindex >= (int)pbody->GetLinks().size() ) {
-                                                RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", pbody->GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetIndex()%pbody->GetLinks().size());
-                                            }
-                                            else {
-                                                pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(pbody->GetLinks().at((*itLinkRef)->GetIndex()));
-                                            }
-                                        }
-                                        pNewGrabbed->_SetLinkNonCollidingIsValid(true);
+                            LinkPtr pNewGrabbingLink = pbody->GetLink(pGrabbingLink->GetName());
+                            GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pNewGrabbingLink));
+                            pNewGrabbed->_tRelative = pGrabbed->_tRelative;
+                            pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
+                            if( pGrabbed->IsListNonCollidingLinksValid() ) {
+                                FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
+                                    int linkindex = (*itLinkRef)->GetIndex();
+                                    if( linkindex < 0 || linkindex >= (int)pbody->GetLinks().size() ) {
+                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", pbody->GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetIndex()%pbody->GetLinks().size());
                                     }
-
-                                    pbody->_AttachBody(pNewGrabbedBody);
-                                    pbody->_vGrabbedBodies.push_back(pNewGrabbed);
+                                    else {
+                                        pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(pbody->GetLinks().at((*itLinkRef)->GetIndex()));
+                                    }
                                 }
+                                pNewGrabbed->_SetLinkNonCollidingIsValid(true);
+                            }
+                            CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
+
+                            pbody->_AttachBody(pNewGrabbedBody);
+                            pbody->_vGrabbedBodies.push_back(pNewGrabbed);
+                            CollisionCheckerBasePtr collisionchecker = pbody->GetSelfCollisionChecker();
+                            if (!!collisionchecker) {
+                                collisionchecker->InitKinBody(pNewGrabbedBody);
                             }
                         }
                     }
@@ -305,6 +311,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                                 }
                                 pNewGrabbed->_SetLinkNonCollidingIsValid(true);
                             }
+                            CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
                             body._AttachBody(pNewGrabbedBody);
                             body._vGrabbedBodies.push_back(pNewGrabbed);

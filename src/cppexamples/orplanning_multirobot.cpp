@@ -49,7 +49,7 @@ public:
         while(IsOk()) {
             list<GraphHandlePtr> listgraphs;
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 params->_getstatefn(params->vinitialconfig);
                 params->vgoalconfig.resize(params->GetDOF());
@@ -106,7 +106,7 @@ public:
                 if( probot1->GetController()->IsDone() || probot2->GetController()->IsDone() ) {
                     break;
                 }
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

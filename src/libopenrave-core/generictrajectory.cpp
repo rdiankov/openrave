@@ -264,61 +264,69 @@ public:
 
     void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite) override
     {
+        Insert (index, data.data(), data.size(), bOverwrite);
+    }
+
+
+    void Insert(size_t index, const dReal* pdata, size_t nDataElements, bool bOverwrite) override
+    {
         BOOST_ASSERT(_bInit);
-        if( data.size() == 0 ) {
+        if( nDataElements == 0 ) {
             return;
         }
         BOOST_ASSERT(_spec.GetDOF()>0);
-        OPENRAVE_ASSERT_FORMAT((data.size()%_spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%_spec.GetDOF(), ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT((nDataElements%_spec.GetDOF()) == 0, "%d does not divide dof %d", nDataElements%_spec.GetDOF(), ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP(index*_spec.GetDOF(),<=,_vtrajdata.size());
         if( bOverwrite && index*_spec.GetDOF() < _vtrajdata.size() ) {
-            size_t copysize = min(data.size(),_vtrajdata.size()-index*_spec.GetDOF());
-            std::copy(data.begin(),data.begin()+copysize,_vtrajdata.begin()+index*_spec.GetDOF());
-            if( copysize < data.size() ) {
-                _vtrajdata.insert(_vtrajdata.end(),data.begin()+copysize,data.end());
+            const size_t copysize = min(nDataElements, _vtrajdata.size()-index*_spec.GetDOF());
+            std::copy(pdata, pdata+copysize, _vtrajdata.begin()+index*_spec.GetDOF());
+            if( copysize < nDataElements ) {
+                _vtrajdata.insert(_vtrajdata.end(), pdata+copysize, pdata+nDataElements);
             }
         }
         else {
-            _vtrajdata.insert(_vtrajdata.begin()+index*_spec.GetDOF(),data.begin(),data.end());
+            _vtrajdata.insert(_vtrajdata.begin()+index*_spec.GetDOF(), pdata, pdata+nDataElements);
         }
         _bChanged = true;
     }
 
     void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite) override
     {
+        Insert (index, data.data(), data.size(), spec, bOverwrite);
+    }
+
+    void Insert(size_t index, const dReal* pdata, size_t nDataElements, const ConfigurationSpecification& spec, bool bOverwrite) override
+    {
         BOOST_ASSERT(_bInit);
-        if( data.size() == 0 ) {
+        if( nDataElements == 0 ) {
             return;
         }
         BOOST_ASSERT(spec.GetDOF()>0);
-        OPENRAVE_ASSERT_FORMAT((data.size()%spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%spec.GetDOF(), ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT((nDataElements%spec.GetDOF()) == 0, "%d does not divide dof %d", nDataElements%spec.GetDOF(), ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP(index*_spec.GetDOF(),<=,_vtrajdata.size());
         if( _spec == spec ) {
-            Insert(index,data,bOverwrite);
+            Insert(index, pdata, nDataElements, bOverwrite);
         }
         else {
             std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator > vconvertgroups(_spec._vgroups.size());
             for(size_t i = 0; i < vconvertgroups.size(); ++i) {
                 vconvertgroups[i] = spec.FindCompatibleGroup(_spec._vgroups[i]);
             }
-            size_t numpoints = data.size()/spec.GetDOF();
+            size_t numpoints = nDataElements/spec.GetDOF();
             size_t sourceindex = 0;
             std::vector<dReal>::iterator ittargetdata;
-            std::vector<dReal>::const_iterator itsourcedata;
             if( bOverwrite && index*_spec.GetDOF() < _vtrajdata.size() ) {
                 size_t copyelements = min(numpoints,_vtrajdata.size()/_spec.GetDOF()-index);
                 ittargetdata = _vtrajdata.begin()+index*_spec.GetDOF();
-                itsourcedata = data.begin();
-                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,copyelements,false);
+                _ConvertData(ittargetdata, pdata, vconvertgroups, spec, copyelements, false);
                 sourceindex = copyelements*spec.GetDOF();
                 index += copyelements;
             }
-            if( sourceindex < data.size() ) {
-                size_t numelements = (data.size()-sourceindex)/spec.GetDOF();
+            if( sourceindex < nDataElements ) {
+                size_t numelements = (nDataElements-sourceindex)/spec.GetDOF();
                 std::vector<dReal> vtemp(numelements*_spec.GetDOF());
                 ittargetdata = vtemp.begin();
-                itsourcedata = data.begin()+sourceindex;
-                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,numelements,true);
+                _ConvertData(ittargetdata, pdata+sourceindex, vconvertgroups, spec, numelements, true);
                 _vtrajdata.insert(_vtrajdata.begin()+index*_spec.GetDOF(),vtemp.begin(),vtemp.end());
             }
             _bChanged = true;
@@ -455,7 +463,7 @@ public:
 
         std::vector<dReal>::iterator itdata = data.begin();
 
-        for(int i = 0; i < numPoints; ++i, itdata += dof) {
+        for(int i = 0; i < (ensureLastPoint ? numPoints-1 : numPoints); ++i, itdata += dof) {
             dReal sampletime = i * deltatime;
             if( sampletime >= duration ) {
                 std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
@@ -489,6 +497,11 @@ public:
                     *(itdata + _timeoffset) = timeFromLowerWaypoint;
                 }
             }
+        }
+
+        if (ensureLastPoint) {
+            // copy the last point, itdata should point to that
+            std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
         }
     }
 
@@ -874,11 +887,11 @@ public:
     }
 
 protected:
-    void _ConvertData(std::vector<dReal>::iterator ittargetdata, std::vector<dReal>::const_iterator itsourcedata, const std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator >& vconvertgroups, const ConfigurationSpecification& spec, size_t numelements, bool filluninitialized)
+    void _ConvertData(std::vector<dReal>::iterator ittargetdata, const dReal* psourcedata, const std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator >& vconvertgroups, const ConfigurationSpecification& spec, size_t numelements, bool filluninitialized)
     {
         for(size_t igroup = 0; igroup < vconvertgroups.size(); ++igroup) {
             if( vconvertgroups[igroup] != spec._vgroups.end() ) {
-                ConfigurationSpecification::ConvertGroupData(ittargetdata+_spec._vgroups[igroup].offset, _spec.GetDOF(), _spec._vgroups[igroup], itsourcedata+vconvertgroups[igroup]->offset, spec.GetDOF(), *vconvertgroups[igroup],numelements,GetEnv(),filluninitialized);
+                ConfigurationSpecification::ConvertGroupData(ittargetdata+_spec._vgroups[igroup].offset, _spec.GetDOF(), _spec._vgroups[igroup], psourcedata+vconvertgroups[igroup]->offset, spec.GetDOF(), *vconvertgroups[igroup],numelements,GetEnv(),filluninitialized);
             }
             else if( filluninitialized ) {
                 vector<dReal> vdefaultvalues(_spec._vgroups[igroup].dof,0);

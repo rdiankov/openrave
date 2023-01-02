@@ -72,6 +72,19 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
         orjson::SetJsonValueByKey(rEnvInfo, "uri", _uri, allocator);
     }
 
+    if( _uInt64Parameters.size() > 0 ) {
+        rapidjson::Value rUInt64Parameters;
+        rUInt64Parameters.SetArray();
+        FOREACHC(it, _uInt64Parameters) {
+            rapidjson::Value rInt64Parameter;
+            rInt64Parameter.SetObject();
+            orjson::SetJsonValueByKey(rInt64Parameter, "id", it->first, allocator);
+            orjson::SetJsonValueByKey(rInt64Parameter, "value", it->second, allocator);
+            rUInt64Parameters.PushBack(rInt64Parameter, allocator);
+        }
+        rEnvInfo.AddMember("uint64Parameters", rUInt64Parameters, allocator);
+    }
+
     if (_vBodyInfos.size() > 0) {
         rapidjson::Value rBodiesValue;
         rBodiesValue.SetArray();
@@ -129,6 +142,24 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
+    if (rEnvInfo.HasMember("uint64Parameters") && rEnvInfo["uint64Parameters"].IsArray()) {
+        for (rapidjson::Value::ConstValueIterator it = rEnvInfo["uint64Parameters"].Begin(); it != rEnvInfo["uint64Parameters"].End(); ++it) {
+            std::string id;
+            if( it->HasMember("id") ) {
+                orjson::LoadJsonValueByKey(*it, "id", id);
+            }
+            if (id.empty()) {
+                RAVELOG_WARN_FORMAT("ignored an entry in uint64Parameters in environment \"%s\" due to missing or empty id", _uri);
+                continue;
+            }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _uInt64Parameters.erase(id);
+                continue;
+            }
+            orjson::LoadJsonValueByKey(*it, "value", _uInt64Parameters[id]);
+        }
+    }
 
     if (rEnvInfo.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + rEnvInfo["bodies"].Size());

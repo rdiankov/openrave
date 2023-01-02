@@ -593,13 +593,15 @@ void init_openravepy_ikparameterization(py::module& m);
 void init_openravepy_ikparameterization();
 #endif
 OPENRAVEPY_API py::object toPyAABB(const AABB& ab);
-OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
-OPENRAVEPY_API py::object toPyRay(const RAY& r);
-OPENRAVEPY_API RAY ExtractRay(py::object o);
-
 /// \brief PyAABB -> AABB
 OPENRAVEPY_API AABB ExtractAABB(py::object o);
+OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
+OPENRAVEPY_API OrientedBox ExtractOrientedBox(py::object o);
+OPENRAVEPY_API std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList);
+OPENRAVEPY_API py::object toPyRay(const RAY& r);
+OPENRAVEPY_API RAY ExtractRay(py::object o);
 OPENRAVEPY_API bool ExtractRay(py::object o, RAY& r);
+
 OPENRAVEPY_API py::object toPyTriMesh(const TriMesh& mesh);
 OPENRAVEPY_API bool ExtractTriMesh(py::object o, TriMesh& mesh);
 OPENRAVEPY_API std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(py::object pyLinkInfoList);
@@ -683,8 +685,8 @@ public:
     virtual py::object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
-    virtual int __hash__() {
-        return static_cast<int>(uintptr_t(_pbase.get()));
+    virtual long __hash__() {
+        return static_cast<long>(uintptr_t(_pbase.get()));
     }
     virtual bool __eq__(PyInterfaceBasePtr p) {
         return !!p && _pbase == p->GetInterfaceBase();

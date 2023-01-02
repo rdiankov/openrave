@@ -52,7 +52,7 @@ public:
     virtual ~QOSGViewerWidget();
 
     /// \brief Draws bounding box around actual kinbody
-    void DrawBoundingBox(bool pressed);
+    //void DrawBoundingBox(bool pressed);
 
     /// \brief Active selection
     void ActivateSelection(bool active);

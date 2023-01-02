@@ -1465,10 +1465,10 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
     if((MATH_FABS(vpos.z) > o.extents.z)&&(vdir.z * vpos.z > 0.0f)) {
         return false;
     }
-    cross3(vd, vdir, vpos);
-    if((MATH_FABS(vd.x) > o.extents.y * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.y))||
-       ( MATH_FABS(vd.y) > o.extents.x * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.x)) ||
-       ( MATH_FABS(vd.z) > o.extents.x * MATH_FABS(vdir.y) + o.extents.y * MATH_FABS(vdir.x)) ) {
+    vd = vdir.cross(vpos);
+    if( (MATH_FABS(vd.x) > o.extents.y * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.y)) ||
+        (MATH_FABS(vd.y) > o.extents.x * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.x)) ||
+        (MATH_FABS(vd.z) > o.extents.x * MATH_FABS(vdir.y) + o.extents.y * MATH_FABS(vdir.x)) ) {
         return false;
     }
     return true;
@@ -1906,6 +1906,30 @@ template <typename T>
 inline obb<T> OBBFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T>& t)
 {
     return OBBFromAABB(ab,RaveTransformMatrix<T>(t));
+}
+
+/// \brief Transform an axis aligned bounding box to an oriented bounding box expressed in transform.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of ab.
+template <typename T>
+inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T>& t)
+{
+    RaveOrientedBox<T> o;
+    o.transform.rot = t.rot;
+    o.transform.trans = t*ab.pos;
+    o.extents = ab.extents;
+    return o;
+}
+
+/// \brief Transform an axis aligned bounding box to an oriented bounding box expressed in transform.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of ab.
+template <typename T>
+inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransformMatrix<T>& t)
+{
+    return OrientedBoxFromAABB(ab,RaveTransform<T>(t));
 }
 
 /// \brief Transforms an oriented bounding box.

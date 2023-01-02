@@ -601,7 +601,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
-    EnvironmentMutex::scoped_lock lockenv(env->GetMutex());
+    EnvironmentLock lockenv(env->GetMutex());
     CollisionOptionsStateSaver optionstate(env->GetCollisionChecker(),env->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
     PlannerBasePtr planner = RaveCreatePlanner(env,plannername.size() > 0 ? plannername : string("parabolicsmoother"));
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
@@ -639,7 +639,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
 {
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicsmoother";
     _robot = robot;
-    EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    EnvironmentLock lockenv(robot->GetEnv()->GetMutex());
     _vRobotActiveIndices = _robot->GetActiveDOFIndices();
     _nRobotAffineDOF = _robot->GetAffineDOF();
     _vRobotRotationAxis = _robot->GetAffineRotationAxis();
@@ -700,7 +700,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
 {
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicretimer";
     _robot = robot;
-    EnvironmentMutex::scoped_lock lockenv(robot->GetEnv()->GetMutex());
+    EnvironmentLock lockenv(robot->GetEnv()->GetMutex());
     _vRobotActiveIndices = _robot->GetActiveDOFIndices();
     _nRobotAffineDOF = _robot->GetAffineDOF();
     _vRobotRotationAxis = _robot->GetAffineRotationAxis();
@@ -773,7 +773,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
         return PlannerStatus(PS_HasSolution);
     }
 
-    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
+    EnvironmentLock lockenv(traj->GetEnv()->GetMutex());
     PlannerBasePtr planner = RaveCreatePlanner(traj->GetEnv(),plannername.size() > 0 ? plannername : string("parabolicsmoother"));
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetConfigurationSpecification(traj->GetEnv(),traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
@@ -901,7 +901,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         return PlannerStatus(PS_HasSolution);
     }
 
-    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
+    EnvironmentLock lockenv(traj->GetEnv()->GetMutex());
     ConfigurationSpecification newspec = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
     if( newspec.GetDOF() != (int)maxvelocities.size() || newspec.GetDOF() != (int)maxaccelerations.size() ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("traj values (%d) do not match maxvelocity size (%d) or maxaccelerations size (%d)"),newspec.GetDOF()%maxvelocities.size()%maxaccelerations.size(), ORE_InvalidArguments);
@@ -1052,7 +1052,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
-    EnvironmentMutex::scoped_lock lockenv(env->GetMutex());
+    EnvironmentLock lockenv(env->GetMutex());
     ConfigurationSpecification trajspec = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
     if( trajspec.GetDOF() != (int)maxvelocities.size() || trajspec.GetDOF() != (int)maxaccelerations.size() ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("traj values (%d) do not match maxvelocity size (%d) or maxaccelerations size (%d)"),trajspec.GetDOF()%maxvelocities.size()%maxaccelerations.size(), ORE_InvalidArguments);
@@ -1168,7 +1168,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
-    EnvironmentMutex::scoped_lock lockenv(env->GetMutex());
+    EnvironmentLock lockenv(env->GetMutex());
     ConfigurationSpecification trajspec = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
     int trajdof = trajspec.GetDOF();
     if( trajdof != (int)maxvelocities.size() ||
@@ -1640,7 +1640,7 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
     PlannerBase::PlannerParametersConstPtr params = planner->GetParameters();
     ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
 
-    EnvironmentMutex::scoped_lock lockenv(traj->GetEnv()->GetMutex());
+    EnvironmentLock lockenv(traj->GetEnv()->GetMutex());
 
     dReal fSamplingTime = 0.01; // for collision checking
     dReal fTimeBuffer = 0.01; // if new trajectory increases within this time limit, then it will be accepted
@@ -2148,7 +2148,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
 
 void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbody)
 {
-    EnvironmentMutex::scoped_lock lockenv(pbody->GetEnv()->GetMutex());
+    EnvironmentLock lockenv(pbody->GetEnv()->GetMutex());
     Transform tbaseinv = pbody->GetTransform().inverse();
     vparameters.resize(pbody->GetDependencyOrderedJoints().size());
     std::vector<DHParameter>::iterator itdh = vparameters.begin();

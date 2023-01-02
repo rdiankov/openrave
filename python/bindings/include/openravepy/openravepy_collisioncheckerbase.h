@@ -48,6 +48,8 @@ public:
 
     object GetGeometryGroup();
 
+    object GetBodyGeometryGroup(PyKinBodyPtr pybody);
+
     void RemoveKinBody(PyKinBodyPtr pbody);
 
     bool CheckCollision(PyKinBodyPtr pbody1);

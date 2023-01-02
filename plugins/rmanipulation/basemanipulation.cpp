@@ -125,7 +125,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         return ModuleBase::SendCommand(sout,sinput);
     }
 protected:
@@ -1093,7 +1093,7 @@ protected:
         }
 
         RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
-        robot->Grab(ptarget);
+        robot->Grab(ptarget, rapidjson::Value());
         return true;
     }
 
