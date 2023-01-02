@@ -38,19 +38,19 @@ void EnsureSoQtInit()
     }
 }
 
-QtCoinRavePlugin::QtCoinRavePlugin() : _InitRefCount(0), _SoQtArgc(0)
+QtCoinRavePlugin::QtCoinRavePlugin()
 {
     _interfaces[OpenRAVE::PT_Viewer].push_back("QtCoin");
     _interfaces[OpenRAVE::PT_Viewer].push_back("QtCameraViewer");
     _interfaces[OpenRAVE::PT_Module].push_back("IvModelLoader");
 }
 
-QtCoinRavePlugin::~QtCoinRavePlugin() override
+QtCoinRavePlugin::~QtCoinRavePlugin()
 {
     Destroy();
 }
 
-void QtCoinRavePlugin::Destroy() override
+void QtCoinRavePlugin::Destroy()
 {
     if( s_InitRefCount > 0 ) {
         RAVELOG_WARN("SoQt releasing all memory\n");
@@ -62,7 +62,7 @@ void QtCoinRavePlugin::Destroy() override
     }
 }
 
-OpenRAVE::InterfaceBasePtr QtCoinRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
+OpenRAVE::InterfaceBasePtr QtCoinRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_Viewer:
@@ -95,12 +95,12 @@ OpenRAVE::InterfaceBasePtr QtCoinRavePlugin::CreateInterface(OpenRAVE::Interface
     return OpenRAVE::InterfaceBasePtr();
 }
 
-const RavePlugin::InterfaceMap& QtCoinRavePlugin::GetInterfaces() const override
+const RavePlugin::InterfaceMap& QtCoinRavePlugin::GetInterfaces() const
 {
     return _interfaces;
 }
 
-const std::string& QtCoinRavePlugin::GetPluginName() const override
+const std::string& QtCoinRavePlugin::GetPluginName() const
 {
     static std::string pluginname = "QtCoinRavePlugin";
     return pluginname;
