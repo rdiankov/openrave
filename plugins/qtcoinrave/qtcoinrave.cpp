@@ -12,6 +12,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "qtcoinrave.h"
+
 #include "qtcoin.h"
 
 #include <QApplication>
@@ -23,7 +25,7 @@
 #include <X11/Xlib.h>
 #endif
 
-ModuleBasePtr CreateIvModelLoader(EnvironmentBasePtr penv);
+OpenRAVE::ModuleBasePtr CreateIvModelLoader(OpenRAVE::EnvironmentBasePtr penv);
 
 std::mutex g_mutexsoqt;
 static int s_InitRefCount = 0;
@@ -36,7 +38,31 @@ void EnsureSoQtInit()
     }
 }
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+QtCoinRavePlugin::QtCoinRavePlugin() : _InitRefCount(0), _SoQtArgc(0)
+{
+    _interfaces[OpenRAVE::PT_Viewer].push_back("QtCoin");
+    _interfaces[OpenRAVE::PT_Viewer].push_back("QtCameraViewer");
+    _interfaces[OpenRAVE::PT_Module].push_back("IvModelLoader");
+}
+
+QtCoinRavePlugin::~QtCoinRavePlugin() override
+{
+    Destroy();
+}
+
+void QtCoinRavePlugin::Destroy() override
+{
+    if( s_InitRefCount > 0 ) {
+        RAVELOG_WARN("SoQt releasing all memory\n");
+        SoQt::done();
+        s_InitRefCount = 0;
+        // necessary since QApplication does not destroy all threads when last SoQt viewer is done
+        //removePostedEvents - sometimes freezes on this function
+        QApplication::quit();
+    }
+}
+
+OpenRAVE::InterfaceBasePtr QtCoinRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
 {
     switch(type) {
     case PT_Viewer:
@@ -52,10 +78,10 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             std::lock_guard<std::mutex> lock(g_mutexsoqt);
             EnsureSoQtInit();
             //SoDBWriteLock dblock;
-            return InterfaceBasePtr(new QtCoinViewer(penv, sinput));
+            return boost::make_shared<QtCoinViewer>(penv, sinput);
         }
         else if( interfacename == "qtcameraviewer" ) {
-            return InterfaceBasePtr(new QtCameraViewer(penv,sinput));
+            return boost::make_shared<QtCameraViewer>(penv, sinput);
         }
         break;
     case PT_Module:
@@ -66,24 +92,20 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& QtCoinRavePlugin::GetInterfaces() const override
 {
-    info.interfacenames[PT_Viewer].push_back("QtCoin");
-    info.interfacenames[PT_Viewer].push_back("QtCameraViewer");
-    info.interfacenames[PT_Module].push_back("IvModelLoader");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& QtCoinRavePlugin::GetPluginName() const override
 {
-    if( s_InitRefCount > 0 ) {
-        RAVELOG_WARN("SoQt releasing all memory\n");
-        SoQt::done();
-        s_InitRefCount = 0;
-        // necessary since QApplication does not destroy all threads when last SoQt viewer is done
-        //removePostedEvents - sometimes freezes on this function
-        QApplication::quit();
-    }
+    static std::string pluginname = "QtCoinRavePlugin";
+    return pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new QtCoinRavePlugin();
 }

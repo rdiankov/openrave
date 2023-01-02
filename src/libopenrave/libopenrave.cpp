@@ -444,10 +444,8 @@ public:
         }
 
         // since initialization depends on _pdatabase, have pdatabase be local until it is complete
-        boost::shared_ptr<RaveDatabase> pdatabase(new RaveDatabase());
-        if( !pdatabase->Init(bLoadAllPlugins) ) {
-            RAVELOG_FATAL("failed to create the openrave plugin database\n");
-        }
+        boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<DynamicRaveDatabase>();
+        pdatabase->Init();
 
         char* phomedir = getenv("OPENRAVE_HOME"); // getenv not thread-safe?
         if( phomedir == NULL ) {
