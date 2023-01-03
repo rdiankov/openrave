@@ -338,6 +338,25 @@ object toPyOrientedBox(const OrientedBox& obb)
     return py::to_object(OPENRAVE_SHARED_PTR<PyOrientedBox>(new PyOrientedBox(obb)));
 }
 
+OrientedBox ExtractOrientedBox(py::object o)
+{
+    extract_<OPENRAVE_SHARED_PTR<PyOrientedBox> > pyobb(o);
+    return ((OPENRAVE_SHARED_PTR<PyOrientedBox>)pyobb)->obb;
+}
+
+std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList)
+{
+    if( IS_PYTHONOBJECT_NONE(pyOrientedBoxList) ) {
+        return {};
+    }
+    const size_t arraySize = len(pyOrientedBoxList);
+    std::vector<OrientedBox> vOrientedBox(arraySize);
+    for(size_t iOrientedBox = 0; iOrientedBox < arraySize; ++iOrientedBox) {
+        vOrientedBox[iOrientedBox] = ExtractOrientedBox(pyOrientedBoxList[iOrientedBox]);
+    }
+    return vOrientedBox;
+}
+
 class OrientedBox_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -447,10 +466,10 @@ public:
 
         } else {
             for(int i = 0; i < numverts; ++i) {
-                object ov = vertices[i];
-                mesh.vertices[i].x = extract<dReal>(ov[0]);
-                mesh.vertices[i].y = extract<dReal>(ov[1]);
-                mesh.vertices[i].z = extract<dReal>(ov[2]);
+                object ov = vertices[py::to_object(i)];
+                mesh.vertices[i].x = extract<dReal>(ov[py::to_object(0)]);
+                mesh.vertices[i].y = extract<dReal>(ov[py::to_object(1)]);
+                mesh.vertices[i].z = extract<dReal>(ov[py::to_object(2)]);
             }
         }
 
@@ -500,10 +519,10 @@ public:
 
         } else {
             for(size_t i = 0; i < numtris; ++i) {
-                object oi = indices[i];
-                mesh.indices[3*i+0] = extract<int32_t>(oi[0]);
-                mesh.indices[3*i+1] = extract<int32_t>(oi[1]);
-                mesh.indices[3*i+2] = extract<int32_t>(oi[2]);
+                object oi = indices[py::to_object(i)];
+                mesh.indices[3*i+0] = extract<int32_t>(oi[py::to_object(0)]);
+                mesh.indices[3*i+1] = extract<int32_t>(oi[py::to_object(1)]);
+                mesh.indices[3*i+2] = extract<int32_t>(oi[py::to_object(2)]);
             }
         }
     }
@@ -742,7 +761,7 @@ bool PyConfigurationSpecification::InsertJointValues(object odata, object ovalue
     }
     // copy the value back, this is wasteful, but no other way to do it unless vdata pointer pointed directly to odata
     for(size_t i = 0; i < vdata.size(); ++i) {
-        odata[i] = vdata[i];
+        odata[py::to_object(i)] = vdata[i];
     }
     return true;
 }
@@ -752,7 +771,7 @@ bool PyConfigurationSpecification::InsertDeltaTime(object odata, dReal deltatime
     // it is easier to get the time index
     FOREACHC(itgroup,_spec._vgroups) {
         if( itgroup->name == "deltatime" ) {
-            odata[itgroup->offset] = py::to_object(deltatime);
+            odata[py::to_object(itgroup->offset)] = py::to_object(deltatime);
             return true;
         }
     }
@@ -1033,7 +1052,7 @@ object RaveGetLoadedInterfaces()
         FOREACHC(itname,it->second) {
             names.append(*itname);
         }
-        ointerfacenames[it->first] = names;
+        ointerfacenames[py::to_object(it->first)] = names;
     }
     return ointerfacenames;
 }
@@ -1076,9 +1095,9 @@ object quatFromAxisAngle2(object oaxis, dReal angle)
 object quatFromRotationMatrix(object R)
 {
     TransformMatrix t;
-    t.rotfrommat(extract<dReal>(R[0][0]), extract<dReal>(R[0][1]), extract<dReal>(R[0][2]),
-                 extract<dReal>(R[1][0]), extract<dReal>(R[1][1]), extract<dReal>(R[1][2]),
-                 extract<dReal>(R[2][0]), extract<dReal>(R[2][1]), extract<dReal>(R[2][2]));
+    t.rotfrommat(extract<dReal>(R[py::to_object(0)][py::to_object(0)]), extract<dReal>(R[py::to_object(0)][py::to_object(1)]), extract<dReal>(R[py::to_object(0)][py::to_object(2)]),
+                 extract<dReal>(R[py::to_object(1)][py::to_object(0)]), extract<dReal>(R[py::to_object(1)][py::to_object(1)]), extract<dReal>(R[py::to_object(1)][py::to_object(2)]),
+                 extract<dReal>(R[py::to_object(2)][py::to_object(0)]), extract<dReal>(R[py::to_object(2)][py::to_object(1)]), extract<dReal>(R[py::to_object(2)][py::to_object(2)]));
     return toPyVector4(quatFromMatrix(t));
 }
 
@@ -1095,9 +1114,9 @@ object InterpolateQuatSquad(object q0, object q1, object q2, object q3, dReal t,
 object axisAngleFromRotationMatrix(object R)
 {
     TransformMatrix t;
-    t.rotfrommat(extract<dReal>(R[0][0]), extract<dReal>(R[0][1]), extract<dReal>(R[0][2]),
-                 extract<dReal>(R[1][0]), extract<dReal>(R[1][1]), extract<dReal>(R[1][2]),
-                 extract<dReal>(R[2][0]), extract<dReal>(R[2][1]), extract<dReal>(R[2][2]));
+    t.rotfrommat(extract<dReal>(R[py::to_object(0)][py::to_object(0)]), extract<dReal>(R[py::to_object(0)][py::to_object(1)]), extract<dReal>(R[py::to_object(0)][py::to_object(2)]),
+                 extract<dReal>(R[py::to_object(1)][py::to_object(0)]), extract<dReal>(R[py::to_object(1)][py::to_object(1)]), extract<dReal>(R[py::to_object(1)][py::to_object(2)]),
+                 extract<dReal>(R[py::to_object(2)][py::to_object(0)]), extract<dReal>(R[py::to_object(2)][py::to_object(1)]), extract<dReal>(R[py::to_object(2)][py::to_object(2)]));
     return toPyVector3(axisAngleFromMatrix(t));
 }
 
@@ -1116,7 +1135,7 @@ object rotationMatrixFromQArray(object qarray)
     py::list orots;
     int N = len(qarray);
     for(int i = 0; i < N; ++i) {
-        orots.append(rotationMatrixFromQuat(qarray[i]));
+        orots.append(rotationMatrixFromQuat(qarray[py::to_object(i)]));
     }
     return orots;
 }
@@ -1156,7 +1175,7 @@ object matrixFromPoses(object oposes)
     py::list omatrices;
     int N = len(oposes);
     for(int i = 0; i < N; ++i) {
-        omatrices.append(matrixFromPose(oposes[i]));
+        omatrices.append(matrixFromPose(oposes[py::to_object(i)]));
     }
     return omatrices;
 }
@@ -1165,10 +1184,10 @@ object poseFromMatrix(object o)
 {
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
-        t.m[4*i+0] = extract<dReal>(o[i][0]);
-        t.m[4*i+1] = extract<dReal>(o[i][1]);
-        t.m[4*i+2] = extract<dReal>(o[i][2]);
-        t.trans[i] = extract<dReal>(o[i][3]);
+        t.m[4*i+0] = extract<dReal>(o[py::to_object(i)][py::to_object(0)]);
+        t.m[4*i+1] = extract<dReal>(o[py::to_object(i)][py::to_object(1)]);
+        t.m[4*i+2] = extract<dReal>(o[py::to_object(i)][py::to_object(2)]);
+        t.trans[i] = extract<dReal>(o[py::to_object(i)][py::to_object(3)]);
     }
     return toPyArray(Transform(t));
 }
@@ -1190,12 +1209,12 @@ object poseFromMatrices(object otransforms)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     TransformMatrix tm;
     for(int j = 0; j < N; ++j) {
-        object o = otransforms[j];
+        object o = otransforms[py::to_object(j)];
         for(int i = 0; i < 3; ++i) {
-            tm.m[4*i+0] = extract<dReal>(o[i][0]);
-            tm.m[4*i+1] = extract<dReal>(o[i][1]);
-            tm.m[4*i+2] = extract<dReal>(o[i][2]);
-            tm.trans[i] = extract<dReal>(o[i][3]);
+            tm.m[4*i+0] = extract<dReal>(o[py::to_object(i)][py::to_object(0)]);
+            tm.m[4*i+1] = extract<dReal>(o[py::to_object(i)][py::to_object(1)]);
+            tm.m[4*i+2] = extract<dReal>(o[py::to_object(i)][py::to_object(2)]);
+            tm.trans[i] = extract<dReal>(o[py::to_object(i)][py::to_object(3)]);
         }
         // convert 4x4 transform matrix (stored as 3x4) to quat+trans (4+3) form
         Transform tpose(tm);
@@ -1226,9 +1245,9 @@ object InvertPoses(object o)
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < N; ++i, ptrans += 7) {
-        object oinputtrans = o[i];
-        Transform t = Transform(Vector(extract<dReal>(oinputtrans[0]),extract<dReal>(oinputtrans[1]),extract<dReal>(oinputtrans[2]),extract<dReal>(oinputtrans[3])),
-                                Vector(extract<dReal>(oinputtrans[4]),extract<dReal>(oinputtrans[5]),extract<dReal>(oinputtrans[6]))).inverse();
+        object oinputtrans = o[py::to_object(i)];
+        Transform t = Transform(Vector(extract<dReal>(oinputtrans[py::to_object(0)]),extract<dReal>(oinputtrans[py::to_object(1)]),extract<dReal>(oinputtrans[py::to_object(2)]),extract<dReal>(oinputtrans[py::to_object(3)])),
+                                Vector(extract<dReal>(oinputtrans[py::to_object(4)]),extract<dReal>(oinputtrans[py::to_object(5)]),extract<dReal>(oinputtrans[py::to_object(6)]))).inverse();
         ptrans[0] = t.rot.x; ptrans[1] = t.rot.y; ptrans[2] = t.rot.z; ptrans[3] = t.rot.w;
         ptrans[4] = t.trans.x; ptrans[5] = t.trans.y; ptrans[6] = t.trans.z;
     }
@@ -1297,7 +1316,7 @@ object poseTransformPoints(object opose, object opoints)
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < N; ++i, ptrans += 3) {
-        Vector newpoint = t*ExtractVector3(opoints[i]);
+        Vector newpoint = t*ExtractVector3(opoints[py::to_object(i)]);
         ptrans[0] = newpoint.x; ptrans[1] = newpoint.y; ptrans[2] = newpoint.z;
     }
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

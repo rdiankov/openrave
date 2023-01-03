@@ -123,6 +123,7 @@ public:
         object __unicode__();
         bool __eq__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p);
         bool __ne__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p);
+        long __hash__();
     };
 
     typedef OPENRAVE_SHARED_PTR<PyPlannerParameters> PyPlannerParametersPtr;

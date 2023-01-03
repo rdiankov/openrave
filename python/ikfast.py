@@ -8355,7 +8355,7 @@ class IKFastSolver(AutoReloader):
                 try:
                     # ignore any equations with degree 3 or more
                     if max(Poly(enew,varsym.svar).degree_list()) > maxdegree or max(Poly(enew,varsym.cvar).degree_list()) > maxdegree:
-                        log.debug('ignoring equation: ',enew)
+                        log.debug('ignoring equation: %r',enew)
                         continue
                 except PolynomialError:
                     continue

@@ -16,8 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <openravepy/openravepy_int.h>
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include <openrave/utils.h>
-#include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem/operations.hpp>
 
@@ -107,12 +109,36 @@ object toPyObject(const rapidjson::Value& value)
             return py::to_object(py::handle<>(PyFloat_FromDouble(value.GetDouble())));
 #endif
         }
-        else {
+        else if( value.IsInt64() ) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             return py::int_(value.GetInt64());
 #else
             return py::to_object(py::handle<>(PyInt_FromLong(value.GetInt64())));
 #endif
+        }
+        else if( value.IsUint64() ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::int_(value.GetUint64());
+#else
+            return py::to_object(py::handle<>(PyInt_FromLong(value.GetUint64())));
+#endif
+        }
+        else if( value.IsInt() ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::int_(value.GetInt());
+#else
+            return py::to_object(py::handle<>(PyInt_FromLong(value.GetInt())));
+#endif
+        }
+        else if( value.IsUint() ) {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+            return py::int_(value.GetUint());
+#else
+            return py::to_object(py::handle<>(PyInt_FromLong(value.GetUint())));
+#endif
+        }
+        else {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("Failed to convert rapidjson value '%s' to a python object."), orjson::DumpJson(value), ORE_InvalidArguments);
         }
     }
     case rapidjson::kNullType: {
@@ -524,8 +550,8 @@ AttributesList toAttributesList(py::list oattributes)
         size_t num=len(oattributes);
         for (size_t i = 0; i < num; i++) {
             // Because we know they're strings, we can do this
-            std::string key = py::extract<std::string>(oattributes[i][0]);
-            std::string value = py::extract<std::string>(oattributes[i][1]);
+            std::string key = py::extract<std::string>(oattributes[i][py::to_object(0)]);
+            std::string value = py::extract<std::string>(oattributes[i][py::to_object(1)]);
             atts.emplace_back(key, value);
         }
     }
@@ -569,7 +595,7 @@ class ViewerManager
         EnvironmentBasePtr _penv;
         std::string _viewername;
         ViewerBasePtr _pviewer; /// the created viewer
-        boost::condition _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+        std::condition_variable _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
         bool _bShowViewer; ///< true if should show the viewer when initially created
     };
     typedef OPENRAVE_SHARED_PTR<ViewerInfo> ViewerInfoPtr;
@@ -577,7 +603,7 @@ public:
     ViewerManager() {
         _bShutdown = false;
         _bInMain = false;
-        _threadviewer.reset(new boost::thread(boost::bind(&ViewerManager::_RunViewerThread, this)));
+        _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
     }
 
     virtual ~ViewerManager() {
@@ -585,7 +611,7 @@ public:
     }
 
     static ViewerManager& GetInstance() {
-        boost::call_once(_InitializeSingleton, _onceInitialize);
+        std::call_once(_onceInitialize, _InitializeSingleton);
         // Return reference to object.
         return *_singleton;
     }
@@ -600,7 +626,7 @@ public:
 
             if( bDoNotAddIfExists ) {
                 // check all existing viewers
-                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::lock_guard<std::mutex> lock(_mutexViewer);
                 std::list<ViewerInfoPtr>::iterator itviewer = _listviewerinfos.begin();
                 while(itviewer != _listviewerinfos.end() ) {
                     if( (*itviewer)->_penv == penv ) {
@@ -637,19 +663,19 @@ public:
                         pviewer->Show(1);
                     }
                     pinfo->_pviewer = pviewer;
-                    boost::mutex::scoped_lock lock(_mutexViewer);
+                    std::lock_guard<std::mutex> lock(_mutexViewer);
                     _listviewerinfos.push_back(pinfo);
                     _conditionViewer.notify_all();
                 }
             }
             else {
                 // no viewer has been created yet, so let the viewer thread create it (if using Qt, this initializes the QApplication in the right thread
-                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::unique_lock<std::mutex> lock(_mutexViewer);
                 _listviewerinfos.push_back(pinfo);
                 _conditionViewer.notify_all();
 
                 /// wait until viewer thread process it
-                pinfo->_cond.wait(_mutexViewer);
+                pinfo->_cond.wait(lock);
                 pviewer = pinfo->_pviewer;
             }
         }
@@ -663,7 +689,7 @@ public:
             return false;
         }
         {
-            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::lock_guard<std::mutex> lock(_mutexViewer);
             FOREACH(itviewer, _listviewerinfos) {
                 ViewerBasePtr ptestviewer = (*itviewer)->_pviewer;
                 if(ptestviewer == pviewer ) {
@@ -684,7 +710,7 @@ public:
         }
         bool bremoved = false;
         {
-            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::lock_guard<std::mutex> lock(_mutexViewer);
             std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
             while(itinfo != _listviewerinfos.end() ) {
                 if( (*itinfo)->_penv == penv ) {
@@ -702,7 +728,7 @@ public:
     void Destroy() {
         _bShutdown = true;
         {
-            boost::mutex::scoped_lock lock(_mutexViewer);
+            std::lock_guard<std::mutex> lock(_mutexViewer);
             // have to notify everyone
             FOREACH(itinfo, _listviewerinfos) {
                 (*itinfo)->_cond.notify_all();
@@ -723,7 +749,7 @@ protected:
             std::list<ViewerBasePtr> listviewers, listtempviewers;
             bool bShowViewer = true;
             {
-                boost::mutex::scoped_lock lock(_mutexViewer);
+                std::unique_lock<std::mutex> lock(_mutexViewer);
                 if( _listviewerinfos.size() == 0 ) {
                     _conditionViewer.wait(lock);
                     if( _listviewerinfos.size() == 0 ) {
@@ -806,7 +832,7 @@ protected:
                 _bInMain = false;
                 // remove from _listviewerinfos in order to avoid running the main loop again
                 {
-                    boost::mutex::scoped_lock lock(_mutexViewer);
+                    std::lock_guard<std::mutex> lock(_mutexViewer);
                     FOREACH(itinfo, _listviewerinfos) {
                         if( (*itinfo)->_pviewer == puseviewer ) {
                             _listviewerinfos.erase(itinfo);
@@ -827,21 +853,21 @@ protected:
 
     }
 
-    OPENRAVE_SHARED_PTR<boost::thread> _threadviewer;
-    boost::mutex _mutexViewer;
-    boost::condition _conditionViewer;
+    OPENRAVE_SHARED_PTR<std::thread> _threadviewer;
+    std::mutex _mutexViewer;
+    std::condition_variable _conditionViewer;
     std::list<ViewerInfoPtr> _listviewerinfos;
 
     bool _bShutdown; ///< if true, shutdown everything
     bool _bInMain; ///< if true, viewer thread is running a main function
 
     static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
-    static boost::once_flag _onceInitialize; ///< makes sure initialization is atomic
+    static std::once_flag _onceInitialize; ///< makes sure initialization is atomic
 
 };
 
 boost::scoped_ptr<ViewerManager> ViewerManager::_singleton(0);
-boost::once_flag ViewerManager::_onceInitialize = BOOST_ONCE_INIT;
+std::once_flag ViewerManager::_onceInitialize;
 
 PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
 {
@@ -923,7 +949,7 @@ object PyInterfaceBase::GetReadableInterfaces()
 {
     py::dict ointerfaces;
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
-        ointerfaces[it->first] = toPyReadable(it->second);
+        ointerfaces[it->first.c_str()] = toPyReadable(it->second);
     }
     return ointerfaces;
 }
@@ -972,12 +998,12 @@ static std::vector<KinBody::KinBodyInfoPtr> _ExtractBodyInfoArray(object vBodyIn
         vBodyInfos.resize(arraySize);
 
         for(size_t iBodyInfo = 0; iBodyInfo < arraySize; iBodyInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo> > pyrobotbaseinfo(vBodyInfoList[iBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo> > pyrobotbaseinfo(vBodyInfoList[py::to_object(iBodyInfo)]);
             if (pyrobotbaseinfo.check()) {
                 vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>)pyrobotbaseinfo)->GetRobotBaseInfo();
                 continue;
             }
-            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> > pykinbodyinfo(vBodyInfoList[iBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> > pykinbodyinfo(vBodyInfoList[py::to_object(iBodyInfo)]);
             if (pykinbodyinfo.check()) {
                 vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>)pykinbodyinfo)->GetKinBodyInfo();
                 continue;
@@ -1159,7 +1185,7 @@ PyEnvironmentBasePtr PyEnvironmentBase::CloneSelf(int options)
 {
 //        string strviewer;
 //        if( options & Clone_Viewer ) {
-//            boost::mutex::scoped_lock lockcreate(_mutexViewer);
+//            std::lock_guard<std::mutex> lockcreate(_mutexViewer);
 //            if( !!_penv->GetViewer() ) {
 //                strviewer = _penv->GetViewer()->GetXMLId();
 //            }
@@ -1175,7 +1201,7 @@ PyEnvironmentBasePtr PyEnvironmentBase::CloneSelf(const std::string& clonedEnvNa
 {
 //        string strviewer;
 //        if( options & Clone_Viewer ) {
-//            boost::mutex::scoped_lock lockcreate(_mutexViewer);
+//            std::lock_guard<std::mutex> lockcreate(_mutexViewer);
 //            if( !!_penv->GetViewer() ) {
 //                strviewer = _penv->GetViewer()->GetXMLId();
 //            }
@@ -1193,7 +1219,7 @@ void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, int options)
         if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
             if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
                 RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
-                //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                //std::lock_guard<std::mutex> lockcreate(pyreference->_mutexViewer);
                 SetViewer("");
             }
         }
@@ -1207,7 +1233,7 @@ void PyEnvironmentBase::Clone(PyEnvironmentBasePtr pyreference, const std::strin
         if( !!_penv->GetViewer() && !!pyreference->GetEnv()->GetViewer() ) {
             if( _penv->GetViewer()->GetXMLId() != pyreference->GetEnv()->GetViewer()->GetXMLId() ) {
                 RAVELOG_VERBOSE("reset the viewer since it has to be cloned\n");
-                //boost::mutex::scoped_lock lockcreate(pyreference->_mutexViewer);
+                //std::lock_guard<std::mutex> lockcreate(pyreference->_mutexViewer);
                 SetViewer("");
             }
         }
@@ -1425,7 +1451,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
 
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
         }
@@ -1435,7 +1461,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1461,7 +1487,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
     KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
         }
@@ -1471,7 +1497,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1499,7 +1525,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pkinbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
@@ -1509,7 +1535,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1524,7 +1550,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pkinbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
@@ -1534,7 +1560,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1567,7 +1593,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     if( nRays == 0 ) {
         return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
     }
-    if( extract<int>(shape[1]) != 6 ) {
+    if( extract<int>(shape[py::to_object(1)]) != 6 ) {
         throw OpenRAVEException(_("rays object needs to be a Nx6 vector\n"));
     }
     CollisionReport report;
@@ -2134,7 +2160,7 @@ void PyEnvironmentBase::Lock()
         if( TryLock() ) {
             return;
         }
-        boost::this_thread::sleep(boost::posix_time::microseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
     }
 
     // failed, so must be a python thread blocking it...
@@ -2145,13 +2171,13 @@ void PyEnvironmentBase::Lock()
 void PyEnvironmentBase::LockRaw()
 {
 #if BOOST_VERSION < 103500
-    boost::mutex::scoped_lock envlock(_envmutex);
+    std::lock_guard<std::mutex> envlock(_envmutex);
     if( _listfreelocks.size() > 0 ) {
         _listfreelocks.back()->lock();
         _listenvlocks.splice(_listenvlocks.end(),_listfreelocks,--_listfreelocks.end());
     }
     else {
-        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        _listenvlocks.emplace_back(boost::make_shared<EnvironmentLock>(_penv->GetMutex()));
     }
 #else
     _penv->GetMutex().lock();
@@ -2167,7 +2193,7 @@ void PyEnvironmentBase::LockReleaseGil()
 void PyEnvironmentBase::Unlock()
 {
 #if BOOST_VERSION < 103500
-    boost::mutex::scoped_lock envlock(_envmutex);
+    std::lock_guard<std::mutex> envlock(_envmutex);
     BOOST_ASSERT(_listenvlocks.size()>0);
     _listenvlocks.back()->unlock();
     _listfreelocks.splice(_listfreelocks.end(),_listenvlocks,--_listenvlocks.end());
@@ -2182,10 +2208,10 @@ bool PyEnvironmentBase::TryLockReleaseGil()
     bool bSuccess = false;
     PythonThreadSaver saver;
 #if BOOST_VERSION < 103500
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    OPENRAVE_SHARED_PTR<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(),false);
     if( !!lockenv->try_lock() ) {
         bSuccess = true;
-        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        _listenvlocks.emplace_back(boost::make_shared<EnvironmentLock>(_penv->GetMutex()));
     }
 #else
     if( _penv->GetMutex().try_lock() ) {
@@ -2199,10 +2225,10 @@ bool PyEnvironmentBase::TryLock()
 {
     bool bSuccess = false;
 #if BOOST_VERSION < 103500
-    OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
+    OPENRAVE_SHARED_PTR<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(),false);
     if( !!lockenv->try_lock() ) {
         bSuccess = true;
-        _listenvlocks.push_back(OPENRAVE_SHARED_PTR<EnvironmentMutex::scoped_lock>(new EnvironmentMutex::scoped_lock(_penv->GetMutex())));
+        _listenvlocks.emplace_back(boost::make_shared<EnvironmentLock>(_penv->GetMutex()));
     }
 #else
     if( _penv->GetMutex().try_lock() ) {
@@ -2227,7 +2253,7 @@ bool PyEnvironmentBase::Lock(float timeout)
         if( TryLock() ) {
             return true;
         }
-        boost::this_thread::sleep(boost::posix_time::microseconds(10));
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
     }
     return false;
 }
@@ -2278,8 +2304,8 @@ size_t PyEnvironmentBase::_getGraphPoints(object opoints, std::vector<float>&vpo
             }
             return vpoints.size()/3;
         case 2: {
-            int num = extract<int>(pointshape[0]);
-            int dim = extract<int>(pointshape[1]);
+            int num = extract<int>(pointshape[py::to_object(0)]);
+            int dim = extract<int>(pointshape[py::to_object(1)]);
             vpoints = ExtractArray<float>(opoints.attr("flat"));
             if(dim % 3) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %dx%d"), num%dim,ORE_InvalidArguments);
@@ -2308,8 +2334,8 @@ size_t PyEnvironmentBase::_getGraphColors(object ocolors, std::vector<float>&vco
             case 1:
                 break;
             case 2: {
-                int numcolors = extract<int>(colorshape[0]);
-                int colordim = extract<int>(colorshape[1]);
+                int numcolors = extract<int>(colorshape[py::to_object(0)]);
+                int colordim = extract<int>(colorshape[py::to_object(1)]);
                 if(( colordim != 3) &&( colordim != 4) ) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("colors dim %d needs to be 3 or 4"),colordim, ORE_InvalidArguments);
                 }
@@ -2347,21 +2373,21 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
             }
             for(size_t i = 0; i < n/3; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
-                            py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
+                            py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
             }
             return n/3;
         }
         case 2: {
-            const int num = py::extract<int>(datashape[0]);
-            const int dim = py::extract<int>(datashape[1]);
+            const int num = py::extract<int>(datashape[py::to_object(0)]);
+            const int dim = py::extract<int>(datashape[py::to_object(1)]);
             if(dim != 3) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%dim,ORE_InvalidArguments);
             }
             const object& o = odata.attr("flat");
             for(size_t i = 0; i < num; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[3*i]),
-                            py::extract<float>(o[3*i+1]), py::extract<float>(o[3*i+2])));
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[py::to_object(3*i)]),
+                            py::extract<float>(o[py::to_object(3*i+1)]), py::extract<float>(o[py::to_object(3*i+2)])));
             }
             return num;
         }
@@ -2375,8 +2401,8 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
         throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
     }
     for(size_t i = 0; i < n/3; ++i) {
-        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
-                    py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
+        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
+                    py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
     }
     return vvectors.size();
 }
@@ -2499,7 +2525,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
             vtexture[i][j][0] = _vtexture[i][j];
         }
     }
-    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[py::to_object(0)]),extract<float>(oextents[py::to_object(1)]),0), vtexture));
 }
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&_vtexture){
     size_t x = _vtexture.size();
@@ -2528,7 +2554,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
             }
         }
     }
-    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[py::to_object(0)]),extract<float>(oextents[py::to_object(1)]),0), vtexture));
 }
 #else
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
@@ -2687,7 +2713,7 @@ object PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix(const string 
 
     py::dict otransforms;
     for(const std::pair<std::string, Transform>& itpair : nameTransfPairs) {
-        otransforms[itpair.first] = ReturnTransform(itpair.second);
+        otransforms[itpair.first.c_str()] = ReturnTransform(itpair.second);
     }
 
     return otransforms;
@@ -2841,6 +2867,9 @@ bool PyEnvironmentBase::__eq__(PyEnvironmentBasePtr p) {
 }
 bool PyEnvironmentBase::__ne__(PyEnvironmentBasePtr p) {
     return !p || _penv!=p->_penv;
+}
+long PyEnvironmentBase::__hash__() {
+    return static_cast<long>(uintptr_t(_penv.get()));
 }
 std::string PyEnvironmentBase::__repr__() {
     return boost::str(boost::format("RaveGetEnvironment(%d)")%RaveGetEnvironmentId(_penv));
@@ -3084,7 +3113,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         py::object oargs = o.attr("args");
         py::object oret;
         if( len(oargs) > 1 ) {
-            oret = oargs[1];
+            oret = oargs[py::to_object(1)];
         }
         else {
             oret = py::none_();
@@ -3095,7 +3124,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         py::object oargs = o.attr("args");
         py::object oret;
         if( len(oargs) > 1 ) {
-            oret = oargs[1];
+            oret = oargs[py::to_object(1)];
         }
         else {
             oret = py::none_();
@@ -3674,6 +3703,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("GetUInt64Parameter", &PyEnvironmentBase::GetUInt64Parameter, PY_ARGS("parameterName", "defaultValue") DOXY_FN(EnvironmentBase,GetUInt64Parameter))
                      .def("__enter__",&PyEnvironmentBase::__enter__)
                      .def("__exit__",&PyEnvironmentBase::__exit__)
+                     .def("__hash__",&PyEnvironmentBase::__hash__)
                      .def("__eq__",&PyEnvironmentBase::__eq__)
                      .def("__ne__",&PyEnvironmentBase::__ne__)
                      .def("__repr__",&PyEnvironmentBase::__repr__)

@@ -712,7 +712,7 @@ bool KinBodyItem::UpdateFromOSG()
         }
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+    boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
     if( !!lockenv ) {
         _pbody->SetLinkTransformations(vtrans,_vjointvalues);
         _pbody->GetLinkTransformations(_vtrans,_vjointvalues);
@@ -725,13 +725,13 @@ bool KinBodyItem::UpdateFromOSG()
 
 void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vjoints = _vjointvalues;
 }
 
 void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofvalues) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vtrans = _vtrans;
     vdofvalues = _vjointvalues;
 }
@@ -745,7 +745,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+        boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
         if( !lockenv ) {
             return false;
         }
@@ -778,7 +778,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     }
 
     if( _bReload || _bDrawStateChanged ) {
-        EnvironmentMutex::scoped_try_lock lockenv(_pbody->GetEnv()->GetMutex());
+        EnvironmentLock lockenv(_pbody->GetEnv()->GetMutex());
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
@@ -786,7 +786,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 

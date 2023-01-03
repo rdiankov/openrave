@@ -619,7 +619,7 @@ public:
         if( !!pinfo ) {
             return GetLinkBV(*pinfo, index);
         } else {
-            RAVELOG_WARN(str(boost::format("KinBody %s is not initialized in fclspace %s, env %d")%body.GetName()%_userdatakey%_penv->GetId()));
+            RAVELOG_WARN_FORMAT("env=%s, KinBody '%s' is not initialized in fclspace %s (self=%d)", _penv->GetNameId()%body.GetName()%_userdatakey%_bIsSelfCollisionChecker);
             return CollisionObjectPtr();
         }
     }
@@ -695,7 +695,6 @@ private:
         case OpenRAVE::GT_None:
             return CollisionGeometryPtr();
 
-        case OpenRAVE::GT_CalibrationBoard:
         case OpenRAVE::GT_Box:
             return make_shared<fcl::Box>(info._vGeomData.x*2.0f,info._vGeomData.y*2.0f,info._vGeomData.z*2.0f);
 
@@ -708,6 +707,7 @@ private:
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_TriMesh:
         case OpenRAVE::GT_Cage:
+        case OpenRAVE::GT_CalibrationBoard: // calibration board is box-shaped but has z-offset. so have to use trimesh.
         {
             const OpenRAVE::TriMesh& mesh = info._meshcollision;
             if (mesh.vertices.empty() || mesh.indices.empty()) {

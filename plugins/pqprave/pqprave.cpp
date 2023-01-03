@@ -12,29 +12,43 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "pqprave.h"
+
 #include "plugindefs.h"
 #include "collisionPQP.h"
-#include <openrave/plugin.h>
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+const std::string PQPRavePlugin::_pluginname = "PQPRavePlugin";
+
+PQPRavePlugin::PQPRavePlugin()
+{
+    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("pqp");
+}
+
+PQPRavePlugin::~PQPRavePlugin() {}
+ 
+OpenRAVE::InterfaceBasePtr PQPRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
         if( interfacename == "pqp")
-            return InterfaceBasePtr(new CollisionCheckerPQP(penv));
+            return boost::make_shared<CollisionCheckerPQP>(penv);
         break;
     default:
         break;
     }
-
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& PQPRavePlugin::GetInterfaces() const
 {
-    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("pqp");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& PQPRavePlugin::GetPluginName() const
 {
+    return _pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new PQPRavePlugin();
 }

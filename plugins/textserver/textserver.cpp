@@ -13,28 +13,41 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "textserverrave.h"
 #include "plugindefs.h"
 #include "textserver.h"
-#include <openrave/plugin.h>
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+TextServerPlugin::TextServerPlugin()
+{
+    _interfaces[OpenRAVE::PT_Module].push_back("textserver");
+}
+
+TextServerPlugin::~TextServerPlugin() {}
+
+OpenRAVE::InterfaceBasePtr TextServerPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
     case OpenRAVE::PT_Module:
         if( interfacename == "textserver")
-            return InterfaceBasePtr(new SimpleTextServer(penv));
+            return boost::make_shared<SimpleTextServer>(penv);
         break;
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& TextServerPlugin::GetInterfaces() const
 {
-    info.interfacenames[OpenRAVE::PT_Module].push_back("textserver");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& TextServerPlugin::GetPluginName() const
 {
+    static std::string pluginname = "TextServerPlugin";
+    return pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new TextServerPlugin();
 }

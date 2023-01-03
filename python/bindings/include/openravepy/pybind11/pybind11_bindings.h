@@ -58,6 +58,13 @@ template <typename T>
 struct extract_ {
     extract_() = delete; // disable default constructor
     explicit extract_(const object& o) {
+        detail::make_caster<T> conv;
+        if (!conv.load(o, true)) {
+            _bcheck = false;
+            return;
+        }
+        _data = detail::cast_op<T>(conv);
+#if 0
         try {
             _data = extract<T>(o); // in pybind11 actually does the extract/cast, which is not good since it will throw exception
         }
@@ -65,6 +72,7 @@ struct extract_ {
             _bcheck = false;
             RAVELOG_WARN_FORMAT("Cannot extract type %s from a pybind11::object: %s", std::string(typeid(T).name())%ex.what());
         }
+#endif
     }
     // user-defined conversion:
     // https://en.cppreference.com/w/cpp/language/cast_operator
@@ -146,7 +154,7 @@ inline py::array_t<bool> toPyArray(const std::vector<bool>& v)
     py::array_t<bool> arr;
     arr.resize({(int) v.size()});
     for(size_t i = 0; i < v.size(); ++i) {
-        arr[i] = v[i];
+        arr.mutable_at(i) = v[i];
     }
     return arr;
 }

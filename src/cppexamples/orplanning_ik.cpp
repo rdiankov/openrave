@@ -57,7 +57,7 @@ public:
 
         while(IsOk()) {
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 // find a new manipulator position and feed that into the planner. If valid, robot will move to it safely.
                 Transform t = pmanip->GetTransform();
@@ -75,7 +75,7 @@ public:
 
             // unlock the environment and wait for the robot to finish
             while(!probot->GetController()->IsDone() && IsOk()) {
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

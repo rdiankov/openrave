@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 98)
-set (OPENRAVE_VERSION_PATCH 1)
+set (OPENRAVE_VERSION_MINOR 105)
+set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -54,12 +54,21 @@ option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
 option(OPT_MSGPACK "Support msgpack format" ON)
+option(OPT_CURL "Use curl for downloading resources" ON)
 option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
+option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+
+if (OPT_ENVIRONMENT_RECURSIVE_LOCK)
+  message(STATUS "using threads and synchronization primitives from std.")
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 1)
+else()
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 0)
+endif()
 
 if(OPT_DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
@@ -210,6 +219,13 @@ endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
+  add_definitions("-Werror=return-type")
+endif()
+
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+  add_definitions("-Werror=return-local-addr")
+elseif( COMPILER_IS_CLANG )
+  add_definitions("-Werror=return-stack-address")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
@@ -239,12 +255,6 @@ else()
   check_cxx_compiler_flag("-Bsymbolic-functions" LINKER_HAS_BSYMBOLIC_FUNCTIONS)
   check_cxx_compiler_flag("-fvisibility=hidden" LINKER_HAS_VISIBILITY)
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" LINKER_HAS_VISIBILITY_INLINES_HIDDEN)
-endif()
-
-if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  set(STDC_LIBRARY stdc++)
-else()
-  set(STDC_LIBRARY)
 endif()
 
 if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -520,28 +530,6 @@ if( ASSIMP_FOUND )
   endif()
 endif()
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  check_cxx_source_runs("
-  int main()
-  {
-    int a = 0;
-    int*pa = &a;
-    asm(\".intel_syntax\\\\n\"
-	\"mov %%rax, %0\\\\n\"
-    \"mov %%eax, [%%rax]\\\\n\"
-    \".att_syntax\\\\n\"
-    : : \"r\"(pa) : \"%rax\");
-    return 0;
-  }"
-  IS_X86_64)
-
-  if( IS_X86_64 )
-    add_definitions("-D__x86_64__")
-  endif()
-else()
-  set(IS_X86_64 0)
-endif()
-
 check_library_exists(rt clock_gettime "" CLOCK_GETTIME_FOUND)
 if( CLOCK_GETTIME_FOUND )
   add_definitions(-DCLOCK_GETTIME_FOUND)
@@ -805,6 +793,17 @@ if( OPT_LOG4CXX )
     include_directories(${LOG4CXX_INCLUDEDIR})
     set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${LOG4CXX_LIBDIR})
     set(OPENRAVE_LOG4CXX 1)
+  endif()
+endif()
+
+# libcurl for downloading resources
+set(OPENRAVE_CURL 0)
+set(OPENRAVE_CURL_LIBRARIES)
+if( OPT_CURL )
+  find_package(CURL)
+  if ( CURL_FOUND )
+    set(OPENRAVE_CURL_LIBRARIES ${CURL_LIBRARIES})
+    set(OPENRAVE_CURL 1)
   endif()
 endif()
 

@@ -2027,16 +2027,13 @@ private:
 public:
         GrabbedInfo() {
         }
-        bool operator==(const GrabbedInfo& other) const {
-            return _id == other._id
-                   && _grabbedname == other._grabbedname
-                   && _robotlinkname == other._robotlinkname
-                   && _trelative == other._trelative
-                   && _setIgnoreRobotLinkNames == other._setIgnoreRobotLinkNames;
-        }
+        GrabbedInfo(const GrabbedInfo& other);
+        bool operator==(const GrabbedInfo& other) const;
         bool operator!=(const GrabbedInfo& other) const {
             return !operator==(other);
         }
+
+        GrabbedInfo& operator=(const GrabbedInfo& other);
 
         void Reset() override;
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
@@ -2050,6 +2047,7 @@ public:
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<std::string> _setIgnoreRobotLinkNames; ///< names of links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
+        rapidjson::Document _rGrabbedUserData; ///< user-defined data to be updated when kinbody grabs and releases objects
     };
     typedef boost::shared_ptr<GrabbedInfo> GrabbedInfoPtr;
     typedef boost::shared_ptr<GrabbedInfo const> GrabbedInfoConstPtr;
@@ -2185,6 +2183,8 @@ public:
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
         std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
+
+        boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
@@ -3173,9 +3173,10 @@ private:
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \param[in] setBodyLinksToIgnore Additional body link indices that collision checker ignore
         when checking collisions between the grabbed body and the body.
+        \param[in] rGrabbedUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grab the body with the specified link.
 
@@ -3183,17 +3184,19 @@ private:
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
+        \param[in] rGrabbedUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
+        \param[in] rGrabbedUserData custom data to keep in the body
         \return true if successful and body is grabbed/
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Release the body if grabbed.
 
@@ -3234,6 +3237,7 @@ private:
         GICR_BodyNotGrabbed = 1,  //< Specified body is not grabbed
         GICR_GrabbingLinkNotMatch = 2, ///< Specified body is grabbed, but grabbing link does not match
         GICR_IgnoredLinksNotMatch = 3, ///< Specified body is grabbed and grabbing link matches, but ignored links do not match
+        GICR_UserDataNotMatch = 4, ///< Specified body is grabbed, grabbing link matches, and ignored links match, but user data do not match
     };
 
     /** \brief Checks whether a body is grabbed with the given robot link.
@@ -3244,12 +3248,12 @@ private:
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore) const;
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const;
 
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore) const;
+    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const;
 
     /** \brief gets all grabbed bodies of the body
 
@@ -3321,6 +3325,11 @@ private:
 
     /// \brief Associate the kinbody's current kinematics geometry hash with a forward kinematics generator
     virtual void SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator);
+
+    /// \brief gets the associated file entries
+    inline const boost::shared_ptr<rapidjson::Document>& GetAssociatedFileEntries() const {
+        return _prAssociatedFileEntries;
+    }
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
@@ -3468,6 +3477,7 @@ protected:
 
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
+    boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 
 private:
     mutable std::string __hashkinematics;
@@ -3552,7 +3562,7 @@ public:
     std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
     Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
     std::set<int> _setGrabberLinkIndicesToIgnore; ///< indices to the links of the grabber whose collisions with the grabbed bodies should be ignored.
-
+    rapidjson::Document _rGrabbedUserData; ///< user-defined data to be updated when kinbody grabs and releases objects
 private:
     bool _listNonCollidingIsValid = false; ///< a flag indicating whether the current _listNonCollidingLinksWhenGrabbed is valid or not.
     std::vector<KinBody::LinkPtr> _vAttachedToGrabbingLink; ///< vector of all links that are rigidly attached to _pGrabbingLink

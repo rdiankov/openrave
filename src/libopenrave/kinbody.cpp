@@ -72,7 +72,7 @@ public:
     virtual ~ChangeCallbackData() {
         KinBodyConstPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
-            boost::unique_lock< boost::shared_mutex > lock(pbody->GetInterfaceMutex());
+            std::unique_lock<boost::shared_mutex> lock(pbody->GetInterfaceMutex());
             FOREACH(itinfo, _iterators) {
                 pbody->_vlistRegisteredCallbacks.at(itinfo->first).erase(itinfo->second);
             }
@@ -113,7 +113,8 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
-           && _mReadableInterfaces == other._mReadableInterfaces;
+           && _mReadableInterfaces == other._mReadableInterfaces
+           && (!_prAssociatedFileEntries ? !other._prAssociatedFileEntries : (!!other._prAssociatedFileEntries && *_prAssociatedFileEntries == *other._prAssociatedFileEntries));
 }
 
 void KinBody::KinBodyInfo::Reset()
@@ -129,6 +130,7 @@ void KinBody::KinBodyInfo::Reset()
     _vLinkInfos.clear();
     _vJointInfos.clear();
     _mReadableInterfaces.clear();
+    _prAssociatedFileEntries.reset();
     _isRobot = false;
     _isPartial = true;
 }
@@ -234,6 +236,12 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     }
 
     rKinBodyInfo.AddMember("__isPartial__", _isPartial, allocator);
+
+    if( !!_prAssociatedFileEntries ) {
+        rapidjson::Value rAssociatedFileEntries;
+        rAssociatedFileEntries.CopyFrom(*_prAssociatedFileEntries, allocator);
+        rKinBodyInfo.AddMember("files", rAssociatedFileEntries, allocator);
+    }
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -385,6 +393,17 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
         AddModifiedField(KinBodyInfo::KBIF_Transform);
     }
+
+    rapidjson::Value::ConstMemberIterator itFiles = value.FindMember("files");
+    if( itFiles != value.MemberEnd() ) {
+        if( !_prAssociatedFileEntries ) {
+            _prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *_prAssociatedFileEntries = rapidjson::Document();
+        }
+        _prAssociatedFileEntries->CopyFrom(itFiles->value, _prAssociatedFileEntries->GetAllocator());
+    }
 }
 
 void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
@@ -499,6 +518,8 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -542,6 +563,8 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -572,6 +595,8 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -595,6 +620,8 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -625,6 +652,8 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -689,6 +718,8 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     }
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -720,6 +751,8 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
     }
     _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
 }
 
 bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
@@ -740,6 +773,16 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
 
     if( GetXMLId() != info._interfaceType ) {
         RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
+    }
+
+    if( !!info._prAssociatedFileEntries ) {
+        if( !_prAssociatedFileEntries ) {
+            _prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *_prAssociatedFileEntries = rapidjson::Document();
+        }
+        _prAssociatedFileEntries->CopyFrom(*info._prAssociatedFileEntries, _prAssociatedFileEntries->GetAllocator());
     }
 
     return true;
@@ -3974,6 +4017,13 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
         if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
             // collision checking will not be automatically updated with environment calls, so need to do this manually
             _selfcollisionchecker->InitKinBody(shared_kinbody());
+
+            // self collision checker initializes internal data structure at the time of grab, so need to do it here for newly set self collision checker.
+            std::vector<KinBodyPtr> vGrabbed;
+            GetGrabbed(vGrabbed);
+            for (const KinBodyPtr& pgrabbed : vGrabbed) {
+                _selfcollisionchecker->InitKinBody(pgrabbed);
+            }
         }
     }
 }
@@ -5618,6 +5668,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
                 pgrabbed->_tRelative = pgrabbedref->_tRelative;
                 pgrabbed->_setGrabberLinkIndicesToIgnore = pgrabbedref->_setGrabberLinkIndicesToIgnore; // can do this since link indices are the same
+                CopyRapidJsonDoc(pgrabbedref->_rGrabbedUserData, pgrabbed->_rGrabbedUserData);
                 if( pgrabbedref->IsListNonCollidingLinksValid() ) {
                     FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
                         pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
@@ -5801,7 +5852,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
 UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::function<void()>&callback) const
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody_const()));
-    boost::unique_lock< boost::shared_mutex > lock(GetInterfaceMutex());
+    std::unique_lock<boost::shared_mutex> lock(GetInterfaceMutex());
 
     uint32_t index = 0;
     while(properties) {
@@ -6012,6 +6063,16 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
             info._mReadableInterfaces[it->first] = it->second->CloneSelf();
         }
     }
+
+    if( !!_prAssociatedFileEntries ) {
+        if( !info._prAssociatedFileEntries ) {
+            info._prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *info._prAssociatedFileEntries = rapidjson::Document();
+        }
+        info._prAssociatedFileEntries->CopyFrom(*_prAssociatedFileEntries, info._prAssociatedFileEntries->GetAllocator());
+    }
 }
 
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
@@ -6176,6 +6237,17 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     if( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface change", _id);
+    }
+
+    if( !!info._prAssociatedFileEntries ) {
+        if( !_prAssociatedFileEntries ) {
+            _prAssociatedFileEntries.reset(new rapidjson::Document());
+            _prAssociatedFileEntries->CopyFrom(*info._prAssociatedFileEntries, _prAssociatedFileEntries->GetAllocator());
+        }
+        else if( *_prAssociatedFileEntries != *info._prAssociatedFileEntries ) {
+            *_prAssociatedFileEntries = rapidjson::Document();
+            _prAssociatedFileEntries->CopyFrom(*info._prAssociatedFileEntries, _prAssociatedFileEntries->GetAllocator());
+        }
     }
 
     return updateFromInfoResult;

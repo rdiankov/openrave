@@ -138,7 +138,20 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
         if (!_docSensorGeometry.IsObject()) {
             _docSensorGeometry.SetObject();
         }
-        orjson::UpdateJson(_docSensorGeometry, value["sensorGeometry"]);
+        const rapidjson::Value& rSensorGeometry = value["sensorGeometry"];
+        if( rSensorGeometry.IsObject() ) {
+            for (rapidjson::Value::ConstMemberIterator it = rSensorGeometry.MemberBegin(); it != rSensorGeometry.MemberEnd(); ++it) {
+                if( it->value.IsObject() && _docSensorGeometry.HasMember(it->name.GetString()) ) {
+                    // have to update recursively
+                    for (rapidjson::Value::ConstMemberIterator it2 = it->value.MemberBegin(); it2 != it->value.MemberEnd(); ++it2) {
+                        orjson::SetJsonValueByKey(_docSensorGeometry[it->name.GetString()], it2->name.GetString(), it2->value, _docSensorGeometry.GetAllocator());
+                    }
+                }
+                else {
+                    orjson::SetJsonValueByKey(_docSensorGeometry, it->name.GetString(), it->value);
+                }
+            }
+        }
     }
 }
 
@@ -2015,37 +2028,37 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody)
+bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector());
+    return Grab(pbody, pmanip->GetEndEffector(), rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore);
+    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
 {
-    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames);
+    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rGrabbedUserData);
 }
 
 void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)

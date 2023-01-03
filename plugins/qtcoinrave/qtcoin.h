@@ -204,7 +204,7 @@ typedef boost::shared_ptr<QtCoinViewer const> QtCoinViewerConstPtr;
 
 #define CALLBACK_EVENT QEvent::Type(QEvent::User+101)
 
-extern boost::mutex g_mutexsoqt;
+extern std::mutex g_mutexsoqt;
 
 // assumes g_mutexsoqt is locked
 void EnsureSoQtInit();
