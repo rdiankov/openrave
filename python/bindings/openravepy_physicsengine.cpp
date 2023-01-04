@@ -83,7 +83,7 @@ bool PyPhysicsEngineBase::SetLinkVelocities(PyKinBodyPtr pykinbody, object ovelo
     std::vector<std::pair<Vector,Vector> > velocities;
     velocities.resize(len(ovelocities));
     for(size_t i = 0; i < velocities.size(); ++i) {
-        std::vector<dReal> v = ExtractArray<dReal>(ovelocities[i]);
+        std::vector<dReal> v = ExtractArray<dReal>(ovelocities[py::to_object(i)]);
         BOOST_ASSERT(v.size()==6);
         velocities[i].first.x = v[0];
         velocities[i].first.y = v[1];

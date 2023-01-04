@@ -22,6 +22,7 @@ set(openrave_lib_SOURCES
   planningutils.cpp
   plugindatabase.h
   plugindatabase.cpp
+  plugindatabase_virtual.cpp
   robot.cpp
   robotconnectedbody.cpp
   robotmanipulator.cpp
