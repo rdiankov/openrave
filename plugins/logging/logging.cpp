@@ -15,15 +15,36 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Plugin exposes 3 functions to OpenRAVE.
+#include "logging.h"
 #include "plugindefs.h"
-#include <openrave/plugin.h>
 
 #ifdef ENABLE_VIDEORECORDING
-ModuleBasePtr CreateViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ModuleBasePtr CreateViewerRecorder(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 void DestroyViewerRecordingStaticResources();
 #endif
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+const std::string LoggingPlugin::_pluginname = "LoggingPlugin";
+
+LoggingPlugin::LoggingPlugin()
+{
+#ifdef ENABLE_VIDEORECORDING
+    _interfaces[OpenRAVE::PT_Module].push_back("ViewerRecorder");
+#endif
+}
+
+LoggingPlugin::~LoggingPlugin()
+{
+    Destroy();
+}
+
+void LoggingPlugin::Destroy()
+{
+#ifdef ENABLE_VIDEORECORDING
+DestroyViewerRecordingStaticResources();
+#endif
+}
+
+OpenRAVE::InterfaceBasePtr LoggingPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
     case OpenRAVE::PT_Module:
@@ -36,19 +57,19 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& LoggingPlugin::GetInterfaces() const
 {
-#ifdef ENABLE_VIDEORECORDING
-    info.interfacenames[OpenRAVE::PT_Module].push_back("ViewerRecorder");
-#endif
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& LoggingPlugin::GetPluginName() const
 {
-#ifdef ENABLE_VIDEORECORDING
-    DestroyViewerRecordingStaticResources();
-#endif
+    return _pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new LoggingPlugin();
 }

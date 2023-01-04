@@ -471,7 +471,7 @@ std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(object py
         vManipulatorInfos.resize(arraySize);
 
         for(size_t iManipulatorInfo = 0; iManipulatorInfo < arraySize; iManipulatorInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyManipulatorInfo> > pymanipinfo(pyManipList[iManipulatorInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyManipulatorInfo> > pymanipinfo(pyManipList[py::to_object(iManipulatorInfo)]);
             if (pymanipinfo.check()) {
                 vManipulatorInfos[iManipulatorInfo] = ((OPENRAVE_SHARED_PTR<PyManipulatorInfo>)pymanipinfo)->GetManipulatorInfo();
             }
@@ -497,7 +497,7 @@ std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(obj
         vAttachedSensorInfos.resize(arraySize);
 
         for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < arraySize; iAttachedSensorInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> > pyattachensensorinfo(pyAttachedSensorInfoList[iAttachedSensorInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> > pyattachensensorinfo(pyAttachedSensorInfoList[py::to_object(iAttachedSensorInfo)]);
             if (pyattachensensorinfo.check()) {
                 vAttachedSensorInfos[iAttachedSensorInfo] = ((OPENRAVE_SHARED_PTR<PyAttachedSensorInfo>)pyattachensensorinfo)->GetAttachedSensorInfo();
             }
@@ -523,7 +523,7 @@ std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(objec
         vConnectedBodyInfos.resize(arraySize);
 
         for(size_t iConnectedBodyInfo = 0; iConnectedBodyInfo < arraySize; iConnectedBodyInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> > pyconnectedbodyinfo(pyConnectedBodyInfoList[iConnectedBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> > pyconnectedbodyinfo(pyConnectedBodyInfoList[py::to_object(iConnectedBodyInfo)]);
             if (pyconnectedbodyinfo.check()) {
                 vConnectedBodyInfos[iConnectedBodyInfo] = ((OPENRAVE_SHARED_PTR<PyConnectedBodyInfo>)pyconnectedbodyinfo)->GetConnectedBodyInfo();
             }
@@ -552,7 +552,7 @@ std::vector<RobotBase::GripperInfoPtr> ExtractGripperInfoArray(object pyGripperI
         for(size_t iGripperInfo = 0; iGripperInfo < arraySize; iGripperInfo++) {
             RobotBase::GripperInfoPtr pInfo(new RobotBase::GripperInfo());
             rapidjson::Document rGripperInfo;
-            toRapidJSONValue(pyGripperInfoList[iGripperInfo], rGripperInfo, rGripperInfo.GetAllocator());
+            toRapidJSONValue(pyGripperInfoList[py::to_object(iGripperInfo)], rGripperInfo, rGripperInfo.GetAllocator());
             pInfo->DeserializeJSON(rGripperInfo, fUnitScale, options);
             vGripperInfos.push_back(pInfo);
         }
@@ -1584,7 +1584,7 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
     _ParseJointInfos(ojointinfos, vjointinfos);
     std::vector<RobotBase::ManipulatorInfoConstPtr> vmanipinfos(len(omanipinfos));
     for(size_t i = 0; i < vmanipinfos.size(); ++i) {
-        PyManipulatorInfoPtr pymanip = py::extract<PyManipulatorInfoPtr>(omanipinfos[i]);
+        PyManipulatorInfoPtr pymanip = py::extract<PyManipulatorInfoPtr>(omanipinfos[py::to_object(i)]);
         if( !pymanip ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ManipulatorInfo"),ORE_InvalidArguments);
         }
@@ -1592,7 +1592,7 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
     }
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vattachedsensorinfos(len(oattachedsensorinfos));
     for(size_t i = 0; i < vattachedsensorinfos.size(); ++i) {
-        PyAttachedSensorInfoPtr pyattachedsensor = py::extract<PyAttachedSensorInfoPtr>(oattachedsensorinfos[i]);
+        PyAttachedSensorInfoPtr pyattachedsensor = py::extract<PyAttachedSensorInfoPtr>(oattachedsensorinfos[py::to_object(i)]);
         if( !pyattachedsensor ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.AttachedsensorInfo"),ORE_InvalidArguments);
         }

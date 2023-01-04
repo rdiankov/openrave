@@ -550,8 +550,8 @@ AttributesList toAttributesList(py::list oattributes)
         size_t num=len(oattributes);
         for (size_t i = 0; i < num; i++) {
             // Because we know they're strings, we can do this
-            std::string key = py::extract<std::string>(oattributes[i][0]);
-            std::string value = py::extract<std::string>(oattributes[i][1]);
+            std::string key = py::extract<std::string>(oattributes[i][py::to_object(0)]);
+            std::string value = py::extract<std::string>(oattributes[i][py::to_object(1)]);
             atts.emplace_back(key, value);
         }
     }
@@ -949,7 +949,7 @@ object PyInterfaceBase::GetReadableInterfaces()
 {
     py::dict ointerfaces;
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
-        ointerfaces[it->first] = toPyReadable(it->second);
+        ointerfaces[it->first.c_str()] = toPyReadable(it->second);
     }
     return ointerfaces;
 }
@@ -998,12 +998,12 @@ static std::vector<KinBody::KinBodyInfoPtr> _ExtractBodyInfoArray(object vBodyIn
         vBodyInfos.resize(arraySize);
 
         for(size_t iBodyInfo = 0; iBodyInfo < arraySize; iBodyInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo> > pyrobotbaseinfo(vBodyInfoList[iBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo> > pyrobotbaseinfo(vBodyInfoList[py::to_object(iBodyInfo)]);
             if (pyrobotbaseinfo.check()) {
                 vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotBaseInfo>)pyrobotbaseinfo)->GetRobotBaseInfo();
                 continue;
             }
-            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> > pykinbodyinfo(vBodyInfoList[iBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> > pykinbodyinfo(vBodyInfoList[py::to_object(iBodyInfo)]);
             if (pykinbodyinfo.check()) {
                 vBodyInfos[iBodyInfo] = ((OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo>)pykinbodyinfo)->GetKinBodyInfo();
                 continue;
@@ -1451,7 +1451,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
 
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
         }
@@ -1461,7 +1461,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1487,7 +1487,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
     KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
         }
@@ -1497,7 +1497,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1525,7 +1525,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pkinbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
@@ -1535,7 +1535,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1550,7 +1550,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
-        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pkinbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pkinbody));
         }
@@ -1560,7 +1560,7 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < (size_t)len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -1593,7 +1593,7 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
     if( nRays == 0 ) {
         return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
     }
-    if( extract<int>(shape[1]) != 6 ) {
+    if( extract<int>(shape[py::to_object(1)]) != 6 ) {
         throw OpenRAVEException(_("rays object needs to be a Nx6 vector\n"));
     }
     CollisionReport report;
@@ -2304,8 +2304,8 @@ size_t PyEnvironmentBase::_getGraphPoints(object opoints, std::vector<float>&vpo
             }
             return vpoints.size()/3;
         case 2: {
-            int num = extract<int>(pointshape[0]);
-            int dim = extract<int>(pointshape[1]);
+            int num = extract<int>(pointshape[py::to_object(0)]);
+            int dim = extract<int>(pointshape[py::to_object(1)]);
             vpoints = ExtractArray<float>(opoints.attr("flat"));
             if(dim % 3) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("points have bad size %dx%d"), num%dim,ORE_InvalidArguments);
@@ -2334,8 +2334,8 @@ size_t PyEnvironmentBase::_getGraphColors(object ocolors, std::vector<float>&vco
             case 1:
                 break;
             case 2: {
-                int numcolors = extract<int>(colorshape[0]);
-                int colordim = extract<int>(colorshape[1]);
+                int numcolors = extract<int>(colorshape[py::to_object(0)]);
+                int colordim = extract<int>(colorshape[py::to_object(1)]);
                 if(( colordim != 3) &&( colordim != 4) ) {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("colors dim %d needs to be 3 or 4"),colordim, ORE_InvalidArguments);
                 }
@@ -2373,21 +2373,21 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
             }
             for(size_t i = 0; i < n/3; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
-                            py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
+                            py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
             }
             return n/3;
         }
         case 2: {
-            const int num = py::extract<int>(datashape[0]);
-            const int dim = py::extract<int>(datashape[1]);
+            const int num = py::extract<int>(datashape[py::to_object(0)]);
+            const int dim = py::extract<int>(datashape[py::to_object(1)]);
             if(dim != 3) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%dim,ORE_InvalidArguments);
             }
             const object& o = odata.attr("flat");
             for(size_t i = 0; i < num; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[3*i]),
-                            py::extract<float>(o[3*i+1]), py::extract<float>(o[3*i+2])));
+                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[py::to_object(3*i)]),
+                            py::extract<float>(o[py::to_object(3*i+1)]), py::extract<float>(o[py::to_object(3*i+2)])));
             }
             return num;
         }
@@ -2401,8 +2401,8 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
         throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
     }
     for(size_t i = 0; i < n/3; ++i) {
-        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[3*i]),
-                    py::extract<float>(odata[3*i+1]), py::extract<float>(odata[3*i+2])));
+        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
+                    py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
     }
     return vvectors.size();
 }
@@ -2525,7 +2525,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
             vtexture[i][j][0] = _vtexture[i][j];
         }
     }
-    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[py::to_object(0)]),extract<float>(oextents[py::to_object(1)]),0), vtexture));
 }
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&_vtexture){
     size_t x = _vtexture.size();
@@ -2554,7 +2554,7 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
             }
         }
     }
-    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[0]),extract<float>(oextents[1]),0), vtexture));
+    return toPyGraphHandle(_penv->drawplane(RaveTransform<float>(ExtractTransform(otransform)), RaveVector<float>(extract<float>(oextents[py::to_object(0)]),extract<float>(oextents[py::to_object(1)]),0), vtexture));
 }
 #else
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const boost::multi_array<float,2>&_vtexture)
@@ -2713,7 +2713,7 @@ object PyEnvironmentBase::GetPublishedBodyTransformsMatchingPrefix(const string 
 
     py::dict otransforms;
     for(const std::pair<std::string, Transform>& itpair : nameTransfPairs) {
-        otransforms[itpair.first] = ReturnTransform(itpair.second);
+        otransforms[itpair.first.c_str()] = ReturnTransform(itpair.second);
     }
 
     return otransforms;
@@ -3113,7 +3113,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         py::object oargs = o.attr("args");
         py::object oret;
         if( len(oargs) > 1 ) {
-            oret = oargs[1];
+            oret = oargs[py::to_object(1)];
         }
         else {
             oret = py::none_();
@@ -3124,7 +3124,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         py::object oargs = o.attr("args");
         py::object oret;
         if( len(oargs) > 1 ) {
-            oret = oargs[1];
+            oret = oargs[py::to_object(1)];
         }
         else {
             oret = py::none_();

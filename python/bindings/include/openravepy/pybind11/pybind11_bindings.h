@@ -154,7 +154,7 @@ inline py::array_t<bool> toPyArray(const std::vector<bool>& v)
     py::array_t<bool> arr;
     arr.resize({(int) v.size()});
     for(size_t i = 0; i < v.size(); ++i) {
-        arr[i] = v[i];
+        arr.mutable_at(i) = v[i];
     }
     return arr;
 }

@@ -125,6 +125,10 @@ void PyCollisionReport::init(PyEnvironmentBasePtr pyenv)
     vLinkColliding = newLinkColliding;
 }
 
+void PyCollisionReport::Reset(int coloptions)
+{
+    return report->Reset(coloptions);
+}
 std::string PyCollisionReport::__str__()
 {
     return report->__str__();
@@ -393,7 +397,7 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
     std::vector<KinBodyConstPtr> vbodyexcluded;
     size_t numBodyExcluded = len(bodyexcluded);
     for(size_t i = 0; i < numBodyExcluded; ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
         }
@@ -404,7 +408,7 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     size_t numLinkExcluded = len(linkexcluded);
     for(size_t i = 0; i < numLinkExcluded; ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -430,7 +434,7 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
     KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
 
     for(size_t i = 0; i < len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbody ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbody));
         }
@@ -440,7 +444,7 @@ bool PyCollisionCheckerBase::CheckCollision(object o1, object bodyexcluded, obje
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -468,7 +472,7 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
 {
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < len(bodyexcluded); ++i) {
-        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbodyex ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbodyex));
         }
@@ -478,7 +482,7 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -494,7 +498,7 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
     std::vector<KinBodyConstPtr> vbodyexcluded;
     size_t numBodyExcluded = len(bodyexcluded);
     for(size_t i = 0; i < numBodyExcluded; ++i) {
-        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[i]);
+        PyKinBodyPtr pbodyex = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
         if( !!pbodyex ) {
             vbodyexcluded.push_back(openravepy::GetKinBody(pbodyex));
         }
@@ -504,7 +508,7 @@ bool PyCollisionCheckerBase::CheckCollision(PyKinBodyPtr pbody, object bodyexclu
     }
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for(size_t i = 0; i < len(linkexcluded); ++i) {
-        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[i]);
+        KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(linkexcluded[py::to_object(i)]);
         if( !!plink2 ) {
             vlinkexcluded.push_back(plink2);
         }
@@ -537,7 +541,7 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     if( num == 0 ) {
         return py::make_tuple(py::empty_array_astype<int>(), py::empty_array_astype<dReal>());
     }
-    if( extract<int>(shape[1]) != 6 ) {
+    if( extract<int>(shape[py::to_object(1)]) != 6 ) {
         throw openrave_exception(_("rays object needs to be a Nx6 vector\n"));
     }
     CollisionReport report;
@@ -560,7 +564,7 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     bool* pcollision = (bool*)PyArray_DATA(pycollision);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < num; ++i, ppos += 6) {
-        std::vector<dReal> ray = ExtractArray<dReal>(rays[i]);
+        std::vector<dReal> ray = ExtractArray<dReal>(rays[py::to_object(i)]);
         r.pos.x = ray[0];
         r.pos.y = ray[1];
         r.pos.z = ray[2];
@@ -720,6 +724,7 @@ PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv,
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -790,6 +795,16 @@ void init_openravepy_collisionchecker()
     .def_readonly("nKeepPrevious", &PyCollisionReport::nKeepPrevious)
     .def("__str__",&PyCollisionReport::__str__)
     .def("__unicode__",&PyCollisionReport::__unicode__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("Reset", &PyCollisionReport::Reset,
+         "coloptions"_a = 0,
+         "Reset report"
+        )
+#else
+    .def("Reset",&PyCollisionReport::Reset,
+         Reset_overloads(PY_ARGS("coloptions")
+                         "Reset report"))
+#endif
     ;
 
     bool (PyCollisionCheckerBase::*pcolb)(PyKinBodyPtr) = &PyCollisionCheckerBase::CheckCollision;

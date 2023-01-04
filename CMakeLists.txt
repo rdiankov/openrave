@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 104)
-set (OPENRAVE_VERSION_PATCH 1)
+set (OPENRAVE_VERSION_MINOR 105)
+set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -222,6 +222,12 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-Werror=return-type")
 endif()
 
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+  add_definitions("-Werror=return-local-addr")
+elseif( COMPILER_IS_CLANG )
+  add_definitions("-Werror=return-stack-address")
+endif()
+
 set(OPENRAVE_EXPORT_CXXFLAGS)
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
@@ -249,12 +255,6 @@ else()
   check_cxx_compiler_flag("-Bsymbolic-functions" LINKER_HAS_BSYMBOLIC_FUNCTIONS)
   check_cxx_compiler_flag("-fvisibility=hidden" LINKER_HAS_VISIBILITY)
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" LINKER_HAS_VISIBILITY_INLINES_HIDDEN)
-endif()
-
-if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  set(STDC_LIBRARY stdc++)
-else()
-  set(STDC_LIBRARY)
 endif()
 
 if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -528,28 +528,6 @@ if( ASSIMP_FOUND )
   if( ${ASSIMP_VERSION} STRGREATER "2.0.0" )
     set(IS_ASSIMP3 1)
   endif()
-endif()
-
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  check_cxx_source_runs("
-  int main()
-  {
-    int a = 0;
-    int*pa = &a;
-    asm(\".intel_syntax\\\\n\"
-	\"mov %%rax, %0\\\\n\"
-    \"mov %%eax, [%%rax]\\\\n\"
-    \".att_syntax\\\\n\"
-    : : \"r\"(pa) : \"%rax\");
-    return 0;
-  }"
-  IS_X86_64)
-
-  if( IS_X86_64 )
-    add_definitions("-D__x86_64__")
-  endif()
-else()
-  set(IS_X86_64 0)
 endif()
 
 check_library_exists(rt clock_gettime "" CLOCK_GETTIME_FOUND)
