@@ -145,6 +145,7 @@ public:
     JointControlInfo_RobotControllerPtr GetJointControlInfo();
 
     std::string controllerType;
+    // TODO(mirai) initialization with boost::array
     object robotControllerAxisProductCode = toPyArray(std::array<std::string, 3>({"", "", ""}));
     object robotControllerAxisIndex = toPyVector3(Vector(-1, -1, -1));
     object robotControllerAxisMult = toPyVector3(Vector(1.0, 1.0, 1.0));
