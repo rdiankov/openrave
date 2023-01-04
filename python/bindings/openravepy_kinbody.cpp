@@ -658,7 +658,7 @@ PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const Joi
     FOREACHC(itdofindex, jci.robotControllerAxisProductCode) {
         _robotControllerAxisProductCode.append(*itdofindex);
     }
-    robotControllerAxisIndex = _robotControllerAxisIndex;
+    robotControllerAxisProductCode = _robotControllerAxisProductCode;
     FOREACHC(itdofindex, jci.robotControllerAxisIndex) {
         _robotControllerAxisIndex.append(*itdofindex);
     }
