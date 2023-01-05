@@ -3715,7 +3715,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     // i travels is simply sum_k |p(t_{k + 1}) - p(t_k)| where t_k is the k-th critical point. Also
     // let the first critical point be t = 0 and the last one t = timeelapsed.
     //
-    int nLargestStepIndex = -1; // index to the DOF that moves the most
     int numSteps = 0; // the number of steps the dof nLargestStepIndex takes along this path
     int totalSteps = 0; // the number of steps of all DOFs combined
     const std::vector<dReal>& vConfigResolution = params->_vConfigResolution;
@@ -3837,7 +3836,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
             totalSteps += steps;
             if( steps > numSteps ) {
-                nLargestStepIndex = idof;
                 numSteps = steps;
             }
         } // end for loop iterating through each dof to find discretization steps.
@@ -3856,7 +3854,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             totalSteps += steps;
             if (steps > numSteps) {
                 numSteps = steps;
-                nLargestStepIndex = idof;
             }
         }
     }
@@ -3929,7 +3926,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 
     // Checking the rest of the segment starts here
     bool bHasRampDeviatedFromInterpolation = false; // TODO: write a correct description for this variable later
-    bool bHasNewTempConfigToAdd = false; // TODO: write a correct description for this variable later
 
     if( !bUseAllLinearInterpolation && timeelapsed > 0 ) {
         bool bComputeNewTimeStep = true; // TODO: write a correct description for this variable later
@@ -3957,7 +3953,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
                     filterreturn->_configurationtimes.push_back(tcur);
                 }
-                bHasNewTempConfigToAdd = false;
             }
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
@@ -3971,9 +3966,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             int earliestindex = -1;
             if( bComputeNewTimeStep ) {
                 dReal tdelta = timeelapsed - tcur;
-                dReal tdeltaonedof;
+                dReal tdeltaonedof = 0;
                 for( size_t idof = 0; idof < ndof; ++idof ) {
-                    dReal fcurvalue;
+                    dReal fcurvalue = 0;
 
                     switch( maskinterpolation ) {
                     case IT_Cubic:
@@ -4084,7 +4079,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             } // end switch maskinterpolation
 
             dReal dqscale = 1.0;  // TODO: write a correct description for this variable later
-            int iScaleIndex = -1; // TODO: write a correct description for this variable later
             dReal fitdiff = 1/(tnext - tprev);
             for( size_t idof = 0; idof < ndof; ++idof ) {
                 if( RaveFabs(dQ[idof]) > vConfigResolution[idof] * 1.01 ) {
@@ -4163,7 +4157,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
                     if( s < dqscale ) {
                         dqscale = s;
-                        iScaleIndex = (int)idof;
                     }
                 }
                 else {
@@ -4230,7 +4223,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( neighstatus == NSS_SuccessfulWithDeviation ) {
                 bHasRampDeviatedFromInterpolation = true;
             }
-            bHasNewTempConfigToAdd = true;
 
             // Fill in _vtempvelconfig and _vtempaccelconfig
             switch( maskinterpolation ) {

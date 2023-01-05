@@ -657,7 +657,6 @@ bool CacheTree::_Remove(CacheTreeNodePtr removenode, std::vector< std::vector<Ca
     std::vector<CacheTreeNodePtr>& vNextLevelNodes = vvCoverSetNodes[coverindex];
     vNextLevelNodes.resize(0);
 
-    bool bfound = false;
     FOREACH(itcurrentnode, vvCoverSetNodes.at(coverindex-1)) {
         // only take the children whose distances are within the bound
         if( setLevelRawChildren.find(*itcurrentnode) != setLevelRawChildren.end() ) {
@@ -668,7 +667,6 @@ bool CacheTree::_Remove(CacheTreeNodePtr removenode, std::vector< std::vector<Ca
                     vNextLevelNodes.resize(0);
                     vNextLevelNodes.push_back(*itchild);
                     itchild = (*itcurrentnode)->_vchildren.erase(itchild);
-                    bfound = true;
                 }
                 else {
                     if( curdist <= fLevelBound2 ) {

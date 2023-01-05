@@ -63,7 +63,6 @@ public:
         /// \brief Check all constraints on all rampnds in the given vector of rampnds. options is passed to the OpenRAVE check function.
         RampOptimizer::CheckReturn Check2(const std::vector<RampOptimizer::RampND>& rampndVect, int options, std::vector<RampOptimizer::RampND>& rampndVectOut)
         {
-            std::vector<dReal> &vswitchtimes=_vswitchtimes;
             std::vector<dReal> &q0=_q0, &q1=_q1, &dq0=_dq0, &dq1=_dq1;
             std::vector<uint8_t> &vsearchsegments=_vsearchsegments;
 

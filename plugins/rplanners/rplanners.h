@@ -950,7 +950,7 @@ private:
         std::vector<NodePtr>& vNextLevelNodes = vvCoverSetNodes[coverindex];
         vNextLevelNodes.resize(0);
 
-        bool bfound = false;
+        //bool bfound = false;
         FOREACH(itcurrentnode, vvCoverSetNodes.at(coverindex-1)) {
             // only take the children whose distances are within the bound
             if( setLevelRawChildren.find(*itcurrentnode) != setLevelRawChildren.end() ) {
@@ -964,7 +964,7 @@ private:
                         if( (*itcurrentnode)->_hasselfchild && _ComputeDistance(*itcurrentnode, *itchild) <= _mindistance) {
                             (*itcurrentnode)->_hasselfchild = 0;
                         }
-                        bfound = true;
+                        //bfound = true;
                         //break;
                     }
                     else {

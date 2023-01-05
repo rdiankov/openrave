@@ -203,7 +203,7 @@ public:
             if( IS_DEBUGLEVEL(Level_Debug) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
                 T totalerror2 = _ComputeConstraintError(_pmanip->GetTransform(),_error);
                 if( totalerror2 >= _errorthresh2 ) {
-                    Transform tEE = _tTargetFrameLeft * _pmanip->GetTransform() * _tTargetFrameRight; // for debugging
+                    //Transform tEE = _tTargetFrameLeft * _pmanip->GetTransform() * _tTargetFrameRight; // for debugging
                     throw OPENRAVE_EXCEPTION_FORMAT("initial robot configuration does not satisfy constraints %f>%f",totalerror2%_errorthresh2,ORE_InconsistentConstraints);
                 }
             }
