@@ -462,7 +462,7 @@ void QtOSGViewer::_CreateActions()
 
     bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Polygon"), this);
     bboxAct->setCheckable(true);
-    connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
+    //connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
 
     connect(&_updateViewerTimer, SIGNAL(timeout()), this, SLOT(_UpdateViewerCallback()));
     _updateViewerTimer.start(1000/60); // ms
@@ -708,10 +708,10 @@ void QtOSGViewer::polygonMode()
     _posgWidget->SetPolygonMode(wireAct->isChecked() ? 2 : 0);
 }
 
-void QtOSGViewer::_ProcessBoundingBox()
-{
-    _posgWidget->DrawBoundingBox(bboxAct->isChecked());
-}
+//void QtOSGViewer::_ProcessBoundingBox()
+//{
+//    _posgWidget->DrawBoundingBox(bboxAct->isChecked());
+//}
 
 void QtOSGViewer::axes()
 {

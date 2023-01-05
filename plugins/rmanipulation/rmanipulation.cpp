@@ -13,15 +13,25 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "rmanipulation.h"
 #include "plugindefs.h"
-#include <openrave/plugin.h>
 
-ModuleBasePtr CreateBaseManipulation(EnvironmentBasePtr penv);
-ModuleBasePtr CreateTaskCaging(EnvironmentBasePtr penv);
-ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv);
-ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv);
+OpenRAVE::ModuleBasePtr CreateBaseManipulation(OpenRAVE::EnvironmentBasePtr penv);
+//OpenRAVE::ModuleBasePtr CreateTaskCaging(OpenRAVE::EnvironmentBasePtr penv);
+OpenRAVE::ModuleBasePtr CreateTaskManipulation(OpenRAVE::EnvironmentBasePtr penv);
+OpenRAVE::ModuleBasePtr CreateVisualFeedback(OpenRAVE::EnvironmentBasePtr penv);
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+RManipulationPlugin::RManipulationPlugin()
+{
+    _interfaces[PT_Module].push_back("BaseManipulation");
+    _interfaces[PT_Module].push_back("TaskManipulation");
+    _interfaces[PT_Module].push_back("TaskCaging");
+    _interfaces[PT_Module].push_back("VisualFeedback");
+}
+
+RManipulationPlugin::~RManipulationPlugin() {}
+
+OpenRAVE::InterfaceBasePtr RManipulationPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_Module:
@@ -31,9 +41,9 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         else if( interfacename == "taskmanipulation" ) {
             return CreateTaskManipulation(penv);
         }
-        else if( interfacename == "taskcaging") {
-            return CreateTaskCaging(penv);
-        }
+        //else if( interfacename == "taskcaging") {
+        //    return CreateTaskCaging(penv);
+        //}
         else if( interfacename == "visualfeedback") {
             return CreateVisualFeedback(penv);
         }
@@ -41,17 +51,20 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& RManipulationPlugin::GetInterfaces() const
 {
-    info.interfacenames[PT_Module].push_back("BaseManipulation");
-    info.interfacenames[PT_Module].push_back("TaskManipulation");
-    info.interfacenames[PT_Module].push_back("TaskCaging");
-    info.interfacenames[PT_Module].push_back("VisualFeedback");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& RManipulationPlugin::GetPluginName() const
 {
+    static std::string pluginname = "RManipulationPlugin";
+    return pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new RManipulationPlugin();
 }

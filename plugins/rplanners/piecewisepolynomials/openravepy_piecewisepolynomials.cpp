@@ -305,7 +305,7 @@ std::vector<piecewisepolynomials::Polynomial> ExtractArrayPolynomials(const py::
     std::vector<piecewisepolynomials::Polynomial> v;
     v.reserve(numPolynomials);
     for(size_t ipoly = 0; ipoly < numPolynomials; ++ipoly ) {
-        PyPolynomialPtr ppypoly = py::extract<PyPolynomialPtr>(ov[ipoly]);
+        PyPolynomialPtr ppypoly = py::extract<PyPolynomialPtr>(ov[py::to_object(ipoly)]);
         if( !!ppypoly ) {
             v.push_back(*(ppypoly->_ppolynomial));
         }
@@ -612,7 +612,7 @@ std::vector<piecewisepolynomials::Chunk> ExtractArrayChunks(const py::object ov)
     std::vector<piecewisepolynomials::Chunk> v;
     v.reserve(numChunks);
     for(size_t ichunk = 0; ichunk < numChunks; ++ichunk ) {
-        PyChunkPtr ppychunk = py::extract<PyChunkPtr>(ov[ichunk]);
+        PyChunkPtr ppychunk = py::extract<PyChunkPtr>(ov[py::to_object(ichunk)]);
         if( !!ppychunk ) {
             v.push_back(*(ppychunk->_pchunk));
         }
