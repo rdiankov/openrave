@@ -113,8 +113,9 @@ int main()
 """
     else:
         code_cpp = """#include <openrave/plugin.h>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 using namespace OpenRAVE;
+using namespace boost::placeholders;
 
 %s
 // called to create a new plugin

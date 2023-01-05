@@ -62,10 +62,14 @@
 #include <iostream>
 #include <sstream>
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/assert.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/version.hpp>
+
+using boost::placeholders::_1;
+using boost::placeholders::_2;
+using boost::placeholders::_3;
 
 #include <QtCore/QVariant>
 #include <QtWidgets/QAction>

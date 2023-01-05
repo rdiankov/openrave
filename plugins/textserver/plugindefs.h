@@ -55,7 +55,7 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/thread/thread.hpp>
@@ -63,6 +63,10 @@
 #include <boost/thread/condition.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/assert.hpp>
+
+using boost::placeholders::_1;
+using boost::placeholders::_2;
+using boost::placeholders::_3;
 
 using namespace std;
 using namespace OpenRAVE;

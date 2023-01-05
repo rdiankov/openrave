@@ -59,11 +59,12 @@
 #include <cmath>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/format.hpp>
 
 using namespace std;
 using namespace OpenRAVE;
+using namespace boost::placeholders;
 
 static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 

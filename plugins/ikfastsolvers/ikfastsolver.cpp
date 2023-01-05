@@ -18,7 +18,6 @@
 
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
 

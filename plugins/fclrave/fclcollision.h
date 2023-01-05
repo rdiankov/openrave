@@ -5,7 +5,6 @@
 #include <boost/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/utils.h>
-#include <boost/function_output_iterator.hpp>
 
 #include "fclspace.h"
 #include "fclmanagercache.h"
