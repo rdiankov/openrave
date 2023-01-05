@@ -254,18 +254,18 @@ protected:
             _v0vel[i] = *(itdataprev+info->gvel.offset+i);
             _v1vel[i] = *(itdata+info->gvel.offset+i);
         }
-        dReal deltatime = *(itdata+_timeoffset);
-        dReal ideltatime = 1/deltatime;
-        dReal ideltatime2 = ideltatime*ideltatime;
-        for(int i=0; i < info->gvel.dof; ++i) {
-            dReal px = *(itdata+info->gpos.offset+i) - *(itdataprev+info->gpos.offset+i);
-            dReal v0 = *(itdataprev+info->gvel.offset+i);
-            dReal v1 = *(itdata+info->gvel.offset+i);
-            dReal c3 = (v1 + v0 - 2*px*ideltatime)*ideltatime2;
-            dReal c2 = (3*px*ideltatime - (2*v0 + v1))*ideltatime;
+//        dReal deltatime = *(itdata+_timeoffset);
+//        dReal ideltatime = 1/deltatime;
+//        dReal ideltatime2 = ideltatime*ideltatime;
+//        for(int i=0; i < info->gvel.dof; ++i) {
+//            dReal px = *(itdata+info->gpos.offset+i) - *(itdataprev+info->gpos.offset+i);
+//            dReal v0 = *(itdataprev+info->gvel.offset+i);
+//            dReal v1 = *(itdata+info->gvel.offset+i);
+//            dReal c3 = (v1 + v0 - 2*px*ideltatime)*ideltatime2;
+//            dReal c2 = (3*px*ideltatime - (2*v0 + v1))*ideltatime;
 //            dReal a1 = 6*c3, a0 = 2*c2;
 //            *(itdata+info->gaccel.offset+i) = a0 + deltatime*a1;
-        }
+//        }
         return true;
     }
 

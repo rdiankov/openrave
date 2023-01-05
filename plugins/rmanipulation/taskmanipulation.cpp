@@ -1356,7 +1356,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1366,7 +1365,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
@@ -1502,7 +1500,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1512,7 +1509,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
