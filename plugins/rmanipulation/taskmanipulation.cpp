@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
 #define GRASPTHRESH2 dReal(0.002f)
 
 struct GRASPGOAL

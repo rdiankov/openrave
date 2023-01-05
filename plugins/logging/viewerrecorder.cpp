@@ -20,8 +20,10 @@
 #include <mutex>
 
 #include <boost/version.hpp>
-
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
+
+using namespace boost::placeholders;
 
 #ifdef _WIN32
 

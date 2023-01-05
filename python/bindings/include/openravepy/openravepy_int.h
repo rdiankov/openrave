@@ -40,7 +40,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/version.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
@@ -55,6 +55,8 @@
 #define OPENRAVE_BINDINGS_PYARRAY
 #include <openravepy/bindings.h>
 #include <openravepy/docstrings.h>
+
+using namespace boost::placeholders;
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave", msgid)
 

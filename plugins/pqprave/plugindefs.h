@@ -56,7 +56,6 @@
 #include <iostream>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
 
 using namespace std;
 using namespace OpenRAVE;

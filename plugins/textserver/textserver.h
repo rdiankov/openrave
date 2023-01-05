@@ -21,6 +21,9 @@
 #include <mutex>
 #include <openrave/planningutils.h>
 #include <cstdlib>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 #ifndef _WIN32
 #include <sys/types.h>
