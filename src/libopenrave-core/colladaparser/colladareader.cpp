@@ -1778,20 +1778,6 @@ public:
                                             }
                                             jci.robotControllerAxisOffset.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
                                         }
-                                        else if( pchild->getElementName() == std::string("robotControllerAxisFeedforwardVelocityOffsetMult") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
-                                            }
-                                            jci.robotControllerAxisFeedforwardVelocityOffsetMult.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
-                                        }
-                                        else if( pchild->getElementName() == std::string("robotControllerAxisFeedforwardTorqueOffsetMult") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
-                                            }
-                                            jci.robotControllerAxisFeedforwardTorqueOffsetMult.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
-                                        }
                                     }
                                     continue;
                                 }

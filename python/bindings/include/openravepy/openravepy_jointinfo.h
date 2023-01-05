@@ -150,8 +150,6 @@ public:
     object robotControllerAxisIndex = toPyVector3(Vector(-1, -1, -1));
     object robotControllerAxisMult = toPyVector3(Vector(1.0, 1.0, 1.0));
     object robotControllerAxisOffset = toPyVector3(Vector(0.0, 0.0, 0.0));
-    object robotControllerAxisFeedforwardVelocityOffsetMult = toPyVector3(Vector(0.0, 0.0, 0.0));
-    object robotControllerAxisFeedforwardTorqueOffsetMult = toPyVector3(Vector(0.0, 0.0, 0.0));
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
 
