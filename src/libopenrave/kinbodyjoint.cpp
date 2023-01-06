@@ -1187,6 +1187,12 @@ dReal KinBody::Joint::GetVelocity(int axis) const
 
 void KinBody::Joint::_GetVelocities(dReal* pVelocities, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
 {
+    if( IsStatic() ) {
+        for(int i = 0; i < GetDOF(); ++i) {
+            pVelocities[i] = 0;
+        }
+        return;
+    }
     if( GetDOF() == 1 ) {
         pVelocities[0] = _GetVelocity(0, linkparentvelocity, linkchildvelocity);
         return;
