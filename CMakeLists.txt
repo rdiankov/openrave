@@ -850,6 +850,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/openrave/     DESTINATION ${CMAKE_
 if (OPT_CBINDINGS)
   install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/openrave_c/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave_c)
 endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
 # Install license file

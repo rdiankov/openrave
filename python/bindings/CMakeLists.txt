@@ -4,11 +4,27 @@ if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
 endif()
 
 # all cpp files for python bindings
-set(openravepy_int_cpp_files openravepy_int.cpp openravepy_kinbody.cpp openravepy_robot.cpp openravepy_global.cpp
-    openravepy_collisionchecker.cpp openravepy_controller.cpp openravepy_ikparameterization.cpp openravepy_iksolver.cpp
-    openravepy_module.cpp openravepy_physicsengine.cpp openravepy_planner.cpp openravepy_planningutils.cpp
-    openravepy_sensor.cpp openravepy_sensorsystem.cpp openravepy_spacesampler.cpp openravepy_trajectory.cpp
-    openravepy_viewer.cpp bindings.cpp docstrings.cpp)
+set(openravepy_int_cpp_files
+  openravepy_int.cpp
+  openravepy_kinbody.cpp
+  openravepy_robot.cpp
+  openravepy_global.cpp
+  openravepy_collisionchecker.cpp
+  openravepy_controller.cpp
+  openravepy_ikparameterization.cpp
+  openravepy_iksolver.cpp
+  openravepy_module.cpp
+  openravepy_physicsengine.cpp
+  openravepy_planner.cpp
+  openravepy_planningutils.cpp
+  openravepy_sensor.cpp
+  openravepy_sensorsystem.cpp
+  openravepy_spacesampler.cpp
+  openravepy_trajectory.cpp
+  openravepy_viewer.cpp
+  bindings.cpp
+  docstrings.cpp
+)
 
 set(SUCCESS_BUILD_PYTHON_BINDINGS ON)
 
@@ -32,7 +48,6 @@ if (pybind11_FOUND)
 
     ## openrave bindings
     add_library(openravepy_int SHARED ${openravepy_int_cpp_files})
-    # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/Segfault_in_cxa_allocate_exception#Workaround)
     target_link_libraries(openravepy_int PRIVATE boost_assertion_failed PUBLIC Python2::Module Python2::NumPy pybind11::module libopenrave libopenrave-core)
     set_target_properties(openravepy_int PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}")
     if( WIN32 )
@@ -50,7 +65,6 @@ if (pybind11_FOUND)
     if( ANN_FOUND )
       add_library(pyANN_int SHARED pyann.cpp bindings.cpp)
       include_directories(${ANN_INCLUDE_DIR})
-      # stdc++ has to be included before opengl libraries due to some ATI bug (http://wiki.fifengine.de/  Segfault_in_cxa_allocate_exception#Workaround)
       target_link_libraries(pyANN_int PRIVATE boost_assertion_failed ANN PUBLIC Python2::Module Python2::NumPy ${OPENRAVEPY_LINKED_LIBRARIES})
       set_target_properties(pyANN_int PROPERTIES PREFIX "" COMPILE_FLAGS "${ANN_CFLAGS} ${OPENRAVEPY_COMPILE_FLAGS}")
       if( WIN32 )

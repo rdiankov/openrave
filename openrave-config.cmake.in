@@ -22,11 +22,11 @@ set(OpenRAVE_INCLUDE_DIRS ${OpenRAVE_INCLUDE_DIR} ${OpenRAVE_RAPIDJSON_INCLUDE_D
 set(OpenRAVE_PYTHON @OPT_PYTHON@)
 set(OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS @USE_PYBIND11_PYTHON_BINDINGS@)
 set(OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
-message(STATUS "OpenRAVE was compiled with Boost ${OpenRAVE_Boost_VERSION}.")
 
 include(${CMAKE_CURRENT_LIST_DIR}/openrave-targets.cmake)
 
-find_package(Boost REQUIRED COMPONENTS filesystem)
+find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS date_time filesystem system thread)
+find_package(RapidJSON REQUIRED)
 if (${OpenRAVE_PYTHON})
     find_package(Python2 REQUIRED COMPONENTS Interpreter Development NumPy)
 
@@ -38,7 +38,7 @@ if (${OpenRAVE_PYTHON})
     if (${OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS})
         find_package(pybind11 REQUIRED)
     else()
-        find_package(Boost REQUIRED COMPONENTS python)
+        find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS python)
     endif()
 endif()
 
@@ -46,3 +46,5 @@ endif()
 get_target_property(libopenrave_LOCATION libopenrave LOCATION)
 get_target_property(libopenrave-core_LOCATION libopenrave-core LOCATION)
 set(OpenRAVE_CORE_LIBRARIES "${libopenrave_LOCATION};${libopenrave-core_LOCATION}")
+
+message(STATUS "Found OpenRAVE ${OpenRAVE_VERSION}, compiled with Boost ${OpenRAVE_Boost_VERSION}.")

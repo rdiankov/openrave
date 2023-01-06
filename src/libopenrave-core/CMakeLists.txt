@@ -75,7 +75,11 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 
 target_link_libraries(libopenrave-core PRIVATE boost_assertion_failed ivcon PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES})
-install(TARGETS libopenrave-core EXPORT openrave-targets LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(TARGETS libopenrave-core
+  EXPORT openrave-targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}
+)
 install(FILES openrave-core.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR})
 
 if( OPT_CBINDINGS )
@@ -89,7 +93,11 @@ if( OPT_CBINDINGS )
     COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_C_CORE_DLL_EXPORTS -DOPENRAVE_C_CORE_DLL -DOPENRAVE_CORE_DLL"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   target_link_libraries (libopenrave-core_c PRIVATE boost_assertion_failed PUBLIC libopenrave-core ${OPENRAVE_CORE_LIBRARIES})
-  install(TARGETS libopenrave-core_c EXPORT openrave-targets LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS libopenrave-core_c
+    EXPORT openrave-targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}
+  )
   install(FILES openrave-core_c.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR})
 endif()
 
@@ -105,5 +113,9 @@ if( OPT_STATIC )
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 
   target_link_libraries(libopenrave-core_static PRIVATE boost_assertion_failed ivcon PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES})
-  install(TARGETS libopenrave-core_static EXPORT openrave-targets LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  install(TARGETS libopenrave-core_static
+    EXPORT openrave-targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}
+  )
 endif()
