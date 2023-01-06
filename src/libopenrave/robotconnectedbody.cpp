@@ -997,7 +997,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         KinBody::JointInfo& dummyJointInfo = connectedBody._pDummyJointCache->_info;
         dummyJointInfo._name = connectedBody._dummyPassiveJointName;
         dummyJointInfo._bIsActive = false;
-        dummyJointInfo._type = KinBody::JointType::JointPrismatic;
+        dummyJointInfo._type = KinBody::JointType::JointRevolute;
         dummyJointInfo._vmaxaccel[0] = 0.0;
         dummyJointInfo._vmaxvel[0] = 0.0;
         dummyJointInfo._vupperlimit[0] = 0;
