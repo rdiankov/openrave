@@ -1187,6 +1187,12 @@ dReal KinBody::Joint::GetVelocity(int axis) const
 
 void KinBody::Joint::_GetVelocities(dReal* pVelocities, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
 {
+    if( IsStatic() ) {
+        for(int i = 0; i < GetDOF(); ++i) {
+            pVelocities[i] = 0;
+        }
+        return;
+    }
     if( GetDOF() == 1 ) {
         pVelocities[0] = _GetVelocity(0, linkparentvelocity, linkchildvelocity);
         return;
@@ -1226,6 +1232,9 @@ void KinBody::Joint::_GetVelocities(dReal* pVelocities, const std::pair<Vector,V
 
 dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const
 {
+    if( IsStatic() ) {
+        return 0;
+    }
     const Transform& linkparenttransform = _attachedbodies[0]->_info._t;
     const Transform& linkchildtransform = _attachedbodies[1]->_info._t;
     Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
