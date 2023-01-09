@@ -38,6 +38,7 @@ option(OPT_PLUGINS "Build the pluings" ON)
 option(OPT_DOUBLE_PRECISION "Use double precision" ON)
 option(OPT_ACCURATEMATH "Use accurate and robust math to account for floating-point errors" ON)
 option(OPT_PYTHON "Build python bindings" ON)
+option(OPT_PYTHON3 "Choose Python 3 instead of 2, enables OPT_PYTHON" OFF)
 option(OPT_OCTAVE "Build octave bindings" ON)
 option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
@@ -754,15 +755,27 @@ add_subdirectory(src)
 add_subdirectory(octave_matlab)
 add_subdirectory(locale)
 
-if(OPT_PYTHON)
-  find_package(Python2 REQUIRED COMPONENTS Interpreter Development NumPy)
-  string(REGEX REPLACE "^/usr/" "" OPENRAVE_PYTHON_INSTALL_DIR "${Python2_SITEARCH}")
+if(OPT_PYTHON OR OPT_PYTHON3)
+  set(OPT_PYTHON ON) # If Python3 was requested, set this to ON
+  if (OPT_PYTHON3)
+    find_package(Python 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
+  else()
+    find_package(Python 2.7 REQUIRED COMPONENTS Interpreter Development NumPy)
+  endif()
+
+  execute_process(
+    COMMAND ${Python_EXECUTABLE} -c "import distutils.sysconfig as sysconf; import os;\
+      print(os.path.relpath(sysconf.get_python_lib(1, prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}'))\
+    "
+    OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
   set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy")
 
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
     # get the sympy version
   execute_process(
-    COMMAND ${Python2_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
+    COMMAND ${Python_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
     OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE _sympy_version_failed)
   message(STATUS "_sympy_version ${_sympy_version}")

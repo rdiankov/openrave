@@ -3,7 +3,6 @@ if (NOT OPT_PYTHON)
 endif()
 
 add_subdirectory(bindings)
-set(HAVE_ALL_PYTHON_HEADERS ${HAVE_ALL_PYTHON_HEADERS} PARENT_SCOPE)
 
 if( OPT_BUILD_PACKAGE_DEFAULT )
   set(OPENRAVEPY_EGG "${CMAKE_CURRENT_BINARY_DIR}/openravepy.egg-info")

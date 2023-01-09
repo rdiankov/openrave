@@ -21,8 +21,8 @@ if( OPT_PYTHON )
       boost_assertion_failed
     PUBLIC
       ${OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES}
-      Python2::Module
-      Python2::NumPy
+      Python::Module
+      Python::NumPy
       pybind11::module
   )
 
