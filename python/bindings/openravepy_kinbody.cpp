@@ -654,25 +654,25 @@ PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const Joi
 {
     controllerType = jci.controllerType;
 
-    py::list _robotControllerAxisIndex, _robotControllerAxisMult, _robotControllerAxisOffset, _robotControllerAxisProductCode;
+    py::list axisIndex, axisMult, axisOffset, axisProductCode;
     FOREACHC(itdofindex, jci.robotControllerAxisIndex) {
-        _robotControllerAxisIndex.append(*itdofindex);
+        axisIndex.append(*itdofindex);
     }
-    robotControllerAxisIndex = _robotControllerAxisIndex;
+    robotControllerAxisIndex = axisIndex;
 
     FOREACHC(itdofmult, jci.robotControllerAxisMult) {
-        _robotControllerAxisMult.append(*itdofmult);
+        axisMult.append(*itdofmult);
     }
-    robotControllerAxisMult = _robotControllerAxisMult;
+    robotControllerAxisMult = axisMult;
 
     FOREACHC(itdofoffset, jci.robotControllerAxisOffset) {
-        _robotControllerAxisOffset.append(*itdofoffset);
+        axisOffset.append(*itdofoffset);
     }
-    robotControllerAxisOffset = _robotControllerAxisOffset;
+    robotControllerAxisOffset = axisOffset;
     FOREACHC(itDOFProductCode, jci.robotControllerAxisProductCode) {
-        _robotControllerAxisProductCode.append(*itDOFProductCode);
+        axisProductCode.append(*itDOFProductCode);
     }
-    robotControllerAxisProductCode = _robotControllerAxisProductCode;
+    robotControllerAxisProductCode = axisProductCode;
 }
 
 JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJointControlInfo()
