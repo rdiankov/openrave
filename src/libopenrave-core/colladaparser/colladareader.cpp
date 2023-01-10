@@ -1760,6 +1760,7 @@ public:
                                                 continue;
                                             }
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                RAVELOG_VERBOSE_FORMAT("skip reading axis at index %d since joint dof size is %d", ijointaxis%pjoint->GetDOF());
                                                 continue;
                                             }
                                             if( pchild->getElementName() == std::string("robotControllerAxisIndex") ) {

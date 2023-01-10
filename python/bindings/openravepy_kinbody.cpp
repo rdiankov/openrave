@@ -648,29 +648,21 @@ ElectricMotorActuatorInfoPtr PyElectricMotorActuatorInfo::GetElectricMotorActuat
 
 PyJointControlInfo_RobotController::PyJointControlInfo_RobotController()
 {
+    robotControllerAxisIndex = py::cast(std::array<int16_t, 3>({-1, -1, -1}));
+    robotControllerAxisMult = toPyVector3(Vector(1.0, 1.0, 1.0));
+    robotControllerAxisOffset = toPyVector3(Vector(0.0, 0.0, 0.0));
+    robotControllerAxisProductCode = py::cast(std::array<std::string, 3>({"", "", ""}));
 }
 
 PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const JointControlInfo_RobotController& jci)
 {
     controllerType = jci.controllerType;
-
-    py::list axisIndex, axisMult, axisOffset, axisProductCode;
-    FOREACHC(itdofindex, jci.robotControllerAxisIndex) {
-        axisIndex.append(*itdofindex);
-    }
-    robotControllerAxisIndex = axisIndex;
-
-    FOREACHC(itdofmult, jci.robotControllerAxisMult) {
-        axisMult.append(*itdofmult);
-    }
-    robotControllerAxisMult = axisMult;
-
-    FOREACHC(itdofoffset, jci.robotControllerAxisOffset) {
-        axisOffset.append(*itdofoffset);
-    }
-    robotControllerAxisOffset = axisOffset;
+    robotControllerAxisIndex = py::cast(std::array<int16_t, 3>({jci.robotControllerAxisIndex[0], jci.robotControllerAxisIndex[1], jci.robotControllerAxisIndex[2]}));
+    robotControllerAxisMult = toPyVector3(Vector(jci.robotControllerAxisMult[0], jci.robotControllerAxisMult[1], jci.robotControllerAxisMult[2]));
+    robotControllerAxisOffset = toPyVector3(Vector(jci.robotControllerAxisOffset[0], jci.robotControllerAxisOffset[1], jci.robotControllerAxisOffset[2]));
+    py::list axisProductCode;
     FOREACHC(itDOFProductCode, jci.robotControllerAxisProductCode) {
-        axisProductCode.append(*itDOFProductCode);
+        axisProductCode.append(ConvertStringToUnicode(*itDOFProductCode));
     }
     robotControllerAxisProductCode = axisProductCode;
 }
