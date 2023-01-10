@@ -1709,11 +1709,8 @@ private:
                         // robotId
                         daeElementRef param_controllerType = param_jointcontrolinfo_robotcontroller->add("controllerType");
                         param_controllerType->setCharData(pjoint->_info._jci_robotcontroller->controllerType.c_str());
-                        // robotControllerAxis[Index, Mult, Offset]
+                        // robotControllerAxis[Index, Mult, Offset, ProductCode]
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
-                            daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
-                            param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
                             daeElementRef param_robotControllerAxisIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisIndex");
                             param_robotControllerAxisIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisIndex[iaxis]).c_str());
@@ -1723,6 +1720,9 @@ private:
                             daeElementRef param_robotControllerAxisOffset = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisOffset");
                             param_robotControllerAxisOffset->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisOffset->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisOffset[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
+                            param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
                         }
                         break;
                     } // end case JCM_RobotController
