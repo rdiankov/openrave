@@ -24,6 +24,8 @@
 #include <log4cxx/logger.h>
 #endif
 
+#include <vector>
+
 namespace OpenRAVE {
 
 // terminal attributes
