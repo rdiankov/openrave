@@ -1751,7 +1751,7 @@ public:
                                             jci.controllerType = pchild->getCharData();
                                         }
                                         else {
-                                            int ijointaxis;
+                                            int ijointaxis = -1;
                                             try {
                                                 ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             }
@@ -1788,7 +1788,7 @@ public:
                                         if( pchild->getElementName() == std::string("deviceType") ) {
                                             jci.deviceType = boost::lexical_cast<int>(pchild->getCharData());
                                         } else {
-                                            int ijointaxis;
+                                            int ijointaxis = -1;
                                             try {
                                                 ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             }
