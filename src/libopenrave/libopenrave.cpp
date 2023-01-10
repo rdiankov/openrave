@@ -93,10 +93,6 @@ const char s_filesep = '/';
 #include <fenv.h>
 #endif
 
-#ifdef LIBM_ACCURACY_RESULTS_H
-#include LIBM_ACCURACY_RESULTS_H
-#endif
-
 // use round-nearest versions since it is the default
 #ifdef LIBM_EXP_ACCURATE
 dReal RaveExp(dReal f) {

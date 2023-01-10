@@ -295,6 +295,7 @@ if( OPT_ACCURATEMATH AND NOT MSVC AND NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES aarc
   if(NOT CRLIBM_FOUND_LIB OR NOT HAVE_CRLIBM_H)
     message(STATUS "Using local crlibm")
     add_subdirectory(3rdparty/crlibm-1.0beta4)
+    set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
   endif()
 endif()
 
