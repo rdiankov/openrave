@@ -373,22 +373,24 @@ if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND
 endif ()
 
 # always include libpcrecpp since we need it for URL parsing
-pkg_check_modules(libpcrecpp libpcrecpp)
-if( libpcrecpp_FOUND )
-  set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
+pkg_check_modules(pcrecpp libpcrecpp)
+if( pcrecpp_FOUND )
+  set(CMAKE_REQUIRED_INCLUDES ${pcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
   check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
   set(CMAKE_REQUIRED_INCLUDES)
   if( NOT HAVE_PCRECPP_H )
-    set(libpcrecpp_FOUND 0)
+    set(pcrecpp_FOUND 0)
   endif()
 endif()
 
-if( NOT libpcrecpp_FOUND )
+if( NOT pcrecpp_FOUND )
   message(STATUS "System pcre not found, using local from sources")
   # include the local pcre
   add_subdirectory(3rdparty/pcre-8.02)
-
-  set(libpcrecpp_FOUND 1)
+  add_library(pcrecpp INTERFACE)
+  target_include_directories(pcrecpp INTERFACE ${libpcrecpp_INCLUDE_DIRS})
+  target_link_libraries(pcrecpp INTERFACE pcrecpp_local)
+  set(pcrecpp_FOUND 1)
 endif()
 
 if( OPT_COLLADA )
