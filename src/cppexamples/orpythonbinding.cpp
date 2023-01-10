@@ -110,7 +110,7 @@ void Init(UserDataPtr globalstate)
 {
     RaveInitializeFromState(globalstate);
     if( !g_PythonBindingInterfaceHandle ) {
-        g_PythonBindingInterfaceHandle = RaveRegisterInterface(PT_Module, "PythonBinding", OPENRAVE_MODULE_HASH,OPENRAVE_ENVIRONMENT_HASH, PythonBindingCreateInterface);
+        g_PythonBindingInterfaceHandle = RaveRegisterInterface(PT_Module, "PythonBinding", NULL, NULL, PythonBindingCreateInterface);
     }
 }
 

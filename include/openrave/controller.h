@@ -105,11 +105,6 @@ public:
     //        this case.
     //    virtual void GetControlMaxTorques(std::vector<dReal>& vmaxtorque) const;
     //    virtual void SetControlTorques(const std::vector<dReal>& pTorques);
-
-private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_CONTROLLER_HASH;
-    }
 };
 
 /** \brief controller that manage multiple controllers, allows users to easily set multiple controllers for one robot.

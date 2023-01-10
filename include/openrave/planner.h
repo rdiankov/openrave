@@ -707,10 +707,6 @@ protected:
     virtual PlannerAction _CallCallbacks(const PlannerProgress& progress);
 
 private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_PLANNER_HASH;
-    }
-
     std::list<UserDataWeakPtr> __listRegisteredCallbacks; ///< internally managed callbacks
     PlannerBasePtr __cachePostProcessPlanner; ///< cached version of the post process planner
 

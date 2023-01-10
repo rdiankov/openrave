@@ -8,8 +8,6 @@ set_target_properties(piecewisepolynomials PROPERTIES COMPILE_FLAGS "${PLUGIN_CO
 
 install(TARGETS piecewisepolynomials DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 
-add_dependencies(piecewisepolynomials interfacehashes_target)		
-
 if (OPT_PYTHON)
     add_library(openravepy_piecewisepolynomials SHARED openravepy_piecewisepolynomials.cpp)
     target_link_libraries(openravepy_piecewisepolynomials PRIVATE boost_assertion_failed PUBLIC piecewisepolynomials openravepy_int openravepy2_meta)

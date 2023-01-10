@@ -3225,11 +3225,11 @@ protected:
         _vRapidJsonLoadBuffer.resize(4000000);
         _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
 
-        _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
-        _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
-        _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
-        _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", RaveGetInterfaceHash(PT_PhysicsEngine), GetHash(), CreateGenericPhysicsEngine);
-        _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", RaveGetInterfaceHash(PT_CollisionChecker), GetHash(), CreateGenericCollisionChecker);
+        _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", NULL, NULL, CreateGenericRobot);
+        _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", NULL, NULL, CreateGenericTrajectory);
+        _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", NULL, NULL, CreateMultiController);
+        _handlegenericphysicsengine = RaveRegisterInterface(PT_PhysicsEngine,"GenericPhysicsEngine", NULL, NULL, CreateGenericPhysicsEngine);
+        _handlegenericcollisionchecker = RaveRegisterInterface(PT_CollisionChecker,"GenericCollisionChecker", NULL, NULL, CreateGenericCollisionChecker);
     }
 
     /// \brief invalidates a kinbody from _vecbodies

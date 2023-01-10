@@ -274,61 +274,6 @@ else()
   set(NATIVE_COMPILE_FLAGS "")
 endif()
 
-# generate the md5 sum for all OpenRAVE interfaces
-add_subdirectory(cpp-gen-md5)
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/cpp-gen-md5")
-
-if( MSVC )
-  if( EXTRA_MSVC_DEPEND )
-    add_dependencies(cpp-gen-md5-native ${EXTRA_MSVC_DEPEND})
-  endif()
-  set(CPPGENMD5 cpp-gen-md5-native)
-else()
-  set(CPPGENMD5 "${CMAKE_CURRENT_BINARY_DIR}/cpp-gen-md5/cpp-gen-md5-native")
-endif()
-
-set(interfacehashes_h ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h)
-add_custom_command(
-  OUTPUT ${interfacehashes_h}
-  COMMAND ${CPPGENMD5}
-  ARGS "${OPENRAVE_PRECISION}" "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/interface.h"
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/collisionchecker.h" OPENRAVE_COLLISIONCHECKER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/robot.h" OPENRAVE_ROBOT_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/planner.h" OPENRAVE_PLANNER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/kinbody.h" OPENRAVE_KINBODY_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensorsystem.h" OPENRAVE_SENSORSYSTEM_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/controller.h" OPENRAVE_CONTROLLER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/module.h" OPENRAVE_MODULE_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/iksolver.h" OPENRAVE_IKSOLVER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/physicsengine.h" OPENRAVE_PHYSICSENGINE_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensor.h" OPENRAVE_SENSOR_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/trajectory.h" OPENRAVE_TRAJECTORY_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/viewer.h" OPENRAVE_VIEWER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/spacesampler.h" OPENRAVE_SPACESAMPLER_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h" OPENRAVE_ENVIRONMENT_HASH
-       "${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h" OPENRAVE_PLUGININFO_HASH
-       > "${interfacehashes_h}"
-  DEPENDS cpp-gen-md5-native
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/interface.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/collisionchecker.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/robot.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/planner.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/kinbody.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensorsystem.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/controller.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/module.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/iksolver.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/physicsengine.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/sensor.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/trajectory.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/viewer.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/spacesampler.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/environment.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h)
-
-add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTRA_MSVC_DEPEND})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
-
 # math libraries
 find_package(GMP)
 find_package(GMPXX)
@@ -342,6 +287,7 @@ if( MPFR_FOUND )
 endif()
 find_package(MPFI)
 
+add_subdirectory(3rdparty/md5)
 
 if( OPT_ACCURATEMATH AND NOT MSVC AND NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES aarch64 )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)

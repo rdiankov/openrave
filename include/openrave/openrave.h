@@ -94,7 +94,6 @@
 namespace OpenRAVE {
 
 #include <openrave/config.h>
-#include <openrave/interfacehashes.h>
 
 }
 
@@ -2600,29 +2599,6 @@ namespace OpenRAVE {
 /// \name Global Functionality - Interface Creation, Plugin Management, Logging
 /// \anchor global_functionality
 //@{
-
-/// \brief Returns the a 16 character null-terminated string specifying a hash of the interfaces used for checking changes.
-inline const char* RaveGetInterfaceHash(InterfaceType type)
-{
-    switch(type) {
-    case PT_Planner: return OPENRAVE_PLANNER_HASH;
-    case PT_Robot: return OPENRAVE_ROBOT_HASH;
-    case PT_SensorSystem: return OPENRAVE_SENSORSYSTEM_HASH;
-    case PT_Controller: return OPENRAVE_CONTROLLER_HASH;
-    case PT_Module: return OPENRAVE_MODULE_HASH;
-    case PT_InverseKinematicsSolver: return OPENRAVE_IKSOLVER_HASH;
-    case PT_KinBody: return OPENRAVE_KINBODY_HASH;
-    case PT_PhysicsEngine: return OPENRAVE_PHYSICSENGINE_HASH;
-    case PT_Sensor: return OPENRAVE_SENSOR_HASH;
-    case PT_CollisionChecker: return OPENRAVE_COLLISIONCHECKER_HASH;
-    case PT_Trajectory: return OPENRAVE_TRAJECTORY_HASH;
-    case PT_Viewer: return OPENRAVE_VIEWER_HASH;
-    case PT_SpaceSampler: return OPENRAVE_SPACESAMPLER_HASH;
-    default:
-        throw openrave_exception("failed to find openrave interface type",ORE_InvalidArguments);
-        return NULL;
-    }
-}
 
 /// \brief Safely casts from the base interface class to an openrave interface using static_pointer_cast.
 ///

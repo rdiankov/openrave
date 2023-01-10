@@ -88,11 +88,11 @@ struct OPENRAVE_HELPER_DLL_EXPORT RavePlugin : public OpenRAVE::UserData, public
     }
 
     static bool IsEnvHashValid(const char* envHash) noexcept {
-        return 0 == strncmp(OPENRAVE_ENVIRONMENT_HASH, envHash, sizeof(OPENRAVE_ENVIRONMENT_HASH));
+        return true; //0 == strncmp(OPENRAVE_ENVIRONMENT_HASH, envHash, sizeof(OPENRAVE_ENVIRONMENT_HASH));
     }
 
     static bool IsPluginHashValid(const char* infoHash) noexcept {
-        return 0 == strncmp(OPENRAVE_PLUGININFO_HASH, infoHash, sizeof(OPENRAVE_PLUGININFO_HASH));
+        return true; //0 == strncmp(OPENRAVE_PLUGININFO_HASH, infoHash, sizeof(OPENRAVE_PLUGININFO_HASH));
     }
 
 protected:
@@ -114,20 +114,13 @@ using PluginExportFn_Create = RavePlugin*(*)();
 // Implementations
 
 
-OpenRAVE::InterfaceBasePtr RavePlugin::OpenRAVECreateInterface(OpenRAVE::InterfaceType type, std::string name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv) try
+OpenRAVE::InterfaceBasePtr RavePlugin::OpenRAVECreateInterface(OpenRAVE::InterfaceType type, std::string name, const char* /*interfacehash*/, const char* /*envhash*/, OpenRAVE::EnvironmentBasePtr penv) try
 {
     std::for_each(name.begin(), name.end(), ::tolower);
     std::pair<OpenRAVE::InterfaceType, std::string> p(type, name);
 
-    if( strcmp(interfacehash,OpenRAVE::RaveGetInterfaceHash(type)) ) {
-        _setBadInterfaces.insert(p);
-        throw OPENRAVE_EXCEPTION_FORMAT("bad interface %s hash: %s!=%s",RaveGetInterfaceName(type)%interfacehash%OpenRAVE::RaveGetInterfaceHash(type),OpenRAVE::ORE_InvalidInterfaceHash);
-    }
     if( !penv ) {
         throw OPENRAVE_EXCEPTION_FORMAT0("need to set environment",OpenRAVE::ORE_InvalidArguments);
-    }
-    if( !IsEnvHashValid(envhash) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("bad environment hash: %s!=%s",envhash%OPENRAVE_ENVIRONMENT_HASH,OpenRAVE::ORE_InvalidPlugin);
     }
 
     if(_setBadInterfaces.find(p) != _setBadInterfaces.end()) {

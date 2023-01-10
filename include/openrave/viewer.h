@@ -226,10 +226,6 @@ protected:
     }
 
 private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_VIEWER_HASH;
-    }
-
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
     friend class Environment;

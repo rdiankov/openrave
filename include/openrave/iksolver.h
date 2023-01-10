@@ -318,10 +318,6 @@ protected:
     virtual void _CallFinishCallbacks(IkReturnPtr, RobotBase::ManipulatorConstPtr, const IkParameterization &);
 
 private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_IKSOLVER_HASH;
-    }
-
     std::list<UserDataWeakPtr> __listRegisteredFilters; ///< internally managed filters
     std::list<UserDataWeakPtr> __listRegisteredFinishCallbacks; ///< internally managed callbacks
 

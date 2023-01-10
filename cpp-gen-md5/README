@@ -1,1 +1,0 @@
-Generates a md5 sum from the lexical tokens of a C++ file ignoring directives and whitespace.

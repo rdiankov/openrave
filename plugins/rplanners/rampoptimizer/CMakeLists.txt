@@ -4,8 +4,6 @@ set_target_properties(rampoptimizer PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_F
 
 install(TARGETS rampoptimizer DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 
-add_dependencies(rampoptimizer interfacehashes_target)		
-
 if (OPT_PYTHON)
     add_library(openravepy_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
     target_link_libraries(openravepy_rampoptimizer PRIVATE boost_assertion_failed PUBLIC rampoptimizer openravepy_int openravepy2_meta)

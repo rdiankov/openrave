@@ -112,7 +112,7 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
         for (const PluginPtr& plugin : _vPlugins) {
             if (plugin->HasInterface(type, interfacename)) {
                 try {
-                    pointer = plugin->OpenRAVECreateInterface(type, name, RaveGetInterfaceHash(type), OPENRAVE_ENVIRONMENT_HASH, penv);
+                    pointer = plugin->OpenRAVECreateInterface(type, name, NULL, NULL, penv);
                 } catch (const std::exception& e) {
                     RAVELOG_WARN_FORMAT("Failed to create interface from %s at %s", plugin->GetPluginName() % plugin->GetPluginPath());
                     plugin->AddBadInterface(type, name); // Bad interface, no cookie

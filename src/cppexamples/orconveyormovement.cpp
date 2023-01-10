@@ -125,7 +125,7 @@ class ConveyorExample : public OpenRAVEExample
 {
 public:
     virtual void demothread(int argc, char ** argv) {
-        boost::shared_ptr<void> handle = RaveRegisterInterface(PT_Module,"conveyorbelt",OPENRAVE_MODULE_HASH,OPENRAVE_ENVIRONMENT_HASH,ConveyorBeltModule::create);
+        boost::shared_ptr<void> handle = RaveRegisterInterface(PT_Module,"conveyorbelt", NULL, NULL, ConveyorBeltModule::create);
 
         // load the environment
         string scenefilename = "robots/pr2-beta-static.zae";

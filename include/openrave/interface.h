@@ -303,7 +303,6 @@ public:
     /// \brief Unregisters the command. <b>[multi-thread safe]</b>
     virtual void UnregisterJSONCommand(const std::string& cmdname);
 
-    virtual const char* GetHash() const = 0;
     std::string __description;     /// \see GetDescription()
     std::string __struri; ///< \see GetURI
 

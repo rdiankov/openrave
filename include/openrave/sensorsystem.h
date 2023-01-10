@@ -67,11 +67,6 @@ protected:
     virtual void SetManageData(KinBodyPtr pbody, KinBody::ManageDataPtr data) {
         pbody->SetManageData(data);
     }
-
-private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_SENSORSYSTEM_HASH;
-    }
 };
 
 /// A very simple sensor system example that manages raw detection data

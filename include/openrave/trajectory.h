@@ -219,11 +219,6 @@ protected:
     inline TrajectoryBaseConstPtr shared_trajectory_const() const {
         return boost::static_pointer_cast<TrajectoryBase const>(shared_from_this());
     }
-
-private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_TRAJECTORY_HASH;
-    }
 };
 
 } // end namespace OpenRAVE

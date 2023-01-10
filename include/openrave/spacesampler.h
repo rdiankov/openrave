@@ -178,10 +178,6 @@ protected:
     virtual int _CallStatusFunctions(int sampleiteration);
 
 private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_SPACESAMPLER_HASH;
-    }
-
     std::list<UserDataWeakPtr> __listRegisteredCallbacks; ///< internally managed callbacks
 
     friend class CustomSamplerCallbackData;

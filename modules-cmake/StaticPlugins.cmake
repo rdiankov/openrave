@@ -61,12 +61,6 @@ target_link_libraries(fclrave_static PRIVATE ${FCL_LIBRARIES})
 target_compile_definitions(fclrave_static PRIVATE "OPENRAVE_STATIC_PLUGINS=1")
 message(STATUS "\t... FCL")
 
-add_dependencies(baserobots_static      interfacehashes_target)
-add_dependencies(basecontrollers_static interfacehashes_target)
-add_dependencies(basesamplers_static    interfacehashes_target)
-add_dependencies(basesensors_static     interfacehashes_target)
-add_dependencies(fclrave_static         interfacehashes_target)
-
 add_library(static_plugins INTERFACE)
 target_include_directories(static_plugins INTERFACE
     ${OPENRAVE_PLUGIN_DIR}/baserobots

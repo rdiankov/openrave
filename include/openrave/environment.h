@@ -879,10 +879,6 @@ public:
     std::vector<std::string> _keywords;  ///< some string values for describinging the environment
 
 protected:
-    virtual const char* GetHash() const {
-        return OPENRAVE_ENVIRONMENT_HASH;
-    }
-
     void _InitializeInternal();
 
     std::string _name;   ///< environment name. only set during construction and cloning.

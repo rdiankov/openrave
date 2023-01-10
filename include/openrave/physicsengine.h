@@ -152,11 +152,6 @@ protected:
     virtual void SetPhysicsData(KinBodyPtr body, UserDataPtr data) RAVE_DEPRECATED {
         body->SetUserData(GetXMLId(), data);
     }
-
-private:
-    virtual const char* GetHash() const {
-        return OPENRAVE_PHYSICSENGINE_HASH;
-    }
 };
 
 } // end namespace OpenRAVE
