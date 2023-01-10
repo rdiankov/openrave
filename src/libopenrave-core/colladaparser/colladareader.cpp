@@ -1756,7 +1756,7 @@ public:
                                                 ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             }
                                             catch(const boost::bad_lexical_cast&) {
-                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"))
+                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"));
                                                 continue;
                                             }
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
@@ -1792,7 +1792,7 @@ public:
                                                 ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
                                             }
                                             catch(const boost::bad_lexical_cast&) {
-                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"))
+                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"));
                                                 continue;
                                             }
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
