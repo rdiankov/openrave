@@ -2940,7 +2940,7 @@ public:
                 // for new body or robot
                 KinBodyPtr pNewBody;
                 if (pKinBodyInfo->_isRobot) {
-                    RAVELOG_VERBOSE_FORMAT("add new robot %s", pKinBodyInfo->_id);
+                    RAVELOG_VERBOSE_FORMAT("add new robot id=%s, name=%s", pKinBodyInfo->_id%pKinBodyInfo->_name);
                     RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pRobot ) {
                         pRobot = RaveCreateRobot(shared_from_this(), "");
@@ -2957,7 +2957,7 @@ public:
                     pNewBody = RaveInterfaceCast<KinBody>(pRobot);
                 }
                 else {
-                    RAVELOG_VERBOSE_FORMAT("add new kinbody %s", pKinBodyInfo->_id);
+                    RAVELOG_VERBOSE_FORMAT("add new kinbody id=%s, name=%s", pKinBodyInfo->_id%pKinBodyInfo->_name);
                     pNewBody = RaveCreateKinBody(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pNewBody ) {
                         pNewBody = RaveCreateKinBody(shared_from_this(), "");
@@ -2984,7 +2984,9 @@ public:
 
             if (!!pInitBody) {
                 // only for init body we need to set name and dofvalues again
-                OPENRAVE_ASSERT_OP_FORMAT0(pInitBody->GetName(), ==, pKinBodyInfo->_name, "names should be matching", ORE_InvalidArguments);
+                if( !!pMatchExistingBody ) {
+                    OPENRAVE_ASSERT_OP_FORMAT0(pInitBody->GetName(), ==, pKinBodyInfo->_name, "names should be matching", ORE_InvalidArguments);
+                }
 
                 // dof value
                 bool bChanged = false;
