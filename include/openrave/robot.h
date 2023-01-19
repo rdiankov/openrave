@@ -1302,6 +1302,16 @@ private:
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
+        \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
+        when checking collisions between the grabbed body and the body.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \return true if successful and body is grabbed
+     */
+    virtual bool Grab(KinBodyPtr body, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
+
+    /** \brief Grabs the body with the active manipulator's end effector.
+
+        \param[in] body the body to be grabbed
         \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
