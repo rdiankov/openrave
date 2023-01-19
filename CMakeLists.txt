@@ -82,8 +82,6 @@ else()
 endif()
 
 if (OPT_STATIC_PLUGINS)
-  message(STATUS "statically compiling in plugins.")
-  set(OPT_STATIC ON)
   set(OPT_PLUGINS OFF)
   set(OPENRAVE_STATIC_PLUGINS 1)
 else()
