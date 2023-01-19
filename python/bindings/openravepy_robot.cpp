@@ -2112,7 +2112,12 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore)
     if( !!plink ) {
         return _probot->Grab(pbody->GetBody(), plink, rapidjson::Value());
     }
-    // maybe it is a set?
+    if( !IS_PYTHONOBJECT_NONE(pylink_or_linkstoignore) && len(pylink_or_linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(pylink_or_linkstoignore[0])) ) {
+        // pylink_or_linkstoignore is a list of link names to be ignored
+        std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(pylink_or_linkstoignore);
+        return _probot->Grab(pbody->GetBody(), setlinkstoignoreString, rapidjson::Value());
+    }
+    // pylink_or_linkstoignore is a list of link indices to be ignored
     std::set<int> setlinkstoignore = ExtractSet<int>(pylink_or_linkstoignore);
     return _probot->Grab(pbody->GetBody(), setlinkstoignore, rapidjson::Value());
 }
