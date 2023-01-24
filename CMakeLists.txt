@@ -349,6 +349,9 @@ endif()
 endif()
 
 find_package(LibXml2 REQUIRED)
+include_directories(${LIBXML2_INCLUDE_DIR})
+add_definitions(${LIBXML2_DEFINITIONS})
+message(STATUS "libxml2 found")
 
 # for qtcoin plugin.
 # it is necessary to check here since we would like the qt version stored in the openrave-config file

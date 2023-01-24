@@ -10,7 +10,6 @@ if( libpcrecpp_FOUND )
   # pcre for url parsing
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${libpcrecpp_CFLAGS_OTHER}")
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${libpcrecpp_LDFLAGS_OTHER}")
-  #set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${libpcrecpp_LIBRARIES})
   include_directories(${libpcrecpp_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${libpcrecpp_LIBRARY_DIRS})
   add_definitions(-DHAVE_PCRECPP)
@@ -71,7 +70,7 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 target_link_libraries(libopenrave-core
-  PRIVATE boost_assertion_failed pcrecpp ${IVCON_LIBRARY}
+  PRIVATE boost_assertion_failed pcrecpp LibXml2::LibXml2 ${IVCON_LIBRARY}
   PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES}
 )
 install(TARGETS libopenrave-core
@@ -117,7 +116,7 @@ if( OPT_STATIC )
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   target_link_libraries(libopenrave-core_static
-    PRIVATE boost_assertion_failed pcrecpp ${IVCON_LIBRARY}
+    PRIVATE boost_assertion_failed pcrecpp LibXml2::LibXml2 ${IVCON_LIBRARY}
     PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES}
   )
   install(TARGETS libopenrave-core_static
