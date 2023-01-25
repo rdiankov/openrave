@@ -103,30 +103,6 @@ public:
     /// \brief makes sure that all the bodies are currently in the scene (if they are not explicitly excluded)
     void EnsureBodies(const std::vector<KinBodyConstPtr>& vbodies);
 
-    /// \brief ensures that pbody is being tracked inside the manager
-//    void EnsureBody(KinBodyConstPtr pbody)
-//    {
-//        _tmpSortedBuffer.resize(0);
-//        std::map<int, KinBodyCache>::iterator it = _vecCachedBodies.find(pbody->GetEnvironmentBodyIndex());
-//        if( it == _vecCachedBodies.end() ) {
-//            std::vector<CollisionObjectPtr> vcolobjs;
-//            FCLSpace::FCLKinBodyInfoPtr pinfo = _fclspace.GetInfo(pbody);
-//            uint64_t linkmask=0;
-//            if( _AddBody(pbody, pinfo, vcolobjs, linkmask, false) ) { // new collision objects are already added to _tmpSortedBuffer
-//                _vecCachedBodies[(pbody)->GetEnvironmentBodyIndex()] = KinBodyCache(pbody, pinfo);
-//                _vecCachedBodies[(pbody)->GetEnvironmentBodyIndex()].vcolobjs.swap(vcolobjs);
-//                _vecCachedBodies[(pbody)->GetEnvironmentBodyIndex()].linkmask = linkmask;
-//            }
-//        }
-//        if( _tmpSortedBuffer.size() > 0 ) {
-//#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-//            SaveCollisionObjectDebugInfos();
-//#endif
-//            pmanager->registerObjects(_tmpSortedBuffer); // bulk update
-//        }
-//
-//    }
-
     /// \brief remove tracking of the body, return true if body was removed
     bool RemoveBody(const KinBody &body);
 
@@ -165,33 +141,6 @@ private:
 
     void _UpdateActiveLinks(const RobotBase& robot);
 
-//    void CheckCount()
-//    {
-//        // count how many entries
-//        std::vector<fcl::CollisionObject*> vobjs;
-//        pmanager->getObjects(vobjs);
-//        FOREACH(itobj, vobjs) {
-//            if( *itobj == 0 ) {
-//                continue;
-//            }
-//            int c = CountForObj(((fcl::DynamicAABBTreeCollisionManager*)pmanager.get())->getTree().getRoot(), *itobj);
-//            if( c != 1 ) {
-//                RAVELOG_WARN("asdfsadfasdf\n");
-//            }
-//        }
-//    }
-//
-//    bool CheckForObjInManager(fcl::CollisionObject* pobj)
-//    {
-//        CheckCount();
-//        bool bexists = CheckForObj(((fcl::DynamicAABBTreeCollisionManager*)pmanager.get())->getTree().getRoot(), pobj);
-//        if( bexists ) {
-//            RAVELOG_WARN("should not be in\n");
-//        }
-//        return bexists;
-//    }
-
-
     FCLSpace& _fclspace; ///< reference for speed
     BroadPhaseCollisionManagerPtr pmanager;
     std::vector<KinBodyCache> _vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
@@ -209,21 +158,6 @@ private:
     std::vector<int> _vecAttachedEnvBodyIndicesCache;
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
-
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-    void SaveCollisionObjectDebugInfos() {
-        FOREACH(itpcollobj, _tmpSortedBuffer) {
-            SaveCollisionObjectDebugInfos(*itpcollobj);
-        }
-    }
-
-    void SaveCollisionObjectDebugInfos(fcl::CollisionObject* pcollobj) {
-        FCLSpace::FCLKinBodyInfo::LinkInfo* pLINK = static_cast<FCLSpace::FCLKinBodyInfo::LinkInfo*>(pcollobj->getUserData());
-        _mapDebugCollisionObjects.insert(std::make_pair(pcollobj, std::make_pair(pLINK->bodylinkname, _fclspace.GetInfo(pLINK->GetLink()->GetParent())->_geometrygroup)));
-    }
-
-    std::map< fcl::CollisionObject*, std::pair<std::string, std::string> > _mapDebugCollisionObjects;
-#endif
 };
 
 typedef boost::shared_ptr<FCLCollisionManagerInstance> FCLCollisionManagerInstancePtr;

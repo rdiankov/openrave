@@ -213,9 +213,6 @@ void FCLCollisionManagerInstance::InitBodyManager(KinBodyConstPtr pbody, bool bT
         }
     }
     if (_tmpSortedBuffer.size() > 0) {
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-        SaveCollisionObjectDebugInfos();
-#endif
         pmanager->registerObjects(_tmpSortedBuffer); // bulk update
     }
     pmanager->setup();
@@ -262,9 +259,6 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
         }
     }
     if (_tmpSortedBuffer.size() > 0) {
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-        SaveCollisionObjectDebugInfos();
-#endif
         pmanager->registerObjects(_tmpSortedBuffer); // bulk update
     }
 }
@@ -365,25 +359,11 @@ void FCLCollisionManagerInstance::Synchronize() {
                                     CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(*pnewinfo, robot.GetLinks()[ilink]->GetIndex());
                                     if (bIsActiveLinkEnabled && !!pcolobj) {
                                         fcl::CollisionObject* pColObjRaw = pcolobj.get();
-#ifdef FCLRAVE_USE_REPLACEOBJECT
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                                        SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
                                         if (!!trackingCache.vcolobjs.at(ilink)) {
                                             pmanager->replaceObject(trackingCache.vcolobjs.at(ilink).get(), pColObjRaw, false);
                                         } else {
                                             pmanager->registerObject(pColObjRaw);
                                         }
-#else
-                                        // no replace
-                                        if (!!trackingCache.vcolobjs.at(ilink)) {
-                                            pmanager->unregisterObject(trackingCache.vcolobjs.at(ilink).get());
-                                        }
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                                        SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
-                                        pmanager->registerObject(pColObjRaw);
-#endif
                                         bcallsetup = true;
                                     } else {
                                         if (!!trackingCache.vcolobjs.at(ilink)) {
@@ -462,9 +442,6 @@ void FCLCollisionManagerInstance::Synchronize() {
             cache.geometrygroup = pnewinfo->_geometrygroup;
             pinfo = pnewinfo;
             if (_tmpSortedBuffer.size() > 0) {
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                SaveCollisionObjectDebugInfos();
-#endif
                 pmanager->registerObjects(_tmpSortedBuffer); // bulk update
                 _tmpSortedBuffer.resize(0);
             }
@@ -494,26 +471,11 @@ void FCLCollisionManagerInstance::Synchronize() {
                         CollisionObjectPtr pcolobj = _fclspace.GetLinkBV(kinBodyInfo, ilink);
                         if (!!pcolobj) {
                             fcl::CollisionObject* pColObjRaw = pcolobj.get();
-#ifdef FCLRAVE_USE_REPLACEOBJECT
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                            SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
                             if (!!cache.vcolobjs.at(ilink)) {
                                 pmanager->replaceObject(cache.vcolobjs.at(ilink).get(), pColObjRaw, false);
                             } else {
                                 pmanager->registerObject(pColObjRaw);
                             }
-#else
-
-                            // no replace
-                            if (!!cache.vcolobjs.at(ilink)) {
-                                pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
-                            }
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                            SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
-                            pmanager->registerObject(pColObjRaw);
-#endif
                             bcallsetup = true;
                         } else {
                             if (!!cache.vcolobjs.at(ilink)) {
@@ -546,10 +508,6 @@ void FCLCollisionManagerInstance::Synchronize() {
                             // RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d",
                             // body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%body.GetName()%pColObjRaw%ilink);
                             fcl::CollisionObject* pColObjRaw = pcolobj.get();
-#ifdef FCLRAVE_USE_REPLACEOBJECT
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                            SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
                             if (!!cache.vcolobjs.at(ilink)) {
                                 // RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s replacing cached obj %x with %x ",
                                 // body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%body.GetName()%cache.vcolobjs.at(ilink).get()%pColObjRaw);
@@ -557,20 +515,6 @@ void FCLCollisionManagerInstance::Synchronize() {
                             } else {
                                 pmanager->registerObject(pColObjRaw);
                             }
-#else
-
-                            // no replace
-                            if (!!cache.vcolobjs.at(ilink)) {
-                                // RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s unregister cached obj %x ",
-                                // body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%body.GetName()%cache.vcolobjs.at(ilink).get());
-                                fcl::CollisionObject* ptestobj = cache.vcolobjs.at(ilink).get();
-                                pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
-                            }
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                            SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
-                            pmanager->registerObject(pColObjRaw);
-#endif
                             bcallsetup = true;
                             cache.vcolobjs.at(ilink) = pcolobj;
                         } else {
@@ -605,20 +549,10 @@ void FCLCollisionManagerInstance::Synchronize() {
                         // RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d",
                         // body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%body.GetName()%pColObjRaw%ilink);
                         if (cache.vcolobjs.at(ilink) == pcolobj) {
-#ifdef FCLRAVE_USE_BULK_UPDATE
                             // same object, so just update
                             pmanager->update(cache.vcolobjs.at(ilink).get(), false);
-#else
-                            // Performance issue !!
-                            pmanager->update(cache.vcolobjs.at(ilink).get());
-#endif
                         } else {
                             fcl::CollisionObject* pColObjRaw = pcolobj.get();
-#ifdef FCLRAVE_USE_REPLACEOBJECT
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                            SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
-
                             // different object, have to replace
                             if (!!cache.vcolobjs.at(ilink)) {
                                 // RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s replacing cached obj %x with %x ",
@@ -627,20 +561,6 @@ void FCLCollisionManagerInstance::Synchronize() {
                             } else {
                                 pmanager->registerObject(pColObjRaw);
                             }
-#else // FCLRAVE_USE_REPLACEOBJECT
-
-                            // no replace
-                            if (!!cache.vcolobjs.at(ilink)) {
-                                // RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s unregister cached obj %x ",
-                                // body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecke()%body.GetName()%cache.vcolobjs.at(ilink).get());
-                                fcl::CollisionObject* ptestobj = cache.vcolobjs.at(ilink).get();
-                                pmanager->unregisterObject(cache.vcolobjs.at(ilink).get());
-                            }
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-                            SaveCollisionObjectDebugInfos(pColObjRaw);
-#endif
-                            pmanager->registerObject(pColObjRaw);
-#endif // FCLRAVE_USE_REPLACEOBJECT
                         }
 
                         bcallsetup = true;
@@ -744,9 +664,6 @@ void FCLCollisionManagerInstance::Synchronize() {
     }
 
     if (_tmpSortedBuffer.size() > 0) {
-#ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
-        SaveCollisionObjectDebugInfos();
-#endif
         pmanager->registerObjects(_tmpSortedBuffer); // bulk update
     }
     if (bcallsetup) {
