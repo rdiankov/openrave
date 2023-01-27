@@ -2,7 +2,6 @@
 #ifndef OPENRAVE_IVSHMEM_FCL_MANAGERCACHE
 #define OPENRAVE_IVSHMEM_FCL_MANAGERCACHE
 
-#include "plugindefs.h"
 #include "fclspace.h"
 
 namespace ivshmem {
@@ -19,9 +18,9 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
     {
         KinBodyCache();
 
-        KinBodyCache(const KinBodyConstPtr& pbody, const FCLSpace::FCLKinBodyInfoPtr& pinfo);
+        KinBodyCache(const OpenRAVE::KinBodyConstPtr& pbody, const FCLSpace::FCLKinBodyInfoPtr& pinfo);
 
-        void SetBodyData(const KinBodyConstPtr& pbody, const FCLSpace::FCLKinBodyInfoPtr& pinfo, const std::vector<uint64_t>& linkEnableStateCache);
+        void SetBodyData(const OpenRAVE::KinBodyConstPtr& pbody, const FCLSpace::FCLKinBodyInfoPtr& pinfo, const std::vector<uint64_t>& linkEnableStateCache);
 
         ~KinBodyCache() {
             // KinBodyCache is stored in vector, and resizing it causes destructor be called, but do not want warning on vcolobjs being non-empty.
@@ -55,17 +54,17 @@ public:
 
     /// \brief sets up manager for body checking
     /// \param bTrackActiveDOF true if should be tracking the active dof
-    void InitBodyManager(KinBodyConstPtr pbody, bool bTrackActiveDOF);
+    void InitBodyManager(OpenRAVE::KinBodyConstPtr pbody, bool bTrackActiveDOF);
 
     /// \brief sets up manager for environment checking
     /// \param excludedEnvBodyIndices Index corresponds to the environement body index. value 1 means excluded. if value at index 5 is 1, KinBody with env body index 5 is excluded
     void InitEnvironment(const std::vector<int8_t>& excludedEnvBodyIndices);
 
     /// \brief makes sure that all the bodies are currently in the scene (if they are not explicitly excluded)
-    void EnsureBodies(const std::vector<KinBodyConstPtr>& vbodies);
+    void EnsureBodies(const std::vector<OpenRAVE::KinBodyConstPtr>& vbodies);
 
     /// \brief remove tracking of the body, return true if body was removed
-    bool RemoveBody(const KinBody &body);
+    bool RemoveBody(const OpenRAVE::KinBody &body);
 
     /// \brief Synchronizes the element of the manager instance whose update stamps are outdated
     void Synchronize();
@@ -84,7 +83,7 @@ public:
             std::stringstream ss;
             ss << "bodies=[";
             for (KinBodyCache& cache : _vecCachedBodies) {
-                KinBodyConstPtr pbody = cache.pwbody.lock();
+                OpenRAVE::KinBodyConstPtr pbody = cache.pwbody.lock();
                 if( !!pbody ) {
                     ss << pbody->GetName() << ", ";
                 }
@@ -97,9 +96,9 @@ public:
 private:
     /// \brief adds a body to the manager, returns true if something was added
     /// should not add anything to _vecCachedBodies! insert to _tmpSortedBuffer
-    bool _AddBody(const KinBody& body, const FCLSpace::FCLKinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint64_t>& linkEnableStatesBitmasks, bool bTrackActiveDOF);
+    bool _AddBody(const OpenRAVE::KinBody& body, const FCLSpace::FCLKinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint64_t>& linkEnableStatesBitmasks, bool bTrackActiveDOF);
 
-    void _UpdateActiveLinks(const RobotBase& robot);
+    void _UpdateActiveLinks(const OpenRAVE::RobotBase& robot);
 
     FCLSpace& _fclspace; ///< reference for speed
     BroadPhaseCollisionManagerPtr pmanager;
@@ -114,7 +113,7 @@ private:
     std::vector<uint64_t> _linkEnableStatesBitmasks; ///< links that are currently inside the manager
     std::vector<uint64_t> _linkEnableStatesCache; ///< memory holder for receiving return value of GetLinkEnableStatesMasks in Synchronize.
 
-    std::vector<KinBodyPtr> _vecAttachedEnvBodiesCache;
+    std::vector<OpenRAVE::KinBodyPtr> _vecAttachedEnvBodiesCache;
     std::vector<int> _vecAttachedEnvBodyIndicesCache;
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody

@@ -6,13 +6,21 @@
 #include <memory> // c++11
 #include <vector>
 
+#include <fcl/collision.h>
+#include <fcl/distance.h>
+#include <fcl/BVH/BVH_model.h>
+#include <fcl/broadphase/broadphase.h>
+#include <fcl/shape/geometric_shapes.h>
+
+#include <openrave/openrave.h>
+
 namespace ivshmem {
 
-typedef KinBody::LinkConstPtr LinkConstPtr;
+typedef OpenRAVE::KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
-typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
-typedef KinBody::GeometryConstPtr GeometryConstPtr;
-typedef boost::weak_ptr<KinBody::Geometry> GeometryWeakPtr;
+typedef boost::weak_ptr<const OpenRAVE::KinBody> KinBodyConstWeakPtr;
+typedef OpenRAVE::KinBody::GeometryConstPtr GeometryConstPtr;
+typedef boost::weak_ptr<OpenRAVE::KinBody::Geometry> GeometryWeakPtr;
 using OpenRAVE::ORE_Assert;
 
 // Warning : this is the only place where we use std::shared_ptr (for compatibility with fcl)
@@ -21,8 +29,9 @@ typedef boost::shared_ptr<fcl::CollisionObject> CollisionObjectPtr;
 typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &points, std::vector<fcl::Triangle> const &triangles) > MeshFactory;
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
 typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
-typedef std::pair<Transform, CollisionObjectPtr> TransformCollisionPair;
+typedef std::pair<OpenRAVE::Transform, CollisionObjectPtr> TransformCollisionPair;
 
+using OpenRAVE::Vector;
 
 // Helper functions for conversions from OpenRAVE to FCL
 
@@ -52,7 +61,7 @@ inline fcl::AABB ConvertAABBToFcl(const OpenRAVE::AABB& bv) {
 template <class T>
 CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std::vector<fcl::Triangle> const &triangles)
 {
-    std::shared_ptr< fcl::BVHModel<T> > const model = make_shared<fcl::BVHModel<T> >();
+    auto model = std::make_shared<fcl::BVHModel<T> >();
     model->beginModel(triangles.size(), points.size());
     model->addSubModel(points, triangles);
     model->endModel();
@@ -90,13 +99,13 @@ public:
             FCLGeometryInfo() : bFromKinBodyGeometry(false) {
             }
 
-            FCLGeometryInfo(KinBody::GeometryPtr pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true) {
+            FCLGeometryInfo(OpenRAVE::KinBody::GeometryPtr pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true) {
             }
 
             virtual ~FCLGeometryInfo() {
             }
 
-            inline KinBody::GeometryPtr GetGeometry() {
+            inline OpenRAVE::KinBody::GeometryPtr GetGeometry() {
                 return _pgeom.lock();
             }
 
@@ -110,7 +119,7 @@ public:
 public:
             LinkInfo() : bFromKinBodyLink(false) {
             }
-            LinkInfo(KinBody::LinkPtr plink) : _plink(plink), bFromKinBodyLink(true) {
+            LinkInfo(OpenRAVE::KinBody::LinkPtr plink) : _plink(plink), bFromKinBodyLink(true) {
             }
 
             virtual ~LinkInfo() {
@@ -128,10 +137,9 @@ public:
                     linkBV.second->setUserData(nullptr); // reset the user data since someone can hold a ref to the collision object and continue using it
                 }
                 linkBV.second.reset();
-
-                FOREACH(itgeompair, vgeoms) {
-                    (*itgeompair).second->setUserData(nullptr);
-                    (*itgeompair).second.reset();
+                for (auto& pair : vgeoms) {
+                    pair.second->setUserData(nullptr);
+                    pair.second.reset();
                 }
                 vgeoms.resize(0);
 
@@ -139,12 +147,12 @@ public:
                 vgeominfos.resize(0);
             }
 
-            inline KinBody::LinkPtr GetLink() {
+            inline OpenRAVE::KinBody::LinkPtr GetLink() {
                 return _plink.lock();
             }
 
-            KinBody::LinkWeakPtr _plink;
-            vector< boost::shared_ptr<FCLGeometryInfo> > vgeominfos; ///< info for every geometry of the link
+            OpenRAVE::KinBody::LinkWeakPtr _plink;
+            std::vector< boost::shared_ptr<FCLGeometryInfo> > vgeominfos; ///< info for every geometry of the link
 
             //int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
             TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
@@ -161,19 +169,19 @@ public:
 
         void Reset();
 
-        KinBodyPtr GetBody()
+        OpenRAVE::KinBodyPtr GetBody()
         {
             return _pbody.lock();
         }
 
-        KinBodyWeakPtr _pbody;
+        OpenRAVE::KinBodyWeakPtr _pbody;
         int nLastStamp;  ///< KinBody::GetUpdateStamp() when last synchronized ("is transform up to date")
         int nLinkUpdateStamp; ///< update stamp for link enable state (increases every time link enables change)
         int nGeometryUpdateStamp; ///< update stamp for geometry update state (increases every time geometry enables change)
         int nAttachedBodiesUpdateStamp; ///< update stamp for when attached bodies change of this body
         int nActiveDOFUpdateStamp; ///< update stamp for when active dofs change of this body
 
-        vector< boost::shared_ptr<LinkInfo> > vlinks; ///< info for every link of the kinbody
+        std::vector< boost::shared_ptr<LinkInfo> > vlinks; ///< info for every link of the kinbody
 
         OpenRAVE::UserDataPtr _bodyAttachedCallback; ///< handle for the callback called when a body is attached or detached
         OpenRAVE::UserDataPtr _activeDOFsCallback; ///< handle for the callback called when a the activeDOFs have changed
@@ -193,7 +201,7 @@ public:
     typedef boost::shared_ptr<FCLSpace::FCLKinBodyInfo::LinkInfo> LinkInfoPtr;
     typedef boost::function<void (FCLKinBodyInfoPtr)> SynchronizeCallbackFn;
 
-    FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey);
+    FCLSpace(OpenRAVE::EnvironmentBasePtr penv, const std::string& userdatakey);
 
     virtual ~FCLSpace()
     {
@@ -202,18 +210,18 @@ public:
 
     void DestroyEnvironment();
 
-    FCLKinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo = FCLKinBodyInfoPtr(), bool bSetToCurrentPInfo=true);
+    FCLKinBodyInfoPtr InitKinBody(OpenRAVE::KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo = FCLKinBodyInfoPtr(), bool bSetToCurrentPInfo=true);
 
-    bool HasNamedGeometry(const KinBody &body, const std::string& groupname);
+    bool HasNamedGeometry(const OpenRAVE::KinBody &body, const std::string& groupname);
 
 
     void SetGeometryGroup(const std::string& groupname);
 
     const std::string& GetGeometryGroup() const;
 
-    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname);
+    bool SetBodyGeometryGroup(OpenRAVE::KinBodyConstPtr pbody, const std::string& groupname);
 
-    const std::string& GetBodyGeometryGroup(const KinBody &body) const;
+    const std::string& GetBodyGeometryGroup(const OpenRAVE::KinBody &body) const;
 
     // Set the current bvhRepresentation and reinitializes all the KinbodyInfo if needed
     void SetBVHRepresentation(std::string const &type);
@@ -222,27 +230,27 @@ public:
 
     void Synchronize();
 
-    void Synchronize(const KinBody &body);
+    void Synchronize(const OpenRAVE::KinBody &body);
 
-    void SynchronizeWithAttached(const KinBody &body);
+    void SynchronizeWithAttached(const OpenRAVE::KinBody &body);
 
-    FCLKinBodyInfoPtr& GetInfo(const KinBody &body);
+    FCLKinBodyInfoPtr& GetInfo(const OpenRAVE::KinBody &body);
 
-    const FCLKinBodyInfoPtr& GetInfo(const KinBody &body) const;
+    const FCLKinBodyInfoPtr& GetInfo(const OpenRAVE::KinBody &body) const;
 
-    void RemoveUserData(KinBodyConstPtr pbody);
+    void RemoveUserData(OpenRAVE::KinBodyConstPtr pbody);
 
 
     /// \brief returns bodies initialized by this space. Note that some entries are null pointer.
-    const std::vector<KinBodyConstPtr>& GetEnvBodies() const {
+    const std::vector<OpenRAVE::KinBodyConstPtr>& GetEnvBodies() const {
         return _vecInitializedBodies;
     }
 
-    inline CollisionObjectPtr GetLinkBV(const KinBody::Link &link) {
+    inline CollisionObjectPtr GetLinkBV(const OpenRAVE::KinBody::Link &link) {
         return GetLinkBV(*link.GetParent(), link.GetIndex());
     }
 
-    inline CollisionObjectPtr GetLinkBV(const KinBody &body, int index) {
+    inline CollisionObjectPtr GetLinkBV(const OpenRAVE::KinBody &body, int index) {
         FCLKinBodyInfoPtr& pinfo = GetInfo(body);
         if( !!pinfo ) {
             return GetLinkBV(*pinfo, index);
@@ -257,7 +265,7 @@ public:
     }
 
 
-    inline LinkInfoPtr GetLinkInfo(const KinBody::Link &link) {
+    inline LinkInfoPtr GetLinkInfo(const OpenRAVE::KinBody::Link &link) {
         return GetInfo(*link.GetParent())->vlinks.at(link.GetIndex());
     }
 
@@ -281,10 +289,10 @@ public:
 private:
 
     // what about the tests on non-zero size (eg. box extents) ?
-    CollisionGeometryPtr _CreateFCLGeomFromGeometryInfo(const KinBody::GeometryInfo &info);
+    CollisionGeometryPtr _CreateFCLGeomFromGeometryInfo(const OpenRAVE::KinBody::GeometryInfo &info);
 
     /// \brief pass in info.GetBody() as a reference to avoid dereferencing the weak pointer in FCLKinBodyInfo
-    void _Synchronize(FCLKinBodyInfo& info, const KinBody& body);
+    void _Synchronize(FCLKinBodyInfo& info, const OpenRAVE::KinBody& body);
 
     /// \brief controls whether the kinbody info is removed during the destructor
     class FCLKinBodyInfoRemover
@@ -333,7 +341,7 @@ private:
     }
 
 
-    EnvironmentBasePtr _penv;
+    OpenRAVE::EnvironmentBasePtr _penv;
     std::string _userdatakey;
     std::string _geometrygroup;
     //SynchronizeCallbackFn _synccallback;
@@ -341,12 +349,12 @@ private:
     std::string _bvhRepresentation;
     MeshFactory _meshFactory;
 
-    std::vector<KinBodyConstPtr> _vecInitializedBodies; ///< vector of the kinbody initialized in this space. index is the environment body index. nullptr means uninitialized.
+    std::vector<OpenRAVE::KinBodyConstPtr> _vecInitializedBodies; ///< vector of the kinbody initialized in this space. index is the environment body index. nullptr means uninitialized.
     std::vector<std::map< std::string, FCLKinBodyInfoPtr> > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
     std::vector<FCLKinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a FCLKinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
 
     std::vector<int> _vecAttachedEnvBodyIndicesCache; ///< cache
-    std::vector<KinBodyPtr> _vecAttachedBodiesCache; ///< cache
+    std::vector<OpenRAVE::KinBodyPtr> _vecAttachedBodiesCache; ///< cache
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };

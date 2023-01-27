@@ -1,4 +1,13 @@
+#include <openrave/utils.h>
+
 #include "fclmanagercache.h"
+
+using OpenRAVE::KinBody;
+using OpenRAVE::KinBodyPtr;
+using OpenRAVE::KinBodyConstPtr;
+using OpenRAVE::RobotBase;
+using OpenRAVE::RobotBaseConstPtr;
+using OpenRAVE::EnvironmentBase;
 
 namespace ivshmem {
 
@@ -56,9 +65,9 @@ void FCLCollisionManagerInstance::KinBodyCache::Invalidate(bool warnOnNonEmptyCo
         ss << "env=" << envNameId << ", "
            << "body=" << bodyName << ", "
            << "geomgroup=\"" << unknown_geomgroup << "\", "
-           << "FCLCollisionManagerInstance 0x" << hex << this << " has " << dec << vcolobjs.size() << " collision objects (";
+           << "FCLCollisionManagerInstance 0x" << std::hex << this << " has " << std::dec << vcolobjs.size() << " collision objects (";
         for (const CollisionObjectPtr& obj : vcolobjs) {
-            ss << "0x" << hex << obj << ", ";
+            ss << "0x" << std::hex << obj << ", ";
             if (!!obj) {
                 const fcl::Quaternion3f& q = obj->getQuatRotation();
                 const fcl::Vec3f& t = obj->getTranslation();
@@ -343,8 +352,8 @@ void FCLCollisionManagerInstance::Synchronize() {
                             _linkEnableStatesBitmasks = robot.GetLinkEnableStatesMasks();
                             for (size_t ilink = 0; ilink < robot.GetLinks().size(); ++ilink) {
                                 int isLinkActive = 0;
-                                FOREACH(itindex, robot.GetActiveDOFIndices()) {
-                                    if (robot.DoesAffect(robot.GetJointFromDOFIndex(*itindex)->GetJointIndex(), ilink)) {
+                                for (const int index : robot.GetActiveDOFIndices()) {
+                                    if (robot.DoesAffect(robot.GetJointFromDOFIndex(index)->GetJointIndex(), ilink)) {
                                         isLinkActive = 1;
                                         break;
                                     }
@@ -399,9 +408,9 @@ void FCLCollisionManagerInstance::Synchronize() {
             // should happen when parts are removed
             // RAVELOG_VERBOSE_FORMAT("env=%d, %u manager contains invalid body %s, removing for now", _fclspace.GetEnvironmentId()%_lastSyncTimeStamp%(!pbody ?
             // std::string() : pbody->GetName()));
-            FOREACH(itcolobj, cache.vcolobjs) {
-                if (!!itcolobj->get()) {
-                    pmanager->unregisterObject(itcolobj->get());
+            for (const CollisionObjectPtr colobj : cache.vcolobjs) {
+                if (!!colobj.get()) {
+                    pmanager->unregisterObject(colobj.get());
                 }
             }
             cache.vcolobjs.resize(0);
@@ -424,9 +433,9 @@ void FCLCollisionManagerInstance::Synchronize() {
         if (pinfo != pnewinfo) {
             // everything changed!
             RAVELOG_VERBOSE_FORMAT("%u body %s entire FCLKinBodyInfo changed", _lastSyncTimeStamp % pbody->GetName());
-            FOREACH(itcolobj, cache.vcolobjs) {
-                if (!!itcolobj->get()) {
-                    pmanager->unregisterObject(itcolobj->get());
+            for (const CollisionObjectPtr colobj : cache.vcolobjs) {
+                if (!!colobj.get()) {
+                    pmanager->unregisterObject(colobj.get());
                 }
             }
             cache.vcolobjs.resize(0);
@@ -644,7 +653,7 @@ void FCLCollisionManagerInstance::Synchronize() {
                         "env=%s body %s has envBodyIndex=%d, but stored at wrong index=%d",
                         body.GetEnv()->GetNameId() % body.GetName() % currentBodyEnvBodyIndex % cachedBodyIndex);
                 }
-                const vector<int>::const_iterator it = lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
+                const std::vector<int>::const_iterator it = std::lower_bound(vecAttachedEnvBodyIndices.begin(), vecAttachedEnvBodyIndices.end(), currentBodyEnvBodyIndex);
                 isInvalid = (it == vecAttachedEnvBodyIndices.end() || *it != currentBodyEnvBodyIndex) || currentBodyEnvBodyIndex != cachedBodyIndex;
             }
             if (isInvalid) {
@@ -652,9 +661,9 @@ void FCLCollisionManagerInstance::Synchronize() {
                     RAVELOG_VERBOSE_FORMAT("env=%s, %x, %u removing old cache %d", pBody->GetEnv()->GetNameId() % this % _lastSyncTimeStamp % cachedBodyIndex);
                 }
                 // not in attached bodies so should remove
-                FOREACH(itcol, cache.vcolobjs) {
-                    if (!!itcol->get()) {
-                        pmanager->unregisterObject(itcol->get());
+                for (const CollisionObjectPtr colobj : cache.vcolobjs) {
+                    if (!!colobj.get()) {
+                        pmanager->unregisterObject(colobj.get());
                     }
                 }
                 cache.vcolobjs.resize(0);
@@ -715,8 +724,8 @@ void FCLCollisionManagerInstance::_UpdateActiveLinks(const RobotBase& robot) {
     _vTrackingActiveLinks.resize(robot.GetLinks().size());
     for (size_t i = 0; i < robot.GetLinks().size(); ++i) {
         int isLinkActive = 0;
-        FOREACH(itindex, robot.GetActiveDOFIndices()) {
-            if (robot.DoesAffect(robot.GetJointFromDOFIndex(*itindex)->GetJointIndex(), i)) {
+        for (const int index : robot.GetActiveDOFIndices()) {
+            if (robot.DoesAffect(robot.GetJointFromDOFIndex(index)->GetJointIndex(), i)) {
                 isLinkActive = 1;
                 break;
             }
