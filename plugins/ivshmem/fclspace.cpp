@@ -502,11 +502,6 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
                 coll.computeAABB();
             }
         }
-
-        // Does this have any use ?
-        // if( !!_synccallback ) {
-        //     _synccallback(pinfo);
-        // }
     }
 }
 
@@ -544,11 +539,6 @@ void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pin
         InitKinBody(pbody, pinfo, false);
         remover.ResetRemove(); // succeeded
     }
-//   FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
-//   _cachedpinfo.erase(pbody->GetEnvironmentBodyIndex());
-//   if( !!pinfoCurrentGeometry ) {
-//       _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()] = pinfoCurrentGeometry;
-//   }
 }
 
 } // namespace

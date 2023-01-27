@@ -7,46 +7,10 @@
 
 namespace ivshmem {
 
-//static bool CheckForObj(fcl::DynamicAABBTreeCollisionManager::DynamicAABBNode* root, fcl::CollisionObject* pobj)
-//{
-//    if( !root ) {
-//        return false;
-//    }
-//    if( root->data == pobj ) {
-//        return true;
-//    }
-//    if( !!root->children[0] ) {
-//        if( CheckForObj(root->children[0], pobj) ) {
-//            return true;
-//        }
-//    }
-//    if( !!root->children[1] ) {
-//        if( CheckForObj(root->children[1], pobj) ) {
-//            return true;
-//        }
-//    }
-//    return false;
-//}
-//
-//static int CountForObj(fcl::DynamicAABBTreeCollisionManager::DynamicAABBNode* root, fcl::CollisionObject* pobj)
-//{
-//    if( !root ) {
-//        return 0;
-//    }
-//    int count = 0;
-//    if( root->data == pobj ) {
-//        ++count;
-//    }
-//    count += CheckForObj(root->children[0], pobj);
-//    count += CheckForObj(root->children[1], pobj);
-//    return count;
-//}
-
 typedef boost::shared_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerPtr;
 typedef boost::weak_ptr<fcl::BroadPhaseCollisionManager> BroadPhaseCollisionManagerWeakPtr;
 
 /// \brief A broadphase collision manager together with cache data of the bodies it contains
-///
 /// used to maintain the correct state of the broadphase manager
 class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCollisionManagerInstance>
 {
@@ -57,9 +21,7 @@ class FCLCollisionManagerInstance : public boost::enable_shared_from_this<FCLCol
 
         KinBodyCache(const KinBodyConstPtr& pbody, const FCLSpace::FCLKinBodyInfoPtr& pinfo);
 
-        void SetBodyData(const KinBodyConstPtr& pbody,
-                         const FCLSpace::FCLKinBodyInfoPtr& pinfo,
-                         const std::vector<uint64_t>& linkEnableStateCache);
+        void SetBodyData(const KinBodyConstPtr& pbody, const FCLSpace::FCLKinBodyInfoPtr& pinfo, const std::vector<uint64_t>& linkEnableStateCache);
 
         ~KinBodyCache() {
             // KinBodyCache is stored in vector, and resizing it causes destructor be called, but do not want warning on vcolobjs being non-empty.
@@ -92,7 +54,6 @@ public:
     ~FCLCollisionManagerInstance();
 
     /// \brief sets up manager for body checking
-    ///
     /// \param bTrackActiveDOF true if should be tracking the active dof
     void InitBodyManager(KinBodyConstPtr pbody, bool bTrackActiveDOF);
 
@@ -135,7 +96,6 @@ public:
 
 private:
     /// \brief adds a body to the manager, returns true if something was added
-    ///
     /// should not add anything to _vecCachedBodies! insert to _tmpSortedBuffer
     bool _AddBody(const KinBody& body, const FCLSpace::FCLKinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint64_t>& linkEnableStatesBitmasks, bool bTrackActiveDOF);
 
