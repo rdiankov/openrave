@@ -20,6 +20,8 @@
 #ifndef OPENRAVE_LOGGING_H
 #define OPENRAVE_LOGGING_H
 
+#include <vector>
+
 #if OPENRAVE_LOG4CXX
 #include <log4cxx/logger.h>
 #endif
