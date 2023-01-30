@@ -70,7 +70,7 @@ void RaveDatabase::GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::
     interfacenames.clear();
     for (const PluginPtr& plugin : _vPlugins) {
         const RavePlugin::InterfaceMap& interfaces = plugin->GetInterfaces();
-        for (const std::pair<InterfaceType, std::vector<std::string>>& entry : interfaces) {
+        for (const std::pair<const InterfaceType, std::vector<std::string>>& entry : interfaces) {
             interfacenames[entry.first].insert(interfacenames[entry.first].end(), entry.second.begin(), entry.second.end());
         }
     }
