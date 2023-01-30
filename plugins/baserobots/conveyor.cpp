@@ -119,7 +119,7 @@ public:
             return _cmdata;
         }
 
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override {
             if( !!_pcurreader ) {
                 if( _pcurreader->startElement(name,atts) == PE_Support ) {
                     return PE_Support;
@@ -143,7 +143,7 @@ public:
             return PE_Support;
         }
 
-        virtual bool endElement(const std::string& name)
+        virtual bool endElement(const std::string& name) override
         {
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) ) {
@@ -194,7 +194,7 @@ public:
             return false;
         }
 
-        virtual void characters(const std::string& ch)
+        virtual void characters(const std::string& ch) override
         {
             if( !!_pcurreader ) {
                 _pcurreader->characters(ch);
@@ -224,7 +224,7 @@ protected:
     virtual ~Conveyor() {
     }
 
-    virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
+    virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation) override
     {
         _pController = controller;
         if( !!_pController ) {
@@ -237,10 +237,10 @@ protected:
         return true;
     }
 
-    virtual ControllerBasePtr GetController() const {
+    virtual ControllerBasePtr GetController() const override {
         return _pController;
     }
-    virtual void SimulationStep(dReal fElapsedTime)
+    virtual void SimulationStep(dReal fElapsedTime) override
     {
         RobotBase::SimulationStep(fElapsedTime);
         if( !!_pController ) {
