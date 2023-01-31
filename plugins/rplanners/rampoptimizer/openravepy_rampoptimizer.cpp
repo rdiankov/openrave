@@ -56,7 +56,7 @@ using py::def;
 #include <openravepy/openravepy_module.h>
 
 namespace rampoptimizer = OpenRAVE::RampOptimizerInternal;
-typedef OpenRAVE::dReal dReal;
+using OpenRAVE::dReal;
 
 namespace rampoptimizerpy {
 

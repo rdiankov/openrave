@@ -5541,7 +5541,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         {
             // deep copy extra geometries as well, otherwise changing value of map in original map affects value of cloned map
             std::map< std::string, std::vector<GeometryInfoPtr> > newMapExtraGeometries;
-            for (const std::pair<std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometries) {
+            for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometries) {
                 std::vector<GeometryInfoPtr> newvalues;
                 newvalues.reserve(keyValue.second.size());
                 for (const GeometryInfoPtr& geomInfoPtr : keyValue.second) {
