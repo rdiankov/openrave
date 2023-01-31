@@ -17,6 +17,8 @@
 #ifndef RAVE_PLUGIN_DATABASE_H
 #define RAVE_PLUGIN_DATABASE_H
 
+#if !OPENRAVE_STATIC_PLUGINS
+
 #include "openrave/openrave.h"
 #include "openrave/plugin.h"
 #include "openrave/plugininfo.h"
@@ -65,4 +67,6 @@ private:
 
 } // end namespace OpenRAVE
 
-#endif
+#endif // !OPENRAVE_STATIC_PLUGINS
+
+#endif // RAVE_PLUGIN_DATABASE_H
