@@ -142,7 +142,7 @@ public:
     std::string controllerType; ///< the type of the controller used to control this joint
     //int robotId = -1; ///< index of the robot within that controller?
     boost::array<int16_t, 3> robotControllerAxisIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis (up to the DOF of the joint). -1 if not specified/not valid.
-    boost::array<dReal, 3> robotControllerAxisMult = {1.0, 1.0, 1.0}; ///< indicates the multiplier to convert the joint values from openrave to the robot controller, per joint axis.
+    boost::array<dReal, 3> robotControllerAxisMult = {1.0, 1.0, 1.0}; ///< indicates the multiplier to convert the joint values from the robot controller units to openrave units, per joint axis.
     boost::array<dReal, 3> robotControllerAxisOffset = {0.0, 0.0, 0.0}; ///< indicates the offset, in the robot controller units, that should be applied to the joint values, per joint axis.
     boost::array<std::string, 3> robotControllerAxisProductCode = {"", "", ""}; ///< indicates the product code of the robot controller used to control each joint axis.
 };
