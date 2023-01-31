@@ -4298,11 +4298,11 @@ void KinBody::_ComputeInternalInformation()
     if((_veclinks.size() > 0)&&(_vecjoints.size() > 0)) {
         std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
         // joints with only one attachment are attached to a static link, which is attached to link 0
-        for( const JointPtr joint :_vecjoints) {
+        for( const JointPtr& joint :_vecjoints) {
             vlinkadjacency.at(joint->GetFirstAttached()->GetIndex()).push_back(joint->GetSecondAttached()->GetIndex());
             vlinkadjacency.at(joint->GetSecondAttached()->GetIndex()).push_back(joint->GetFirstAttached()->GetIndex());
         }
-        for( const JointPtr passive : _vPassiveJoints) {
+        for( const JointPtr& passive : _vPassiveJoints) {
             vlinkadjacency.at(passive->GetFirstAttached()->GetIndex()).push_back(passive->GetSecondAttached()->GetIndex());
             vlinkadjacency.at(passive->GetSecondAttached()->GetIndex()).push_back(passive->GetFirstAttached()->GetIndex());
         }
