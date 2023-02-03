@@ -21,8 +21,8 @@ if( OPT_PYTHON )
       boost_assertion_failed
     PUBLIC
       ${OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES}
-      Python::Module
-      Python::NumPy
+      Python2::Module
+      Python2::NumPy
       pybind11::module
   )
 
@@ -49,6 +49,9 @@ if( OPT_PYTHON )
     set_target_properties(openravepy_rampoptimizer PROPERTIES SUFFIX ".pyd")
   endif()
   install(TARGETS openravepy_rampoptimizer DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+
+  add_subdirectory(python3)
+
 else()
   message(STATUS "HAVE_ALL_PYTHON_HEADERS = ${HAVE_ALL_PYTHON_HEADERS}; do not build openravepy_rampoptimizer")
 endif()

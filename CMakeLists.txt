@@ -755,16 +755,11 @@ add_subdirectory(src)
 add_subdirectory(octave_matlab)
 add_subdirectory(locale)
 
-if(OPT_PYTHON OR OPT_PYTHON3)
-  set(OPT_PYTHON ON) # If Python3 was requested, set this to ON
-  if (OPT_PYTHON3)
-    find_package(Python 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
-  else()
-    find_package(Python 2.7 REQUIRED COMPONENTS Interpreter Development NumPy)
-  endif()
+if(OPT_PYTHON)
+  find_package(Python2 REQUIRED COMPONENTS Interpreter Development NumPy)
 
   execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import distutils.sysconfig as sysconf; import os;\
+    COMMAND ${Python2_EXECUTABLE} -c "import distutils.sysconfig as sysconf; import os;\
       print(os.path.relpath(sysconf.get_python_lib(1, prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}'))\
     "
     OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -775,7 +770,7 @@ if(OPT_PYTHON OR OPT_PYTHON3)
   set(OPENRAVE_USE_LOCAL_SYMPY 1)
     # get the sympy version
   execute_process(
-    COMMAND ${Python_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
+    COMMAND ${Python2_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
     OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE _sympy_version_failed)
   message(STATUS "_sympy_version ${_sympy_version}")
@@ -812,6 +807,59 @@ if(OPT_PYTHON OR OPT_PYTHON3)
     set(OPENRAVEPY_VER_NAME "_openravepy_")
   endif()
   set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
+
+
+
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development NumPy)
+
+  execute_process(
+    COMMAND ${Python3_EXECUTABLE} -c "import distutils.sysconfig as sysconf; import os;\
+      print(os.path.relpath(sysconf.get_python_lib(1, prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}'))\
+    "
+    OUTPUT_VARIABLE OPENRAVE_PYTHON3_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  set(OPENRAVEPY3_INSTALL_DIR "${OPENRAVE_PYTHON3_INSTALL_DIR}/openravepy")
+
+  set(OPENRAVE_USE_LOCAL_SYMPY 1)
+    # get the sympy version
+  execute_process(
+    COMMAND ${Python3_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
+    OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _sympy_version_failed)
+  message(STATUS "_sympy_version ${_sympy_version}")
+  if( ${_sympy_version_failed} EQUAL 0 )
+    string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
+    message(STATUS "Found sympy version '${_sympy_version}'")
+    if( "${_sympy_version}" VERSION_GREATER "0.6.3" OR "${_sympy_version}" VERSION_EQUAL "0.6.3" )
+      set(OPENRAVE_USE_LOCAL_SYMPY 0)
+      if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
+        message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
+      else()
+        message(STATUS "Assuming sympy version 0.7.x or greater")
+      endif()
+    endif()
+  else()
+    message(STATUS "failed to find python sympy system installation")
+  endif()
+
+  if( OPENRAVE_USE_LOCAL_SYMPY )
+    message(STATUS "System sympy (v=${_sympy_version}) is not right version, using local sympy")
+    # extract sympy
+    if( NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/__init__.py" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sympy/solvers/tests")
+      message(STATUS "extracting sympy to ${CMAKE_CURRENT_SOURCE_DIR}")
+      execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.7.1.tgz"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+    endif()
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON3_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE)
+  endif()
+
+  set(OPENRAVEPY3_VER_INSTALL_DIR "${OPENRAVEPY3_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
+
+
+
+
 
   # build python bindings, either with pybind11 or Boost.Python
   set(USE_PYBIND11_PYTHON_BINDINGS OFF CACHE BOOL "Build OpenRAVE's python bindings with pybind11 (ON) or Boost.Python (OFF)")
