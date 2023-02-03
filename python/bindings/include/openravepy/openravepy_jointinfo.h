@@ -145,7 +145,10 @@ public:
     JointControlInfo_RobotControllerPtr GetJointControlInfo();
 
     std::string controllerType;
-    object robotControllerAxisIndex = toPyVector3(Vector(-1, -1, -1));
+    object robotControllerAxisIndex;
+    object robotControllerAxisMult;
+    object robotControllerAxisOffset;
+    py::list robotControllerAxisProductCode;
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
 

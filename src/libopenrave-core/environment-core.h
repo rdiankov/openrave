@@ -324,7 +324,7 @@ public:
         }
     }
 
-    virtual void Destroy()
+    virtual void Destroy() override
     {
         std::lock_guard<std::mutex> lockdestroy(_mutexInit);
         if( !_bInit ) {
@@ -416,7 +416,7 @@ public:
         RAVELOG_VERBOSE("Environment destroyed\n");
     }
 
-    virtual void Reset()
+    virtual void Reset() override
     {
         // destruction order is *very* important, don't touch it without consultation
         list<ViewerBasePtr> listViewers;
@@ -500,18 +500,18 @@ public:
         }
     }
 
-    virtual UserDataPtr GlobalState() {
+    virtual UserDataPtr GlobalState() override {
         return RaveGlobalState();
     }
 
-    virtual void OwnInterface(InterfaceBasePtr pinterface)
+    virtual void OwnInterface(InterfaceBasePtr pinterface) override
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentLock lockenv(GetMutex());
         ExclusiveLock lock473(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
-    virtual void DisownInterface(InterfaceBasePtr pinterface)
+    virtual void DisownInterface(InterfaceBasePtr pinterface) override
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentLock lockenv(GetMutex());
@@ -570,7 +570,7 @@ public:
         return ret;
     }
 
-    void GetModules(std::list<ModuleBasePtr>& listModules, uint64_t timeout) const
+    void GetModules(std::list<ModuleBasePtr>& listModules, uint64_t timeout) const override
     {
         TimedSharedLock lock145(_mutexInterfaces, timeout);
         if (!lock145) {
@@ -601,7 +601,7 @@ public:
         return false;
     }
 
-    virtual bool Load(const std::string& filename, const AttributesList& atts)
+    virtual bool Load(const std::string& filename, const AttributesList& atts) override
     {
         EnvironmentLock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
@@ -682,7 +682,7 @@ public:
         return RaveParseJSON(shared_from_this(), rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, atts, *_prLoadEnvAlloc);
     }
 
-    virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts)
+    virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts) override
     {
         EnvironmentLock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
@@ -776,7 +776,7 @@ public:
         }
     }
 
-    virtual void SerializeJSON(rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, SelectionOptions options, const AttributesList& atts)
+    virtual void SerializeJSON(rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, SelectionOptions options, const AttributesList& atts) override
     {
         EnvironmentLock lockenv(GetMutex());
         std::list<KinBodyPtr> listbodies;
@@ -838,7 +838,7 @@ public:
         }
     }
 
-    virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList())
+    virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) override
     {
         if (filetype != "collada" && filetype != "json" && filetype != "msgpack") {
             throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada and json", filetype, ORE_InvalidArguments);
@@ -934,7 +934,7 @@ public:
         }
     }
 
-    virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs)
+    virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs) override
     {
         CHECK_INTERFACE(pinterface);
         switch(pinterface->GetInterfaceType()) {
@@ -1053,7 +1053,7 @@ public:
         psensor->Configure(SensorBase::CC_PowerOn);
     }
 
-    virtual bool Remove(InterfaceBasePtr pinterface)
+    virtual bool Remove(InterfaceBasePtr pinterface) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_INTERFACE(pinterface);
@@ -1111,7 +1111,7 @@ public:
         return false;
     }
 
-    virtual bool RemoveKinBodyByName(const std::string& name)
+    virtual bool RemoveKinBodyByName(const std::string& name) override
     {
         EnvironmentLock lockenv(GetMutex());
         KinBodyPtr pbody;
@@ -1133,7 +1133,7 @@ public:
         return false;
     }
 
-    virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback)
+    virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback) override
     {
         ExclusiveLock lock705(_mutexInterfaces);
         BodyCallbackDataPtr pdata(new BodyCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
@@ -1219,7 +1219,7 @@ public:
         return 0;
     }
 
-    virtual RobotBasePtr GetRobot(const std::string& pname) const
+    virtual RobotBasePtr GetRobot(const std::string& pname) const override
     {
         if( pname.empty() ) {
             return RobotBasePtr();
@@ -1261,7 +1261,7 @@ public:
         return envBodyIndex;
     }
 
-    virtual SensorBasePtr GetSensor(const std::string& name) const
+    virtual SensorBasePtr GetSensor(const std::string& name) const override
     {
         SharedLock lock022(_mutexInterfaces);
         for (const KinBodyPtr& pbody : _vecbodies) {
@@ -1283,7 +1283,7 @@ public:
         return SensorBasePtr();
     }
 
-    virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine)
+    virtual bool SetPhysicsEngine(PhysicsEngineBasePtr pengine) override
     {
         EnvironmentLock lockenv(GetMutex());
         if( !!_pPhysicsEngine ) {
@@ -1302,24 +1302,24 @@ public:
         return true;
     }
 
-    virtual PhysicsEngineBasePtr GetPhysicsEngine() const {
+    virtual PhysicsEngineBasePtr GetPhysicsEngine() const override {
         return _pPhysicsEngine;
     }
 
-    virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback)
+    virtual UserDataPtr RegisterCollisionCallback(const CollisionCallbackFn& callback) override
     {
         ExclusiveLock lock990(_mutexInterfaces);
         CollisionCallbackDataPtr pdata(new CollisionCallbackData(callback,boost::static_pointer_cast<Environment>(shared_from_this())));
         pdata->_iterator = _listRegisteredCollisionCallbacks.insert(_listRegisteredCollisionCallbacks.end(),pdata);
         return pdata;
     }
-    virtual bool HasRegisteredCollisionCallbacks() const
+    virtual bool HasRegisteredCollisionCallbacks() const override
     {
         ExclusiveLock lock931(_mutexInterfaces);
         return _listRegisteredCollisionCallbacks.size() > 0;
     }
 
-    virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>& listcallbacks) const
+    virtual void GetRegisteredCollisionCallbacks(std::list<CollisionCallbackFn>& listcallbacks) const override
     {
         ExclusiveLock lock303(_mutexInterfaces);
         listcallbacks.clear();
@@ -1329,7 +1329,7 @@ public:
         }
     }
 
-    virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)
+    virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker) override
     {
         EnvironmentLock lockenv(GetMutex());
         if( _pCurrentChecker == pchecker ) {
@@ -1360,14 +1360,14 @@ public:
         return _pCurrentChecker;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         return _pCurrentChecker->CheckCollision(pbody1,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
@@ -1375,14 +1375,14 @@ public:
         return _pCurrentChecker->CheckCollision(pbody1,pbody2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report )
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report ) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
@@ -1390,7 +1390,7 @@ public:
         return _pCurrentChecker->CheckCollision(plink1,plink2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
@@ -1398,52 +1398,52 @@ public:
         return _pCurrentChecker->CheckCollision(plink,pbody,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(ray,plink,report);
     }
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(ray,pbody,report);
     }
-    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
+    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report) override
     {
         return _pCurrentChecker->CheckCollision(ray,report);
     }
 
-    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(trimesh,pbody,report);
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckStandaloneSelfCollision(pbody,report);
     }
 
-    virtual void StepSimulation(dReal fTimeStep)
+    virtual void StepSimulation(dReal fTimeStep) override
     {
         EnvironmentLock lockenv(GetMutex());
 
@@ -1497,11 +1497,11 @@ public:
         _nCurSimTime += step;
     }
 
-    virtual EnvironmentMutex& GetMutex() const {
+    virtual EnvironmentMutex& GetMutex() const override {
         return _mutexEnvironment;
     }
 
-    virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout) const
+    virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout) const override
     {
         TimedSharedLock lock853(_mutexInterfaces, timeout);
         if (!lock853) {
@@ -1517,7 +1517,7 @@ public:
         }
     }
 
-    virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout) const
+    virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout) const override
     {
         TimedSharedLock lock186(_mutexInterfaces, timeout);
         if (!lock186) {
@@ -1558,7 +1558,7 @@ public:
         }
     }
 
-    virtual void Triangulate(TriMesh& trimesh, const KinBody &body)
+    virtual void Triangulate(TriMesh& trimesh, const KinBody &body) override
     {
         EnvironmentLock lockenv(GetMutex());     // reading collision data, so don't want anyone modifying it
         FOREACHC(it, body.GetLinks()) {
@@ -1566,7 +1566,7 @@ public:
         }
     }
 
-    virtual void TriangulateScene(TriMesh& trimesh, SelectionOptions options,const std::string& selectname)
+    virtual void TriangulateScene(TriMesh& trimesh, SelectionOptions options,const std::string& selectname) override
     {
         EnvironmentLock lockenv(GetMutex());
         ExclusiveLock lock830(_mutexInterfaces);
@@ -1738,7 +1738,7 @@ public:
         return robot;
     }
 
-    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts)
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts) override
     {
         EnvironmentLock lockenv(GetMutex());
 
@@ -1809,7 +1809,7 @@ public:
         return robot;
     }
 
-    virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts)
+    virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts) override
     {
         EnvironmentLock lockenv(GetMutex());
 

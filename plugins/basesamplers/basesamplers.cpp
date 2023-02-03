@@ -65,6 +65,10 @@ const std::string& BaseSamplersPlugin::GetPluginName() const
     return pluginname;
 }
 
+#if !OPENRAVE_STATIC_PLUGINS
+
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new BaseSamplersPlugin();
 }
+
+#endif // OPENRAVE_STATIC_PLUGINS

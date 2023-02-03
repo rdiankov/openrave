@@ -4298,15 +4298,15 @@ void KinBody::_ComputeInternalInformation()
     if((_veclinks.size() > 0)&&(_vecjoints.size() > 0)) {
         std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
         // joints with only one attachment are attached to a static link, which is attached to link 0
-        for( const auto joint :_vecjoints) {
+        for( const JointPtr& joint :_vecjoints) {
             vlinkadjacency.at(joint->GetFirstAttached()->GetIndex()).push_back(joint->GetSecondAttached()->GetIndex());
             vlinkadjacency.at(joint->GetSecondAttached()->GetIndex()).push_back(joint->GetFirstAttached()->GetIndex());
         }
-        for( const auto passive : _vPassiveJoints) {
+        for( const JointPtr& passive : _vPassiveJoints) {
             vlinkadjacency.at(passive->GetFirstAttached()->GetIndex()).push_back(passive->GetSecondAttached()->GetIndex());
             vlinkadjacency.at(passive->GetSecondAttached()->GetIndex()).push_back(passive->GetFirstAttached()->GetIndex());
         }
-        for( auto &adj : vlinkadjacency) {
+        for( std::vector<int> &adj : vlinkadjacency) {
             sort(adj.begin(), adj.end());
         }
 
@@ -5541,7 +5541,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         {
             // deep copy extra geometries as well, otherwise changing value of map in original map affects value of cloned map
             std::map< std::string, std::vector<GeometryInfoPtr> > newMapExtraGeometries;
-            for (const std::pair<std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometries) {
+            for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometries) {
                 std::vector<GeometryInfoPtr> newvalues;
                 newvalues.reserve(keyValue.second.size());
                 for (const GeometryInfoPtr& geomInfoPtr : keyValue.second) {

@@ -199,11 +199,11 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             if( fdiff > g_fEpsilonJointLimit ) {
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                 ss << "dof " << i << " of solution=[";
-                for( const auto value : solution) {
+                for( const dReal value : solution) {
                     ss << value << ", ";
                 }
                 ss << "] != dof " << dofindex << " of currentvalues=[";
-                for( const auto value : vtestsolution) {
+                for( const dReal value : vtestsolution) {
                     ss << value << ", ";
                 }
                 ss << "]";
@@ -234,11 +234,11 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                         
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                         ss << "dof " << dofindex << " of solution=[";
-                        for( const auto value : vtestsolution) {
+                        for( const dReal value : vtestsolution) {
                             ss << value << ", ";
                         }
                         ss << "] != dof " << dofindex << " of currentvalues=[";
-                        for( const auto value : vtestsolution2) {
+                        for( const dReal value : vtestsolution2) {
                             ss << value << ", ";
                         }
                         ss << "]";

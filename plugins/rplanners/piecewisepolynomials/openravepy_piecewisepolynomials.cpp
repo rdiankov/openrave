@@ -60,7 +60,7 @@ using py::def;
 #include <openravepy/openravepy_module.h>
 
 namespace piecewisepolynomials = OpenRAVE::PiecewisePolynomialsInternal;
-typedef OpenRAVE::dReal dReal;
+using OpenRAVE::dReal;
 
 namespace piecewisepolynomialspy {
 

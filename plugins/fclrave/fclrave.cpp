@@ -44,6 +44,10 @@ const std::string& FCLRavePlugin::GetPluginName() const
     return _pluginname;
 }
 
+#if !OPENRAVE_STATIC_PLUGINS
+
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new FCLRavePlugin();
 }
+
+#endif // OPENRAVE_STATIC_PLUGINS
