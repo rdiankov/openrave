@@ -18,13 +18,15 @@
 
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
 
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
 #endif
+
+using namespace boost::placeholders;
 
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase

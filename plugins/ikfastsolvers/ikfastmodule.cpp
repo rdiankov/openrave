@@ -15,6 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
 
 #ifdef Boost_IOSTREAMS_FOUND
@@ -73,6 +74,8 @@
 #include <rapidjson/error/en.h>
 
 #include "next_combination.h"
+
+using namespace boost::placeholders;
 
 #define LOAD_IKFUNCTION0(fnname) { \
         ikfunctions->_ ## fnname = (typename ikfast::IkFastFunctions<T>::fnname ## Fn)SysLoadSym(plib, # fnname); \

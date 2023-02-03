@@ -74,7 +74,6 @@ Planner Parameters\n\
                     RAVELOG_ERROR("failed to set state values\n");
                     return false;
                 }
-                Transform tstate = _manip->GetTransform();
                 _robot->SetActiveDOFs(_manip->GetArmIndices());
                 _robot->GetActiveDOFValues(dummyvalues);
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
@@ -167,7 +166,7 @@ Planner Parameters\n\
             }
         }
 
-        dReal fstarttime = 0, fendtime = workspacetraj->GetDuration();
+        dReal fstarttime = 0;
         bool bPrevInCollision = true;
         list<Transform> listtransforms;
         dReal ftime = 0;
@@ -183,7 +182,6 @@ Planner Parameters\n\
                 }
                 if( !bPrevInCollision ) {
                     if( ftime >= minimumcompletetime ) {
-                        fendtime = ftime;
                         break;
                     }
                 }
@@ -261,7 +259,6 @@ Planner Parameters\n\
                 else {
                     if( !bPrevInCollision ) {
                         if( ftime >= minimumcompletetime ) {
-                            fendtime = ftime;
                             break;
                         }
                     }

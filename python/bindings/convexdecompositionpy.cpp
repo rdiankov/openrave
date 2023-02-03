@@ -105,7 +105,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
     const py::buffer_info& vertices_info = vertices.request();
     const std::vector<ssize_t> &vertices_shape = vertices_info.shape;
     BOOST_ASSERT(vertices_shape.size() == 2);
-    const size_t nvertices = vertices_shape[0];
+    //const size_t nvertices = vertices_shape[0];
     BOOST_ASSERT(vertices_shape[1] == 3);
     float const* const p_vertices = (float *) vertices_info.ptr;
 
