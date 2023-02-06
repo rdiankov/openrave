@@ -353,6 +353,25 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t)
 }
 
 template<class T>
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t) {
+    if(!v.IsArray() || (v.Size() != 4 + 3 + 3)) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox", OpenRAVE::ORE_InvalidArguments);
+    }
+
+    for (size_t iIndex = 0; iIndex < 4; ++iIndex) {
+        LoadJsonValue(v[iIndex], t.transform.rot[iIndex]);
+    }
+    for (size_t iIndex = 0; iIndex < 3; ++iIndex) {
+        LoadJsonValue(v[4+iIndex], t.transform.trans[iIndex]);
+    }
+    for (size_t iIndex = 0; iIndex < 3; ++iIndex) {
+        LoadJsonValue(v[4+3+iIndex], t.extents[iIndex]);
+    }
+    t.transform.trans.w = 0;
+    t.extents.w = 0;
+}
+
+template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr) {
     static_assert(std::is_default_constructible<T>::value, "Shared pointer of type must be default-constructible.");
     ptr = boost::make_shared<T>();
@@ -614,6 +633,30 @@ inline void SaveJsonValue(rapidjson::Value& rTransform, const OpenRAVE::RaveTran
 }
 
 template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetArray();
+    // TODO, what's a better way to serialize?
+    bool bHas4Values = t[3] != 0;
+    int numvalues = bHas4Values ? 4 : 3;
+    v.Reserve(numvalues, alloc);
+    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
+        rapidjson::Value tmpv;
+        SaveJsonValue(tmpv, t[ivalue], alloc);
+        v.PushBack(tmpv, alloc);
+    }
+}
+
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    rapidjson::Value tmpv;
+    SaveJsonValue(tmpv, t.extents, alloc);
+    v.AddMember("extents", tmpv, alloc);
+    SaveJsonValue(tmpv, t.transform, alloc);
+    v.AddMember("transform", tmpv, alloc);
+}
+
+template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
     v.Reserve(t.size(), alloc);
@@ -631,20 +674,6 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
     for (size_t ivec = 0; ivec < t.size() && ivec < n; ++ivec) {
         rapidjson::Value tmpv;
         SaveJsonValue(tmpv, t[ivec], alloc);
-        v.PushBack(tmpv, alloc);
-    }
-}
-
-template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetArray();
-    // TODO, what's a better way to serialize?
-    bool bHas4Values = t[3] != 0;
-    int numvalues = bHas4Values ? 4 : 3;
-    v.Reserve(numvalues, alloc);
-    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
-        rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t[ivalue], alloc);
         v.PushBack(tmpv, alloc);
     }
 }
