@@ -24,6 +24,10 @@ if (OPT_PYTHON3)
         target_compile_definitions(openravepy3_configurationcache PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy3_configurationcache PRIVATE "-fvisibility=hidden")
     endif()
-    set_target_properties(openravepy3_configurationcache PROPERTIES PREFIX "")
+    set_target_properties(openravepy3_configurationcache PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY "python3"
+        OUTPUT_NAME "openravepy_configurationcache"
+    )
     install(TARGETS openravepy3_configurationcache DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 endif()

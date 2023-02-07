@@ -28,6 +28,10 @@ if (OPT_PYTHON3)
         target_compile_definitions(openravepy3_piecewisepolynomials PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy3_piecewisepolynomials PRIVATE "-fvisibility=hidden")
     endif()
-    set_target_properties(openravepy3_piecewisepolynomials PROPERTIES PREFIX "")
+    set_target_properties(openravepy3_piecewisepolynomials PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY "python3"
+        OUTPUT_NAME "openravepy_piecewisepolynomials"
+    )
     install(TARGETS openravepy3_piecewisepolynomials DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 endif()

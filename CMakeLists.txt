@@ -797,7 +797,6 @@ if (OPT_PYTHON)
   set(OPENRAVEPY_VER_NAME         ${OPENRAVEPY2_VER_NAME})
   set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY2_VER_INSTALL_DIR})
 
-
   # get the sympy version
   execute_process(
     COMMAND ${Python2_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
@@ -877,6 +876,14 @@ if (OPT_PYTHON3)
     set(OPENRAVEPY3_VER_NAME "_openravepy3_")
   endif()
   set(OPENRAVEPY3_VER_INSTALL_DIR "${OPENRAVEPY3_INSTALL_DIR}/${OPENRAVEPY3_VER_NAME}") # used by openrave-config.cmake
+
+  # Set only if Python2 is not enabled.
+  if (NOT OPT_PYTHON)
+    set(OPENRAVE_PYTHON_INSTALL_DIR ${OPENRAVE_PYTHON3_INSTALL_DIR})
+    set(OPENRAVEPY_INSTALL_DIR      ${OPENRAVEPY3_INSTALL_DIR})
+    set(OPENRAVEPY_VER_NAME         ${OPENRAVEPY3_VER_NAME})
+    set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY3_VER_INSTALL_DIR})
+  endif()
 
   add_library(openravepy3_meta INTERFACE)
   target_include_directories(openravepy3_meta INTERFACE

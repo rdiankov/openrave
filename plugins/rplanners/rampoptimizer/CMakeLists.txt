@@ -24,6 +24,10 @@ if (OPT_PYTHON3)
         target_compile_definitions(openravepy3_rampoptimizer PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy3_rampoptimizer PRIVATE "-fvisibility=hidden")
     endif()
-    set_target_properties(openravepy3_rampoptimizer PROPERTIES PREFIX "")
+    set_target_properties(openravepy3_rampoptimizer PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY "python3"
+        OUTPUT_NAME "openravepy_rampoptimizer"
+    )
     install(TARGETS openravepy3_rampoptimizer DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 endif()

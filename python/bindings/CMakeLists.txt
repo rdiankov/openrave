@@ -71,7 +71,12 @@ if (OPT_PYTHON3)
     ## openrave bindings
     add_library(openravepy3_int SHARED ${openravepy_int_cpp_files})
     target_link_libraries(openravepy3_int PRIVATE boost_assertion_failed PUBLIC openravepy3_meta)
-    set_target_properties(openravepy3_int PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_COMPILE_FLAGS}")
+    target_compile_options(openravepy3_int PRIVATE "${OPENRAVEPY_COMPILE_FLAGS}")
+    set_target_properties(openravepy3_int PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY "python3"
+        OUTPUT_NAME "openravepy_int"
+    )
     install(TARGETS openravepy3_int EXPORT openrave-targets DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR})
 
     ## ann bindings
@@ -79,7 +84,12 @@ if (OPT_PYTHON3)
         add_library(py3ANN_int SHARED pyann.cpp bindings.cpp)
         include_directories(${ANN_INCLUDE_DIR})
         target_link_libraries(py3ANN_int PRIVATE boost_assertion_failed ANN PUBLIC openravepy3_meta)
-        set_target_properties(py3ANN_int PROPERTIES PREFIX "" COMPILE_FLAGS "${ANN_CFLAGS} ${OPENRAVEPY_COMPILE_FLAGS}")
+        target_compile_options(py3ANN_int PRIVATE "${ANN_CFLAGS} ${OPENRAVEPY_COMPILE_FLAGS}")
+        set_target_properties(py3ANN_int PROPERTIES
+            PREFIX ""
+            LIBRARY_OUTPUT_DIRECTORY "python3"
+            OUTPUT_NAME "pyANN_int"
+        )
         install(TARGETS py3ANN_int EXPORT openrave-targets DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR})
     endif()
 
@@ -88,7 +98,12 @@ if (OPT_PYTHON3)
         add_library(convexdecompositionpy3 SHARED convexdecompositionpy.cpp bindings.cpp)
         include_directories(${CONVEXDECOMPOSITION_INCLUDE_DIR})
         target_link_libraries(convexdecompositionpy3 PRIVATE boost_assertion_failed convexdecomposition PUBLIC openravepy3_meta)
-        set_target_properties(convexdecompositionpy3 PROPERTIES PREFIX "" COMPILE_FLAGS "${CONVEXDECOMPOSITION_CFLAGS} ${OPENRAVEPY_COMPILE_FLAGS}" )
+        target_compile_options(convexdecompositionpy3 PRIVATE "${CONVEXDECOMPOSITION_CFLAGS} ${OPENRAVEPY_COMPILE_FLAGS}")
+        set_target_properties(convexdecompositionpy3 PROPERTIES
+            PREFIX ""
+            LIBRARY_OUTPUT_DIRECTORY "python3"
+            OUTPUT_NAME "convexdecompositionpy"
+        )
         install(TARGETS convexdecompositionpy3 EXPORT openrave-targets DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR})
     endif()
 endif()
