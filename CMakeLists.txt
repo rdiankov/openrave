@@ -772,6 +772,13 @@ add_subdirectory(src)
 add_subdirectory(octave_matlab)
 add_subdirectory(locale)
 
+# Python version agnostic
+if( NOT WIN32 AND OPENRAVE_BIN_SUFFIX )
+  set(OPENRAVEPY_VER_NAME "_openravepy_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
+else()
+  set(OPENRAVEPY_VER_NAME "_openravepy_")
+endif()
+
 if (OPT_PYTHON)
   find_package(Python2 2.7 REQUIRED COMPONENTS Interpreter Development NumPy)
   message(STATUS "Python 2 version is ${Python2_VERSION}")
@@ -782,19 +789,12 @@ if (OPT_PYTHON)
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
   )
   message(STATUS "Python2 site-packages path is ${OPENRAVE_PYTHON2_INSTALL_DIR}")
-  set(OPENRAVEPY2_INSTALL_DIR "${OPENRAVE_PYTHON2_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
-
-  if( NOT WIN32 AND OPENRAVE_BIN_SUFFIX )
-    set(OPENRAVEPY2_VER_NAME "_openravepy_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
-  else()
-    set(OPENRAVEPY2_VER_NAME "_openravepy_")
-  endif()
-  set(OPENRAVEPY2_VER_INSTALL_DIR "${OPENRAVEPY2_INSTALL_DIR}/${OPENRAVEPY2_VER_NAME}") # used by openrave-config.cmake
+  set(OPENRAVEPY2_INSTALL_DIR "${OPENRAVE_PYTHON2_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings installation directory")
+  set(OPENRAVEPY2_VER_INSTALL_DIR "${OPENRAVEPY2_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
 
   # Backward compat
   set(OPENRAVE_PYTHON_INSTALL_DIR ${OPENRAVE_PYTHON2_INSTALL_DIR})
   set(OPENRAVEPY_INSTALL_DIR      ${OPENRAVEPY2_INSTALL_DIR})
-  set(OPENRAVEPY_VER_NAME         ${OPENRAVEPY2_VER_NAME})
   set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY2_VER_INSTALL_DIR})
 
   # get the sympy version
@@ -868,20 +868,13 @@ if (OPT_PYTHON3)
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
   )
   message(STATUS "Python3 site-packages path is ${OPENRAVE_PYTHON3_INSTALL_DIR}")
-  set(OPENRAVEPY3_INSTALL_DIR "${OPENRAVE_PYTHON3_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python3 bindings (openravepy3) installation directory")
-
-  if( NOT WIN32 AND OPENRAVE_BIN_SUFFIX )
-    set(OPENRAVEPY3_VER_NAME "_openravepy3_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
-  else()
-    set(OPENRAVEPY3_VER_NAME "_openravepy3_")
-  endif()
-  set(OPENRAVEPY3_VER_INSTALL_DIR "${OPENRAVEPY3_INSTALL_DIR}/${OPENRAVEPY3_VER_NAME}") # used by openrave-config.cmake
+  set(OPENRAVEPY3_INSTALL_DIR "${OPENRAVE_PYTHON3_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python3 bindings installation directory")
+  set(OPENRAVEPY3_VER_INSTALL_DIR "${OPENRAVEPY3_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
 
   # Set only if Python2 is not enabled.
   if (NOT OPT_PYTHON)
     set(OPENRAVE_PYTHON_INSTALL_DIR ${OPENRAVE_PYTHON3_INSTALL_DIR})
     set(OPENRAVEPY_INSTALL_DIR      ${OPENRAVEPY3_INSTALL_DIR})
-    set(OPENRAVEPY_VER_NAME         ${OPENRAVEPY3_VER_NAME})
     set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY3_VER_INSTALL_DIR})
   endif()
 
