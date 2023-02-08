@@ -120,4 +120,3 @@ set(crlibm_SOURCES ${crlibm_SOURCES}
   ${source_dir}/atan_fast.h      ${source_dir}/csh_fast.h        ${source_dir}/expm1.h            ${source_dir}/log.h     ${source_dir}/pow.h       ${source_dir}/trigo_fast.h)
 
 add_library(crlibm STATIC ${crlibm_SOURCES})
-set_target_properties(crlibm PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")

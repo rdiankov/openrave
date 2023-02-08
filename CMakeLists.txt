@@ -60,7 +60,7 @@ option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
 option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
 option(OPT_STATIC_PLUGINS "Statically compile in plugins" OFF)
-option(OPT_PIC "Build position independent code" ON)
+option(OPT_PIC "Build position independent code." ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ${OPT_PIC})
 
@@ -267,12 +267,6 @@ endif()
 find_package(Boost REQUIRED COMPONENTS filesystem system thread iostreams)
 set(OPENRAVE_BOOST_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 set(OPENRAVE_BOOST_LIB_DIRS ${Boost_LIBRARY_DIRS})
-
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
-  set(NATIVE_COMPILE_FLAGS "" CACHE STRING "compilation flags to pass to tools that are executed at build-time. For example '-march=native -mtune=native'. By default this is empty.")
-else()
-  set(NATIVE_COMPILE_FLAGS "")
-endif()
 
 # math libraries
 find_package(GMP)
