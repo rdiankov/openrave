@@ -1,5 +1,7 @@
-find_package(PkgConfig QUIET REQUIRED)
-pkg_check_modules(FCL REQUIRED fcl)
+find_package(libccd REQUIRED)
+find_package(fcl REQUIRED)
+message(STATUS "libccd version ${libccd_VERSION}")
+message(STATUS "fcl version ${fcl_VERSION}")
 
 set(ivshmem_src
     ivshmem.cpp # Entrypoint of the plugin
@@ -20,7 +22,7 @@ set(ivshmem_src
 add_library(ivshmem SHARED ${ivshmem_src})
 target_include_directories(ivshmem PRIVATE ${FCL_INCLUDEDIR})
 target_link_directories(ivshmem PRIVATE ${FCL_LIBRARY_DIRS})
-target_link_libraries(ivshmem PRIVATE boost_assertion_failed PUBLIC rt libopenrave ${FCL_LIBRARIES})
+target_link_libraries(ivshmem PRIVATE boost_assertion_failed PUBLIC rt libopenrave fcl::fcl_static libccd::ccd_static)
 set_target_properties(ivshmem PROPERTIES
     COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}"
     LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${FCL_LDFLAGS}"
