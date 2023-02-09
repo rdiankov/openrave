@@ -3481,6 +3481,7 @@ protected:
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
     boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
+    Transform _baseLinkRelativeTransform; ///< the relative transform between body frame and base link, this transform is built into GetTransform() but we need to store it separately for ExtractInfo() to get back the original base link transform
 
 private:
     mutable std::string __hashkinematics;

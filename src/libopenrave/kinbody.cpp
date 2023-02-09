@@ -766,6 +766,9 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
     _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
+    if( info._vLinkInfos.size() > 0 ) {
+        _baseLinkRelativeTransform = info._vLinkInfos[0]->GetTransform();
+    }
 
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
@@ -5984,11 +5987,12 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    info._transform = GetTransform();
+    // GetTransform() = info._transform * _baseLinkRelativeTransform
+    info._transform = GetTransform() * _baseLinkRelativeTransform.inverse();
 
     // in order for link transform comparision to make sense
     KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
-    SetTransform(Transform());
+    SetTransform(_baseLinkRelativeTransform); // so that base link is at exactly _baseLinkRelativeTransform
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
 
@@ -6092,6 +6096,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
         updateFromInfoResult = UFIR_Success;
     }
+    if( info._vLinkInfos.size() > 0 ) {
+        _baseLinkRelativeTransform = info._vLinkInfos[0]->GetTransform();
+    } else {
+        _baseLinkRelativeTransform = Transform();
+    }
 
     // need to avoid checking links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -6154,7 +6163,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             // if any link has its transform field set, we need to set zero configuration before comparison
             if( (*itLinkInfo)->IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
                 stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
-                SetTransform(Transform());
+                SetTransform(_baseLinkRelativeTransform); // so that base link is at exactly _baseLinkRelativeTransform
                 vector<dReal> vZeros(GetDOF(), 0);
                 SetDOFValues(vZeros, KinBody::CLA_Nothing);
                 break;
@@ -6193,10 +6202,13 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) && GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
-        SetTransform(info._transform);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) || (info._vLinkInfos.size() > 0 && info._vLinkInfos[0]->IsModifiedField(KinBody::LinkInfo::LIF_Transform)) ) {
+        Transform bodyTransform = info._transform * _baseLinkRelativeTransform;
+        if( GetTransform().CompareTransform(bodyTransform, g_fEpsilon) ) {
+            SetTransform(bodyTransform);
+            updateFromInfoResult = UFIR_Success;
+            RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
+        }
     }
 
     // don't change the dof values here since body might not be added!
