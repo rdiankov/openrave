@@ -185,15 +185,15 @@ openrave --loadplugin ./libplugincpp.so
 - Another way is to load it from the C++/Python/APIs:<br/>
 \b C++
 \code
-RaveLoadPlugin(env,"plugincpp");
+RaveLoadPlugin(env,"libplugincpp.so");
 \endcode
 \b Python
 \verbatim
-RaveLoadPlugin('plugincpp')
+RaveLoadPlugin('libplugincpp.so')
 \endverbatim
 \b Octave
 \verbatim
-orEnvLoadPlugin('plugincpp');
+orEnvLoadPlugin('libplugincpp.so');
 \endverbatim
 
 Once the plugin is loaded, we can create the interface and call its commands to load an environment and return the number of bodies:

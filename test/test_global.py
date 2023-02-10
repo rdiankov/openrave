@@ -19,8 +19,9 @@ log=logging.getLogger('openravepytest')
 @with_destroy
 def test_pluginloading():
     RaveInitialize(load_all_plugins=False)
-    assert(RaveLoadPlugin('ikfastsolvers'))
-    assert(RaveLoadPlugin('libikfastsolvers'))
+    assert(not RaveLoadPlugin('ikfastsolvers'))
+    assert(not RaveLoadPlugin('libikfastsolvers'))
+    assert(RaveLoadPlugin('libikfastsolvers.so'))
     env=Environment()
     assert(RaveCreateProblem(env,'ikfast') is not None)
 

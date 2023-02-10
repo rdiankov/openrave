@@ -117,7 +117,7 @@ The following example shows how to start the runtime and load only one plugin:
 
   try:
       RaveInitialize(load_all_plugins=False)
-      success = RaveLoadPlugin('libbasemanipulation')
+      success = RaveLoadPlugin('libbasemanipulation.so')
       # do work
   finally:
       RaveDestroy() # destroy the runtime
@@ -142,7 +142,7 @@ In addition, the OpenRAVE runtime managing plugin resources and environments has
   try:
       env1=Environment()
       env2=Environment()
-      RaveLoadPlugin('myplugin')
+      RaveLoadPlugin('libmyplugin.so')
       # do work
   finally:
       RaveDestroy() # destroys all environments and loaded plugins
