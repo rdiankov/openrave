@@ -44,8 +44,8 @@ def setup_robotstats():
     global env,ikfastproblem
     # just load the plugin we'll be using
     RaveInitialize(load_all_plugins=False)
-    success = RaveLoadPlugin('basesamplers')
-    success = RaveLoadPlugin('ikfastsolvers')
+    success = RaveLoadPlugin('libbasesamplers.so')
+    success = RaveLoadPlugin('libikfastsolvers.so')
     assert(success)
     RaveSetDebugLevel(DebugLevel.Error) # set to error in order to avoid expected plugin loading errors
     #format = logging.Formatter('%(name)s: %(message)s')
