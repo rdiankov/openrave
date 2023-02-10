@@ -83,13 +83,13 @@ uintptr_t TripleBufferedSharedMemory::get_writable() const noexcept {
 
 /// TripleBufferedSharedIOMemory
 
-TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize, std::size_t readsize, std::string shmpath)
+TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize, std::size_t readsize, std::string path)
     : _totalsize((writesize + readsize) * 4) // Zephyr seems to choke on sizes that are not strict powers of 2.
     , _writesize(writesize)
     , _readsize(readsize)
-    , _shmpath(std::move(shmpath))
+    , _path(std::move(path))
     , _mmap(NULL) {
-    auto shmfd = FileDescriptor(shm_open, _shmpath.c_str(), O_RDWR | O_CREAT, S_IRWXU);
+    auto shmfd = FileDescriptor(open, _path.c_str(), O_RDWR, S_IRWXU);
     if (!shmfd) {
         throw std::runtime_error("Failed to shm_open: "s + strerror(errno));
     }
@@ -98,10 +98,10 @@ TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize
         throw std::runtime_error("Failed to ftruncate ivshmem: "s + strerror(errno));
     }
     _mmap = ::mmap(NULL, _totalsize, PROT_READ | PROT_WRITE, MAP_SHARED, shmfd.get(), 0);
-    RAVELOG_INFO("Base mapped address is %p\n", _mmap);
     if (_mmap == MAP_FAILED) {
         throw std::runtime_error("Failed to map memory of ivshmem: "s + strerror(errno));
     }
+    RAVELOG_INFO("Base mapped address is %p\n", _mmap);
 
     // Compute the starting write buffer address offsets
     uintptr_t write_present_offset = PTR_SIZE * 8; // Eight values: 3 for write, 3 for read, 2 for page sizes.
@@ -129,14 +129,14 @@ TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize
     ::memcpy(&offset[7], &readsize,  PTR_SIZE);
 }
 
-TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t size, const std::string& shmpath)
-    : TripleBufferedSharedIOMemory(size, size, shmpath) {}
+TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t size, const std::string& path)
+    : TripleBufferedSharedIOMemory(size, size, path) {}
 
 TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(TripleBufferedSharedIOMemory&& other) noexcept
     : _totalsize(other._totalsize)
     , _writesize(other._writesize)
     , _readsize(other._readsize)
-    , _shmpath(std::move(_shmpath))
+    , _path(std::move(_path))
     , _mmap(other._mmap)
 {
     other._mmap = NULL;
@@ -146,7 +146,7 @@ TripleBufferedSharedIOMemory::~TripleBufferedSharedIOMemory() noexcept {
     if (_mmap) {
         ::munmap(_mmap, _totalsize);
     }
-    ::shm_unlink(_shmpath.c_str());
+    ::shm_unlink(_path.c_str());
 }
 
 void TripleBufferedSharedIOMemory::write_ready() noexcept {

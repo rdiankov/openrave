@@ -14,11 +14,9 @@
 
 #include "triple_buffered_shared_memory.hpp"
 #include "ivshmem_server.hpp"
+#include "uio_server.hpp"
 
 namespace ivshmem {
-
-#define START_TIMING_OPT(statistics, label, options, isRobot);           \
-    START_TIMING(statistics, boost::str(boost::format("%s,%x,%d")%label%options%isRobot))
 
 typedef FCLSpace::FCLKinBodyInfoConstPtr FCLKinBodyInfoConstPtr;
 typedef FCLSpace::FCLKinBodyInfoPtr FCLKinBodyInfoPtr;

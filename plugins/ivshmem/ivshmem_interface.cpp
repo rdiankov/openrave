@@ -91,7 +91,7 @@ const std::list<EnvironmentBase::CollisionCallbackFn>& IVShMemInterface::Collisi
 
 IVShMemInterface::IVShMemInterface(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
     : OpenRAVE::CollisionCheckerBase(penv)
-    , _shmem(1 * 1024 * 1024)
+    , _shmem(1 * 1024 * 1024, 1 * 1024 * 1024, UIOServer::UIO_FILE_PATH_2) // TODO: The available size may be smaller on the actual device.
     , _ivshmem_server()
     , _query_id(1)
     , _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")

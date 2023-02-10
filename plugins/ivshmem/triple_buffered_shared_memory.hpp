@@ -64,7 +64,7 @@ private:
     std::size_t _totalsize;
     std::size_t _writesize;
     std::size_t _readsize;
-    std::string _shmpath;
+    std::string _path;
     void* _mmap;
 };
 
