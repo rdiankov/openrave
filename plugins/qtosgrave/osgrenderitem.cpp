@@ -106,12 +106,21 @@ public:
     }
     virtual void apply(osg::Node &node) {
         if( !done ) {
-            if( &node == _osgSceneRoot.get() ) {
+            std::vector<OSGNodePtr>::const_iterator itNode = std::find(_seenNodes.begin(), _seenNodes.end(), &node);
+            if ( itNode != _seenNodes.end() ) {
+                // node path is a cycle, so set world coordinate to identity since there is no root node
+                wcMatrix.makeIdentity();
+                done = true;
+                _seenNodes.clear();
+            }
+            else if( &node == _osgSceneRoot.get() ) {
                 // found the path, so get the world coordinate system
                 wcMatrix.set( osg::computeLocalToWorld(getNodePath()));
                 done = true;
+                _seenNodes.clear();
             }
             else {
+                _seenNodes.emplace_back(&node);
                 traverse(node);
             }
         }
@@ -120,6 +129,7 @@ public:
     void Reset() {
         done = false;
         wcMatrix.makeIdentity();
+        _seenNodes.clear();
     }
 
     bool IsDone() {
@@ -129,6 +139,7 @@ public:
     osg::Matrix wcMatrix;
 private:
     OSGNodePtr _osgSceneRoot;
+    std::vector<OSGNodePtr> _seenNodes;
     bool done;
 };
 
