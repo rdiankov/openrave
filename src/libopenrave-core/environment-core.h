@@ -3002,14 +3002,14 @@ public:
                 }
 
                 if( !bChanged ) {
-                    dReal dist = TransformDistanceFast(pInitBody->GetTransform(), pKinBodyInfo->_transform * pInitBody->_baseLinkRelativeTransform);
+                    dReal dist = TransformDistanceFast(pInitBody->GetTransform(), pKinBodyInfo->_transform);
                     if( dist > 1e-7 ) {
                         bChanged = true;
                     }
                 }
 
                 if( bChanged ) {
-                    pInitBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform * pInitBody->_baseLinkRelativeTransform, KinBody::CLA_Nothing);
+                    pInitBody->SetDOFValues(vDOFValues, pKinBodyInfo->_transform, KinBody::CLA_Nothing);
                 }
             }
         }

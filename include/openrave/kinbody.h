@@ -2644,7 +2644,7 @@ private:
 
     /// queries the transfromation of the first link of the body
     inline const Transform GetTransform() const {
-        return _veclinks.size() > 0 ? _veclinks.front()->GetTransform() : Transform();
+        return _veclinks.size() > 0 ? _veclinks.front()->GetTransform() * _invBaseLinkInBodyTransform : Transform();
     }
 
     /// \brief Set the velocity of the base link, rest of links are set to a consistent velocity so entire robot moves correctly.
@@ -3481,7 +3481,8 @@ protected:
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
     boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
-    Transform _baseLinkRelativeTransform; ///< the relative transform between body frame and base link, this transform is built into GetTransform() but we need to store it separately for ExtractInfo() to get back the original base link transform
+    Transform _baseLinkInBodyTransform; ///< the transform of the base link in the body coordinate frame. The body transform returned is baselink->GetTransform() * _baseLinkInBodyTransform.inverse(). When setting a transform, it is GetTransform() * _baseLinkInBodyTransform
+    Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup
 
 private:
     mutable std::string __hashkinematics;

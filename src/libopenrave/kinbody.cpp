@@ -767,7 +767,11 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
     _name = info._name;
     _referenceUri = info._referenceUri;
     if( info._vLinkInfos.size() > 0 ) {
-        _baseLinkRelativeTransform = info._vLinkInfos[0]->GetTransform();
+        _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
+        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
+    }
+    else {
+        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
     }
 
     FOREACH(it, info._mReadableInterfaces) {
@@ -1363,13 +1367,14 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
 }
 
 // like apply transform except everything is relative to the first frame
-void KinBody::SetTransform(const Transform& trans)
+void KinBody::SetTransform(const Transform& bodyTransform)
 {
     if( _veclinks.size() == 0 ) {
         return;
     }
+    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
     Transform tbaseinv = _veclinks.front()->GetTransform().inverse();
-    Transform tapply = trans * tbaseinv;
+    Transform tapply = baseLinkTransform * tbaseinv;
     FOREACH(itlink, _veclinks) {
         (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
     }
@@ -2053,13 +2058,14 @@ void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
     }
 }
 
-void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, uint32_t checklimits)
+void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& bodyTransform, uint32_t checklimits)
 {
     if( _veclinks.size() == 0 ) {
         return;
     }
-    Transform tbase = transBase*_veclinks.at(0)->GetTransform().inverse();
-    _veclinks.at(0)->SetTransform(transBase);
+    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
+    Transform tbase = baseLinkTransform*_veclinks.at(0)->GetTransform().inverse();
+    _veclinks.at(0)->SetTransform(baseLinkTransform);
 
     // apply the relative transformation to all links!! (needed for passive joints)
     for(size_t i = 1; i < _veclinks.size(); ++i) {
@@ -5987,12 +5993,11 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    // GetTransform() = info._transform * _baseLinkRelativeTransform
-    info._transform = GetTransform() * _baseLinkRelativeTransform.inverse();
+    info._transform = GetTransform();
 
     // in order for link transform comparision to make sense
     KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
-    SetTransform(_baseLinkRelativeTransform); // so that base link is at exactly _baseLinkRelativeTransform
+    SetTransform(Transform()); // so that base link is at exactly _baseLinkInBodyTransform
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
 
@@ -6097,9 +6102,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         updateFromInfoResult = UFIR_Success;
     }
     if( info._vLinkInfos.size() > 0 ) {
-        _baseLinkRelativeTransform = info._vLinkInfos[0]->GetTransform();
-    } else {
-        _baseLinkRelativeTransform = Transform();
+        _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
+        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
+    }
+    else {
+        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
     }
 
     // need to avoid checking links and joints belonging to connected bodies
@@ -6163,7 +6170,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             // if any link has its transform field set, we need to set zero configuration before comparison
             if( (*itLinkInfo)->IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
                 stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
-                SetTransform(_baseLinkRelativeTransform); // so that base link is at exactly _baseLinkRelativeTransform
+                SetTransform(Transform());
                 vector<dReal> vZeros(GetDOF(), 0);
                 SetDOFValues(vZeros, KinBody::CLA_Nothing);
                 break;
@@ -6203,7 +6210,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
     // transform
     if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) || (info._vLinkInfos.size() > 0 && info._vLinkInfos[0]->IsModifiedField(KinBody::LinkInfo::LIF_Transform)) ) {
-        Transform bodyTransform = info._transform * _baseLinkRelativeTransform;
+        Transform bodyTransform = info._transform * _invBaseLinkInBodyTransform;
         if( GetTransform().CompareTransform(bodyTransform, g_fEpsilon) ) {
             SetTransform(bodyTransform);
             updateFromInfoResult = UFIR_Success;
