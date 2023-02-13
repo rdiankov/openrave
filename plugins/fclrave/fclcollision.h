@@ -2,15 +2,17 @@
 #ifndef OPENRAVE_FCL_COLLISION
 #define OPENRAVE_FCL_COLLISION
 
+#include <boost/bind/bind.hpp>
 #include <boost/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/utils.h>
-#include <boost/function_output_iterator.hpp>
 
 #include "fclspace.h"
 #include "fclmanagercache.h"
 
 #include "fclstatistics.h"
+
+using namespace boost::placeholders;
 
 #define FCLRAVE_CHECKPARENTLESS
 

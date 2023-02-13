@@ -19,7 +19,9 @@
 #include <condition_variable>
 #include <mutex>
 #include <cmath>
+#include <boost/bind/bind.hpp>
 
+using namespace boost::placeholders;
 
 #ifdef QHULL_FOUND
 

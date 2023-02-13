@@ -1750,12 +1750,31 @@ public:
                                         if( pchild->getElementName() == std::string("controllerType") ) {
                                             jci.controllerType = pchild->getCharData();
                                         }
-                                        else if( pchild->getElementName() == std::string("robotControllerAxisIndex") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                        else {
+                                            int ijointaxis = -1;
+                                            try {
+                                                ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            }
+                                            catch(const boost::bad_lexical_cast&) {
+                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"));
                                                 continue;
                                             }
-                                            jci.robotControllerAxisIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                RAVELOG_VERBOSE_FORMAT("skip reading axis at index %d since joint dof size is %d", ijointaxis%pjoint->GetDOF());
+                                                continue;
+                                            }
+                                            if( pchild->getElementName() == std::string("robotControllerAxisIndex") ) {
+                                                jci.robotControllerAxisIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisMult") ) {
+                                                jci.robotControllerAxisMult.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisOffset") ) {
+                                                jci.robotControllerAxisOffset.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisProductCode") ) {
+                                                jci.robotControllerAxisProductCode.at(ijointaxis) = std::string(pchild->getCharData());
+                                            }
                                         }
                                     }
                                     continue;
@@ -1768,51 +1787,43 @@ public:
                                         daeElementRef pchild = pelt->getChildren()[ieltcontent];
                                         if( pchild->getElementName() == std::string("deviceType") ) {
                                             jci.deviceType = boost::lexical_cast<int>(pchild->getCharData());
-                                        }
-                                        else if( pchild->getElementName() == std::string("moveIONames") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                        } else {
+                                            int ijointaxis = -1;
+                                            try {
+                                                ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            }
+                                            catch(const boost::bad_lexical_cast&) {
+                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"));
+                                                continue;
+                                            }
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.moveIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("upperLimitIONames") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            if( pchild->getElementName() == std::string("moveIONames") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.moveIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.upperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("upperLimitSensorIsOn") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            else if( pchild->getElementName() == std::string("upperLimitIONames") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.upperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.upperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("lowerLimitIONames") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            else if( pchild->getElementName() == std::string("upperLimitSensorIsOn") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.upperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.lowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("lowerLimitSensorIsOn") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            else if( pchild->getElementName() == std::string("lowerLimitIONames") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.lowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.lowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                            else if( pchild->getElementName() == std::string("lowerLimitSensorIsOn") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.lowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                            }
                                         }
                                     }
                                     continue;

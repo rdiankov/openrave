@@ -21,6 +21,9 @@
 #include <mutex>
 #include <openrave/planningutils.h>
 #include <cstdlib>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -63,7 +66,7 @@ public:
             if( bInit )
                 Close();
         }
-        bool Accept(int server_sockfd)
+        bool Accept(int server_sockfd_)
         {
             if( bInit )
                 Close();
@@ -71,14 +74,14 @@ public:
             bool success = true;
 
             //signal(SIGCHLD, SIG_IGN);
-            //RAVELOG(L"server waiting for connection, %d\n", server_sockfd);
+            //RAVELOG(L"server waiting for connection, %d\n", server_sockfd_);
 
             //	char str[sizeof(server_address)+1];
             //	memcpy(str, &server_address, sizeof(server_address));
             //	str[sizeof(server_address)] = 0;
 
             client_len = sizeof(client_address);
-            client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_address, (socklen_t*)&client_len);
+            client_sockfd = accept(server_sockfd_, (struct sockaddr *)&client_address, (socklen_t*)&client_len);
 
             if( client_sockfd == -1 ) {
                 success = false;

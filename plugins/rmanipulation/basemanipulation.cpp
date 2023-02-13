@@ -16,6 +16,9 @@
 #include "commonmanipulation.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 class BaseManipulation : public ModuleBase
 {

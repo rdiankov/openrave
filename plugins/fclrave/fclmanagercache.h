@@ -233,7 +233,7 @@ public:
                 continue;
             }
 
-            bool bsetUpdateStamp = false;
+            //bool bsetUpdateStamp = false;
             _linkEnableStatesBitmasks = attachedBody.GetLinkEnableStatesMasks();
             vcolobjs.clear(); // reset any existing collision objects
             vcolobjs.resize(attachedBody.GetLinks().size(),CollisionObjectPtr());
@@ -255,7 +255,7 @@ public:
                                 RAVELOG_WARN_FORMAT("env=%s body %s link %s is added multiple times", pbody->GetEnv()->GetNameId()%pbody->GetName()%link.GetName());
                             }
                         }
-                        bsetUpdateStamp = true;
+                        //bsetUpdateStamp = true;
                     }
                     else {
                         OpenRAVE::DisableLinkStateBit(_linkEnableStatesBitmasks, linkIndex);

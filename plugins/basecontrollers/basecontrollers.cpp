@@ -60,6 +60,10 @@ const std::string& BaseControllersPlugin::GetPluginName() const
     return _pluginname;
 }
 
+#if !OPENRAVE_STATIC_PLUGINS
+
 OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
     return new BaseControllersPlugin();
 }
+
+#endif // OPENRAVE_STATIC_PLUGINS

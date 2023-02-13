@@ -144,7 +144,7 @@ public:
         T firsterror2 = totalerror21;
         T besterror2 = totalerror21;
         _lasterror2 = totalerror21;
-        int armdof = manip.GetArmDOF();
+        //int armdof = manip.GetArmDOF();
         std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
         std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
         bool bSuccess = false;

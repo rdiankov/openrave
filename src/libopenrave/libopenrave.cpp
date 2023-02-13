@@ -31,6 +31,7 @@
 #include <locale>
 #include <set>
 
+#include "plugindatabase_virtual.h"
 #include "plugindatabase.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -444,7 +445,11 @@ public:
         }
 
         // since initialization depends on _pdatabase, have pdatabase be local until it is complete
+#if OPENRAVE_STATIC_PLUGINS
+        boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<StaticRaveDatabase>();
+#else
         boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<DynamicRaveDatabase>();
+#endif // OPENRAVE_STATIC_PLUGINS
         pdatabase->Init();
 
         char* phomedir = getenv("OPENRAVE_HOME"); // getenv not thread-safe?

@@ -106,18 +106,27 @@ void JointControlInfo_RobotController::Reset()
 {
     controllerType.clear();
     robotControllerAxisIndex[0] = robotControllerAxisIndex[1] = robotControllerAxisIndex[2] = -1;
+    robotControllerAxisMult[0] = robotControllerAxisMult[1] = robotControllerAxisMult[2] = 1.0;
+    robotControllerAxisOffset[0] = robotControllerAxisOffset[1] = robotControllerAxisOffset[2] = 0.0;
+    robotControllerAxisProductCode[0] = robotControllerAxisProductCode[1] = robotControllerAxisProductCode[2] = "";
 }
 
 void JointControlInfo_RobotController::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     orjson::SetJsonValueByKey(value, "controllerType", controllerType, allocator);
     orjson::SetJsonValueByKey(value, "robotControllerAxisIndex", robotControllerAxisIndex, allocator);
+    orjson::SetJsonValueByKey(value, "robotControllerAxisMult", robotControllerAxisMult, allocator);
+    orjson::SetJsonValueByKey(value, "robotControllerAxisOffset", robotControllerAxisOffset, allocator);
+    orjson::SetJsonValueByKey(value, "robotControllerAxisProductCode", robotControllerAxisProductCode, allocator);
 }
 
 void JointControlInfo_RobotController::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
     orjson::LoadJsonValueByKey(value, "controllerType", controllerType);
     orjson::LoadJsonValueByKey(value, "robotControllerAxisIndex", robotControllerAxisIndex);
+    orjson::LoadJsonValueByKey(value, "robotControllerAxisMult", robotControllerAxisMult);
+    orjson::LoadJsonValueByKey(value, "robotControllerAxisOffset", robotControllerAxisOffset);
+    orjson::LoadJsonValueByKey(value, "robotControllerAxisProductCode", robotControllerAxisProductCode);
 }
 
 void JointControlInfo_IO::Reset()
@@ -1187,6 +1196,12 @@ dReal KinBody::Joint::GetVelocity(int axis) const
 
 void KinBody::Joint::_GetVelocities(dReal* pVelocities, const std::pair<Vector,Vector>& linkparentvelocity, const std::pair<Vector,Vector>& linkchildvelocity) const
 {
+    if( IsStatic() ) {
+        for(int i = 0; i < GetDOF(); ++i) {
+            pVelocities[i] = 0;
+        }
+        return;
+    }
     if( GetDOF() == 1 ) {
         pVelocities[0] = _GetVelocity(0, linkparentvelocity, linkchildvelocity);
         return;
@@ -1226,6 +1241,9 @@ void KinBody::Joint::_GetVelocities(dReal* pVelocities, const std::pair<Vector,V
 
 dReal KinBody::Joint::_GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const
 {
+    if( IsStatic() ) {
+        return 0;
+    }
     const Transform& linkparenttransform = _attachedbodies[0]->_info._t;
     const Transform& linkchildtransform = _attachedbodies[1]->_info._t;
     Vector quatdelta = quatMultiply(linkparenttransform.rot,_tLeft.rot);
