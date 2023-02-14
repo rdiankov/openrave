@@ -97,6 +97,7 @@ TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize
     if (ret == -1) {
         throw std::runtime_error("Failed to ftruncate ivshmem: "s + strerror(errno));
     }
+    RAVELOG_INFO("Trying to map %lu bytes of shared memory...", _totalsize);
     _mmap = ::mmap(NULL, _totalsize, PROT_READ | PROT_WRITE, MAP_SHARED, shmfd.get(), 0);
     if (_mmap == MAP_FAILED) {
         throw std::runtime_error("Failed to map memory of ivshmem: "s + strerror(errno));
