@@ -1415,6 +1415,8 @@ class IKFastSolver(AutoReloader):
                 name = str('j%d')%idof
                 self.axismap[name] = axis
                 self.axismapinv[idof] = name
+        
+        sys.setrecursionlimit(3000) # needed for non-intersecting axes/5D IK robots
     
     def _CheckPreemptFn(self, msg=u'', progress=0.25):
         """progress is a value from [0,1] where 0 is just starting and 1 is complete 
