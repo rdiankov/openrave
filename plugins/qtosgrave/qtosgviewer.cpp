@@ -2313,7 +2313,15 @@ void QtOSGViewer::_CloseGraphHandle(OSGSwitchPtr handle)
 void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t)
 {
     // have to convert to smart pointers so that we can get exceptions thrown rather than dereferencing null pointers
-    SetMatrixTransform(*OSGMatrixTransformPtr(OSGTransformPtr(OSGNodePtr(handle->getChild(0))->asTransform())->asMatrixTransform()), t);
+    if( handle->getNumChildren() > 0 ) {
+        OSGNodePtr osgnode = handle->getChild(0);
+        if( !!osgnode ) {
+            OSGTransformPtr osgtransform = osgnode->asTransform();
+            if( !!osgtransform ) {
+                SetMatrixTransform(*OSGMatrixTransformPtr(osgtransform->asMatrixTransform()), t);
+            }
+        }
+    }
 }
 
 void QtOSGViewer::_SetGraphShow(OSGSwitchPtr handle, bool bShow)
