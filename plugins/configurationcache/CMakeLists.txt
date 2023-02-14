@@ -8,7 +8,7 @@ install(TARGETS configurationcache DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} C
 
 if (OPT_PYTHON)
     add_library(openravepy_configurationcache SHARED openravepy_configurationcache.cpp)
-    target_link_libraries(openravepy_configurationcache PRIVATE boost_assertion_failed PUBLIC configurationcache openravepy_int openravepy2_meta)
+    target_link_libraries(openravepy_configurationcache PRIVATE boost_assertion_failed PUBLIC configurationcache openravepy2_int openravepy2_meta)
     if (USE_PYBIND11_PYTHON_BINDINGS)
         target_compile_definitions(openravepy_configurationcache PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy_configurationcache PRIVATE "-fvisibility=hidden")
@@ -19,7 +19,7 @@ endif()
 
 if (OPT_PYTHON3)
     add_library(openravepy3_configurationcache SHARED openravepy_configurationcache.cpp)
-    target_link_libraries(openravepy3_configurationcache PRIVATE boost_assertion_failed PUBLIC configurationcache openravepy_int openravepy3_meta)
+    target_link_libraries(openravepy3_configurationcache PRIVATE boost_assertion_failed PUBLIC configurationcache openravepy3_int openravepy3_meta)
     if (USE_PYBIND11_PYTHON_BINDINGS)
         target_compile_definitions(openravepy3_configurationcache PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy3_configurationcache PRIVATE "-fvisibility=hidden")
