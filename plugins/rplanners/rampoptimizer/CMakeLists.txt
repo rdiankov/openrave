@@ -8,7 +8,7 @@ add_dependencies(rampoptimizer interfacehashes_target)
 
 if (OPT_PYTHON)
     add_library(openravepy_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
-    target_link_libraries(openravepy_rampoptimizer PRIVATE boost_assertion_failed PUBLIC rampoptimizer openravepy2_int openravepy2_meta)
+    target_link_libraries(openravepy_rampoptimizer PRIVATE boost_assertion_failed PUBLIC rampoptimizer openravepy_int openravepy2_meta)
     if (USE_PYBIND11_PYTHON_BINDINGS)
         target_compile_definitions(openravepy_rampoptimizer PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy_rampoptimizer PRIVATE "-fvisibility=hidden")

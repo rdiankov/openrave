@@ -12,7 +12,7 @@ add_dependencies(piecewisepolynomials interfacehashes_target)
 
 if (OPT_PYTHON)
     add_library(openravepy_piecewisepolynomials SHARED openravepy_piecewisepolynomials.cpp)
-    target_link_libraries(openravepy_piecewisepolynomials PRIVATE boost_assertion_failed PUBLIC piecewisepolynomials openravepy2_int openravepy2_meta)
+    target_link_libraries(openravepy_piecewisepolynomials PRIVATE boost_assertion_failed PUBLIC piecewisepolynomials openravepy_int openravepy2_meta)
     if (USE_PYBIND11_PYTHON_BINDINGS)
         target_compile_definitions(openravepy_piecewisepolynomials PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy_piecewisepolynomials PRIVATE "-fvisibility=hidden")
