@@ -84,7 +84,7 @@ uintptr_t TripleBufferedSharedMemory::get_writable() const noexcept {
 /// TripleBufferedSharedIOMemory
 
 TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize, std::size_t readsize, std::string path)
-    : _totalsize((writesize + readsize) * 4) // Zephyr seems to choke on sizes that are not strict powers of 2.
+    : _totalsize((writesize + readsize)) // Zephyr seems to choke on sizes that are not strict powers of 2.
     , _writesize(writesize)
     , _readsize(readsize)
     , _path(std::move(path))
@@ -97,7 +97,7 @@ TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize
     if (ret == -1) {
         throw std::runtime_error("Failed to ftruncate ivshmem: "s + strerror(errno));
     }
-    RAVELOG_INFO("Trying to map %lu bytes of shared memory...", _totalsize);
+    RAVELOG_INFO("Trying to map %lu bytes of shared memory...\n", _totalsize);
     _mmap = ::mmap(NULL, _totalsize, PROT_READ | PROT_WRITE, MAP_SHARED, shmfd.get(), 0);
     if (_mmap == MAP_FAILED) {
         throw std::runtime_error("Failed to map memory of ivshmem: "s + strerror(errno));
