@@ -45,17 +45,17 @@ public:
     TripleBufferedSharedIOMemory& operator=(TripleBufferedSharedIOMemory&&) = default;
     operator bool() const noexcept { return !!_mmap; }
 
+    // Fetch the base address for examination. Not intended for the contents to be writable.
+    const void* const base_address() const noexcept { return _mmap; }
+
     // Finish writing the current buffer, submitting it for swapping.
-    void write_ready() noexcept;
+    void write_ready(size_t size) noexcept;
     // Fetch the current buffer for writing.
     uintptr_t get_writable() const noexcept;
     std::size_t writable_size() const noexcept { return _writesize; }
 
-    // DESIGN CONCERN: Read semantics shouldn't need to work the same way as write semantics,
-    // since we can just get a new buffer and read it on demand, which is a little different from writing.
-
-    // Finish reading the current buffer, submitting it for swapping.
-    void read_ready() noexcept;
+    // USAGE NOTE: For reading, ready the buffer BEFORE reading (opposite of write, where you write, and then ready the buffer)
+    void read_ready(size_t size) noexcept;
     // Fetch the current buffer for reading.
     uintptr_t get_readable() const noexcept;
     std::size_t readable_size() const noexcept { return _readsize; }

@@ -1,8 +1,8 @@
 #include <type_traits>
 #include <fcl/shape/geometric_shapes.h>
 
-#include "serialization.hpp"
 #include <openrave/openrave.h>
+#include "serialization.hpp"
 
 static_assert(std::is_same<fcl::FCL_REAL, double>::value, "FCL_REAL is not 64-bit float!");
 static_assert(sizeof(void*) == 8, "Size of pointer is not 8 bytes!");
@@ -174,15 +174,15 @@ uint64_t deserialize(const uint8_t* const mem, fcl::Contact& v) {
     uint64_t offset = 0;
     offset = deserialize<decltype(v.b1)>(mem + offset, v.b1);
     offset = deserialize<decltype(v.b2)>(mem + offset, v.b2);
-    offset = deserialize<decltype(v.normal)>(mem + offset, v.normal);
-    offset = deserialize<decltype(v.pos)>(mem + offset, v.pos);
+    offset = deserialize(mem + offset, v.normal);
+    offset = deserialize(mem + offset, v.pos);
     offset = deserialize<decltype(v.penetration_depth)>(mem + offset, v.penetration_depth);
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::CostSource& v) {
     uint64_t offset = 0;
-    offset = deserialize<decltype(v.aabb_min)>(mem + offset, v.aabb_min);
-    offset = deserialize<decltype(v.aabb_max)>(mem + offset, v.aabb_max);
+    offset = deserialize(mem + offset, v.aabb_min);
+    offset = deserialize(mem + offset, v.aabb_max);
     offset = deserialize<decltype(v.cost_density)>(mem + offset, v.cost_density);
     offset = deserialize<decltype(v.total_cost)>(mem + offset, v.total_cost);
     return offset;
@@ -194,14 +194,14 @@ uint64_t deserialize(const uint8_t* const mem, fcl::CollisionResult& v) {
     offset += deserialize<size_t>(mem + offset, numContacts);
     while (numContacts-- > 0) {
         fcl::Contact contact;
-        offset += deserialize<fcl::Contact>(mem + offset, contact);
+        offset += deserialize(mem + offset, contact);
         v.addContact(std::move(contact));
     }
     size_t numCostSource = 0;
     offset += deserialize<size_t>(mem + offset, numCostSource);
     while (numCostSource-- > 0) {
         fcl::CostSource costSource;
-        offset += deserialize<fcl::CostSource>(mem + offset, costSource);
+        offset += deserialize(mem + offset, costSource);
         v.addCostSource(std::move(costSource), std::numeric_limits<size_t>::max());
     }
     return offset;

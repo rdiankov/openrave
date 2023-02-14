@@ -34,6 +34,7 @@
 #include <cstdarg>
 #include <functional>
 #include <stdexcept>
+#include <thread>
 
 #include <openrave/config.h>
 #include <openrave/logging.h>
@@ -48,20 +49,6 @@
 
 using namespace std::literals;
 
-// Add a file descriptor to watch in epoll.
-// Returns true if successful, false if -1 occurred.
-static bool AddToEpoll(int fd, int epoll_fd, void* data, uint32_t flags = EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLERR | EPOLLHUP) noexcept {
-    struct epoll_event ev;
-    ev.events = flags;
-    ev.data.fd = fd;
-    ev.data.ptr = data;
-    return ::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ev.data.fd, &ev) != -1;
-}
-
-static bool AddToEpoll(const FileDescriptor& fd, const FileDescriptor& ep_fd, void* data, uint32_t flags = EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLERR | EPOLLHUP) noexcept {
-    return AddToEpoll(fd.get(), ep_fd.get(), data, flags);
-}
-
 static bool RemoveFromEpoll(int fd, int ep_fd) {
     return ::epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, NULL) != -1;
 }
@@ -72,11 +59,13 @@ static bool RemoveFromEpoll(const FileDescriptor& fd, const FileDescriptor& ep_f
 
 UIOServer::UIOServer(std::string uio_device_path)
     : _stop(false) {
-        RAVELOG_INFO("Starting other ivshmem server, built on %s", __TIMESTAMP__);
+    RAVELOG_INFO("Starting other UIO server, built on %s\n", __TIMESTAMP__);
+    _peer.fd = FileDescriptor(::open, UIO_FILE_PATH_0, O_RDWR);
+    _peer.id = 0; // Hard-coded, rtlinux is VM 1 and peer Zephyr is VM 0.
 }
 
 UIOServer::UIOServer(UIOServer&& other) noexcept
-    : _vpeer(std::move(other._vpeer)) {
+    : _peer(std::move(other._peer)) {
     _stop.store(other._stop.load());
     other._stop = true;
 }
@@ -90,88 +79,82 @@ void UIOServer::Thread() {
     if (!_uio_fd) {
         throw std::runtime_error("Failed to create fd for "s +  UIO_DEV_NAME + ": "s + strerror(errno));
     }
+
+    /** Set up epoll **/
+    auto ep_fd = FileDescriptor(::epoll_create, 1);
+    if (!ep_fd) {
+        throw std::runtime_error("Failed to create epoll fd: "s + strerror(errno));
+    }
+
     auto evt_fd = FileDescriptor(::eventfd, 0, 0);
     if (!evt_fd) {
         throw std::runtime_error("Failed to create eventfds: "s + strerror(errno));
     }
 
-    /** Set up epoll **/
-    static constexpr size_t MAX_EPOLL_EVENTS = 4;
-    auto ep_fd = FileDescriptor(epoll_create, MAX_EPOLL_EVENTS);
-
-    uio_irq_data data{0};
-    data.fd = 0;
-    data.vector = ep_fd.get();
-    // Adding the UIO fd to epoll allows us to detect when new guests come online.
-    if (!AddToEpoll(evt_fd, ep_fd, &data, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
-        throw std::runtime_error("Failed to register epoll event: "s + strerror(errno));
+    uio_irq_data irq_data{0};
+    irq_data.fd = evt_fd.get();
+    irq_data.vector = 0;
+    struct epoll_event irq_ev{0};
+    irq_ev.events = EPOLLIN;
+    irq_ev.data.ptr = &irq_data;
+    if (::epoll_ctl(ep_fd.get(), EPOLL_CTL_ADD, evt_fd.get(), &irq_ev) == -1) {
+        throw std::runtime_error("Failed to register epoll for eventfd: "s + strerror(errno));
     }
-    if (::ioctl(_uio_fd.get(), UIO_WRITE, &data) < 0) {
+
+    // Trigger an irq event if it is written to.
+    if (::ioctl(_uio_fd.get(), UIO_WRITE, &irq_data) < 0) {
         throw std::runtime_error("Failed to ioctl!");
     }
-
-    // Add virtual peer to allow us to handle signals coming from guests
-    //if (!AddToEpoll(_vpeer.vectors[0], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
-    //    throw std::runtime_error("Failed to register _vpeer.vectors[1] with epoll event: "s + strerror(errno));
-    //}
-    //if (!AddToEpoll(_vpeer.vectors[1], ep_fd, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
-    //    throw std::runtime_error("Failed to register _vpeer.vectors[1] with epoll event: "s + strerror(errno));
-    //}
 
     // Add a signalfd to epoll as part of exit criteria.
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGINT);
     auto sig_fd = FileDescriptor(signalfd, -1, &mask, 0);
-    if (!AddToEpoll(sig_fd, ep_fd, NULL, EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP)) {
-        throw std::runtime_error("Failed to register epoll event: "s + strerror(errno));
+    struct epoll_event sig_ev{0};
+    sig_ev.events = EPOLLIN | EPOLLPRI | EPOLLERR | EPOLLRDHUP;
+    sig_ev.data.fd = sig_fd.get();
+    if (::epoll_ctl(ep_fd.get(), EPOLL_CTL_ADD, sig_fd.get(), &sig_ev) == -1) {
+        throw std::runtime_error("Failed to register epoll for signalfd: "s + strerror(errno));
     }
 
-    ::epoll_event events[MAX_EPOLL_EVENTS];
-
-    // ivshmem only provides 16 bits of client ID.
-    // Start from 1 because 0 is reserved by the virtual peer.
-    //int16_t guest_id = 1;
-
+    ::epoll_event epevent{0};
     while (!_stop) {
-        int num_fds = ::epoll_wait(ep_fd.get(), events, MAX_EPOLL_EVENTS, -1);
-        if (num_fds <= 0) {
+        int num_fds = ::epoll_wait(ep_fd.get(), &epevent, 1, 500);
+        if (num_fds == -1) {
             throw std::runtime_error("Error caught in epoll_wait: "s + strerror(errno));
         }
-        for (int i = 0; (i < num_fds) && !_stop; ++i) {
-            int fd = events[i].data.fd;
-            // Signal event, it's time to stop
-            if (fd == sig_fd.get()) {
-                _OnStop();
-                break;
+        // Signal event, it's time to stop
+        if (epevent.data.fd == sig_fd.get()) {
+            RAVELOG_INFO("Stop signal caught.");
+            Stop();
+            break;
+        }
+
+        // IRQ Event
+        if (epevent.data.ptr == &irq_data) {
+            eventfd_t event;
+            uio_irq_data* irq_ptr = static_cast<uio_irq_data*>(epevent.data.ptr);
+            if (::eventfd_read(irq_ptr->fd, &event) == -1) {
+                RAVELOG_ERROR("eventfd_read failed to read the correct number of bytes.");
+                continue;
             }
-            if (fd == _uio_fd.get()) {
-                eventfd_t event;
-                ::eventfd_read(static_cast<uio_irq_data*>(events[i].data.ptr)->fd, &event);
-                RAVELOG_INFO("[UIO] Received IRQ!");
-                _irq_cv.notify_one();
-            }
+            _sem.release();
         }
     }
 }
 
-void UIOServer::_InitFDs() {
-}
-
-void UIOServer::_NewGuest(int16_t guest_id) {
-    // TODO Not needed for now.
-}
-
-void UIOServer::_OnStop() {
-    RAVELOG_INFO("Stop signal caught.");
-    _stop.store(true);
+void UIOServer::Stop() {
+    _stop = true;
 }
 
 void UIOServer::InterruptPeer() const {
-    uint32_t* memptr = (uint32_t*)::mmap(NULL, IVSH_BAR0_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, _peer.fd, 0);
+    constexpr uint16_t vector = 0;
+    uint32_t* memptr = (uint32_t*)::mmap(NULL, IVSH_BAR0_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, _peer.fd.get(), 0);
     if (memptr == MAP_FAILED) {
+        ::munmap(memptr, IVSH_BAR0_SIZE);
         throw std::runtime_error("Failed to map memory for interrupt.");
     }
-    memptr[3] = (_peer.id << 16) | 0; // 0 is vector ID
+    memptr[3] = (static_cast<uint32_t>(_peer.id) << 16) | vector;
     ::munmap(memptr, IVSH_BAR0_SIZE);
 }

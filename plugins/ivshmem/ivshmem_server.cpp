@@ -73,7 +73,7 @@ IVShMemServer::IVShMemServer(std::string shmem_path)
     : _stop(false)
     , _shmem_path(std::move(shmem_path))
     , _sock_fd() {
-        RAVELOG_INFO("Starting other ivshmem server, built on %s", __TIMESTAMP__);
+        RAVELOG_INFO("Starting other ivshmem server, built on %s\n", __TIMESTAMP__);
 }
 
 IVShMemServer::IVShMemServer(IVShMemServer&& other) noexcept
@@ -144,7 +144,7 @@ void IVShMemServer::Thread() try {
                 if (fd == _vpeer.vectors[j].get()) {
                     if (events[i].events & EPOLLIN) {
                         uint64_t num_interrupts = 0;
-                        ssize_t bytes = ::read(fd, &num_interrupts, sizeof(num_interrupts));
+                        [[maybe_unused]] ssize_t bytes = ::read(fd, &num_interrupts, sizeof(num_interrupts));
                         RAVELOG_DEBUG("Vector %lu was interrupted %ld times.", j, num_interrupts);
                         _vpeer.vector_cvs[j].notify_one();
                         break;
@@ -310,7 +310,7 @@ void IVShMemServer::_NewGuest(int16_t guest_id) {
         }
     }
 
-    RAVELOG_INFO("Added new peer ID %d", peer.id);
+    RAVELOG_INFO("Added new peer ID %d\n", peer.id);
     _peers.emplace_back(std::move(peer));
 }
 
@@ -321,12 +321,12 @@ void IVShMemServer::_RemoveGuest(int16_t guest_id) {
     if (guestiter == _peers.end()) {
         return;
     }
-    RAVELOG_INFO("Removing guest ID %d", guest_id);
+    RAVELOG_INFO("Removing guest ID %d\n", guest_id);
     _peers.erase(guestiter);
 }
 
 void IVShMemServer::_OnStop() {
-    RAVELOG_INFO("Stop signal caught.");
+    RAVELOG_INFO("Stop signal caught.\n");
     _stop.store(true);
     for (std::condition_variable& cv : _vpeer.vector_cvs) {
         cv.notify_all();

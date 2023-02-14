@@ -97,7 +97,7 @@ IVShMemInterface::IVShMemInterface(OpenRAVE::EnvironmentBasePtr penv, std::istre
     , _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
     , _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
 {
-    _ivshmem_thread = std::thread(&IVShMemServer::Thread, &_ivshmem_server);
+    _ivshmem_thread = std::thread(&UIOServer::Thread, &_ivshmem_server);
     _bParentlessCollisionObject = false;
     _userdatakey = std::string("ivshmem") + boost::lexical_cast<std::string>(this);
     _fclspace = boost::make_shared<FCLSpace>(penv, _userdatakey);
@@ -258,7 +258,7 @@ void IVShMemInterface::RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
 
 bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
 {
-    RAVELOG_INFO("CheckCollision Kinbody Kinbody");
+    RAVELOG_INFO("CheckCollision Kinbody Kinbody\n");
     if( !!report ) {
         report->Reset(_options);
     }
@@ -293,10 +293,12 @@ bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pb
         body1Manager.GetManager()->distance(body2Manager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseDistance);
     };
 
+    // TODO
     // Block until a collision checker comes online.
-    _ivshmem_server.WaitVector(0, this->_collisoncheck_mutex, [this]() -> bool {
-        return this->_ivshmem_server.NumPeers() > 0;
-    });
+    //RAVELOG_INFO("Waiting for UIO server to finish init...\n");
+    //_ivshmem_server.WaitVector(this->_collisoncheck_mutex);
+    //RAVELOG_INFO("Done.\n");
+    RAVELOG_INFO("Skipping blocking.\n");
 
     body1Manager.GetManager()->collide(body2Manager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseCollision);
     return query._bCollision;
@@ -1131,8 +1133,12 @@ enum class QueryType : uint16_t {
 };
 
 // ===== Diverted collision functions
-std::size_t IVShMemInterface::collide(const fcl::CollisionObject* o1, const fcl::CollisionObject* o2, const fcl::CollisionRequest& request, fcl::CollisionResult& result)
+std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
+                                        const fcl::CollisionObject* o2,
+                                        const fcl::CollisionRequest& request,
+                                        fcl::CollisionResult& result)
 {
+    volatile const uintptr_t* const addresses = static_cast<const uintptr_t* const>(_shmem.base_address());
     uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id);
@@ -1140,19 +1146,22 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionObject* o1, const fcl:
     offset += ivshmem::serialize(write_addr + offset, *o1);
     offset += ivshmem::serialize(write_addr + offset, *o2);
     offset += ivshmem::serialize(write_addr + offset, request);
-    RAVELOG_INFO("Query %lu, wrote %lu bytes", _query_id++, offset);
-    _shmem.write_ready();
-    _ivshmem_server.InterruptPeer();
 
-    _ivshmem_server.WaitVector(0, this->_collisoncheck_mutex);
-    _shmem.read_ready();
-    offset = 0;
+    RAVELOG_INFO("Write ready.\n");
+    _shmem.write_ready(offset);
+    RAVELOG_INFO("Interrupt Peer.\n");
+    _ivshmem_server.InterruptPeer();
+    RAVELOG_INFO("Wait vector.\n");
+    _ivshmem_server.WaitVector();
+    RAVELOG_INFO("Read ready.\n");
+    _shmem.read_ready(offset);
+
     const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
     uint64_t query_id = 0; // returned query ID
-    offset = ivshmem::deserialize<uint64_t>(read_addr, query_id);
-
+    offset = 0;
+    offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);
     offset += ivshmem::deserialize(read_addr + offset, result);
-    RAVELOG_INFO("Query %lu, read %lu bytes", query_id, offset);
+    RAVELOG_INFO("Reading %lu bytes for query %lu. numcontacts: %lu\n", offset, query_id, result.numContacts());
     return result.numContacts();
 }
 
@@ -1169,8 +1178,8 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
     offset += ivshmem::serialize(write_addr + offset, o2);
     offset += ivshmem::serialize(write_addr + offset, tf2);
     offset += ivshmem::serialize(write_addr + offset, request);
-    RAVELOG_INFO("Query %lu, wrote %lu bytes", _query_id++, offset);
-    _shmem.write_ready();
+    RAVELOG_INFO("Query %lu, wrote %lu bytes\n", _query_id++, offset);
+    _shmem.write_ready(offset);
     _ivshmem_server.InterruptPeer();
 
     //uintptr_t read_addr = _shmem.get_readable();
@@ -1185,12 +1194,12 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
 
 void IVShMemInterface::exit()
 {
-    RAVELOG_INFO("Sending exit signal to collision checker...");
+    RAVELOG_INFO("Sending exit signal to collision checker...\n");
     uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id);
     offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::Exit));
-    _shmem.write_ready();
+    _shmem.write_ready(offset);
     _ivshmem_server.InterruptPeer();
 }
 

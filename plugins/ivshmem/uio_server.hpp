@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "fd.hpp"
+#include "semaphore.hpp"
 
 struct uio_irq_data {
 	int fd;
@@ -43,14 +44,19 @@ public:
     static constexpr const char* UIO_FILE_PATH_0 = "/sys/class/uio/uio0/device/resource0";
 
     // BAR 0 contains the following registers, interpreted as an array of 32-bit integers:
-    // int32_t[0] - R/W Interrupt Mask
-    // -------[1] - R/W Interrupt Status
-    // -------[2] - RO  IVPosition
-    // -------[3] - WO  Doorbell
-    // -------[4 onwards] - Reserved
-    // In the ACRN documentation, the offset to get the Doorbell is written as (IVSH_REG_DOORBELL >> 2)
-    // where IVSH_REG_DOORBELL = 12 (12th byte offset from 0) and (12 >> 2) evaluates to 3.
+    // uint32_t[0] - R/W Interrupt Mask
+    //         [1] - R/W Interrupt Status
+    //         [2] - RO  IVPosition
+    //         [3] - WO  Doorbell
+    //         [4+] - Reserved
+    // In the ACRN documentation, the offset to get the Doorbell is written as (IVSHMEM_DOORBELL_REG >> 2)
+    // The value written to the register is a combination of 16-bit shifted peer-ID ORed with the ID of the desired vector.
+    // https://projectacrn.github.io/latest/developer-guides/hld/ivshmem-hld.html
     static constexpr size_t      IVSH_BAR0_SIZE  = 256;
+    static constexpr uint32_t    IVSHMEM_IRQ_MASK_REG = 0x0;
+    static constexpr uint32_t    IVSHMEM_IRQ_STA_REG  = 0x4;
+    static constexpr uint32_t    IVSHMEM_IV_POS_REG   = 0x8;
+    static constexpr uint32_t    IVSHMEM_DOORBELL_REG = 0xC;
 
     // BAR1 holds MSI-X table and PBA (only ivshmem-doorbell)
     // This is not used at the moment.
@@ -83,17 +89,11 @@ public:
     // AKA trigger doorbell
     void InterruptPeer() const;
 
-    inline void WaitVector(std::mutex& mtx) {
-        std::unique_lock<std::mutex> lock(mtx);
-        _irq_cv.wait(lock);
+    inline void WaitVector() {
+        _sem.acquire();
     }
 
-private:
-    void _InitFDs();
-
-    void _NewGuest(int16_t guest_id);
-
-    void _OnStop();
+    void Stop();
 
 private:
     std::atomic_bool _stop;
@@ -105,15 +105,10 @@ private:
     public:
         int16_t id; // ivshmem only provides 16 bits of client ID.
         FileDescriptor fd; // To receive data from peers when there is an event
-        std::array<FileDescriptor, IVSHMEM_VECTOR_COUNT> vectors; // eventfds to listen for events, but can't receive data
     };
     IVShMemPeer _peer;
 
-    // The IVShMem server normally cannot receive interrupt events from peers.
-    // Adding a virtual peer allows us to masquerade as a fellow peer and receive events from them.
-    IVShMemPeer _vpeer;
-
-    std::condition_variable _irq_cv;
+    std::binary_semaphore _sem;
 };
 
 #endif // OPENRAVE_UIO_SERVER_HPP

@@ -1,12 +1,6 @@
 #ifndef OPENRAVE_IVSHMEM_SERIALIZATION_HPP
 #define OPENRAVE_IVSHMEM_SERIALIZATION_HPP
 
-#include <ext/stdio_filebuf.h>
-#include <stdio.h>
-
-#include <fstream>
-#include <iosfwd>
-
 #include <fcl/BVH/BVH_model.h>
 #include <fcl/collision.h>
 
@@ -17,6 +11,7 @@ namespace ivshmem {
 // Basic template for primitive types.
 template <typename T, typename std::enable_if<std::is_arithmetic<T>::value, bool>::type = true>
 uint64_t serialize(uint8_t* const mem, const T& v) noexcept {
+    static_assert(std::is_arithmetic<T>::value, "Type must be arithmetic.");
     ::memcpy(mem, &v, sizeof(T));
     return sizeof(T);
 }
@@ -38,8 +33,9 @@ size_t serialize(uint8_t* const, const fcl::DistanceRequest&) noexcept;
 
 /// Deserialization ==================================================================================================
 
-template <typename T, typename U = typename std::remove_reference<T>::type>
+template <typename T, typename U = typename std::remove_reference<T>::type, typename std::enable_if<std::is_arithmetic<U>::value, bool>::type = true>
 inline uint64_t deserialize(const uint8_t* const mem, U& value) {
+    static_assert(std::is_arithmetic<U>::value, "Type must be arithmetic.");
     memcpy(&value, mem, sizeof(U));
     return sizeof(U);
 }

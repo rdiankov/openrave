@@ -84,11 +84,12 @@ uintptr_t TripleBufferedSharedMemory::get_writable() const noexcept {
 /// TripleBufferedSharedIOMemory
 
 TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize, std::size_t readsize, std::string path)
-    : _totalsize((writesize + readsize)) // Zephyr seems to choke on sizes that are not strict powers of 2.
+    : _totalsize((writesize + readsize) * 4) // Zephyr seems to choke on sizes that are not strict powers of 2.
     , _writesize(writesize)
     , _readsize(readsize)
     , _path(std::move(path))
     , _mmap(NULL) {
+    RAVELOG_INFO("Mapping %lu bytes of shared memory at %s\n", _totalsize, _path.c_str());
     auto shmfd = FileDescriptor(open, _path.c_str(), O_RDWR, S_IRWXU);
     if (!shmfd) {
         throw std::runtime_error("Failed to shm_open: "s + strerror(errno));
@@ -97,12 +98,17 @@ TripleBufferedSharedIOMemory::TripleBufferedSharedIOMemory(std::size_t writesize
     if (ret == -1) {
         throw std::runtime_error("Failed to ftruncate ivshmem: "s + strerror(errno));
     }
-    RAVELOG_INFO("Trying to map %lu bytes of shared memory...\n", _totalsize);
     _mmap = ::mmap(NULL, _totalsize, PROT_READ | PROT_WRITE, MAP_SHARED, shmfd.get(), 0);
     if (_mmap == MAP_FAILED) {
         throw std::runtime_error("Failed to map memory of ivshmem: "s + strerror(errno));
     }
     RAVELOG_INFO("Base mapped address is %p\n", _mmap);
+
+    // Memory map
+    // [ WPO ][ WRO ][ WIO ][ RPO ][ RRO ][ RIO ][ WSz ][ RSz ]
+    //    0      1      2      3      4      5      6      7
+    // <---Server--->       <---Server--->
+    //        <---Client--->       <---Client--->
 
     // Compute the starting write buffer address offsets
     uintptr_t write_present_offset = PTR_SIZE * 8; // Eight values: 3 for write, 3 for read, 2 for page sizes.
@@ -150,7 +156,7 @@ TripleBufferedSharedIOMemory::~TripleBufferedSharedIOMemory() noexcept {
     ::shm_unlink(_path.c_str());
 }
 
-void TripleBufferedSharedIOMemory::write_ready() noexcept {
+void TripleBufferedSharedIOMemory::write_ready(size_t) noexcept {
     uintptr_t* const offset = static_cast<uintptr_t*>(_mmap);
     offset[1] = __atomic_exchange_n(
         &offset[0], offset[1], __ATOMIC_SEQ_CST
@@ -162,7 +168,7 @@ uintptr_t TripleBufferedSharedIOMemory::get_writable() const noexcept {
     return reinterpret_cast<uintptr_t>(_mmap) + offset;
 }
 
-void TripleBufferedSharedIOMemory::read_ready() noexcept {
+void TripleBufferedSharedIOMemory::read_ready(size_t) noexcept {
     uintptr_t* const offset = static_cast<uintptr_t*>(_mmap);
     offset[4] = __atomic_exchange_n(
         &offset[3], offset[4], __ATOMIC_SEQ_CST
