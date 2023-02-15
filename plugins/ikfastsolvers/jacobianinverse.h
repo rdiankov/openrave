@@ -110,9 +110,9 @@ public:
     int ComputeSolution(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         // check if manip's iksolver suppports this ikgoal type
-        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
-        }
+//        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+//            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator '%s' does not support iktype 0x%x."),manip.GetIkSolver()%manip.GetName()%ikgoal.GetType(),ORE_InvalidArguments);
+//        }
 
         RobotBasePtr probot = manip.GetRobot();
         uint32_t checklimits = bIgnoreJointLimits ? OpenRAVE::KinBody::CLA_Nothing : OpenRAVE::KinBody::CLA_CheckLimitsSilent; // if not ignoring limits, silently clamp the values to their limits.
@@ -307,9 +307,9 @@ public:
     int ComputeSolutionTranslation(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         // check if manip's iksolver suppports this ikgoal type
-        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
-        }
+//        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+//            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator '%s' do not support iktype 0x%x"),manip.GetIkSolver()%manip.GetName()%ikgoal.GetIkType(),ORE_InvalidArguments);
+//        }
 
         _goalIkp = ikgoal;
         

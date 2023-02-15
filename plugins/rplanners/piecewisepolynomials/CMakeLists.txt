@@ -23,7 +23,7 @@ endif()
 
 if (OPT_PYTHON3)
     add_library(openravepy3_piecewisepolynomials SHARED openravepy_piecewisepolynomials.cpp)
-    target_link_libraries(openravepy3_piecewisepolynomials PRIVATE boost_assertion_failed PUBLIC piecewisepolynomials openravepy_int openravepy3_meta)
+    target_link_libraries(openravepy3_piecewisepolynomials PRIVATE boost_assertion_failed PUBLIC piecewisepolynomials openravepy3_int openravepy3_meta)
     if (USE_PYBIND11_PYTHON_BINDINGS)
         target_compile_definitions(openravepy3_piecewisepolynomials PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy3_piecewisepolynomials PRIVATE "-fvisibility=hidden")

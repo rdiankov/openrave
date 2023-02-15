@@ -19,7 +19,7 @@ endif()
 
 if (OPT_PYTHON3)
     add_library(openravepy3_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
-    target_link_libraries(openravepy3_rampoptimizer PRIVATE boost_assertion_failed PUBLIC rampoptimizer openravepy_int openravepy3_meta)
+    target_link_libraries(openravepy3_rampoptimizer PRIVATE boost_assertion_failed PUBLIC rampoptimizer openravepy3_int openravepy3_meta)
     if (USE_PYBIND11_PYTHON_BINDINGS)
         target_compile_definitions(openravepy3_rampoptimizer PRIVATE "USE_PYBIND11_PYTHON_BINDINGS")
         target_compile_options(openravepy3_rampoptimizer PRIVATE "-fvisibility=hidden")
