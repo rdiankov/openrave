@@ -1,8 +1,6 @@
-add_library(rampoptimizer SHARED paraboliccommon.h paraboliccommon.cpp ramp.h ramp.cpp interpolator.h interpolator.cpp feasibilitychecker.h feasibilitychecker.cpp parabolicchecker.h parabolicchecker.cpp)
+add_library(rampoptimizer STATIC paraboliccommon.h paraboliccommon.cpp ramp.h ramp.cpp interpolator.h interpolator.cpp feasibilitychecker.h feasibilitychecker.cpp parabolicchecker.h parabolicchecker.cpp)
 target_link_libraries(rampoptimizer PRIVATE boost_assertion_failed PUBLIC libopenrave)
 set_target_properties(rampoptimizer PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
-
-install(TARGETS rampoptimizer DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 
 if (OPT_PYTHON)
     add_library(openravepy_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
