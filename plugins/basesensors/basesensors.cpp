@@ -33,6 +33,8 @@ BaseSensorsPlugin::BaseSensorsPlugin()
     s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateXMLReader));
     s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"baseforce6d",BaseForce6DSensor::CreateXMLReader));
     s_listRegisteredReaders.push_back(RaveRegisterXMLReader(PT_Sensor,"base_force6d",BaseForce6DSensor::CreateXMLReader));
+    s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"baselaser2d",BaseLaser2DSensor::CreateJSONReader));
+    s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"base_laser2d",BaseLaser2DSensor::CreateJSONReader));
     s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"basecamera",BaseCameraSensor::CreateJSONReader));
     s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"base_pinhole_camera",BaseCameraSensor::CreateJSONReader));
     s_listRegisteredReaders.push_back(RaveRegisterJSONReader(PT_Sensor,"baseforce6d",BaseForce6DSensor::CreateJSONReader));
