@@ -14,4 +14,3 @@ add_library(convexdecomposition STATIC
   NvConvexDecomposition.h  NvMeshIslandGeneration.h  NvSimpleTypes.h       NvThreadConfig.h
   NvFloatMath.h            NvRayCast.h               NvSplitMesh.h         NvUserMemAlloc.h
   NvFloatMath.inl )
-set_target_properties(convexdecomposition PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
