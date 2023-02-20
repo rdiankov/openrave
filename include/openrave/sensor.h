@@ -241,6 +241,9 @@ public:
             return pNew;
         }
 
+        bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+        bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
+
         boost::array<dReal,2> min_angle;         ///< Start for the laser scan [rad].
         boost::array<dReal,2> max_angle;         ///< End angles for the laser scan [rad].
         boost::array<dReal,2> resolution;         ///< Angular resolutions for each axis of rotation [rad].

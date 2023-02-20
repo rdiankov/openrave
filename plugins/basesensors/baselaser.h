@@ -117,10 +117,34 @@ protected:
         stringstream ss;
     };
 
+    class BaseLaser2DJSONReader : public BaseJSONReader
+    {
+public:
+        BaseLaser2DJSONReader(ReadablePtr pReadable) {
+            if (!!pReadable) {
+                _pgeom = boost::dynamic_pointer_cast<LaserGeomData>(pReadable);
+            }
+            else {
+                _pgeom.reset(new LaserGeomData());
+            }
+        }
+        virtual ~BaseLaser2DJSONReader() {}
+        ReadablePtr GetReadable() override {
+            return _pgeom;
+        }
+protected:
+        LaserGeomDataPtr _pgeom;
+    };
+
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseLaser2DXMLReader(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
+    }
+
+    static BaseJSONReaderPtr CreateJSONReader(ReadablePtr pReadable, const AttributesList& atts)
+    {
+        return BaseJSONReaderPtr(new BaseLaser2DJSONReader(pReadable));
     }
 
     BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
