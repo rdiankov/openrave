@@ -2609,6 +2609,32 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     return true;
 }
 
+bool SensorBase::LaserGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    orjson::SetJsonValueByKey(value, "min_angle", min_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "max_angle", max_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "resolution", resolution[0], allocator);
+    orjson::SetJsonValueByKey(value, "min_range", min_range, allocator);
+    orjson::SetJsonValueByKey(value, "max_range", max_range, allocator);
+    orjson::SetJsonValueByKey(value, "time_increment", time_increment, allocator);
+    orjson::SetJsonValueByKey(value, "time_scan", time_scan, allocator);
+    return true;
+}
+
+bool SensorBase::LaserGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    orjson::LoadJsonValueByKey(value, "min_angle", min_angle[0]);
+    orjson::LoadJsonValueByKey(value, "max_angle", max_angle[0]);
+    orjson::LoadJsonValueByKey(value, "resolution", resolution[0]);
+    orjson::LoadJsonValueByKey(value, "min_range", min_range);
+    orjson::LoadJsonValueByKey(value, "max_range", max_range);
+    orjson::LoadJsonValueByKey(value, "time_increment", time_increment);
+    orjson::LoadJsonValueByKey(value, "time_scan", time_scan);
+    return true;
+}
+
 bool SensorBase::Force6DGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
     SensorGeometry::SerializeXML(writer, options);

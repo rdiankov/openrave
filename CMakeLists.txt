@@ -60,6 +60,9 @@ option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
 option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
 option(OPT_STATIC_PLUGINS "Statically compile in plugins" OFF)
+option(OPT_PIC "Build position independent code" ON)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ${OPT_PIC})
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
@@ -351,11 +354,8 @@ foreach(ldir ${Boost_LIBRARY_DIRS})
 endforeach()
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
-  add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
-  set(EXTRA_COMPILE_FLAGS "-fPIC")
   set(NATIVE_COMPILE_FLAGS "" CACHE STRING "compilation flags to pass to tools that are executed at build-time. For example '-march=native -mtune=native'. By default this is empty.")
 else()
-  set(EXTRA_COMPILE_FLAGS "")
   set(NATIVE_COMPILE_FLAGS "")
 endif()
 

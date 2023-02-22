@@ -386,8 +386,6 @@ SET(targets ${targets} pcrecpp_local)
   ENDIF(MINGW AND NOT PCRE_STATIC)
 ENDIF(PCRE_BUILD_PCRECPP)
 
-SET_TARGET_PROPERTIES(pcrecpp_local PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
-
 # Executables
 
 # Removed by PH (2008-01-23) because pcredemo shouldn't really be built
