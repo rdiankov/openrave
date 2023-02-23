@@ -2017,19 +2017,64 @@ void CollisionReport::Reset(int coloptions)
         minDistance = 1e20f;
         numWithinTol = 0;
         contacts.resize(0);
-        vLinkColliding.resize(0);
+        vLinkColliding.clear();
         plink1.reset();
         plink2.reset();
         pgeom1.reset();
         pgeom2.reset();
+        vGeometryContacts.clear();
     }
 }
 
 std::string CollisionReport::__str__() const
 {
     stringstream s;
-    if( vLinkColliding.size() > 0 ) {
-        s << "pairs=" << vLinkColliding.size();
+    if( vGeometryContacts.size() > 0 ) {
+        s << "geompairs=" << vGeometryContacts.size();
+        int index = 0;
+        for(const CollisionReport::GeometryPairContact& pairContact : vGeometryContacts) {
+            s << ", [" << index << "](";
+            if( !!pairContact.pgeom1 ) {
+                KinBody::LinkPtr parentLink = pairContact.pgeom1->GetParentLink(true);
+                if( !!parentLink ) {
+                    KinBodyPtr parent = parentLink->GetParent(true);
+                    if( !!parent ) {
+                        s << parent->GetName() << ":" << parentLink->GetName() << ":" << pairContact.pgeom1->GetName();
+                    }
+                    else {
+                        RAVELOG_WARN_FORMAT("could not get parent for link name '%s' when printing collision report", parentLink->GetName());
+                        s << "[deleted]:" << parentLink->GetName() << ":" << pairContact.pgeom1->GetName();
+                    }
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent link for geometry name '%s' when printing collision report", pairContact.pgeom1->GetName());
+                    s << "[deleted]:" << pairContact.pgeom1->GetName();
+                }
+            }
+            s << ")x(";
+            if( !!pairContact.pgeom2 ) {
+                KinBody::LinkPtr parentLink = pairContact.pgeom2->GetParentLink(true);
+                if( !!parentLink ) {
+                    KinBodyPtr parent = parentLink->GetParent(true);
+                    if( !!parent ) {
+                        s << parent->GetName() << ":" << parentLink->GetName() << ":" << pairContact.pgeom2->GetName();
+                    }
+                    else {
+                        RAVELOG_WARN_FORMAT("could not get parent for link name '%s' when printing collision report", parentLink->GetName());
+                        s << "[deleted]:" << parentLink->GetName() << ":" << pairContact.pgeom2->GetName();
+                    }
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent link for geometry name '%s' when printing collision report", pairContact.pgeom2->GetName());
+                    s << "[deleted]:" << pairContact.pgeom2->GetName();
+                }
+            }
+            s << ") ";
+            ++index;
+        }
+    }
+    else if( vLinkColliding.size() > 0 ) {
+        s << "linkpairs=" << vLinkColliding.size();
         int index = 0;
         FOREACH(itlinkpair, vLinkColliding) {
             s << ", [" << index << "](";
