@@ -58,6 +58,20 @@ inline bool IsIn(T const& x, std::vector<T> const &collection) {
     return std::find(collection.begin(), collection.end(), x) != collection.end();
 }
 
+
+bool CompareGeometryPairContact(const CollisionReport::GeometryPairContact& pairContact1, const CollisionReport::GeometryPairContact& pairContact2)
+{
+    if( pairContact1.pgeom1.get() < pairContact2.pgeom1.get() ) {
+        return true;
+    }
+    else if( pairContact1.pgeom1.get() > pairContact2.pgeom1.get() ) {
+        return false;
+    }
+
+    // compare pgeom2 since pgeom1 is equal
+    return pairContact1.pgeom2.get() < pairContact2.pgeom2.get();
+}
+
 class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
 public:
@@ -376,7 +390,7 @@ public:
         while (it != _envmanagers.end()) {
             const vector<int>& excludedBodyIndices = it->first;
             const vector<int>::const_iterator itExcluded = lower_bound(excludedBodyIndices.begin(), excludedBodyIndices.end(), envBodyIndex);
-            
+
             const bool bFound = itExcluded != excludedBodyIndices.end() && *itExcluded == envBodyIndex;
             if (bFound) {
                 numErased++;
@@ -1026,7 +1040,7 @@ private:
             }
         }
 
-        if( pcb->_bCollision && !(_options & OpenRAVE::CO_AllLinkCollisions) ) {
+        if( pcb->_bCollision && !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts | OpenRAVE::CO_AllGeometryCollisions) ) ) {
             pcb->_bStopChecking = true; // stop checking collision
         }
 
@@ -1113,6 +1127,43 @@ private:
                     }
                 }
 
+                // uses _reportcache.contacts
+                if( _options & (OpenRAVE::CO_AllGeometryContacts | OpenRAVE::CO_AllGeometryCollisions) ) {
+                    // We maintain vGeometryContacts ordered
+                    CollisionReport::GeometryPairContact pairContact;
+                    if( pgeom1.get() < pgeom2.get() ) {
+                        pairContact.pgeom1 = pgeom1;
+                        pairContact.pgeom2 = pgeom2;
+                    }
+                    else {
+                        pairContact.pgeom1 = pgeom2;
+                        pairContact.pgeom2 = pgeom1;
+                    }
+                    typedef std::vector<CollisionReport::GeometryPairContact>::iterator PairIterator;
+                    PairIterator end = pcb->_report->vGeometryContacts.end(), first = std::lower_bound(pcb->_report->vGeometryContacts.begin(), end, pairContact, CompareGeometryPairContact);
+                    if( first == end  ) {
+                        PairIterator itnewentry = pcb->_report->vGeometryContacts.insert(first, pairContact);
+                        if( _options & OpenRAVE::CO_AllGeometryContacts ) {
+                            itnewentry->contacts = _reportcache.contacts; // do contacts at the end
+                        }
+                    }
+                    else {
+                        // check if same geometries
+                        if( first->pgeom1 == pairContact.pgeom1 && first->pgeom2 == pairContact.pgeom2 ) {
+                            if( _options & OpenRAVE::CO_AllGeometryContacts ) {
+                                // append the contacts
+                                first->contacts.insert(first->contacts.end(), _reportcache.contacts.begin(), _reportcache.contacts.end());
+                            }
+                        }
+                        else {
+                            PairIterator itnewentry = pcb->_report->vGeometryContacts.insert(first, pairContact);
+                            if( _options & OpenRAVE::CO_AllGeometryContacts ) {
+                                itnewentry->contacts = _reportcache.contacts; // do contacts at the end
+                            }
+                        }
+                    }
+                }
+
                 pcb->_report->plink1 = _reportcache.plink1;
                 pcb->_report->plink2 = _reportcache.plink2;
                 pcb->_report->pgeom1 = _reportcache.pgeom1;
@@ -1135,7 +1186,7 @@ private:
                 }
 
                 pcb->_bCollision = true;
-                if( !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts)) ) {
+                if( !(_options & (OpenRAVE::CO_AllLinkCollisions | OpenRAVE::CO_AllGeometryContacts | OpenRAVE::CO_AllGeometryCollisions)) ) {
                     pcb->_bStopChecking = true; // stop checking collision
                 }
                 return pcb->_bStopChecking;
@@ -1308,7 +1359,7 @@ private:
             FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
             p->InitBodyManager(pbody, bactiveDOFs);
             it = _bodymanagers.insert(BODYMANAGERSMAP::value_type(std::make_pair(pbody.get(), (int)bactiveDOFs), p)).first;
-            
+
             if ((int) _bodymanagers.size() > _maxNumBodyManagers) {
                 RAVELOG_VERBOSE_FORMAT("env=%s, exceeded previous max number of body managers, now %d.", GetEnv()->GetNameId()%_bodymanagers.size());
                 _maxNumBodyManagers = _bodymanagers.size();

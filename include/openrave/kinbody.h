@@ -575,6 +575,18 @@ public:
         ~Geometry() {
         }
 
+        /// \brief parent link that geometry belongs to.
+        ///
+        /// \param trylock if true then will try to get the parent pointer and return empty pointer if parent was already destroyed. Otherwise throws an exception if parent is already destroyed. By default this should be
+        inline boost::shared_ptr<Link> GetParentLink(bool trylock=false) const {
+            if( trylock ) {
+                return _parent.lock();
+            }
+            else {
+                return LinkPtr(_parent);
+            }
+        }
+
         /// \brief get local geometry transform
         inline const Transform& GetTransform() const {
             return _info._t;

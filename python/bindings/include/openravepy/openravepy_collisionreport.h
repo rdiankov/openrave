@@ -54,6 +54,7 @@ public:
     object pgeom1 = py::none_();
     object pgeom2 = py::none_();
     py::list vLinkColliding;
+    py::list vGeometryContacts;
     dReal minDistance;
     int numWithinTol;
     py::list contacts;

@@ -123,6 +123,19 @@ void PyCollisionReport::init(PyEnvironmentBasePtr pyenv)
         newLinkColliding.append(py::make_tuple(pylink1, pylink2));
     }
     vLinkColliding = newLinkColliding;
+
+    py::list newGeometryContacts;
+    for(const CollisionReport::GeometryPairContact& pairContact : report->vGeometryContacts) {
+        object pygeom1, pygeom2;
+        if( !!pairContact.pgeom1 ) {
+            pygeom1 = openravepy::toPyKinBodyGeometry(OPENRAVE_CONST_POINTER_CAST<KinBody::Geometry>(pairContact.pgeom1));
+        }
+        if( !!pairContact.pgeom2 ) {
+            pygeom2 = openravepy::toPyKinBodyGeometry(OPENRAVE_CONST_POINTER_CAST<KinBody::Geometry>(pairContact.pgeom2));
+        }
+        newGeometryContacts.append(py::make_tuple(pygeom1, pygeom2));
+    }
+    vGeometryContacts = newGeometryContacts;
 }
 
 void PyCollisionReport::Reset(int coloptions)
@@ -745,6 +758,7 @@ void init_openravepy_collisionchecker()
     .value("RayAnyHit",CO_RayAnyHit)
     .value("ActiveDOFs",CO_ActiveDOFs)
     .value("AllLinkCollisions", CO_AllLinkCollisions)
+    .value("AllGeometryCollisions", CO_AllGeometryCollisions)
     .value("AllGeometryContacts", CO_AllGeometryContacts)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .export_values()
@@ -792,6 +806,7 @@ void init_openravepy_collisionchecker()
     .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
     .def_readonly("contacts",&PyCollisionReport::contacts)
     .def_readonly("vLinkColliding",&PyCollisionReport::vLinkColliding)
+    .def_readonly("vGeometryContacts",&PyCollisionReport::vGeometryContacts)
     .def_readonly("nKeepPrevious", &PyCollisionReport::nKeepPrevious)
     .def("__str__",&PyCollisionReport::__str__)
     .def("__unicode__",&PyCollisionReport::__unicode__)
@@ -799,7 +814,7 @@ void init_openravepy_collisionchecker()
     .def("Reset", &PyCollisionReport::Reset,
          "coloptions"_a = 0,
          "Reset report"
-        )
+         )
 #else
     .def("Reset",&PyCollisionReport::Reset,
          Reset_overloads(PY_ARGS("coloptions")
@@ -873,7 +888,7 @@ void init_openravepy_collisionchecker()
          "body"_a,
          "front_facing_only"_a = false,
          "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columns are position, last 3 are direction*range. The return value is: (N array of hit points, Nx6 array of hit position and surface normals."
-        )
+         )
 #else
     .def("CheckCollisionRays",&PyCollisionCheckerBase::CheckCollisionRays,
          CheckCollisionRays_overloads(PY_ARGS("rays","body","front_facing_only")
