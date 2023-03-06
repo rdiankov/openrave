@@ -5,8 +5,6 @@ message(STATUS "fcl version ${fcl_VERSION}")
 
 set(ivshmem_src
     ivshmem.cpp # Entrypoint of the plugin
-    ivshmem_server.cpp
-    ivshmem_server.hpp
     uio_server.cpp
     uio_server.hpp
     ivshmem_interface.cpp

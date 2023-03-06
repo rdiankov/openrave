@@ -49,17 +49,9 @@
 
 using namespace std::literals;
 
-static bool RemoveFromEpoll(int fd, int ep_fd) {
-    return ::epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, NULL) != -1;
-}
-
-static bool RemoveFromEpoll(const FileDescriptor& fd, const FileDescriptor& ep_fd) {
-    return RemoveFromEpoll(fd.get(), ep_fd.get());
-}
-
 UIOServer::UIOServer(std::string uio_device_path)
     : _stop(false) {
-    RAVELOG_INFO("Starting other UIO server, built on %s\n", __TIMESTAMP__);
+    RAVELOG_INFO("UIO server, built on %s\n", __TIMESTAMP__);
     _peer.fd = FileDescriptor(::open, UIO_FILE_PATH_0, O_RDWR);
     _peer.id = 0; // Hard-coded, rtlinux is VM 1 and peer Zephyr is VM 0.
 }

@@ -1132,13 +1132,27 @@ enum class QueryType : uint16_t {
     GeometryDistance = 4
 };
 
+void dump_memory(const uint8_t* const ptr) {
+    constexpr int ROWS = 8;
+    constexpr int COLS = 32;
+    std::cout << std::hex;
+    std::cout << "Address: " << static_cast<const void* const>(ptr) << std::endl;
+    for (uint32_t i = 0; i < ROWS; ++i) {
+        for (uint32_t j = 0; j < COLS; ++j) {
+            std::cout << std::setfill('0') << std::setw(2) << static_cast<int>(ptr[j + i * COLS]) << ' ';
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+    std::cout << std::dec;
+}
+
 // ===== Diverted collision functions
 std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
                                         const fcl::CollisionObject* o2,
                                         const fcl::CollisionRequest& request,
                                         fcl::CollisionResult& result)
 {
-    volatile const uintptr_t* const addresses = static_cast<const uintptr_t* const>(_shmem.base_address());
     uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id);
@@ -1147,9 +1161,7 @@ std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
     offset += ivshmem::serialize(write_addr + offset, *o2);
     offset += ivshmem::serialize(write_addr + offset, request);
 
-    RAVELOG_INFO("Write ready.\n");
     _shmem.write_ready(offset);
-    RAVELOG_INFO("Interrupt Peer.\n");
     _ivshmem_server.InterruptPeer();
     RAVELOG_INFO("Wait vector.\n");
     _ivshmem_server.WaitVector();
@@ -1157,9 +1169,11 @@ std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
     _shmem.read_ready(offset);
 
     const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
+    dump_memory(read_addr);
     uint64_t query_id = 0; // returned query ID
     offset = 0;
     offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);
+    RAVELOG_INFO("query %lu\n", query_id);
     offset += ivshmem::deserialize(read_addr + offset, result);
     RAVELOG_INFO("Reading %lu bytes for query %lu. numcontacts: %lu\n", offset, query_id, result.numContacts());
     return result.numContacts();
