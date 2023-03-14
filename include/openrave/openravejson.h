@@ -353,22 +353,37 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t)
 }
 
 template<class T>
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>& t) {
+    if (v.IsArray()) {
+        if(v.Size() != 7) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Transform. Array length does not match (%d != 7)", GetJsonTypeName(v)%v.Size(), OpenRAVE::ORE_InvalidArguments);
+        }
+        LoadJsonValue(v[0], t.rot.x);
+        LoadJsonValue(v[1], t.rot.y);
+        LoadJsonValue(v[2], t.rot.z);
+        LoadJsonValue(v[3], t.rot.w);
+        LoadJsonValue(v[4], t.trans.x);
+        LoadJsonValue(v[5], t.trans.y);
+        LoadJsonValue(v[6], t.trans.z);
+    } else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to RaveTransform", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
+template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t) {
-    if(!v.IsArray() || (v.Size() != 4 + 3 + 3)) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox", OpenRAVE::ORE_InvalidArguments);
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("extents") || !v["extents"].IsArray() || v["extents"].Size() != 3) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"extents\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("transform") || !v["transform"].IsArray() || v["transform"].Size() != 7) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"transform\" malformatted", OpenRAVE::ORE_InvalidArguments);
     }
 
-    for (size_t iIndex = 0; iIndex < 4; ++iIndex) {
-        LoadJsonValue(v[iIndex], t.transform.rot[iIndex]);
-    }
-    for (size_t iIndex = 0; iIndex < 3; ++iIndex) {
-        LoadJsonValue(v[4+iIndex], t.transform.trans[iIndex]);
-    }
-    for (size_t iIndex = 0; iIndex < 3; ++iIndex) {
-        LoadJsonValue(v[4+3+iIndex], t.extents[iIndex]);
-    }
-    t.transform.trans.w = 0;
-    t.extents.w = 0;
+    LoadJsonValue(v["extents"], t.extents);
+    LoadJsonValue(v["transform"], t.transform);
 }
 
 template<class T>
@@ -521,24 +536,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
         }
     } else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Map", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
-    }
-}
-
-template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>& t) {
-    if (v.IsArray()) {
-        if(v.Size() != 7) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Transform. Array length does not match (%d != 7)", GetJsonTypeName(v)%v.Size(), OpenRAVE::ORE_InvalidArguments);
-        }
-        LoadJsonValue(v[0], t.rot.x);
-        LoadJsonValue(v[1], t.rot.y);
-        LoadJsonValue(v[2], t.rot.z);
-        LoadJsonValue(v[3], t.rot.w);
-        LoadJsonValue(v[4], t.trans.x);
-        LoadJsonValue(v[5], t.trans.y);
-        LoadJsonValue(v[6], t.trans.z);
-    } else {
-        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to RaveTransform", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
