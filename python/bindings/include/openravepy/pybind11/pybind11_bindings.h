@@ -115,7 +115,7 @@ namespace py = pybind11;
 inline py::object ConvertStringToUnicode(const std::string& s)
 {
     PyObject *pyo = PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr);
-    return py::cast<py::object>(pyo); // py::handle_to_object(pyo);
+    return py::reinterpret_steal<py::object>(pyo);
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY
