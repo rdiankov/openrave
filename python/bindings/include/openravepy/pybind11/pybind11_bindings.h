@@ -42,7 +42,7 @@ inline object to_object(const std::string& t) {
     return bytes(t);
 }
 inline object handle_to_object(PyObject* pyo) {
-    return cast<object>(pyo);
+    return reinterpret_steal<object>(pyo);
 }
 template <typename T>
 inline object to_array_astype(PyObject* pyo) {
