@@ -637,7 +637,7 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometr
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
-    OPENRAVE_ASSERT_OP(geometries.size(),>,0);
+    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(),>,0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
