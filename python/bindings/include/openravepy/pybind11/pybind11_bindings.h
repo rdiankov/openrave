@@ -42,7 +42,7 @@ inline object to_object(const std::string& t) {
     return bytes(t);
 }
 inline object handle_to_object(PyObject* pyo) {
-    return cast<object>(pyo);
+    return reinterpret_steal<object>(pyo);
 }
 template <typename T>
 inline object to_array_astype(PyObject* pyo) {
@@ -115,7 +115,7 @@ namespace py = pybind11;
 inline py::object ConvertStringToUnicode(const std::string& s)
 {
     PyObject *pyo = PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr);
-    return py::cast<py::object>(pyo); // py::handle_to_object(pyo);
+    return py::reinterpret_steal<py::object>(pyo);
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY
