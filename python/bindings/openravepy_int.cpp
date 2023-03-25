@@ -1802,7 +1802,7 @@ object PyEnvironmentBase::WriteToMemory(const std::string &filetype, const int o
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // https://github.com/pybind/pybind11/issues/1201
 #if PY_MAJOR_VERSION >= 3
-        return py::cast<py::object>(PyUnicode_FromStringAndSize(output.data(), output.size()));
+        return py::cast<py::object>(PyBytes_FromStringAndSize(output.data(), output.size()));
 #else
         return py::cast<py::object>(PyString_FromStringAndSize(output.data(), output.size()));
 #endif
@@ -1957,7 +1957,7 @@ void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, 
         if (PyBool_Check(oAddMode.ptr())) {
             addMode = py::extract<bool>(oAddMode) ? IAM_AllowRenaming : IAM_StrictNameChecking;
             if( pinterface->GetInterfaceType() != PT_Module ) {
-                RAVELOG_WARN_FORMAT("Trying to use 'anonymous' flag when adding object %s of type %d via Add", pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
+                RAVELOG_WARN_FORMAT("env=%s trying to use 'anonymous' flag when adding object '%s' of interface type '%d' via Add", _penv->GetNameId()%pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
             }
         }
         else {

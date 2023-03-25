@@ -2657,26 +2657,26 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
 bool SensorBase::LaserGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
-    orjson::SetJsonValueByKey(value, "min_angle", min_angle[0], allocator);
-    orjson::SetJsonValueByKey(value, "max_angle", max_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "minAngle", min_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "maxAngle", max_angle[0], allocator);
     orjson::SetJsonValueByKey(value, "resolution", resolution[0], allocator);
-    orjson::SetJsonValueByKey(value, "min_range", min_range, allocator);
-    orjson::SetJsonValueByKey(value, "max_range", max_range, allocator);
-    orjson::SetJsonValueByKey(value, "time_increment", time_increment, allocator);
-    orjson::SetJsonValueByKey(value, "time_scan", time_scan, allocator);
+    orjson::SetJsonValueByKey(value, "minRange", min_range, allocator);
+    orjson::SetJsonValueByKey(value, "maxRange", max_range, allocator);
+    orjson::SetJsonValueByKey(value, "timeIncrement", time_increment, allocator);
+    orjson::SetJsonValueByKey(value, "timeScan", time_scan, allocator);
     return true;
 }
 
 bool SensorBase::LaserGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
-    orjson::LoadJsonValueByKey(value, "min_angle", min_angle[0]);
-    orjson::LoadJsonValueByKey(value, "max_angle", max_angle[0]);
+    orjson::LoadJsonValueByKey(value, "minAngle", min_angle[0]);
+    orjson::LoadJsonValueByKey(value, "maxAngle", max_angle[0]);
     orjson::LoadJsonValueByKey(value, "resolution", resolution[0]);
-    orjson::LoadJsonValueByKey(value, "min_range", min_range);
-    orjson::LoadJsonValueByKey(value, "max_range", max_range);
-    orjson::LoadJsonValueByKey(value, "time_increment", time_increment);
-    orjson::LoadJsonValueByKey(value, "time_scan", time_scan);
+    orjson::LoadJsonValueByKey(value, "minRange", min_range);
+    orjson::LoadJsonValueByKey(value, "maxRange", max_range);
+    orjson::LoadJsonValueByKey(value, "timeIncrement", time_increment);
+    orjson::LoadJsonValueByKey(value, "timeScan", time_scan);
     return true;
 }
 
@@ -2698,7 +2698,7 @@ bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjs
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
-    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
+    orjson::SetJsonValueByKey(value, "correctionMatrix", correction_matrix, allocator, correction_matrix.size());
     return true;
 }
 
@@ -2706,7 +2706,7 @@ bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value,
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "polarity", polarity);
-    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
+    orjson::LoadJsonValueByKey(value, "correctionMatrix", correction_matrix);
     return true;
 }
 

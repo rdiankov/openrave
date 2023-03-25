@@ -153,6 +153,7 @@ PyLaserGeomData::PyLaserGeomData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData c
 {
     min_angle = py::make_tuple(pgeom->min_angle[0], pgeom->min_angle[1]);
     max_angle = py::make_tuple(pgeom->max_angle[0], pgeom->max_angle[1]);
+    resolution = py::make_tuple(pgeom->resolution[0], pgeom->resolution[1]);
     min_range = pgeom->min_range;
     max_range = pgeom->max_range;
     time_increment = pgeom->time_increment;
@@ -169,6 +170,8 @@ SensorBase::SensorGeometryPtr PyLaserGeomData::GetGeometry() {
     geom->min_angle[1] = (dReal)py::extract<dReal>(min_angle[1]);
     geom->max_angle[0] = (dReal)py::extract<dReal>(max_angle[0]);
     geom->max_angle[1] = (dReal)py::extract<dReal>(max_angle[1]);
+    geom->resolution[0] = (dReal)py::extract<dReal>(resolution[0]);
+    geom->resolution[1] = (dReal)py::extract<dReal>(resolution[1]);
     geom->min_range = min_range;
     geom->max_range = max_range;
     geom->time_increment = time_increment;
