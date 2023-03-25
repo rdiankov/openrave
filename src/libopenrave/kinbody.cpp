@@ -445,6 +445,11 @@ KinBody::~KinBody()
 
 void KinBody::Destroy()
 {
+    //OPENRAVE_ASSERT_OP_FORMAT(GetEnvironmentBodyIndex(),==,0, "env=%s, destroying body '%s' while it is still in the environment!", GetEnv()->GetNameId()%GetName(), ORE_Assert);
+    if( GetEnvironmentBodyIndex() != 0 ) {
+        RAVELOG_DEBUG_FORMAT("env=%s, destroying body '%s' with bodyIndex=%d while it is still in the environment.", GetEnv()->GetNameId()%GetName()%GetEnvironmentBodyIndex());
+    }
+    
     ReleaseAllGrabbed();
     if( _listAttachedBodies.size() > 0 ) {
         // could be in the environment destructor?
