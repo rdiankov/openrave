@@ -3742,6 +3742,10 @@ bool PyKinBody::IsAttached(PyKinBodyPtr pattachbody)
     CHECK_POINTER(pattachbody);
     return _pbody->IsAttached(*pattachbody->GetBody());
 }
+bool PyKinBody::HasAttached() const
+{
+    return _pbody->HasAttached();
+}
 object PyKinBody::GetAttached() const
 {
     py::list attached;
@@ -5650,6 +5654,7 @@ void init_openravepy_kinbody()
                          .def("CheckSelfCollision",&PyKinBody::CheckSelfCollision, CheckSelfCollision_overloads(PY_ARGS("report","collisionchecker") DOXY_FN(KinBody,CheckSelfCollision)))
 #endif
                          .def("IsAttached",&PyKinBody::IsAttached,PY_ARGS("body") DOXY_FN(KinBody,IsAttached))
+                         .def("HasAttached",&PyKinBody::HasAttached, DOXY_FN(KinBody,HasAttached))
                          .def("GetAttached",&PyKinBody::GetAttached, DOXY_FN(KinBody,GetAttached))
                          .def("GetAttachedEnvironmentBodyIndices",&PyKinBody::GetAttachedEnvironmentBodyIndices, DOXY_FN(KinBody,GetAttachedEnvironmentBodyIndices))
                          .def("SetZeroConfiguration",&PyKinBody::SetZeroConfiguration, DOXY_FN(KinBody,SetZeroConfiguration))
