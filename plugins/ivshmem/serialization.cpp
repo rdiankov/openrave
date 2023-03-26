@@ -173,21 +173,21 @@ uint64_t deserialize(const uint8_t* const mem, fcl::Quaternion3f& v) {
 uint64_t deserialize(const uint8_t* const mem, fcl::Contact& v) {
     RAVELOG_INFO("Deserializing Contact.\n");
     uint64_t offset = 0;
-    offset = deserialize<decltype(v.b1)>(mem + offset, v.b1);
-    offset = deserialize<decltype(v.b2)>(mem + offset, v.b2);
-    offset = deserialize(mem + offset, v.normal);
-    offset = deserialize(mem + offset, v.pos);
-    offset = deserialize<decltype(v.penetration_depth)>(mem + offset, v.penetration_depth);
+    offset += deserialize<decltype(v.b1)>(mem + offset, v.b1);
+    offset += deserialize<decltype(v.b2)>(mem + offset, v.b2);
+    offset += deserialize(mem + offset, v.normal);
+    offset += deserialize(mem + offset, v.pos);
+    offset += deserialize<decltype(v.penetration_depth)>(mem + offset, v.penetration_depth);
     RAVELOG_INFO("Contact Offset: %lu\n", offset);
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::CostSource& v) {
     RAVELOG_INFO("Deserializing CostSource.\n");
     uint64_t offset = 0;
-    offset = deserialize(mem + offset, v.aabb_min);
-    offset = deserialize(mem + offset, v.aabb_max);
-    offset = deserialize<decltype(v.cost_density)>(mem + offset, v.cost_density);
-    offset = deserialize<decltype(v.total_cost)>(mem + offset, v.total_cost);
+    offset += deserialize(mem + offset, v.aabb_min);
+    offset += deserialize(mem + offset, v.aabb_max);
+    offset += deserialize<decltype(v.cost_density)>(mem + offset, v.cost_density);
+    offset += deserialize<decltype(v.total_cost)>(mem + offset, v.total_cost);
     RAVELOG_INFO("CostSource Offset: %lu\n", offset);
     return offset;
 }
@@ -218,8 +218,8 @@ uint64_t deserialize(const uint8_t* const mem, fcl::DistanceResult& v) {
     uint64_t offset = 0;
     v.clear();
     offset += deserialize<decltype(v.min_distance)>(mem + offset, v.min_distance);
-    offset = deserialize<decltype(v.b1)>(mem + offset, v.b1);
-    offset = deserialize<decltype(v.b2)>(mem + offset, v.b2);
+    offset += deserialize<decltype(v.b1)>(mem + offset, v.b1);
+    offset += deserialize<decltype(v.b2)>(mem + offset, v.b2);
     return offset;
 }
 
