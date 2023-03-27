@@ -471,7 +471,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
     t.indices.resize(v["indices"].Size());
     size_t i = 0;
     for (rapidjson::Value::ConstValueIterator it = v["indices"].Begin(); it != v["indices"].End(); ++it) {
-        OpenRAVE::Vector vertex;
         LoadJsonValue(*it, t.indices[i]);
         i++;
     }
