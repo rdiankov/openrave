@@ -891,11 +891,8 @@ inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::SensorBase::Camer
 template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetObject();
-    rapidjson::Value tmpv;
-    SaveJsonValue(tmpv, t.extents, alloc);
-    v.AddMember("extents", tmpv, alloc);
-    SaveJsonValue(tmpv, t.transform, alloc);
-    v.AddMember("transform", tmpv, alloc);
+    SetJsonValueByKey(v, "extents", t.extents, alloc);
+    SetJsonValueByKey(v, "transform", t.transform, alloc);
 }
 
 inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
