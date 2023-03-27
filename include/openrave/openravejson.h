@@ -197,6 +197,10 @@ public:
 template<class T> inline std::string GetJsonString(const T& t);
 
 template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t); // forward decl
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc); // forward decl
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t); // forward decl
+inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc); // forward decl
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t); // forward decl
 
 //store a json value to local data structures
 //for compatibility with ptree, type conversion is made. will remove them in the future
@@ -353,40 +357,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t)
 }
 
 template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>& t) {
-    if (v.IsArray()) {
-        if(v.Size() != 7) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Transform. Array length does not match (%d != 7)", GetJsonTypeName(v)%v.Size(), OpenRAVE::ORE_InvalidArguments);
-        }
-        LoadJsonValue(v[0], t.rot.x);
-        LoadJsonValue(v[1], t.rot.y);
-        LoadJsonValue(v[2], t.rot.z);
-        LoadJsonValue(v[3], t.rot.w);
-        LoadJsonValue(v[4], t.trans.x);
-        LoadJsonValue(v[5], t.trans.y);
-        LoadJsonValue(v[6], t.trans.z);
-    } else {
-        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to RaveTransform", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
-    }
-}
-
-template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t) {
-    if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
-    }
-    if (!v.HasMember("extents") || !v["extents"].IsArray() || v["extents"].Size() != 3) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"extents\" malformatted", OpenRAVE::ORE_InvalidArguments);
-    }
-    if (!v.HasMember("transform") || !v["transform"].IsArray() || v["transform"].Size() != 7) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"transform\" malformatted", OpenRAVE::ORE_InvalidArguments);
-    }
-
-    LoadJsonValue(v["extents"], t.extents);
-    LoadJsonValue(v["transform"], t.transform);
-}
-
-template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, boost::shared_ptr<T>& ptr) {
     static_assert(std::is_default_constructible<T>::value, "Shared pointer of type must be default-constructible.");
     ptr = boost::make_shared<T>();
@@ -440,39 +410,6 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::pair<T, U>& t) {
         }
     } else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Pair", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
-    }
-}
-
-inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
-{
-    if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
-    }
-
-    if (!v.HasMember("vertices") || !v["vertices"].IsArray() || v["vertices"].Size() % 3 != 0) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", OpenRAVE::ORE_InvalidArguments);
-    }
-
-    t.vertices.clear();
-    t.vertices.reserve(v["vertices"].Size() / 3);
-
-    for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End(); ) {
-        OpenRAVE::Vector vertex;
-        LoadJsonValue(*(it++), vertex.x);
-        LoadJsonValue(*(it++), vertex.y);
-        LoadJsonValue(*(it++), vertex.z);
-        t.vertices.push_back(vertex);
-    }
-
-    if (!v.HasMember("indices") || !v["indices"].IsArray()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"indices\" malformatted", OpenRAVE::ORE_InvalidArguments);
-    }
-
-    t.indices.resize(v["indices"].Size());
-    size_t i = 0;
-    for (rapidjson::Value::ConstValueIterator it = v["indices"].Begin(); it != v["indices"].End(); ++it) {
-        LoadJsonValue(*it, t.indices[i]);
-        i++;
     }
 }
 
@@ -536,6 +473,63 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
     } else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Map", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
     }
+}
+
+template<class T>
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>& t) {
+    if (v.IsArray()) {
+        if(v.Size() != 7) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Transform. Array length does not match (%d != 7)", GetJsonTypeName(v)%v.Size(), OpenRAVE::ORE_InvalidArguments);
+        }
+        LoadJsonValue(v[0], t.rot.x);
+        LoadJsonValue(v[1], t.rot.y);
+        LoadJsonValue(v[2], t.rot.z);
+        LoadJsonValue(v[3], t.rot.w);
+        LoadJsonValue(v[4], t.trans.x);
+        LoadJsonValue(v[5], t.trans.y);
+        LoadJsonValue(v[6], t.trans.z);
+    } else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to RaveTransform", GetJsonTypeName(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
+{
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+    }
+
+    if (!v.HasMember("vertices") || !v["vertices"].IsArray() || v["vertices"].Size() % 3 != 0) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a TriMesh, \"vertices\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+
+    t.vertices.clear();
+    t.vertices.reserve(v["vertices"].Size() / 3);
+
+    for (rapidjson::Value::ConstValueIterator it = v["vertices"].Begin(); it != v["vertices"].End(); ) {
+        OpenRAVE::Vector vertex;
+        LoadJsonValue(*(it++), vertex.x);
+        LoadJsonValue(*(it++), vertex.y);
+        LoadJsonValue(*(it++), vertex.z);
+        t.vertices.push_back(vertex);
+    }
+    LoadJsonValue(v["indices"], t.indices);
+}
+
+template<class T>
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t) {
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("extents") || !v["extents"].IsArray() || v["extents"].Size() != 3) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"extents\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("transform") || !v["transform"].IsArray() || v["transform"].Size() != 7) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"transform\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+
+    LoadJsonValue(v["extents"], t.extents);
+    LoadJsonValue(v["transform"], t.transform);
 }
 
 //Save a data structure to rapidjson::Value format
@@ -639,51 +633,6 @@ inline void SaveJsonValue(rapidjson::Value& rTransform, const OpenRAVE::RaveTran
 }
 
 template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetArray();
-    // TODO, what's a better way to serialize?
-    bool bHas4Values = t[3] != 0;
-    int numvalues = bHas4Values ? 4 : 3;
-    v.Reserve(numvalues, alloc);
-    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
-        rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t[ivalue], alloc);
-        v.PushBack(tmpv, alloc);
-    }
-}
-
-template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetObject();
-    rapidjson::Value tmpv;
-    SaveJsonValue(tmpv, t.extents, alloc);
-    v.AddMember("extents", tmpv, alloc);
-    SaveJsonValue(tmpv, t.transform, alloc);
-    v.AddMember("transform", tmpv, alloc);
-}
-
-inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
-    rTriMesh.SetObject();
-    rapidjson::Value rVertices;
-    rVertices.SetArray();
-    rVertices.Reserve(t.vertices.size()*3, alloc);
-    for(size_t ivertex = 0; ivertex < t.vertices.size(); ++ivertex) {
-        rVertices.PushBack(t.vertices[ivertex][0], alloc);
-        rVertices.PushBack(t.vertices[ivertex][1], alloc);
-        rVertices.PushBack(t.vertices[ivertex][2], alloc);
-    }
-    rTriMesh.AddMember("vertices", rVertices, alloc);
-
-    rapidjson::Value rIndices;
-    rIndices.SetArray();
-    rIndices.Reserve(t.indices.size(), alloc);
-    for (size_t iindex = 0; iindex < t.indices.size(); ++iindex) {
-        rIndices.PushBack(t.indices[iindex], alloc);
-    }
-    rTriMesh.AddMember("indices", rIndices, alloc);
-}
-
-template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetArray();
     v.Reserve(t.size(), alloc);
@@ -701,6 +650,20 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
     for (size_t ivec = 0; ivec < t.size() && ivec < n; ++ivec) {
         rapidjson::Value tmpv;
         SaveJsonValue(tmpv, t[ivec], alloc);
+        v.PushBack(tmpv, alloc);
+    }
+}
+
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetArray();
+    // TODO, what's a better way to serialize?
+    bool bHas4Values = t[3] != 0;
+    int numvalues = bHas4Values ? 4 : 3;
+    v.Reserve(numvalues, alloc);
+    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
+        rapidjson::Value tmpv;
+        SaveJsonValue(tmpv, t[ivalue], alloc);
         v.PushBack(tmpv, alloc);
     }
 }
@@ -923,6 +886,30 @@ inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::SensorBase::Camer
     SetJsonValueByKey(v, "focalLength", t.focal_length, alloc);
     SetJsonValueByKey(v, "distortionModel", t.distortion_model, alloc);
     SetJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs, alloc);
+}
+
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    rapidjson::Value tmpv;
+    SaveJsonValue(tmpv, t.extents, alloc);
+    v.AddMember("extents", tmpv, alloc);
+    SaveJsonValue(tmpv, t.transform, alloc);
+    v.AddMember("transform", tmpv, alloc);
+}
+
+inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc) {
+    rTriMesh.SetObject();
+    rapidjson::Value rVertices;
+    rVertices.SetArray();
+    rVertices.Reserve(t.vertices.size()*3, alloc);
+    for(size_t ivertex = 0; ivertex < t.vertices.size(); ++ivertex) {
+        rVertices.PushBack(t.vertices[ivertex][0], alloc);
+        rVertices.PushBack(t.vertices[ivertex][1], alloc);
+        rVertices.PushBack(t.vertices[ivertex][2], alloc);
+    }
+    rTriMesh.AddMember("vertices", rVertices, alloc);
+    SetJsonValueByKey(rTriMesh, "indices", t.indices, alloc);
 }
 
 template<class T, class U>
