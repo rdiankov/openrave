@@ -301,6 +301,7 @@ public:
     PyInterfaceBasePtr GetSelfCollisionChecker();
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());
     bool IsAttached(PyKinBodyPtr pattachbody);
+    bool HasAttached() const;
     py::object GetAttached() const;
     py::object GetAttachedEnvironmentBodyIndices() const;
     void SetZeroConfiguration();

@@ -745,7 +745,9 @@ private:
         //KinBodyPtr pbody = info.GetBody();
         if( info.nLastStamp != body.GetUpdateStamp()) {
             info.nLastStamp = body.GetUpdateStamp();
-            BOOST_ASSERT( body.GetLinks().size() == info.vlinks.size() );
+            if( body.GetLinks().size() != info.vlinks.size() ) {
+                throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, the current number of links in body '%s' are %d, and are not the same as the number cached links %d")%_penv->GetNameId()%body.GetName()%body.GetLinks().size()%info.vlinks.size()), OpenRAVE::ORE_InvalidState);
+            }
             CollisionObjectPtr pcoll;
             for(size_t i = 0; i < body.GetLinks().size(); ++i) {
                 const FCLSpace::FCLKinBodyInfo::LinkInfo& linkInfo = *info.vlinks[i];

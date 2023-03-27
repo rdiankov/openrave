@@ -1957,7 +1957,7 @@ void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, 
         if (PyBool_Check(oAddMode.ptr())) {
             addMode = py::extract<bool>(oAddMode) ? IAM_AllowRenaming : IAM_StrictNameChecking;
             if( pinterface->GetInterfaceType() != PT_Module ) {
-                RAVELOG_WARN_FORMAT("Trying to use 'anonymous' flag when adding object %s of type %d via Add", pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
+                RAVELOG_WARN_FORMAT("env=%s trying to use 'anonymous' flag when adding object '%s' of interface type '%d' via Add", _penv->GetNameId()%pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
             }
         }
         else {
