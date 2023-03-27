@@ -171,33 +171,27 @@ uint64_t deserialize(const uint8_t* const mem, fcl::Quaternion3f& v) {
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::Contact& v) {
-    RAVELOG_INFO("Deserializing Contact.\n");
     uint64_t offset = 0;
     offset += deserialize<decltype(v.b1)>(mem + offset, v.b1);
     offset += deserialize<decltype(v.b2)>(mem + offset, v.b2);
     offset += deserialize(mem + offset, v.normal);
     offset += deserialize(mem + offset, v.pos);
     offset += deserialize<decltype(v.penetration_depth)>(mem + offset, v.penetration_depth);
-    RAVELOG_INFO("Contact Offset: %lu\n", offset);
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::CostSource& v) {
-    RAVELOG_INFO("Deserializing CostSource.\n");
     uint64_t offset = 0;
     offset += deserialize(mem + offset, v.aabb_min);
     offset += deserialize(mem + offset, v.aabb_max);
     offset += deserialize<decltype(v.cost_density)>(mem + offset, v.cost_density);
     offset += deserialize<decltype(v.total_cost)>(mem + offset, v.total_cost);
-    RAVELOG_INFO("CostSource Offset: %lu\n", offset);
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::CollisionResult& v) {
-    RAVELOG_INFO("Deserializing CollisionResult.\n");
     uint64_t offset = 0;
     v.clear();
     size_t numContacts = 0;
     offset += deserialize<size_t>(mem + offset, numContacts);
-    RAVELOG_INFO("Contact count: %lu\n", numContacts);
     while (numContacts-- > 0) {
         fcl::Contact contact;
         offset += deserialize(mem + offset, contact);
@@ -205,13 +199,11 @@ uint64_t deserialize(const uint8_t* const mem, fcl::CollisionResult& v) {
     }
     size_t numCostSource = 0;
     offset += deserialize<size_t>(mem + offset, numCostSource);
-    RAVELOG_INFO("Cost source count: %lu\n", numCostSource);
     while (numCostSource-- > 0) {
         fcl::CostSource costSource;
         offset += deserialize(mem + offset, costSource);
         v.addCostSource(std::move(costSource), std::numeric_limits<size_t>::max());
     }
-    RAVELOG_INFO("CollisionResult Offset: %lu\n", offset);
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::DistanceResult& v) {

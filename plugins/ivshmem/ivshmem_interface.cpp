@@ -258,7 +258,6 @@ void IVShMemInterface::RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
 
 bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
 {
-    RAVELOG_INFO("CheckCollision Kinbody Kinbody\n");
     if( !!report ) {
         report->Reset(_options);
     }
@@ -298,7 +297,7 @@ bool IVShMemInterface::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pb
     //RAVELOG_INFO("Waiting for UIO server to finish init...\n");
     //_ivshmem_server.WaitVector(this->_collisoncheck_mutex);
     //RAVELOG_INFO("Done.\n");
-    RAVELOG_INFO("Skipping blocking.\n");
+    //RAVELOG_INFO("Skipping blocking.\n");
 
     body1Manager.GetManager()->collide(body2Manager.GetManager().get(), &query, &IVShMemInterface::CheckNarrowPhaseCollision);
     return query._bCollision;
@@ -1132,21 +1131,6 @@ enum class QueryType : uint16_t {
     GeometryDistance = 4
 };
 
-void dump_memory(const uint8_t* const ptr) {
-    constexpr int ROWS = 8;
-    constexpr int COLS = 32;
-    std::cout << std::hex;
-    std::cout << "Address: " << static_cast<const void* const>(ptr) << std::endl;
-    for (uint32_t i = 0; i < ROWS; ++i) {
-        for (uint32_t j = 0; j < COLS; ++j) {
-            std::cout << std::setfill('0') << std::setw(2) << static_cast<int>(ptr[j + i * COLS]) << ' ';
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-    std::cout << std::dec;
-}
-
 // ===== Diverted collision functions
 std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
                                         const fcl::CollisionObject* o2,
@@ -1155,7 +1139,7 @@ std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
 {
     uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
-    offset += ivshmem::serialize(write_addr + offset, _query_id);
+    offset += ivshmem::serialize(write_addr + offset, _query_id++);
     offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::ObjectCollision));
     offset += ivshmem::serialize(write_addr + offset, *o1);
     offset += ivshmem::serialize(write_addr + offset, *o2);
@@ -1163,19 +1147,15 @@ std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
 
     _shmem.write_ready(offset);
     _ivshmem_server.InterruptPeer();
-    RAVELOG_INFO("Wait vector.\n");
     _ivshmem_server.WaitVector();
-    RAVELOG_INFO("Read ready.\n");
     _shmem.read_ready(offset);
 
     const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
-    dump_memory(read_addr);
     uint64_t query_id = 0; // returned query ID
     offset = 0;
     offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);
-    RAVELOG_INFO("query %lu\n", query_id);
     offset += ivshmem::deserialize(read_addr + offset, result);
-    RAVELOG_INFO("Reading %lu bytes for query %lu. numcontacts: %lu\n", offset, query_id, result.numContacts());
+    RAVELOG_DEBUG("Reading %lu bytes for query %lu. numcontacts: %lu\n", offset, query_id, result.numContacts());
     return result.numContacts();
 }
 
@@ -1185,36 +1165,42 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
 {
     uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
-    offset += ivshmem::serialize(write_addr + offset, _query_id);
+    offset += ivshmem::serialize(write_addr + offset, _query_id++);
     offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::GeometryCollision));
     offset += ivshmem::serialize(write_addr + offset, o1);
     offset += ivshmem::serialize(write_addr + offset, tf1);
     offset += ivshmem::serialize(write_addr + offset, o2);
     offset += ivshmem::serialize(write_addr + offset, tf2);
     offset += ivshmem::serialize(write_addr + offset, request);
-    RAVELOG_INFO("Query %lu, wrote %lu bytes\n", _query_id++, offset);
+
     _shmem.write_ready(offset);
     _ivshmem_server.InterruptPeer();
+    _ivshmem_server.WaitVector();
+    _shmem.read_ready(offset);
 
-    //uintptr_t read_addr = _shmem.get_readable();
-    //std::filebuf ifb = ivshmem::OpenMemoryAsFile(reinterpret_cast<void*>(read_addr), _shmem.readable_size());
-    //std::istream is(&ifb);
-    //uint64_t query_id = query_id = ivshmem::DeSerialize<uint64_t>(is);
-    //RAVELOG_DEBUG("Got back query ID %lu", query_id);
-    //result = ivshmem::DeSerialize<fcl::CollisionResult>(is);
-    //return result.numContacts();
-    return 0;
+    const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
+    uint64_t query_id = 0; // returned query ID
+    offset = 0;
+    offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);
+    offset += ivshmem::deserialize(read_addr + offset, result);
+    RAVELOG_DEBUG("Reading %lu bytes for query %lu. numcontacts: %lu\n", offset, query_id, result.numContacts());
+    return result.numContacts();
 }
 
 void IVShMemInterface::exit()
 {
-    RAVELOG_INFO("Sending exit signal to collision checker...\n");
-    uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
-    size_t offset = 0;
-    offset += ivshmem::serialize(write_addr + offset, _query_id);
-    offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::Exit));
-    _shmem.write_ready(offset);
-    _ivshmem_server.InterruptPeer();
+    /// NOTES: It is unnecessary to ask Zephyr to exit.
+    /// The system is read-only and stateless, so it is sufficient to simply ignore it when
+    /// the driver program exits and restarts.
+    /// TODO: Maybe a reset command is still needed?
+
+    //RAVELOG_INFO("Sending exit signal to collision checker...\n");
+    //uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
+    //size_t offset = 0;
+    //offset += ivshmem::serialize(write_addr + offset, _query_id++);
+    //offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::Exit));
+    //_shmem.write_ready(offset);
+    //_ivshmem_server.InterruptPeer();
 }
 
 } // namespace
