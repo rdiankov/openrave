@@ -68,7 +68,15 @@ if( FCL_FOUND )
 
     link_directories(${OPENRAVE_LINK_DIRS} ${FCL_LIBRARY_DIRS})
     include_directories(${FCL_INCLUDE_DIRS} ${FCL_INCLUDEDIR})
-    add_library(fclrave SHARED fclrave.cpp fclcollision.h fclstatistics.h fclspace.h plugindefs.h)
+
+    add_library(fclrave SHARED
+        fclrave.cpp
+        fclspace.cpp
+        fclcollision.h
+        fclstatistics.h
+        fclspace.h
+        plugindefs.h
+    )
     target_link_libraries(fclrave PRIVATE boost_assertion_failed PUBLIC libopenrave ${FCL_LIBRARIES})
     # ${FCL_CFLAGS_OTHER} is useless as CMAKE_CXX_STANDARD now requires 14
     set_target_properties(fclrave PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS} ${FCL_LDFLAGS}")
