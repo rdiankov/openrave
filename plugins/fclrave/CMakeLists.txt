@@ -71,6 +71,7 @@ if( FCL_FOUND )
 
     add_library(fclrave SHARED
         fclrave.cpp
+        fclcollision.cpp
         fclspace.cpp
         fclcollision.h
         fclstatistics.h
