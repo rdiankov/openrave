@@ -73,9 +73,11 @@ if( FCL_FOUND )
         fclrave.cpp
         fclcollision.cpp
         fclspace.cpp
+        fclmanagercache.cpp
         fclcollision.h
         fclstatistics.h
         fclspace.h
+        fclmanagercache.h
         plugindefs.h
     )
     target_link_libraries(fclrave PRIVATE boost_assertion_failed PUBLIC libopenrave ${FCL_LIBRARIES})
