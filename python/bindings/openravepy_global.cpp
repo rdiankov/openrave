@@ -315,7 +315,7 @@ public:
     dict toDict() {
         // for ujson serialization
         dict d;
-        d["transform"] = transform();
+        d["transform"] = pose();
         d["extents"] = extents();
         return d;
     }
