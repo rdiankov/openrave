@@ -151,6 +151,7 @@ PyLaserGeomData::PyLaserGeomData() {
 }
 PyLaserGeomData::PyLaserGeomData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const> pgeom)
 {
+    hardware_id = pgeom->hardware_id;
     min_angle = py::make_tuple(pgeom->min_angle[0], pgeom->min_angle[1]);
     max_angle = py::make_tuple(pgeom->max_angle[0], pgeom->max_angle[1]);
     resolution = py::make_tuple(pgeom->resolution[0], pgeom->resolution[1]);
@@ -166,6 +167,7 @@ SensorBase::SensorType PyLaserGeomData::GetType() {
 }
 SensorBase::SensorGeometryPtr PyLaserGeomData::GetGeometry() {
     OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData> geom(new SensorBase::LaserGeomData());
+    geom->hardware_id = hardware_id;
     geom->min_angle[0] = (dReal)py::extract<dReal>(min_angle[0]);
     geom->min_angle[1] = (dReal)py::extract<dReal>(min_angle[1]);
     geom->max_angle[0] = (dReal)py::extract<dReal>(max_angle[0]);
