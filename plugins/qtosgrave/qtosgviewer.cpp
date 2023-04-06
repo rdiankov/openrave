@@ -1077,6 +1077,12 @@ void QtOSGViewer::_UpdateViewport()
     _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
+
+    _cameraDistanceToFocus = _posgWidget->GetCameraDistanceToFocus();
+
+    // have to flip Z axis
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    _cameraTransform = GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
 }
 
 void QtOSGViewer::_SetHUDTextOffset(double xOffset, double yOffset)
@@ -1487,15 +1493,13 @@ void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 {
     std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
-    // have to flip Z axis
-    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    return GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
+    return _cameraTransform;
 }
 
 float QtOSGViewer::GetCameraDistanceToFocus() const
 {
     std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
-    return _posgWidget->GetCameraDistanceToFocus();
+    return _cameraDistanceToFocus;
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const

@@ -430,6 +430,8 @@ public:
 
     //@{ camera
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
+    RaveTransform<float> _cameraTransform; ///< transform of the view camera, read only.
+    float _cameraDistanceToFocus = 0.0; ///< distance to focus of the view camera, read only.
     //@}
 
     std::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
