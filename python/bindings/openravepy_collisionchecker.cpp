@@ -656,21 +656,21 @@ bool PyCollisionCheckerBase::CheckCollisionOBB(object oaabb, object otransform, 
     return bCollision;
 }
 
-bool PyCollisionCheckerBase::CheckCollisionOBB(object oaabb, object otransform, object bodyincluded, PyCollisionReportPtr pReport)
+bool PyCollisionCheckerBase::CheckCollisionOBB(object oaabb, object otransform, object bodiesincluded, PyCollisionReportPtr pReport)
 {
     const AABB aabb = ExtractAABB(oaabb);
     const Transform t = ExtractTransform(otransform);
-    std::vector<KinBodyConstPtr> vbodyincluded;
-    for(size_t i = 0; i < (size_t)len(bodyincluded); ++i) {
-        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyincluded[py::to_object(i)]);
+    std::vector<KinBodyConstPtr> vbodiesincluded;
+    for(size_t i = 0; i < (size_t)len(bodiesincluded); ++i) {
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodiesincluded[py::to_object(i)]);
         if( !!pkinbody ) {
-            vbodyincluded.push_back(openravepy::GetKinBody(pkinbody));
+            vbodiesincluded.push_back(openravepy::GetKinBody(pkinbody));
         }
         else {
             RAVELOG_ERROR("failed to get included body\n");
         }
     }
-    bool bCollision = _pCollisionChecker->CheckCollision(aabb, t, vbodyincluded, openravepy::GetCollisionReport(pReport));
+    bool bCollision = _pCollisionChecker->CheckCollision(aabb, t, vbodiesincluded, openravepy::GetCollisionReport(pReport));
     openravepy::UpdateCollisionReport(pReport, _pyenv);
     return bCollision;
 }
