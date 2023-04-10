@@ -656,6 +656,25 @@ bool PyCollisionCheckerBase::CheckCollisionOBB(object oaabb, object otransform, 
     return bCollision;
 }
 
+bool PyCollisionCheckerBase::CheckCollisionOBB(object oaabb, object otransform, object bodyincluded, PyCollisionReportPtr pReport)
+{
+    const AABB aabb = ExtractAABB(oaabb);
+    const Transform t = ExtractTransform(otransform);
+    std::vector<KinBodyConstPtr> vbodyincluded;
+    for(size_t i = 0; i < (size_t)len(bodyincluded); ++i) {
+        PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyincluded[py::to_object(i)]);
+        if( !!pkinbody ) {
+            vbodyincluded.push_back(openravepy::GetKinBody(pkinbody));
+        }
+        else {
+            RAVELOG_ERROR("failed to get included body\n");
+        }
+    }
+    bool bCollision = _pCollisionChecker->CheckCollision(aabb, t, vbodyincluded, openravepy::GetCollisionReport(pReport));
+    openravepy::UpdateCollisionReport(pReport, _pyenv);
+    return bCollision;
+}
+
 bool PyCollisionCheckerBase::CheckSelfCollision(object o1, PyCollisionReportPtr pReport)
 {
     KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
@@ -843,6 +862,7 @@ void init_openravepy_collisionchecker()
     bool (PyCollisionCheckerBase::*pcoltbr)(object, PyKinBodyPtr, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionTriMesh;
     bool (PyCollisionCheckerBase::*pcolter)(object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionTriMesh;
     bool (PyCollisionCheckerBase::*pcolobb)(object, object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionOBB;
+    bool (PyCollisionCheckerBase::*pcolobbi)(object, object, object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionOBB;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, PyInterfaceBase>(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
@@ -881,6 +901,7 @@ void init_openravepy_collisionchecker()
     .def("CheckCollisionTriMesh",pcolter, PY_ARGS("trimesh", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const TriMesh; CollisionReportPtr"))
     .def("CheckCollisionTriMesh",pcoltbr, PY_ARGS("trimesh", "body", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const TriMesh; KinBodyConstPtr; CollisionReportPtr"))
     .def("CheckCollisionOBB", pcolobb, PY_ARGS("aabb", "pose", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const AABB; const Transform; CollisionReport"))
+    .def("CheckCollisionOBB", pcolobbi, PY_ARGS("aabb", "pose", "bodyincluded", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const AABB; const Transform; const std::vector; CollisionReport"))
     .def("CheckSelfCollision",&PyCollisionCheckerBase::CheckSelfCollision, PY_ARGS("linkbody", "report") DOXY_FN(CollisionCheckerBase,CheckSelfCollision "KinBodyConstPtr, CollisionReportPtr"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("CheckCollisionRays", &PyCollisionCheckerBase::CheckCollisionRays,
