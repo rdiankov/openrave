@@ -901,7 +901,7 @@ void init_openravepy_collisionchecker()
     .def("CheckCollisionTriMesh",pcolter, PY_ARGS("trimesh", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const TriMesh; CollisionReportPtr"))
     .def("CheckCollisionTriMesh",pcoltbr, PY_ARGS("trimesh", "body", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const TriMesh; KinBodyConstPtr; CollisionReportPtr"))
     .def("CheckCollisionOBB", pcolobb, PY_ARGS("aabb", "pose", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const AABB; const Transform; CollisionReport"))
-    .def("CheckCollisionOBB", pcolobbi, PY_ARGS("aabb", "pose", "bodyincluded", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const AABB; const Transform; const std::vector; CollisionReport"))
+    .def("CheckCollisionOBB", pcolobbi, PY_ARGS("aabb", "pose", "bodiesincluded", "report") DOXY_FN(CollisionCheckerBase,CheckCollision "const AABB; const Transform; const std::vector; CollisionReport"))
     .def("CheckSelfCollision",&PyCollisionCheckerBase::CheckSelfCollision, PY_ARGS("linkbody", "report") DOXY_FN(CollisionCheckerBase,CheckSelfCollision "KinBodyConstPtr, CollisionReportPtr"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .def("CheckCollisionRays", &PyCollisionCheckerBase::CheckCollisionRays,
