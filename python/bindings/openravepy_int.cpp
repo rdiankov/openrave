@@ -2505,6 +2505,26 @@ object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocol
     return toPyGraphHandle(_penv->drawboxarray(vvectors,ExtractVector3(oextents)));
 }
 
+object PyEnvironmentBase::drawaabb(object oaabb, object otransform, object ocolor, float transparency)
+{
+    const AABB aabb = ExtractAABB(oaabb);
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    return toPyGraphHandle(_penv->drawaabb(aabb, ExtractTransform(otransform), vcolor, transparency));
+}
+
+object PyEnvironmentBase::drawobb(object oobb, object ocolor, float transparency)
+{
+    const OrientedBox obb = ExtractOrientedBox(oobb);
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    return toPyGraphHandle(_penv->drawobb(obb, vcolor, transparency));
+}
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture)
 {
@@ -3637,6 +3657,24 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           )
 #else
                      .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawboxarray_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawboxarray)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("drawaabb", &PyEnvironmentBase::drawaabb,
+                          "aabb"_a,
+                          "transform"_a,
+                          "color"_a = py::none_(),
+                          "transparency"_a = 0.0f,
+                          DOXY_FN(EnvironmentBase,drawaabb)
+                          )
+                     .def("drawobb", &PyEnvironmentBase::drawobb,
+                          "obb"_a,
+                          "color"_a = py::none_(),
+                          "transparency"_a = 0.0f,
+                          DOXY_FN(EnvironmentBase,drawobb)
+                          )
+#else
+                     .def("drawaabb",&PyEnvironmentBase::drawbox,drawbox_overloads(PY_ARGS("aabb","transform","color","transparency") DOXY_FN(EnvironmentBase,drawaabb)))
+                     .def("drawobb",&PyEnvironmentBase::drawbox,drawbox_overloads(PY_ARGS("obb","color","transparency") DOXY_FN(EnvironmentBase,drawobb)))
 #endif
                      .def("drawplane",drawplane1, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
                      .def("drawplane",drawplane2, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
