@@ -1697,7 +1697,7 @@ GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVec
     const RaveVector<float> color(0.33203125f, 0.5f, 0.898437f);
     RaveTransform<float> pose;
     pose.trans = vpos;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vextents, pose, color, 1.0f), ViewerCommandPriority::MEDIUM); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vextents, pose, color, 0.0f), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
