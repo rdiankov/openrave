@@ -211,7 +211,7 @@ class ReachabilityModel(DatabaseGenerator):
             return self.has()
         
         except Exception as e:
-            log.debug('LoadHDF5 for %s: ',filename,e)
+            log.debug('LoadHDF5 for %s: %r',filename,e)
             return False
         finally:
             if f is not None:

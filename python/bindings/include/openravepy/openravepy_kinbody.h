@@ -125,6 +125,7 @@ public:
 #else
         py::object _setIgnoreRobotLinkNames = py::none_();
 #endif
+        py::object _grabbedUserData = py::none_();
     }; // class PyGrabbedInfo
     typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 
@@ -158,6 +159,9 @@ public:
         bool _isPartial = true;
         py::object _dofValues = py::none_();
         py::object _readableInterfaces = py::none_();
+
+        py::object _files = py::none_();
+
         virtual std::string __str__();
         virtual py::object __unicode__();
 
@@ -297,6 +301,7 @@ public:
     PyInterfaceBasePtr GetSelfCollisionChecker();
     bool CheckSelfCollision(PyCollisionReportPtr pReport=PyCollisionReportPtr(), PyCollisionCheckerBasePtr pycollisionchecker=PyCollisionCheckerBasePtr());
     bool IsAttached(PyKinBodyPtr pattachbody);
+    bool HasAttached() const;
     py::object GetAttached() const;
     py::object GetAttachedEnvironmentBodyIndices() const;
     void SetZeroConfiguration();
@@ -306,14 +311,14 @@ public:
     void SetConfigurationValues(py::object ovalues, uint32_t checklimits=KinBody::CLA_CheckLimits);
     py::object GetConfigurationValues() const;
     bool Grab(PyKinBodyPtr pbody, py::object pylink_or_linkstoignore);
-    bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore);
+    bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object grabbedUserData);
     void Release(PyKinBodyPtr pbody);
     void ReleaseAllGrabbed();
     void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
     int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink) const;
-    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore) const;
+    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object grabbedUserData) const;
     int GetNumGrabbed() const;
     py::object GetGrabbed() const;
     py::object GetGrabbedInfo(py::object ograbbedname=py::none_()) const;
@@ -332,8 +337,10 @@ public:
     py::object GetManageData() const;
     int GetUpdateStamp() const;
     std::string serialize(int options) const;
+    UpdateFromInfoResult UpdateFromKinBodyInfo(py::object oInfo);
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
+    py::object GetAssociatedFileEntries() const;
 
     py::object ExtractInfo() const;
 

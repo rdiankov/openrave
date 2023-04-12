@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
 #define GRASPTHRESH2 dReal(0.002f)
 
 struct GRASPGOAL
@@ -1117,7 +1120,13 @@ protected:
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = directions[index];
+            }
+        }
 
         vector<dReal> voffset;
         string cmd;
@@ -1237,9 +1246,13 @@ protected:
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
-        FOREACH(it,graspparams->vgoalconfig) {
-            *it = -*it;
+
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = -directions[index];
+            }
         }
         string cmd;
         while(!sinput.eof()) {
@@ -1346,7 +1359,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1356,7 +1368,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
@@ -1492,7 +1503,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1502,7 +1512,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 

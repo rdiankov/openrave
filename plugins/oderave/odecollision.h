@@ -18,8 +18,11 @@
 
 #include "odespace.h"
 
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <openrave/utils.h>
+
+using namespace boost::placeholders;
 
 #ifndef ODE_USE_MULTITHREAD
 static std::mutex _mutexode;

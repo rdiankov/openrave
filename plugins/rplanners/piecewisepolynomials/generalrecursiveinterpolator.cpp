@@ -209,7 +209,6 @@ PolynomialCheckReturn GeneralRecursiveInterpolator::Compute1DTrajectory(
         dReal delta = deltaX - deltaX1 - deltaX3;
 
         // Note: In the paper, there is no explicit consideration for the case when v is zero.
-        bool bFreeDuration2 = false;
         if( FuzzyZero(v, g_fPolynomialEpsilon) ) {
             // In this case, v == 0 so we are free to choose the duration of this middle part.
             duration2 = 0; // leave it unchosen first. will compute an appropriate value for duration in the end.

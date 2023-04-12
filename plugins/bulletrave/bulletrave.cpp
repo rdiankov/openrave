@@ -13,27 +13,30 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
+#include "bulletrave.h"
+//#include "plugindefs.h"
 #include "bulletphysics.h"
 #include "bulletcollision.h"
-#include <openrave/plugin.h>
 
-CollisionCheckerBasePtr CreateBulletCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::CollisionCheckerBasePtr CreateBulletCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 
-static std::list< OpenRAVE::UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object
+const std::string BulletRavePlugin::_pluginname = "BulletRavePlugin";
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+BulletRavePlugin::BulletRavePlugin()
 {
-    if( !s_listRegisteredReaders ) {
-        s_listRegisteredReaders = new list< OpenRAVE::UserDataPtr >();
-        s_listRegisteredReaders->push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"bulletproperties",BulletPhysicsEngine::CreateXMLReader));
-    }
+    s_listRegisteredReaders.push_back(RaveRegisterXMLReader(OpenRAVE::PT_PhysicsEngine,"bulletproperties",BulletPhysicsEngine::CreateXMLReader));
+    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("bullet");
+    _interfaces[OpenRAVE::PT_PhysicsEngine].push_back("bullet");
+}
 
+BulletRavePlugin::~BulletRavePlugin() {}
+
+OpenRAVE::InterfaceBasePtr BulletRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:
         if( interfacename == "bullet") {
             return CreateBulletCollisionChecker(penv,sinput);
-	     
         }
         break;
     case OpenRAVE::PT_PhysicsEngine:
@@ -44,17 +47,19 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& BulletRavePlugin::GetInterfaces() const
 {
-    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("bullet");
-    info.interfacenames[OpenRAVE::PT_PhysicsEngine].push_back("bullet");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& BulletRavePlugin::GetPluginName() const
 {
-	delete s_listRegisteredReaders;
-	s_listRegisteredReaders = NULL;
+    return _pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new BulletRavePlugin();
 }

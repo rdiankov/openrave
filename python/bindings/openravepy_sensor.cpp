@@ -86,10 +86,10 @@ SensorBase::CameraIntrinsics PyCameraIntrinsics::GetCameraIntrinsics()
         intrinsics.cy = 0;
     }
     else {
-        intrinsics.fx = py::extract<dReal>(K[0][0]);
-        intrinsics.fy = py::extract<dReal>(K[1][1]);
-        intrinsics.cx = py::extract<dReal>(K[0][2]);
-        intrinsics.cy = py::extract<dReal>(K[1][2]);
+        intrinsics.fx = py::extract<dReal>(K[py::to_object(0)][py::to_object(0)]);
+        intrinsics.fy = py::extract<dReal>(K[py::to_object(1)][py::to_object(1)]);
+        intrinsics.cx = py::extract<dReal>(K[py::to_object(0)][py::to_object(2)]);
+        intrinsics.cy = py::extract<dReal>(K[py::to_object(1)][py::to_object(2)]);
     }
     intrinsics.distortion_model = distortion_model;
     intrinsics.distortion_coeffs = ExtractArray<dReal>(distortion_coeffs);
@@ -151,8 +151,10 @@ PyLaserGeomData::PyLaserGeomData() {
 }
 PyLaserGeomData::PyLaserGeomData(OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const> pgeom)
 {
+    hardware_id = pgeom->hardware_id;
     min_angle = py::make_tuple(pgeom->min_angle[0], pgeom->min_angle[1]);
     max_angle = py::make_tuple(pgeom->max_angle[0], pgeom->max_angle[1]);
+    resolution = py::make_tuple(pgeom->resolution[0], pgeom->resolution[1]);
     min_range = pgeom->min_range;
     max_range = pgeom->max_range;
     time_increment = pgeom->time_increment;
@@ -165,10 +167,13 @@ SensorBase::SensorType PyLaserGeomData::GetType() {
 }
 SensorBase::SensorGeometryPtr PyLaserGeomData::GetGeometry() {
     OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData> geom(new SensorBase::LaserGeomData());
+    geom->hardware_id = hardware_id;
     geom->min_angle[0] = (dReal)py::extract<dReal>(min_angle[0]);
     geom->min_angle[1] = (dReal)py::extract<dReal>(min_angle[1]);
     geom->max_angle[0] = (dReal)py::extract<dReal>(max_angle[0]);
     geom->max_angle[1] = (dReal)py::extract<dReal>(max_angle[1]);
+    geom->resolution[0] = (dReal)py::extract<dReal>(resolution[0]);
+    geom->resolution[1] = (dReal)py::extract<dReal>(resolution[1]);
     geom->min_range = min_range;
     geom->max_range = max_range;
     geom->time_increment = time_increment;
@@ -239,7 +244,7 @@ SensorBase::SensorGeometryPtr PyForce6DGeomData::GetGeometry() {
     geom->polarity = polarity;
     const size_t num = len(correction_matrix);
     for (size_t i = 0; i < num; ++i) {
-        geom->correction_matrix[i] = py::extract<dReal>(correction_matrix[i]);
+        geom->correction_matrix[i] = py::extract<dReal>(correction_matrix[py::to_object(i)]);
     }
     return geom;
 }

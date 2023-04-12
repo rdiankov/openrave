@@ -147,6 +147,8 @@ public:
     aiSceneManaged(const std::string& dataorfilename, bool bIsFilename=true, const std::string& formathint=std::string(), unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
         std::call_once(__onceSetAssimpLog, __SetAssimpLog);
         _importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT|aiPrimitiveType_LINE);
+        _importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, aiComponent_NORMALS);
+        flags |= aiProcess_RemoveComponent;
         if( bIsFilename ) {
             _scene = _importer.ReadFile(dataorfilename.c_str(),flags);
         }
@@ -2669,13 +2671,17 @@ public:
             }
         }
         else if( xmlname == "closingdirection" || xmlname == "closingdir" || xmlname == "chuckingdirection" ) {
-            _manipinfo._vChuckingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-            FOREACH(it, _manipinfo._vChuckingDirection) {
-                if( *it > 0 ) {
-                    *it = 1;
+            vector<dReal> vChuckingDirectionReal = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+            _manipinfo._vChuckingDirection.resize(vChuckingDirectionReal.size());
+            for (size_t index = 0; index < vChuckingDirectionReal.size(); ++index) {
+                const dReal realVal = vChuckingDirectionReal[index];
+                int& intVal = _manipinfo._vChuckingDirection[index];
+                intVal = 0;
+                if( realVal > 0 ) {
+                    intVal = 1;
                 }
-                else if( *it < 0 ) {
-                    *it = -1;
+                else if( realVal < 0 ) {
+                    intVal = -1;
                 }
             }
         }

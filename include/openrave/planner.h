@@ -528,9 +528,9 @@ protected:
     virtual bool serialize(std::ostream& O, int options=0) const;
 
     //@{ XML parsing functions, parses the default parameters
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-    virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch);
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+    virtual bool endElement(const std::string& name) override;
+    virtual void characters(const std::string& ch) override;
     std::stringstream _ss;         ///< holds the data read by characters
     boost::shared_ptr<std::stringstream> _sslocal;
     /// all the top-level XML parameter tags (lower case) that are handled by this parameter structure, should be registered in the constructor

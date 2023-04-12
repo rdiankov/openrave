@@ -83,7 +83,7 @@ public:
             return _cmdata;
         }
 
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override{
             _ss.str("");         // have to clear the string
             if( name == "pair" ) {
                 _cmdata->listmaps.push_back(XMLData::COLLISIONPAIR());
@@ -115,7 +115,7 @@ public:
             return PE_Pass;
         }
 
-        virtual bool endElement(const std::string& name)
+        virtual bool endElement(const std::string& name) override
         {
             if( name == "pair" ) {
                 BOOST_ASSERT(_cmdata->listmaps.size()>0);
@@ -141,7 +141,7 @@ public:
             return false;
         }
 
-        virtual void characters(const std::string& ch)
+        virtual void characters(const std::string& ch) override
         {
             _ss.clear();
             _ss << ch;

@@ -31,6 +31,7 @@
 #include <locale>
 #include <set>
 
+#include "plugindatabase_virtual.h"
 #include "plugindatabase.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -444,10 +445,12 @@ public:
         }
 
         // since initialization depends on _pdatabase, have pdatabase be local until it is complete
-        boost::shared_ptr<RaveDatabase> pdatabase(new RaveDatabase());
-        if( !pdatabase->Init(bLoadAllPlugins) ) {
-            RAVELOG_FATAL("failed to create the openrave plugin database\n");
-        }
+#if OPENRAVE_STATIC_PLUGINS
+        boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<StaticRaveDatabase>();
+#else
+        boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<DynamicRaveDatabase>();
+#endif // OPENRAVE_STATIC_PLUGINS
+        pdatabase->Init();
 
         char* phomedir = getenv("OPENRAVE_HOME"); // getenv not thread-safe?
         if( phomedir == NULL ) {
@@ -1998,6 +2001,10 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_BodyNameConflict: return "BodyNameConflict";
     case ORE_SensorNameConflict: return "SensorNameConflict";
     case ORE_BodyIdConflict: return "BodyIdConflict";
+    case ORE_EnvironmentFormatUnrecognized: return "EnvironmentFormatUnrecognized";
+    case ORE_CurlTimeout: return "CurlTimeout";
+    case ORE_CurlInvalidHandle: return "CurlInvalidHandle";
+    case ORE_CurlInvalidResponse: return "CurlInvalidResponse";
     }
     // should throw an exception?
     return "";
@@ -2010,23 +2017,68 @@ void CollisionReport::Reset(int coloptions)
         minDistance = 1e20f;
         numWithinTol = 0;
         contacts.resize(0);
-        vLinkColliding.resize(0);
-        vGeomColliding.resize(0);
-        vBodyColliding.resize(0);
+        vLinkColliding.clear();
+        vGeomColliding.clear();
+        vBodyColliding.clear();
         plink1.reset();
         plink2.reset();
         pgeom1.reset();
         pgeom2.reset();
         bodyName1.clear();
         bodyName2.clear();
+        vGeometryContacts.clear();
     }
 }
 
 std::string CollisionReport::__str__() const
 {
     stringstream s;
-    if( vLinkColliding.size() > 0 ) {
-        s << "pairs=" << vLinkColliding.size();
+    if( vGeometryContacts.size() > 0 ) {
+        s << "geompairs=" << vGeometryContacts.size();
+        int index = 0;
+        for(const CollisionReport::GeometryPairContact& pairContact : vGeometryContacts) {
+            s << ", [" << index << "](";
+            if( !!pairContact.pgeom1 ) {
+                KinBody::LinkPtr parentLink = pairContact.pgeom1->GetParentLink(true);
+                if( !!parentLink ) {
+                    KinBodyPtr parent = parentLink->GetParent(true);
+                    if( !!parent ) {
+                        s << parent->GetName() << ":" << parentLink->GetName() << ":" << pairContact.pgeom1->GetName();
+                    }
+                    else {
+                        RAVELOG_WARN_FORMAT("could not get parent for link name '%s' when printing collision report", parentLink->GetName());
+                        s << "[deleted]:" << parentLink->GetName() << ":" << pairContact.pgeom1->GetName();
+                    }
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent link for geometry name '%s' when printing collision report", pairContact.pgeom1->GetName());
+                    s << "[deleted]:" << pairContact.pgeom1->GetName();
+                }
+            }
+            s << ")x(";
+            if( !!pairContact.pgeom2 ) {
+                KinBody::LinkPtr parentLink = pairContact.pgeom2->GetParentLink(true);
+                if( !!parentLink ) {
+                    KinBodyPtr parent = parentLink->GetParent(true);
+                    if( !!parent ) {
+                        s << parent->GetName() << ":" << parentLink->GetName() << ":" << pairContact.pgeom2->GetName();
+                    }
+                    else {
+                        RAVELOG_WARN_FORMAT("could not get parent for link name '%s' when printing collision report", parentLink->GetName());
+                        s << "[deleted]:" << parentLink->GetName() << ":" << pairContact.pgeom2->GetName();
+                    }
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("could not get parent link for geometry name '%s' when printing collision report", pairContact.pgeom2->GetName());
+                    s << "[deleted]:" << pairContact.pgeom2->GetName();
+                }
+            }
+            s << ") ";
+            ++index;
+        }
+    }
+    else if( vLinkColliding.size() > 0 ) {
+        s << "linkpairs=" << vLinkColliding.size();
         int index = 0;
         bool bHasCollidingBodyNames = vBodyColliding.size() == vLinkColliding.size();
         std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> >::const_iterator itlinkpair = vLinkColliding.begin();
@@ -2811,6 +2863,32 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     return true;
 }
 
+bool SensorBase::LaserGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    orjson::SetJsonValueByKey(value, "minAngle", min_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "maxAngle", max_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "resolution", resolution[0], allocator);
+    orjson::SetJsonValueByKey(value, "minRange", min_range, allocator);
+    orjson::SetJsonValueByKey(value, "maxRange", max_range, allocator);
+    orjson::SetJsonValueByKey(value, "timeIncrement", time_increment, allocator);
+    orjson::SetJsonValueByKey(value, "timeScan", time_scan, allocator);
+    return true;
+}
+
+bool SensorBase::LaserGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    orjson::LoadJsonValueByKey(value, "minAngle", min_angle[0]);
+    orjson::LoadJsonValueByKey(value, "maxAngle", max_angle[0]);
+    orjson::LoadJsonValueByKey(value, "resolution", resolution[0]);
+    orjson::LoadJsonValueByKey(value, "minRange", min_range);
+    orjson::LoadJsonValueByKey(value, "maxRange", max_range);
+    orjson::LoadJsonValueByKey(value, "timeIncrement", time_increment);
+    orjson::LoadJsonValueByKey(value, "timeScan", time_scan);
+    return true;
+}
+
 bool SensorBase::Force6DGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
     SensorGeometry::SerializeXML(writer, options);
@@ -2829,7 +2907,7 @@ bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjs
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
-    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
+    orjson::SetJsonValueByKey(value, "correctionMatrix", correction_matrix, allocator, correction_matrix.size());
     return true;
 }
 
@@ -2837,7 +2915,7 @@ bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value,
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "polarity", polarity);
-    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
+    orjson::LoadJsonValueByKey(value, "correctionMatrix", correction_matrix);
     return true;
 }
 

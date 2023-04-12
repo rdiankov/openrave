@@ -18,13 +18,15 @@
 
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
 
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
 #endif
+
+using namespace boost::placeholders;
 
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase
@@ -1180,6 +1182,7 @@ protected:
                 RAY r = param.GetTranslationDirection5D();
                 IkReal eetrans[3] = {(IkReal)r.pos.x, (IkReal)r.pos.y, (IkReal)r.pos.z};
                 IkReal eerot[9] = {(IkReal)r.dir.x, (IkReal)r.dir.y, (IkReal)r.dir.z, 0,0,0,0,0,0};
+                //RAVELOG_INFO_FORMAT("translationdirection5d: %.17e %.17e %.17e %.17e 0 0 0 %.17e 0 0 0 %.17e", r.dir.x%r.dir.y%r.dir.z%r.pos.x%r.pos.y%r.pos.z);
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                 if( !bret ) {
 #ifdef OPENRAVE_HAS_LAPACK

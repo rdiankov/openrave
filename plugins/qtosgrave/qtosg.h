@@ -62,7 +62,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/assert.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/version.hpp>
@@ -78,8 +78,9 @@
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QTreeWidget>
 
-using namespace OpenRAVE;
 using namespace std;
+using namespace boost::placeholders;
+using namespace OpenRAVE;
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 

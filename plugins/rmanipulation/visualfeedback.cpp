@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false

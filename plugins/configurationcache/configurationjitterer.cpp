@@ -378,7 +378,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _nullbiassampleprob = nullbiassampleprob;
         _deltasampleprob = deltasampleprob;
         _busebiasing = true;
-        RAVELOG_VERBOSE_FORMAT("set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", _nullsampleprob%_nullbiassampleprob%_deltasampleprob);
+        RAVELOG_VERBOSE_FORMAT("env=%s, set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", GetEnv()->GetNameId()%_nullsampleprob%_nullbiassampleprob%_deltasampleprob);
 #else
         throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot set manipulator bias since lapack is not supported"), ORE_CommandNotSupported);
 #endif
@@ -515,7 +515,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             ss << *itval << ",";
                         }
                         ss << "]";
-                        RAVELOG_VERBOSE_FORMAT("env=%d, original env collision failed. report=%s; %s", GetEnv()->GetId()%_report->__str__()%ss.str());
+                        RAVELOG_VERBOSE_FORMAT("env=%s, original env collision failed. report=%s; %s", GetEnv()->GetNameId()%_report->__str__()%ss.str());
                     }
                     _counter.nEnvCollisionFailure++;
                     bCollision = true;
@@ -530,7 +530,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             ss << *itval << ",";
                         }
                         ss << "]";
-                        RAVELOG_VERBOSE_FORMAT("env=%d, original self collision failed. report=%s; %s", GetEnv()->GetId()%_report->__str__()%ss.str());
+                        RAVELOG_VERBOSE_FORMAT("env=%s, original self collision failed. report=%s; %s", GetEnv()->GetNameId()%_report->__str__()%ss.str());
                     }
                     _counter.nSelfCollisionFailure++;
                     bCollision = true;
@@ -540,7 +540,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
                 if( _counter.nNeighStateFailure > 0 ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetId()%_counter.nNeighStateFailure);
+                    RAVELOG_DEBUG_FORMAT("env=%s, jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetNameId()%_counter.nNeighStateFailure);
                 }
                 return -1;
             }
@@ -548,7 +548,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             _nNumIterations++;
         }
         else {
-            RAVELOG_VERBOSE_FORMAT("env=%d, skipping orig pos check", GetEnv()->GetId());
+            RAVELOG_VERBOSE_FORMAT("env=%s, skipping orig pos check", GetEnv()->GetNameId());
         }
 
         if( !!_cache ) {
@@ -788,7 +788,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         _counter.nConstraintToolDirFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "env=" << _probot->GetEnv()->GetId() << ", direction constraints failed, ";
+                            ss << "env=" << GetEnv()->GetNameId() << ", direction constraints failed, ";
                             for(size_t i = 0; i < _newdof2.size(); ++i ) {
                                 if( i > 0 ) {
                                     ss << "," << _newdof2[i];
@@ -809,7 +809,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         _counter.nConstraintToolPositionFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "env=" << _probot->GetEnv()->GetId() << ", position constraints failed, ";
+                            ss << "env=" << GetEnv()->GetNameId() << ", position constraints failed, ";
                             for(size_t i = 0; i < _newdof2.size(); ++i ) {
                                 if( i > 0 ) {
                                     ss << "," << _newdof2[i];
@@ -837,7 +837,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( bCollision ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "env=" << _probot->GetEnv()->GetId() << ", iter=" << iter << "; collision failed, ";
+                        ss << "env=" << _probot->GetEnv()->GetNameId() << ", iter=" << iter << "; collision failed, ";
                         for(size_t i = 0; i < _newdof2.size(); ++i ) {
                             if( i > 0 ) {
                                 ss << "," << _newdof2[i];
@@ -858,7 +858,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     _probot->GetActiveDOFValues(vnewdof);
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                    ss << "jitter iter=" << iter << " ";
+                    ss << "env=" << GetEnv()->GetNameId() << ", jitter iter=" << iter << " ";
 #ifdef _DEBUG
                     ss << "maxtrans=" << fmaxtransdist << " ";
 #endif
@@ -929,7 +929,7 @@ protected:
             // compute single value decomposition: Jacobian = U*diag(S)*transpose(V)
             int ret = boost::numeric::bindings::lapack::gesdd('O','A',J,S,U,V);
             if( ret != 0 ) {
-                RAVELOG_WARN("failed to compute SVD for jacobian, disabling bias\n");
+                RAVELOG_WARN_FORMAT("env=%s, failed to compute SVD for jacobian, disabling bias", GetEnv()->GetNameId());
                 return;
             }
             // diag(S) * transpose(V) * dofvelocities = transpose(U) * P = P2

@@ -2893,26 +2893,6 @@ inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vd
     return true;
 }
 
-/// \brief Create the interfaces, see \ref CreateInterfaceValidated.
-/// \ingroup plugin_exports
-typedef InterfaceBasePtr (*PluginExportFn_OpenRAVECreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, const char* envhash, EnvironmentBasePtr env);
-
-/// \brief Called to fill information about the plugin, see \ref GetPluginAttributesValidated.
-/// \ingroup plugin_exports
-typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, int size, const char* infohash);
-
-/// \brief Called before plugin is unloaded from openrave. See \ref DestroyPlugin.
-/// \ingroup plugin_exports
-typedef void (*PluginExportFn_DestroyPlugin)();
-
-/// \brief Called when OpenRAVE global runtime is finished initializing. See \ref OnRaveInitialized
-/// \ingroup plugin_exports
-typedef void (*PluginExportFn_OnRaveInitialized)();
-
-/// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
-/// \ingroup plugin_exports
-typedef void (*PluginExportFn_OnRavePreDestroy)();
-
 // define inline functions
 const std::string& IkParameterization::GetName() const
 {

@@ -59,7 +59,6 @@
 #include <cmath>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
 #include <boost/format.hpp>
 
 using namespace std;

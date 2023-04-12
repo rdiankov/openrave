@@ -58,7 +58,26 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
-    orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    try {
+        orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+    }
+    catch(const std::exception& e) {
+        // backward compatiblity with float chucking directions
+        RAVELOG_DEBUG_FORMAT("encountered error while loading 'chuckingDirections' as integers, try to load it as doubles: %s", e.what());
+        vector<double> vLocalChuckingDirection;
+        orjson::LoadJsonValueByKey(value, "chuckingDirections", vLocalChuckingDirection);
+        _vChuckingDirection.resize(vLocalChuckingDirection.size());
+        for (size_t index = 0; index < vLocalChuckingDirection.size(); ++index) {
+            int direction = 0;
+            if (vLocalChuckingDirection[index] > 0) {
+                direction = 1;
+            }
+            else if (vLocalChuckingDirection[index] < 0) {
+                direction = -1;
+            }
+            _vChuckingDirection[index] = direction;
+        }
+    }
     orjson::LoadJsonValueByKey(value, "direction", _vdirection);
     orjson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
     orjson::LoadJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName); //optional;
@@ -207,7 +226,7 @@ int RobotBase::Manipulator::GetGripperDOF() const
     return static_cast<int>(__vgripperdofindices.size());
 }
 
-void RobotBase::Manipulator::SetChuckingDirection(const std::vector<dReal>& chuckingdirection)
+void RobotBase::Manipulator::SetChuckingDirection(const std::vector<int>& chuckingdirection)
 {
     OPENRAVE_ASSERT_OP((int)chuckingdirection.size(),==,GetGripperDOF());
     _info._vChuckingDirection = chuckingdirection;
@@ -1630,7 +1649,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
             o << *it << " ";
         }
         FOREACHC(it,_info._vChuckingDirection) {
-            SerializeRound(o,*it);
+            o << *it << " ";
         }
         SerializeRound(o,_info._tLocalTool);
     }
@@ -1812,7 +1831,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
 
-    std::vector<dReal> vChuckingDirection;
+    std::vector<int> vChuckingDirection;
 
     GripperInfoPtr pGripperInfo;
     if( !_info._grippername.empty() ) {

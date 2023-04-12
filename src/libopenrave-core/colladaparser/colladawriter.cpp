@@ -1709,11 +1709,20 @@ private:
                         // robotId
                         daeElementRef param_controllerType = param_jointcontrolinfo_robotcontroller->add("controllerType");
                         param_controllerType->setCharData(pjoint->_info._jci_robotcontroller->controllerType.c_str());
-                        // robotControllerAxisIndex
+                        // robotControllerAxis[Index, Mult, Offset, ProductCode]
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
                             daeElementRef param_robotControllerAxisIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisIndex");
                             param_robotControllerAxisIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisIndex[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisMult = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisMult");
+                            param_robotControllerAxisMult->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisMult->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisMult[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisOffset = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisOffset");
+                            param_robotControllerAxisOffset->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisOffset->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisOffset[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
+                            param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
                         }
                         break;
                     } // end case JCM_RobotController
@@ -2758,13 +2767,13 @@ private:
         domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
         ptec->setProfile("OpenRAVE");
         const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
-        for (int linkIndex0 = 0; linkIndex0 < links.size(); ++linkIndex0) {
+        for (int linkIndex0 = 0; linkIndex0 < (int)links.size(); ++linkIndex0) {
             const KinBody::LinkPtr plink0 = links.at(linkIndex0);
             if (!plink0) {
                 RAVELOG_WARN_FORMAT("env=%d body \"%s\" link %d / %d is null so skip writing ignore link pair.", pbody->GetEnv()->GetId()%pbody->GetName()%linkIndex0%links.size());
                 continue;
             }
-            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < links.size(); ++linkIndex1) {
+            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < (int)links.size(); ++linkIndex1) {
                 if (pbody->AreAdjacentLinks(linkIndex0, linkIndex1)) {
                     const KinBody::LinkPtr plink1 = links.at(linkIndex1);
                     if (!plink1) {

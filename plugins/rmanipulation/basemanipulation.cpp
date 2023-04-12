@@ -16,6 +16,9 @@
 #include "commonmanipulation.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 class BaseManipulation : public ModuleBase
 {
@@ -1093,7 +1096,7 @@ protected:
         }
 
         RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
-        robot->Grab(ptarget);
+        robot->Grab(ptarget, rapidjson::Value());
         return true;
     }
 

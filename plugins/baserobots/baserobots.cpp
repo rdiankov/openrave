@@ -14,29 +14,32 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
-#include <openrave/plugin.h>
+#include "baserobots.h"
+//#include "plugindefs.h"
+#include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
 
-static UserDataPtr s_RegisteredReader;
+OpenRAVE::RobotBasePtr CreateCollisionMapRobot(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::RobotBasePtr CreateConveyorRobot(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 
-RobotBasePtr CreateCollisionMapRobot(EnvironmentBasePtr penv, std::istream& sinput);
-RobotBasePtr CreateConveyorRobot(EnvironmentBasePtr penv, std::istream& sinput);
+void RegisterCollisionMapRobotReaders(std::list< OpenRAVE::UserDataPtr >& listRegisteredReaders);
+void RegisterConveyorReaders(std::list< OpenRAVE::UserDataPtr >& listRegisteredReaders);
 
-void RegisterCollisionMapRobotReaders(std::list< UserDataPtr >& listRegisteredReaders);
-void RegisterConveyorReaders(std::list< UserDataPtr >& listRegisteredReaders);
+const std::string BaseRobotsPlugin::_pluginname = "BaseRobotsPlugin";
 
-static std::list< UserDataPtr >* s_listRegisteredReaders = NULL; ///< have to make it a pointer in order to prevent static object destruction from taking precedence
-
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+BaseRobotsPlugin::BaseRobotsPlugin()
 {
-    if( !s_listRegisteredReaders ) {
-        s_listRegisteredReaders = new list< UserDataPtr >();
-        RegisterCollisionMapRobotReaders(*s_listRegisteredReaders);
-        RegisterConveyorReaders(*s_listRegisteredReaders);
-    }
+    RegisterCollisionMapRobotReaders(s_listRegisteredReaders);
+    RegisterConveyorReaders(s_listRegisteredReaders);
+    _interfaces[OpenRAVE::PT_Robot].push_back("CollisionMapRobot");
+    _interfaces[OpenRAVE::PT_Robot].push_back("Conveyor");
+}
 
+BaseRobotsPlugin::~BaseRobotsPlugin() {}
+
+OpenRAVE::InterfaceBasePtr BaseRobotsPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
     switch(type) {
-    case PT_Robot:
+    case OpenRAVE::PT_Robot:
         if( interfacename == "collisionmaprobot") {
             return CreateCollisionMapRobot(penv,sinput);
         }
@@ -47,17 +50,23 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& BaseRobotsPlugin::GetInterfaces() const
 {
-    info.interfacenames[PT_Robot].push_back("CollisionMapRobot");
-    info.interfacenames[PT_Robot].push_back("Conveyor");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& BaseRobotsPlugin::GetPluginName() const
 {
-    delete s_listRegisteredReaders;
-    s_listRegisteredReaders = NULL;
+    return _pluginname;
 }
+
+#if !OPENRAVE_STATIC_PLUGINS
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new BaseRobotsPlugin();
+}
+
+#endif // OPENRAVE_STATIC_PLUGINS

@@ -58,7 +58,7 @@ public:
         std::string _name;
         std::string _sBaseLinkName, _sIkChainEndLinkName, _sEffectorLinkName; ///< name of the base and effector links of the robot used to determine the chain
         Transform _tLocalTool;
-        std::vector<dReal> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
+        std::vector<int> _vChuckingDirection; ///< the normal direction to move joints for the hand to grasp something
         Vector _vdirection = Vector(0,0,1);
         std::string _sIkSolverXMLId; ///< xml id of the IkSolver interface to attach
         std::vector<std::string> _vGripperJointNames;         ///< names of the gripper joints
@@ -261,12 +261,12 @@ public:
         /// \brief returns the number of DOF for the gripper indices. Equivalent to GetGripperIndices().size()
         int GetGripperDOF() const;
 
-        inline const std::vector<dReal>& GetChuckingDirection() const {
+        inline const std::vector<int>& GetChuckingDirection() const {
             return _info._vChuckingDirection;
         }
 
         /// \brief sets the normal gripper direction to move joints to close/chuck the hand
-        void SetChuckingDirection(const std::vector<dReal>& chuckingdirection);
+        void SetChuckingDirection(const std::vector<int>& chuckingdirection);
 
         /// \brief Sets the local tool direction with respect to the end effector link.
         ///
@@ -731,7 +731,7 @@ public:
 
         void Reset() override;
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
-        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options);
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
         /// \brief Updates the infos depending on the robot at the identity and zero position.
         void InitInfoFromBody(RobotBase& robot);
@@ -904,7 +904,7 @@ public:
         std::vector<ConnectedBodyInfoPtr> _vConnectedBodyInfos; ///< list of pointers to ConnectedBodyInfo
         std::vector<GripperInfoPtr> _vGripperInfos; ///< list of pointers to GripperInfo
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) override;
 
     };
     typedef boost::shared_ptr<RobotBaseInfo> RobotBaseInfoPtr;
@@ -955,7 +955,7 @@ private:
         return PT_Robot;
     }
 
-    virtual void Destroy();
+    virtual void Destroy() override;
 
     /// \brief initializes a robot with links, joints, manipulators, and sensors
     ///
@@ -1244,10 +1244,10 @@ private:
     virtual void CalculateActiveAngularVelocityJacobian(int index, std::vector<dReal>& jacobian) const;
     virtual void CalculateActiveAngularVelocityJacobian(int index, boost::multi_array<dReal,2>& jacobian) const;
 
-    virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const;
+    virtual const std::vector<int>& GetNonAdjacentLinks(int adjacentoptions=0) const override;
 
     /// \brief \ref KinBody::SetNonCollidingConfiguration, also regrabs all bodies
-    virtual void SetNonCollidingConfiguration();
+    virtual void SetNonCollidingConfiguration() override;
 
     //@}
 
@@ -1266,9 +1266,10 @@ private:
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore) override;
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grab the body with the specified link.
 
@@ -1276,33 +1277,47 @@ private:
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames) override;
+    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed/
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith) override;
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore);
+    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
+        \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
+        when checking collisions between the grabbed body and the body.
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body);
+    virtual bool Grab(KinBodyPtr body, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
+
+    /** \brief Grabs the body with the active manipulator's end effector.
+
+        \param[in] body the body to be grabbed
+        \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \return true if successful and body is grabbed
+     */
+    virtual bool Grab(KinBodyPtr body, const rapidjson::Value& rGrabbedUserData);
 
     //@}
 
@@ -1310,17 +1325,17 @@ private:
 
         Do not call SimulationStep for the attached sensors in this function.
      */
-    virtual void SimulationStep(dReal fElapsedTime);
+    virtual void SimulationStep(dReal fElapsedTime) override;
 
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
 
     /// \return true if this body is derived from RobotBase
     bool IsRobot() const override {
         return true;
     }
 
-    virtual void serialize(std::ostream& o, int options) const;
+    virtual void serialize(std::ostream& o, int options) const override;
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
@@ -1365,7 +1380,7 @@ protected:
     /// \brief Called to notify the body that certain groups of parameters have been changed.
     ///
     /// This function in calls every registers calledback that is tracking the changes.
-    virtual void _PostprocessChangedParameters(uint32_t parameters);
+    virtual void _PostprocessChangedParameters(uint32_t parameters) override;
 
     virtual void _UpdateAttachedSensors();
 
@@ -1392,7 +1407,7 @@ protected:
     ConfigurationSpecification _activespec;
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_ROBOT_HASH;
     }
     virtual const char* GetKinBodyHash() const {

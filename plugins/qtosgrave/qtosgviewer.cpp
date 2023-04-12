@@ -462,7 +462,7 @@ void QtOSGViewer::_CreateActions()
 
     bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Polygon"), this);
     bboxAct->setCheckable(true);
-    connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
+    //connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
 
     connect(&_updateViewerTimer, SIGNAL(timeout()), this, SLOT(_UpdateViewerCallback()));
     _updateViewerTimer.start(1000/60); // ms
@@ -708,10 +708,10 @@ void QtOSGViewer::polygonMode()
     _posgWidget->SetPolygonMode(wireAct->isChecked() ? 2 : 0);
 }
 
-void QtOSGViewer::_ProcessBoundingBox()
-{
-    _posgWidget->DrawBoundingBox(bboxAct->isChecked());
-}
+//void QtOSGViewer::_ProcessBoundingBox()
+//{
+//    _posgWidget->DrawBoundingBox(bboxAct->isChecked());
+//}
 
 void QtOSGViewer::axes()
 {
@@ -1077,6 +1077,12 @@ void QtOSGViewer::_UpdateViewport()
     _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
+
+    _cameraDistanceToFocus = _posgWidget->GetCameraDistanceToFocus();
+
+    // have to flip Z axis
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    _cameraTransform = GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
 }
 
 void QtOSGViewer::_SetHUDTextOffset(double xOffset, double yOffset)
@@ -1487,15 +1493,13 @@ void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 {
     std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
-    // have to flip Z axis
-    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    return GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
+    return _cameraTransform;
 }
 
 float QtOSGViewer::GetCameraDistanceToFocus() const
 {
     std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
-    return _posgWidget->GetCameraDistanceToFocus();
+    return _cameraDistanceToFocus;
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
@@ -2313,7 +2317,15 @@ void QtOSGViewer::_CloseGraphHandle(OSGSwitchPtr handle)
 void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t)
 {
     // have to convert to smart pointers so that we can get exceptions thrown rather than dereferencing null pointers
-    SetMatrixTransform(*OSGMatrixTransformPtr(OSGTransformPtr(OSGNodePtr(handle->getChild(0))->asTransform())->asMatrixTransform()), t);
+    if( handle->getNumChildren() > 0 ) {
+        OSGNodePtr osgnode = handle->getChild(0);
+        if( !!osgnode ) {
+            OSGTransformPtr osgtransform = osgnode->asTransform();
+            if( !!osgtransform ) {
+                SetMatrixTransform(*OSGMatrixTransformPtr(osgtransform->asMatrixTransform()), t);
+            }
+        }
+    }
 }
 
 void QtOSGViewer::_SetGraphShow(OSGSwitchPtr handle, bool bShow)

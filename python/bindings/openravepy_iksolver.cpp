@@ -132,7 +132,7 @@ object PyIkReturn::GetMapData(const std::string& key) {
 object PyIkReturn::GetMapDataDict() {
     py::dict odata;
     FOREACHC(it,_ret._mapdata) {
-        odata[it->first] = toPyArray(it->second);
+        odata[it->first.c_str()] = toPyArray(it->second);
     }
     return odata;
 }
