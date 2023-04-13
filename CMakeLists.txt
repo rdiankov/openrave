@@ -837,7 +837,7 @@ configure_package_config_file(
 )
 write_basic_package_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake
-  VERSION ${OPENRAVE_SOVERSION}
+  VERSION "${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH}"
   COMPATIBILITY AnyNewerVersion
 )
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/openrave-${OPENRAVE_SOVERSION})
