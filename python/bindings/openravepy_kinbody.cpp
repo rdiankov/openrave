@@ -264,6 +264,11 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vGeomData2 = toPyVector4(info._vGeomData2);
     _vGeomData3 = toPyVector4(info._vGeomData3);
     _vGeomData4 = toPyVector4(info._vGeomData4);
+    dReal cropMarginXYZ[6];
+    for(int i=0;i<6;i++){
+        cropMarginXYZ[i] = info._vCropContainerMarginXYZ[i];
+    }
+    _vCropContainerMarginXYZ = toPyArrayN(cropMarginXYZ, 6);
 
     _vSideWalls = py::list();
     for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
@@ -339,6 +344,9 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
     info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
     info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
+    for(int i=0;i<6;++i){
+        info._vCropContainerMarginXYZ[i] = (dReal)py::extract<dReal>(_vCropContainerMarginXYZ[py::to_object(i)]);
+    }
 
     info._vSideWalls.clear();
     for (size_t i = 0; i < (size_t)len(_vSideWalls); ++i) {
@@ -4797,6 +4805,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def_readwrite("_calibrationBoardParameters", &PyGeometryInfo::_calibrationBoardParameters)
+                          .def_readwrite("_vCropContainerMarginXYZ", &PyGeometryInfo::_vCropContainerMarginXYZ)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
