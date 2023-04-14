@@ -352,6 +352,12 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
                 return 16;
             }
         }
+        for(int i=0;i<6;i++){
+            dReal diff = _vCropContainerMarginXYZ[i] - rhs._vCropContainerMarginXYZ[i]*fUnitScale;
+            if(RaveFabs(diff) > fEpsilon){
+                return 22;
+            }
+        }
         break;
     }
 
@@ -757,6 +763,9 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
             itwall->vExtents *= fUnitScale;
         }
         _vGeomData2 *= fUnitScale;
+        for(int i=0;i<6;i++){
+            _vCropContainerMarginXYZ[i] *= fUnitScale;
+        }
         break;
     }
     case GT_Sphere:
@@ -811,6 +820,7 @@ void KinBody::GeometryInfo::Reset()
     _bModifiable = true;
     _calibrationBoardParameters.clear();
     _modifiedFields = 0xffffffff;
+    _vCropContainerMarginXYZ = {0, 0, 0, 0, 0, 0};
 }
 
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
@@ -848,6 +858,10 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     }
 
     orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
+    boost::array<dReal, 6> cropMarginXYZCopy = _vCropContainerMarginXYZ;
+    for(int i=0;i<6;i++){
+        cropMarginXYZCopy[i] *= fUnitScale;
+    }
 
     switch(_type) {
     case GT_Box:
@@ -859,6 +873,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginXYZ", cropMarginXYZCopy, allocator);
         break;
 
     case GT_Cage: {
@@ -879,6 +894,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
             orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
         }
         orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginXYZ", cropMarginXYZCopy, allocator);
         break;
     }
     case GT_Sphere:
@@ -1031,6 +1047,21 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _meshcollision.Clear();
             }
         }
+        if (value.HasMember("cropContainerMarginXYZ")) {
+            boost::array<dReal, 6> vDataTemp;
+            orjson::LoadJsonValueByKey(value, "cropContainerMarginXYZ", vDataTemp);
+            bool shouldUpdate = false;
+            for(int i=0;i<6;i++){
+                vDataTemp[i] *= fUnitScale;
+                if(vDataTemp[i] != _vCropContainerMarginXYZ[i]){
+                    shouldUpdate = true;
+                }
+            }
+            if (shouldUpdate) {
+                _vCropContainerMarginXYZ = vDataTemp;
+                _meshcollision.Clear();
+            }
+        }
         break;
     case GT_Cage:
         if (value.HasMember("baseExtents")) {
@@ -1081,6 +1112,21 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 if (bSideWallChanged) {
                     _meshcollision.Clear();
                 }
+            }
+        }
+        if (value.HasMember("cropContainerMarginXYZ")) {
+            boost::array<dReal, 6> vDataTemp;
+            orjson::LoadJsonValueByKey(value, "cropContainerMarginXYZ", vDataTemp);
+            bool shouldUpdate = false;
+            for(int i=0;i<6;i++){
+                vDataTemp[i] *= fUnitScale;
+                if(vDataTemp[i] != _vCropContainerMarginXYZ[i]){
+                    shouldUpdate = true;
+                }
+            }
+            if (shouldUpdate) {
+                _vCropContainerMarginXYZ = vDataTemp;
+                _meshcollision.Clear();
             }
         }
         break;

@@ -359,7 +359,13 @@ public:
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
-                   && _calibrationBoardParameters == other._calibrationBoardParameters;
+                   && _calibrationBoardParameters == other._calibrationBoardParameters
+                   && _vCropContainerMarginXYZ[0] == other._vCropContainerMarginXYZ[0]
+                   && _vCropContainerMarginXYZ[1] == other._vCropContainerMarginXYZ[1]
+                   && _vCropContainerMarginXYZ[2] == other._vCropContainerMarginXYZ[2]
+                   && _vCropContainerMarginXYZ[3] == other._vCropContainerMarginXYZ[3]
+                   && _vCropContainerMarginXYZ[4] == other._vCropContainerMarginXYZ[4]
+                   && _vCropContainerMarginXYZ[5] == other._vCropContainerMarginXYZ[5];
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -490,6 +496,7 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
+        boost::array<dReal, 6> _vCropContainerMarginXYZ = {0, 0, 0, 0, 0, 0};
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
