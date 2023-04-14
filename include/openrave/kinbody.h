@@ -659,6 +659,9 @@ public:
         inline const std::string& GetName() const {
             return _info._name;
         }
+        inline const boost::array<dReal, 6>& GetCropContainerMarginXYZ() const {
+            return _info._vCropContainerMarginXYZ;
+        }
 
         /// \brief returns the local collision mesh
         inline const TriMesh& GetCollisionMesh() const {
@@ -733,6 +736,9 @@ public:
 
         /// \brief sets the name of the geometry
         void SetName(const std::string& name);
+
+        /// \brief set the cropping margin of the geometry
+        void SetCropContainerMarginXYZ(const boost::array<dReal, 6>& cropContainerMarginXYZ);
 
         /// \brief generates the dot mesh of a calibration board
         inline void GetCalibrationBoardDotMesh(TriMesh& tri) {

@@ -1492,6 +1492,13 @@ void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
+void KinBody::Geometry::SetCropContainerMarginXYZ(const boost::array<dReal, 6>& cropContainerMarginXYZ)
+{
+    LinkPtr parent(_parent);
+    _info._vCropContainerMarginXYZ = cropContainerMarginXYZ;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+}
+
 /*
  * Ray-box intersection using IEEE numerical properties to ensure that the
  * test is both robust and efficient, as described in:
@@ -1729,6 +1736,19 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     if (IsModifiable() != info._bModifiable) {
         _info._bModifiable = info._bModifiable;
         RAVELOG_VERBOSE_FORMAT("geometry %s modifiable changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // cropContainerMarginXYZ
+    bool shouldUpdate = false;
+    for(int i=0;i<6;i++){
+        if(_info._vCropContainerMarginXYZ[i] != info._vCropContainerMarginXYZ[i]){
+            shouldUpdate = true;
+        }
+    }
+    if(shouldUpdate){
+        _info._vCropContainerMarginXYZ = info._vCropContainerMarginXYZ;
+        RAVELOG_VERBOSE_FORMAT("geometry %s cropContainerMarginXYZ changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 

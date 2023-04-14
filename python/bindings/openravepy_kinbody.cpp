@@ -4272,7 +4272,8 @@ public:
             r._fTransparency,
             r._bVisible,
             r._bModifiable,
-            r._calibrationBoardParameters
+            r._calibrationBoardParameters,
+            r._vCropContainerMarginXYZ
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4288,6 +4289,7 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
+        r._vCropContainerMarginXYZ = state[13];
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
