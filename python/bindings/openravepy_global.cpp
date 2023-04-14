@@ -349,10 +349,11 @@ std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList)
     if( IS_PYTHONOBJECT_NONE(pyOrientedBoxList) ) {
         return {};
     }
-    const size_t arraySize = len(pyOrientedBoxList);
+    py::list pyOrientedBoxArray(pyOrientedBoxList);
+    const size_t arraySize = pyOrientedBoxArray.size();
     std::vector<OrientedBox> vOrientedBox(arraySize);
     for(size_t iOrientedBox = 0; iOrientedBox < arraySize; ++iOrientedBox) {
-        vOrientedBox[iOrientedBox] = ExtractOrientedBox(pyOrientedBoxList[iOrientedBox]);
+        vOrientedBox[iOrientedBox] = ExtractOrientedBox(pyOrientedBoxArray[iOrientedBox]);
     }
     return vOrientedBox;
 }

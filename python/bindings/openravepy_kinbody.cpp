@@ -686,17 +686,19 @@ JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJoint
         }
     }
     if( !IS_PYTHONOBJECT_NONE(robotControllerAxisMult) ) {
-        size_t num = len(robotControllerAxisMult);
+        py::list robotControllerAxisMultList(robotControllerAxisMult);
+        size_t num = robotControllerAxisMultList.size();
         OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisMult.size(), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
-            info.robotControllerAxisMult[i] = py::extract<dReal>(robotControllerAxisMult[i]);
+            info.robotControllerAxisMult[i] = py::extract<dReal>(robotControllerAxisMultList[i]);
         }
     }
     if( !IS_PYTHONOBJECT_NONE(robotControllerAxisOffset) ) {
-        size_t num = len(robotControllerAxisOffset);
+        py::list robotControllerAxisOffsetList(robotControllerAxisOffset);
+        size_t num = robotControllerAxisOffsetList.size();
         OPENRAVE_EXCEPTION_FORMAT0(num == info.robotControllerAxisOffset.size(), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
-            info.robotControllerAxisOffset[i] = py::extract<dReal>(robotControllerAxisOffset[i]);
+            info.robotControllerAxisOffset[i] = py::extract<dReal>(robotControllerAxisOffsetList[i]);
         }
     }
     if( !IS_PYTHONOBJECT_NONE(robotControllerAxisProductCode) ) {
