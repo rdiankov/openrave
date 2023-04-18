@@ -264,11 +264,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vGeomData2 = toPyVector4(info._vGeomData2);
     _vGeomData3 = toPyVector4(info._vGeomData3);
     _vGeomData4 = toPyVector4(info._vGeomData4);
-    dReal cropMarginXYZ[6];
-    for(int i=0;i<6;i++){
-        cropMarginXYZ[i] = info._vCropContainerMarginsXYZXYZ[i];
-    }
-    _vCropContainerMarginsXYZXYZ = toPyArrayN(cropMarginXYZ, 6);
+    _vCropContainerMarginsXYZXYZ = toPyArrayN(&info._vCropContainerMarginsXYZXYZ[0], 6);
 
     _vSideWalls = py::list();
     for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
