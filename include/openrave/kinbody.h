@@ -360,7 +360,7 @@ public:
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
                    && _calibrationBoardParameters == other._calibrationBoardParameters
-                   && _vCropContainerMarginXYZ == other._vCropContainerMarginXYZ;
+                   && _vCropContainerMarginsXYZXYZ == other._vCropContainerMarginsXYZXYZ;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -491,7 +491,7 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
-        boost::array<dReal, 6> _vCropContainerMarginXYZ = {0, 0, 0, 0, 0, 0};
+        boost::array<dReal, 6> _vCropContainerMarginsXYZXYZ = {0, 0, 0, 0, 0, 0};
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
@@ -655,7 +655,7 @@ public:
             return _info._name;
         }
         inline const boost::array<dReal, 6>& GetCropContainerMarginXYZ() const {
-            return _info._vCropContainerMarginXYZ;
+            return _info._vCropContainerMarginsXYZXYZ;
         }
 
         /// \brief returns the local collision mesh
@@ -733,7 +733,7 @@ public:
         void SetName(const std::string& name);
 
         /// \brief set the cropping margin of the geometry
-        void SetCropContainerMarginXYZ(const boost::array<dReal, 6>& cropContainerMarginXYZ);
+        void SetCropContainerMarginXYZ(const boost::array<dReal, 6>& cropContainerMarginsXYZXYZ);
 
         /// \brief generates the dot mesh of a calibration board
         inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
