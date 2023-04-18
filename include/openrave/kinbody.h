@@ -274,7 +274,7 @@ typedef boost::shared_ptr<Grabbed> GrabbedPtr;
 typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
 
 template<std::size_t N>
-boost::array<dReal, N>& operator*=(boost::array<dReal, N>& lfs, dReal rhs){
+inline boost::array<dReal, N>& operator*=(boost::array<dReal, N>& lfs, dReal rhs){
     for(int i=0;i<N;i++){
         lfs[i] *= rhs;
     }
@@ -282,7 +282,7 @@ boost::array<dReal, N>& operator*=(boost::array<dReal, N>& lfs, dReal rhs){
 }
 
 template<std::size_t N>
-boost::array<dReal, N> operator*(const boost::array<dReal, N>& lfs, dReal rhs){
+inline boost::array<dReal, N> operator*(const boost::array<dReal, N>& lfs, dReal rhs){
     boost::array<dReal, N> result = lfs;
     for(int i=0;i<N;i++){
         result[i] *= rhs;
@@ -291,7 +291,7 @@ boost::array<dReal, N> operator*(const boost::array<dReal, N>& lfs, dReal rhs){
 }
 
 template<std::size_t N>
-boost::array<dReal, N> operator-(const boost::array<dReal, N>& lfs, const boost::array<dReal, N>& rfs){
+inline boost::array<dReal, N> operator-(const boost::array<dReal, N>& lfs, const boost::array<dReal, N>& rfs){
     boost::array<dReal, N> result = lfs;
     for(int i=0;i<N;i++){
         result[i] -= rfs[i];
