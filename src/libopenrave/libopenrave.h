@@ -276,6 +276,11 @@ inline bool IsZeroWithEpsilon4(const Vector v, dReal fEpsilon)
     return RaveFabs(v.x) <= fEpsilon && RaveFabs(v.y) <= fEpsilon && RaveFabs(v.z) <= fEpsilon && RaveFabs(v.w) <= fEpsilon;
 }
 
+inline bool IsZeroWithEpsilon6(const boost::array<dReal, 6> v, dReal fEpsilon)
+{
+    return RaveFabs(v[0]) <= fEpsilon && RaveFabs(v[1]) <= fEpsilon && RaveFabs(v[2]) <= fEpsilon && RaveFabs(v[3]) <= fEpsilon && RaveFabs(v[4]) <= fEpsilon && RaveFabs(v[5]) <= fEpsilon;
+}
+
 inline dReal ComputeQuatDistance2(const Vector& quat0, const Vector& quat1)
 {
     dReal e1 = (quat0-quat1).lengthsqr4();

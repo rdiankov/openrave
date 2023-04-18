@@ -352,11 +352,8 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
                 return 16;
             }
         }
-        for(int i=0;i<6;i++){
-            dReal diff = _vCropContainerMarginsXYZXYZ[i] - rhs._vCropContainerMarginsXYZXYZ[i]*fUnitScale;
-            if(RaveFabs(diff) > fEpsilon){
-                return 22;
-            }
+        if( !IsZeroWithEpsilon6(_vCropContainerMarginsXYZXYZ - rhs._vCropContainerMarginsXYZXYZ*fUnitScale, fEpsilon) ) {
+            return 22;
         }
         break;
     }

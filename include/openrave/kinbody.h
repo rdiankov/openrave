@@ -281,6 +281,24 @@ boost::array<dReal, N>& operator*=(boost::array<dReal, N>& lfs, dReal rhs){
     return lfs;
 }
 
+template<std::size_t N>
+boost::array<dReal, N> operator*(const boost::array<dReal, N>& lfs, dReal rhs){
+    boost::array<dReal, N> result = lfs;
+    for(int i=0;i<N;i++){
+        result[i] *= rhs;
+    }
+    return result;
+}
+
+template<std::size_t N>
+boost::array<dReal, N> operator-(const boost::array<dReal, N>& lfs, const boost::array<dReal, N>& rfs){
+    boost::array<dReal, N> result = lfs;
+    for(int i=0;i<N;i++){
+        result[i] -= rfs[i];
+    }
+    return result;
+}
+
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
