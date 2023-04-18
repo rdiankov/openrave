@@ -753,6 +753,7 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         _vGeomData2 *= fUnitScale;
         _vGeomData3 *= fUnitScale;
         _vGeomData4 *= fUnitScale;
+        _vCropContainerMarginsXYZXYZ *= fUnitScale;
         break;
 
     case GT_Cage: {
@@ -763,9 +764,7 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
             itwall->vExtents *= fUnitScale;
         }
         _vGeomData2 *= fUnitScale;
-        for(int i=0;i<6;i++){
-            _vCropContainerMarginsXYZXYZ[i] *= fUnitScale;
-        }
+        _vCropContainerMarginsXYZXYZ *= fUnitScale;
         break;
     }
     case GT_Sphere:
@@ -859,9 +858,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
 
     orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
     boost::array<dReal, 6> cropContainerMarginsXYZXYZCopy = _vCropContainerMarginsXYZXYZ;
-    for(int i=0;i<6;i++){
-        cropContainerMarginsXYZXYZCopy[i] *= fUnitScale;
-    }
+    cropContainerMarginsXYZXYZCopy *= fUnitScale;
 
     switch(_type) {
     case GT_Box:
@@ -1050,9 +1047,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         if (value.HasMember("cropContainerMarginsXYZXYZ")) {
             boost::array<dReal, 6> vDataTemp;
             orjson::LoadJsonValueByKey(value, "cropContainerMarginsXYZXYZ", vDataTemp);
-            for(int i=0;i<6;i++){
-                vDataTemp[i] *= fUnitScale;
-            }
+            vDataTemp *= fUnitScale;
             if (vDataTemp != _vCropContainerMarginsXYZXYZ) {
                 _vCropContainerMarginsXYZXYZ = vDataTemp;
                 _meshcollision.Clear();
@@ -1113,9 +1108,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         if (value.HasMember("cropContainerMarginsXYZXYZ")) {
             boost::array<dReal, 6> vDataTemp;
             orjson::LoadJsonValueByKey(value, "cropContainerMarginsXYZXYZ", vDataTemp);
-            for(int i=0;i<6;i++){
-                vDataTemp[i] *= fUnitScale;
-            }
+            vDataTemp *= fUnitScale;
             if (vDataTemp != _vCropContainerMarginsXYZXYZ) {
                 _vCropContainerMarginsXYZXYZ = vDataTemp;
                 _meshcollision.Clear();

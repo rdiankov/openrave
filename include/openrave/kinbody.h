@@ -273,6 +273,14 @@ class Grabbed;
 typedef boost::shared_ptr<Grabbed> GrabbedPtr;
 typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
 
+template<std::size_t N>
+boost::array<dReal, N>& operator*=(boost::array<dReal, N>& lfs, dReal rhs){
+    for(int i=0;i<N;i++){
+        lfs[i] *= rhs;
+    }
+    return lfs;
+}
+
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
     \ingroup interfaces
