@@ -360,12 +360,7 @@ public:
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
                    && _calibrationBoardParameters == other._calibrationBoardParameters
-                   && _vCropContainerMarginXYZ[0] == other._vCropContainerMarginXYZ[0]
-                   && _vCropContainerMarginXYZ[1] == other._vCropContainerMarginXYZ[1]
-                   && _vCropContainerMarginXYZ[2] == other._vCropContainerMarginXYZ[2]
-                   && _vCropContainerMarginXYZ[3] == other._vCropContainerMarginXYZ[3]
-                   && _vCropContainerMarginXYZ[4] == other._vCropContainerMarginXYZ[4]
-                   && _vCropContainerMarginXYZ[5] == other._vCropContainerMarginXYZ[5];
+                   && _vCropContainerMarginXYZ == other._vCropContainerMarginXYZ;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
