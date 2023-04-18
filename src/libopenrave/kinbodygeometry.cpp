@@ -1050,14 +1050,10 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         if (value.HasMember("cropContainerMarginsXYZXYZ")) {
             boost::array<dReal, 6> vDataTemp;
             orjson::LoadJsonValueByKey(value, "cropContainerMarginsXYZXYZ", vDataTemp);
-            bool shouldUpdate = false;
             for(int i=0;i<6;i++){
                 vDataTemp[i] *= fUnitScale;
-                if(vDataTemp[i] != _vCropContainerMarginsXYZXYZ[i]){
-                    shouldUpdate = true;
-                }
             }
-            if (shouldUpdate) {
+            if (vDataTemp != _vCropContainerMarginsXYZXYZ) {
                 _vCropContainerMarginsXYZXYZ = vDataTemp;
                 _meshcollision.Clear();
             }
@@ -1117,14 +1113,10 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         if (value.HasMember("cropContainerMarginsXYZXYZ")) {
             boost::array<dReal, 6> vDataTemp;
             orjson::LoadJsonValueByKey(value, "cropContainerMarginsXYZXYZ", vDataTemp);
-            bool shouldUpdate = false;
             for(int i=0;i<6;i++){
                 vDataTemp[i] *= fUnitScale;
-                if(vDataTemp[i] != _vCropContainerMarginsXYZXYZ[i]){
-                    shouldUpdate = true;
-                }
             }
-            if (shouldUpdate) {
+            if (vDataTemp != _vCropContainerMarginsXYZXYZ) {
                 _vCropContainerMarginsXYZXYZ = vDataTemp;
                 _meshcollision.Clear();
             }
@@ -1740,13 +1732,7 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     }
 
     // cropContainerMarginsXYZXYZ
-    bool shouldUpdate = false;
-    for(int i=0;i<6;i++){
-        if(_info._vCropContainerMarginsXYZXYZ[i] != info._vCropContainerMarginsXYZXYZ[i]){
-            shouldUpdate = true;
-        }
-    }
-    if(shouldUpdate){
+    if(GetCropContainerMarginXYZ() != info._vCropContainerMarginsXYZXYZ){
         _info._vCropContainerMarginsXYZXYZ = info._vCropContainerMarginsXYZXYZ;
         RAVELOG_VERBOSE_FORMAT("geometry %s cropContainerMarginsXYZXYZ changed", _info._id);
         updateFromInfoResult = UFIR_Success;
