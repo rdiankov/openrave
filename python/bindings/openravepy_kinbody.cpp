@@ -340,7 +340,7 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
     info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
     info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
-    for(int i=0;i<6;++i){
+    for(int i=0;i<info._vCropContainerMarginsXYZXYZ.size();++i){
         info._vCropContainerMarginsXYZXYZ[i] = (dReal)py::extract<dReal>(_vCropContainerMarginsXYZXYZ[py::to_object(i)]);
     }
 

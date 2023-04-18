@@ -854,8 +854,6 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     }
 
     orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
-    boost::array<dReal, 6> cropContainerMarginsXYZXYZCopy = _vCropContainerMarginsXYZXYZ;
-    cropContainerMarginsXYZXYZCopy *= fUnitScale;
 
     switch(_type) {
     case GT_Box:
@@ -867,7 +865,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginsXYZXYZ", cropContainerMarginsXYZXYZCopy, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginsXYZXYZ", _vCropContainerMarginsXYZXYZ*fUnitScale, allocator);
         break;
 
     case GT_Cage: {
@@ -888,7 +886,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
             orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
         }
         orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginsXYZXYZ", cropContainerMarginsXYZXYZCopy, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginsXYZXYZ", _vCropContainerMarginsXYZXYZ*fUnitScale, allocator);
         break;
     }
     case GT_Sphere:
