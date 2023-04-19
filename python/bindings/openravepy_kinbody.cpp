@@ -264,7 +264,8 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vGeomData2 = toPyVector4(info._vGeomData2);
     _vGeomData3 = toPyVector4(info._vGeomData3);
     _vGeomData4 = toPyVector4(info._vGeomData4);
-    _vCropContainerMarginsXYZXYZ = toPyArrayN(&info._vCropContainerMarginsXYZXYZ[0], 6);
+    _vNegCropContainerMargins = toPyVector3(info._vNegCropContainerMargins);
+    _vPosCropContainerMargins = toPyVector3(info._vPosCropContainerMargins);
 
     _vSideWalls = py::list();
     for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
@@ -340,9 +341,8 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
     info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
     info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
     info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
-    for(int i=0;i<info._vCropContainerMarginsXYZXYZ.size();++i){
-        info._vCropContainerMarginsXYZXYZ[i] = (dReal)py::extract<dReal>(_vCropContainerMarginsXYZXYZ[py::to_object(i)]);
-    }
+    info._vNegCropContainerMargins = ExtractVector<dReal>(_vNegCropContainerMargins);
+    info._vPosCropContainerMargins = ExtractVector<dReal>(_vPosCropContainerMargins);
 
     info._vSideWalls.clear();
     for (size_t i = 0; i < (size_t)len(_vSideWalls); ++i) {
@@ -4269,7 +4269,8 @@ public:
             r._bVisible,
             r._bModifiable,
             r._calibrationBoardParameters,
-            r._vCropContainerMarginsXYZXYZ
+            r._vNegCropContainerMargins,
+            r._vPosCropContainerMargins
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4285,7 +4286,8 @@ public:
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
-        r._vCropContainerMarginsXYZXYZ = state[13];
+        r._vNegCropContainerMargins = state[13];
+        r._vPosCropContainerMargins = state[14];
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
@@ -4803,7 +4805,8 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def_readwrite("_calibrationBoardParameters", &PyGeometryInfo::_calibrationBoardParameters)
-                          .def_readwrite("_vCropContainerMarginsXYZXYZ", &PyGeometryInfo::_vCropContainerMarginsXYZXYZ)
+                          .def_readwrite("_vNegCropContainerMargins", &PyGeometryInfo::_vNegCropContainerMargins)
+                          .def_readwrite("_vPosCropContainerMargins", &PyGeometryInfo::_vPosCropContainerMargins)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

@@ -334,6 +334,12 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         if( !IsZeroWithEpsilon3(_vGeomData4 - rhs._vGeomData4*fUnitScale, fEpsilon) ) {
             return 12;
         }
+        if( !IsZeroWithEpsilon3(_vNegCropContainerMargins - rhs._vNegCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 22;
+        }
+        if( !IsZeroWithEpsilon3(_vPosCropContainerMargins - rhs._vPosCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 23;
+        }
         break;
 
     case GT_Cage: {
@@ -352,8 +358,11 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
                 return 16;
             }
         }
-        if( !IsZeroWithEpsilon6(_vCropContainerMarginsXYZXYZ - rhs._vCropContainerMarginsXYZXYZ*fUnitScale, fEpsilon) ) {
-            return 22;
+        if( !IsZeroWithEpsilon3(_vNegCropContainerMargins - rhs._vNegCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 24;
+        }
+        if( !IsZeroWithEpsilon3(_vPosCropContainerMargins - rhs._vPosCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 25;
         }
         break;
     }
@@ -750,7 +759,8 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         _vGeomData2 *= fUnitScale;
         _vGeomData3 *= fUnitScale;
         _vGeomData4 *= fUnitScale;
-        _vCropContainerMarginsXYZXYZ *= fUnitScale;
+        _vNegCropContainerMargins *= fUnitScale;
+        _vPosCropContainerMargins *= fUnitScale;
         break;
 
     case GT_Cage: {
@@ -761,7 +771,8 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
             itwall->vExtents *= fUnitScale;
         }
         _vGeomData2 *= fUnitScale;
-        _vCropContainerMarginsXYZXYZ *= fUnitScale;
+        _vNegCropContainerMargins *= fUnitScale;
+        _vPosCropContainerMargins *= fUnitScale;
         break;
     }
     case GT_Sphere:
@@ -816,7 +827,8 @@ void KinBody::GeometryInfo::Reset()
     _bModifiable = true;
     _calibrationBoardParameters.clear();
     _modifiedFields = 0xffffffff;
-    _vCropContainerMarginsXYZXYZ = {0, 0, 0, 0, 0, 0};
+    _vNegCropContainerMargins = Vector(0,0,0);
+    _vPosCropContainerMargins = Vector(0,0,0);
 }
 
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
@@ -865,7 +877,8 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginsXYZXYZ", _vCropContainerMarginsXYZXYZ*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "negCropContainerMargins", _vNegCropContainerMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "posCropContainerMargins", _vPosCropContainerMargins*fUnitScale, allocator);
         break;
 
     case GT_Cage: {
@@ -886,7 +899,8 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
             orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
         }
         orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "cropContainerMarginsXYZXYZ", _vCropContainerMarginsXYZXYZ*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "negCropContainerMargins", _vNegCropContainerMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "posCropContainerMargins", _vPosCropContainerMargins*fUnitScale, allocator);
         break;
     }
     case GT_Sphere:
@@ -1039,12 +1053,19 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _meshcollision.Clear();
             }
         }
-        if (value.HasMember("cropContainerMarginsXYZXYZ")) {
-            boost::array<dReal, 6> vDataTemp;
-            orjson::LoadJsonValueByKey(value, "cropContainerMarginsXYZXYZ", vDataTemp);
-            vDataTemp *= fUnitScale;
-            if (vDataTemp != _vCropContainerMarginsXYZXYZ) {
-                _vCropContainerMarginsXYZXYZ = vDataTemp;
+        if (value.HasMember("negCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "negCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vNegCropContainerMargins) {
+                _vNegCropContainerMargins = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
+        }
+        if (value.HasMember("posCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "posCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vPosCropContainerMargins) {
+                _vPosCropContainerMargins = vGeomDataTemp;
                 _meshcollision.Clear();
             }
         }
@@ -1100,12 +1121,19 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 }
             }
         }
-        if (value.HasMember("cropContainerMarginsXYZXYZ")) {
-            boost::array<dReal, 6> vDataTemp;
-            orjson::LoadJsonValueByKey(value, "cropContainerMarginsXYZXYZ", vDataTemp);
-            vDataTemp *= fUnitScale;
-            if (vDataTemp != _vCropContainerMarginsXYZXYZ) {
-                _vCropContainerMarginsXYZXYZ = vDataTemp;
+        if (value.HasMember("negCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "negCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vNegCropContainerMargins) {
+                _vNegCropContainerMargins = vGeomDataTemp;
+                _meshcollision.Clear();
+            }
+        }
+        if (value.HasMember("posCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "posCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vPosCropContainerMargins) {
+                _vPosCropContainerMargins = vGeomDataTemp;
                 _meshcollision.Clear();
             }
         }
@@ -1472,10 +1500,17 @@ void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
-void KinBody::Geometry::SetCropContainerMarginXYZ(const boost::array<dReal, 6>& cropContainerMarginsXYZXYZ)
+void KinBody::Geometry::SetNegCropContainerMargins(const Vector& negCropContainerMargins)
 {
     LinkPtr parent(_parent);
-    _info._vCropContainerMarginsXYZXYZ = cropContainerMarginsXYZXYZ;
+    _info._vNegCropContainerMargins = negCropContainerMargins;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+}
+
+void KinBody::Geometry::SetPosCropContainerMargins(const Vector& posCropContainerMargins)
+{
+    LinkPtr parent(_parent);
+    _info._vPosCropContainerMargins = posCropContainerMargins;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
@@ -1719,10 +1754,17 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
         updateFromInfoResult = UFIR_Success;
     }
 
-    // cropContainerMarginsXYZXYZ
-    if(GetCropContainerMarginXYZ() != info._vCropContainerMarginsXYZXYZ){
-        _info._vCropContainerMarginsXYZXYZ = info._vCropContainerMarginsXYZXYZ;
-        RAVELOG_VERBOSE_FORMAT("geometry %s cropContainerMarginsXYZXYZ changed", _info._id);
+    // negCropContainerMargins
+    if(GetNegCropContainerMargins() != info._vNegCropContainerMargins){
+        _info._vNegCropContainerMargins = info._vNegCropContainerMargins;
+        RAVELOG_VERBOSE_FORMAT("geometry %s negCropContainerMargins changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // posCropContainerMargins
+    if(GetPosCropContainerMargins() != info._vPosCropContainerMargins){
+        _info._vPosCropContainerMargins = info._vPosCropContainerMargins;
+        RAVELOG_VERBOSE_FORMAT("geometry %s posCropContainerMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 

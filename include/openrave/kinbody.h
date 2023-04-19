@@ -273,31 +273,6 @@ class Grabbed;
 typedef boost::shared_ptr<Grabbed> GrabbedPtr;
 typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
 
-template<std::size_t N>
-inline boost::array<dReal, N>& operator*=(boost::array<dReal, N>& lfs, dReal rhs){
-    for(int i=0;i<N;i++){
-        lfs[i] *= rhs;
-    }
-    return lfs;
-}
-
-template<std::size_t N>
-inline boost::array<dReal, N> operator*(const boost::array<dReal, N>& lfs, dReal rhs){
-    boost::array<dReal, N> result = lfs;
-    for(int i=0;i<N;i++){
-        result[i] *= rhs;
-    }
-    return result;
-}
-
-template<std::size_t N>
-inline boost::array<dReal, N> operator-(const boost::array<dReal, N>& lfs, const boost::array<dReal, N>& rfs){
-    boost::array<dReal, N> result = lfs;
-    for(int i=0;i<N;i++){
-        result[i] -= rfs[i];
-    }
-    return result;
-}
 
 
 /** \brief <b>[interface]</b> A kinematic body of links and joints. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_kinbody.
@@ -386,7 +361,8 @@ public:
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
                    && _calibrationBoardParameters == other._calibrationBoardParameters
-                   && _vCropContainerMarginsXYZXYZ == other._vCropContainerMarginsXYZXYZ;
+                   && _vNegCropContainerMargins == other._vNegCropContainerMargins
+                   && _vPosCropContainerMargins == other._vPosCropContainerMargins;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -517,7 +493,8 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
-        boost::array<dReal, 6> _vCropContainerMarginsXYZXYZ = {0, 0, 0, 0, 0, 0};
+        Vector _vNegCropContainerMargins = Vector(0,0,0);
+        Vector _vPosCropContainerMargins = Vector(0,0,0);
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
@@ -680,8 +657,11 @@ public:
         inline const std::string& GetName() const {
             return _info._name;
         }
-        inline const boost::array<dReal, 6>& GetCropContainerMarginXYZ() const {
-            return _info._vCropContainerMarginsXYZXYZ;
+        inline const Vector& GetNegCropContainerMargins() const {
+            return _info._vNegCropContainerMargins;
+        }
+        inline const Vector& GetPosCropContainerMargins() const {
+            return _info._vPosCropContainerMargins;
         }
 
         /// \brief returns the local collision mesh
@@ -758,8 +738,11 @@ public:
         /// \brief sets the name of the geometry
         void SetName(const std::string& name);
 
-        /// \brief set the cropping margin of the geometry
-        void SetCropContainerMarginXYZ(const boost::array<dReal, 6>& cropContainerMarginsXYZXYZ);
+        /// \brief set the negative crop margin of the geometry
+        void SetNegCropContainerMargins(const Vector& negCropContainerMargins);
+
+        /// \brief set the positive crop margin of the geometry
+        void SetPosCropContainerMargins(const Vector& posCropContainerMargins);
 
         /// \brief generates the dot mesh of a calibration board
         inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
