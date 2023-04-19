@@ -360,8 +360,8 @@ public:
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
                    && _calibrationBoardParameters == other._calibrationBoardParameters
-                   && _vNegCropContainerMargins == other._vNegCropContainerMargins
-                   && _vPosCropContainerMargins == other._vPosCropContainerMargins;
+                   && _vNegativeCropContainerMargins == other._vNegativeCropContainerMargins
+                   && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -492,8 +492,8 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
-        Vector _vNegCropContainerMargins = Vector(0,0,0); ///< The negative crop margins component
-        Vector _vPosCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
+        Vector _vNegativeCropContainerMargins = Vector(0,0,0); ///< The negative crop margins component
+        Vector _vPositiveCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
@@ -656,11 +656,11 @@ public:
         inline const std::string& GetName() const {
             return _info._name;
         }
-        inline const Vector& GetNegCropContainerMargins() const {
-            return _info._vNegCropContainerMargins;
+        inline const Vector& GetNegativeCropContainerMargins() const {
+            return _info._vNegativeCropContainerMargins;
         }
-        inline const Vector& GetPosCropContainerMargins() const {
-            return _info._vPosCropContainerMargins;
+        inline const Vector& GetPositiveCropContainerMargins() const {
+            return _info._vPositiveCropContainerMargins;
         }
 
         /// \brief returns the local collision mesh
@@ -738,10 +738,10 @@ public:
         void SetName(const std::string& name);
 
         /// \brief set the negative crop margin of the geometry
-        void SetNegCropContainerMargins(const Vector& negCropContainerMargins);
+        void SetNegativeCropContainerMargins(const Vector& negativeCropContainerMargins);
 
         /// \brief set the positive crop margin of the geometry
-        void SetPosCropContainerMargins(const Vector& posCropContainerMargins);
+        void SetPositiveCropContainerMargins(const Vector& positiveCropContainerMargins);
 
         /// \brief generates the dot mesh of a calibration board
         inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
