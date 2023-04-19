@@ -492,8 +492,8 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
-        Vector _vNegCropContainerMargins = Vector(0,0,0);
-        Vector _vPosCropContainerMargins = Vector(0,0,0);
+        Vector _vNegCropContainerMargins = Vector(0,0,0); ///< The negative crop margins component
+        Vector _vPosCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
