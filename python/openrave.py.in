@@ -197,6 +197,10 @@ if __name__ == "__main__":
                     env.Load(arg,{'openravescheme':options.openravescheme})
             if options.pythoncmd is not None:
                 eval(compile(options.pythoncmd,'<string>','exec'))
+
+            if options.ipython:
+                import IPython # IPython <= 4.2.1 needs to be imported before creating viewer
+
             viewer = None
             if viewername is not None:
                 if sys.platform.startswith('darwin'):
@@ -208,9 +212,7 @@ if __name__ == "__main__":
 
             ipythonthread = None
             if options.ipython:
-
                 api_version = None
-                import IPython
                 if IPython.__version__.startswith("0.10"):
                     api_version = '0.10'
                 elif IPython.__version__.startswith("0.11"):
