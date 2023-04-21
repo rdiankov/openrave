@@ -2483,8 +2483,8 @@ protected:
         // every time a shortcut attempt is successful)
 
         dReal score = 1.0;                 // if the current iteration is successful, we calculate a score
-        dReal currentBestScore = 1.0;      // keeps track of the best shortcut score so far
-        dReal iCurrentBestScore = 1.0;
+        dReal currentBestScore = 0.0;      // keeps track of the best shortcut score so far
+        dReal iCurrentBestScore = DBL_MAX;
         dReal cutoffRatio = _parameters->durationImprovementCutoffRatio; // we stop shortcutting if the progress made is considered too little (score/currentBestScore < cutoffRatio)
 
         dReal specialShortcutWeight = 0.1; // if the sampled number is less than this weight, we sample t0 and t1 around a zerovelpoint
