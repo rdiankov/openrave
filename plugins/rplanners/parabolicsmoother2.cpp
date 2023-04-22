@@ -519,7 +519,7 @@ public:
             vstatesavers.push_back(statesaver);
         }
 
-        uint32_t baseTime = utils::GetMilliTime();
+        uint64_t baseTime = utils::GetMicroTime();
         ConfigurationSpecification posSpec = _parameters->_configurationspecification;
         ConfigurationSpecification velSpec = posSpec.ConvertToVelocitySpecification();
         ConfigurationSpecification timeSpec;
@@ -698,6 +698,7 @@ public:
         }
 
         // Main planning loop
+        uint64_t mergeStartTime = 0, shortcutStartTime = 0, conversionStartTime = 0;
         try {
             _bUsePerturbation = true;
             _feasibilitychecker.tol = parameters->_vConfigResolution;
@@ -716,6 +717,7 @@ public:
 #endif
             if( !!parameters->_setstatevaluesfn && _parameters->_nMaxIterations > 0 ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
+                mergeStartTime = utils::GetMicroTime();
 #ifdef SMOOTHER2_TIMING_DEBUG
                 _tShortcutStart = utils::GetMicroTime();
 #endif
@@ -727,6 +729,7 @@ public:
                     }
                 }
 #endif
+                shortcutStartTime = utils::GetMicroTime();
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
 #ifdef SMOOTHER2_TIMING_DEBUG
                 _tShortcutEnd = utils::GetMicroTime();
@@ -745,6 +748,7 @@ public:
             }
 
             // Now start converting parabolicpath to OpenRAVE trajectory
+            conversionStartTime = utils::GetMicroTime();
             ConfigurationSpecification newSpec = posSpec;
             newSpec.AddDerivativeGroups(1, true);
             int waypointOffset = newSpec.AddGroup("iswaypoint", 1, "next");
@@ -986,7 +990,14 @@ public:
             RAVELOG_WARN(description);
             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s.", _environmentid%(0.001f*(float)(utils::GetMilliTime() - baseTime)));
+
+        if( mergeStartTime != 0 && shortcutStartTime != 0 && conversionStartTime != 0 ) {
+            const uint64_t currentTime = utils::GetMicroTime();
+            RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s. (init=%fs, merge=%fs, shortcut=%fs, conv=%fs)", _environmentid%(1e-6*(currentTime - baseTime))%(1e-6*(mergeStartTime - baseTime))%(1e-6*(shortcutStartTime - mergeStartTime))%(1e-6*(conversionStartTime - shortcutStartTime))%(1e-6*(currentTime - conversionStartTime)));
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s.", _environmentid%(1e-6*(utils::GetMicroTime() - baseTime)));
+        }
 
         if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             RAVELOG_DEBUG_FORMAT("env=%d, Start sampling trajectory after shortcutting (for verification)", _environmentid);
