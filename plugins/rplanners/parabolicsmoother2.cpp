@@ -3303,11 +3303,6 @@ protected:
                 iIterProgress += 0x10000000;
 
                 tTotal = parabolicpath.GetDuration();
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d successful, numSlowDowns=%d, tTotal=%.15e, t0=%.15e, t1=%.15e, fVelAccMult=[%f, %f]->[%f,%f], score=%.15e, bestScore=%.15e", _environmentid%iters%numIters%numSlowDowns%tTotal%t0%t1%fStartTimeVelMult%fStartTimeAccelMult%fCurVelMult%fCurAccelMult%score%currentBestScore);
-
-                // Keep track of the multipliers
-                fStartTimeVelMult = min(1.0, fCurVelMult * fiSearchVelAccelMult);
-                fStartTimeAccelMult = min(1.0, fCurAccelMult * fiSearchVelAccelMult);
 
                 // Calculate the score
                 score = diff/nItersFromPrevSuccessful;
@@ -3316,6 +3311,12 @@ protected:
                     iCurrentBestScore = 1.0/currentBestScore;
                 }
                 nItersFromPrevSuccessful = 0;
+
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d successful, numSlowDowns=%d, tTotal=%.15e, t0=%.15e, t1=%.15e, fVelAccMult=[%f, %f]->[%f,%f], score=%.15e, bestScore=%.15e", _environmentid%iters%numIters%numSlowDowns%tTotal%t0%t1%fStartTimeVelMult%fStartTimeAccelMult%fCurVelMult%fCurAccelMult%score%currentBestScore);
+
+                // Keep track of the multipliers
+                fStartTimeVelMult = min(1.0, fCurVelMult * fiSearchVelAccelMult);
+                fStartTimeAccelMult = min(1.0, fCurAccelMult * fiSearchVelAccelMult);
 
                 if( (score*iCurrentBestScore < cutoffRatio) && (numShortcuts > 5)) {
                     // We have already shortcut for a bit (numShortcuts > 5). The progress made in
