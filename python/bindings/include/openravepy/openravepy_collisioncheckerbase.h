@@ -94,6 +94,8 @@ public:
 
     bool CheckCollisionOBB(object oaabb, object otransform, PyCollisionReportPtr pReport);
 
+    bool CheckCollisionOBB(object oaabb, object otransform, object bodiesincluded, PyCollisionReportPtr pReport);
+
     virtual bool CheckSelfCollision(object o1, PyCollisionReportPtr pReport);
 };
 
