@@ -1666,7 +1666,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
             // sanity check
             FOREACHC(itarmdof,__varmdofindices) {
                 if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(), __pEffector->GetIndex()) ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator \"%s\" is not valid. end effector link \"%s\" is not affected by joint \%s\""), GetName()%__pEffector->GetName()%probot->GetJointFromDOFIndex(*itarmdof)->GetName(), ORE_Failed);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator \"%s\" is not valid. end effector link \"%s\" is not affected by joint \"%s\""), GetName()%__pEffector->GetName()%probot->GetJointFromDOFIndex(*itarmdof)->GetName(), ORE_Failed);
                 }
             }
         }
