@@ -854,12 +854,7 @@ bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
             return false;
         }
     }
-    for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-        if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-            return true;
-        }
-    }
-    return false;
+    return true;
 }
 
 void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
@@ -1068,8 +1063,8 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
 {
     RobotBasePtr probot(__probot);
-    Transform toldEE = GetTransform();
-    Transform tdelta = tEE*toldEE.inverse();
+    const Transform toldEE = GetTransform();
+    const Transform tdelta = tEE*toldEE.inverse();
 
     CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
@@ -1667,6 +1662,13 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
             }
             // initialize the arm configuration spec
             __armspec = probot->GetConfigurationSpecificationIndices(__varmdofindices);
+
+            // sanity check
+            FOREACHC(itarmdof,__varmdofindices) {
+                if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(), __pEffector->GetIndex()) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator \"%s\" is not valid. end effector link \"%s\" is not affected by joint \%s\""), GetName()%__pEffector->GetName()%probot->GetJointFromDOFIndex(*itarmdof)->GetName(), ORE_Failed);
+                }
+            }
         }
         else {
             RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%GetName()%__pBase->GetName()%__pEffector->GetName()));
