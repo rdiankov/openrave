@@ -1058,7 +1058,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vNegativeCropContainerMargins) {
                 _vNegativeCropContainerMargins = vGeomDataTemp;
-                _meshcollision.Clear();
             }
         }
         if (value.HasMember("positiveCropContainerMargins")) {
@@ -1066,7 +1065,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vPositiveCropContainerMargins) {
                 _vPositiveCropContainerMargins = vGeomDataTemp;
-                _meshcollision.Clear();
             }
         }
         break;
@@ -1126,7 +1124,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vNegativeCropContainerMargins) {
                 _vNegativeCropContainerMargins = vGeomDataTemp;
-                _meshcollision.Clear();
             }
         }
         if (value.HasMember("positiveCropContainerMargins")) {
@@ -1134,7 +1131,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp *= fUnitScale;
             if (vGeomDataTemp != _vPositiveCropContainerMargins) {
                 _vPositiveCropContainerMargins = vGeomDataTemp;
-                _meshcollision.Clear();
             }
         }
         break;
