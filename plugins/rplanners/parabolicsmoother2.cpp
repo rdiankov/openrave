@@ -1698,7 +1698,8 @@ protected:
         vShortcutStats.resize(20);
         std::fill(vShortcutStats.begin(), vShortcutStats.end(), 0);
 
-        std::stringstream shortcutprogress;
+        std::stringstream& shortcutprogress = _ssshortcutprogress;
+        shortcutprogress.str(""); shortcutprogress.clear();
         shortcutprogress << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
 #endif
 
@@ -2442,7 +2443,8 @@ protected:
         vShortcutStats.resize(20);
         std::fill(vShortcutStats.begin(), vShortcutStats.end(), 0);
 
-        std::stringstream shortcutprogress;
+        std::stringstream& shortcutprogress = _ssshortcutprogress;
+        shortcutprogress.str(""); shortcutprogress.clear();
         shortcutprogress << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
 #endif
 
@@ -3455,7 +3457,10 @@ protected:
     uint32_t _fileIndexMod; ///< maximum number of trajectory index allowed when saving
     uint32_t _fileIndex; ///< file index used for saved trajectory naming.
     DebugLevel _dumplevel;  ///< minimum debug level which triggers trajectory saving
+#ifdef SMOOTHER2_PROGRESS_DEBUG
     std::vector<int> _vShortcutStats; ///< keeps track of the number of times a shortcut iter finishes with each ShortcutStatus
+    std::stringstream _ssshortcutprogress; ///< keep track of shortcutprogress as stringstream. only for debuggin purpose
+#endif
 
     /// Caching stuff
     RampOptimizer::ParabolicPath _cacheparabolicpath, _cacheparabolicpath2;
