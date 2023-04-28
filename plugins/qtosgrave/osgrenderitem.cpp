@@ -478,6 +478,26 @@ void KinBodyItem::Load()
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     geode->addDrawable(geom);
                     pgeometrydata->addChild(geode);
+
+                    if(orgeom->GetType() == GT_TriMesh){
+                        // CropContainerMargins only exists in GT_Cage and GT_Container
+                        break;
+                    }
+                    Vector negativeCropContainerMargins = orgeom->GetNegativeCropContainerMargins();
+                    Vector positiveCropContainerMargins = orgeom->GetPositiveCropContainerMargins();
+                    if(negativeCropContainerMargins == Vector(0, 0, 0) && positiveCropContainerMargins == Vector(0, 0, 0)){
+                        // do nothing if CropContainerMargins are all zeros
+                        break;
+                    }
+                    // TODO
+                    orgeom->GetContainerOuterExtents();
+                    orgeom->GetContainerInnerExtents();
+                    orgeom->GetContainerBottomCross();
+                    orgeom->GetContainerBottom();
+                    // TODO: do math here?
+                    // TODO: draw line here?
+                    GetBody()->GetEnv();
+
                     break;
                 }
                 // Board is a Box, dots are a separate Mesh from the board's collision Mesh
