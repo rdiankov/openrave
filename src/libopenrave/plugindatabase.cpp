@@ -133,21 +133,19 @@ DynamicRaveDatabase::~DynamicRaveDatabase()
 void DynamicRaveDatabase::Init()
 {
     const char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS"); // getenv not thread-safe?
-    if (!pOPENRAVE_PLUGINS) {
-        RAVELOG_WARN("Failed to read environment variable OPENRAVE_PLUGINS");
-        return;
-    }
     std::vector<std::string> vplugindirs;
-    utils::TokenizeString(pOPENRAVE_PLUGINS, s_delimiter, vplugindirs);
-    for (int iplugindir = vplugindirs.size() - 1; iplugindir > 0; iplugindir--) {
-        int jplugindir = 0;
-        for(; jplugindir < iplugindir; jplugindir++) {
-            if(vplugindirs[iplugindir] == vplugindirs[jplugindir]) {
-                break;
+    if (!!pOPENRAVE_PLUGINS) {
+        utils::TokenizeString(pOPENRAVE_PLUGINS, s_delimiter, vplugindirs);
+        for (int iplugindir = vplugindirs.size() - 1; iplugindir > 0; iplugindir--) {
+            int jplugindir = 0;
+            for(; jplugindir < iplugindir; jplugindir++) {
+                if(vplugindirs[iplugindir] == vplugindirs[jplugindir]) {
+                    break;
+                }
             }
-        }
-        if (jplugindir < iplugindir) {
-            vplugindirs.erase(vplugindirs.begin()+iplugindir);
+            if (jplugindir < iplugindir) {
+                vplugindirs.erase(vplugindirs.begin()+iplugindir);
+            }
         }
     }
     bool bExists = false;
