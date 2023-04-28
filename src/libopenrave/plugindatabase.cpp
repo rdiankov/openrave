@@ -54,6 +54,15 @@ const char* s_delimiter = ":";
 
 namespace OpenRAVE {
 
+static const std::string PLUGIN_EXT =
+#if defined (__APPLE_CC__)
+    ".dylib";
+#elif defined (_WIN32)
+    ".dll";
+#else
+    ".so";
+#endif
+
 DynamicRaveDatabase::DynamicLibrary::DynamicLibrary(const std::string& path)
 {
 #ifdef _WIN32
@@ -208,27 +217,25 @@ void DynamicRaveDatabase::ReloadPlugins()
 
 bool DynamicRaveDatabase::LoadPlugin(const std::string& libraryname)
 {
-    // If the libraryname matches any of the existing loaded libraries, then reload it
+    std::string canonicalizedLibraryname = libraryname;
+    if(canonicalizedLibraryname.substr(0, 3) != "lib") {
+        canonicalizedLibraryname = "lib" + canonicalizedLibraryname;
+    }
+    if(canonicalizedLibraryname.substr(canonicalizedLibraryname.size() - PLUGIN_EXT.size()) != PLUGIN_EXT) {
+        canonicalizedLibraryname += PLUGIN_EXT;
+    }
+    // If the canonicalizedLibraryname matches any of the existing loaded libraries, then reload it
     {
         std::lock_guard<std::mutex> lock(_mutex);
-        _vPlugins.erase(std::remove_if(_vPlugins.begin(), _vPlugins.end(), [&libraryname](const PluginPtr& plugin) {
-            return (plugin->GetPluginName() == libraryname || plugin->GetPluginPath() == libraryname);
+        _vPlugins.erase(std::remove_if(_vPlugins.begin(), _vPlugins.end(), [&canonicalizedLibraryname](const PluginPtr& plugin) {
+            return (plugin->GetPluginName() == canonicalizedLibraryname || plugin->GetPluginPath() == canonicalizedLibraryname);
         }), _vPlugins.end());
     }
-    return _LoadPlugin(libraryname);
+    return _LoadPlugin(canonicalizedLibraryname);
 }
 
 void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool recurse) try
 {
-    static const std::string PLUGIN_EXT =
-#if defined (__APPLE_CC__)
-        ".dylib";
-#elif defined (_WIN32)
-        ".dll";
-#else
-        ".so";
-#endif
-
 #ifdef HAVE_BOOST_FILESYSTEM
     const fs::path path(strpath);
     if (fs::is_empty(path)) {
