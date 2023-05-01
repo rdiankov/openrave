@@ -2375,7 +2375,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     }
 
                     // check the dynamic acceleration limits
-                    const dReal fDynamicAccLimit = _vfulldofdynamicaccelerationlimits.at(iDOF);
+                    const dReal fDynamicAccLimit = _vfulldofdynamicaccelerationlimits.at(iDOF)*1.5;
                     const dReal fAccelAbs = RaveFabs(_dofaccelerations.at(iDOF));
                     if( fDynamicAccLimit < fAccelAbs ) {
                         bHasDynamicLimitsVioldatedJoint = true;
