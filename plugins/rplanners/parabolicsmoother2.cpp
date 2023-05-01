@@ -1836,50 +1836,11 @@ protected:
                 size_t iSlowDownDueToManip = 0;
                 bool bShortcutTimeExceeded = false;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
-#ifdef SMOOTHER2_TIMING_DEBUG
-                    _nCallsInterpolator += 1;
-                    _tStartInterpolator = utils::GetMicroTime();
-#endif
-                    bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
-#ifdef SMOOTHER2_TIMING_DEBUG
-                    _tEndInterpolator = utils::GetMicroTime();
-                    _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
-#endif
-                    iIterProgress += 0x1000;
-                    if( !res ) {
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, initial interpolation failed.", _environmentid%iters%numIters);
-                        ++vShortcutStats[SS_InitialInterpolationFailed];
-                        shortcutprogress << SS_InitialInterpolationFailed << "\n";
-#endif
-                        break;
-                    }
-
-                    // Check if the shortcut makes a significant improvement
                     dReal segmentTime = 0;
-                    FOREACHC(itrampnd, shortcutRampNDVect) {
-                        segmentTime += itrampnd->GetDuration();
-                    }
-                    if( segmentTime + minTimeStep > t1 - t0 ) {
-                        // RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d/%d, rejecting shortcut from t0 = %.15e to t1 = %.15e, %.15e > %.15e, minTimeStep = %.15e, final trajectory duration = %.15e s.",
-                        //                        _environmentid%iters%numIters%t0%t1%segmentTime%(t1 - t0)%minTimeStep%parabolicpath.GetDuration());
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, rejecting since it will not make significant improvement. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", _environmentid%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
-                        if( iSlowDown == 0 ) {
-                            ++vShortcutStats[SS_InterpolatedSegmentTooLong];
-                            shortcutprogress << SS_InterpolatedSegmentTooLong << "\n";
-                        }
-                        else {
-                            ++vShortcutStats[SS_InterpolatedSegmentTooLongFromSlowDown];
-                            shortcutprogress << SS_InterpolatedSegmentTooLongFromSlowDown << "\n";
-                        }
-#endif
+                    if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
+                                               t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
                         break;
                     }
-
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, finished initial interpolation. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", _environmentid%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
-#endif
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return -1;
@@ -2694,50 +2655,11 @@ protected:
                 size_t iSlowDownDueToManip = 0;
                 bool bShortcutTimeExceeded = false;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
-#ifdef SMOOTHER2_TIMING_DEBUG
-                    _nCallsInterpolator += 1;
-                    _tStartInterpolator = utils::GetMicroTime();
-#endif
-                    bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
-#ifdef SMOOTHER2_TIMING_DEBUG
-                    _tEndInterpolator = utils::GetMicroTime();
-                    _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
-#endif
-                    iIterProgress += 0x1000;
-                    if( !res ) {
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, initial interpolation failed.", _environmentid%iters%numIters);
-                        ++vShortcutStats[SS_InitialInterpolationFailed];
-                        shortcutprogress << SS_InitialInterpolationFailed << "\n";
-#endif
-                        break;
-                    }
-
-                    // Check if the shortcut makes a significant improvement
                     dReal segmentTime = 0;
-                    FOREACHC(itrampnd, shortcutRampNDVect) {
-                        segmentTime += itrampnd->GetDuration();
-                    }
-                    if( segmentTime + minTimeStep > t1 - t0 ) {
-                        // RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d/%d, rejecting shortcut from t0 = %.15e to t1 = %.15e, %.15e > %.15e, minTimeStep = %.15e, final trajectory duration = %.15e s.",
-                        //                        _environmentid%iters%numIters%t0%t1%segmentTime%(t1 - t0)%minTimeStep%parabolicpath.GetDuration());
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, rejecting since it will not make significant improvement. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", _environmentid%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
-                        if( iSlowDown == 0 ) {
-                            ++vShortcutStats[SS_InterpolatedSegmentTooLong];
-                            shortcutprogress << SS_InterpolatedSegmentTooLong << "\n";
-                        }
-                        else {
-                            ++vShortcutStats[SS_InterpolatedSegmentTooLongFromSlowDown];
-                            shortcutprogress << SS_InterpolatedSegmentTooLongFromSlowDown << "\n";
-                        }
-#endif
+                    if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
+                                               t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
                         break;
                     }
-
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                    RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, finished initial interpolation. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", _environmentid%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
-#endif
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
                         return -1;
@@ -3432,6 +3354,68 @@ protected:
         f << std::setprecision(RampOptimizer::g_nPrec);
         ptraj->serialize(f);
         return filename;
+    }
+
+    /// \brief compute interpolation. expected to be called from _MergeConsecutiveSegments and _Shortcut.
+    ///        note that internally uses debugging member variables (_vShortcutStats and _ssshortcutprogress) if SMOOTHER2_PROGRESS_DEBUG is enabled.
+    /// \param[out] shortcutRampNDVect : vector of ramps to contain resultant interpolation result.
+    /// \param[out] segmentTime : resultant segment time
+    /// \param[out] iIterProgress : for debugging purpose
+    /// \param[in] t0, t1, minTimeStep : time values used in shortcut iteration.
+    /// \param[in] x0Vect, x1Vect, v0Vect, v1Vect : positions and velocities at t0 and t1. used for interpolation.
+    /// \param[in] vellimits, accellimits : vel/accel limits used for interpolation.
+    /// \return true if successful, e.g. interpolation is successful and resultant segment time is not too long.
+    bool _ComputeInterpolation(std::vector<RampOptimizer::RampND>& shortcutRampNDVect, dReal& segmentTime, uint32_t& iIterProgress,
+                               const dReal t0, const dReal t1, const dReal minTimeStep,
+                               const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                               const std::vector<dReal>& vellimits, const std::vector<dReal>& accellimits,
+                               const size_t iSlowDown, const int iters, const int numIters)
+    {
+#ifdef SMOOTHER2_TIMING_DEBUG
+        _nCallsInterpolator += 1;
+        _tStartInterpolator = utils::GetMicroTime();
+#endif
+        bool res = _interpolator.ComputeArbitraryVelNDTrajectory(x0Vect, x1Vect, v0Vect, v1Vect, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, vellimits, accellimits, shortcutRampNDVect, true);
+#ifdef SMOOTHER2_TIMING_DEBUG
+        _tEndInterpolator = utils::GetMicroTime();
+        _totalTimeInterpolator += 0.000001f*(float)(_tEndInterpolator - _tStartInterpolator);
+#endif
+        iIterProgress += 0x1000;
+        if( !res ) {
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, initial interpolation failed.", _environmentid%iters%numIters);
+            ++_vShortcutStats[SS_InitialInterpolationFailed];
+            _ssshortcutprogress << SS_InitialInterpolationFailed << "\n";
+#endif
+            return false;
+        }
+
+        // Check if the shortcut makes a significant improvement
+        segmentTime = 0;
+        FOREACHC(itrampnd, shortcutRampNDVect) {
+            segmentTime += itrampnd->GetDuration();
+        }
+        if( segmentTime + minTimeStep > t1 - t0 ) {
+            // RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d/%d, rejecting shortcut from t0 = %.15e to t1 = %.15e, %.15e > %.15e, minTimeStep = %.15e, final trajectory duration = %.15e s.",
+            //                        _environmentid%iters%numIters%t0%t1%segmentTime%(t1 - t0)%minTimeStep%parabolicpath.GetDuration());
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, rejecting since it will not make significant improvement. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", _environmentid%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
+            if( iSlowDown == 0 ) {
+                ++_vShortcutStats[SS_InterpolatedSegmentTooLong];
+                _ssshortcutprogress << SS_InterpolatedSegmentTooLong << "\n";
+            }
+            else {
+                ++_vShortcutStats[SS_InterpolatedSegmentTooLongFromSlowDown];
+                _ssshortcutprogress << SS_InterpolatedSegmentTooLongFromSlowDown << "\n";
+            }
+#endif
+            return false;
+        }
+
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+        RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, finished initial interpolation. originalSegmentTime=%.15e, newSegmentTime=%.15e, diff=%.15e, minTimeStep=%.15e", _environmentid%iters%numIters%(t1 - t0)%segmentTime%(t1 - t0 - segmentTime)%minTimeStep);
+#endif
+        return true;
     }
 
     /// Members
