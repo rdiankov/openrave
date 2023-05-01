@@ -3756,7 +3756,7 @@ protected:
         std::vector<int> vUsedDOFIndices; ///< used openrave dof indices
         std::string bodyName; ///< used body name in _parameters->_configurationspecification
         bool bHasDynamicLimits; ///< true if the body has dynamic limits
-        dReal fDynamicAccelerationLimitMult = 1.0;
+        dReal fDynamicAccelerationLimitMult = 1.0; ///< additional mult for dynamic acceleration limits. smoother should respect [original dynamic acceleration limit]x[fDynamicAccelerationLimitMult].
         std::vector<dReal> vCacheFullDOFPositions, vCacheFullDOFVelocities, vCacheFullDOFAccelerationLimits, vCacheFullDOFJerkLimits; ///< cached vectors for dynamic limits. openrave fulldof kinematics order and size is GetDOF.
         std::vector<dReal> vCacheTmpX, vCacheTmpV, vCacheTmpA, vCacheTmpALim; ///< cached vectors for _CheckTimeBasedConstraintsForInitialSlowDown, ...etc. order and size are same as _parameters->_configurationspecification.
     };
