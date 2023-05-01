@@ -1748,12 +1748,6 @@ protected:
 
         // Various parameters for shortcutting
         int numSlowDowns = 0; // counts the number of times we slow down the trajectory (via vel/accel scaling) because of manip constraints
-        dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // magic constant
-        dReal fStartTimeVelMult = 1.0; // this is the multiplier for scaling down the *initial* velocity in each shortcut iteration. If manip constraints
-                                       // or dynamic constraints are used, then this will track the most recent successful multiplier. The idea is that if the
-                                       // recent successful multiplier is some low value, say 0.1, it is unlikely that using the full vel/accel limits, i.e.,
-                                       // multiplier = 1.0, will succeed the next time
-        dReal fStartTimeAccelMult = 1.0;
         int nTimeBasedConstraintsFailed = 0;
 
         std::vector<dReal> velReductionFactors, accelReductionFactors;
@@ -1841,14 +1835,14 @@ protected:
                         // Adjust vellimits and accellimits
                         dReal fminvel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j])); // the scaled vellimits must be at least this value
                         {
-                            dReal f = max(fminvel, fStartTimeVelMult * _parameters->_vConfigVelocityLimit[j]);
+                            dReal f = max(fminvel, _parameters->_vConfigVelocityLimit[j]);
                             if( vellimits[j] > f ) {
                                 vellimits[j] = f;
                             }
                         }
 
                         {
-                            dReal f = fStartTimeAccelMult * _parameters->_vConfigAccelerationLimit[j];
+                            dReal f = _parameters->_vConfigAccelerationLimit[j];
                             if( accellimits[j] > f ) {
                                 accellimits[j] = f;
                             }
@@ -1861,8 +1855,8 @@ protected:
 
                 std::vector<dReal> reductionFactors2; // keeps track of the reduction factors got from this shortcut
 
-                dReal fCurVelMult = fStartTimeVelMult;
-                dReal fCurAccelMult = fStartTimeAccelMult;
+                dReal fCurVelMult = 1.0;
+                dReal fCurAccelMult = 1.0;
 
                 bool bSuccess = false;
                 size_t maxSlowDownTries = 100;
@@ -1871,10 +1865,24 @@ protected:
                 size_t iSlowDownDueToManip = 0;
                 bool bShortcutTimeExceeded = false;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
+                    // compute interpolation. only at the first slowdown iteration, call dedicated function to combine interpolation and computing of initial guess of vellimits and accellimits
                     dReal segmentTime = 0;
-                    if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
-                                               t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
-                        break;
+                    if( iSlowDown == 0 ) {
+                        bool bSlowedDown;
+                        if( !_ComputeInterpolationWithInitialGuess(shortcutRampNDVect, segmentTime, vellimits, accellimits, bSlowedDown, fCurVelMult, fCurAccelMult, iIterProgress,
+                                                                   t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, iSlowDown, iters, numIters, usedBody) ) {
+                            break;
+                        }
+                        if( bSlowedDown ) {
+                            numSlowDowns += 1;
+                            nTimeBasedConstraintsFailed++;
+                        }
+                    }
+                    else {
+                        if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
+                                                   t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
+                            break;
+                        }
                     }
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
@@ -2067,48 +2075,7 @@ protected:
                         // In case manip speed is exceeded, only vellimits is scaled down. Otherwise, both vellimits and accellimits are scaled down.
                         if( _bmanipconstraints && _manipconstraintchecker ) {
                             // Scale down vellimits and accellimits independently according to the violated constraint (manipspeed/manipaccel)
-                            if( iSlowDownDueToManip == 0 && (retcheck.fMaxManipAccel > _parameters->maxmanipaccel || retcheck.fMaxManipSpeed > _parameters->maxmanipspeed) && !_bUseNewHeuristic ) {
-                                ++iSlowDownDueToManip;
-                                // Try computing estimates of vellimits and accellimits before scaling down
-
-                                {// Need to make sure that x0, x1, v0, v1 hold the correct values
-                                    rampndVect[i0].EvalPos(u0, x0Vect);
-                                    rampndVect[i1].EvalPos(u1, x1Vect);
-                                    rampndVect[i0].EvalVel(u0, v0Vect);
-                                    rampndVect[i1].EvalVel(u1, v1Vect);
-                                }
-
-                                if( _parameters->SetStateValues(x0Vect) != 0 ) {
-                                    RAVELOG_WARN_FORMAT("env=%d, state setting error", _environmentid);
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                                    ++vShortcutStats[SS_StateSettingFailed];
-                                    shortcutprogress << SS_StateSettingFailed << "\n";
-#endif
-                                    break;
-                                }
-                                _manipconstraintchecker->GetMaxVelocitiesAccelerations(v0Vect, vellimits, accellimits);
-
-                                if( _parameters->SetStateValues(x1Vect) != 0 ) {
-                                    RAVELOG_WARN_FORMAT("env=%d, state setting error", _environmentid);
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                                    ++vShortcutStats[SS_StateSettingFailed];
-                                    shortcutprogress << SS_StateSettingFailed << "\n";
-#endif
-                                    break;
-                                }
-                                _manipconstraintchecker->GetMaxVelocitiesAccelerations(v1Vect, vellimits, accellimits);
-
-                                for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
-                                    dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                    if( vellimits[j] < fMinVel ) {
-                                        vellimits[j] = fMinVel;
-                                    }
-                                }
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, set new vellimits and accellimits from estimate", _environmentid%iters%numIters);
-#endif
-                            }
-                            else {
+                            {
                                 // After computing the new vellimits and accellimits and they don't work, we gradually scale vellimits/accellimits down
                                 dReal fVelMult, fAccelMult;
                                 bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
@@ -2381,10 +2348,6 @@ protected:
                 _vZeroVelPointInfos.resize(writeIndex);
                 --index;
 
-                // Keep track of the multipliers
-                fStartTimeVelMult = min(1.0, fCurVelMult * fiSearchVelAccelMult);
-                fStartTimeAccelMult = min(1.0, fCurAccelMult * fiSearchVelAccelMult);
-
                 // Now replace the original trajectory segment by the shortcut
                 parabolicpath.ReplaceSegment(t0, t1, shortcutRampNDVectOut);
                 iIterProgress += 0x10000000;
@@ -2458,7 +2421,6 @@ protected:
 
         // Various parameters for shortcutting
         int numSlowDowns = 0; // counts the number of times we slow down the trajectory (via vel/accel scaling) because of manip constraints
-        dReal fiSearchVelAccelMult = 1.0/_parameters->fSearchVelAccelMult; // magic constant
         dReal fStartTimeVelMult = 1.0; // this is the multiplier for scaling down the *initial* velocity in each shortcut iteration. If manip constraints
                                        // or dynamic constraints are used, then this will track the most recent successful multiplier. The idea is that if the
                                        // recent successful multiplier is some low value, say 0.1, it is unlikely that using the full vel/accel limits, i.e.,
@@ -2511,6 +2473,8 @@ protected:
                 break;
             }
             nItersFromPrevSuccessful += 1;
+            fStartTimeVelMult = 1;
+            fStartTimeAccelMult = 1;
 
             // Sample t0 and t1. We could possibly add some heuristics here to get higher quality
             // shortcuts
@@ -2682,10 +2646,24 @@ protected:
                 size_t iSlowDownDueToManip = 0;
                 bool bShortcutTimeExceeded = false;
                 for (size_t iSlowDown = 0; iSlowDown < maxSlowDownTries; ++iSlowDown) {
+                    // compute interpolation. only at the first slowdown iteration, call dedicated function to combine interpolation and computing of initial guess of vellimits and accellimits
                     dReal segmentTime = 0;
-                    if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
-                                               t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
-                        break;
+                    if( iSlowDown == 0 ) {
+                        bool bSlowedDown;
+                        if( !_ComputeInterpolationWithInitialGuess(shortcutRampNDVect, segmentTime, vellimits, accellimits, bSlowedDown, fCurVelMult, fCurAccelMult, iIterProgress,
+                                                                   t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, iSlowDown, iters, numIters, usedBody) ) {
+                            break;
+                        }
+                        if( bSlowedDown ) {
+                            numSlowDowns += 1;
+                            nTimeBasedConstraintsFailed++;
+                        }
+                    }
+                    else {
+                        if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
+                                                   t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
+                            break;
+                        }
                     }
 
                     if( _CallCallbacks(_progress) == PA_Interrupt ) {
@@ -2877,48 +2855,7 @@ protected:
                         // Scale down vellimits and/or accellimits
                         if( _bmanipconstraints && _manipconstraintchecker ) {
                             // Scale down vellimits and accellimits independently according to the violated constraint (manipspeed/manipaccel)
-                            if( iSlowDownDueToManip == 0 && (retcheck.fMaxManipAccel > _parameters->maxmanipaccel || retcheck.fMaxManipSpeed > _parameters->maxmanipspeed) && !_bUseNewHeuristic ) {
-                                ++iSlowDownDueToManip;
-                                // Try computing estimates of vellimits and accellimits before scaling down
-
-                                {// Need to make sure that x0, x1, v0, v1 hold the correct values
-                                    rampndVect[i0].EvalPos(u0, x0Vect);
-                                    rampndVect[i1].EvalPos(u1, x1Vect);
-                                    rampndVect[i0].EvalVel(u0, v0Vect);
-                                    rampndVect[i1].EvalVel(u1, v1Vect);
-                                }
-
-                                if( _parameters->SetStateValues(x0Vect) != 0 ) {
-                                    RAVELOG_WARN_FORMAT("env=%d, state setting error", _environmentid);
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                                    ++vShortcutStats[SS_StateSettingFailed];
-                                    shortcutprogress << SS_StateSettingFailed << "\n";
-#endif
-                                    break;
-                                }
-                                _manipconstraintchecker->GetMaxVelocitiesAccelerations(v0Vect, vellimits, accellimits);
-
-                                if( _parameters->SetStateValues(x1Vect) != 0 ) {
-                                    RAVELOG_WARN_FORMAT("env=%d, state setting error", _environmentid);
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                                    ++vShortcutStats[SS_StateSettingFailed];
-                                    shortcutprogress << SS_StateSettingFailed << "\n";
-#endif
-                                    break;
-                                }
-                                _manipconstraintchecker->GetMaxVelocitiesAccelerations(v1Vect, vellimits, accellimits);
-
-                                for (size_t j = 0; j < _parameters->_vConfigVelocityLimit.size(); ++j) {
-                                    dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
-                                    if( vellimits[j] < fMinVel ) {
-                                        vellimits[j] = fMinVel;
-                                    }
-                                }
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, set new vellimits and accellimits from estimate", _environmentid%iters%numIters);
-#endif
-                            }
-                            else {
+                            {
                                 // After computing the new vellimits and accellimits and they don't work, we gradually scale vellimits/accellimits down
                                 dReal fVelMult, fAccelMult;
                                 bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
@@ -3249,10 +3186,6 @@ protected:
 
                 RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d successful, numSlowDowns=%d, tTotal=%.15e, t0=%.15e, t1=%.15e, fVelAccMult=[%f, %f]->[%f,%f], score=%.15e, bestScore=%.15e", _environmentid%iters%numIters%numSlowDowns%tTotal%t0%t1%fStartTimeVelMult%fStartTimeAccelMult%fCurVelMult%fCurAccelMult%score%currentBestScore);
 
-                // Keep track of the multipliers
-                fStartTimeVelMult = min(1.0, fCurVelMult * fiSearchVelAccelMult);
-                fStartTimeAccelMult = min(1.0, fCurAccelMult * fiSearchVelAccelMult);
-
                 if( (score*iCurrentBestScore < cutoffRatio) && (numShortcuts > 5)) {
                     // We have already shortcut for a bit (numShortcuts > 5). The progress made in
                     // this iteration is below the curoff ratio. If we continue, it is unlikely that
@@ -3539,6 +3472,7 @@ protected:
         return true;
     }
 
+
     /// \brief compute dynamic limits. for now, acc limits only
     ///        all vectors in arguments have same size and order config, like _parameters->_vConfigVelocityLimit.
     /// \param[out] vAccelLimits : resultant acceleration limits.
@@ -3583,6 +3517,228 @@ protected:
                 vAccelLimits[iDOF] = min(vTmpALim[iDOF], vAccelLimits[iDOF]);
             }
         }
+    }
+
+    /// \brief check timebased constraints as initial guess of slowdown loop. see also _ComputeInterpolationWithInitialGuess.
+    ///        the purpose of this function is roughly estimate the feasible vellimits and accellimits for the given rampndVect.
+    ///        this function does not quit early on violation of some element of rampndVect. this function tries to compute the worst values over all rampndVect to reduce the risk to violate the limits in Check2.
+    ///        this function assumes that slowdown along with Check2 is computationally expensive and roughly checking the whole rampndVect might be slightly efficient.
+    ///        this function handles the mostly same time-based conditions checked in Check2. but, this function considers these in dedicated ways to compute initial guess. the method to reduce limits is different for the types of constraints.
+    ///
+    /// \param[out] vellimits, accellimits : should contain initial values. then, resultant limits are computed in this function. size and order are same as _parameters's config.
+    /// \param[in] v0Vect, v1Vect : velocities at t0 and t1 (boundary condition)
+    /// \param[in] rampndVect : vector of rampnd to check
+    /// \param[in] usedBody : if not null pointer, enable dynamics limits computation.
+    /// \param[in] fReductionRatio : ratio of how much computed reduction factor is adopted. should be in (0.0, 1.0]. used to interpolate between the computed reduction factor and max of it, e.g. 1.0. if fReductionRatio is smaller, do not slowdown vellimits and accellimits that much. if larger, aggressively slowdonw these limits.
+    RampOptimizer::CheckReturn _CheckTimeBasedConstraintsForInitialSlowDown(std::vector<dReal>& vellimits, std::vector<dReal>& accellimits,
+                                                                            const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                                                            const std::vector<RampOptimizer::RampND>& rampndVect,
+                                                                            const KinBodyConstPtr usedBody,
+                                                                            const dReal fReductionRatio)
+    {
+        RampOptimizer::CheckReturn retcheck(0);
+        if( rampndVect.size() == 0 ) {
+            return retcheck;
+        }
+
+        const dReal fiSearchVelAccelMult = 1/_parameters->fSearchVelAccelMult; // inverse of fSearchVelAccelMult. multiplied values should be clamped by 1.0 later on. see also the documentation of same parameter in _Shortcut function. 1) larger fSearchVelAccelMult -> mostly, more conservative and less chance to violate the true limits checked in Check2 function (e.g. less time consuming). 2) smaller fSearchVelAccelMult -> mostly, more aggressive and more chance to violate the true limits checked in Check2 function (e.g. more time consuming).
+        const dReal nDOF = vellimits.size();
+
+        // original limits before this function is called. the rampndVect is computed based on these original limits and we should scaled down these.
+        std::vector<dReal>& vOrgVelLimits = _vCacheOrgVelLimits, vOrgAccelLimits = _vCacheOrgAccelLimits;
+        vOrgVelLimits = vellimits;
+        vOrgAccelLimits = accellimits;
+
+        // check dynamic limits.
+        //   - nature of dynamic limits (for now)
+        //     |ddq| <= a(q, dq). dynamic limits depends on q and dq. once ddq violation is obseved, we can reduce dq or ddq. while reducing of ddq has always solution, dq might not always have solution.
+        //   - slowdown method
+        //     scale down only the joints which violate the limits. because this function is just an estimation, if GetAVec is not violating the dynamic limit while accellimits violates the dynamic limit, do not clamp the limit for now not to avoid from making the limit too conservative.
+        //     different from main slowdown loop, do not scale down the vel limits for now, since reducing of dq might not always have solution.
+        //     for now, do not multiply fiSearchVelAccelMult. compared with manip accel/speed, dynamic limits are closed-form and less inaccurate.
+        bool bHasDynamicLimitViolation = false; // true if dynamic limit violation
+        if( _dynamicLimitInfo.bHasDynamicLimits && !!usedBody ) {
+            std::vector<dReal>& vTmpX = _dynamicLimitInfo.vCacheTmpX, vTmpV = _dynamicLimitInfo.vCacheTmpV, vTmpA = _dynamicLimitInfo.vCacheTmpA, vTmpALim = _dynamicLimitInfo.vCacheTmpALim;
+            const KinBody& usedBodyRef = *usedBody;
+            for(int iRamp = 0; iRamp < (int)rampndVect.size(); ++iRamp) {
+                const RampOptimizer::RampND& tmpRamp = rampndVect[iRamp];
+                tmpRamp.GetAVect(vTmpA);
+                if( iRamp == 0 ) { // compute only iRamp==0. iRamp>0, skip updating of dynamic limits, since we can assume that consecutive ramps have continuous boundary condition. e.g. iRamp-1's X1 and V1 == iRamp's X0 and V0.
+                    tmpRamp.GetX0Vect(vTmpX);
+                    tmpRamp.GetV0Vect(vTmpV);
+                    _ComputeDynamicLimits(vTmpALim, vTmpX, vTmpV, usedBodyRef);
+                }
+                for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
+                    const dReal fAccLim = vTmpALim[iDOF];
+                    const dReal fCurAcc = RaveFabs(vTmpA[iDOF]);
+                    if( fCurAcc > fAccLim ) {
+                        //accellimits[iDOF] = min(accellimits[iDOF], accellimits[iDOF]*fAccLim/fCurAcc*fiSearchVelAccelMult);
+                        accellimits[iDOF] = min(accellimits[iDOF], fAccLim);
+                        bHasDynamicLimitViolation = true;
+                    }
+                }
+                tmpRamp.GetX1Vect(vTmpX);
+                tmpRamp.GetV1Vect(vTmpV);
+                _ComputeDynamicLimits(vTmpALim, vTmpX, vTmpV, usedBodyRef);
+                for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
+                    const dReal fAccLim = vTmpALim[iDOF];
+                    const dReal fCurAcc = RaveFabs(vTmpA[iDOF]);
+                    if( fCurAcc > fAccLim ) {
+                        //accellimits[iDOF] = min(accellimits[iDOF], accellimits[iDOF]*fAccLim/fCurAcc*fiSearchVelAccelMult);
+                        accellimits[iDOF] = min(accellimits[iDOF], fAccLim);
+                        bHasDynamicLimitViolation = true;
+                    }
+                }
+            }
+        }
+
+        // check manip accel/speed
+        //   - nature of manip accel/speed constraints
+        //     ddr = J ddq + dJ dq, depending on q, dq, and ddq. once ddq violation is obseved, we can reduce dq and/or ddq. reducing of only dq or reducing of only ddq might not always have solution. reducing of both dq and ddq always has solution. this relationship is case-by-case
+        //   - slowdown method
+        //     scale down the vel and acc limits, mostly in the same manner of main slowdown loop.
+        //     note : different from the old initial guess computation by GetMaxVelocitiesAccelerations, 1) use same computation as later slowdown iteration. 2) scale down vellimits as well, since scaling down of the acc limits might not be enough to scale down the max manip accel theoretically.
+        bool bHasManipViolation = false;
+        if( _bmanipconstraints ) {
+            try {
+                std::vector<RampOptimizer::RampND>& rampndVectTmp = _cacheRampNDVectInitialGuess;
+                const int iLastElement = (int)rampndVect.size()-1;
+                for(int iRamp = 0; iRamp < (int)rampndVect.size(); ++iRamp) {
+                    rampndVectTmp.clear();
+                    rampndVectTmp.push_back(rampndVect[iRamp]);
+#ifdef SMOOTHER2_TIMING_DEBUG
+                    _nCallsCheckManip += 1;
+                    _tStartCheckManip = utils::GetMicroTime();
+#endif
+                    retcheck = _manipconstraintchecker->CheckManipConstraints2(rampndVectTmp, IT_Closed, _bUseNewHeuristic);
+#ifdef SMOOTHER2_TIMING_DEBUG
+                    _tEndCheckManip = utils::GetMicroTime();
+                    _totalTimeCheckManip += 0.000001f*(float)(_tEndCheckManip - _tStartCheckManip);
+#endif
+                    if( retcheck.retcode != 0 ) {
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+                        RAVELOG_VERBOSE_FORMAT("env=%d, CheckManipConstraints2 returns retcode=0x%x", _environmentid%retcheck.retcode);
+#endif
+                        if( retcheck.retcode == CFO_CheckTimeBasedConstraints ) {
+                            // if CFO_CheckTimeBasedConstraints, process
+                            bHasManipViolation = true;
+                            if( _parameters->maxmanipaccel > 0 && _parameters->maxmanipaccel < retcheck.fMaxManipAccel ) {
+                                // reduce accel limits
+                                const dReal fAccMult = min(retcheck.fTimeBasedSurpassMult*retcheck.fTimeBasedSurpassMult * fiSearchVelAccelMult, 1.0)*fReductionRatio + (1-fReductionRatio);
+                                for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
+                                    accellimits[iDOF] = min(accellimits[iDOF], vOrgAccelLimits[iDOF]*fAccMult);
+                                }
+                                // since manip accel ddr is related to joint vel dq, reduce vel limits
+                                if( iRamp != 0 && iRamp != iLastElement ) {
+                                    // note that we cannot reduce vellimits at t0 and t1, since velocities of t0 and t1 are boundary condition. so, for t0 or t1, skip reducing the limits.
+                                    // iRamp=0's end condition and iRamp=iLastElement's start condition can have velocity reducing. but, somehow, if we reduce them, got slightly worse computation. so, here we simply skip iRamp=0 and iRamp=iLastElement.
+                                    const dReal fVelMult = min(retcheck.fTimeBasedSurpassMult * fiSearchVelAccelMult, 1.0)*fReductionRatio + (1-fReductionRatio);
+                                    for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
+                                        const dReal fMinVel = max(RaveFabs(v0Vect[iDOF]), RaveFabs(v1Vect[iDOF]));
+                                        vellimits[iDOF] = max(fMinVel, vOrgVelLimits[iDOF]*fVelMult);
+                                    }
+                                }
+                            }
+                            else if( _parameters->maxmanipspeed > 0 && _parameters->maxmanipspeed < retcheck.fMaxManipSpeed ) {
+                                // reduce vel limits. TODO : if t0 or t1 has violation, what's the correct way to handle it?
+                                const dReal fVelMult = min(retcheck.fTimeBasedSurpassMult * fiSearchVelAccelMult, 1.0)*fReductionRatio + (1-fReductionRatio);
+                                for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
+                                    const dReal fMinVel = max(RaveFabs(v0Vect[iDOF]), RaveFabs(v1Vect[iDOF]));
+                                    vellimits[iDOF] = max(fMinVel, vOrgVelLimits[iDOF]*fVelMult);
+                                }
+                            }
+                        }
+                        else {
+                            // if non CFO_CheckTimeBasedConstraints error, return immediately
+                            return retcheck;
+                        }
+                    }
+                }
+            }
+            catch (const std::exception& ex) {
+                RAVELOG_VERBOSE_FORMAT("env=%d, CheckManipConstraints2 threw an exception: %s", _environmentid%ex.what());
+                return RampOptimizer::CheckReturn(0xffff|CFO_FromTrajectorySmoother);
+            }
+        }
+
+        // set retcheck
+        if( (bHasDynamicLimitViolation || bHasManipViolation) && (retcheck.retcode == 0) ) {
+            retcheck.retcode = CFO_CheckTimeBasedConstraints;
+        }
+        return retcheck;
+    }
+
+    /// \brief compute vel/accel mults, which are ratios aginst the max config limits. note that config limits should not be zero.
+    /// \param[out] fVelMult, fAccelMult : mult i n[0.0, 1.0]. if there are several values among different DOFs, take min, e.g. worst.
+    /// \param[in] vVelLimits, vAccelLimits : vel and accel limits. same size and order as config limits.
+    void _ComputeVelAccelMults(dReal& fVelMult, dReal& fAccelMult,
+                               const std::vector<dReal>& vVelLimits, const std::vector<dReal>& vAccelLimits) const
+    {
+        fVelMult = 1.0;
+        fAccelMult = 1.0;
+        for(int iDOF = 0; iDOF < (int)vVelLimits.size(); ++iDOF) {
+            fVelMult = min(vVelLimits[iDOF]/_parameters->_vConfigVelocityLimit[iDOF], fVelMult);
+            fAccelMult = min(vAccelLimits[iDOF]/_parameters->_vConfigAccelerationLimit[iDOF], fAccelMult);
+        }
+    }
+
+    /// \brief compute interpolation while computing the initial guess of vellimits and accellimits. expected to be called at the first slowdown iteration inside of _MergeConsecutiveSegments and _Shortcut.
+    ///        this function tries interpolation and then rough limit checking to reduce the vellimits and accellimits so that these respets the limits for computed shortcutRampNDVect.
+    ///
+    ///        caller's main slowdown loop can check the limits via Check2 function in detail. Check2 function is different from this function like:
+    ///          - Check2 checks the constrints more in detail. especially, CheckPathAllConstraints can modify the ramp, thus shortcutRampNDVect in this function might be different from it and checking based on shortcutRampNDVect is not enough. even though, this function is supposed to give the good initial guess.
+    ///          - Slowdown logic in the slowdown loop of the caller is slightly different from that in _CheckTimeBasedConstraintsForInitialSlowDown. _CheckTimeBasedConstraintsForInitialSlowDown is customized for initial guess computation.
+    ///
+    ///        the motivation to compute initial guess is:
+    ///          - in Check2 function, limits are checked along with collision checking. collision checking would be computationally expensive. it would be preferable to slowdown the ramps initially before Check2 function.
+    ///
+    ///        note that internally uses debugging member variables (_vShortcutStats and _ssshortcutprogress) if SMOOTHER2_PROGRESS_DEBUG is enabled in _ComputeInterpolation.
+    /// \param[out] shortcutRampNDVect : vector of ramps to contain resultant interpolation result.
+    /// \param[out] segmentTime : resultant segment time
+    /// \param[out] vellimits, accellimits : caller should give vel/accel limits first. this function tries to slow down these limits in this function. vellimits and accellimits contain the resultant limits as initial guess.
+    /// \param[out] bSlowedDown : true if slowdown occurred
+    /// \param[out] fVelMult, fAccelMult : mults against the config limits in [0.0, 1.0]. should not be used for further limit computation. only for tracking breaking condition from the main slowdown loop to detect too much slowdown. only computed when returning true.
+    /// \param[out] iIterProgress : for debugging purpose
+    /// \param[in] t0, t1, minTimeStep : time values used in shortcut iteration.
+    /// \param[in] x0Vect, x1Vect, v0Vect, v1Vect : positions and velocities at t0 and t1 (boundary conditions). used for interpolation.
+    /// \return true if there is not apparent failure, e.g. there is no interpolation nor duration failure of _ComputeInterpolation.
+    bool _ComputeInterpolationWithInitialGuess(std::vector<RampOptimizer::RampND>& shortcutRampNDVect, dReal& segmentTime,
+                                               std::vector<dReal>& vellimits, std::vector<dReal>& accellimits,
+                                               bool& bSlowedDown, dReal& fVelMult, dReal& fAccelMult, uint32_t& iIterProgress,
+                                               const dReal t0, const dReal t1, const dReal minTimeStep,
+                                               const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect, const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                               const size_t iSlowDown, const int iters, const int numIters,
+                                               const KinBodyConstPtr usedBody,
+                                               const int nMaxInitialGuessSlowDown = 3)
+    {
+        bSlowedDown = false;
+        for(int iInitialGuessSlowDown = 0; iInitialGuessSlowDown < nMaxInitialGuessSlowDown; ++iInitialGuessSlowDown) {
+            if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
+                                       t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
+                return false;
+            }
+            const dReal fReductionRatio = (iInitialGuessSlowDown == nMaxInitialGuessSlowDown-1) ? 1.0 : 0.5; // if the last loop, use the computed limits (e.g. 1.0). otherwise, use slightly larger limits (e.g. 0.5).
+            RampOptimizer::CheckReturn retcheck = _CheckTimeBasedConstraintsForInitialSlowDown(vellimits, accellimits, v0Vect, v1Vect, shortcutRampNDVect, usedBody, fReductionRatio);
+            if( retcheck.retcode == 0 ) {
+                // if initial guess check passed, return true. note that this does not guarantee to pass Check2 later on, because checked ramp and conditions are slightly different.
+                _ComputeVelAccelMults(fVelMult, fAccelMult, vellimits, accellimits);
+                return true;
+            }
+            else if( retcheck.retcode != CFO_CheckTimeBasedConstraints ) {
+                // if failed but not coming from CFO_CheckTimeBasedConstraints, we cannot continue slowdown loop and return immediately.
+                return false;
+            }
+            bSlowedDown = true;
+        }
+
+        // based on the latest vellimits and accellimits, compute the interpolation for caller's slowdown loop.
+        if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
+                                   t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
+            return false;
+        }
+        // even if initial guess check didn't pass, return true. failing of _CheckTimeBasedConstraintsForInitialSlowDown does not mean failing of Check2 later on. no need to reject such ramp and limits and Check2 function can handle the ramp and limits later on.
+        _ComputeVelAccelMults(fVelMult, fAccelMult, vellimits, accellimits);
+        return true;
     }
 
     /// Members
@@ -3637,6 +3793,7 @@ protected:
     std::vector<dReal> _cacheX0Vect1, _cacheX1Vect1; ///< need to have another copies of x0 and x1 vectors. For v0 and v1 vectors, we can reuse to ones above.
     std::vector<dReal> _cacheVellimits, _cacheAccelLimits; ///< stores current velocity and acceleration limits, also used in _Shortcut
     std::vector<RampOptimizer::RampND> _cacheRampNDVectOut1; ///< stores output from the check function, also used in _Shortcut
+    std::vector<RampOptimizer::RampND> _cacheRampNDVectInitialGuess; ///< cached vector used for initial guess computation
 
     // in _Shortcut
     std::vector<uint8_t> _vVisitedDiscretizationCache;
@@ -3687,6 +3844,7 @@ protected:
         std::vector<dReal> vCacheTmpX, vCacheTmpV, vCacheTmpA, vCacheTmpALim; ///< cached vectors for _CheckTimeBasedConstraintsForInitialSlowDown, ...etc. order and size are same as _parameters->_configurationspecification.
     };
     DynamicLimitInfo _dynamicLimitInfo; ///< info to use dynamic limits.
+    std::vector<dReal> _vCacheOrgAccelLimits, _vCacheOrgVelLimits; ///< cached vectors for _CheckTimeBasedConstraintsForInitialSlowDown, ...etc. order and size are same as _parameters->_configurationspecification.
 
 }; // end class ParabolicSmoother2
 
