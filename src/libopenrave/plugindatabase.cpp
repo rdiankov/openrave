@@ -216,9 +216,11 @@ void DynamicRaveDatabase::ReloadPlugins()
 bool DynamicRaveDatabase::LoadPlugin(const std::string& libraryname)
 {
     std::string canonicalizedLibraryname = libraryname;
+#ifndef _WIN32
     if(canonicalizedLibraryname.substr(0, 3) != "lib") {
         canonicalizedLibraryname = "lib" + canonicalizedLibraryname;
     }
+#endif
     if(canonicalizedLibraryname.substr(canonicalizedLibraryname.size() - PLUGIN_EXT.size()) != PLUGIN_EXT) {
         canonicalizedLibraryname += PLUGIN_EXT;
     }
