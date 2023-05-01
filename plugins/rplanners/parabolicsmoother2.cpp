@@ -525,6 +525,26 @@ public:
         ConfigurationSpecification timeSpec;
         timeSpec.AddDeltaTimeGroup();
 
+        std::vector<int> vUsedConfigIndices;
+        _dynamicLimitInfo.Reset();
+        FOREACH(itbody, vusedbodies) {
+            if( (*itbody)->IsRobot() && ((*itbody)->GetDOF() >= (int)_parameters->_vConfigVelocityLimit.size()) ) {
+                posSpec.ExtractUsedIndices(KinBodyConstPtr(*itbody), _dynamicLimitInfo.vUsedDOFIndices, vUsedConfigIndices);
+                if( _dynamicLimitInfo.vUsedDOFIndices.size() == _parameters->_vConfigVelocityLimit.size() ) {
+                    _dynamicLimitInfo.bodyName = (*itbody)->GetName();
+                    _dynamicLimitInfo.vCacheFullDOFPositions.resize((*itbody)->GetDOF());
+                    _dynamicLimitInfo.vCacheFullDOFVelocities.clear();
+                    _dynamicLimitInfo.vCacheFullDOFVelocities.resize((*itbody)->GetDOF(), 0.0);
+                    _dynamicLimitInfo.vCacheFullDOFAccelerationLimits.resize((*itbody)->GetDOF());
+                    _dynamicLimitInfo.vCacheFullDOFJerkLimits.resize((*itbody)->GetDOF());
+                    // TODO : need to check dynamic constraint type
+                    _dynamicLimitInfo.bHasDynamicLimits = (*itbody)->GetDOFDynamicAccelerationJerkLimits(_dynamicLimitInfo.vCacheFullDOFAccelerationLimits, _dynamicLimitInfo.vCacheFullDOFJerkLimits,
+                                                                                                         _dynamicLimitInfo.vCacheFullDOFPositions, _dynamicLimitInfo.vCacheFullDOFVelocities);
+                    break;
+                }
+            }
+        }
+
         std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posSpec._vgroups.at(0), false);
         OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "Failed to find group %s in the passed-in trajectory", posSpec._vgroups.at(0).name, ORE_InvalidArguments);
 
@@ -569,6 +589,7 @@ public:
             // Convert the original OpenRAVE trajectory to a parabolicpath
             ptraj->GetWaypoint(0, x0Vect, posSpec);
             ptraj->GetWaypoint(0, v0Vect, velSpec);
+            KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
 
             std::vector<RampOptimizer::RampND>& tempRampNDVect = _cacheRampNDVect;
             for (size_t iwaypoint = 1; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint) {
@@ -595,7 +616,7 @@ public:
                     }
                     else {
                         // We only check time-based constraints since the path is anyway likely to be modified during shortcutting.
-                        if( !_ComputeRampWithZeroVelEndpoints(x0Vect, x1Vect, CFO_CheckTimeBasedConstraints, tempRampNDVect) ) {
+                        if( !_ComputeRampWithZeroVelEndpoints(x0Vect, x1Vect, CFO_CheckTimeBasedConstraints, tempRampNDVect, usedBody) ) {
 #ifdef SMOOTHER2_TIMING_DEBUG
                             // We don't use this stats
                             // Reset SegmentFeasible2 counters
@@ -1472,10 +1493,11 @@ protected:
             std::vector<RampOptimizer::RampND>& rampndVect = _cacheRampNDVect;
             size_t numWaypoints = vNewWaypoints.size();
             size_t curIndex = 0;
+            KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
             for (size_t iwaypoint = 1; iwaypoint < numWaypoints; ++iwaypoint) {
                 OPENRAVE_ASSERT_OP(vNewWaypoints[iwaypoint].size(), ==, ndof);
 
-                if( !_ComputeRampWithZeroVelEndpoints(vNewWaypoints[iwaypoint - 1], vNewWaypoints[iwaypoint], options, rampndVect, iwaypoint, numWaypoints) ) {
+                if( !_ComputeRampWithZeroVelEndpoints(vNewWaypoints[iwaypoint - 1], vNewWaypoints[iwaypoint], options, rampndVect, usedBody, iwaypoint, numWaypoints) ) {
 #ifdef SMOOTHER2_TIMING_DEBUG
                     // We don't use this stats
                     // Reset SegmentFeasible2 counters
@@ -1537,14 +1559,22 @@ protected:
     /// \brief Interpolate two given waypoints with a trajectory which starts and ends with zero
     /// velocities. Manip constraints (if available) is also taken care of by gradually scaling
     /// vellimits and accellimits down until the constraints are no longer violated. Therefore, the
+    /// usedBody : if not null pointer and dynamic limit is necessary, use it to compute the dynamic limits.
     /// output trajectory (rampnd) is guaranteed to feasible.
-    bool _ComputeRampWithZeroVelEndpoints(const std::vector<dReal>& x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<RampOptimizer::RampND>& rampndVectOut, size_t iwaypoint=0, size_t numWaypoints=0)
+    bool _ComputeRampWithZeroVelEndpoints(const std::vector<dReal>& x0VectIn, const std::vector<dReal>& x1VectIn, int options, std::vector<RampOptimizer::RampND>& rampndVectOut, KinBodyConstPtr usedBody, size_t iwaypoint=0, size_t numWaypoints=0)
     {
         // Cache
         std::vector<dReal> &x0Vect = _cacheX0Vect1, &x1Vect = _cacheX1Vect1, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect;
         std::vector<dReal> &vellimits = _cacheVellimits, &accellimits = _cacheAccelLimits;
         vellimits = _parameters->_vConfigVelocityLimit;
         accellimits = _parameters->_vConfigAccelerationLimit;
+
+        // update limits based on necessray conditions
+        v0Vect.clear();
+        v0Vect.resize(vellimits.size(), 0.0);
+        v1Vect.clear();
+        v1Vect.resize(vellimits.size(), 0.0);
+        _UpdateLimitsByNecessaryConditions(vellimits, accellimits, x0VectIn, x1VectIn, v0Vect, v1Vect, usedBody);
 
         dReal fCurVelMult = 1.0;
         // Now setting fVelMultCutOff to 0 since when manip speed/accel limits are very low, we might get very small velmult
@@ -1732,6 +1762,7 @@ protected:
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
+        KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
 
         // Main shortcut loop
         size_t index;
@@ -1823,6 +1854,9 @@ protected:
                         }
                     }
                 }
+
+                // update limits based on necessray conditions
+                _UpdateLimitsByNecessaryConditions(vellimits, accellimits, x0Vect, x1Vect, v0Vect, v1Vect, usedBody);
 
                 std::vector<dReal> reductionFactors2; // keeps track of the reduction factors got from this shortcut
 
@@ -2459,6 +2493,7 @@ protected:
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
+        KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
 
         // Main shortcut loop
         int iters = 0;
@@ -2642,6 +2677,9 @@ protected:
                         }
                     }
                 }
+
+                // update limits based on necessray conditions
+                _UpdateLimitsByNecessaryConditions(vellimits, accellimits, x0Vect, x1Vect, v0Vect, v1Vect, usedBody);
 
                 std::vector<dReal> reductionFactors2; // keeps track of the reduction factors got from this shortcut
 
@@ -3418,6 +3456,52 @@ protected:
         return true;
     }
 
+    /// \brief compute dynamic limits. for now, acc limits only
+    ///        all vectors in arguments have same size and order config, like _parameters->_vConfigVelocityLimit.
+    /// \param[out] vAccelLimits : resultant acceleration limits.
+    /// \param[in] xVect, vVect : pos and vel.
+    /// \param[in] usedBody : body to compute dynamic limits
+    void _ComputeDynamicLimits(std::vector<dReal>& vAccelLimits,
+                               const std::vector<dReal>& xVect, const std::vector<dReal>& vVect, const KinBody& usedBody)
+    {
+        vAccelLimits.resize(xVect.size());
+        for(int iDOF = 0; iDOF < (int)_dynamicLimitInfo.vUsedDOFIndices.size(); ++iDOF) {
+            _dynamicLimitInfo.vCacheFullDOFPositions[_dynamicLimitInfo.vUsedDOFIndices[iDOF]] = xVect[iDOF];
+            _dynamicLimitInfo.vCacheFullDOFVelocities[_dynamicLimitInfo.vUsedDOFIndices[iDOF]] = max(-_parameters->_vConfigVelocityLimit[iDOF], min(vVect[iDOF], _parameters->_vConfigVelocityLimit[iDOF])); // just in case, clamp by config velocity limits.
+        }
+        usedBody.GetDOFDynamicAccelerationJerkLimits(_dynamicLimitInfo.vCacheFullDOFAccelerationLimits, _dynamicLimitInfo.vCacheFullDOFJerkLimits,
+                                                     _dynamicLimitInfo.vCacheFullDOFPositions, _dynamicLimitInfo.vCacheFullDOFVelocities);
+        for(int iDOF = 0; iDOF < (int)_dynamicLimitInfo.vUsedDOFIndices.size(); ++iDOF) {
+            vAccelLimits[iDOF] = _dynamicLimitInfo.vCacheFullDOFAccelerationLimits[_dynamicLimitInfo.vUsedDOFIndices[iDOF]]*_dynamicLimitInfo.fDynamicAccelerationLimitMult;
+        }
+    }
+
+    /// \brief update limits by necesary conditions. for now, dynamic accel limits only.
+    ///        all vectors in arguments have same size and order config, like _parameters->_vConfigVelocityLimit.
+    /// \param[out] vVelLimits, vAccelLimits : resultant acceleration limits. expected to have the default value in it.
+    /// \param[in] vVelocityLimits : just in case, clamp velocity by velocity limits, since dynamic limit might be ill-condition.
+    /// \param[in] x0Vect, v0Vect, x1Vect, v1Vect : pos and vel at t0 and t1.
+    void _UpdateLimitsByNecessaryConditions(std::vector<dReal>& vVelLimits, std::vector<dReal>& vAccelLimits,
+                                            const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vect,
+                                            const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
+                                            const KinBodyConstPtr usedBody)
+    {
+        if( _dynamicLimitInfo.bHasDynamicLimits && !!usedBody ) {
+            // acceleration limits should at least satisfy the dynamic acceleration limits at t0 and t1.
+            // check dynamic acceleration limit at t0
+            std::vector<dReal>& vTmpALim = _dynamicLimitInfo.vCacheTmpALim;
+            _ComputeDynamicLimits(vTmpALim, x0Vect, v0Vect, *usedBody);
+            for(int iDOF = 0; iDOF < (int)_dynamicLimitInfo.vUsedDOFIndices.size(); ++iDOF) {
+                vAccelLimits[iDOF] = min(vTmpALim[iDOF], vAccelLimits[iDOF]);
+            }
+            // check dynamic acceleration limit at t1
+            _ComputeDynamicLimits(vTmpALim, x1Vect, v1Vect, *usedBody);
+            for(int iDOF = 0; iDOF < (int)_dynamicLimitInfo.vUsedDOFIndices.size(); ++iDOF) {
+                vAccelLimits[iDOF] = min(vTmpALim[iDOF], vAccelLimits[iDOF]);
+            }
+        }
+    }
+
     /// Members
     int _environmentid;
     ConstraintTrajectoryTimingParametersPtr _parameters;
@@ -3500,6 +3584,26 @@ protected:
     bool _bUseNewHeuristic;
 
     std::stringstream _sslog; // for logging purpose
+
+    /// \brief info to use dynamic limits.
+    struct DynamicLimitInfo
+    {
+        /// \brief reset
+        void Reset()
+        {
+            bHasDynamicLimits = false;
+            vUsedDOFIndices.clear();
+            bodyName.clear();
+        };
+
+        std::vector<int> vUsedDOFIndices; ///< used openrave dof indices
+        std::string bodyName; ///< used body name in _parameters->_configurationspecification
+        bool bHasDynamicLimits; ///< true if the body has dynamic limits
+        dReal fDynamicAccelerationLimitMult = 1.0;
+        std::vector<dReal> vCacheFullDOFPositions, vCacheFullDOFVelocities, vCacheFullDOFAccelerationLimits, vCacheFullDOFJerkLimits; ///< cached vectors for dynamic limits. openrave fulldof kinematics order and size is GetDOF.
+        std::vector<dReal> vCacheTmpX, vCacheTmpV, vCacheTmpA, vCacheTmpALim; ///< cached vectors for _CheckTimeBasedConstraintsForInitialSlowDown, ...etc. order and size are same as _parameters->_configurationspecification.
+    };
+    DynamicLimitInfo _dynamicLimitInfo; ///< info to use dynamic limits.
 
 }; // end class ParabolicSmoother2
 
