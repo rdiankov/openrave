@@ -118,7 +118,7 @@ void UIOServer::Thread() {
         }
         // Signal event, it's time to stop
         if (epevent.data.fd == sig_fd.get()) {
-            RAVELOG_INFO("Stop signal caught.");
+            RAVELOG_INFO("Stop signal caught.\n");
             Stop();
             break;
         }
@@ -128,7 +128,7 @@ void UIOServer::Thread() {
             eventfd_t event;
             uio_irq_data* irq_ptr = static_cast<uio_irq_data*>(epevent.data.ptr);
             if (::eventfd_read(irq_ptr->fd, &event) == -1) {
-                RAVELOG_ERROR("eventfd_read failed to read the correct number of bytes.");
+                RAVELOG_ERROR("eventfd_read failed to read the correct number of bytes.\n");
                 continue;
             }
             _sem.release();
