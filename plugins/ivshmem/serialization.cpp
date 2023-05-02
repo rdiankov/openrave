@@ -157,17 +157,21 @@ uint64_t deserialize<bool>(const uint8_t* const mem, bool& v) {
 
 uint64_t deserialize(const uint8_t* const mem, fcl::Vec3f& v) {
     uint64_t offset = 0;
-    offset += deserialize<fcl::FCL_REAL>(mem + offset, v[0]);
-    offset += deserialize<fcl::FCL_REAL>(mem + offset, v[1]);
-    offset += deserialize<fcl::FCL_REAL>(mem + offset, v[2]);
+    fcl::FCL_REAL x, y, z;
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, x);
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, y);
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, z);
+    v = fcl::Vec3f(x, y, z);
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::Quaternion3f& v) {
     uint64_t offset = 0;
-    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getW());
-    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getX());
-    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getY());
-    offset += deserialize<fcl::FCL_REAL>(mem + offset, v.getZ());
+    fcl::FCL_REAL w, x, y, z;
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, w);
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, x);
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, y);
+    offset += deserialize<fcl::FCL_REAL>(mem + offset, z);
+    v = fcl::Quaternion3f(w, x, y, z);
     return offset;
 }
 uint64_t deserialize(const uint8_t* const mem, fcl::Contact& v) {
