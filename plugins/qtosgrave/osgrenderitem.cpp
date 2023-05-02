@@ -490,7 +490,7 @@ void KinBodyItem::Load()
                         break;
                     }
                     
-                    Vector extents = orgeom->GetBoxExtents();
+                    Vector extents = orgeom->GetContainerInnerExtents();
                     osg::Geode *lineGeode = new osg::Geode;
                     osg::Geometry *lineGeometry = new osg::Geometry;
                     osg::Vec3Array *linePointVector = new osg::Vec3Array;
