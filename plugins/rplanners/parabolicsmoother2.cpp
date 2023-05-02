@@ -3640,11 +3640,15 @@ protected:
                                 }
                             }
                             else if( _parameters->maxmanipspeed > 0 && _parameters->maxmanipspeed < retcheck.fMaxManipSpeed ) {
-                                // reduce vel limits. TODO : if t0 or t1 has violation, what's the correct way to handle it?
-                                const dReal fVelMult = min(retcheck.fTimeBasedSurpassMult * fiSearchVelAccelMult, 1.0)*fReductionRatio + (1-fReductionRatio);
-                                for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
-                                    const dReal fMinVel = max(RaveFabs(v0Vect[iDOF]), RaveFabs(v1Vect[iDOF]));
-                                    vellimits[iDOF] = max(fMinVel, vOrgVelLimits[iDOF]*fVelMult);
+                                // reduce vel limits.
+                                if( iRamp != 0 && iRamp != iLastElement ) {
+                                    // note that we cannot reduce vellimits at t0 and t1, since velocities of t0 and t1 are boundary condition. so, for t0 or t1, skip reducing the limits.
+                                    // iRamp=0's end condition and iRamp=iLastElement's start condition can have velocity reducing. but, somehow, if we reduce them, got slightly worse computation. so, here we simply skip iRamp=0 and iRamp=iLastElement.
+                                    const dReal fVelMult = min(retcheck.fTimeBasedSurpassMult * fiSearchVelAccelMult, 1.0)*fReductionRatio + (1-fReductionRatio);
+                                    for(int iDOF = 0; iDOF < nDOF; ++iDOF) {
+                                        const dReal fMinVel = max(RaveFabs(v0Vect[iDOF]), RaveFabs(v1Vect[iDOF]));
+                                        vellimits[iDOF] = max(fMinVel, vOrgVelLimits[iDOF]*fVelMult);
+                                    }
                                 }
                             }
                         }
