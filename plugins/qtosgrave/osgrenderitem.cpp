@@ -502,6 +502,7 @@ void KinBodyItem::Load()
                     upperBound.z = extents.z;
                     upperBound -= positiveCropContainerMargins;
 
+                    // bottom 4 edges
                     linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
                     linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
                     linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
@@ -511,15 +512,7 @@ void KinBodyItem::Load()
                     linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
                     linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
 
-                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
-                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
-                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
-                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
-                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
-                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
-                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
-                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
-
+                    // middle 4 edges
                     linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
                     linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
                     linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
@@ -528,6 +521,16 @@ void KinBodyItem::Load()
                     linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
                     linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
                     linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+
+                    // top 4 edges
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
 
                     lineGeometry->setVertexArray(linePointVector);
                     lineGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES, 0, linePointVector->size()));
@@ -539,9 +542,9 @@ void KinBodyItem::Load()
                     lineGeode->getOrCreateStateSet()->setAttributeAndModes(linewidth, osg::StateAttribute::ON);
                     
                     // setup color
-                    osg::ref_ptr<osg::Material> lineMat = new osg::Material;
-                    lineMat->setDiffuse(osg::Material::FRONT, osg::Vec4(1, 0, 0, 1));
-                    lineGeode->getOrCreateStateSet()->setAttributeAndModes(lineMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+                    osg::ref_ptr<osg::Material> lineMaterial = new osg::Material;
+                    lineMaterial->setDiffuse(osg::Material::FRONT, osg::Vec4(1, 0, 0, 1)); // red
+                    lineGeode->getOrCreateStateSet()->setAttributeAndModes(lineMaterial, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
 
                     pgeometrydata->addChild(lineGeode);
                     break;
