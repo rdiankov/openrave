@@ -65,6 +65,8 @@ public:
     object _filenamecollision = py::none_();
     object _vRenderScale = toPyVector3(Vector(1,1,1));
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
+    object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
+    object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
 
     py::list _vSideWalls;
     float _containerBaseHeight = 0.0;

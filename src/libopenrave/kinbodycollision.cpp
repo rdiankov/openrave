@@ -425,7 +425,6 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
     bool bincollision = false;
     LinkPtr plink = _veclinks.at(ilinkindex);
     if( plink->IsEnabled() ) {
-        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
             if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                 return true;

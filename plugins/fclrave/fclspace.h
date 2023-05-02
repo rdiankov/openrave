@@ -24,6 +24,7 @@ typedef boost::function<CollisionGeometryPtr (std::vector<fcl::Vec3f> const &poi
 typedef std::vector<fcl::CollisionObject *> CollisionGroup;
 typedef boost::shared_ptr<CollisionGroup> CollisionGroupPtr;
 typedef std::pair<Transform, CollisionObjectPtr> TransformCollisionPair;
+typedef std::pair<Vector, CollisionObjectPtr> TranslationCollisionPair;
 
 
 // Helper functions for conversions from OpenRAVE to FCL
@@ -132,7 +133,7 @@ public:
             vector< boost::shared_ptr<FCLGeometryInfo> > vgeominfos; ///< info for every geometry of the link
 
             //int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
-            TransformCollisionPair linkBV; ///< pair of the transformation and collision object corresponding to a bounding OBB for the link
+            TranslationCollisionPair linkBV; ///< pair of the translation and collision object corresponding to a bounding OBB for the link
             std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
             bool bFromKinBodyLink; ///< if true, then from kinbodylink. Otherwise from standalone object that does not have any KinBody associations

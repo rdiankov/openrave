@@ -174,7 +174,7 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
             CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
             pfclgeomBV->setUserData(nullptr);
             CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject>(pfclgeomBV);
-            Transform trans(Vector(1,0,0,0),ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_)));
+            const Vector trans = ConvertVectorFromFCL(0.5 * (enclosingBV.min_ + enclosingBV.max_));
             pfclcollBV->setUserData(linkinfo.get());
             linkinfo->linkBV = std::make_pair(trans, pfclcollBV);
         }
@@ -503,17 +503,18 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
         if( body.GetLinks().size() != info.vlinks.size() ) {
             throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, the current number of links in body '%s' are %d, and are not the same as the number cached links %d")%_penv->GetNameId()%body.GetName()%body.GetLinks().size()%info.vlinks.size()), OpenRAVE::ORE_InvalidState);
         }
-        CollisionObjectPtr pcoll;
+
         for(size_t i = 0; i < body.GetLinks().size(); ++i) {
-            const FCLSpace::FCLKinBodyInfo::LinkInfo& linkInfo = *info.vlinks[i];
-            pcoll = linkInfo.linkBV.second;
+            FCLSpace::FCLKinBodyInfo::LinkInfo& linkInfo = *info.vlinks[i];
+            CollisionObjectPtr& pcoll = linkInfo.linkBV.second; // avoid copying shared pointer for performance
             if( !pcoll ) {
                 continue;
             }
             const Transform& linkTransform = body.GetLinks()[i]->GetTransform();
-            Transform pose = linkTransform * linkInfo.linkBV.first;
-            fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-            fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+            Transform pose = linkTransform;
+            pose.trans += pose.rotate(linkInfo.linkBV.first);
+            const fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+            const fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
 
             pcoll->setTranslation(newPosition);
             pcoll->setQuatRotation(newOrientation);
@@ -523,9 +524,9 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
             //info.vlinks[i]->nLastStamp = info.nLastStamp;
             for (const TransformCollisionPair& pgeom : linkInfo.vgeoms) {
                 fcl::CollisionObject& coll = *pgeom.second;
-                Transform pose1 = linkTransform * pgeom.first;
-                fcl::Vec3f newPosition1 = ConvertVectorToFCL(pose1.trans);
-                fcl::Quaternion3f newOrientation1 = ConvertQuaternionToFCL(pose1.rot);
+                const Transform pose1 = linkTransform * pgeom.first;
+                const fcl::Vec3f newPosition1 = ConvertVectorToFCL(pose1.trans);
+                const fcl::Quaternion3f newOrientation1 = ConvertQuaternionToFCL(pose1.rot);
 
                 coll.setTranslation(newPosition1);
                 coll.setQuatRotation(newOrientation1);
