@@ -148,6 +148,9 @@ void DynamicRaveDatabase::Init()
             }
         }
     }
+    else {
+        RAVELOG_WARN("Failed to read environment variable OPENRAVE_PLUGINS");
+    }
     bool bExists = false;
     std::string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
 #ifdef HAVE_BOOST_FILESYSTEM
