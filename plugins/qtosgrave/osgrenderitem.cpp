@@ -489,15 +489,61 @@ void KinBodyItem::Load()
                         // do nothing if CropContainerMargins are all zeros
                         break;
                     }
-                    // TODO
-                    orgeom->GetContainerOuterExtents();
-                    orgeom->GetContainerInnerExtents();
-                    orgeom->GetContainerBottomCross();
-                    orgeom->GetContainerBottom();
-                    // TODO: do math here?
-                    // TODO: draw line here?
-                    GetBody()->GetEnv();
+                    
+                    Vector extents = orgeom->GetBoxExtents();
+                    osg::Geode *lineGeode = new osg::Geode;
+                    osg::Geometry *lineGeometry = new osg::Geometry;
+                    osg::Vec3Array *linePointVector = new osg::Vec3Array;
 
+                    Vector lowerBound = extents * -0.5;
+                    lowerBound.z = 0;
+                    lowerBound += negativeCropContainerMargins;
+                    Vector upperBound = extents * 0.5;
+                    upperBound.z = extents.z;
+                    upperBound -= positiveCropContainerMargins;
+
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
+
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
+                    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+
+                    lineGeometry->setVertexArray(linePointVector);
+                    lineGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES, 0, linePointVector->size()));
+                    lineGeode->addDrawable(lineGeometry);
+
+                    // setup line width
+                    osg::LineWidth* linewidth = new osg::LineWidth();
+                    linewidth->setWidth(3.0f);
+                    lineGeode->getOrCreateStateSet()->setAttributeAndModes(linewidth, osg::StateAttribute::ON);
+                    
+                    // setup color
+                    osg::ref_ptr<osg::Material> lineMat = new osg::Material;
+                    lineMat->setDiffuse(osg::Material::FRONT, osg::Vec4(1, 0, 0, 1));
+                    lineGeode->getOrCreateStateSet()->setAttributeAndModes(lineMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+
+                    pgeometrydata->addChild(lineGeode);
                     break;
                 }
                 // Board is a Box, dots are a separate Mesh from the board's collision Mesh
