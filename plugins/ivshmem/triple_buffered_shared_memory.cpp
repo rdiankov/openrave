@@ -163,9 +163,9 @@ void TripleBufferedSharedIOMemory::write_ready(size_t) noexcept {
     );
 }
 
-uintptr_t TripleBufferedSharedIOMemory::get_writable() const noexcept {
+uint8_t* TripleBufferedSharedIOMemory::get_writable() const noexcept {
     uintptr_t offset = static_cast<uintptr_t*>(_mmap)[0];
-    return static_cast<uintptr_t>(_mmap) + offset;
+    return static_cast<uint8_t*>(_mmap) + offset;
 }
 
 void TripleBufferedSharedIOMemory::read_ready(size_t) noexcept {
@@ -175,7 +175,7 @@ void TripleBufferedSharedIOMemory::read_ready(size_t) noexcept {
     );
 }
 
-uintptr_t TripleBufferedSharedIOMemory::get_readable() const noexcept {
+uint8_t* TripleBufferedSharedIOMemory::get_readable() const noexcept {
     uintptr_t offset = static_cast<uintptr_t*>(_mmap)[3];
-    return static_cast<uintptr_t>(_mmap) + offset;
+    return static_cast<uint8_t*>(_mmap) + offset;
 }

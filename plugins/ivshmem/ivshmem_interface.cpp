@@ -1137,7 +1137,7 @@ std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
                                         const fcl::CollisionRequest& request,
                                         fcl::CollisionResult& result)
 {
-    uint8_t* const write_addr = static_cast<uint8_t*>(_shmem.get_writable());
+    uint8_t* const write_addr = _shmem.get_writable();
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id++);
     offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::ObjectCollision));
@@ -1151,7 +1151,7 @@ std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
     _ivshmem_server.WaitVector();
     _shmem.read_ready(offset);
 
-    const uint8_t* const read_addr = static_cast<uint8_t*>(_shmem.get_readable());
+    const uint8_t* const read_addr = _shmem.get_readable();
     uint64_t query_id = 0; // returned query ID
     offset = 0;
     offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);
@@ -1164,7 +1164,7 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
                                     const fcl::CollisionGeometry* o2, const fcl::Transform3f& tf2,
                                     const fcl::CollisionRequest& request, fcl::CollisionResult& result)
 {
-    uint8_t* const write_addr = static_cast<uint8_t*>(_shmem.get_writable());
+    uint8_t* const write_addr = _shmem.get_writable();
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id++);
     offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::GeometryCollision));
@@ -1180,7 +1180,7 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
     _ivshmem_server.WaitVector();
     _shmem.read_ready(offset);
 
-    const uint8_t* const read_addr = static_cast<uint8_t*>(_shmem.get_readable());
+    const uint8_t* const read_addr = _shmem.get_readable();
     uint64_t query_id = 0; // returned query ID
     offset = 0;
     offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);

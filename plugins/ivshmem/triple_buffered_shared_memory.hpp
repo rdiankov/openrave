@@ -51,13 +51,13 @@ public:
     // Finish writing the current buffer, submitting it for swapping.
     void write_ready(size_t size) noexcept;
     // Fetch the current buffer for writing.
-    uintptr_t get_writable() const noexcept;
+    uint8_t* get_writable() const noexcept;
     std::size_t writable_size() const noexcept { return _writesize; }
 
     // USAGE NOTE: For reading, ready the buffer BEFORE reading (opposite of write, where you write, and then ready the buffer)
     void read_ready(size_t size) noexcept;
     // Fetch the current buffer for reading.
-    uintptr_t get_readable() const noexcept;
+    uint8_t* get_readable() const noexcept;
     std::size_t readable_size() const noexcept { return _readsize; }
 
 private:
