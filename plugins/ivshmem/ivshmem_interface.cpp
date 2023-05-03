@@ -1137,20 +1137,21 @@ std::size_t IVShMemInterface::collide(  const fcl::CollisionObject* o1,
                                         const fcl::CollisionRequest& request,
                                         fcl::CollisionResult& result)
 {
-    uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
+    uint8_t* const write_addr = static_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id++);
     offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::ObjectCollision));
     offset += ivshmem::serialize(write_addr + offset, *o1);
     offset += ivshmem::serialize(write_addr + offset, *o2);
     offset += ivshmem::serialize(write_addr + offset, request);
+    RAVELOG_DEBUG("Writing %lu bytes for query %lu.\n", offset, _query_id-1);
 
     _shmem.write_ready(offset);
     _ivshmem_server.InterruptPeer();
     _ivshmem_server.WaitVector();
     _shmem.read_ready(offset);
 
-    const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
+    const uint8_t* const read_addr = static_cast<uint8_t*>(_shmem.get_readable());
     uint64_t query_id = 0; // returned query ID
     offset = 0;
     offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);
@@ -1163,7 +1164,7 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
                                     const fcl::CollisionGeometry* o2, const fcl::Transform3f& tf2,
                                     const fcl::CollisionRequest& request, fcl::CollisionResult& result)
 {
-    uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
+    uint8_t* const write_addr = static_cast<uint8_t*>(_shmem.get_writable());
     size_t offset = 0;
     offset += ivshmem::serialize(write_addr + offset, _query_id++);
     offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::GeometryCollision));
@@ -1172,13 +1173,14 @@ std::size_t IVShMemInterface::collide(const fcl::CollisionGeometry* o1, const fc
     offset += ivshmem::serialize(write_addr + offset, o2);
     offset += ivshmem::serialize(write_addr + offset, tf2);
     offset += ivshmem::serialize(write_addr + offset, request);
+    RAVELOG_DEBUG("Writing %lu bytes for query %lu.\n", offset, _query_id-1);
 
     _shmem.write_ready(offset);
     _ivshmem_server.InterruptPeer();
     _ivshmem_server.WaitVector();
     _shmem.read_ready(offset);
 
-    const uint8_t* const read_addr = reinterpret_cast<uint8_t*>(_shmem.get_readable());
+    const uint8_t* const read_addr = static_cast<uint8_t*>(_shmem.get_readable());
     uint64_t query_id = 0; // returned query ID
     offset = 0;
     offset += ivshmem::deserialize<uint64_t>(read_addr, query_id);
@@ -1195,7 +1197,7 @@ void IVShMemInterface::exit()
     /// TODO: Maybe a reset command is still needed?
 
     //RAVELOG_INFO("Sending exit signal to collision checker...\n");
-    //uint8_t* const write_addr = reinterpret_cast<uint8_t*>(_shmem.get_writable());
+    //uint8_t* const write_addr = static_cast<uint8_t*>(_shmem.get_writable());
     //size_t offset = 0;
     //offset += ivshmem::serialize(write_addr + offset, _query_id++);
     //offset += ivshmem::serialize(write_addr + offset, static_cast<uint16_t>(QueryType::Exit));
