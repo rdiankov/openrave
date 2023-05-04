@@ -111,7 +111,7 @@ target_link_libraries(openrave PRIVATE boost_assertion_failed PUBLIC ${Boost_DAT
 
 install(TARGETS openrave DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX} ${CMAKE_INSTALL_PREFIX}/bin/openrave)
 endif()
 
 # always extract the models since we don't know when models.tgz has been changed

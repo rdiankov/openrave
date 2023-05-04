@@ -334,6 +334,18 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         if( !IsZeroWithEpsilon3(_vGeomData4 - rhs._vGeomData4*fUnitScale, fEpsilon) ) {
             return 12;
         }
+        if( !IsZeroWithEpsilon3(_vNegativeCropContainerMargins - rhs._vNegativeCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 22;
+        }
+        if( !IsZeroWithEpsilon3(_vPositiveCropContainerMargins - rhs._vPositiveCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 23;
+        }
+        if( !IsZeroWithEpsilon3(_vNegativeCropContainerEmptyMargins - rhs._vNegativeCropContainerEmptyMargins*fUnitScale, fEpsilon) ) {
+            return 26;
+        }
+        if( !IsZeroWithEpsilon3(_vPositiveCropContainerEmptyMargins - rhs._vPositiveCropContainerEmptyMargins*fUnitScale, fEpsilon) ) {
+            return 27;
+        }
         break;
 
     case GT_Cage: {
@@ -351,6 +363,18 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
             if(_vSideWalls[iwall].Compare(rhs._vSideWalls[iwall], fUnitScale, fEpsilon) > 0) {
                 return 16;
             }
+        }
+        if( !IsZeroWithEpsilon3(_vNegativeCropContainerMargins - rhs._vNegativeCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 24;
+        }
+        if( !IsZeroWithEpsilon3(_vPositiveCropContainerMargins - rhs._vPositiveCropContainerMargins*fUnitScale, fEpsilon) ) {
+            return 25;
+        }
+        if( !IsZeroWithEpsilon3(_vNegativeCropContainerEmptyMargins - rhs._vNegativeCropContainerEmptyMargins*fUnitScale, fEpsilon) ) {
+            return 28;
+        }
+        if( !IsZeroWithEpsilon3(_vPositiveCropContainerEmptyMargins - rhs._vPositiveCropContainerEmptyMargins*fUnitScale, fEpsilon) ) {
+            return 29;
         }
         break;
     }
@@ -747,6 +771,10 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         _vGeomData2 *= fUnitScale;
         _vGeomData3 *= fUnitScale;
         _vGeomData4 *= fUnitScale;
+        _vNegativeCropContainerMargins *= fUnitScale;
+        _vPositiveCropContainerMargins *= fUnitScale;
+        _vNegativeCropContainerEmptyMargins *= fUnitScale;
+        _vPositiveCropContainerEmptyMargins *= fUnitScale;
         break;
 
     case GT_Cage: {
@@ -757,6 +785,10 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
             itwall->vExtents *= fUnitScale;
         }
         _vGeomData2 *= fUnitScale;
+        _vNegativeCropContainerMargins *= fUnitScale;
+        _vPositiveCropContainerMargins *= fUnitScale;
+        _vNegativeCropContainerEmptyMargins *= fUnitScale;
+        _vPositiveCropContainerEmptyMargins *= fUnitScale;
         break;
     }
     case GT_Sphere:
@@ -811,6 +843,10 @@ void KinBody::GeometryInfo::Reset()
     _bModifiable = true;
     _calibrationBoardParameters.clear();
     _modifiedFields = 0xffffffff;
+    _vNegativeCropContainerMargins = Vector(0,0,0);
+    _vPositiveCropContainerMargins = Vector(0,0,0);
+    _vNegativeCropContainerEmptyMargins = Vector(0,0,0);
+    _vPositiveCropContainerEmptyMargins = Vector(0,0,0);
 }
 
 inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
@@ -859,6 +895,10 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
         break;
 
     case GT_Cage: {
@@ -879,6 +919,10 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
             orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
         }
         orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
         break;
     }
     case GT_Sphere:
@@ -1031,6 +1075,34 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _meshcollision.Clear();
             }
         }
+        if (value.HasMember("negativeCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "negativeCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vNegativeCropContainerMargins) {
+                _vNegativeCropContainerMargins = vGeomDataTemp;
+            }
+        }
+        if (value.HasMember("positiveCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "positiveCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vPositiveCropContainerMargins) {
+                _vPositiveCropContainerMargins = vGeomDataTemp;
+            }
+        }
+        if (value.HasMember("negativeCropContainerEmptyMargins")) {
+            orjson::LoadJsonValueByKey(value, "negativeCropContainerEmptyMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vNegativeCropContainerEmptyMargins) {
+                _vNegativeCropContainerEmptyMargins = vGeomDataTemp;
+            }
+        }
+        if (value.HasMember("positiveCropContainerEmptyMargins")) {
+            orjson::LoadJsonValueByKey(value, "positiveCropContainerEmptyMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vPositiveCropContainerEmptyMargins) {
+                _vPositiveCropContainerEmptyMargins = vGeomDataTemp;
+            }
+        }
         break;
     case GT_Cage:
         if (value.HasMember("baseExtents")) {
@@ -1081,6 +1153,34 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 if (bSideWallChanged) {
                     _meshcollision.Clear();
                 }
+            }
+        }
+        if (value.HasMember("negativeCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "negativeCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vNegativeCropContainerMargins) {
+                _vNegativeCropContainerMargins = vGeomDataTemp;
+            }
+        }
+        if (value.HasMember("positiveCropContainerMargins")) {
+            orjson::LoadJsonValueByKey(value, "positiveCropContainerMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vPositiveCropContainerMargins) {
+                _vPositiveCropContainerMargins = vGeomDataTemp;
+            }
+        }
+        if (value.HasMember("negativeCropContainerEmptyMargins")) {
+            orjson::LoadJsonValueByKey(value, "negativeCropContainerEmptyMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vNegativeCropContainerEmptyMargins) {
+                _vNegativeCropContainerEmptyMargins = vGeomDataTemp;
+            }
+        }
+        if (value.HasMember("positiveCropContainerEmptyMargins")) {
+            orjson::LoadJsonValueByKey(value, "positiveCropContainerEmptyMargins", vGeomDataTemp);
+            vGeomDataTemp *= fUnitScale;
+            if (vGeomDataTemp != _vPositiveCropContainerEmptyMargins) {
+                _vPositiveCropContainerEmptyMargins = vGeomDataTemp;
             }
         }
         break;
@@ -1446,6 +1546,34 @@ void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
 }
 
+void KinBody::Geometry::SetNegativeCropContainerMargins(const Vector& negativeCropContainerMargins)
+{
+    LinkPtr parent(_parent);
+    _info._vNegativeCropContainerMargins = negativeCropContainerMargins;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+}
+
+void KinBody::Geometry::SetPositiveCropContainerMargins(const Vector& positiveCropContainerMargins)
+{
+    LinkPtr parent(_parent);
+    _info._vPositiveCropContainerMargins = positiveCropContainerMargins;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+}
+
+void KinBody::Geometry::SetNegativeCropContainerEmptyMargins(const Vector& negativeCropContainerEmptyMargins)
+{
+    LinkPtr parent(_parent);
+    _info._vNegativeCropContainerEmptyMargins = negativeCropContainerEmptyMargins;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+}
+
+void KinBody::Geometry::SetPositiveCropContainerEmptyMargins(const Vector& positiveCropContainerEmptyMargins)
+{
+    LinkPtr parent(_parent);
+    _info._vPositiveCropContainerEmptyMargins = positiveCropContainerEmptyMargins;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+}
+
 /*
  * Ray-box intersection using IEEE numerical properties to ensure that the
  * test is both robust and efficient, as described in:
@@ -1683,6 +1811,34 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     if (IsModifiable() != info._bModifiable) {
         _info._bModifiable = info._bModifiable;
         RAVELOG_VERBOSE_FORMAT("geometry %s modifiable changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // negativeCropContainerMargins
+    if(GetNegativeCropContainerMargins() != info._vNegativeCropContainerMargins){
+        _info._vNegativeCropContainerMargins = info._vNegativeCropContainerMargins;
+        RAVELOG_VERBOSE_FORMAT("geometry %s negativeCropContainerMargins changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // positiveCropContainerMargins
+    if(GetPositiveCropContainerMargins() != info._vPositiveCropContainerMargins){
+        _info._vPositiveCropContainerMargins = info._vPositiveCropContainerMargins;
+        RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerMargins changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // negativeCropContainerEmptyMargins
+    if(GetNegativeCropContainerEmptyMargins() != info._vNegativeCropContainerEmptyMargins){
+        _info._vNegativeCropContainerEmptyMargins = info._vNegativeCropContainerEmptyMargins;
+        RAVELOG_VERBOSE_FORMAT("geometry %s negativeCropContainerEmptyMargins changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // positiveCropContainerEmptyMargins
+    if(GetPositiveCropContainerEmptyMargins() != info._vPositiveCropContainerEmptyMargins){
+        _info._vPositiveCropContainerEmptyMargins = info._vPositiveCropContainerEmptyMargins;
+        RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerEmptyMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
