@@ -58,26 +58,40 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
-    try {
-        orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
-    }
-    catch(const std::exception& e) {
-        // backward compatiblity with float chucking directions
-        RAVELOG_DEBUG_FORMAT("encountered error while loading 'chuckingDirections' as integers, try to load it as doubles: %s", e.what());
-        vector<double> vLocalChuckingDirection;
-        orjson::LoadJsonValueByKey(value, "chuckingDirections", vLocalChuckingDirection);
-        _vChuckingDirection.resize(vLocalChuckingDirection.size());
-        for (size_t index = 0; index < vLocalChuckingDirection.size(); ++index) {
+
+    rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirections");
+    if( itChuckingDirections != value.MemberEnd() ) {
+        const rapidjson::Value& rChuckingDirections = itChuckingDirections->value;
+        if( !rChuckingDirections.IsArray() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("When loading tool '%s' with id '%s', 'chuckingDirections' needs to be an array, currently it is '%s'"), _name%_id%orjson::DumpJson(rChuckingDirections), ORE_InvalidArguments);
+        }
+
+        _vChuckingDirection.resize(rChuckingDirections.Size());
+        for(int index = 0; index < (int)_vChuckingDirection.size(); ++index) {
             int direction = 0;
-            if (vLocalChuckingDirection[index] > 0) {
-                direction = 1;
+            if( rChuckingDirections[index].IsFloat() || rChuckingDirections[index].IsDouble() ) {
+                double fdirection = 0;
+                orjson::LoadJsonValue(rChuckingDirections[index], fdirection);
+                if( fdirection > 0 ) {
+                    direction = 1;
+                }
+                else if( fdirection < 0 ) {
+                    direction = -1;
+                }
             }
-            else if (vLocalChuckingDirection[index] < 0) {
-                direction = -1;
+            else {
+                orjson::LoadJsonValue(rChuckingDirections[index], direction);
+                if (direction > 0) {
+                    direction = 1;
+                }
+                else if (direction < 0) {
+                    direction = -1;
+                }
             }
             _vChuckingDirection[index] = direction;
         }
     }
+
     orjson::LoadJsonValueByKey(value, "direction", _vdirection);
     orjson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
     orjson::LoadJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName); //optional;

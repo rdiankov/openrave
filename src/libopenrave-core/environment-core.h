@@ -2428,6 +2428,30 @@ public:
         }
         return handles;
     }
+    virtual OpenRAVE::GraphHandlePtr drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency)
+    {
+        SharedLock lock782(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawaabb(aabb, transform, vcolor, transparency));
+        }
+        return handles;
+    }
+    virtual OpenRAVE::GraphHandlePtr drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency)
+    {
+        SharedLock lock782(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawobb(obb, vcolor, transparency));
+        }
+        return handles;
+    }
     virtual OpenRAVE::GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
     {
         SharedLock lock756(_mutexInterfaces);
