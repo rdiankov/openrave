@@ -23,6 +23,7 @@
 #include <osg/PolygonOffset>
 #include <osg/LineStipple>
 #include <osg/Depth>
+#include <iostream>
 
 namespace qtosgrave {
 
@@ -480,15 +481,25 @@ void KinBodyItem::Load()
                     pgeometrydata->addChild(geode);
 
                     if(orgeom->GetType() == GT_TriMesh){
-                        // CropContainerMargins only exists in GT_Cage and GT_Container
+                        // CropContainerMargins and CropContainerEmptyMargins only exists in GT_Cage and GT_Container
                         break;
                     }
 
-                    Vector extents = orgeom->GetContainerInnerExtents();
-                    Vector negativeCropContainerMargins = orgeom->GetNegativeCropContainerMargins();
-                    Vector positiveCropContainerMargins = orgeom->GetPositiveCropContainerMargins();
-                    RaveVector<float> lineColor = orgeom->GetDiffuseColor() * 0.1; // shade of the geometry color
-                    DrawCropContainerMargins(pgeometrydata, extents, negativeCropContainerMargins, positiveCropContainerMargins, lineColor);
+                    DrawCropContainerMargins(
+                        pgeometrydata, 
+                        orgeom->GetContainerInnerExtents(), 
+                        orgeom->GetNegativeCropContainerMargins(), 
+                        orgeom->GetPositiveCropContainerMargins(), 
+                        orgeom->GetDiffuseColor() * 0.5 // shade of the geometry color
+                    );
+
+                    DrawCropContainerMargins(
+                        pgeometrydata, 
+                        orgeom->GetContainerInnerExtents(), 
+                        orgeom->GetNegativeCropContainerEmptyMargins(), 
+                        orgeom->GetPositiveCropContainerEmptyMargins(), 
+                        orgeom->GetDiffuseColor() + (-orgeom->GetDiffuseColor() + RaveVector<float>(1, 1, 1)) * 0.5 // tint of the geometry color
+                    );
 
                     break;
                 }
