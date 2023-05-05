@@ -23,7 +23,6 @@
 #include <osg/PolygonOffset>
 #include <osg/LineStipple>
 #include <osg/Depth>
-#include <iostream>
 
 namespace qtosgrave {
 
