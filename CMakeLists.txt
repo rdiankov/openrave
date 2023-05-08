@@ -176,13 +176,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   set(CMAKE_CXX_FLAGS_OPTIMIZED "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -D_SECURE_SCL=0") # this practically removes all checks making it a very dangerous options to play with
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -O3 -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_DEBUG "-g3 -D_DEBUG")
-
-  # the _GLIBCXX_DEBUG flag is very helpful in bounds checking for vector[] and iterators, however it requires all
-  # libraries linking with openrave to use it
-#  if( CMAKE_BUILD_TYPE STREQUAL "Debug")
-#    set(OPENRAVE_EXPORT_CXXFLAGS "${OPENRAVE_EXPORT_CXXFLAGS} -D_GLIBCXX_DEBUG")
-#  endif()
+  set(CMAKE_CXX_FLAGS_DEBUG "-g3 -D_DEBUG -frecord-gcc-switches")
 endif()
 
 if( MSVC )
