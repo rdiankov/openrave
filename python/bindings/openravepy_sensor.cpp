@@ -1026,6 +1026,7 @@ void init_openravepy_sensor()
     .def_readwrite("max_range",&PyLaserGeomData::max_range)
     .def_readwrite("time_increment",&PyLaserGeomData::time_increment)
     .def_readwrite("time_scan",&PyLaserGeomData::time_scan)
+    .def_readwrite("resolution",&PyLaserGeomData::resolution)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

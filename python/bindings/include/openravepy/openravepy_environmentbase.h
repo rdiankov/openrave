@@ -250,6 +250,8 @@ public:
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
     object drawboxarray(object opos, object oextents, object ocolor=py::none_());
+    object drawaabb(object oaabb, object otransform, object ocolor=py::none_(), float transparency=0.0f);
+    object drawobb(object oobb, object ocolor=py::none_(), float transparency=0.0f);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture);
