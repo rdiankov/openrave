@@ -81,6 +81,8 @@ public:
     virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents);
     virtual GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents);
+    virtual GraphHandlePtr drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency);
+    virtual GraphHandlePtr drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency);
 
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color);
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const boost::multi_array<float,2>& colors);
@@ -322,14 +324,14 @@ public:
 
     virtual OSGSwitchPtr _CreateGraphHandle();
     virtual void _CloseGraphHandle(OSGSwitchPtr handle);
-    virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t);
+    virtual void _SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float>& t);
     virtual void _SetGraphShow(OSGSwitchPtr handle, bool bShow);
 
     virtual void _Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::PrimitiveSet::Mode mode, osg::ref_ptr<osg::StateAttribute> attribute, bool bUsingTransparency=false);
     virtual void _DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, osg::ref_ptr<osg::DrawElementsUInt> osgindices, bool bUsingTransparency);
     virtual void _SetTriangleMesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, osg::ref_ptr<osg::Vec3Array> osgvertices, osg::ref_ptr<osg::DrawElementsUInt> osgindices);
     virtual void _DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition);
-    virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
+    virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vextents, const RaveTransform<float>& pose, const RaveVector<float>& color, float transparency);
     virtual void _DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
     virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
 

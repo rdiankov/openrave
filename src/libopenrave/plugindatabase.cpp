@@ -54,6 +54,15 @@ const char* s_delimiter = ":";
 
 namespace OpenRAVE {
 
+static const std::string PLUGIN_EXT =
+#if defined (__APPLE_CC__)
+    ".dylib";
+#elif defined (_WIN32)
+    ".dll";
+#else
+    ".so";
+#endif
+
 DynamicRaveDatabase::DynamicLibrary::DynamicLibrary(const std::string& path)
 {
 #ifdef _WIN32
@@ -124,22 +133,23 @@ DynamicRaveDatabase::~DynamicRaveDatabase()
 void DynamicRaveDatabase::Init()
 {
     const char* pOPENRAVE_PLUGINS = getenv("OPENRAVE_PLUGINS"); // getenv not thread-safe?
-    if (!pOPENRAVE_PLUGINS) {
-        RAVELOG_WARN("Failed to read environment variable OPENRAVE_PLUGINS");
-        return;
-    }
     std::vector<std::string> vplugindirs;
-    utils::TokenizeString(pOPENRAVE_PLUGINS, s_delimiter, vplugindirs);
-    for (int iplugindir = vplugindirs.size() - 1; iplugindir > 0; iplugindir--) {
-        int jplugindir = 0;
-        for(; jplugindir < iplugindir; jplugindir++) {
-            if(vplugindirs[iplugindir] == vplugindirs[jplugindir]) {
-                break;
+    if (!!pOPENRAVE_PLUGINS) {
+        utils::TokenizeString(pOPENRAVE_PLUGINS, s_delimiter, vplugindirs);
+        for (int iplugindir = vplugindirs.size() - 1; iplugindir > 0; iplugindir--) {
+            int jplugindir = 0;
+            for(; jplugindir < iplugindir; jplugindir++) {
+                if(vplugindirs[iplugindir] == vplugindirs[jplugindir]) {
+                    break;
+                }
+            }
+            if (jplugindir < iplugindir) {
+                vplugindirs.erase(vplugindirs.begin()+iplugindir);
             }
         }
-        if (jplugindir < iplugindir) {
-            vplugindirs.erase(vplugindirs.begin()+iplugindir);
-        }
+    }
+    else {
+        RAVELOG_WARN("Failed to read environment variable OPENRAVE_PLUGINS");
     }
     bool bExists = false;
     std::string installdir = OPENRAVE_PLUGINS_INSTALL_DIR;
@@ -208,27 +218,27 @@ void DynamicRaveDatabase::ReloadPlugins()
 
 bool DynamicRaveDatabase::LoadPlugin(const std::string& libraryname)
 {
-    // If the libraryname matches any of the existing loaded libraries, then reload it
+    std::string canonicalizedLibraryname = libraryname;
+#ifndef _WIN32
+    if(canonicalizedLibraryname.substr(0, 3) != "lib") {
+        canonicalizedLibraryname = "lib" + canonicalizedLibraryname;
+    }
+#endif
+    if(canonicalizedLibraryname.substr(canonicalizedLibraryname.size() - PLUGIN_EXT.size()) != PLUGIN_EXT) {
+        canonicalizedLibraryname += PLUGIN_EXT;
+    }
+    // If the canonicalizedLibraryname matches any of the existing loaded libraries, then reload it
     {
         std::lock_guard<std::mutex> lock(_mutex);
-        _vPlugins.erase(std::remove_if(_vPlugins.begin(), _vPlugins.end(), [&libraryname](const PluginPtr& plugin) {
-            return (plugin->GetPluginName() == libraryname || plugin->GetPluginPath() == libraryname);
+        _vPlugins.erase(std::remove_if(_vPlugins.begin(), _vPlugins.end(), [&canonicalizedLibraryname](const PluginPtr& plugin) {
+            return (plugin->GetPluginName() == canonicalizedLibraryname || plugin->GetPluginPath() == canonicalizedLibraryname);
         }), _vPlugins.end());
     }
-    return _LoadPlugin(libraryname);
+    return _LoadPlugin(canonicalizedLibraryname);
 }
 
 void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool recurse) try
 {
-    static const std::string PLUGIN_EXT =
-#if defined (__APPLE_CC__)
-        ".dylib";
-#elif defined (_WIN32)
-        ".dll";
-#else
-        ".so";
-#endif
-
 #ifdef HAVE_BOOST_FILESYSTEM
     const fs::path path(strpath);
     if (fs::is_empty(path)) {

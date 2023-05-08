@@ -1668,22 +1668,23 @@ GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vextents, const RaveTransform<float>& pose, const RaveVector<float>& color, float transparency)
 {
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    SetMatrixTransform(*trans, pose);
     osg::ref_ptr<osg::Geode> geode(new osg::Geode());
 
     osg::ref_ptr<osg::Box> box = new osg::Box();
     box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
-    box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
 
     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
-    sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
+    const float alpha = std::max<float>(0.0, std::min<float>(1.0f, 1.0f - transparency));
+    sd->setColor(osg::Vec4f(color.x, color.y, color.z, alpha));
     geode->addDrawable(sd);
 
     // don't do transparent bin since that is too slow for big point clouds...
     //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    handle->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+    handle->getOrCreateStateSet()->setRenderingHint(alpha < 1.0f ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
 
     trans->addChild(geode);
     handle->addChild(trans);
@@ -1693,7 +1694,10 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
 GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    const RaveVector<float> color(0.33203125f, 0.5f, 0.898437f);
+    RaveTransform<float> pose;
+    pose.trans = vpos;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vextents, pose, color, 0.0f), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1726,6 +1730,22 @@ GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float>>& v
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+GraphHandlePtr QtOSGViewer::drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    RaveTransform<float> aabbpose;
+    aabbpose.trans = aabb.pos;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, aabb.extents, transform*aabbpose, vcolor, transparency), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+GraphHandlePtr QtOSGViewer::drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, obb.extents, obb.transform, vcolor, transparency), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -2314,7 +2334,7 @@ void QtOSGViewer::_CloseGraphHandle(OSGSwitchPtr handle)
     _posgWidget->GetFigureRoot()->removeChild(handle);
 }
 
-void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t)
+void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float>& t)
 {
     // have to convert to smart pointers so that we can get exceptions thrown rather than dereferencing null pointers
     if( handle->getNumChildren() > 0 ) {
