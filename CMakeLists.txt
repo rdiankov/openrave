@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 111)
-set (OPENRAVE_VERSION_PATCH 0)
+set (OPENRAVE_VERSION_MINOR 113)
+set (OPENRAVE_VERSION_PATCH 1)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -935,7 +935,7 @@ endif()
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
   # create all the directories ahead of time, or otherwise WORKING_DIRECTORY will not work
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/bin COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR})" COMPONENT openrave)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-config ${CMAKE_INSTALL_PREFIX}/bin/openrave-config)
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-config ${CMAKE_INSTALL_PREFIX}/bin/openrave-config)
 endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" IMMEDIATE @ONLY)
@@ -951,9 +951,9 @@ if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-core.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
   if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave.pc)
+    InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave.pc)
 
-    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}-core.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave-core.pc)
+    InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-core.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave-core.pc)
 
 
     if( BASH_COMPLETION_DIR )

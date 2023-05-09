@@ -46,23 +46,23 @@ set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PYTHON_RECOMMENDS python-h5py pytho
 set(CPACK_COMPONENT_${COMPONENT_PREFIX_UPPER}PYTHON_SUGGESTS ipython python-qt4 PARENT_SCOPE)
 
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}.py
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}.py
                  ${CMAKE_INSTALL_PREFIX}/bin/openrave.py)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-robot.py
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-robot.py
                  ${CMAKE_INSTALL_PREFIX}/bin/openrave-robot.py)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-createplugin.py
                  ${CMAKE_INSTALL_PREFIX}/bin/openrave-createplugin.py)
 
   if (OPT_PYTHON)
     InstallSymlink(
-      ${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY2_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}
+      ${OPENRAVEPY_VER_NAME}
       ${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY2_INSTALL_DIR}/_openravepy_
     )
   endif()
 
   if (OPT_PYTHON3)
     InstallSymlink(
-      ${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY3_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}
+      ${OPENRAVEPY_VER_NAME}
       ${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY3_INSTALL_DIR}/_openravepy_
     )
   endif()
