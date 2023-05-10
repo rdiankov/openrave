@@ -53,6 +53,7 @@ enum IkReturnAction : uint64_t
     IKRA_RejectEnvCollision = (IKRA_Reject|0x00000040),
     IKRA_RejectJointLimits = (IKRA_Reject|0x00000100),
     IKRA_RejectKinematicsPrecision = (IKRA_Reject|0x00000200),
+    IKRA_RejectOcclusion = (IKRA_Reject|0x00000400),
     IKRA_RejectCustomFilter = (IKRA_Reject|0x00008000), // the reason should be set in the upper 16 bits
 };
 
