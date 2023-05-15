@@ -452,6 +452,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
+    _bIgnoreSelfCollision = info._bIgnoreSelfCollision;
 }
 
 py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
@@ -563,6 +564,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
     info._bStatic = _bStatic;
     info._bIsEnabled = _bIsEnabled;
+    info._bIgnoreSelfCollision = _bIgnoreSelfCollision;
     return pinfo;
 }
 
@@ -1382,6 +1384,9 @@ int PyLink::GetIndex() {
 bool PyLink::IsEnabled() const {
     return _plink->IsEnabled();
 }
+bool PyLink::IsSelfCollisionIgnored() const {
+    return _plink->IsSelfCollisionIgnored();
+}
 bool PyLink::SetVisible(bool visible) {
     return _plink->SetVisible(visible);
 }
@@ -1393,6 +1398,10 @@ bool PyLink::IsStatic() const {
 }
 void PyLink::Enable(bool bEnable) {
     _plink->Enable(bEnable);
+}
+
+void PyLink::IgnoreSelfCollision(bool bIgnore) {
+    _plink->IgnoreSelfCollision(bIgnore);
 }
 
 object PyLink::GetParent() const
@@ -4338,7 +4347,7 @@ class LinkInfo_pickle_suite
 public:
     static py::tuple getstate(const PyLinkInfo& r)
     {
-        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._mapStringParameters, r._mapExtraGeometries);
+        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._bIgnoreSelfCollision, r._mapStringParameters, r._mapExtraGeometries);
     }
     static void setstate(PyLinkInfo& r, py::tuple state) {
         int num = len(state);
@@ -4362,14 +4371,15 @@ public:
         }
         r._bStatic = py::extract<bool>(state[9]);
         r._bIsEnabled = py::extract<bool>(state[10]);
-        if( num > 11 ) {
-            r._mapStringParameters = dict(state[11]);
+        r._bIgnoreSelfCollision = py::extract<bool>(state[11]);
+        if( num > 12 ) {
+            r._mapStringParameters = dict(state[12]);
         }
         else {
             r._mapStringParameters.clear();
         }
-        if( num > 12 ) {
-            r._mapExtraGeometries = dict(state[12]);
+        if( num > 13 ) {
+            r._mapExtraGeometries = dict(state[13]);
         }
         else {
             r._mapExtraGeometries.clear();
@@ -4897,6 +4907,7 @@ void init_openravepy_kinbody()
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
                       .def_readwrite("_bIsEnabled",&PyLinkInfo::_bIsEnabled)
                       .def_readwrite("_bVisible",&PyLinkInfo::_bVisible)
+                      .def_readwrite("_bIgnoreSelfCollision",&PyLinkInfo::_bIgnoreSelfCollision)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                       .def("SerializeJSON", &PyLinkInfo::SerializeJSON,
                            "unitScale"_a = 1.0,
@@ -5798,6 +5809,8 @@ void init_openravepy_kinbody()
                           .def("GetIndex",&PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))
                           .def("Enable",&PyLink::Enable,PY_ARGS("enable") DOXY_FN(KinBody::Link,Enable))
                           .def("IsEnabled",&PyLink::IsEnabled, DOXY_FN(KinBody::Link,IsEnabled))
+                          .def("IgnoreSelfCollision",&PyLink::IgnoreSelfCollision,PY_ARGS("ignore") DOXY_FN(KinBody::Link,IgnoreSelfCollision))
+                          .def("IsSelfCollisionIgnored",&PyLink::IsSelfCollisionIgnored, DOXY_FN(KinBody::Link,IsSelfCollisionIgnored))
                           .def("IsStatic",&PyLink::IsStatic, DOXY_FN(KinBody::Link,IsStatic))
                           .def("SetVisible",&PyLink::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody::Link,SetVisible))
                           .def("IsVisible",&PyLink::IsVisible, DOXY_FN(KinBody::Link,IsVisible))
