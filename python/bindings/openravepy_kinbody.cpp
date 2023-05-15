@@ -1400,8 +1400,8 @@ void PyLink::Enable(bool bEnable) {
     _plink->Enable(bEnable);
 }
 
-void PyLink::IgnoreSelfCollision(bool bIgnore) {
-    _plink->IgnoreSelfCollision(bIgnore);
+void PyLink::SetIgnoreSelfCollision(bool bIgnore) {
+    _plink->SetIgnoreSelfCollision(bIgnore);
 }
 
 object PyLink::GetParent() const
@@ -5809,7 +5809,7 @@ void init_openravepy_kinbody()
                           .def("GetIndex",&PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))
                           .def("Enable",&PyLink::Enable,PY_ARGS("enable") DOXY_FN(KinBody::Link,Enable))
                           .def("IsEnabled",&PyLink::IsEnabled, DOXY_FN(KinBody::Link,IsEnabled))
-                          .def("IgnoreSelfCollision",&PyLink::IgnoreSelfCollision,PY_ARGS("ignore") DOXY_FN(KinBody::Link,IgnoreSelfCollision))
+                          .def("SetIgnoreSelfCollision",&PyLink::SetIgnoreSelfCollision,PY_ARGS("ignore") DOXY_FN(KinBody::Link,SetIgnoreSelfCollision))
                           .def("IsSelfCollisionIgnored",&PyLink::IsSelfCollisionIgnored, DOXY_FN(KinBody::Link,IsSelfCollisionIgnored))
                           .def("IsStatic",&PyLink::IsStatic, DOXY_FN(KinBody::Link,IsStatic))
                           .def("SetVisible",&PyLink::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody::Link,SetVisible))

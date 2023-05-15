@@ -297,7 +297,7 @@ public:
     bool SetVisible(bool visible);
     bool IsVisible() const;
     bool IsStatic() const;
-    void IgnoreSelfCollision(bool bIgnore);
+    void SetIgnoreSelfCollision(bool bIgnore);
     bool IsSelfCollisionIgnored() const;
 
     object GetParent() const;

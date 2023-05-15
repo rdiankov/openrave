@@ -387,7 +387,7 @@ bool KinBody::Link::IsEnabled() const
     return _info._bIsEnabled;
 }
 
-void KinBody::Link::IgnoreSelfCollision(bool bIgnore)
+void KinBody::Link::SetIgnoreSelfCollision(bool bIgnore)
 {
     _info._bIgnoreSelfCollision = bIgnore;
 }
@@ -1038,7 +1038,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
 
     // _bIgnoreSelfCollision
     if (IsSelfCollisionIgnored() != info._bIgnoreSelfCollision) {
-        IgnoreSelfCollision(info._bIgnoreSelfCollision);
+        SetIgnoreSelfCollision(info._bIgnoreSelfCollision);
         RAVELOG_VERBOSE_FORMAT("link %s ignoreSelfCollision changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }

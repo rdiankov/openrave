@@ -993,8 +993,8 @@ public:
         /// \brief returns true if the link is enabled. \see Enable
         bool IsEnabled() const;
 
-        /// \brief Ignores a Link from self collision.
-        void IgnoreSelfCollision(bool bIgnore);
+        /// \brief sets this link to be ignored in self collision checking.
+        void SetIgnoreSelfCollision(bool bIgnore);
 
         /// \brief returns true if the link is ignored from self collision. \see IgnoreSelfCollision
         bool IsSelfCollisionIgnored() const;
