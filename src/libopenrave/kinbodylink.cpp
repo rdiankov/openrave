@@ -36,6 +36,7 @@ void KinBody::LinkInfo::Reset()
     _vForcedAdjacentLinks.clear();
     _bStatic = false;
     _bIsEnabled = false;
+    _bIgnoreSelfCollision = false;
 }
 
 int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fUnitScale, dReal fEpsilon) const
@@ -101,10 +102,14 @@ int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dRea
         return 17;
     }
 
+    if( _bIgnoreSelfCollision != rhs._bIgnoreSelfCollision ) {
+        return 18;
+    }
+
     for(int igeom = 0; igeom < (int)_vgeometryinfos.size(); ++igeom) {
         int geomcompare = _vgeometryinfos[igeom]->Compare(*rhs._vgeometryinfos[igeom], fUnitScale, fEpsilon);
         if (geomcompare != 0) {
-            return 18|(igeom<<16)|(geomcompare<<24);
+            return 19|(igeom<<16)|(geomcompare<<24);
         }
     }
 
@@ -347,6 +352,7 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
            && _vForcedAdjacentLinks == other._vForcedAdjacentLinks
            && _bStatic == other._bStatic
            && _bIsEnabled == other._bIsEnabled
+           && _bIgnoreSelfCollision == other._bIgnoreSelfCollision
            && AreVectorsDeepEqual(_vgeometryinfos, other._vgeometryinfos);
 }
 
