@@ -797,17 +797,11 @@ bool FCLCollisionChecker::CheckStandaloneSelfCollision(LinkConstPtr plink, Colli
             if( !pLINK1.linkBV.second || !pLINK2.linkBV.second || !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
                 continue;
             }
-            {
-                const LinkConstPtr plink1 = pLINK1.GetLink();
-                if ( !!plink1 && plink1->IsSelfCollisionIgnored() ) {
-                    continue;
-                }
+            if ( pLINK1.GetLink()->IsSelfCollisionIgnored() ) {
+                continue;
             }
-            {
-                const LinkConstPtr plink2 = pLINK2.GetLink();
-                if ( !!plink2 && plink2->IsSelfCollisionIgnored() ) {
-                    continue;
-                }
+            if ( pLINK2.GetLink()->IsSelfCollisionIgnored() ) {
+                continue;
             }
             FOREACH(itgeom1, pLINK1.vgeoms) {
                 FOREACH(itgeom2, pLINK2.vgeoms) {
