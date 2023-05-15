@@ -746,6 +746,10 @@ public:
             if( !plink1->IsEnabled() || !plink2->IsEnabled() ) {
                 continue;
             }
+            if ( plink1->IsSelfCollisionIgnored() || plink2->IsSelfCollisionIgnored() ) {
+                continue;
+            }
+
             if( _CheckCollision(plink1,plink2, report) ) {
                 if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                     RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
@@ -781,6 +785,11 @@ public:
         if( !!report ) {
             report->Reset(_options);
         }
+
+        if ( plink->IsSelfCollisionIgnored() ) {
+            return false;
+        }
+
         KinBodyPtr pbody = plink->GetParent();
         if( pbody->GetLinks().size() <= 1 ) {
             return false;

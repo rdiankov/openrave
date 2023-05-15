@@ -903,9 +903,11 @@ public:
         /// shouldn't be affected by physics (including gravity). Collision still works.
         bool _bStatic = false;
 
-        /// \true false if the link is disabled. disabled links do not participate in collision detection
-        bool _bIsEnabled = true;
-        bool __padding0, __padding1; // for 4-byte alignment
+        bool _bIsEnabled = true; ///< false if the link is disabled. disabled links do not participate in collision detection
+
+        bool _bIgnoreSelfCollision = false; ///< true if the link ignored from self collision computation. If true, this link is not considered in self collision check against any other links.
+
+        bool __padding; // for 4-byte alignment
 
         enum LinkInfoField : uint32_t
         {
@@ -990,6 +992,12 @@ public:
 
         /// \brief returns true if the link is enabled. \see Enable
         bool IsEnabled() const;
+
+        /// \brief Ignores a Link from self collision.
+        void IgnoreSelfCollision(bool bIgnore);
+
+        /// \brief returns true if the link is ignored from self collision. \see IgnoreSelfCollision
+        bool IsSelfCollisionIgnored() const;
 
         /// \brief Sets all the geometries of the link as visible or non visible.
         ///

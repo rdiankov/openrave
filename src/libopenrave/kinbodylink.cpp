@@ -215,6 +215,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
     orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
     orjson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+    orjson::SetJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision, allocator);
 }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options)
@@ -330,6 +331,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
     orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
     orjson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
+    orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
@@ -377,6 +379,16 @@ void KinBody::Link::_Enable(bool bEnable)
 bool KinBody::Link::IsEnabled() const
 {
     return _info._bIsEnabled;
+}
+
+void KinBody::Link::IgnoreSelfCollision(bool bIgnore)
+{
+    _info._bIgnoreSelfCollision = bIgnore;
+}
+
+bool KinBody::Link::IsSelfCollisionIgnored() const
+{
+    return _info._bIgnoreSelfCollision;
 }
 
 bool KinBody::Link::SetVisible(bool visible)
@@ -1015,6 +1027,13 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     if (IsEnabled() != info._bIsEnabled) {
         Enable(info._bIsEnabled);
         RAVELOG_VERBOSE_FORMAT("link %s enabled changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _bIgnoreSelfCollision
+    if (IsSelfCollisionIgnored() != info._bIgnoreSelfCollision) {
+        IgnoreSelfCollision(info._bIgnoreSelfCollision);
+        RAVELOG_VERBOSE_FORMAT("link %s ignoreSelfCollision changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 

@@ -726,20 +726,14 @@ bool FCLCollisionChecker::CheckStandaloneSelfCollision(KinBodyConstPtr pbody, Co
         // We don't need to check if the links are enabled since we got adjacency information with AO_Enabled
         const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK1 = *pinfo->vlinks.at(index1);
         const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK2 = *pinfo->vlinks.at(index2);
-        if( !pLINK1.linkBV.second || !pLINK2.linkBV.second || !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
+        if ( pLINK1.GetLink()->IsSelfCollisionIgnored() ) {
             continue;
         }
-        {
-            const LinkConstPtr plink = pLINK1.GetLink();
-            if ( !!plink && plink->IgnoreSelfCollision() ) {
-                continue;
-            }
+        if ( pLINK2.GetLink()->IsSelfCollisionIgnored() ) {
+            continue;
         }
-        {
-            const LinkConstPtr plink = pLINK2.GetLink();
-            if ( !!plink && plink->IgnoreSelfCollision() ) {
-                continue;
-            }
+        if( !pLINK1.linkBV.second || !pLINK2.linkBV.second || !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
+            continue;
         }
         FOREACH(itgeom1, pLINK1.vgeoms) {
             FOREACH(itgeom2, pLINK2.vgeoms) {
@@ -770,6 +764,10 @@ bool FCLCollisionChecker::CheckStandaloneSelfCollision(LinkConstPtr plink, Colli
         report->Reset(_options);
     }
 
+    if ( plink->IsSelfCollisionIgnored() ) {
+        return false;
+    }
+
     KinBodyPtr pbody = plink->GetParent();
     if( pbody->GetLinks().size() <= 1 ) {
         return false;
@@ -798,6 +796,18 @@ bool FCLCollisionChecker::CheckStandaloneSelfCollision(LinkConstPtr plink, Colli
             const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK2 = *pinfo->vlinks.at(index2);
             if( !pLINK1.linkBV.second || !pLINK2.linkBV.second || !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {
                 continue;
+            }
+            {
+                const LinkConstPtr plink1 = pLINK1.GetLink();
+                if ( !!plink1 && plink1->IsSelfCollisionIgnored() ) {
+                    continue;
+                }
+            }
+            {
+                const LinkConstPtr plink2 = pLINK2.GetLink();
+                if ( !!plink2 && plink2->IsSelfCollisionIgnored() ) {
+                    continue;
+                }
             }
             FOREACH(itgeom1, pLINK1.vgeoms) {
                 FOREACH(itgeom2, pLINK2.vgeoms) {
