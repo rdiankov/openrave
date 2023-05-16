@@ -423,10 +423,48 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
 void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) const
 {
     // TODO: extract info from connectedbody to make extra geometry working
-    rapidjson::Value data;
-    rapidjson::Document doc;
-    _info.SerializeJSON(data, doc.GetAllocator(), 1, 0);
-    info.DeserializeJSON(data, 1, 0);
+    info = _info;
+
+    info._vLinkInfos.resize(_vResolvedLinkNames.size());
+    for(size_t iLinkInfo = 0; iLinkInfo < _vResolvedLinkNames.size(); ++iLinkInfo) {
+        info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());
+        _vResolvedLinkNames[iLinkInfo].second->ExtractInfo(*info._vLinkInfos[iLinkInfo]);
+        info._vLinkInfos[iLinkInfo]->_name = _info._vLinkInfos[iLinkInfo]->_name;
+        info._vLinkInfos[iLinkInfo]->SetTransform(_info._vLinkInfos[iLinkInfo]->GetTransform());
+    }
+
+    info._vJointInfos.resize(_vResolvedJointNames.size());
+    for(size_t iJointInfo = 0; iJointInfo < _vResolvedJointNames.size(); ++iJointInfo) {
+        info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
+        _vResolvedJointNames[iJointInfo].second->ExtractInfo(*info._vJointInfos[iJointInfo]);
+        info._vJointInfos[iJointInfo]->_name = _info._vJointInfos[iJointInfo]->_name;
+        info._vJointInfos[iJointInfo]->_linkname0 = _info._vJointInfos[iJointInfo]->_linkname0;
+        info._vJointInfos[iJointInfo]->_linkname1 = _info._vJointInfos[iJointInfo]->_linkname1;
+    }
+
+    info._vManipulatorInfos.resize(_vResolvedManipulatorNames.size());
+    for(size_t iManipulatorInfo = 0; iManipulatorInfo < _vResolvedManipulatorNames.size(); ++iManipulatorInfo) {
+        info._vManipulatorInfos[iManipulatorInfo].reset(new RobotBase::ManipulatorInfo());
+        _vResolvedManipulatorNames[iManipulatorInfo].second->ExtractInfo(*info._vManipulatorInfos[iManipulatorInfo]);
+        info._vManipulatorInfos[iManipulatorInfo]->_name = _info._vManipulatorInfos[iManipulatorInfo]->_name;
+        info._vManipulatorInfos[iManipulatorInfo]->_sBaseLinkName = _info._vManipulatorInfos[iManipulatorInfo]->_sBaseLinkName;
+        info._vManipulatorInfos[iManipulatorInfo]->_sIkChainEndLinkName = _info._vManipulatorInfos[iManipulatorInfo]->_sIkChainEndLinkName;
+        info._vManipulatorInfos[iManipulatorInfo]->_sEffectorLinkName = _info._vManipulatorInfos[iManipulatorInfo]->_sEffectorLinkName;
+    }
+
+    info._vAttachedSensorInfos.resize(_vResolvedAttachedSensorNames.size());
+    for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < _vResolvedAttachedSensorNames.size(); ++iAttachedSensorInfo) {
+        info._vAttachedSensorInfos[iAttachedSensorInfo].reset(new RobotBase::AttachedSensorInfo());
+        _vResolvedAttachedSensorNames[iAttachedSensorInfo].second->ExtractInfo(*info._vAttachedSensorInfos[iAttachedSensorInfo]);
+        info._vAttachedSensorInfos[iAttachedSensorInfo]->_name = _info._vAttachedSensorInfos[iAttachedSensorInfo]->_name;
+        info._vAttachedSensorInfos[iAttachedSensorInfo]->_linkname = _info._vAttachedSensorInfos[iAttachedSensorInfo]->_linkname;
+    }
+
+    info._vGripperInfos.resize(_vResolvedGripperInfoNames.size());
+    for(size_t iGripperInfo = 0; iGripperInfo < _vResolvedGripperInfoNames.size(); ++iGripperInfo) {
+        info._vGripperInfos[iGripperInfo].reset(new RobotBase::GripperInfo());
+        *info._vGripperInfos[iGripperInfo] = *_info._vGripperInfos[iGripperInfo];
+    }
 }
 
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
