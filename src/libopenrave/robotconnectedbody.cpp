@@ -442,26 +442,20 @@ void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) c
         info._vJointInfos[iJointInfo]->_linkname1 = _info._vJointInfos[iJointInfo]->_linkname1;
     }
 
-    info._vManipulatorInfos.resize(_vResolvedManipulatorNames.size());
-    for(size_t iManipulatorInfo = 0; iManipulatorInfo < _vResolvedManipulatorNames.size(); ++iManipulatorInfo) {
+    info._vManipulatorInfos.resize(_info._vManipulatorInfos.size());
+    for(size_t iManipulatorInfo = 0; iManipulatorInfo < _info._vManipulatorInfos.size(); ++iManipulatorInfo) {
         info._vManipulatorInfos[iManipulatorInfo].reset(new RobotBase::ManipulatorInfo());
-        _vResolvedManipulatorNames[iManipulatorInfo].second->ExtractInfo(*info._vManipulatorInfos[iManipulatorInfo]);
-        info._vManipulatorInfos[iManipulatorInfo]->_name = _info._vManipulatorInfos[iManipulatorInfo]->_name;
-        info._vManipulatorInfos[iManipulatorInfo]->_sBaseLinkName = _info._vManipulatorInfos[iManipulatorInfo]->_sBaseLinkName;
-        info._vManipulatorInfos[iManipulatorInfo]->_sIkChainEndLinkName = _info._vManipulatorInfos[iManipulatorInfo]->_sIkChainEndLinkName;
-        info._vManipulatorInfos[iManipulatorInfo]->_sEffectorLinkName = _info._vManipulatorInfos[iManipulatorInfo]->_sEffectorLinkName;
+        *info._vManipulatorInfos[iManipulatorInfo] = *_info._vManipulatorInfos[iManipulatorInfo];
     }
 
-    info._vAttachedSensorInfos.resize(_vResolvedAttachedSensorNames.size());
-    for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < _vResolvedAttachedSensorNames.size(); ++iAttachedSensorInfo) {
+    info._vAttachedSensorInfos.resize(_info._vAttachedSensorInfos.size());
+    for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < _info._vAttachedSensorInfos.size(); ++iAttachedSensorInfo) {
         info._vAttachedSensorInfos[iAttachedSensorInfo].reset(new RobotBase::AttachedSensorInfo());
-        _vResolvedAttachedSensorNames[iAttachedSensorInfo].second->ExtractInfo(*info._vAttachedSensorInfos[iAttachedSensorInfo]);
-        info._vAttachedSensorInfos[iAttachedSensorInfo]->_name = _info._vAttachedSensorInfos[iAttachedSensorInfo]->_name;
-        info._vAttachedSensorInfos[iAttachedSensorInfo]->_linkname = _info._vAttachedSensorInfos[iAttachedSensorInfo]->_linkname;
+        *info._vAttachedSensorInfos[iAttachedSensorInfo] = *_info._vAttachedSensorInfos[iAttachedSensorInfo];
     }
 
-    info._vGripperInfos.resize(_vResolvedGripperInfoNames.size());
-    for(size_t iGripperInfo = 0; iGripperInfo < _vResolvedGripperInfoNames.size(); ++iGripperInfo) {
+    info._vGripperInfos.resize(_info._vGripperInfos.size());
+    for(size_t iGripperInfo = 0; iGripperInfo < _info._vGripperInfos.size(); ++iGripperInfo) {
         info._vGripperInfos[iGripperInfo].reset(new RobotBase::GripperInfo());
         *info._vGripperInfos[iGripperInfo] = *_info._vGripperInfos[iGripperInfo];
     }
