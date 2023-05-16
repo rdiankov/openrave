@@ -146,6 +146,9 @@ public:
 
     JSONReader(const AttributesList& atts, EnvironmentBasePtr penv, const std::string& defaultSuffix) : _penv(penv), _defaultSuffix(defaultSuffix)
     {
+        std::string remoteUrl;
+        std::string unixEndpoint;
+
         FOREACHC(itatt, atts) {
             if (itatt->first == "openravescheme") {
                 std::stringstream ss(itatt->second);
@@ -163,11 +166,10 @@ public:
                 ss >> _fGeomScale;
             }
             else if (itatt->first == "remoteurl") {
-#if OPENRAVE_CURL
-                _pDownloader = boost::make_shared<JSONDownloader>(_rapidJSONDocuments, itatt->second, _vOpenRAVESchemeAliases);
-#else
-                throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with CURL support first", _filename, ORE_InvalidArguments);
-#endif
+                remoteUrl = itatt->second;
+            }
+            else if (itatt->first == "unixendpoint") {
+                unixEndpoint = itatt->second;
             }
             else if (itatt->first == "timeout") {
                 dReal timeout = 0;
@@ -184,6 +186,15 @@ public:
         // set global scale when initalize jsonreader.
         _fGlobalScale = 1.0 / _penv->GetUnit().second;
         _deserializeOptions = 0;
+
+
+        if (!remoteUrl.empty()) {
+#if OPENRAVE_CURL
+            _pDownloader = boost::make_shared<JSONDownloader>(_rapidJSONDocuments, _vOpenRAVESchemeAliases, remoteUrl, unixEndpoint);
+#else
+            throw OPENRAVE_EXCEPTION_FORMAT("\"remoteurl\" option is not supported, have to compile openrave with CURL support first", _filename, ORE_InvalidArguments);
+#endif
+        }
     }
 
     virtual ~JSONReader()
