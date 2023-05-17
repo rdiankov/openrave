@@ -83,10 +83,11 @@ JSONDownloadContext::~JSONDownloadContext()
     }
 }
 
-JSONDownloader::JSONDownloader(std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::string& remoteUrl, const std::vector<std::string>& vOpenRAVESchemeAliases) :
+JSONDownloader::JSONDownloader(std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::vector<std::string>& vOpenRAVESchemeAliases, const std::string& remoteUrl, const std::string& unixEndpoint) :
     _rapidJSONDocuments(rapidJSONDocuments),
+    _vOpenRAVESchemeAliases(vOpenRAVESchemeAliases),
     _remoteUrl(remoteUrl),
-    _vOpenRAVESchemeAliases(vOpenRAVESchemeAliases)
+    _unixEndpoint(unixEndpoint)
 {
     _curlm = curl_multi_init();
     if (!_curlm) {
@@ -320,6 +321,12 @@ void JSONDownloaderScope::_QueueDownloadURI(const std::string& uri, rapidjson::D
     curlCode = curl_easy_setopt(pContext->curl, CURLOPT_WRITEDATA, pContext.get());
     if (curlCode != CURLE_OK) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_WRITEDATA) for uri \"%s\": %s", canonicalUri%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
+    }
+    if (!_downloader._unixEndpoint.empty()) {
+        curlCode = curl_easy_setopt(pContext->curl, CURLOPT_UNIX_SOCKET_PATH, _downloader._unixEndpoint.c_str());
+        if (curlCode != CURLE_OK) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to curl_easy_setopt(CURLOPT_UNIX_SOCKET_PATH) for uri \"%s\" unix endpoint \"%s\": %s", canonicalUri%_downloader._unixEndpoint%curl_easy_strerror(curlCode), ORE_CurlInvalidHandle);
+        }
     }
 
     // add handle to curl multi
