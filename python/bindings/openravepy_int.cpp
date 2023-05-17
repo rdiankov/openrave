@@ -2612,7 +2612,7 @@ object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object oc
             return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
         }
         else {
-            const auto array = extract<py::numeric::array>(ocolors);
+            const py::numeric::array array = extract<py::numeric::array>(ocolors);
             BOOST_ASSERT(array.ndim() == 2);
             BOOST_ASSERT(array.shape(0) == vpoints.size() / 3);
             BOOST_ASSERT(array.shape(1) == 3 || array.shape(1) == 4);
