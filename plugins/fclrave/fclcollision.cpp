@@ -1187,7 +1187,7 @@ LinkPair FCLCollisionChecker::MakeLinkPair(LinkConstPtr plink1, LinkConstPtr pli
     }
 }
 
-LinkGeomPairs MakeLinkGeomPairs(LinkConstPtr plink1, LinkConstPtr plink2, GeometryConstPtr pgeom1, GeometryConstPtr pgeom2)
+LinkGeomPairs FCLCollisionChecker::MakeLinkGeomPairs(LinkConstPtr plink1, LinkConstPtr plink2, GeometryConstPtr pgeom1, GeometryConstPtr pgeom2)
 {
     if( plink1.get() < plink2.get() ) {
         return make_pair(make_pair(plink1, plink2), make_pair(pgeom1, pgeom2));
