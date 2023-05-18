@@ -125,7 +125,7 @@ public:
                 vgeominfos.resize(0);
             }
 
-            inline KinBody::LinkPtr GetLink() {
+            inline KinBody::LinkPtr GetLink() const {
                 return _plink.lock();
             }
 

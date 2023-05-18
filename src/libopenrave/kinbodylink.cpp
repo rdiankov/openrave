@@ -36,6 +36,7 @@ void KinBody::LinkInfo::Reset()
     _vForcedAdjacentLinks.clear();
     _bStatic = false;
     _bIsEnabled = false;
+    _bIgnoreSelfCollision = false;
 }
 
 int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fUnitScale, dReal fEpsilon) const
@@ -101,10 +102,14 @@ int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dRea
         return 17;
     }
 
+    if( _bIgnoreSelfCollision != rhs._bIgnoreSelfCollision ) {
+        return 18;
+    }
+
     for(int igeom = 0; igeom < (int)_vgeometryinfos.size(); ++igeom) {
         int geomcompare = _vgeometryinfos[igeom]->Compare(*rhs._vgeometryinfos[igeom], fUnitScale, fEpsilon);
         if (geomcompare != 0) {
-            return 18|(igeom<<16)|(geomcompare<<24);
+            return 19|(igeom<<16)|(geomcompare<<24);
         }
     }
 
@@ -215,6 +220,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
     orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
     orjson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+    orjson::SetJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision, allocator);
 }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options)
@@ -330,6 +336,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
     orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
     orjson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
+    orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
@@ -345,6 +352,7 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
            && _vForcedAdjacentLinks == other._vForcedAdjacentLinks
            && _bStatic == other._bStatic
            && _bIsEnabled == other._bIsEnabled
+           && _bIgnoreSelfCollision == other._bIgnoreSelfCollision
            && AreVectorsDeepEqual(_vgeometryinfos, other._vgeometryinfos);
 }
 
@@ -377,6 +385,16 @@ void KinBody::Link::_Enable(bool bEnable)
 bool KinBody::Link::IsEnabled() const
 {
     return _info._bIsEnabled;
+}
+
+void KinBody::Link::SetIgnoreSelfCollision(bool bIgnore)
+{
+    _info._bIgnoreSelfCollision = bIgnore;
+}
+
+bool KinBody::Link::IsSelfCollisionIgnored() const
+{
+    return _info._bIgnoreSelfCollision;
 }
 
 bool KinBody::Link::SetVisible(bool visible)
@@ -1015,6 +1033,13 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     if (IsEnabled() != info._bIsEnabled) {
         Enable(info._bIsEnabled);
         RAVELOG_VERBOSE_FORMAT("link %s enabled changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _bIgnoreSelfCollision
+    if (IsSelfCollisionIgnored() != info._bIgnoreSelfCollision) {
+        SetIgnoreSelfCollision(info._bIgnoreSelfCollision);
+        RAVELOG_VERBOSE_FORMAT("link %s ignoreSelfCollision changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
