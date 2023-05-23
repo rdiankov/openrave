@@ -424,6 +424,35 @@ void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) c
 {
     // TODO: extract info from connectedbody to make extra geometry working
     info = _info;
+
+    for(size_t iLinkInfo = 0; iLinkInfo < _info._vLinkInfos.size(); ++iLinkInfo) {
+        info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());
+        *info._vLinkInfos[iLinkInfo] = *_info._vLinkInfos[iLinkInfo];
+        for(size_t iGeometryInfo = 0; iGeometryInfo < _info._vLinkInfos[iLinkInfo]->_vgeometryinfos.size(); ++iGeometryInfo){
+            info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo].reset(new KinBody::GeometryInfo());
+            *info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo] = *_info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo];
+        }
+    }
+
+    for(size_t iJointInfo = 0; iJointInfo < _info._vJointInfos.size(); ++iJointInfo) {
+        info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
+        *info._vJointInfos[iJointInfo] = *_info._vJointInfos[iJointInfo];
+    }
+
+    for(size_t iManipulatorInfo = 0; iManipulatorInfo < _info._vManipulatorInfos.size(); ++iManipulatorInfo) {
+        info._vManipulatorInfos[iManipulatorInfo].reset(new RobotBase::ManipulatorInfo());
+        *info._vManipulatorInfos[iManipulatorInfo] = *_info._vManipulatorInfos[iManipulatorInfo];
+    }
+
+    for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < _info._vAttachedSensorInfos.size(); ++iAttachedSensorInfo) {
+        info._vAttachedSensorInfos[iAttachedSensorInfo].reset(new RobotBase::AttachedSensorInfo());
+        *info._vAttachedSensorInfos[iAttachedSensorInfo] = *_info._vAttachedSensorInfos[iAttachedSensorInfo];
+    }
+
+    for(size_t iGripperInfo = 0; iGripperInfo < _info._vGripperInfos.size(); ++iGripperInfo) {
+        info._vGripperInfos[iGripperInfo].reset(new RobotBase::GripperInfo());
+        *info._vGripperInfos[iGripperInfo] = *_info._vGripperInfos[iGripperInfo];
+    }
 }
 
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
