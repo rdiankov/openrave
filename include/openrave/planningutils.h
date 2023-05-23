@@ -465,6 +465,13 @@ public:
         return _report;
     }
 
+    /// \brief get DynamicsCollisionConstraint's parameters exposed from PlannerParameters::GetConstraintCheckerParams.
+    /// \param[out] sRetParameters : resultant string to contain parameters.
+    void GetDynamicsCollisionConstraintParameters(std::string& sRetParameters) const
+    {
+        sRetParameters = boost::str(boost::format("<dynamicsconstraintstype>%d</dynamicsconstraintstype><filtermask>%d</filtermask>")%(int)_torquelimitmode%_filtermask);
+    }
+
 protected:
     /// \brief checks an already set state
     ///

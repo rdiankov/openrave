@@ -615,6 +615,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     if( !bsmooth ) {
         params->_setstatevaluesfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
+        params->_getConstraintCheckerParamsFn.clear();
     }
 
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
@@ -711,6 +712,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     params->_hastimestamps = false;
     params->_setstatevaluesfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
+    params->_getConstraintCheckerParamsFn.clear();
     params->_sExtraParameters = plannerparameters;
     if( !_planner->InitPlan(_robot,params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), plannername%_robot->GetName(), ORE_InvalidArguments);
@@ -753,6 +755,7 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
     params->_hastimestamps = false;
     params->_setstatevaluesfn.clear();
     params->_checkpathvelocityconstraintsfn.clear();
+    params->_getConstraintCheckerParamsFn.clear();
     params->_sExtraParameters = _parameters->_sExtraParameters;
     if( !_planner->InitPlan(_robot,params) ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("failed to init planner %s with robot %s"), _planner->GetXMLId()%_robot->GetName(), ORE_InvalidArguments);
@@ -786,6 +789,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     if( !bsmooth ) {
         params->_setstatevaluesfn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
+        params->_getConstraintCheckerParamsFn.clear();
     }
 
     params->_sPostProcessingPlanner = ""; // have to turn off the second post processing stage
@@ -977,6 +981,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
             boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
             params->_checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
+            params->_getConstraintCheckerParamsFn = boost::bind(&DynamicsCollisionConstraint::GetDynamicsCollisionConstraintParameters, pcollision, _1);
             statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatevaluesfn, params->_getstatefn));
         }
     }
@@ -984,6 +989,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
         params->_setstatevaluesfn.clear();
         params->_getstatefn.clear();
         params->_checkpathvelocityconstraintsfn.clear();
+        params->_getConstraintCheckerParamsFn.clear();
     }
 
     params->_diffstatefn = boost::bind(diffstatefn,_1,_2,vrotaxes);
@@ -1065,6 +1071,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         parameters->_setstatevaluesfn.clear();
         parameters->_getstatefn.clear();
         parameters->_checkpathvelocityconstraintsfn.clear();
+        parameters->_getConstraintCheckerParamsFn.clear();
         parameters->_sExtraParameters += _extraparameters;
         _parameters = parameters;
     }
@@ -1185,6 +1192,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
         parameters->_getstatefn.clear();
         parameters->_checkpathvelocityconstraintsfn.clear();
         parameters->_checkpathvelocityaccelerationconstraintsfn.clear();
+        parameters->_getConstraintCheckerParamsFn.clear();
         parameters->_sExtraParameters += _extraparameters;
 
         _parameters = parameters;

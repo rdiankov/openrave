@@ -479,6 +479,23 @@ private:
     /// For example, when _samplefn is set and a SpaceSampler is used as the underlying number generator, then it should be added to this list.
     std::list<SpaceSamplerBasePtr> _listInternalSamplers;
 
+    /// \brief Get internal parameters used for constraint checkers of _checkpathvelocityaccelerationconstraintsfn and _checkpathvelocityconstraintsfn.
+    ///        When the user wants to set these functions, please add this function as well.
+    /// \param[out] sRetParameters : return arbitrary parameters used by constraint checkers. in xml format.
+    typedef boost::function<void (std::string&)> GetConstraintCheckerParamsFn;
+    GetConstraintCheckerParamsFn _getConstraintCheckerParamsFn;
+
+    /// \brief wrapper function calling _getConstraintCheckerParamsFn.
+    /// \param[out] sRetParameters : clear this first, and then, return results in it.
+    inline void GetConstraintCheckerParams(std::string& sRetParameters)
+    {
+        sRetParameters.clear();
+        if(!_getConstraintCheckerParamsFn) {
+            return;
+        }
+        _getConstraintCheckerParamsFn(sRetParameters);
+    }
+
 protected:
     // router to a default implementation of _checkpathconstraintsfn that calls on _checkpathvelocityconstraintsfn
     bool _CheckPathConstraintsOld(const std::vector<dReal>&q0, const std::vector<dReal>&q1, IntervalType interval, ConfigurationListPtr pvCheckedConfigurations) {
