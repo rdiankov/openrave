@@ -2246,7 +2246,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(DC_NominalTorque), _perturbation(0.1)
+DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(DC_NominalTorque), _perturbation(0.1), _fDynamicLimitsAccelerationMult(1.0), _fDynamicLimitsJerkMult(1.0)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
@@ -2383,7 +2383,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     }
 
                     // check the dynamic acceleration limits
-                    const dReal fDynamicAccLimit = _vfulldofdynamicaccelerationlimits.at(iDOF);
+                    const dReal fDynamicAccLimit = _vfulldofdynamicaccelerationlimits.at(iDOF)*_fDynamicLimitsAccelerationMult;
                     const dReal fAccelAbs = RaveFabs(_dofaccelerations.at(iDOF));
                     if( fDynamicAccLimit < fAccelAbs ) {
                         bHasDynamicLimitsVioldatedJoint = true;
