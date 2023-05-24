@@ -481,19 +481,19 @@ private:
 
     /// \brief Get internal parameters used for constraint checkers of _checkpathvelocityaccelerationconstraintsfn and _checkpathvelocityconstraintsfn.
     ///        When the user wants to set these functions, please add this function as well.
-    /// \param[out] sRetParameters : return arbitrary parameters used by constraint checkers. in xml format.
-    typedef boost::function<void (std::string&)> GetConstraintCheckerParamsFn;
+    typedef boost::function<void (std::map<std::string, int>&, std::map<std::string, dReal>&)> GetConstraintCheckerParamsFn;
     GetConstraintCheckerParamsFn _getConstraintCheckerParamsFn;
 
     /// \brief wrapper function calling _getConstraintCheckerParamsFn.
-    /// \param[out] sRetParameters : clear this first, and then, return results in it.
-    inline void GetConstraintCheckerParams(std::string& sRetParameters)
+    /// \param[out] mapIntParameters, mapFloatParameters : results of parameters for int and dReal. if not available, empty.
+    inline void GetConstraintCheckerParams(std::map<std::string, int>& mapIntParameters, std::map<std::string, dReal>& mapFloatParameters)
     {
-        sRetParameters.clear();
+        mapIntParameters.clear();
+        mapFloatParameters.clear();
         if(!_getConstraintCheckerParamsFn) {
             return;
         }
-        _getConstraintCheckerParamsFn(sRetParameters);
+        _getConstraintCheckerParamsFn(mapIntParameters, mapFloatParameters);
     }
 
 protected:

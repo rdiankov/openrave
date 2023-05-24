@@ -455,6 +455,15 @@ public:
     /// \param bCallAfterCheckCollision if set, function will be called after check collision functions.
     virtual void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false);
 
+    /// \brief if using GetDOFDynamicAccelerationJerkLimits, multiply this value before checking. TODO: need to check if same thing is necessary for ComputeInverseDynamics
+    ///
+    /// \param fDynamicLimitsAccelerationMult, fDynamicLimitsJerkMult : mults for acceleration limits and jerk limits.
+    virtual void SetDynamicLimitsMult(const dReal fDynamicLimitsAccelerationMult, const dReal fDynamicLimitsJerkMult)
+    {
+        _fDynamicLimitsAccelerationMult = fDynamicLimitsAccelerationMult;
+        _fDynamicLimitsJerkMult = fDynamicLimitsJerkMult;
+    }
+
     /// \brief checks line collision. Uses the constructor's self-collisions
     virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options = 0xffff, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr());
 
@@ -466,10 +475,13 @@ public:
     }
 
     /// \brief get DynamicsCollisionConstraint's parameters exposed from PlannerParameters::GetConstraintCheckerParams.
-    /// \param[out] sRetParameters : resultant string to contain parameters.
-    void GetDynamicsCollisionConstraintParameters(std::string& sRetParameters) const
+    /// \param[out] mapIntParameters, mapFloatParameters : results of parameters for int and dReal.
+    void GetDynamicsCollisionConstraintParameters(std::map<std::string, int>& mapIntParameters, std::map<std::string, dReal>& mapFloatParameters)
     {
-        sRetParameters = boost::str(boost::format("<dynamicsconstraintstype>%d</dynamicsconstraintstype><filtermask>%d</filtermask>")%(int)_torquelimitmode%_filtermask);
+        mapIntParameters.insert(std::pair<std::string, int>("dynamicsconstraintstype", (int)_torquelimitmode));
+        mapIntParameters.insert(std::pair<std::string, int>("filtermask", _filtermask));
+        mapFloatParameters.insert(std::pair<std::string, dReal>("dynamiclimitsaccelerationmult", _fDynamicLimitsAccelerationMult));
+        mapFloatParameters.insert(std::pair<std::string, dReal>("dynamiclimitsjerkmult", _fDynamicLimitsJerkMult));
     }
 
 protected:
@@ -504,6 +516,7 @@ protected:
     std::vector<dReal> _doftorques, _dofaccelerations; ///< in body DOF space
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
     std::vector<dReal> _vfulldofdynamicaccelerationlimits, _vfulldofdynamicjerklimits, _vfulldofvalues, _vfulldofvelocities; ///< in body full DOF space. the size is GetDOF().
+    dReal _fDynamicLimitsAccelerationMult, _fDynamicLimitsJerkMult; ///< mults, which are multiplied to GetDOFDynamicAccelerationJerkLimits.
 };
 
 typedef boost::shared_ptr<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;
