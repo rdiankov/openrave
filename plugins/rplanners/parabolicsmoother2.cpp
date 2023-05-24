@@ -525,6 +525,20 @@ public:
         ConfigurationSpecification timeSpec;
         timeSpec.AddDeltaTimeGroup();
 
+        // get DynamicsCollisionConstraint parameters
+        std::map<std::string, int> mapIntParameters;
+        std::map<std::string, dReal> mapFloatParameters;
+        _parameters->GetConstraintCheckerParams(mapIntParameters, mapFloatParameters);
+        //RAVELOG_DEBUG_FORMAT("param=%d;%d;%f;%f", mapIntParameters["filtermask"] % mapIntParameters["dynamicsconstraintstype"] % mapFloatParameters["dynamiclimitsaccelerationmult"] % mapFloatParameters["dynamiclimitsjerkmult"]);
+        std::map<std::string, int>::const_iterator itFilterMask = mapIntParameters.find("filtermask");
+        std::map<std::string, int>::const_iterator itDynamicsConstraintsType = mapIntParameters.find("dynamicsconstraintstype");
+        std::map<std::string, dReal>::const_iterator itDynamicLimitsAccelerationMult = mapFloatParameters.find("dynamiclimitsaccelerationmult");
+        if( itFilterMask == mapIntParameters.end() || itDynamicsConstraintsType == mapIntParameters.end() || itDynamicLimitsAccelerationMult == mapFloatParameters.end() ) {
+            // TODO : how to handle this?
+            RAVELOG_WARN_FORMAT("could not get parameters : nofiltermask=%d;nodynamicsconstraintstype=%d;noaccmult=%d",
+                                (itFilterMask == mapIntParameters.end())%(itDynamicsConstraintsType == mapIntParameters.end())%(itDynamicLimitsAccelerationMult == mapFloatParameters.end()));
+        }
+
         std::vector<int> vUsedConfigIndices;
         _dynamicLimitInfo.Reset();
         FOREACH(itbody, vusedbodies) {
@@ -537,9 +551,11 @@ public:
                     _dynamicLimitInfo.vCacheFullDOFVelocities.resize((*itbody)->GetDOF(), 0.0);
                     _dynamicLimitInfo.vCacheFullDOFAccelerationLimits.resize((*itbody)->GetDOF());
                     _dynamicLimitInfo.vCacheFullDOFJerkLimits.resize((*itbody)->GetDOF());
-                    // TODO : need to check dynamic constraint type
-                    _dynamicLimitInfo.bHasDynamicLimits = (*itbody)->GetDOFDynamicAccelerationJerkLimits(_dynamicLimitInfo.vCacheFullDOFAccelerationLimits, _dynamicLimitInfo.vCacheFullDOFJerkLimits,
-                                                                                                         _dynamicLimitInfo.vCacheFullDOFPositions, _dynamicLimitInfo.vCacheFullDOFVelocities);
+                    _dynamicLimitInfo.fDynamicAccelerationLimitMult = itDynamicLimitsAccelerationMult->second;
+                    const bool bHasDynamicLimits = (*itbody)->GetDOFDynamicAccelerationJerkLimits(_dynamicLimitInfo.vCacheFullDOFAccelerationLimits, _dynamicLimitInfo.vCacheFullDOFJerkLimits,
+                                                                                                  _dynamicLimitInfo.vCacheFullDOFPositions, _dynamicLimitInfo.vCacheFullDOFVelocities);
+                    const DynamicsConstraintsType dynamicsConstraintsType = (DynamicsConstraintsType)(itDynamicsConstraintsType->second);
+                    _dynamicLimitInfo.bUseDynamicLimits = bHasDynamicLimits && (itFilterMask->second & CFO_CheckTimeBasedConstraints) && (dynamicsConstraintsType != DC_Unknown && dynamicsConstraintsType != DC_IgnoreTorque);
                     break;
                 }
             }
@@ -589,7 +605,7 @@ public:
             // Convert the original OpenRAVE trajectory to a parabolicpath
             ptraj->GetWaypoint(0, x0Vect, posSpec);
             ptraj->GetWaypoint(0, v0Vect, velSpec);
-            KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
+            KinBodyConstPtr usedBody = _dynamicLimitInfo.bUseDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
 
             std::vector<RampOptimizer::RampND>& tempRampNDVect = _cacheRampNDVect;
             for (size_t iwaypoint = 1; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint) {
@@ -1493,7 +1509,7 @@ protected:
             std::vector<RampOptimizer::RampND>& rampndVect = _cacheRampNDVect;
             size_t numWaypoints = vNewWaypoints.size();
             size_t curIndex = 0;
-            KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
+            KinBodyConstPtr usedBody = _dynamicLimitInfo.bUseDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
             for (size_t iwaypoint = 1; iwaypoint < numWaypoints; ++iwaypoint) {
                 OPENRAVE_ASSERT_OP(vNewWaypoints[iwaypoint].size(), ==, ndof);
 
@@ -1756,7 +1772,7 @@ protected:
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
-        KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
+        KinBodyConstPtr usedBody = _dynamicLimitInfo.bUseDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
 
         // Main shortcut loop
         size_t index;
@@ -2455,7 +2471,7 @@ protected:
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
-        KinBodyConstPtr usedBody = _dynamicLimitInfo.bHasDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
+        KinBodyConstPtr usedBody = _dynamicLimitInfo.bUseDynamicLimits ? GetEnv()->GetKinBody(_dynamicLimitInfo.bodyName) : KinBodyConstPtr();
 
         // Main shortcut loop
         int iters = 0;
@@ -3430,7 +3446,7 @@ protected:
                                             const std::vector<dReal>& v0Vect, const std::vector<dReal>& v1Vect,
                                             const KinBodyConstPtr usedBody)
     {
-        if( _dynamicLimitInfo.bHasDynamicLimits && !!usedBody ) {
+        if( _dynamicLimitInfo.bUseDynamicLimits && !!usedBody ) {
             // acceleration limits should at least satisfy the dynamic acceleration limits at t0 and t1.
             // check dynamic acceleration limit at t0
             std::vector<dReal>& vTmpALim = _dynamicLimitInfo.vCacheTmpALim;
@@ -3485,7 +3501,7 @@ protected:
         //     different from main slowdown loop, do not scale down the vel limits for now, since reducing of dq might not always have solution.
         //     for now, do not multiply fiSearchVelAccelMult. compared with manip accel/speed, dynamic limits are closed-form and less inaccurate.
         bool bHasDynamicLimitViolation = false; // true if dynamic limit violation
-        if( _dynamicLimitInfo.bHasDynamicLimits && !!usedBody ) {
+        if( _dynamicLimitInfo.bUseDynamicLimits && !!usedBody ) {
             std::vector<dReal>& vTmpX = _dynamicLimitInfo.vCacheTmpX, vTmpV = _dynamicLimitInfo.vCacheTmpV, vTmpA = _dynamicLimitInfo.vCacheTmpA, vTmpALim = _dynamicLimitInfo.vCacheTmpALim;
             const KinBody& usedBodyRef = *usedBody;
             for(int iRamp = 0; iRamp < (int)rampndVect.size(); ++iRamp) {
@@ -3782,15 +3798,15 @@ protected:
         /// \brief reset
         void Reset()
         {
-            bHasDynamicLimits = false;
+            bUseDynamicLimits = false;
             vUsedDOFIndices.clear();
             bodyName.clear();
         };
 
         std::vector<int> vUsedDOFIndices; ///< used openrave dof indices
         std::string bodyName; ///< used body name in _parameters->_configurationspecification
-        bool bHasDynamicLimits; ///< true if the body has dynamic limits
-        dReal fDynamicAccelerationLimitMult = 1.5; ///< additional mult for dynamic acceleration limits. smoother should respect [original dynamic acceleration limit]x[fDynamicAccelerationLimitMult].
+        bool bUseDynamicLimits; ///< true if use dynamic limits.
+        dReal fDynamicAccelerationLimitMult; ///< additional mult for dynamic acceleration limits. smoother should respect [original dynamic acceleration limit]x[fDynamicAccelerationLimitMult].
         std::vector<dReal> vCacheFullDOFPositions, vCacheFullDOFVelocities, vCacheFullDOFAccelerationLimits, vCacheFullDOFJerkLimits; ///< cached vectors for dynamic limits. openrave fulldof kinematics order and size is GetDOF.
         std::vector<dReal> vCacheTmpX, vCacheTmpV, vCacheTmpA, vCacheTmpALim; ///< cached vectors for _CheckTimeBasedConstraintsForInitialSlowDown, ...etc. order and size are same as _parameters->_configurationspecification.
     };
