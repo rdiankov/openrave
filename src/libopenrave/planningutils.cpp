@@ -981,7 +981,7 @@ static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::ve
             std::list<KinBodyPtr> listCheckCollisions; listCheckCollisions.push_back(robot);
             boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(params, listCheckCollisions, 0xffffffff&~CFO_CheckTimeBasedConstraints));
             params->_checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
-            params->_getConstraintCheckerParamsFn = boost::bind(&DynamicsCollisionConstraint::GetDynamicsCollisionConstraintParameters, pcollision, _1);
+            params->_getConstraintCheckerParamsFn = boost::bind(&DynamicsCollisionConstraint::GetDynamicsCollisionConstraintParameters, pcollision, _1, _2);
             statesaver.reset(new PlannerStateSaver(newspec.GetDOF(), params->_setstatevaluesfn, params->_getstatefn));
         }
     }
