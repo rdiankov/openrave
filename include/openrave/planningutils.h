@@ -458,7 +458,7 @@ public:
     /// \brief if using GetDOFDynamicAccelerationJerkLimits, multiply this value before checking. TODO: need to check if same thing is necessary for ComputeInverseDynamics
     ///
     /// \param fDynamicLimitsAccelerationMult, fDynamicLimitsJerkMult : mults for acceleration limits and jerk limits.
-    virtual void SetDynamicLimitsMult(const dReal fDynamicLimitsAccelerationMult, const dReal fDynamicLimitsJerkMult)
+    virtual void SetDynamicLimitsMults(const dReal fDynamicLimitsAccelerationMult, const dReal fDynamicLimitsJerkMult)
     {
         _fDynamicLimitsAccelerationMult = fDynamicLimitsAccelerationMult;
         _fDynamicLimitsJerkMult = fDynamicLimitsJerkMult;
