@@ -4802,7 +4802,12 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    __hashkinematics.resize(0);
+    if (!_vecjoints.empty()) {
+        __hashkinematics.resize(0);
+    }
+    else {
+        RAVELOG_VERBOSE_FORMAT("env=%s, body='%s' has no active joint, thus kinematics cannot change. Not clearing __hashkinematics='%s'", GetEnv()->GetNameId()%GetName()%__hashkinematics);
+    }
     const size_t numLinks = GetLinks().size();
 
     // create the adjacency list
