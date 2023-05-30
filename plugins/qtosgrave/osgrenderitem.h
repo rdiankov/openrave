@@ -189,6 +189,16 @@ public:
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
+    void SetCropMarginVisible(bool visible) {
+        _bCropMarginVisible = visible;
+        Load();
+    }
+
+    void SetCropEmptyMarginVisible(bool visible) {
+        _bCropEmptyMarginVisible = visible;
+        Load();
+    }
+
 protected:
     /// \brief Calculate per-face normals from face vertices.
     //osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
@@ -212,6 +222,8 @@ protected:
     vector<Transform> _vtrans;
     mutable std::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
+
+    bool _bCropMarginVisible, _bCropEmptyMarginVisible;
 
 private:
     /// \brief Print matrix

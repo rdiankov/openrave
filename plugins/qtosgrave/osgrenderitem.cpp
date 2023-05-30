@@ -241,6 +241,11 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
+
+    // toggles for visualizing crop container margins
+    _bCropMarginVisible = false;
+    _bCropEmptyMarginVisible = false;
+
     _environmentid = pbody->GetEnvironmentBodyIndex();
     _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
     _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
@@ -484,21 +489,25 @@ void KinBodyItem::Load()
                         break;
                     }
 
-                    DrawCropContainerMargins(
-                        pgeometrydata, 
-                        orgeom->GetContainerInnerExtents(), 
-                        orgeom->GetNegativeCropContainerMargins(), 
-                        orgeom->GetPositiveCropContainerMargins(), 
-                        orgeom->GetDiffuseColor() * 0.5 // shade of the geometry color
-                    );
+                    if (_bCropMarginVisible) {
+                        DrawCropContainerMargins(
+                            pgeometrydata, 
+                            orgeom->GetContainerInnerExtents(), 
+                            orgeom->GetNegativeCropContainerMargins(), 
+                            orgeom->GetPositiveCropContainerMargins(), 
+                            orgeom->GetDiffuseColor() * 0.5 // shade of the geometry color
+                        );
+                    }
 
-                    DrawCropContainerMargins(
-                        pgeometrydata, 
-                        orgeom->GetContainerInnerExtents(), 
-                        orgeom->GetNegativeCropContainerEmptyMargins(), 
-                        orgeom->GetPositiveCropContainerEmptyMargins(), 
-                        orgeom->GetDiffuseColor() + (-orgeom->GetDiffuseColor() + RaveVector<float>(1, 1, 1)) * 0.5 // tint of the geometry color
-                    );
+                    if (_bCropEmptyMarginVisible) {
+                        DrawCropContainerMargins(
+                            pgeometrydata, 
+                            orgeom->GetContainerInnerExtents(), 
+                            orgeom->GetNegativeCropContainerEmptyMargins(), 
+                            orgeom->GetPositiveCropContainerEmptyMargins(), 
+                            orgeom->GetDiffuseColor() + (-orgeom->GetDiffuseColor() + RaveVector<float>(1, 1, 1)) * 0.5 // tint of the geometry color
+                        );
+                    }
 
                     break;
                 }
