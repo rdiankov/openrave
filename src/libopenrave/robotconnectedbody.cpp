@@ -1149,6 +1149,9 @@ bool RobotBase::SetConnectedBodyActiveStates(const std::vector<int8_t>& activest
     for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
         bChanged |= _vecConnectedBodies[iconnectedbody]->SetActive(activestates[iconnectedbody]);
     }
+    if (bChanged) {
+        __hashkinematics.resize(0);
+    }
     return bChanged;
 }
 
