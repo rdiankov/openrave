@@ -687,7 +687,6 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
         }
         (*itlink)->_Update(false);
     }
-    __hashKinGeomDyn.resize(0); // geometry changed
     // have to reset the adjacency cache
     _ResetInternalCollisionCache();
 }
