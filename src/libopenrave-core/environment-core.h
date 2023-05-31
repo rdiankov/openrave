@@ -3538,7 +3538,7 @@ protected:
                     if( bPhysicsEngineChanged ) {
                         GetPhysicsEngine()->InitKinBody(pnewbody);
                     }
-                    pnewbody->__hashkinematics = body.__hashkinematics;
+                    pnewbody->__hashKinGeomDyn = body.__hashKinGeomDyn;
                     if( pnewbody->IsRobot() ) {
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
@@ -3577,7 +3577,7 @@ protected:
                 pnewbody->_ComputeInternalInformation();
                 GetCollisionChecker()->InitKinBody(pnewbody);
                 GetPhysicsEngine()->InitKinBody(pnewbody);
-                pnewbody->__hashkinematics = body.__hashkinematics; /// _ComputeInternalInformation resets the hashes
+                pnewbody->__hashKinGeomDyn = body.__hashKinGeomDyn;
                 if( pnewbody->IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
