@@ -3537,7 +3537,7 @@ protected:
     Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup
 
 private:
-    mutable std::string __hashKinGeomDyn; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
+    mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const {
         return OPENRAVE_KINBODY_HASH;
