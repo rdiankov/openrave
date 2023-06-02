@@ -179,9 +179,9 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 
     // Crop-margin visualization commands: toggle whether visualizations are displayed inside containers for 
     // crop container margins and crop container empty margins
-    RegisterCommand("ToggleCropMarginVisible", boost::bind(&QtOSGViewer::_ToggleCropMarginVisibleCommand, this, _1, _2),
+    RegisterCommand("SetCropMarginVisible", boost::bind(&QtOSGViewer::_SetCropMarginVisibleCommand, this, _1, _2),
     "Sets whether crop container margins are visualized or not");
-    RegisterCommand("ToggleCropEmptyMarginVisible", boost::bind(&QtOSGViewer::_ToggleCropEmptyMarginVisibleCommand, this, _1, _2),
+    RegisterCommand("SetCropEmptyMarginVisible", boost::bind(&QtOSGViewer::_SetCropEmptyMarginVisibleCommand, this, _1, _2),
     "Sets whether crop container empty margins are visualized or not");
 
     // Establish size limits per priority
@@ -1340,21 +1340,23 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     return true;
 }
 
-bool QtOSGViewer::_ToggleCropMarginVisibleCommand(ostream& sout, istream& sinput)
+bool QtOSGViewer::_SetCropMarginVisibleCommand(ostream& sout, istream& sinput)
 {
     std::string name = "";
-    sinput >> name;
+    bool visible = false;
+    sinput >> name >> visible;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_ToggleCropMarginVisible, this, name), ViewerCommandPriority::LOW);
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropMarginVisible, this, name, visible), ViewerCommandPriority::LOW);
     return true;
 }
 
-bool QtOSGViewer::_ToggleCropEmptyMarginVisibleCommand(ostream& sout, istream& sinput)
+bool QtOSGViewer::_SetCropEmptyMarginVisibleCommand(ostream& sout, istream& sinput)
 {
     std::string name = "";
-    sinput >> name;
+    bool visible = false;
+    sinput >> name >>  visible;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_ToggleCropEmptyMarginVisible, this, name), ViewerCommandPriority::LOW);
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropEmptyMarginVisible, this, name, visible), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -2024,14 +2026,14 @@ void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
     _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
 }
 
-void QtOSGViewer::_ToggleCropMarginVisible(const std::string& name)
+void QtOSGViewer::_SetCropMarginVisible(const std::string& name, bool visible)
 {
-    _posgWidget->GetItemFromName(name)->ToggleCropMarginVisible();
+    _posgWidget->GetItemFromName(name)->SetCropMarginVisible(visible);
 }
 
-void QtOSGViewer::_ToggleCropEmptyMarginVisible(const std::string& name)
+void QtOSGViewer::_SetCropEmptyMarginVisible(const std::string& name, bool visible)
 {
-    _posgWidget->GetItemFromName(name)->ToggleCropEmptyMarginVisible();
+    _posgWidget->GetItemFromName(name)->SetCropEmptyMarginVisible(visible);
 }
 
 void QtOSGViewer::SetName(const string& name)

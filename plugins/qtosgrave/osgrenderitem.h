@@ -189,13 +189,13 @@ public:
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
-    void ToggleCropMarginVisible() {
-        _bCropMarginVisible = !_bCropMarginVisible;
+    void SetCropMarginVisible(bool visible) {
+        _bCropMarginVisible = visible;
         Load();
     }
 
-    void ToggleCropEmptyMarginVisible() {
-        _bCropEmptyMarginVisible = !_bCropEmptyMarginVisible;
+    void SetCropEmptyMarginVisible(bool visible) {
+        _bCropEmptyMarginVisible = visible;
         Load();
     }
 
