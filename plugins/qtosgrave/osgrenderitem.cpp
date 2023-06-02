@@ -1131,6 +1131,9 @@ void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, 
     boxMaterial->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(color.x, color.y, color.z, 1));
     boxMaterial->setTransparency(osg::Material::FRONT_AND_BACK, 0.5);
     boxGeode->getOrCreateStateSet()->setAttributeAndModes(boxMaterial, osg::StateAttribute::PROTECTED);
+    boxGeode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+    boxGeode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
+    boxGeode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 
     pgeometrydata->addChild(boxGeode);
 }
