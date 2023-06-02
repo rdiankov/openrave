@@ -352,8 +352,7 @@ public:
     virtual void _RotateCameraYDirection(float thetaY);
     virtual void _PanCameraXDirection(float dx);
     virtual void _PanCameraYDirection(float dy);
-    virtual void _SetCropMarginVisible(const std::string& name, bool visible);
-    virtual void _SetCropEmptyMarginVisible(const std::string& name, bool visible);
+    virtual void _SetCropMarginVisible(const std::string& bodyName, const std::string& cropContainerType, bool visible);
 
     /// \brief priority values used to determine how important it is to process certain GUI thread functions over others
     enum ViewerCommandPriority : uint8_t {
@@ -415,7 +414,6 @@ public:
     bool _PanCameraXDirectionCommand(ostream& sout, istream& sinput);
     bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
     bool _SetCropMarginVisibleCommand(ostream& sout, istream& sinput);
-    bool _SetCropEmptyMarginVisibleCommand(ostream& sout, istream& sinput);
 
     //@{ Message Queue
     std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions

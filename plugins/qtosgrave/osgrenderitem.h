@@ -189,14 +189,15 @@ public:
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
-    void SetCropMarginVisible(bool visible) {
-        _bCropMarginVisible = visible;
-        Load();
-    }
-
-    void SetCropEmptyMarginVisible(bool visible) {
-        _bCropEmptyMarginVisible = visible;
-        Load();
+    void SetCropMarginVisible(const std::string& cropContainerType, bool visible) {
+        if (cropContainerType == "cropContainerMargin") {
+            _bCropMarginVisible = visible;
+            Load();
+        }
+        else if (cropContainerType == "cropContainerEmptyMargin") {
+            _bCropEmptyMarginVisible = visible;
+            Load();
+        }
     }
 
 protected:
