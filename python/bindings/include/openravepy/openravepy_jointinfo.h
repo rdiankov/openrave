@@ -104,6 +104,7 @@ public:
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;
+    bool _bIgnoreSelfCollision = false;
     bool _bVisible = true;
 
 private:
@@ -291,11 +292,13 @@ public:
 
     object GetName();
     int GetIndex();
+    void Enable(bool bEnable);
     bool IsEnabled() const;
     bool SetVisible(bool visible);
     bool IsVisible() const;
     bool IsStatic() const;
-    void Enable(bool bEnable);
+    void SetIgnoreSelfCollision(bool bIgnore);
+    bool IsSelfCollisionIgnored() const;
 
     object GetParent() const;
 

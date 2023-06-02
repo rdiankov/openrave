@@ -2612,8 +2612,13 @@ object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object oc
             return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
         }
         else {
-            BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
-            return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
+            const py::numeric::array array = extract<py::numeric::array>(ocolors);
+            BOOST_ASSERT(array.ndim() == 2);
+            BOOST_ASSERT(array.shape(0) == vpoints.size() / 3);
+            BOOST_ASSERT(array.shape(1) == 3 || array.shape(1) == 4);
+            boost::multi_array<float, 2> colors(std::vector<size_t>({static_cast<unsigned long>(array.shape(0)), static_cast<unsigned long>(array.shape(1))}));
+            colors.assign(array.data(), array.data() + array.size());
+            return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,std::move(colors)));
         }
     }
     return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));

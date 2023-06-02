@@ -486,6 +486,8 @@ void KinBody::Destroy()
 
     _ResetInternalCollisionCache();
     _selfcollisionchecker.reset();
+
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -4802,7 +4804,6 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    __hashkinematics.resize(0);
     const size_t numLinks = GetLinks().size();
 
     // create the adjacency list
@@ -5532,7 +5533,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _name = r->_name;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
-    __hashkinematics = r->__hashkinematics;
+    __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;
     _vTempJoints = r->_vTempJoints;
 
     _vLinkTransformPointers.clear(); _vLinkTransformPointers.reserve(r->_veclinks.size());
@@ -5741,7 +5742,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     }
     // do not change hash if geometry changed!
     if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
-        __hashkinematics.resize(0);
+        __hashKinematicsGeometryDynamics.resize(0);
     }
 
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
@@ -5803,14 +5804,14 @@ void KinBody::SetZeroConfiguration()
 const std::string& KinBody::GetKinematicsGeometryHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( __hashkinematics.size() == 0 ) {
+    if( __hashKinematicsGeometryDynamics.size() == 0 ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         // should add dynamics since that affects a lot how part is treated.
         serialize(ss,SO_Kinematics|SO_Geometry|SO_Dynamics);
-        __hashkinematics = utils::GetMD5HashString(ss.str());
+        __hashKinematicsGeometryDynamics = utils::GetMD5HashString(ss.str());
     }
-    return __hashkinematics;
+    return __hashKinematicsGeometryDynamics;
 }
 
 void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits)

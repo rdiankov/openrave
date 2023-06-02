@@ -874,6 +874,7 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
 
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
+    rGeometryInfo.SetObject();
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
 
