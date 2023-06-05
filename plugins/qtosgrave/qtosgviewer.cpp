@@ -2019,7 +2019,10 @@ void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
 
 void QtOSGViewer::_SetCropMarginVisible(const std::string& bodyName, const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible)
 {
-    _posgWidget->GetItemFromName(bodyName)->SetCropMarginVisible(linkName, geometryName, cropContainerType, visible);
+    KinBodyItemPtr kinBody = _posgWidget->GetItemFromName(bodyName);
+    if (kinBody != nullptr) {
+        kinBody->SetCropMarginVisible(linkName, geometryName, cropContainerType, visible);
+    }
 }
 
 void QtOSGViewer::SetName(const string& name)

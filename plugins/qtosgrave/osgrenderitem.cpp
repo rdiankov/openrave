@@ -488,20 +488,20 @@ void KinBodyItem::Load()
                     std::pair<std::string, std::string> linkGeometryNames(porlink->GetName(), orgeom->GetName());
                     if (_cropMarginVisible.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
-                            pgeometrydata, 
-                            orgeom->GetContainerInnerExtents(), 
-                            orgeom->GetNegativeCropContainerMargins(), 
-                            orgeom->GetPositiveCropContainerMargins(), 
+                            pgeometrydata,
+                            orgeom->GetContainerInnerExtents(),
+                            orgeom->GetNegativeCropContainerMargins(),
+                            orgeom->GetPositiveCropContainerMargins(),
                             RaveVector<float>(1, 1, 1) - orgeom->GetDiffuseColor() // complementary color of the geometry
                         );
                     }
 
                     if (_cropEmptyMarginVisible.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
-                            pgeometrydata, 
-                            orgeom->GetContainerInnerExtents(), 
-                            orgeom->GetNegativeCropContainerEmptyMargins(), 
-                            orgeom->GetPositiveCropContainerEmptyMargins(), 
+                            pgeometrydata,
+                            orgeom->GetContainerInnerExtents(),
+                            orgeom->GetNegativeCropContainerEmptyMargins(),
+                            orgeom->GetPositiveCropContainerEmptyMargins(),
                             RaveVector<float>(1, 1, 1) - orgeom->GetDiffuseColor() // complementary color of the geometry
                         );
                     }
