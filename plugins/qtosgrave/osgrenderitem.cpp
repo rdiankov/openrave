@@ -242,10 +242,6 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _bReload = false;
     _bDrawStateChanged = false;
 
-    // toggles for visualizing crop container margins
-    _bCropMarginVisible = false;
-    _bCropEmptyMarginVisible = false;
-
     _environmentid = pbody->GetEnvironmentBodyIndex();
     _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
     _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
@@ -489,7 +485,8 @@ void KinBodyItem::Load()
                         break;
                     }
 
-                    if (_bCropMarginVisible) {
+                    std::pair<std::string, std::string> linkGeometryNames(porlink->GetName(), orgeom->GetName());
+                    if (_cropMarginVisible.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
                             pgeometrydata, 
                             orgeom->GetContainerInnerExtents(), 
@@ -499,7 +496,7 @@ void KinBodyItem::Load()
                         );
                     }
 
-                    if (_bCropEmptyMarginVisible) {
+                    if (_cropEmptyMarginVisible.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
                             pgeometrydata, 
                             orgeom->GetContainerInnerExtents(), 

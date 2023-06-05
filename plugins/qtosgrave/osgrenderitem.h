@@ -189,13 +189,22 @@ public:
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
-    void SetCropMarginVisible(const std::string& cropContainerType, bool visible) {
+    void SetCropMarginVisible(const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible) {
+        std::pair<std::string, std::string> linkGeometryNames(linkName, geometryName);
         if (cropContainerType == "cropContainerMargin") {
-            _bCropMarginVisible = visible;
+            if (visible) {
+                _cropMarginVisible.insert(linkGeometryNames);
+            } else {
+                _cropMarginVisible.erase(linkGeometryNames);
+            }
             Load();
         }
         else if (cropContainerType == "cropContainerEmptyMargin") {
-            _bCropEmptyMarginVisible = visible;
+            if (visible) {
+                _cropEmptyMarginVisible.insert(linkGeometryNames);
+            } else {
+                _cropEmptyMarginVisible.erase(linkGeometryNames);
+            }
             Load();
         }
     }
@@ -224,7 +233,8 @@ protected:
     mutable std::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
 
-    bool _bCropMarginVisible, _bCropEmptyMarginVisible;
+    std::set<std::pair<std::string, std::string> > _cropMarginVisible; ///< set of (linkName, geometryName) that identifies which geometries have visible crop margins
+    std::set<std::pair<std::string, std::string> > _cropEmptyMarginVisible;
 
 private:
     /// \brief Print matrix

@@ -1341,11 +1341,13 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
 bool QtOSGViewer::_SetCropMarginVisibleCommand(ostream& sout, istream& sinput)
 {
     std::string bodyName = "";
+    std::string linkName = "";
+    std::string geometryName = "";
     std::string cropMarginType = "";
     bool visible = false;
-    sinput >> bodyName >> cropMarginType >> visible;
+    sinput >> bodyName >> linkName >> geometryName >> cropMarginType >> visible;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropMarginVisible, this, bodyName, cropMarginType, visible), ViewerCommandPriority::LOW);
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropMarginVisible, this, bodyName, linkName, geometryName, cropMarginType, visible), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -2015,9 +2017,9 @@ void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
     _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
 }
 
-void QtOSGViewer::_SetCropMarginVisible(const std::string& bodyName, const std::string& cropContainerType, bool visible)
+void QtOSGViewer::_SetCropMarginVisible(const std::string& bodyName, const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible)
 {
-    _posgWidget->GetItemFromName(bodyName)->SetCropMarginVisible(cropContainerType, visible);
+    _posgWidget->GetItemFromName(bodyName)->SetCropMarginVisible(linkName, geometryName, cropContainerType, visible);
 }
 
 void QtOSGViewer::SetName(const string& name)

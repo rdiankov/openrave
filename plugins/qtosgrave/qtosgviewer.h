@@ -352,7 +352,7 @@ public:
     virtual void _RotateCameraYDirection(float thetaY);
     virtual void _PanCameraXDirection(float dx);
     virtual void _PanCameraYDirection(float dy);
-    virtual void _SetCropMarginVisible(const std::string& bodyName, const std::string& cropContainerType, bool visible);
+    virtual void _SetCropMarginVisible(const std::string& bodyName, const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible);
 
     /// \brief priority values used to determine how important it is to process certain GUI thread functions over others
     enum ViewerCommandPriority : uint8_t {
