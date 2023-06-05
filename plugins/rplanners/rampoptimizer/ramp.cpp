@@ -246,7 +246,8 @@ ParabolicCurve::ParabolicCurve(std::vector<Ramp>&rampsIn)
 
     // Call SetInitialValue to enforce consistency of position throughout the curve (i.e., enforcing
     // ramps[i - 1].x1 = ramps[i].x0).
-    SetInitialValue(_ramps[0].x0);
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, 0);
+    SetInitialValue(_ramps.at(0).x0);
     return;
 }
 
@@ -281,6 +282,7 @@ dReal ParabolicCurve::EvalPos(dReal t) const
     int index;
     dReal remainder;
     FindRampIndex(t, index, remainder);
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, index);
     return _ramps[index].EvalPos(remainder);
 }
 
@@ -296,6 +298,7 @@ dReal ParabolicCurve::EvalVel(dReal t) const
     int index;
     dReal remainder;
     FindRampIndex(t, index, remainder);
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, index);
     return _ramps[index].EvalVel(remainder);
 }
 
@@ -313,6 +316,7 @@ dReal ParabolicCurve::EvalAcc(dReal t) const
     int index;
     dReal remainder;
     FindRampIndex(t, index, remainder);
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, index);
     return _ramps[index].a;
 }
 
@@ -398,6 +402,7 @@ void ParabolicCurve::Initialize(Ramp& rampIn)
     if( _ramps.size() != 1 ) {
         _ramps.resize(1);
     }
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, 0);
     _ramps[0] = rampIn;
     _d = rampIn.d;
     _duration = rampIn.duration;
@@ -420,6 +425,7 @@ void ParabolicCurve::SetConstant(dReal x0, dReal t)
     if( _ramps.size() != 1) {
         _ramps.resize(1);
     }
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, 0);
     _ramps[0].Initialize(0, 0, t, x0);
     _d = _ramps[0].d;
     _duration = t;
@@ -496,6 +502,7 @@ void ParabolicCurve::SetZeroDuration(dReal x0, dReal v0)
     if( _ramps.size() != 1 ) {
         _ramps.resize(1);
     }
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, 0);
     _ramps[0].Initialize(v0, 0, 0, x0);
 
     _d = 0;
@@ -577,10 +584,13 @@ void ParabolicCurve::TrimFront(dReal t)
     int rampssize = _ramps.size();
     if( index > 0 ) {
         for (int iramp = index; iramp < rampssize; ++iramp) {
+            OPENRAVE_ASSERT_OP(_ramps.size(), >, iramp - index);
+            OPENRAVE_ASSERT_OP(_ramps.size(), >, iramp);
             _ramps[iramp - index] = _ramps[iramp];
         }
         _ramps.resize(rampssize - index);
     }
+    OPENRAVE_ASSERT_OP(_ramps.size(), >, 0);
     _ramps[0].TrimFront(remainder);
     _duration -= remainder;
     SetInitialValue(_ramps[0].x0);
@@ -657,6 +667,11 @@ RampND::RampND(const std::vector<dReal>& x0Vect, const std::vector<dReal>& x1Vec
             dReal tSqr = t*t;
             dReal divMult = 1/(t*(0.5*tSqr + 2));
             for (size_t idof = 0; idof < _ndof; ++idof) {
+                OPENRAVE_ASSERT_OP(_data.size(), >, DATA_OFFSET_A*_ndof + idof);
+                OPENRAVE_ASSERT_OP(v0Vect.size(), >, idof);
+                OPENRAVE_ASSERT_OP(v1Vect.size(), >, idof);
+                OPENRAVE_ASSERT_OP(x0Vect.size(), >, idof);
+                OPENRAVE_ASSERT_OP(x1Vect.size(), >, idof);
                 _data[DATA_OFFSET_A*_ndof + idof] = -(v0Vect[idof]*tSqr + t*(x0Vect[idof] - x1Vect[idof]) + 2*(v0Vect[idof] - v1Vect[idof]))*divMult;
             }
         }
@@ -723,6 +738,7 @@ void RampND::EvalPos(dReal t, std::vector<dReal>& xVect) const
 
     xVect.resize(_ndof);
     for (size_t idof = 0; idof < _ndof; ++idof) {
+        OPENRAVE_ASSERT_OP(xVect.size(), >, idof);
         xVect[idof] = GetX0At(idof) + t*(GetV0At(idof) + 0.5*t*GetAAt(idof));
     }
     return;
@@ -741,6 +757,7 @@ void RampND::EvalVel(dReal t, std::vector<dReal>& vVect) const
 
     vVect.resize(_ndof);
     for (size_t idof = 0; idof < _ndof; ++idof) {
+        OPENRAVE_ASSERT_OP(vVect.size(), >, idof);
         vVect[idof] = GetV0At(idof) + t*GetAAt(idof);
     }
     return;
@@ -795,6 +812,11 @@ void RampND::Initialize(const std::vector<dReal>& x0Vect, const std::vector<dRea
             dReal tSqr = t*t;
             dReal divMult = 1/(t*(0.5*tSqr + 2));
             for (size_t idof = 0; idof < _ndof; ++idof) {
+                OPENRAVE_ASSERT_OP(_data.size(), >, DATA_OFFSET_A*_ndof + idof);
+                OPENRAVE_ASSERT_OP(v0Vect.size(), >, idof);
+                OPENRAVE_ASSERT_OP(v1Vect.size(), >, idof);
+                OPENRAVE_ASSERT_OP(x0Vect.size(), >, idof);
+                OPENRAVE_ASSERT_OP(x1Vect.size(), >, idof);
                 _data[DATA_OFFSET_A*_ndof + idof] = -(v0Vect[idof]*tSqr + t*(x0Vect[idof] - x1Vect[idof]) + 2*(v0Vect[idof] - v1Vect[idof]))*divMult;
             }
         }
@@ -825,6 +847,7 @@ void RampND::SetInitialPosition(const std::vector<dReal>& xVect)
     dReal dOriginal;
     for (size_t idof = 0; idof < _ndof; ++idof) {
         dOriginal = GetX1At(idof) - GetX0At(idof);
+        OPENRAVE_ASSERT_OP(xVect.size(), >, idof);
         GetX0At(idof) = xVect[idof];
         GetX1At(idof) = xVect[idof] + dOriginal;
     }
@@ -934,6 +957,7 @@ void RampND::Serialize(std::ostream& O) const
 {
     O << _ndof;
     for (size_t i = 0; i < _data.size(); ++i) {
+        OPENRAVE_ASSERT_OP(_data.size(), >, i);
         O << " " << _data[i];
     }
     O << " " << _duration << "\n";
@@ -952,6 +976,7 @@ void ParabolicPath::EvalPos(dReal t, std::vector<dReal>& xVect) const
     int index;
     dReal remainder;
     FindRampNDIndex(t, index, remainder);
+    OPENRAVE_ASSERT_OP(_rampnds.size(), >, index);
     _rampnds[index].EvalPos(remainder, xVect.begin());
 }
 
@@ -960,6 +985,7 @@ void ParabolicPath::EvalVel(dReal t, std::vector<dReal>& vVect) const
     int index;
     dReal remainder;
     FindRampNDIndex(t, index, remainder);
+    OPENRAVE_ASSERT_OP(_rampnds.size(), >, index);
     _rampnds[index].EvalVel(remainder, vVect.begin());
 }
 
@@ -968,6 +994,7 @@ void ParabolicPath::EvalAcc(dReal t, std::vector<dReal>& aVect) const
     int index;
     dReal remainder;
     FindRampNDIndex(t, index, remainder);
+    OPENRAVE_ASSERT_OP(_rampnds.size(), >, index);
     _rampnds[index].EvalAcc(aVect.begin());
 }
 
@@ -1003,6 +1030,7 @@ void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
 void ParabolicPath::Initialize(const RampND& rampndIn)
 {
     _rampnds.resize(1);
+    OPENRAVE_ASSERT_OP(_rampnds.size(), >, 0);
     _rampnds[0] = rampndIn;
     _duration = rampndIn.GetDuration();
 }
@@ -1015,6 +1043,7 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         dReal duration = 0;
         _rampnds = rampndVect;
         for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {
+            OPENRAVE_ASSERT_OP(_rampnds.size(), >, irampnd);
             duration += _rampnds[irampnd].GetDuration();
         }
         _duration = duration;
@@ -1041,6 +1070,8 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         // moving from right to left.
         _rampnds.resize(newSize);
         for (size_t irampnd = 0; irampnd < rightPartLength; ++irampnd) {
+            OPENRAVE_ASSERT_OP(_rampnds.size(), >, newSize - 1 - iramnd);
+            OPENRAVE_ASSERT_OP(_rampnds.size(), >, prevSize - 1 - iramnd);
             _rampnds[newSize - 1 - irampnd] = _rampnds[prevSize - 1 - irampnd];
         }
         newindex1 = newSize - rightPartLength;
@@ -1049,6 +1080,8 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         // The new size is less than the current size. We need to move the RampNDs (from left to
         // right) first before resizing the container.
         for (size_t irampnd = 0; irampnd < rightPartLength; ++irampnd) {
+            OPENRAVE_ASSERT_OP(_rampnds.size(), >, newSize - rightPartLength + irampnd);
+            OPENRAVE_ASSERT_OP(_rampnds.size(), >, prevSize - rightPartLength + irampnd);
             _rampnds[newSize - rightPartLength + irampnd] = _rampnds[prevSize - rightPartLength + irampnd];
         }
         _rampnds.resize(newSize);
@@ -1065,6 +1098,7 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         newindex0 = index0;
     }
     else {
+        OPENRAVE_ASSERT_OP(_rampnds.size(), >, index0);
         _rampnds[index0].TrimBack(rem0);
     }
 
@@ -1073,6 +1107,7 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         newindex1 += 1;
     }
     else {
+        OPENRAVE_ASSERT_OP(_rampnds.size(), >, newindex1);
         _rampnds[newindex1].TrimFront(rem1);
     }
     OPENRAVE_ASSERT_OP(newindex0 + (int)rampndVect.size(), ==, newindex1);
@@ -1094,6 +1129,7 @@ void ParabolicPath::_UpdateDuration()
 {
     dReal duration = 0;
     for (size_t irampnd = 0; irampnd < _rampnds.size(); ++irampnd) {
+        OPENRAVE_ASSERT_OP(_rampnds.size(), >, irampnd);
         duration += _rampnds[irampnd].GetDuration();
     }
     _duration = duration;
