@@ -1070,8 +1070,8 @@ void ParabolicPath::ReplaceSegment(dReal t0, dReal t1, const std::vector<RampND>
         // moving from right to left.
         _rampnds.resize(newSize);
         for (size_t irampnd = 0; irampnd < rightPartLength; ++irampnd) {
-            OPENRAVE_ASSERT_OP(_rampnds.size(), >, newSize - 1 - iramnd);
-            OPENRAVE_ASSERT_OP(_rampnds.size(), >, prevSize - 1 - iramnd);
+            OPENRAVE_ASSERT_OP(_rampnds.size(), >, newSize - 1 - irampnd);
+            OPENRAVE_ASSERT_OP(_rampnds.size(), >, prevSize - 1 - irampnd);
             _rampnds[newSize - 1 - irampnd] = _rampnds[prevSize - 1 - irampnd];
         }
         newindex1 = newSize - rightPartLength;
