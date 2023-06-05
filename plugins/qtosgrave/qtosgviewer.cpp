@@ -179,7 +179,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 
     // Crop-margin visualization commands: toggle whether visualizations are displayed inside containers for 
     // crop container margins and crop container empty margins
-    RegisterCommand("SetCropMarginVisible", boost::bind(&QtOSGViewer::_SetCropMarginVisibleCommand, this, _1, _2),
+    RegisterCommand("SetCropContainerMarginsVisible", boost::bind(&QtOSGViewer::_SetCropContainerMarginsVisibleCommand, this, _1, _2),
     "Sets whether crop container margins are visualized or not");
 
     // Establish size limits per priority
@@ -1338,16 +1338,16 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     return true;
 }
 
-bool QtOSGViewer::_SetCropMarginVisibleCommand(ostream& sout, istream& sinput)
+bool QtOSGViewer::_SetCropContainerMarginsVisibleCommand(ostream& sout, istream& sinput)
 {
     std::string bodyName = "";
     std::string linkName = "";
     std::string geometryName = "";
-    std::string cropMarginType = "";
+    std::string cropContainerMarginsType = "";
     bool visible = false;
-    sinput >> bodyName >> linkName >> geometryName >> cropMarginType >> visible;
+    sinput >> bodyName >> linkName >> geometryName >> cropContainerMarginsType >> visible;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropMarginVisible, this, bodyName, linkName, geometryName, cropMarginType, visible), ViewerCommandPriority::LOW);
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropContainerMarginsVisible, this, bodyName, linkName, geometryName, cropContainerMarginsType, visible), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -2017,11 +2017,11 @@ void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
     _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
 }
 
-void QtOSGViewer::_SetCropMarginVisible(const std::string& bodyName, const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible)
+void QtOSGViewer::_SetCropContainerMarginsVisible(const std::string& bodyName, const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible)
 {
     KinBodyItemPtr kinBody = _posgWidget->GetItemFromName(bodyName);
     if (kinBody != nullptr) {
-        kinBody->SetCropMarginVisible(linkName, geometryName, cropContainerType, visible);
+        kinBody->SetCropContainerMarginsVisible(linkName, geometryName, cropContainerType, visible);
     }
 }
 

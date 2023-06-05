@@ -486,7 +486,7 @@ void KinBodyItem::Load()
                     }
 
                     std::pair<std::string, std::string> linkGeometryNames(porlink->GetName(), orgeom->GetName());
-                    if (_cropMarginVisible.count(linkGeometryNames) != 0) {
+                    if (_visibleCropContainerMargins.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
                             pgeometrydata,
                             orgeom->GetContainerInnerExtents(),
@@ -496,7 +496,7 @@ void KinBodyItem::Load()
                         );
                     }
 
-                    if (_cropEmptyMarginVisible.count(linkGeometryNames) != 0) {
+                    if (_visibleCropContainerEmptyMargins.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
                             pgeometrydata,
                             orgeom->GetContainerInnerExtents(),
@@ -868,6 +868,28 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     }
 
     return true;
+}
+
+
+void KinBodyItem::SetCropContainerMarginsVisible(const std::string& linkName, const std::string& geometryName, const std::string& cropContainerMarginsType, bool visible)
+{
+    std::pair<std::string, std::string> linkGeometryNames(linkName, geometryName);
+    if (cropContainerMarginsType == "cropContainerMargins") {
+        if (visible) {
+            _visibleCropContainerMargins.insert(linkGeometryNames);
+        } else {
+            _visibleCropContainerMargins.erase(linkGeometryNames);
+        }
+        Load();
+    }
+    else if (cropContainerMarginsType == "cropContainerEmptyMargins") {
+        if (visible) {
+            _visibleCropContainerEmptyMargins.insert(linkGeometryNames);
+        } else {
+            _visibleCropContainerEmptyMargins.erase(linkGeometryNames);
+        }
+        Load();
+    }
 }
 
 void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)

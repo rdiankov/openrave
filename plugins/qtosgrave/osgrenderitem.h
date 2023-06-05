@@ -189,25 +189,8 @@ public:
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
-    void SetCropMarginVisible(const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible) {
-        std::pair<std::string, std::string> linkGeometryNames(linkName, geometryName);
-        if (cropContainerType == "cropContainerMargin") {
-            if (visible) {
-                _cropMarginVisible.insert(linkGeometryNames);
-            } else {
-                _cropMarginVisible.erase(linkGeometryNames);
-            }
-            Load();
-        }
-        else if (cropContainerType == "cropContainerEmptyMargin") {
-            if (visible) {
-                _cropEmptyMarginVisible.insert(linkGeometryNames);
-            } else {
-                _cropEmptyMarginVisible.erase(linkGeometryNames);
-            }
-            Load();
-        }
-    }
+    /// \brief mark crop margin to be rendered
+    void SetCropContainerMarginsVisible(const std::string& linkName, const std::string& geometryName, const std::string& cropContainerMarginsType, bool visible);
 
 protected:
     /// \brief Calculate per-face normals from face vertices.
@@ -233,8 +216,8 @@ protected:
     mutable std::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
 
-    std::set<std::pair<std::string, std::string> > _cropMarginVisible; ///< set of (linkName, geometryName) that identifies which geometries have visible crop margins
-    std::set<std::pair<std::string, std::string> > _cropEmptyMarginVisible;
+    std::set<std::pair<std::string, std::string> > _visibleCropContainerMargins; ///< set of (linkName, geometryName) that identifies which crop container margins to render
+    std::set<std::pair<std::string, std::string> > _visibleCropContainerEmptyMargins; ///< set of (linkName, geometryName) that identifies which crop container empty margins to render
 
 private:
     /// \brief Print matrix
