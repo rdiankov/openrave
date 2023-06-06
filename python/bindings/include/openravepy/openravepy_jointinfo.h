@@ -251,6 +251,10 @@ public:
         void SetTransparency(float f);
         void SetAmbientColor(object ocolor);
         void SetDiffuseColor(object ocolor);
+        void SetNegativeCropContainerMargins(object negativeCropContainerMargins);
+        void SetPositiveCropContainerMargins(object positiveCropContainerMargins);
+        void SetNegativeCropContainerEmptyMargins(object negativeCropContainerEmptyMargins);
+        void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
         void SetRenderFilename(const string& filename);
         void SetName(const std::string& name);
         bool IsDraw();
@@ -273,6 +277,10 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
+        object GetNegativeCropContainerMargins() const;
+        object GetPositiveCropContainerMargins() const;
+        object GetNegativeCropContainerEmptyMargins() const;
+        object GetPositiveCropContainerEmptyMargins() const;
         object GetCalibrationBoardNumDots() const;
         object GetCalibrationBoardDotsDistances() const;
         object GetCalibrationBoardDotColor() const;
