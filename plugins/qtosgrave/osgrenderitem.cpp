@@ -492,7 +492,8 @@ void KinBodyItem::Load()
                             orgeom->GetContainerInnerExtents(),
                             orgeom->GetNegativeCropContainerMargins(),
                             orgeom->GetPositiveCropContainerMargins(),
-                            RaveVector<float>(1, 1, 1) - orgeom->GetDiffuseColor() // complementary color of the geometry
+                            RaveVector<float>(0, 0.8, 0), // green
+                            0.75
                         );
                     }
 
@@ -502,7 +503,8 @@ void KinBodyItem::Load()
                             orgeom->GetContainerInnerExtents(),
                             orgeom->GetNegativeCropContainerEmptyMargins(),
                             orgeom->GetPositiveCropContainerEmptyMargins(),
-                            RaveVector<float>(1, 1, 1) - orgeom->GetDiffuseColor() // complementary color of the geometry
+                            RaveVector<float>(0.5, 0, 0.5), // purple
+                            0.25
                         );
                     }
 
@@ -1123,7 +1125,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     return true;
 }
 
-void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color){
+void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency){
     if(negativeCropContainerMargins == Vector(0, 0, 0) && positiveCropContainerMargins == Vector(0, 0, 0)){
         // do nothing if CropContainerMargins are all zeros
         return;
@@ -1148,7 +1150,7 @@ void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, 
     // setup color and transparency
     osg::ref_ptr<osg::Material> boxMaterial = new osg::Material;
     boxMaterial->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(color.x, color.y, color.z, 1));
-    boxMaterial->setTransparency(osg::Material::FRONT_AND_BACK, 0.5);
+    boxMaterial->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
     boxGeode->getOrCreateStateSet()->setAttributeAndModes(boxMaterial, osg::StateAttribute::PROTECTED);
     boxGeode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
     boxGeode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
