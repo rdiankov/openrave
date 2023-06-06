@@ -1262,6 +1262,18 @@ void PyLink::PyGeometry::SetAmbientColor(object ocolor) {
 void PyLink::PyGeometry::SetDiffuseColor(object ocolor) {
     _pgeometry->SetDiffuseColor(ExtractVector3(ocolor));
 }
+void PyLink::PyGeometry::SetNegativeCropContainerMargins(object negativeCropContainerMargins) {
+    _pgeometry->SetNegativeCropContainerMargins(ExtractVector3(negativeCropContainerMargins));
+}
+void PyLink::PyGeometry::SetPositiveCropContainerMargins(object positiveCropContainerMargins) {
+    _pgeometry->SetPositiveCropContainerMargins(ExtractVector3(positiveCropContainerMargins));
+}
+void PyLink::PyGeometry::SetNegativeCropContainerEmptyMargins(object negativeCropContainerEmptyMargins) {
+    _pgeometry->SetNegativeCropContainerEmptyMargins(ExtractVector3(negativeCropContainerEmptyMargins));
+}
+void PyLink::PyGeometry::SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins) {
+    _pgeometry->SetPositiveCropContainerEmptyMargins(ExtractVector3(positiveCropContainerEmptyMargins));
+}
 void PyLink::PyGeometry::SetRenderFilename(const string& filename) {
     _pgeometry->SetRenderFilename(filename);
 }
@@ -1328,6 +1340,18 @@ object PyLink::PyGeometry::GetDiffuseColor() const {
 }
 object PyLink::PyGeometry::GetAmbientColor() const {
     return toPyVector3(_pgeometry->GetAmbientColor());
+}
+object PyLink::PyGeometry::GetNegativeCropContainerMargins() const {
+    return toPyVector3(_pgeometry->GetNegativeCropContainerMargins());
+}
+object PyLink::PyGeometry::GetPositiveCropContainerMargins() const {
+    return toPyVector3(_pgeometry->GetPositiveCropContainerMargins());
+}
+object PyLink::PyGeometry::GetNegativeCropContainerEmptyMargins() const {
+    return toPyVector3(_pgeometry->GetNegativeCropContainerEmptyMargins());
+}
+object PyLink::PyGeometry::GetPositiveCropContainerEmptyMargins() const {
+    return toPyVector3(_pgeometry->GetPositiveCropContainerEmptyMargins());
 }
 object PyLink::PyGeometry::GetInfo() {
     return py::to_object(PyGeometryInfoPtr(new PyGeometryInfo(_pgeometry->GetInfo())));
@@ -5921,6 +5945,10 @@ void init_openravepy_kinbody()
                                   .def("SetTransparency",&PyLink::PyGeometry::SetTransparency,PY_ARGS("transparency") DOXY_FN(KinBody::Link::Geometry,SetTransparency))
                                   .def("SetDiffuseColor",&PyLink::PyGeometry::SetDiffuseColor,PY_ARGS("color") DOXY_FN(KinBody::Link::Geometry,SetDiffuseColor))
                                   .def("SetAmbientColor",&PyLink::PyGeometry::SetAmbientColor,PY_ARGS("color") DOXY_FN(KinBody::Link::Geometry,SetAmbientColor))
+                                  .def("SetNegativeCropContainerMargins", &PyLink::PyGeometry::SetNegativeCropContainerMargins, PY_ARGS("negativeCropContainerMargins") DOXY_FN(KinBody::Link::Geometry, SetNegativeCropContainerMargins))
+                                  .def("SetPositiveCropContainerMargins", &PyLink::PyGeometry::SetPositiveCropContainerMargins, PY_ARGS("positiveCropContainerMargins") DOXY_FN(KinBody::Link::Geometry, SetPositiveCropContainerMargins))
+                                  .def("SetNegativeCropContainerEmptyMargins", &PyLink::PyGeometry::SetNegativeCropContainerEmptyMargins, PY_ARGS("negativeCropContainerEmptyMargins") DOXY_FN(KinBody::Link::Geometry, SetNegativeCropContainerEmptyMargins))
+                                  .def("SetPositiveCropContainerEmptyMargins", &PyLink::PyGeometry::SetPositiveCropContainerEmptyMargins, PY_ARGS("positiveCropContainerEmptyMargins") DOXY_FN(KinBody::Link::Geometry, SetPositiveCropContainerEmptyMargins))
                                   .def("SetRenderFilename",&PyLink::PyGeometry::SetRenderFilename,PY_ARGS("color") DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
                                   .def("SetName",&PyLink::PyGeometry::SetName,PY_ARGS("name") DOXY_FN(KinBody::Link::Geometry,setName))
                                   .def("SetVisible",&PyLink::PyGeometry::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody::Link::Geometry,SetVisible))
@@ -5944,6 +5972,10 @@ void init_openravepy_kinbody()
                                   .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                   .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                   .def("GetAmbientColor",&PyLink::PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))
+                                  .def("GetNegativeCropContainerMargins", &PyLink::PyGeometry::GetNegativeCropContainerMargins, DOXY_FN(KinBody::Link::Geometry, GetNegativeCropContainerMargins))
+                                  .def("GetPositiveCropContainerMargins", &PyLink::PyGeometry::GetPositiveCropContainerMargins, DOXY_FN(KinBody::Link::Geometry, GetPositiveCropContainerMargins))
+                                  .def("GetNegativeCropContainerEmptyMargins", &PyLink::PyGeometry::GetNegativeCropContainerEmptyMargins, DOXY_FN(KinBody::Link::Geometry, GetNegativeCropContainerEmptyMargins))
+                                  .def("GetPositiveCropContainerEmptyMargins", &PyLink::PyGeometry::GetPositiveCropContainerEmptyMargins, DOXY_FN(KinBody::Link::Geometry, GetPositiveCropContainerEmptyMargins))
                                   .def("GetCalibrationBoardNumDots",&PyLink::PyGeometry::GetCalibrationBoardNumDots, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardNumDots))
                                   .def("GetCalibrationBoardDotsDistances",&PyLink::PyGeometry::GetCalibrationBoardDotsDistances, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotsDistances))
                                   .def("GetCalibrationBoardDotColor",&PyLink::PyGeometry::GetCalibrationBoardDotColor, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotColor))
