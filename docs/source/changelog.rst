@@ -3,6 +3,7 @@
 ChangeLog
 #########
 
+This change log was used until 2012 and is here for legacy purposes. See `CHANGELOG.md` in the repository root directory for the latest changes.
 
 Version 0.9.0 Development
 =========================
