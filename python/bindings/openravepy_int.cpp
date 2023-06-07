@@ -2477,9 +2477,9 @@ object PyEnvironmentBase::drawarrow(object op1, object op2, float linewidth, obj
     return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
 }
 
-object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition)
+object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition, object ocolor)
 {
-    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition)));
+    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition), ExtractVector4(ocolor)));
 }
 
 object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
@@ -3035,7 +3035,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinestrip_overloads, drawlinestrip, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinelist_overloads, drawlinelist, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlabel_overloads, drawlabel, 2, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlabel_overloads, drawlabel, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawboxarray_overloads, drawboxarray, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
@@ -3638,10 +3638,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("drawlabel", &PyEnvironmentBase::drawlabel,
                           "label"_a,
                           "worldPosition"_a,
+                          "color"_a = py::none_(),
                           DOXY_FN(EnvironmentBase,drawlabel)
                           )
 #else
-                     .def("drawlabel",&PyEnvironmentBase::drawlabel,drawlabel_overloads(PY_ARGS("label","worldPosition") DOXY_FN(EnvironmentBase,drawlabel)))
+                     .def("drawlabel",&PyEnvironmentBase::drawlabel,drawlabel_overloads(PY_ARGS("label","worldPosition","color") DOXY_FN(EnvironmentBase,drawlabel)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("drawbox", &PyEnvironmentBase::drawbox,
