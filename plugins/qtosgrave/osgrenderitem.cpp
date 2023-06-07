@@ -504,7 +504,9 @@ void KinBodyItem::Load()
                                 orgeom->GetContainerInnerExtents().z - orgeom->GetNegativeCropContainerMargins().z - orgeom->GetPositiveCropContainerMargins().z
                             ) +
                             // adjust for length of the label
-                            RaveVector<float>(-0.025, -0.28, 0)
+                            RaveVector<float>(-0.025, -0.28, 0),
+                            // green color
+                            RaveVector<float>(0, 0.8, 0, 1)
                         );
                     }
 
@@ -526,7 +528,9 @@ void KinBodyItem::Load()
                                 orgeom->GetContainerInnerExtents().z - orgeom->GetNegativeCropContainerEmptyMargins().z - orgeom->GetPositiveCropContainerEmptyMargins().z
                             ) +
                             // adjust for length of the label
-                            RaveVector<float>(0.025, 0.35, 0)
+                            RaveVector<float>(0.025, 0.35, 0),
+                            // purple color
+                            RaveVector<float>(0.5, 0, 0.5, 1)
                         );
                     }
 
