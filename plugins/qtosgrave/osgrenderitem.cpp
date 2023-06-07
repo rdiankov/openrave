@@ -495,6 +495,17 @@ void KinBodyItem::Load()
                             RaveVector<float>(0, 0.8, 0), // green
                             0.75
                         );
+                        _cropContainerMarginsLabel = _pbody->GetEnv()->drawlabel("Crop container margins", 
+                            _pbody->GetTransform().trans +
+                            // put label on top, at (+x, +y) corner
+                            RaveVector<float>(
+                                (orgeom->GetContainerInnerExtents().x - orgeom->GetNegativeCropContainerMargins().x - orgeom->GetPositiveCropContainerMargins().x) * 0.5,
+                                (orgeom->GetContainerInnerExtents().y - orgeom->GetNegativeCropContainerMargins().y - orgeom->GetPositiveCropContainerMargins().y) * 0.5,
+                                orgeom->GetContainerInnerExtents().z - orgeom->GetNegativeCropContainerMargins().z - orgeom->GetPositiveCropContainerMargins().z
+                            ) +
+                            // adjust for length of the label
+                            RaveVector<float>(-0.025, -0.28, 0)
+                        );
                     }
 
                     if (_visibleCropContainerEmptyMargins.count(linkGeometryNames) != 0) {
@@ -505,6 +516,17 @@ void KinBodyItem::Load()
                             orgeom->GetPositiveCropContainerEmptyMargins(),
                             RaveVector<float>(0.5, 0, 0.5), // purple
                             0.25
+                        );
+                        _cropContainerEmptyMarginsLabel = _pbody->GetEnv()->drawlabel("Crop container empty margins", 
+                            _pbody->GetTransform().trans +
+                            // put label on top, at (-x, -y) corner
+                            RaveVector<float>(
+                                -(orgeom->GetContainerInnerExtents().x - orgeom->GetNegativeCropContainerEmptyMargins().x - orgeom->GetPositiveCropContainerEmptyMargins().x) * 0.5,
+                                -(orgeom->GetContainerInnerExtents().y - orgeom->GetNegativeCropContainerEmptyMargins().y - orgeom->GetPositiveCropContainerEmptyMargins().y) * 0.5,
+                                orgeom->GetContainerInnerExtents().z - orgeom->GetNegativeCropContainerEmptyMargins().z - orgeom->GetPositiveCropContainerEmptyMargins().z
+                            ) +
+                            // adjust for length of the label
+                            RaveVector<float>(0.025, 0.35, 0)
                         );
                     }
 

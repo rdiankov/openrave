@@ -219,6 +219,9 @@ protected:
     std::set<std::pair<std::string, std::string> > _visibleCropContainerMargins; ///< set of (linkName, geometryName) that identifies which crop container margins to render
     std::set<std::pair<std::string, std::string> > _visibleCropContainerEmptyMargins; ///< set of (linkName, geometryName) that identifies which crop container empty margins to render
 
+    GraphHandlePtr _cropContainerMarginsLabel; ///< handle for the label "Crop container margins"
+    GraphHandlePtr _cropContainerEmptyMarginsLabel; ///< handle for the label "Crop container empty margins"
+
 private:
     /// \brief Print matrix
     void _PrintMatrix(osg::Matrix& m);
