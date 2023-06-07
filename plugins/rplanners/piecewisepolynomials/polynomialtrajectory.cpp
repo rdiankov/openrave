@@ -575,7 +575,7 @@ void PiecewisePolynomial::FindPolynomialIndex(const dReal t, size_t& index, dRea
         size_t testIndex = 0;
         dReal currentTime = 0;
         std::vector<Polynomial>::const_iterator itpoly = _vpolynomials.begin();
-        while( (itpoly - 1) != _vpolynomials.end() && t >= currentTime - g_fEpsilonForTimeInstant ) {
+        while( itpoly != _vpolynomials.end() && t >= currentTime - g_fEpsilonForTimeInstant ) {
             currentTime += itpoly->duration;
             itpoly++;
             testIndex++;
