@@ -5976,6 +5976,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     else {
         _vPassiveJoints.push_back(pjoint);
     }
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
