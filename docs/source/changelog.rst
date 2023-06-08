@@ -3,9 +3,13 @@
 ChangeLog
 #########
 
-
-Version 0.9.0 Development
+Version 0.114.1 Development
 =========================
+
+* Allow updating of environment objects via JSON Reader (via `.Environment.DeserializeJSONWithMapping`) where only **name** specified, but not **id**.
+
+Version 0.9.0
+=============
 
 Git Commit: **Unreleased**
 
