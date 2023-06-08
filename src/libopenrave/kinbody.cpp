@@ -5531,7 +5531,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _name = r->_name;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
-    __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;
+    __hashKinGeomDyn = r->__hashKinGeomDyn;
     _vTempJoints = r->_vTempJoints;
 
     _vLinkTransformPointers.clear(); _vLinkTransformPointers.reserve(r->_veclinks.size());
@@ -5740,7 +5740,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     }
     // do not change hash if geometry changed!
     if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
-        __hashKinematicsGeometryDynamics.resize(0);
+        __hashKinGeomDyn.resize(0);
     }
 
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
@@ -5802,14 +5802,14 @@ void KinBody::SetZeroConfiguration()
 const std::string& KinBody::GetKinematicsGeometryHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( __hashKinematicsGeometryDynamics.size() == 0 ) {
+    if( __hashKinGeomDyn.size() == 0 ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         // should add dynamics since that affects a lot how part is treated.
         serialize(ss,SO_Kinematics|SO_Geometry|SO_Dynamics);
-        __hashKinematicsGeometryDynamics = utils::GetMD5HashString(ss.str());
+        __hashKinGeomDyn = utils::GetMD5HashString(ss.str());
     }
-    return __hashKinematicsGeometryDynamics;
+    return __hashKinGeomDyn;
 }
 
 void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits)
