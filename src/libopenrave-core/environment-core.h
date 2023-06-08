@@ -985,8 +985,7 @@ public:
         }
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
-        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup);
-        pbody->_PostprocessChangedParameters(maskPotentialyChanged);
+        pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup);
         _CallBodyCallbacks(pbody, 1);
     }
 
@@ -1026,8 +1025,7 @@ public:
         }
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
-        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup);
-        robot->_PostprocessChangedParameters(maskPotentialyChanged);
+        robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup);
         _CallBodyCallbacks(robot, 1);
     }
 
