@@ -186,6 +186,18 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     }
                 }
             }
+            else {
+                // id is empty, try finding the existing one from a matching name
+                rapidjson::Value::ConstMemberIterator itName = rKinBodyInfo.FindMember("name");
+                if( itName != rKinBodyInfo.MemberEnd() && itName->value.IsString() ) {
+                    FOREACH(itBodyInfo, _vBodyInfos) {
+                        if ((*itBodyInfo)->_name.compare(itName->value.GetString()) == 0) {
+                            itExistingBodyInfo = itBodyInfo;
+                            break;
+                        }
+                    }
+                }
+            }
 
             if( itExistingBodyInfo != _vBodyInfos.end() ) {
                 isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itExistingBodyInfo);
@@ -194,7 +206,6 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
             // here we allow body infos with empty id to be created because
             // when we load things from json, some id could be missing on file
-            // and for the partial update case, the id should be non-empty
 
             bool isRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
             RAVELOG_VERBOSE_FORMAT("body id='%s', isRobot=%d", id%isRobot);
