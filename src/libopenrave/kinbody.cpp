@@ -5926,6 +5926,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
 
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
+    RAVELOG_DEBUG_FORMAT("env=%s, body '%s' aaaaaaaa", GetEnv()->GetNameId()%GetName());
     __hashKinematicsGeometryDynamics.resize(0);
 }
 
@@ -5976,6 +5977,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     else {
         _vPassiveJoints.push_back(pjoint);
     }
+    RAVELOG_DEBUG_FORMAT("env=%s, body '%s' aaaaaaaa", GetEnv()->GetNameId()%GetName());
     __hashKinematicsGeometryDynamics.resize(0);
 }
 
