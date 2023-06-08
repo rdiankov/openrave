@@ -25,46 +25,20 @@ public:
         }
         virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
         {
-		bool flag_of_collision;
-                KinBodyPtr pbody0 = plink0->GetParent();
-                KinBodyPtr pbody1 = plink1->GetParent();
+            bool flag_of_collision;
+            KinBodyPtr pbody0 = plink0->GetParent();
+            KinBodyPtr pbody1 = plink1->GetParent();
 
-                if( pbody0 == pbody1 ) {
-              
-              // Read all the Adjacent link pairs from the robot and check if the 2 links 
-              // you are about to compare, are in a pair inside the Adjacent link pair list
-              FOREACHC(it,pbody0->GetAdjacentLinks()){
-                 
-                  //  The comparision is done bite retrieval process
-                  //  list of pairs  -->  [(a,b),(a',b'),(a'',b''),.....]
-                  /*   And we compare,  a with link0's Index and b with link1's Index 
-                                        a' with link0's Index and b' with link1's Index
-                                                        ...
-                      so we try to find if the link0 and link1 form a pair inside the Adjacent 
-                      link pair list, in order to avoid collision ---
-                  */
-                 if (((int)((*it)&0xffff) == plink0->GetIndex()) && ((int)((*it)>>16) == plink1->GetIndex())){
-                   flag_of_collision = false;
-                   break;
-                  }
-                 // the same condition as above but checking the inverse of the pair (a,b)'= (b,a)
-                 else if( ((int)((*it)&0xffff) == plink1->GetIndex()) && ((int)((*it)>>16) == plink0->GetIndex())){
-                   flag_of_collision = false;
-                   break;
-                 }
-                 // otherwise we return true because collision check should be done
-                 else {
-                   flag_of_collision = true;
-                 }
-                 }
-               }
+            if( pbody0 == pbody1 ) {
+                // if adjacent skip collision check, otherwise collision check should be done
+                flag_of_collision = !pbody0->AreAdjacentLinks(plink0->GetIndex(), plink1->GetIndex());
+            }
             else {
-               // If they are from different entities then collision check has to be performed
-               flag_of_collision = true;
+                // If they are from different entities then collision check has to be performed
+                flag_of_collision = true;
                
-             }
-             return flag_of_collision;
-
+            }
+            return flag_of_collision;
         }
     };
 

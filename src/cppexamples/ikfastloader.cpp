@@ -43,7 +43,7 @@ int main(int argc, char ** argv)
 
     {
         // lock the environment to prevent changes
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+        EnvironmentLock lock(penv->GetMutex());
         // load the scene
         RobotBasePtr probot = penv->ReadRobotXMLFile(robotname);
         if( !probot ) {

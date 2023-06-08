@@ -261,7 +261,7 @@ public:
         PlannerBase::PlannerParametersPtr params(new PlannerBase::PlannerParameters());
         Transform trobotorig;
         {
-            EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+            EnvironmentLock lock(penv->GetMutex()); // lock environment
 
             probot->SetActiveDOFs(pmanip->GetGripperIndices());
             probot->SetActiveDOFValues(vpreshape);
@@ -280,7 +280,7 @@ public:
             iter += 1;
             GraphHandlePtr pgraph;
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 if( (iter%5) == 0 ) {
                     RAVELOG_INFO("find a new position for the robot\n");
@@ -344,7 +344,7 @@ public:
                     for(dReal ftime = 0; ftime <= ptraj->GetDuration(); ftime += 0.01) {
                         ptraj->Sample(vtrajdata,ftime,probot->GetActiveConfigurationSpecification());
                         probot->SetActiveDOFValues(vtrajdata);
-                        vpoints.push_back(pmanip->GetEndEffectorTransform().trans);
+                        vpoints.push_back(pmanip->GetTransform().trans);
                     }
                     pgraph = penv->drawlinestrip(&vpoints[0].x,vpoints.size(),sizeof(vpoints[0]),1.0f);
                 }
@@ -356,7 +356,7 @@ public:
 
             // wait for the robot to finish
             while(!probot->GetController()->IsDone() && IsOk()) {
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

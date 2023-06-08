@@ -64,7 +64,7 @@ def main(env,options):
         basemanip.MoveActiveJoints(goal=[1.29023451,-2.32099996,-0.69800004,1.27843491,-2.32100002,-0.69799996])
     waitrobot(robot)
 
-    print 'move robot base to target'
+    print('move robot base to target')
     with env:
         robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         basemanip.MoveActiveJoints(goal=[2.8,-1.3,0],maxiter=5000,steplength=0.15,maxtries=2)
@@ -73,22 +73,22 @@ def main(env,options):
     taskprob.ReleaseFingers()
     waitrobot(robot)
 
-    print 'move the arm to the target'
+    print('move the arm to the target')
     Tgoal = array([[0,-1,0,3.5],[-1,0,0,-1.3],[0,0,-1,0.842],[0,0,0,1]])
     res = basemanip.MoveToHandPosition(matrices=[Tgoal],seedik=16)
     waitrobot(robot)
 
-    print 'close fingers until collision'
+    print('close fingers until collision')
     taskprob.CloseFingers()
     waitrobot(robot)
 
-    print 'move the arm with the target back to the initial position'
+    print('move the arm with the target back to the initial position')
     with env:
         robot.Grab(target)
         basemanip.MoveManipulator(goal=[0, 0, 1.29023451, 0, -2.32099996, 0, -0.69800004, 0])
     waitrobot(robot)
 
-    print 'move the robot to another location'
+    print('move the robot to another location')
     with env:
         robot.SetActiveDOFs([],DOFAffine.X|DOFAffine.Y|DOFAffine.RotationAxis,[0,0,1])
         localgoal = [0,2.4,0]
@@ -98,12 +98,12 @@ def main(env,options):
             robot.SetActiveDOFValues(goal)
             incollision = env.CheckCollision(robot)
             if incollision:
-                print 'goal in collision!!'
+                print('goal in collision!!')
 
     basemanip.MoveActiveJoints(goal=goal,maxiter=5000,steplength=0.15,maxtries=2)
     waitrobot(robot)
 
-    print 'move the arm to the designated position on another table to place the target down'
+    print('move the arm to the designated position on another table to place the target down')
     Tgoal = array([[0,-1,0,3.5],[-1,0,0,1.5],[0,0,-1,0.855],[0,0,0,1]])
     res = basemanip.MoveToHandPosition(matrices=[Tgoal],seedik=16)
     waitrobot(robot)
@@ -111,11 +111,11 @@ def main(env,options):
     taskprob.ReleaseFingers(target=target)
     waitrobot(robot)
 
-    print 'move manipulator to initial position'
+    print('move manipulator to initial position')
     basemanip.MoveManipulator(goal=[0, 0, 1.29023451, 0, -2.32099996, 0, -0.69800004, 0])
     waitrobot(robot)
 
-    print 'close fingers until collision'
+    print('close fingers until collision')
     taskprob.CloseFingers()
     waitrobot(robot)
 

@@ -29,34 +29,27 @@ using py::object;
 class PyRobotBase : public PyKinBody
 {
 public:
-    class PyRobotBaseInfo: public PyKinBodyInfo
-{
+    class PyRobotBaseInfo : public PyKinBodyInfo
+    {
 public:
-    PyRobotBaseInfo();
-    PyRobotBaseInfo(const RobotBase::RobotBaseInfo& info);
-    RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
+        PyRobotBaseInfo();
+        PyRobotBaseInfo(const RobotBase::RobotBaseInfo& info);
+        RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
 
-    py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
-    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+        py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+        void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    std::vector<RobotBase::ManipulatorInfoPtr> _vManipulatorInfos;
-    std::vector<RobotBase::AttachedSensorInfoPtr> _vAttachedSensorInfos;
-    std::vector<RobotBase::ConnectedBodyInfoPtr> _vConnectedBodyInfos;
-    std::vector<RobotBase::GripperInfoPtr> _vGripperInfo;
-#else
-    py::object _vManipulatorInfos = py::none_();
-    py::object _vAttachedSensorInfos = py::none_();
-    py::object _vConnectedBodyInfos = py::none_();
-    py::object _vGripperInfos = py::none_();
-#endif
-    virtual std::string __str__();
-    virtual py::object __unicode__();
+        py::object _vManipulatorInfos = py::none_();
+        py::object _vAttachedSensorInfos = py::none_();
+        py::object _vConnectedBodyInfos = py::none_();
+        py::object _vGripperInfos = py::none_();
+        virtual std::string __str__();
+        virtual py::object __unicode__();
 
 protected:
-    void _Update(const RobotBase::RobotBaseInfo& info);
-}; // class PyKinBodyInfo
-typedef OPENRAVE_SHARED_PTR<PyRobotBaseInfo> PyRobotBaseInfoPtr;
+        void _Update(const RobotBase::RobotBaseInfo& info);
+    }; // class PyKinBodyInfo
+    typedef OPENRAVE_SHARED_PTR<PyRobotBaseInfo> PyRobotBaseInfoPtr;
 
 protected:
     RobotBasePtr _probot;
@@ -85,6 +78,7 @@ public:
         object GetGripperName() const;
 
         object GetToolChangerConnectedBodyToolName() const;
+        object GetToolChangerLinkName() const;
 
         object GetRestrictGraspSetNames() const;
 
@@ -93,6 +87,7 @@ public:
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
         object GetIkSolver();
         object GetBase();
+        object GetIkChainEndLink();
         object GetEndEffector();
         void ReleaseAllGrabbed();
         object GetGraspTransform();
@@ -434,7 +429,7 @@ public:
 
     // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
     bool Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore);
-    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore);
+    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object grabbedUserData);
 
     bool CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr());
 
@@ -446,6 +441,7 @@ public:
 
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
     bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
+
     py::object ExtractInfo() const;
 
     virtual std::string __repr__();

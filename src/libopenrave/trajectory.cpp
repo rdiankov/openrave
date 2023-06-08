@@ -42,10 +42,9 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
         xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
         FOREACHC(it, GetReadableInterfaces()) {
             // some readable are not xml readable and does not get serialized here
-            ReadablePtr pxmlreadable = OPENRAVE_DYNAMIC_POINTER_CAST<Readable>(it->second);
-            if( !!pxmlreadable ) {
+            if( !!it->second ) {
                 BaseXMLWriterPtr newwriter = writer->AddChild(it->first);
-                pxmlreadable->SerializeXML(newwriter,options);
+                it->second->SerializeXML(newwriter,options);
             }
         }
         writer->Serialize(O);
@@ -56,7 +55,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
 void TrajectoryBase::deserialize(std::istream& I)
 {
     stringbuf buf;
-    stringstream::streampos pos = I.tellg();
+    stringstream::pos_type pos = I.tellg();
     I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
     BOOST_ASSERT(!!I);
 
@@ -75,6 +74,12 @@ void TrajectoryBase::deserialize(std::istream& I)
     xmlreaders::ParseXMLData(readerdata, pbuf.c_str(), ppsize);
 }
 
+void TrajectoryBase::DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize)
+{
+    xmlreaders::TrajectoryReader readerdata(GetEnv(),shared_trajectory());
+    xmlreaders::ParseXMLData(readerdata, (const char*)pdata, nDataSize);
+}
+    
 void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 {
     InterfaceBase::Clone(preference,cloningoptions);
@@ -118,6 +123,34 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
         Sample(tempdata, times[i], spec);
         std::copy(tempdata.begin(), tempdata.end(), itdata);
     }
+}
+
+void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const
+{
+    const dReal duration = GetDuration();
+    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
+    std::vector<dReal> vtimes(numPoints, deltatime);
+    for (int i = 0; i < numPoints; ++i) {
+        vtimes[i] *= i;
+    }
+    if (ensureLastPoint && vtimes.back() < duration) {
+        vtimes.push_back(duration);
+    }
+    return SamplePoints(data, vtimes);
+}
+
+void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
+{
+    const dReal duration = GetDuration();
+    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
+    std::vector<dReal> vtimes(numPoints, deltatime);
+    for (int i = 0; i < numPoints; ++i) {
+        vtimes[i] *= i;
+    }
+    if (ensureLastPoint && vtimes.back() < duration) {
+        vtimes.push_back(duration);
+    }
+    return SamplePoints(data, vtimes, spec);
 }
 
 void TrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const

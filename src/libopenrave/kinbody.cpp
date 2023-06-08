@@ -18,9 +18,9 @@
 #include <algorithm>
 
 // used for functions that are also used internally
-#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%d, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
-#define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%d, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
-#define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%d, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
+#define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
+#define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
+#define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
 namespace OpenRAVE {
 
@@ -35,6 +35,35 @@ const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type)
     return "";
 }
 
+/* given index pair i and j (i < j), convert to a scalar index as in the following table. this way, existing table entries stay valid when table is extended.
+ | i\j          | 0   | 1   | 2   | 3   |
+ | ------------ | --- | --- | --- | --- |
+ | 0            | -   | 0   | 1   | 3   |
+ | 1            | -   | -   | 2   | 4   |
+ | 2            | -   | -   | -   | 5   |
+ | 3            | -   | -   | -   | -   |
+   this indexing is used for data structure holding symmetric 2d table information as 1d vector such as _vForcedAdjacentLinks.
+   This way, when number of links increases, we do not need to restructure the existing entry.
+ */
+inline int _GetIndex1d(int index0, int index1)
+{
+    BOOST_ASSERT(index0 > 0 || index1 > 0);
+    if (index0 < index1) {
+        return index0 + index1 * (index1 - 1) /2;
+    }
+    else {
+        return index1 + index0 * (index0 - 1) /2;
+    }
+}
+
+inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t vectorSize)
+{
+    const size_t tableSize = vectorSize * (vectorSize - 1) / 2;
+    if (vec.size() < tableSize) {
+        vec.resize(tableSize, 0);
+    }
+}
+
 class ChangeCallbackData : public UserData
 {
 public:
@@ -43,7 +72,7 @@ public:
     virtual ~ChangeCallbackData() {
         KinBodyConstPtr pbody = _pweakbody.lock();
         if( !!pbody ) {
-            boost::unique_lock< boost::shared_mutex > lock(pbody->GetInterfaceMutex());
+            std::unique_lock<boost::shared_mutex> lock(pbody->GetInterfaceMutex());
             FOREACH(itinfo, _iterators) {
                 pbody->_vlistRegisteredCallbacks.at(itinfo->first).erase(itinfo->second);
             }
@@ -72,73 +101,6 @@ protected:
 
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
-void ElectricMotorActuatorInfo::Reset()
-{
-    model_type.clear();
-    assigned_power_rating = 0;
-    max_speed = 0;
-    no_load_speed = 0;
-    stall_torque = 0;
-    max_instantaneous_torque = 0;
-    nominal_speed_torque_points.clear();
-    max_speed_torque_points.clear();
-    nominal_torque = 0;
-    rotor_inertia = 0;
-    torque_constant = 0;
-    nominal_voltage = 0;
-    speed_constant = 0;
-    starting_current = 0;
-    terminal_resistance = 0;
-    gear_ratio = 0;
-    coloumb_friction = 0;
-    viscous_friction = 0;
-}
-
-void ElectricMotorActuatorInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
-{
-    orjson::SetJsonValueByKey(value, "modelType", model_type, allocator);
-    orjson::SetJsonValueByKey(value, "assignedPowerRating", assigned_power_rating, allocator);
-    orjson::SetJsonValueByKey(value, "maxSpeed", max_speed, allocator);
-    orjson::SetJsonValueByKey(value, "noLoadSpeed", no_load_speed, allocator);
-    orjson::SetJsonValueByKey(value, "stallTorque", stall_torque, allocator);
-    orjson::SetJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque, allocator);
-    orjson::SetJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points, allocator);
-    orjson::SetJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points, allocator);
-    orjson::SetJsonValueByKey(value, "nominalTorque", nominal_torque, allocator);
-    orjson::SetJsonValueByKey(value, "rotorInertia", rotor_inertia, allocator);
-    orjson::SetJsonValueByKey(value, "torqueConstant", torque_constant, allocator);
-    orjson::SetJsonValueByKey(value, "nominalVoltage", nominal_voltage, allocator);
-    orjson::SetJsonValueByKey(value, "speedConstant", speed_constant, allocator);
-    orjson::SetJsonValueByKey(value, "startingCurrent", starting_current, allocator);
-    orjson::SetJsonValueByKey(value, "terminalResistance", terminal_resistance, allocator);
-    orjson::SetJsonValueByKey(value, "gearRatio", gear_ratio, allocator);
-    orjson::SetJsonValueByKey(value, "coloumbFriction", coloumb_friction, allocator);
-    orjson::SetJsonValueByKey(value, "viscousFriction", viscous_friction, allocator);
-}
-
-void ElectricMotorActuatorInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
-{
-    orjson::LoadJsonValueByKey(value, "modelType", model_type);
-    orjson::LoadJsonValueByKey(value, "assignedPowerRating", assigned_power_rating);
-    orjson::LoadJsonValueByKey(value, "maxSpeed", max_speed);
-    orjson::LoadJsonValueByKey(value, "noLoadSpeed", no_load_speed);
-    orjson::LoadJsonValueByKey(value, "stallTorque", stall_torque);
-    orjson::LoadJsonValueByKey(value, "maxInstantaneousTorque", max_instantaneous_torque);
-    orjson::LoadJsonValueByKey(value, "nominalSpeedTorquePoints", nominal_speed_torque_points);
-    orjson::LoadJsonValueByKey(value, "maxSpeedTorquePoints", max_speed_torque_points);
-    orjson::LoadJsonValueByKey(value, "nominalTorque", nominal_torque);
-    orjson::LoadJsonValueByKey(value, "rotorInertia", rotor_inertia);
-    orjson::LoadJsonValueByKey(value, "torqueConstant", torque_constant);
-    orjson::LoadJsonValueByKey(value, "nominalVoltage", nominal_voltage);
-    orjson::LoadJsonValueByKey(value, "speedConstant", speed_constant);
-    orjson::LoadJsonValueByKey(value, "startingCurrent", starting_current);
-    orjson::LoadJsonValueByKey(value, "terminalResistance", terminal_resistance);
-    orjson::LoadJsonValueByKey(value, "gearRatio", gear_ratio);
-    orjson::LoadJsonValueByKey(value, "coloumbFriction", coloumb_friction);
-    orjson::LoadJsonValueByKey(value, "viscousFriction", viscous_friction);
-}
-
-
 bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
     return _id == other._id
            && _uri == other._uri
@@ -151,28 +113,38 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
-           && _mReadableInterfaces == other._mReadableInterfaces; // TODO
+           && _mReadableInterfaces == other._mReadableInterfaces
+           && (!_prAssociatedFileEntries ? !other._prAssociatedFileEntries : (!!other._prAssociatedFileEntries && *_prAssociatedFileEntries == *other._prAssociatedFileEntries));
 }
 
 void KinBody::KinBodyInfo::Reset()
 {
     _id.clear();
-    _uri.clear();
     _name.clear();
+    _uri.clear();
     _referenceUri.clear();
+    _interfaceType.clear();
     _transform = Transform();
     _dofValues.clear();
     _vGrabbedInfos.clear();
     _vLinkInfos.clear();
     _vJointInfos.clear();
     _mReadableInterfaces.clear();
+    _prAssociatedFileEntries.reset();
+    _isRobot = false;
+    _isPartial = true;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     rKinBodyInfo.SetObject();
-    orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
+    }
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+    }
     if (!_referenceUri.empty()) {
         if( options & ISO_ReferenceUriHint ) {
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUriHint", _referenceUri, allocator);
@@ -181,8 +153,18 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
         }
     }
-    orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "transform", _transform, allocator);
+
+    // perhaps should not save "uri" since that could affect how the body is loaded later
+
+    if( !_interfaceType.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
+    }
+
+    {
+        Transform transform = _transform;
+        transform.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
+    }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
 
     if (_dofValues.size() > 0) {
@@ -192,7 +174,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         FOREACHC(itDofValue, _dofValues) {
             rapidjson::Value dofValue;
             orjson::SetJsonValueByKey(dofValue, "jointName", itDofValue->first.first, allocator);
-            orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            // don't save jointAxis unless not 0
+            if( itDofValue->first.second != 0 ) {
+                orjson::SetJsonValueByKey(dofValue, "jointAxis", itDofValue->first.second, allocator);
+            }
             orjson::SetJsonValueByKey(dofValue, "value", itDofValue->second, allocator);
             dofValues.PushBack(dofValue, allocator);
         }
@@ -239,21 +224,49 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rapidjson::Value rReadableInterfaces;
         rReadableInterfaces.SetObject();
         for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+            // skip serializing __collada__ since we won't need it in json
+            if (it->first == "__collada__") {
+                continue;
+            }
             rapidjson::Value rReadable;
             it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
             orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
         }
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);
     }
+
+    rKinBodyInfo.AddMember("__isPartial__", _isPartial, allocator);
+
+    if( !!_prAssociatedFileEntries ) {
+        rapidjson::Value rAssociatedFileEntries;
+        rAssociatedFileEntries.CopyFrom(*_prAssociatedFileEntries, allocator);
+        rKinBodyInfo.AddMember("files", rAssociatedFileEntries, allocator);
+    }
 }
 
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
+    if (value.HasMember("__isPartial__") ) {
+        bool isPartial = true;
+        orjson::LoadJsonValue(value["__isPartial__"], isPartial);
+        // even if value["__isPartial__"] is False, do not call Reset() since it could be on top of the already loaded correct struct.
+        if( !isPartial ) {
+            // data will be filled so apply to the struct
+            _isPartial = false;
+        }
+    }
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
-        orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+        if (value.HasMember("referenceUri")) {
+            orjson::LoadJsonValueByKey(value, "referenceUri", _referenceUri);
+            AddModifiedField(KinBodyInfo::KBIF_ReferenceURI);
+        }
+        if (value.HasMember("uri")) {
+            orjson::LoadJsonValueByKey(value, "uri", _uri); // user specifies this in case they want to control how the uri is
+            AddModifiedField(KinBodyInfo::KBIF_URI);
+        }
     }
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
@@ -263,21 +276,89 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
         size_t iGrabbed = 0;
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+            const rapidjson::Value& rGrabbed = *it;
+            std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
+            bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
+            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
+            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
+            if (!id.empty()) {
+                // only try to find old info if id is not empty
+                FOREACH(itInfo, _vGrabbedInfos) {
+                    if ((*itInfo)->_id == id) {
+                        itMatchingId = itInfo;
+                        break;
+                    }
+                }
+            }
+
+            std::string grabbedName = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "grabbedName");
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, _vGrabbedInfos) {
+                if ((*itInfo)->_grabbedname == grabbedName) {
+                    itMatchingName = itInfo;
+                    if( id.empty() ) {
+                        id = (*itInfo)->_id;
+                    }
+                    break;
+                }
+            }
+
+            // here we allow items with empty id to be created because
+            // when we load things from json, some id could be missing on file
+            // and for the partial update case, the id should be non-empty
+            if (itMatchingId != _vGrabbedInfos.end()) {
+                if (isDeleted) {
+                    _vGrabbedInfos.erase(itMatchingId);
+                    continue;
+                }
+                (*itMatchingId)->DeserializeJSON(rGrabbed, fUnitScale, options);
+
+                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
+                    // there is another entry with matching name, so remove it
+                    _vGrabbedInfos.erase(itMatchingName);
+                }
+                continue;
+            }
+
+            if (isDeleted) {
+                // ignore
+                continue;
+            }
+
+            if( itMatchingName != _vGrabbedInfos.end() ) {
+                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
+                (*itMatchingName)->_id = id;
+                continue;
+            }
+
+            GrabbedInfoPtr pNewInfo(new GrabbedInfo());
+            pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
+            pNewInfo->_id = id;
+            _vGrabbedInfos.push_back(pNewInfo);
         }
     }
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vLinkInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
+        }
+
+        // if has conflicting names, should error here
+        for(int ilink0 = 0; ilink0 < (int)_vLinkInfos.size(); ++ilink0 ) {
+            for(int ilink1 = ilink0+1; ilink1 < (int)_vLinkInfos.size(); ++ilink1 ) {
+                if( _vLinkInfos[ilink0]->_name == _vLinkInfos[ilink1]->_name ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("Body '%s' has info with link[%d] and link[%d] having the same linkname '%s', which is not allowed. link[%d].id='%s', link[%d].id='%s'", _name%ilink0%ilink1%_vLinkInfos[ilink0]->_name%ilink0%_vLinkInfos[ilink0]->_id%ilink1%_vLinkInfos[ilink1]->_id, ORE_Assert);
+                }
+            }
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfo(*it, _vJointInfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
         }
     }
 
@@ -286,28 +367,46 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         for(rapidjson::Value::ConstValueIterator itr = value["dofValues"].Begin(); itr != value["dofValues"].End(); ++itr) {
             if (itr->IsObject() && itr->HasMember("jointName") && itr->HasMember("value")) {
                 std::string jointName;
-                int jointAxis = 0;
-                dReal dofValue;
+                int jointAxis = 0; // default
+                dReal dofValue=0;
                 orjson::LoadJsonValueByKey(*itr, "jointName", jointName);
                 orjson::LoadJsonValueByKey(*itr, "jointAxis", jointAxis);
                 orjson::LoadJsonValueByKey(*itr, "value", dofValue);
                 _dofValues.emplace_back(std::make_pair(jointName, jointAxis), dofValue);
             }
         }
+        AddModifiedField(KinBodyInfo::KBIF_DOFValues);
     }
 
     if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
         for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
-            _DeserializeReadableInterface(it->name.GetString(), it->value);
+            // skip over __collada__ since it will most likely fail to deserialize
+            if (strcmp(it->name.GetString(), "__collada__") == 0 ) {
+                continue;
+            }
+            _DeserializeReadableInterface(it->name.GetString(), it->value, fUnitScale);
         }
     }
 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _transform);
+        _transform.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        AddModifiedField(KinBodyInfo::KBIF_Transform);
+    }
+
+    rapidjson::Value::ConstMemberIterator itFiles = value.FindMember("files");
+    if( itFiles != value.MemberEnd() ) {
+        if( !_prAssociatedFileEntries ) {
+            _prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *_prAssociatedFileEntries = rapidjson::Document();
+        }
+        _prAssociatedFileEntries->CopyFrom(itFiles->value, _prAssociatedFileEntries->GetAllocator());
     }
 }
 
-void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value) {
+void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
@@ -315,16 +414,16 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
     }
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value);
+        pReader->DeserializeJSON(value, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
     if (value.IsString()) {
-        StringReadablePtr pReadable(new StringReadable(id, value.GetString()));
-        _mReadableInterfaces[id] = pReadable;
+        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
+        _mReadableInterfaces[id] = pStringReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -332,7 +431,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;
     _bMakeJoinedLinksAdjacent = true;
-    _environmentid = 0;
+    _environmentBodyIndex = 0;
     _nNonAdjacentLinkCache = 0x80000000;
     _nUpdateStampId = 0;
     _bAreAllJoints1DOFAndNonCircular = false;
@@ -340,12 +439,17 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
 
 KinBody::~KinBody()
 {
-    RAVELOG_VERBOSE_FORMAT("env=%d, destructing kinbody '%s'", GetEnv()->GetId()%GetName());
+    RAVELOG_VERBOSE_FORMAT("env=%s, destructing kinbody '%s'", GetEnv()->GetNameId()%GetName());
     Destroy();
 }
 
 void KinBody::Destroy()
 {
+    //OPENRAVE_ASSERT_OP_FORMAT(GetEnvironmentBodyIndex(),==,0, "env=%s, destroying body '%s' while it is still in the environment!", GetEnv()->GetNameId()%GetName(), ORE_Assert);
+    if( GetEnvironmentBodyIndex() != 0 ) {
+        RAVELOG_DEBUG_FORMAT("env=%s, destroying body '%s' with bodyIndex=%d while it is still in the environment.", GetEnv()->GetNameId()%GetName()%GetEnvironmentBodyIndex());
+    }
+    
     ReleaseAllGrabbed();
     if( _listAttachedBodies.size() > 0 ) {
         // could be in the environment destructor?
@@ -361,6 +465,7 @@ void KinBody::Destroy()
     _listAttachedBodies.clear();
 
     _veclinks.clear();
+    _vLinkTransformPointers.clear();
     _vecjoints.clear();
     _vTopologicallySortedJoints.clear();
     _vTopologicallySortedJointsAll.clear();
@@ -369,7 +474,7 @@ void KinBody::Destroy()
     _vJointsAffectingLinks.clear();
     _vDOFIndices.clear();
 
-    _setAdjacentLinks.clear();
+    _vAdjacentLinks.clear();
     _vInitialLinkTransformations.clear();
     _vAllPairsShortestPaths.clear();
     _vClosedLoops.clear();
@@ -381,11 +486,13 @@ void KinBody::Destroy()
 
     _ResetInternalCollisionCache();
     _selfcollisionchecker.reset();
+
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -416,13 +523,16 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
 bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -458,13 +568,16 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
 bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -487,13 +600,16 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
 bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -509,7 +625,10 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     Link::GeometryPtr geom(new Link::Geometry(plink,info));
     plink->_vGeometries.push_back(geom);
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -524,8 +643,8 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometr
 
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
-    OPENRAVE_ASSERT_OP(geometries.size(),>,0);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(),>,0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
@@ -538,7 +657,10 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
@@ -586,7 +708,7 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
 
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
     _veclinks.reserve(linkinfos.size());
     FOREACHC(itlinkinfo, linkinfos) {
@@ -601,13 +723,16 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
         pjoint->_info = *rawinfo;
         _InitAndAddJoint(pjoint);
     }
+    _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
     return true;
 }
 
 void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentId()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
     Destroy();
     _veclinks.reserve(linkinfos.size());
@@ -631,7 +756,10 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
             _InitAndAddJoint(pjoint);
         }
     }
+    _vLinkTransformPointers.clear();
     __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
 }
 
 bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
@@ -645,6 +773,13 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
     _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
+    if( info._vLinkInfos.size() > 0 ) {
+        _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
+        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
+    }
+    else {
+        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
+    }
 
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
@@ -654,6 +789,16 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
     }
 
+    if( !!info._prAssociatedFileEntries ) {
+        if( !_prAssociatedFileEntries ) {
+            _prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *_prAssociatedFileEntries = rapidjson::Document();
+        }
+        _prAssociatedFileEntries->CopyFrom(*info._prAssociatedFileEntries, _prAssociatedFileEntries->GetAllocator());
+    }
+
     return true;
 }
 
@@ -661,6 +806,15 @@ void KinBody::SetName(const std::string& newname)
 {
     OPENRAVE_ASSERT_OP(newname.size(), >, 0);
     if( _name != newname ) {
+        if (GetEnvironmentBodyIndex() > 0) {
+            // need to update some cache stored in env, but only if this body is added to env.
+            // otherwise, we may modify the cache for origbody unexpectedly in the following scenario
+            // 1. clonebody = origbody.Clone()
+            // 2. clonebody.SetName('cloned') // this shouldn't cause cache in env to be modified for origbody
+            if( !GetEnv()->NotifyKinBodyNameChanged(_name, newname) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, cannot change body '%s' name to '%s' since it conflicts with another body", GetEnv()->GetId()%_name%newname, ORE_BodyNameConflict);
+            }
+        }
         // have to replace the 2nd word of all the groups with the robot name
         FOREACH(itgroup, _spec._vgroups) {
             stringstream ss(itgroup->name);
@@ -672,6 +826,19 @@ void KinBody::SetName(const std::string& newname)
         }
         _name = newname;
         _PostprocessChangedParameters(Prop_Name);
+    }
+}
+
+void KinBody::SetId(const std::string& newid)
+{
+    // allow empty id to be set
+    if( _id != newid ) {
+        if (GetEnvironmentBodyIndex() > 0) {
+            if( !GetEnv()->NotifyKinBodyIdChanged(_id, newid) ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%d, cannot change body '%s' id from '%s' -> '%s' since it conflicts with another body", GetEnv()->GetId()%_name%_id%newid, ORE_BodyIdConflict);
+            }
+        }
+        _id = newid;
     }
 }
 
@@ -727,8 +894,8 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetValue(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetValue(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -747,8 +914,8 @@ void KinBody::GetDOFVelocities(std::vector<dReal>& v, const std::vector<int>& do
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetVelocity(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetVelocity(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -772,8 +939,8 @@ void KinBody::GetDOFLimits(std::vector<dReal>& vLowerLimit, std::vector<dReal>& 
         vLowerLimit.resize(dofindices.size());
         vUpperLimit.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            std::pair<dReal, dReal> res = pjoint->GetLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            std::pair<dReal, dReal> res = joint.GetLimit(dofindices[i]-joint.GetDOFIndex());
             vLowerLimit[i] = res.first;
             vUpperLimit[i] = res.second;
         }
@@ -799,8 +966,8 @@ void KinBody::GetDOFVelocityLimits(std::vector<dReal>& vlower, std::vector<dReal
         vlower.resize(dofindices.size());
         vupper.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            std::pair<dReal, dReal> res = pjoint->GetVelocityLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            std::pair<dReal, dReal> res = joint.GetVelocityLimit(dofindices[i]-joint.GetDOFIndex());
             vlower[i] = res.first;
             vupper[i] = res.second;
         }
@@ -821,8 +988,8 @@ void KinBody::GetDOFVelocityLimits(std::vector<dReal>& v, const std::vector<int>
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetMaxVel(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetMaxVel(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -841,8 +1008,8 @@ void KinBody::GetDOFAccelerationLimits(std::vector<dReal>& v, const std::vector<
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetAccelerationLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetAccelerationLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -861,8 +1028,8 @@ void KinBody::GetDOFJerkLimits(std::vector<dReal>& v, const std::vector<int>& do
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetJerkLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetJerkLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -881,8 +1048,8 @@ void KinBody::GetDOFHardVelocityLimits(std::vector<dReal>& v, const std::vector<
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetHardVelocityLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetHardVelocityLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -901,8 +1068,8 @@ void KinBody::GetDOFHardAccelerationLimits(std::vector<dReal>& v, const std::vec
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetHardAccelerationLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetHardAccelerationLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -921,8 +1088,8 @@ void KinBody::GetDOFHardJerkLimits(std::vector<dReal>& v, const std::vector<int>
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetHardJerkLimit(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetHardJerkLimit(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -962,8 +1129,8 @@ void KinBody::GetDOFResolutions(std::vector<dReal>& v, const std::vector<int>& d
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetResolution(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetResolution(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -982,8 +1149,8 @@ void KinBody::GetDOFWeights(std::vector<dReal>& v, const std::vector<int>& dofin
     else {
         v.resize(dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            v[i] = pjoint->GetWeight(dofindices[i]-pjoint->GetDOFIndex());
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            v[i] = joint.GetWeight(dofindices[i]-joint.GetDOFIndex());
         }
     }
 }
@@ -1004,8 +1171,8 @@ void KinBody::SetDOFWeights(const std::vector<dReal>& v, const std::vector<int>&
     else {
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_info._vweights.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            joint._info._vweights.at(dofindices[i]-joint.GetDOFIndex()) = v[i];
         }
     }
     _PostprocessChangedParameters(Prop_JointProperties);
@@ -1027,8 +1194,8 @@ void KinBody::SetDOFResolutions(const std::vector<dReal>& v, const std::vector<i
     else {
         OPENRAVE_ASSERT_OP(v.size(),==,dofindices.size());
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            pjoint->_info._vresolution.at(dofindices[i]-pjoint->GetDOFIndex()) = v[i];
+            Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            joint._info._vresolution.at(dofindices[i]-joint.GetDOFIndex()) = v[i];
         }
     }
     _PostprocessChangedParameters(Prop_JointProperties);
@@ -1047,14 +1214,14 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
                     bChanged = true;
                     std::copy(itlower,itlower+(*it)->GetDOF(), (*it)->_info._vlowerlimit.begin());
                     std::copy(itupper,itupper+(*it)->GetDOF(), (*it)->_info._vupperlimit.begin());
-                    for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                        if( (*it)->IsRevolute(i) && !(*it)->IsCircular(i) ) {
+                    for(int j = 0; j < (*it)->GetDOF(); ++j) {
+                        if( (*it)->IsRevolute(j) && !(*it)->IsCircular(j) ) {
                             // TODO, necessary to set wrap?
-                            if( (*it)->_info._vlowerlimit.at(i) < -PI || (*it)->_info._vupperlimit.at(i) > PI) {
-                                (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(i) + (*it)->_info._vupperlimit.at(i)),i);
+                            if( (*it)->_info._vlowerlimit.at(j) < -PI || (*it)->_info._vupperlimit.at(j) > PI) {
+                                (*it)->SetWrapOffset(0.5f * ((*it)->_info._vlowerlimit.at(j) + (*it)->_info._vupperlimit.at(j)),j);
                             }
                             else {
-                                (*it)->SetWrapOffset(0,i);
+                                (*it)->SetWrapOffset(0,j);
                             }
                         }
                     }
@@ -1069,19 +1236,19 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
         OPENRAVE_ASSERT_OP(lower.size(),==,dofindices.size());
         OPENRAVE_ASSERT_OP(upper.size(),==,dofindices.size());
         for(size_t index = 0; index < dofindices.size(); ++index) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[index]);
-            int iaxis = dofindices[index]-pjoint->GetDOFIndex();
-            if( pjoint->_info._vlowerlimit.at(iaxis) != lower[index] || pjoint->_info._vupperlimit.at(iaxis) != upper[index] ) {
+            Joint& joint = _GetJointFromDOFIndex(dofindices[index]);
+            int iaxis = dofindices[index]-joint.GetDOFIndex();
+            if( joint._info._vlowerlimit.at(iaxis) != lower[index] || joint._info._vupperlimit.at(iaxis) != upper[index] ) {
                 bChanged = true;
-                pjoint->_info._vlowerlimit.at(iaxis) = lower[index];
-                pjoint->_info._vupperlimit.at(iaxis) = upper[index];
-                if( pjoint->IsRevolute(iaxis) && !pjoint->IsCircular(iaxis) ) {
+                joint._info._vlowerlimit.at(iaxis) = lower[index];
+                joint._info._vupperlimit.at(iaxis) = upper[index];
+                if( joint.IsRevolute(iaxis) && !joint.IsCircular(iaxis) ) {
                     // TODO, necessary to set wrap?
-                    if( pjoint->_info._vlowerlimit.at(iaxis) < -PI || pjoint->_info._vupperlimit.at(iaxis) > PI) {
-                        pjoint->SetWrapOffset(0.5f * (pjoint->_info._vlowerlimit.at(iaxis) + pjoint->_info._vupperlimit.at(iaxis)),iaxis);
+                    if( joint._info._vlowerlimit.at(iaxis) < -PI || joint._info._vupperlimit.at(iaxis) > PI) {
+                        joint.SetWrapOffset(0.5f * (joint._info._vlowerlimit.at(iaxis) + joint._info._vupperlimit.at(iaxis)),iaxis);
                     }
                     else {
-                        pjoint->SetWrapOffset(0,iaxis);
+                        joint.SetWrapOffset(0,iaxis);
                     }
                 }
             }
@@ -1194,10 +1361,10 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
     else {
         OPENRAVE_ASSERT_OP(q1.size(), ==, dofindices.size() );
         for(size_t i = 0; i < dofindices.size(); ++i) {
-            JointPtr pjoint = GetJointFromDOFIndex(dofindices[i]);
-            if( pjoint->IsCircular(dofindices[i]-pjoint->GetDOFIndex()) ) {
-                int iaxis = dofindices[i]-pjoint->GetDOFIndex();
-                q1[i] = utils::NormalizeCircularAngle(q1[i]-q2[i], pjoint->_vcircularlowerlimit.at(iaxis), pjoint->_vcircularupperlimit.at(iaxis));
+            const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            if( joint.IsCircular(dofindices[i]-joint.GetDOFIndex()) ) {
+                int iaxis = dofindices[i]-joint.GetDOFIndex();
+                q1[i] = utils::NormalizeCircularAngle(q1[i]-q2[i], joint._vcircularlowerlimit.at(iaxis), joint._vcircularupperlimit.at(iaxis));
             }
             else {
                 q1[i] -= q2[i];
@@ -1207,13 +1374,14 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
 }
 
 // like apply transform except everything is relative to the first frame
-void KinBody::SetTransform(const Transform& trans)
+void KinBody::SetTransform(const Transform& bodyTransform)
 {
     if( _veclinks.size() == 0 ) {
         return;
     }
+    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
     Transform tbaseinv = _veclinks.front()->GetTransform().inverse();
-    Transform tapply = trans * tbaseinv;
+    Transform tapply = baseLinkTransform * tbaseinv;
     FOREACH(itlink, _veclinks) {
         (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
     }
@@ -1221,35 +1389,40 @@ void KinBody::SetTransform(const Transform& trans)
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
-Transform KinBody::GetTransform() const
-{
-    return _veclinks.size() > 0 ? _veclinks.front()->GetTransform() : Transform();
-}
-
 bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 {
-    if( _veclinks.size() > 0 ) {
-        std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
+    if (_veclinks.size() == 0) {
+        return false;
+    }
+
+    bool bSuccess = false;
+    if( _veclinks.size() == 1 ) {
+        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocity(_veclinks[0], linearvel, angularvel);
+    }
+    else {
+        std::vector<std::pair<Vector,Vector> >& velocities = _vVelocitiesCache;
+        velocities.resize(_veclinks.size());
         velocities.at(0).first = linearvel;
         velocities.at(0).second = angularvel;
         Vector vlinktrans = _veclinks.at(0)->GetTransform().trans;
-        for(size_t i = 1; i < _veclinks.size(); ++i) {
-            velocities[i].first = linearvel + angularvel.cross(_veclinks[i]->GetTransform().trans-vlinktrans);
-            velocities[i].second = angularvel;
+        for(size_t ilink = 1; ilink < _veclinks.size(); ++ilink) {
+            velocities[ilink].first = linearvel + angularvel.cross(_veclinks[ilink]->GetTransform().trans-vlinktrans);
+            velocities[ilink].second = angularvel;
         }
 
-        bool bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
-        _UpdateGrabbedBodies();
-        return bSuccess;
+        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
     }
-    return false;
+
+    _UpdateGrabbedBodies();
+    return bSuccess;
 }
 
 void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const Vector& linearvel, const Vector& angularvel, uint32_t checklimits)
 {
     CHECK_INTERNAL_COMPUTATION;
-    OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), >=, GetDOF(), "env=%d, not enough values %d!=%d", GetEnv()->GetId()%vDOFVelocities.size()%GetDOF(),ORE_InvalidArguments);
-    std::vector<std::pair<Vector,Vector> > velocities(_veclinks.size());
+    OPENRAVE_ASSERT_OP_FORMAT((int)vDOFVelocities.size(), >=, GetDOF(), "env=%s, not enough values %d!=%d", GetEnv()->GetNameId()%vDOFVelocities.size()%GetDOF(),ORE_InvalidArguments);
+    std::vector<std::pair<Vector,Vector> >& velocities = _vVelocitiesCache;
+    velocities.resize(_veclinks.size());
     velocities.at(0).first = linearvel;
     velocities.at(0).second = angularvel;
 
@@ -1259,17 +1432,17 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
     }
 
     // have to compute the velocities ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size());
-    for(size_t i = 0; i < vPassiveJointVelocities.size(); ++i) {
-        if( !_vPassiveJoints[i]->IsMimic() ) {
-            _vPassiveJoints[i]->GetVelocities(vPassiveJointVelocities[i]);
-        }
-        else {
-            vPassiveJointVelocities[i].resize(_vPassiveJoints[i]->GetDOF(),0);
+    std::vector< boost::array<dReal, 3> >& vPassiveJointVelocities = _vPassiveJointValuesCache;
+    vPassiveJointVelocities.resize(_vPassiveJoints.size());
+    for(size_t ijoint = 0; ijoint < vPassiveJointVelocities.size(); ++ijoint) {
+        if( !_vPassiveJoints[ijoint]->IsMimic() ) {
+            _vPassiveJoints[ijoint]->GetVelocities(vPassiveJointVelocities[ijoint]);
         }
     }
 
-    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    std::vector<uint8_t>& vlinkscomputed = _vLinksVisitedCache;
+    vlinkscomputed.resize(_veclinks.size());
+    std::fill(vlinkscomputed.begin(), vlinkscomputed.end(), 0);
     vlinkscomputed[0] = 1;
     boost::array<dReal,3> dummyvalues; // dummy values for a joint
 
@@ -1308,7 +1481,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                                 dummyvalues[i] += veval.at(ipartial) * partialvelocity;
                             }
                             else {
-                                RAVELOG_DEBUG_FORMAT("env=%d, cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", GetEnv()->GetId()%pjoint->GetName());
+                                RAVELOG_DEBUG_FORMAT("env=%s, cannot evaluate partial velocity for mimic joint %s, perhaps equations don't exist", GetEnv()->GetNameId()%pjoint->GetName());
                             }
                         }
                     }
@@ -1341,7 +1514,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
             for(int i = 0; i < pjoint->GetDOF(); ++i) {
                 if( pvalues[i] < vlower.at(dofindex+i)-g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%s, dof %d velocity is not in limits %.15e<%.15e")%GetEnv()->GetNameId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e<%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vlower.at(dofindex+i), ORE_InvalidArguments);
@@ -1350,7 +1523,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, const V
                 }
                 else if( pvalues[i] > vupper.at(dofindex+i)+g_fEpsilonJointLimit ) {
                     if( checklimits == CLA_CheckLimits ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
+                        RAVELOG_WARN(str(boost::format("env=%s, dof %d velocity is not in limits %.15e>%.15e")%GetEnv()->GetNameId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i)));
                     }
                     else if( checklimits == CLA_CheckLimitsThrow ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d velocity is not in limits %.15e>%.15e"), GetEnv()->GetId()%(dofindex+i)%pvalues[i]%vupper.at(dofindex+i), ORE_InvalidArguments);
@@ -1481,7 +1654,7 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_
             return SetDOFVelocities(vDOFVelocities,linearvel,angularvel,checklimits);
         }
     }
-    OPENRAVE_ASSERT_OP_FORMAT(vDOFVelocities.size(),==,dofindices.size(),"env=%d, index sizes do not match %d!=%d", GetEnv()->GetId()%vDOFVelocities.size()%dofindices.size(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(vDOFVelocities.size(),==,dofindices.size(),"env=%s, index sizes do not match %d!=%d", GetEnv()->GetNameId()%vDOFVelocities.size()%dofindices.size(), ORE_InvalidArguments);
     // have to recreate the correct vector
     std::vector<dReal> vfulldof(GetDOF());
     std::vector<int>::const_iterator it;
@@ -1491,10 +1664,8 @@ void KinBody::SetDOFVelocities(const std::vector<dReal>& vDOFVelocities, uint32_
             vfulldof[i] = vDOFVelocities.at(static_cast<size_t>(it-dofindices.begin()));
         }
         else {
-            JointPtr pjoint = GetJointFromDOFIndex(i);
-            if( !!pjoint ) {
-                vfulldof[i] = _vecjoints.at(_vDOFIndices.at(i))->GetVelocity(i-_vDOFIndices.at(i));
-            }
+            const Joint& joint = _GetJointFromDOFIndex(i);
+            vfulldof[i] = joint.GetVelocity(i-_vDOFIndices.at(i));
         }
     }
     return SetDOFVelocities(vfulldof,linearvel,angularvel,checklimits);
@@ -1531,16 +1702,16 @@ void KinBody::GetLinkTransformations(std::vector<Transform>& transforms, std::ve
     if( (int)doflastsetvalues.capacity() < GetDOF() ) {
         doflastsetvalues.reserve(GetDOF());
     }
-    FOREACHC(it, _vDOFOrderedJoints) {
-        int toadd = (*it)->GetDOFIndex()-(int)doflastsetvalues.size();
+    FOREACHC(joint, _vDOFOrderedJoints) {
+        int toadd = (*joint)->GetDOFIndex()-(int)doflastsetvalues.size();
         if( toadd > 0 ) {
             doflastsetvalues.insert(doflastsetvalues.end(),toadd,0);
         }
         else if( toadd < 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), (*it)->GetName()%toadd, ORE_InvalidState);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s, toadd=%d"), (*joint)->GetName()%toadd, ORE_InvalidState);
         }
-        for(int i = 0; i < (*it)->GetDOF(); ++i) {
-            doflastsetvalues.push_back((*it)->_doflastsetvalues[i]);
+        for(int i = 0; i < (*joint)->GetDOF(); ++i) {
+            doflastsetvalues.push_back((*joint)->_doflastsetvalues[i]);
         }
     }
 }
@@ -1553,21 +1724,18 @@ void KinBody::GetLinkEnableStates(std::vector<uint8_t>& enablestates) const
     }
 }
 
-uint64_t KinBody::GetLinkEnableStatesMask() const
+void KinBody::NotifyLinkEnabled(size_t linkIndex, bool bEnable)
 {
-    if( _veclinks.size() > 64 ) {
-        RAVELOG_WARN_FORMAT("%s has too many links and will only return enable mask for first 64", _name);
+    if (_vLinkEnableStatesMask.empty()) {
+        RAVELOG_VERBOSE_FORMAT("env=%s, body=%s is not initialized probably this is still in initiailization phase. So skip notifying link enabled (index=%d, value=%d) and let _ComputeInternalInformation() take care of this later", GetEnv()->GetNameId()%GetName()%linkIndex%bEnable);
+        return;
     }
-    uint64_t linkstate = 0;
-    for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
-        linkstate |= ((uint64_t)_veclinks[ilink]->_info._bIsEnabled<<ilink);
+    if (bEnable) {
+        EnableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
     }
-    return linkstate;
-}
-
-KinBody::JointPtr KinBody::GetJointFromDOFIndex(int dofindex) const
-{
-    return _vecjoints.at(_vDOFIndices.at(dofindex));
+    else {
+        DisableLinkStateBit(_vLinkEnableStatesMask, linkIndex);
+    }
 }
 
 AABB KinBody::ComputeAABB(bool bEnabledOnlyLinks) const
@@ -1626,13 +1794,140 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
 {
     Vector vmin, vmax;
     bool binitialized=false;
+    Transform tConvertToNewFrame = tBody*GetTransform().inverse();
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+
+        Transform tlink = tConvertToNewFrame*(*itlink)->GetTransform();
+        AABB ablink = (*itlink)->ComputeAABBFromTransform(tlink);
+        if( ablink.extents.x == 0 && ablink.extents.y == 0 && ablink.extents.z == 0 ) {
+            continue;
+        }
+
+        Vector vnmin = ablink.pos - ablink.extents;
+        Vector vnmax = ablink.pos + ablink.extents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+
+    AABB ab;
+    if( !binitialized ) {
+        ab.pos = tBody.trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
+OrientedBox KinBody::ComputeOBBOnAxes(const Vector& quatWorld, bool bEnabledOnlyLinks) const
+{
+    // need to get the body's transform with respect to the new world
+    Transform tinv; tinv.rot = quatInverse(quatWorld);
+    Transform tBodyWithRespectToQuatWorld = tinv * GetTransform();
+    AABB abInQuatWorld = ComputeAABBFromTransform(tBodyWithRespectToQuatWorld, bEnabledOnlyLinks);
+    OrientedBox obb;
+    obb.extents = abInQuatWorld.extents;
+    obb.transform.rot = quatWorld;
+    obb.transform.trans = quatRotate(quatWorld, abInQuatWorld.pos);
+    return obb;
+}
+
+AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
+{
+    return ComputeAABBFromTransform(Transform(), bEnabledOnlyLinks);
+}
+
+AABB KinBody::ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
+{
+    Vector vmin, vmax;
+    bool binitialized=false;
+    AABB ab;
+    FOREACHC(itlink,_veclinks) {
+        if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        ab = (*itlink)->ComputeAABBForGeometryGroup(geomgroupname);
+        if((ab.extents.x == 0)&&(ab.extents.y == 0)&&(ab.extents.z == 0)) {
+            continue;
+        }
+        Vector vnmin = ab.pos - ab.extents;
+        Vector vnmax = ab.pos + ab.extents;
+        if( !binitialized ) {
+            vmin = vnmin;
+            vmax = vnmax;
+            binitialized = true;
+        }
+        else {
+            if( vmin.x > vnmin.x ) {
+                vmin.x = vnmin.x;
+            }
+            if( vmin.y > vnmin.y ) {
+                vmin.y = vnmin.y;
+            }
+            if( vmin.z > vnmin.z ) {
+                vmin.z = vnmin.z;
+            }
+            if( vmax.x < vnmax.x ) {
+                vmax.x = vnmax.x;
+            }
+            if( vmax.y < vnmax.y ) {
+                vmax.y = vnmax.y;
+            }
+            if( vmax.z < vnmax.z ) {
+                vmax.z = vnmax.z;
+            }
+        }
+    }
+    if( !binitialized ) {
+        ab.pos = GetTransform().trans;
+        ab.extents = Vector(0,0,0);
+    }
+    else {
+        ab.pos = (dReal)0.5 * (vmin + vmax);
+        ab.extents = vmax - ab.pos;
+    }
+    return ab;
+}
+
+AABB KinBody::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks) const
+{
+    Vector vmin, vmax;
+    bool binitialized=false;
     AABB ablocal;
     Transform tConvertToNewFrame = tBody*GetTransform().inverse();
     FOREACHC(itlink,_veclinks) {
         if( bEnabledOnlyLinks && !(*itlink)->IsEnabled() ) {
             continue;
         }
-        ablocal = (*itlink)->ComputeLocalAABB();
+        ablocal = (*itlink)->ComputeLocalAABBForGeometryGroup(geomgroupname);
         if( ablocal.extents.x == 0 && ablocal.extents.y == 0 && ablocal.extents.z == 0 ) {
             continue;
         }
@@ -1685,9 +1980,9 @@ AABB KinBody::ComputeAABBFromTransform(const Transform& tBody, bool bEnabledOnly
     return ab;
 }
 
-AABB KinBody::ComputeLocalAABB(bool bEnabledOnlyLinks) const
+AABB KinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
 {
-    return ComputeAABBFromTransform(Transform(), bEnabledOnlyLinks);
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform(), bEnabledOnlyLinks);
 }
 
 Vector KinBody::GetCenterOfMass() const
@@ -1715,7 +2010,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
     else {
         RAVELOG_DEBUG("SetLinkTransformations should be called with doflastsetvalues, re-setting all values\n");
     }
-    OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "env=%d, not enough links %d<%d", GetEnv()->GetId()%vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(vbodies.size(), >=, _veclinks.size(), "env=%s, not enough links %d<%d", GetEnv()->GetNameId()%vbodies.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
     for(it = vbodies.begin(), itlink = _veclinks.begin(); it != vbodies.end(); ++it, ++itlink) {
@@ -1732,7 +2027,7 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
 {
-    OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "env=%d, not enough links %d<%d", GetEnv()->GetId()%transforms.size()%_veclinks.size(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "env=%s, not enough links %d<%d", GetEnv()->GetNameId()%transforms.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
     vector<LinkPtr>::iterator itlink;
     for(it = transforms.begin(), itlink = _veclinks.begin(); it != transforms.end(); ++it, ++itlink) {
@@ -1760,7 +2055,7 @@ void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
     for(size_t ilink = 0; ilink < enablestates.size(); ++ilink) {
         bool bEnable = enablestates[ilink]!=0;
         if( _veclinks[ilink]->_info._bIsEnabled != bEnable ) {
-            _veclinks[ilink]->_info._bIsEnabled = bEnable;
+            _veclinks[ilink]->_Enable(bEnable);
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -1770,13 +2065,14 @@ void KinBody::SetLinkEnableStates(const std::vector<uint8_t>& enablestates)
     }
 }
 
-void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transBase, uint32_t checklimits)
+void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& bodyTransform, uint32_t checklimits)
 {
     if( _veclinks.size() == 0 ) {
         return;
     }
-    Transform tbase = transBase*_veclinks.at(0)->GetTransform().inverse();
-    _veclinks.at(0)->SetTransform(transBase);
+    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
+    Transform tbase = baseLinkTransform*_veclinks.at(0)->GetTransform().inverse();
+    _veclinks.at(0)->SetTransform(baseLinkTransform);
 
     // apply the relative transformation to all links!! (needed for passive joints)
     for(size_t i = 1; i < _veclinks.size(); ++i) {
@@ -1787,15 +2083,25 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits, const std::vector<int>& dofindices)
 {
+    if( vJointValues.size() == 0 ) {
+        return;
+    }
+    SetDOFValues(&vJointValues[0], vJointValues.size(), checklimits, dofindices);
+}
+
+void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits, const std::vector<int>& dofindices)
+{
     CHECK_INTERNAL_COMPUTATION;
-    if( vJointValues.size() == 0 || _veclinks.size() == 0) {
+    if( dof == 0 || _veclinks.size() == 0) {
         return;
     }
     int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
-    OPENRAVE_ASSERT_OP_FORMAT((int)vJointValues.size(),>=,expecteddof, "env=%d, not enough values %d<%d", GetEnv()->GetId()%vJointValues.size()%GetDOF(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, not enough values %d<%d", GetEnv()->GetNameId()%dof%GetDOF(),ORE_InvalidArguments);
 
-    const dReal* pJointValues = &vJointValues[0];
-    if( checklimits != CLA_Nothing || dofindices.size() > 0 ) {
+    if(checklimits == CLA_Nothing && dofindices.empty()) {
+        _vTempJoints.assign(pJointValues, pJointValues + dof);
+    }
+    else {
         _vTempJoints.resize(GetDOF());
         if( dofindices.size() > 0 ) {
             // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
@@ -1809,35 +2115,37 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         dReal* ptempjoints = &_vTempJoints[0];
 
         // check the limits
-        vector<dReal> upperlim, lowerlim;
-        FOREACHC(it, _vecjoints) {
-            const dReal* p = pJointValues+(*it)->GetDOFIndex();
+        for(const JointPtr& pjoint : _vecjoints) {
+            const Joint& joint = *pjoint;
+
+            const dReal* p = pJointValues+joint.GetDOFIndex();
             if( checklimits == CLA_Nothing ) {
                 // limits should not be checked, so just copy
-                for(int i = 0; i < (*it)->GetDOF(); ++i) {
+                for(int i = 0; i < joint.GetDOF(); ++i) {
                     *ptempjoints++ = p[i];
                 }
                 continue;
             }
-            OPENRAVE_ASSERT_OP( (*it)->GetDOF(), <=, 3 );
-            (*it)->GetLimits(lowerlim, upperlim);
-            if( (*it)->GetType() == JointSpherical ) {
+            if( joint.GetType() == JointSpherical ) {
                 dReal fcurang = fmod(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
-                if( fcurang < lowerlim[0] ) {
+                dReal lowerlimit = joint.GetLowerLimit(0);
+                dReal upperlimit = joint.GetUpperLimit(0);
+
+                if( fcurang < lowerlimit ) {
                     if( fcurang < 1e-10 ) {
-                        *ptempjoints++ = lowerlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;
+                        *ptempjoints++ = lowerlimit; *ptempjoints++ = 0; *ptempjoints++ = 0;
                     }
                     else {
-                        dReal fmult = lowerlim[0]/fcurang;
+                        dReal fmult = lowerlimit/fcurang;
                         *ptempjoints++ = p[0]*fmult; *ptempjoints++ = p[1]*fmult; *ptempjoints++ = p[2]*fmult;
                     }
                 }
-                else if( fcurang > upperlim[0] ) {
+                else if( fcurang > upperlimit ) {
                     if( fcurang < 1e-10 ) {
-                        *ptempjoints++ = upperlim[0]; *ptempjoints++ = 0; *ptempjoints++ = 0;
+                        *ptempjoints++ = upperlimit; *ptempjoints++ = 0; *ptempjoints++ = 0;
                     }
                     else {
-                        dReal fmult = upperlim[0]/fcurang;
+                        dReal fmult = upperlimit/fcurang;
                         *ptempjoints++ = p[0]*fmult; *ptempjoints++ = p[1]*fmult; *ptempjoints++ = p[2]*fmult;
                     }
                 }
@@ -1846,33 +2154,36 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 }
             }
             else {
-                for(int i = 0; i < (*it)->GetDOF(); ++i) {
-                    if( (*it)->IsCircular(i) ) {
+                for(int i = 0; i < joint.GetDOF(); ++i) {
+                    if( joint.IsCircular(i) ) {
                         // don't normalize since user is expecting the values he sets are exactly returned via GetDOFValues
                         *ptempjoints++ = p[i]; //utils::NormalizeCircularAngle(p[i],(*it)->_vcircularlowerlimit[i],(*it)->_vcircularupperlimit[i]);
                     }
                     else {
-                        if( p[i] < lowerlim[i] ) {
-                            if( p[i] < lowerlim[i]-g_fEpsilonEvalJointLimit ) {
+                        dReal lowerlimit = joint.GetLowerLimit(0);
+                        dReal upperlimit = joint.GetUpperLimit(0);
+
+                        if( p[i] < lowerlimit ) {
+                            if( p[i] < lowerlimit-g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i]));
+                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%lowerlim[i], ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
                                 }
                             }
-                            *ptempjoints++ = lowerlim[i];
+                            *ptempjoints++ = lowerlimit;
                         }
-                        else if( p[i] > upperlim[i] ) {
-                            if( p[i] > upperlim[i]+g_fEpsilonEvalJointLimit ) {
+                        else if( p[i] > upperlimit ) {
+                            if( p[i] > upperlimit+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is greater than the upper limit %e")%GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i]));
+                                    RAVELOG_WARN_FORMAT("env=%d, dof %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is greater than the upper limit %e"), GetEnv()->GetId()%((*it)->GetDOFIndex()+i)%p[i]%upperlim[i], ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                             }
-                            *ptempjoints++ = upperlim[i];
+                            *ptempjoints++ = upperlimit;
                         }
                         else {
                             *ptempjoints++ = p[i];
@@ -1884,10 +2195,27 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         pJointValues = &_vTempJoints[0];
     }
 
+    if( !!_pCurrentKinematicsFunctions ) {
+        if(_pCurrentKinematicsFunctions->SetLinkTransforms(pJointValues, _vLinkTransformPointers)) {
+            // have to set _doflastsetvalues!
+            for(const JointPtr& pjoint : _vecjoints) {
+                Joint& joint = *pjoint;
+                int dofindex = joint.GetDOFIndex();
+                for(int iaxis = 0; iaxis < joint.GetDOF(); ++iaxis) {
+                    joint._doflastsetvalues[iaxis] = pJointValues[dofindex+iaxis];
+                }
+            }
+            _UpdateGrabbedBodies();
+            _PostprocessChangedParameters(Prop_LinkTransforms);
+            return;
+        }
+    }
+
     // have to compute the angles ahead of time since they are dependent on the link
     const int nActiveJoints = _vecjoints.size();
     const int nPassiveJoints = _vPassiveJoints.size();
-    std::vector< boost::array<dReal, 3> > vPassiveJointValues(nPassiveJoints);
+    std::vector< boost::array<dReal, 3> >& vPassiveJointValues = _vPassiveJointValuesCache;
+    vPassiveJointValues.resize(nPassiveJoints);
     for(int i = 0; i < nPassiveJoints; ++i) {
         const KinBody::JointPtr& pjoint = _vPassiveJoints[i];
         const KinBody::Joint& joint = *pjoint;
@@ -1904,13 +2232,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                 if( !joint.IsCircular(j) ) {
                     if( jvals[j] < vlowerlimit.at(j) ) {
                         if( jvals[j] < vlowerlimit.at(j) - 5e-4f ) {
-                            RAVELOG_WARN_FORMAT("env=%d, dummy joint out of lower limit! %e < %e", GetEnv()->GetId() % vlowerlimit.at(j) % jvals[j]);
+                            RAVELOG_WARN_FORMAT("env=%s, dummy joint out of lower limit! %e < %e", GetEnv()->GetNameId() % vlowerlimit.at(j) % jvals[j]);
                         }
                         jvals[j] = vlowerlimit.at(j);
                     }
                     else if( jvals[j] > vupperlimit.at(j) ) {
                         if( jvals[j] > vupperlimit.at(j) + 5e-4f ) {
-                            RAVELOG_WARN_FORMAT("env=%d, dummy joint out of upper limit! %e > %e", GetEnv()->GetId() % vupperlimit.at(j) % jvals[j]);
+                            RAVELOG_WARN_FORMAT("env=%s, dummy joint out of upper limit! %e > %e", GetEnv()->GetNameId() % vupperlimit.at(j) % jvals[j]);
                         }
                         jvals[j] = vupperlimit.at(j);
                     }
@@ -1919,10 +2247,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
         }
     }
 
-    std::vector<uint8_t> vlinkscomputed(_veclinks.size(),0);
+    std::vector<uint8_t>& vlinkscomputed = _vLinksVisitedCache;
+    vlinkscomputed.resize(_veclinks.size());
+    std::fill(vlinkscomputed.begin(), vlinkscomputed.end(), 0);
     vlinkscomputed[0] = 1;
     boost::array<dReal,3> dummyvalues; // dummy values for a joint
-    std::vector<dReal> vtempvalues, veval;
+    std::vector<dReal>& vtempvalues = _vTempMimicValues;
+    std::vector<dReal>& veval = _vTempMimicValues2;
 
     for(size_t ijoint = 0; ijoint < _vTopologicallySortedJointsAll.size(); ++ijoint) {
         const JointPtr& pjoint = _vTopologicallySortedJointsAll[ijoint];
@@ -1957,10 +2288,11 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                     }
                     const int err = joint._Eval(i, 0, vtempvalues, veval);
                     if( err ) {
-                        RAVELOG_WARN(str(boost::format("env=%d, failed to evaluate joint %s, fparser error %d")%GetEnv()->GetId()%joint.GetName()%err));
+                        RAVELOG_WARN_FORMAT("env=%d, failed to evaluate joint %s, fparser error %d", GetEnv()->GetId()%joint.GetName()%err);
                     }
                     else {
-                        const std::vector<dReal> vevalcopy = veval;
+                        std::vector<dReal>& vevalcopy = _vTempMimicValues3;
+                        vevalcopy = veval;
                         for(std::vector<dReal>::iterator iteval = veval.begin(); iteval != veval.end(); ) {
                             if( jointtype == JointSpherical || joint.IsCircular(i) ) {
                             }
@@ -2012,7 +2344,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
                                     veval.push_back(eval);
                                 }
                             }
-                            OPENRAVE_ASSERT_FORMAT(!veval.empty(), "env=%d, no valid values for joint %s", GetEnv()->GetId()%joint.GetName(),ORE_Assert);
+                            OPENRAVE_ASSERT_FORMAT(!veval.empty(), "env=%s, no valid values for joint %s", GetEnv()->GetNameId()%joint.GetName(),ORE_Assert);
                         }
                         if( veval.size() > 1 ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
@@ -2051,6 +2383,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t chec
 
         Transform tjoint;
         if( jointtype & JointSpecialBit ) {
+            //RAVELOG_DEBUG_FORMAT("Joint %s's jointtype = %d has special bit", GetName() % jointtype);
             switch(jointtype) {
             case JointHinge2: {
                 Transform tfirst;
@@ -2151,6 +2484,12 @@ const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() cons
     return _vTopologicallySortedJoints;
 }
 
+const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJointsAll() const
+{
+    CHECK_INTERNAL_COMPUTATION;
+    return _vTopologicallySortedJointsAll;
+}
+
 const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> > >& KinBody::GetClosedLoops() const
 {
     CHECK_INTERNAL_COMPUTATION;
@@ -2248,8 +2587,8 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
-        this->GetName() % linkindex % nlinks, ORE_InvalidArguments
-    );
+                           this->GetName() % linkindex % nlinks, ORE_InvalidArguments
+                           );
     const size_t dofstride = dofindices.empty() ? this->GetDOF() : dofindices.size();
     vjacobian.resize(3 * dofstride);
     if( dofstride == 0 ) {
@@ -2265,7 +2604,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
     for(int curlink = 0;
         _vAllPairsShortestPaths[offset + curlink].first >= 0;     // parent link is still available
         curlink = _vAllPairsShortestPaths[offset + curlink].first // get index of parent link
-    ) {
+        ) {
         const int jointindex = _vAllPairsShortestPaths[offset + curlink].second; ///< generalized joint index, which counts in [_vecjoints, _vPassiveJoints]
         if( jointindex < nActiveJoints ) {
             // active joint
@@ -3396,6 +3735,12 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
     }
 }
 
+bool KinBody::GetDOFDynamicAccelerationJerkLimits(std::vector<dReal>& vDynamicAccelerationLimits, std::vector<dReal>& vDynamicJerkLimits,
+                                                  const std::vector<dReal>& vDOFPositions, const std::vector<dReal>& vDOFVelocities) const
+{
+    return false;
+}
+
 void KinBody::GetLinkAccelerations(const std::vector<dReal>&vDOFAccelerations, std::vector<std::pair<Vector,Vector> >&vLinkAccelerations, AccelerationMapConstPtr externalaccelerations) const
 {
     CHECK_INTERNAL_COMPUTATION;
@@ -3432,17 +3777,15 @@ void KinBody::_ComputeDOFLinkVelocities(std::vector<dReal>& dofvelocities, std::
         vLinkVelocities[0].first = Vector();
         vLinkVelocities[0].second = Vector();
     }
-    dofvelocities.resize(0);
-    if( (int)dofvelocities.capacity() < GetDOF() ) {
-        dofvelocities.reserve(GetDOF());
-    }
+    dofvelocities.resize(GetDOF(),0);
     FOREACHC(it, _vDOFOrderedJoints) {
+        const Joint& joint = **it;
         int parentindex = 0;
-        if( !!(*it)->_attachedbodies[0] ) {
-            parentindex = (*it)->_attachedbodies[0]->GetIndex();
+        if( !!joint._attachedbodies[0] ) {
+            parentindex = joint._attachedbodies[0]->GetIndex();
         }
-        int childindex = (*it)->_attachedbodies[1]->GetIndex();
-        (*it)->_GetVelocities(dofvelocities,true,vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
+        int childindex = joint._attachedbodies[1]->GetIndex();
+        joint._GetVelocities(&dofvelocities[joint.GetDOFIndex()],vLinkVelocities.at(parentindex),vLinkVelocities.at(childindex));
     }
 }
 
@@ -3470,17 +3813,24 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     }
 
     // have to compute the velocities and accelerations ahead of time since they are dependent on the link transformations
-    std::vector< std::vector<dReal> > vPassiveJointVelocities(_vPassiveJoints.size()), vPassiveJointAccelerations(_vPassiveJoints.size());
+    std::vector< boost::array<dReal,3> >& vPassiveJointVelocities = _vPassiveJointValuesCache;
+    std::vector< boost::array<dReal,3> >& vPassiveJointAccelerations = _vPassiveJointAccelerationsCache;
+    vPassiveJointVelocities.resize(_vPassiveJoints.size());
+    vPassiveJointAccelerations.resize(_vPassiveJoints.size());
     for(size_t i = 0; i <_vPassiveJoints.size(); ++i) {
         if( vDOFAccelerations.size() > 0 ) {
-            vPassiveJointAccelerations[i].resize(_vPassiveJoints[i]->GetDOF(),0);
+            vPassiveJointAccelerations[i][0] = 0;
+            vPassiveJointAccelerations[i][1] = 0;
+            vPassiveJointAccelerations[i][2] = 0;
         }
         if( vDOFVelocities.size() > 0 ) {
             if( !_vPassiveJoints[i]->IsMimic() ) {
                 _vPassiveJoints[i]->GetVelocities(vPassiveJointVelocities[i]);
             }
             else {
-                vPassiveJointVelocities[i].resize(_vPassiveJoints[i]->GetDOF(),0);
+                vPassiveJointVelocities[i][0] = 0;
+                vPassiveJointVelocities[i][1] = 0;
+                vPassiveJointVelocities[i][2] = 0;
             }
         }
     }
@@ -3683,6 +4033,13 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
         if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
             // collision checking will not be automatically updated with environment calls, so need to do this manually
             _selfcollisionchecker->InitKinBody(shared_kinbody());
+
+            // self collision checker initializes internal data structure at the time of grab, so need to do it here for newly set self collision checker.
+            std::vector<KinBodyPtr> vGrabbed;
+            GetGrabbed(vGrabbed);
+            for (const KinBodyPtr& pgrabbed : vGrabbed) {
+                _selfcollisionchecker->InitKinBody(pgrabbed);
+            }
         }
     }
 }
@@ -3697,6 +4054,12 @@ void KinBody::_ComputeInternalInformation()
 {
     uint64_t starttime = utils::GetMicroTime();
     _nHierarchyComputed = 1;
+
+    _vLinkTransformPointers.clear();
+    if( !!_pCurrentKinematicsFunctions ) {
+        RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+        _pCurrentKinematicsFunctions.reset();
+    }
 
     int lindex=0;
     FOREACH(itlink,_veclinks) {
@@ -3746,16 +4109,16 @@ void KinBody::_ComputeInternalInformation()
         }
         int jointindex=0;
         int dofindex=0;
-        FOREACH(itjoint,_vecjoints) {
-            (*itjoint)->jointindex = jointindex++;
-            (*itjoint)->dofindex = dofindex;
-            (*itjoint)->_info._bIsActive = true;
-            dofindex += (*itjoint)->GetDOF();
+        FOREACH(itvjoint,_vecjoints) {
+            (*itvjoint)->jointindex = jointindex++;
+            (*itvjoint)->dofindex = dofindex;
+            (*itvjoint)->_info._bIsActive = true;
+            dofindex += (*itvjoint)->GetDOF();
         }
-        FOREACH(itjoint,_vPassiveJoints) {
-            (*itjoint)->jointindex = -1;
-            (*itjoint)->dofindex = -1;
-            (*itjoint)->_info._bIsActive = false;
+        FOREACH(passive,_vPassiveJoints) {
+            (*passive)->jointindex = -1;
+            (*passive)->dofindex = -1;
+            (*passive)->_info._bIsActive = false;
         }
     }
 
@@ -3771,8 +4134,8 @@ void KinBody::_ComputeInternalInformation()
     }
     sort(vorder.begin(), vorder.end(), utils::index_cmp<vector<int>&>(vJointIndices));
     _vDOFOrderedJoints.resize(0);
-    FOREACH(it,vorder) {
-        _vDOFOrderedJoints.push_back(_vecjoints.at(*it));
+    FOREACH(index,vorder) {
+        _vDOFOrderedJoints.push_back(_vecjoints.at(*index));
     }
 
     try {
@@ -3916,13 +4279,13 @@ void KinBody::_ComputeInternalInformation()
             }
         }
         int jointindex = (int)_vecjoints.size();
-        FOREACHC(itjoint,_vPassiveJoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),jointindex);
+        FOREACHC(passive,_vPassiveJoints) {
+            if( !!(*passive)->GetFirstAttached() && !!(*passive)->GetSecondAttached() ) {
+                int index = (*passive)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*passive)->GetSecondAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*passive)->GetFirstAttached()->GetIndex(),jointindex);
                 vcosts[index] = 1;
-                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),jointindex);
+                index = (*passive)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*passive)->GetFirstAttached()->GetIndex();
+                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*passive)->GetSecondAttached()->GetIndex(),jointindex);
                 vcosts[index] = 1;
             }
             ++jointindex;
@@ -3951,16 +4314,16 @@ void KinBody::_ComputeInternalInformation()
     if((_veclinks.size() > 0)&&(_vecjoints.size() > 0)) {
         std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
         // joints with only one attachment are attached to a static link, which is attached to link 0
-        FOREACHC(itjoint,_vecjoints) {
-            vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
-            vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
+        for( const JointPtr& joint :_vecjoints) {
+            vlinkadjacency.at(joint->GetFirstAttached()->GetIndex()).push_back(joint->GetSecondAttached()->GetIndex());
+            vlinkadjacency.at(joint->GetSecondAttached()->GetIndex()).push_back(joint->GetFirstAttached()->GetIndex());
         }
-        FOREACHC(itjoint,_vPassiveJoints) {
-            vlinkadjacency.at((*itjoint)->GetFirstAttached()->GetIndex()).push_back((*itjoint)->GetSecondAttached()->GetIndex());
-            vlinkadjacency.at((*itjoint)->GetSecondAttached()->GetIndex()).push_back((*itjoint)->GetFirstAttached()->GetIndex());
+        for( const JointPtr& passive : _vPassiveJoints) {
+            vlinkadjacency.at(passive->GetFirstAttached()->GetIndex()).push_back(passive->GetSecondAttached()->GetIndex());
+            vlinkadjacency.at(passive->GetSecondAttached()->GetIndex()).push_back(passive->GetFirstAttached()->GetIndex());
         }
-        FOREACH(it,vlinkadjacency) {
-            sort(it->begin(), it->end());
+        for( std::vector<int> &adj : vlinkadjacency) {
+            sort(adj.begin(), adj.end());
         }
 
         // all unique paths starting at the root link or static links
@@ -4240,13 +4603,13 @@ void KinBody::_ComputeInternalInformation()
                 else {
                     // depths are the same, so check the adjacent joints of each link
                     size_t link0pos=_vTopologicallySortedJointIndicesAll.size(), link1pos=_vTopologicallySortedJointIndicesAll.size();
-                    FOREACHC(itparentlink,plink0->_vParentLinks) {
-                        int jointindex = _vAllPairsShortestPaths[plink0->GetIndex()*_veclinks.size()+*itparentlink].second;
+                    FOREACHC(itparentlink0,plink0->_vParentLinks) {
+                        int jointindex = _vAllPairsShortestPaths[plink0->GetIndex()*_veclinks.size()+*itparentlink0].second;
                         size_t pos = find(_vTopologicallySortedJointIndicesAll.begin(),_vTopologicallySortedJointIndicesAll.end(),jointindex) - _vTopologicallySortedJointIndicesAll.begin();
                         link0pos = min(link0pos,pos);
                     }
-                    FOREACHC(itparentlink,plink1->_vParentLinks) {
-                        int jointindex = _vAllPairsShortestPaths[plink1->GetIndex()*_veclinks.size()+*itparentlink].second;
+                    FOREACHC(itparentlink1,plink1->_vParentLinks) {
+                        int jointindex = _vAllPairsShortestPaths[plink1->GetIndex()*_veclinks.size()+*itparentlink1].second;
                         size_t pos = find(_vTopologicallySortedJointIndicesAll.begin(),_vTopologicallySortedJointIndicesAll.end(),jointindex) - _vTopologicallySortedJointIndicesAll.end();
                         link1pos = min(link1pos,pos);
                     }
@@ -4290,9 +4653,8 @@ void KinBody::_ComputeInternalInformation()
             joint._ComputeInternalStaticInformation(); // IsStatic should be computable here
         }
         // find out what links are affected by what joints.
-        FOREACH(it,_vJointsAffectingLinks) {
-            *it = 0;
-        }
+        _vJointsAffectingLinks.assign( _vJointsAffectingLinks.size(), 0);
+
         vector<int8_t> vusedlinks;
         for(int i = 0; i < (int)_veclinks.size(); ++i) {
             vusedlinks.resize(0); vusedlinks.resize(_veclinks.size());
@@ -4313,8 +4675,8 @@ void KinBody::_ComputeInternalInformation()
                         for(int idof = 0; idof < pjoint->GetDOF(); ++idof) {
                             if( pjoint->IsMimic(idof) ) {
                                 FOREACHC(itmimicdof,pjoint->_vmimic[idof]->_vmimicdofs) {
-                                    JointPtr pjoint2 = GetJointFromDOFIndex(itmimicdof->dofindex);
-                                    _vJointsAffectingLinks[pjoint2->GetJointIndex()*_veclinks.size()+i] = pjoint2->GetHierarchyParentLink()->GetIndex() == i ? -1 : 1;
+                                    const Joint& joint2 = _GetJointFromDOFIndex(itmimicdof->dofindex);
+                                    _vJointsAffectingLinks[joint2.GetJointIndex()*_veclinks.size()+i] = joint2.GetHierarchyParentLink()->GetIndex() == i ? -1 : 1;
                                 }
                             }
                         }
@@ -4442,88 +4804,89 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    __hashkinematics.resize(0);
+    const size_t numLinks = GetLinks().size();
 
     // create the adjacency list
     {
-        _setAdjacentLinks.clear();
-        FOREACH(itadj, _vForcedAdjacentLinks) {
-            LinkPtr pl0 = GetLink(itadj->first);
-            LinkPtr pl1 = GetLink(itadj->second);
-            if( !!pl0 && !!pl1 ) {
-                int ind0 = pl0->GetIndex();
-                int ind1 = pl1->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
+        _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
+        //std::fill(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), 0);
+
+        for (const LinkPtr& plink : _veclinks) {
+            for (const std::string& forceAdjacentLinkFromInfo : plink->_info._vForcedAdjacentLinks) {
+                LinkPtr pLinkForceAdjacentLinkFromInfo = GetLink(forceAdjacentLinkFromInfo);
+                if (!pLinkForceAdjacentLinkFromInfo) {
+                    RAVELOG_WARN_FORMAT("env=%d, could not find link \"%s\" in _vForcedAdjacentLinks of body \"%s:%s\"", GetEnv()->GetId()%forceAdjacentLinkFromInfo%GetName()%plink->GetName());
+                    continue;
                 }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
+
+                const size_t forcedAdjacentLinkIndex = pLinkForceAdjacentLinkFromInfo->GetIndex();
+                _vForcedAdjacentLinks.at(_GetIndex1d(plink->_index, forcedAdjacentLinkIndex)) = 1;
             }
         }
 
+        _vAdjacentLinks = _vForcedAdjacentLinks;
+        // probably unnecessary, but just in case
+        _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
+
         // make no-geometry links adjacent to all other links
-        FOREACH(itlink0, _veclinks) {
-            if( (*itlink0)->GetGeometries().size() == 0 ) {
-                int ind0 = (*itlink0)->GetIndex();
-                FOREACH(itlink1,_veclinks) {
-                    if( *itlink0 != *itlink1 ) {
-                        int ind1 = (*itlink1)->GetIndex();
-                        if( ind1 < ind0 ) {
-                            _setAdjacentLinks.insert(ind1|(ind0<<16));
-                        }
-                        else {
-                            _setAdjacentLinks.insert(ind0|(ind1<<16));
-                        }
+        for (const LinkPtr& plink0 : _veclinks) {
+            const Link& link0 = *plink0;
+            if( link0.GetGeometries().size() == 0 ) {
+                int ind0 = link0.GetIndex();
+                for (const LinkPtr& plink1 : _veclinks) {
+                    const Link& link1 = *plink1;
+                    int ind1 = link1.GetIndex();
+                    if (ind0 != ind1) {
+                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
                     }
                 }
             }
         }
 
         if( _bMakeJoinedLinksAdjacent ) {
-            FOREACH(itj, _vecjoints) {
-                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
-                }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
+            for (const JointPtr& pjoint : _vecjoints) {
+                const Joint& joint = *pjoint;
+                int ind0 = joint._attachedbodies[0]->GetIndex();
+                int ind1 = joint._attachedbodies[1]->GetIndex();
+                _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
             }
 
-            FOREACH(itj, _vPassiveJoints) {
-                int ind0 = (*itj)->_attachedbodies[0]->GetIndex();
-                int ind1 = (*itj)->_attachedbodies[1]->GetIndex();
-                if( ind1 < ind0 ) {
-                    _setAdjacentLinks.insert(ind1|(ind0<<16));
-                }
-                else {
-                    _setAdjacentLinks.insert(ind0|(ind1<<16));
-                }
+            for (const JointPtr& pjoint : _vPassiveJoints) {
+                const Joint& joint = *pjoint;
+                int ind0 = joint._attachedbodies[0]->GetIndex();
+                int ind1 = joint._attachedbodies[1]->GetIndex();
+                _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
             }
 
             // if a pair links has exactly one non-static joint in the middle, then make the pair adjacent
             vector<JointPtr> vjoints;
-            for(int i = 0; i < (int)_veclinks.size()-1; ++i) {
-                for(int j = i+1; j < (int)_veclinks.size(); ++j) {
-                    GetChain(i,j,vjoints);
+            for(int ind0 = 0; ind0 < (int)_veclinks.size()-1; ++ind0) {
+                for(int ind1 = ind0+1; ind1 < (int)_veclinks.size(); ++ind1) {
+                    GetChain(ind0, ind1, vjoints);
                     size_t numstatic = 0;
                     FOREACH(it,vjoints) {
                         numstatic += (*it)->IsStatic();
                     }
                     if( numstatic+1 >= vjoints.size() ) {
-                        if( i < j ) {
-                            _setAdjacentLinks.insert(i|(j<<16));
-                        }
-                        else {
-                            _setAdjacentLinks.insert(j|(i<<16));
-                        }
+                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
                     }
                 }
             }
         }
         _ResetInternalCollisionCache();
+    }
+
+    _vLinkTransformPointers.resize(_veclinks.size());
+    for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
+        _vLinkTransformPointers[ilink] = &_veclinks[ilink]->_info._t;
+    }
+
+    InitializeLinkStateBitMasks(_vLinkEnableStatesMask, _veclinks.size());
+    for (const LinkPtr& plink : _veclinks) {
+        const Link& link = *plink;
+        if (link.IsEnabled()) {
+            EnableLinkStateBit(_vLinkEnableStatesMask, link.GetIndex());
+        }
     }
 
     _nHierarchyComputed = 2;
@@ -4535,7 +4898,7 @@ void KinBody::_ComputeInternalInformation()
         vector<dReal> vcurrentvalues;
         // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
-        std::vector<UserDataPtr> vGrabbedBodies; vGrabbedBodies.swap(_vGrabbedBodies); // swap to get rid of _vGrabbedBodies
+        std::vector<GrabbedPtr> vGrabbedBodies; vGrabbedBodies.swap(_vGrabbedBodies); // swap to get rid of _vGrabbedBodies
         KinBody::SetDOFValues(vcurrentvalues,CLA_CheckLimits, std::vector<int>());
         vGrabbedBodies.swap(_vGrabbedBodies); // swap back
         GetLinkTransformations(vnewtrans, vnewdoflastsetvalues);
@@ -4618,7 +4981,21 @@ void KinBody::_ComputeInternalInformation()
         index += 1;
     }
     _nParametersChanged = 0;
-    RAVELOG_VERBOSE_FORMAT("initialized %s in %fs", GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
+
+    if( !!_pKinematicsGenerator ) {
+        _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
+        if( !!_pCurrentKinematicsFunctions ) {
+            RAVELOG_DEBUG_FORMAT("env=%s, setting custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%s, failed to set custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
+        }
+    }
+    else {
+        _pCurrentKinematicsFunctions.reset();
+    }
+
+    RAVELOG_VERBOSE_FORMAT("env=%d, initialized %s in %f[s]", GetEnv()->GetId()%GetName()%(1e-6*(utils::GetMicroTime()-starttime)));
 }
 
 void KinBody::_DeinitializeInternalInformation()
@@ -4628,46 +5005,116 @@ void KinBody::_DeinitializeInternalInformation()
 
 bool KinBody::IsAttached(const KinBody &body) const
 {
+    // handle obvious cases without doing expensive operations
     if(this == &body ) {
         return true;
     }
-    std::set<KinBodyConstPtr> dummy;
-    return _IsAttached(body, dummy);
+    else if (_listAttachedBodies.empty()) {
+        return false;
+    }
+
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+    return _IsAttached(body.GetEnvironmentBodyIndex(), vAttachedVisited);
 }
 
 void KinBody::GetAttached(std::set<KinBodyPtr>& setAttached) const
 {
+    setAttached.clear();
+    // by spec "including this body.", include this body
     setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyPtr pattached = itbody->lock();
-        if( !!pattached && setAttached.insert(pattached).second ) {
-            pattached->GetAttached(setAttached);
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        return;
+    }
+
+    const EnvironmentBase& env = *GetEnv();
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = -1;
+
+    int numAttached = _GetNumAttached(vAttachedVisited);
+    if( numAttached ) {
+        for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+            if (vAttachedVisited[bodyIndex] == 1) {
+                KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
+                if( !!pbody ) {
+                    setAttached.insert(pbody);
+                    if (--numAttached == 0) {
+                        // already filled vAttached with contents of vAttachedVisited
+                        return;
+                    }
+                }
+            }
         }
     }
 }
 
 void KinBody::GetAttached(std::set<KinBodyConstPtr>& setAttached) const
 {
-    setAttached.insert(shared_kinbody_const());
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyConstPtr pattached = itbody->lock();
-        if( !!pattached && setAttached.insert(pattached).second ) {
-            pattached->GetAttached(setAttached);
+    setAttached.clear();
+    // by spec "including this body.", include this body
+    setAttached.insert(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        return;
+    }
+
+    const EnvironmentBase& env = *GetEnv();
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = -1;
+
+    int numAttached = _GetNumAttached(vAttachedVisited);
+    if( numAttached ) {
+        for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+            if (vAttachedVisited[bodyIndex] == 1) {
+                KinBodyPtr pbody = env.GetBodyFromEnvironmentBodyIndex(bodyIndex);
+                if( !!pbody ) {
+                    setAttached.insert(pbody);
+                    if (--numAttached == 0) {
+                        // already filled vAttached with contents of vAttachedVisited
+                        return;
+                    }
+                }
+            }
         }
     }
 }
 
 void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 {
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
+    vAttached.clear();
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
         vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        return;
     }
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyPtr pattached = itbody->lock();
-        if( !!pattached ) {
-            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
-                vAttached.push_back(pattached);
-                pattached->GetAttached(vAttached);
+
+    const EnvironmentBase& env = *GetEnv();
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
+
+    vAttached.reserve(numAttached);
+    for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+        // 0 means not attached, -1 means it was already in original vAttached so skip
+        if (vAttachedVisited[bodyIndex] == 1) {
+            vAttached.push_back(env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
+            if (--numAttached == 0) {
+                // already filled vAttached with contents of vAttachedVisited
+                return;
             }
         }
     }
@@ -4675,23 +5122,117 @@ void KinBody::GetAttached(std::vector<KinBodyPtr>& vAttached) const
 
 void KinBody::GetAttached(std::vector<KinBodyConstPtr>& vAttached) const
 {
-    if( vAttached.empty() || find(vAttached.begin(), vAttached.end(), shared_kinbody_const()) == vAttached.end() ) {
-        vAttached.push_back(shared_kinbody_const());
+    vAttached.clear();
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        vAttached.push_back(boost::const_pointer_cast<KinBody>(shared_kinbody_const()));
+        return;
     }
-    FOREACHC(itbody,_listAttachedBodies) {
-        KinBodyConstPtr pattached = itbody->lock();
-        if( !!pattached ) {
-            if( find(vAttached.begin(), vAttached.end(), pattached) == vAttached.end() ) {
-                vAttached.push_back(pattached);
-                pattached->GetAttached(vAttached);
+
+    const EnvironmentBase& env = *GetEnv();
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
+
+    vAttached.reserve(numAttached);
+    for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+        // 0 means not attached, -1 means it was already in original vAttached so skip
+        if (vAttachedVisited[bodyIndex] == 1) {
+            vAttached.push_back(env.GetBodyFromEnvironmentBodyIndex(bodyIndex));
+            if (--numAttached == 0) {
+                // already filled vAttached with contents of vAttachedVisited
+                return;
             }
         }
     }
 }
 
-bool KinBody::HasAttached() const
+void KinBody::GetAttachedEnvironmentBodyIndices(std::vector<int>& vAttached) const
 {
-    return _listAttachedBodies.size() > 0;
+    vAttached.clear();
+
+    // early exist, probably this is the case most of the time
+    if (_listAttachedBodies.empty()) {
+        vAttached.push_back(GetEnvironmentBodyIndex());
+        return;
+    }
+
+    const EnvironmentBase& env = *GetEnv();
+    std::vector<int8_t>& vAttachedVisited = _vAttachedVisitedCache;
+    vAttachedVisited.resize(env.GetMaxEnvironmentBodyIndex() + 1);
+    std::fill(vAttachedVisited.begin(), vAttachedVisited.end(), 0);
+
+    vAttachedVisited.at(GetEnvironmentBodyIndex()) = 1;
+    int numAttached = 1 + _GetNumAttached(vAttachedVisited); // +1 for self
+
+    vAttached.reserve(numAttached);
+    for (int bodyIndex = 1; bodyIndex < (int)vAttachedVisited.size(); ++bodyIndex) {
+        if (vAttachedVisited[bodyIndex] == 1) {
+            vAttached.push_back(bodyIndex);
+            if (--numAttached == 0) {
+                // already filled vAttached with contents of vAttachedVisited
+                return;
+            }
+        }
+    }
+}
+
+bool KinBody::_IsAttached(int otherBodyid, std::vector<int8_t>& vAttachedVisited) const
+{
+    for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
+        KinBodyConstPtr pattached = pbody.lock();
+        if (!pattached) {
+            continue;
+        }
+        const KinBody& attached = *pattached;
+        if (otherBodyid == attached._environmentBodyIndex) {
+            vAttachedVisited.at(attached._environmentBodyIndex) = 1; // attached, and visited
+            return true;
+        }
+        else if (vAttachedVisited.at(attached._environmentBodyIndex) != 0) {
+            // already checked, but need to continue to check other entries in _listAttachedBodies
+            continue;
+        }
+        else {
+            vAttachedVisited.at(attached._environmentBodyIndex) = -1; // not attached, but visitied
+        }
+
+        // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
+        if (attached._listAttachedBodies.size() > 1 && attached._IsAttached(otherBodyid, vAttachedVisited)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+int KinBody::_GetNumAttached(std::vector<int8_t>& vAttachedVisited) const
+{
+    int numFound = 0;
+    for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
+        KinBodyConstPtr pattachedBody = pbody.lock();
+        if (!pattachedBody) {
+            continue;
+        }
+        const KinBody& attachedBody = *pattachedBody;
+        const int bodyIndex = attachedBody.GetEnvironmentBodyIndex();
+        if (vAttachedVisited.at(bodyIndex) != 0) {
+            // already checked, so skip
+            continue;
+        }
+        vAttachedVisited.at(bodyIndex) = 1;
+        numFound++;
+        // if attached._listAttachedBodies has only one element, that element is same as attached as attachement relationship is by-directional, so not worth checking
+        if (attachedBody._listAttachedBodies.size() > 1) {
+            numFound += attachedBody._GetNumAttached(vAttachedVisited);
+        }
+    }
+    return numFound;
 }
 
 bool KinBody::_IsAttached(const KinBody &body, std::set<KinBodyConstPtr>&setChecked) const
@@ -4744,13 +5285,22 @@ bool KinBody::_RemoveAttachedBody(KinBody &body)
 void KinBody::Enable(bool bEnable)
 {
     bool bchanged = false;
-    FOREACH(it, _veclinks) {
-        if( (*it)->_info._bIsEnabled != bEnable ) {
-            (*it)->_info._bIsEnabled = bEnable;
+    for (const LinkPtr& plink : _veclinks) {
+        Link& link = *plink;
+        if( link._info._bIsEnabled != bEnable ) {
+            link._info._bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
     }
+
+    if (bEnable) {
+        EnableAllLinkStateBitMasks(_vLinkEnableStatesMask, _veclinks.size());
+    }
+    else {
+        DisableAllLinkStateBitMasks(_vLinkEnableStatesMask);
+    }
+
     if( bchanged ) {
         _PostprocessChangedParameters(Prop_LinkEnable);
     }
@@ -4758,8 +5308,8 @@ void KinBody::Enable(bool bEnable)
 
 bool KinBody::IsEnabled() const
 {
-    FOREACHC(it, _veclinks) {
-        if((*it)->IsEnabled()) {
+    for (uint64_t mask : _vLinkEnableStatesMask) {
+        if (mask > 0) {
             return true;
         }
     }
@@ -4794,11 +5344,6 @@ bool KinBody::IsVisible() const
     return false;
 }
 
-int KinBody::GetEnvironmentId() const
-{
-    return _environmentid;
-}
-
 int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION0;
@@ -4810,7 +5355,7 @@ int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 int8_t KinBody::DoesDOFAffectLink(int dofindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%GetDOF(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(dofindex >= 0 && dofindex < GetDOF(), "body %s dofindex %d invalid (num dofs %d)", GetName()%dofindex%GetDOF(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s linkindex %d invalid (num links %d)", GetName()%linkindex%_veclinks.size(), ORE_InvalidArguments);
     int jointindex = _vDOFIndices.at(dofindex);
     return _vJointsAffectingLinks.at(jointindex*_veclinks.size()+linkindex);
@@ -4887,10 +5432,12 @@ private:
         }
         _nUpdateStampId++; // because transforms were modified
         _vNonAdjacentLinks[0].resize(0);
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            for(size_t j = i+1; j < _veclinks.size(); ++j) {
-                if((_setAdjacentLinks.find(i|(j<<16)) == _setAdjacentLinks.end())&& !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[i]), LinkConstPtr(_veclinks[j])) ) {
-                    _vNonAdjacentLinks[0].push_back(i|(j<<16));
+
+        for(size_t ind0 = 0; ind0 < _veclinks.size(); ++ind0) {
+            for(size_t ind1 = ind0+1; ind1 < _veclinks.size(); ++ind1) {
+                const bool bAdjacent = AreAdjacentLinks(ind0, ind1);
+                if(!bAdjacent && !collisionchecker->CheckCollision(LinkConstPtr(_veclinks[ind0]), LinkConstPtr(_veclinks[ind1])) ) {
+                    _vNonAdjacentLinks[0].push_back(ind0|(ind1<<16));
                 }
             }
         }
@@ -4919,27 +5466,61 @@ private:
     return _vNonAdjacentLinks.at(adjacentoptions);
 }
 
-const std::set<int>& KinBody::GetAdjacentLinks() const
+bool KinBody::AreAdjacentLinks(int linkindex0, int linkindex1) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    return _setAdjacentLinks;
+    const size_t index = _GetIndex1d(linkindex0, linkindex1);
+    if (index < _vAdjacentLinks.size()) {
+        return _vAdjacentLinks.at(index);
+    }
+    RAVELOG_WARN_FORMAT("env=%d, body %s has %d links (size of _vAdjacentLinks is %d). Cannot compute adjacent for index %d and %d (1d index is %d)",
+                        GetEnv()->GetId()%GetName()%GetLinks().size()%_vAdjacentLinks.size()%linkindex0%linkindex1%index);
+    return false;
+}
+
+void KinBody::SetAdjacentLinksCombinations(const std::vector<int>& linkIndices)
+{
+    for (size_t idx0 = 0; idx0 < linkIndices.size(); idx0++) {
+        const int linkIndex0 = linkIndices[idx0];
+        for (size_t idx1 = idx0 + 1; idx1 < linkIndices.size(); idx1++) {
+            const int linkIndex1 = linkIndices[idx1];
+            OPENRAVE_ASSERT_OP(linkIndex0,!=,linkIndex1);
+            _SetAdjacentLinksInternal(linkIndex0, linkIndex1);
+        }
+    }
+    _ResetInternalCollisionCache();
+}
+
+void KinBody::SetAdjacentLinksPairs(const std::vector<std::pair<int, int> >& linkIndices)
+{
+    for ( const std::pair<int, int>& link01 : linkIndices) {
+        OPENRAVE_ASSERT_OP(link01.first, !=, link01.second);
+        _SetAdjacentLinksInternal(link01.first, link01.second);
+    }
+    _ResetInternalCollisionCache();
 }
 
 void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 {
     OPENRAVE_ASSERT_OP(linkindex0,!=,linkindex1);
-    if( linkindex0 > linkindex1 ) {
-        std::swap(linkindex0, linkindex1);
-    }
+    _SetAdjacentLinksInternal(linkindex0, linkindex1);
 
-    _setAdjacentLinks.insert(linkindex0|(linkindex1<<16));
-    std::string linkname0 = _veclinks.at(linkindex0)->GetName();
-    std::string linkname1 = _veclinks.at(linkindex1)->GetName();
-    std::pair<std::string, std::string> adjpair = std::make_pair(linkname0, linkname1);
-    if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
-        _vForcedAdjacentLinks.push_back(adjpair);
-    }
     _ResetInternalCollisionCache();
+}
+
+void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
+{
+    const int numLinks = GetLinks().size();
+    BOOST_ASSERT(linkindex0 < numLinks);
+    BOOST_ASSERT(linkindex1 < numLinks);
+
+    const size_t index = _GetIndex1d(linkindex0, linkindex1);
+
+    _ResizeVectorFor2DTable(_vAdjacentLinks, numLinks);
+    _vAdjacentLinks.at(index) = 1;
+
+    _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
+    _vForcedAdjacentLinks.at(index) = 1;
 }
 
 void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
@@ -4947,26 +5528,49 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     InterfaceBase::Clone(preference,cloningoptions);
     KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
 
+    _pKinematicsGenerator.reset();
+    _pCurrentKinematicsFunctions.reset();
     _name = r->_name;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
-    __hashkinematics = r->__hashkinematics;
+    __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;
     _vTempJoints = r->_vTempJoints;
 
-    _veclinks.resize(0); _veclinks.reserve(r->_veclinks.size());
-    FOREACHC(itlink, r->_veclinks) {
+    _vLinkTransformPointers.clear(); _vLinkTransformPointers.reserve(r->_veclinks.size());
+    _veclinks.clear(); _veclinks.reserve(r->_veclinks.size());
+    for (const LinkPtr& origLinkPtr : r->_veclinks) {
         LinkPtr pnewlink(new Link(shared_kinbody()));
+        Link& newlink = *pnewlink;
         // TODO should create a Link::Clone method
-        *pnewlink = **itlink; // be careful of copying pointers
-        pnewlink->_parent = shared_kinbody();
-        // have to copy all the geometries too!
-        std::vector<Link::GeometryPtr> vnewgeometries(pnewlink->_vGeometries.size());
-        for(size_t igeom = 0; igeom < vnewgeometries.size(); ++igeom) {
-            vnewgeometries[igeom].reset(new Link::Geometry(pnewlink, pnewlink->_vGeometries[igeom]->_info));
+        newlink = *origLinkPtr; // be careful of copying pointers
+        newlink._parent = shared_kinbody();
+
+        {
+            // have to copy all the geometries too!
+            std::vector<Link::GeometryPtr> vnewgeometries(newlink._vGeometries.size());
+            for(size_t igeom = 0; igeom < vnewgeometries.size(); ++igeom) {
+                vnewgeometries[igeom].reset(new Link::Geometry(pnewlink, newlink._vGeometries[igeom]->_info));
+            }
+            newlink._vGeometries = vnewgeometries;
         }
-        pnewlink->_vGeometries = vnewgeometries;
+        {
+            // deep copy extra geometries as well, otherwise changing value of map in original map affects value of cloned map
+            std::map< std::string, std::vector<GeometryInfoPtr> > newMapExtraGeometries;
+            for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometries) {
+                std::vector<GeometryInfoPtr> newvalues;
+                newvalues.reserve(keyValue.second.size());
+                for (const GeometryInfoPtr& geomInfoPtr : keyValue.second) {
+                    newvalues.push_back(GeometryInfoPtr(new GeometryInfo(*geomInfoPtr)));
+                }
+                newMapExtraGeometries[keyValue.first] = newvalues;
+            }
+            newlink._info._mapExtraGeometries = newMapExtraGeometries;
+        }
+
         _veclinks.push_back(pnewlink);
+        _vLinkTransformPointers.push_back(&newlink._info._t);
     }
+    _vLinkEnableStatesMask = r->_vLinkEnableStatesMask;
 
     _vecjoints.resize(0); _vecjoints.reserve(r->_vecjoints.size());
     FOREACHC(itjoint, r->_vecjoints) {
@@ -5012,7 +5616,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vJointsAffectingLinks = r->_vJointsAffectingLinks;
     _vDOFIndices = r->_vDOFIndices;
 
-    _setAdjacentLinks = r->_setAdjacentLinks;
+    _vAdjacentLinks = r->_vAdjacentLinks;
     _vInitialLinkTransformations = r->_vInitialLinkTransformations;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
@@ -5039,16 +5643,6 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
     }
 
-    _listAttachedBodies.clear(); // will be set in the environment
-    if( !(cloningoptions & Clone_IgnoreAttachedBodies) ) {
-        FOREACHC(itatt, r->_listAttachedBodies) {
-            KinBodyConstPtr pattref = itatt->lock();
-            if( !!pattref ) {
-                _listAttachedBodies.push_back(GetEnv()->GetBodyFromEnvironmentId(pattref->GetEnvironmentId()));
-            }
-        }
-    }
-
     // cannot copy the velocities since it requires the physics engine to be initialized with this kinbody, which might not happen before the clone..?
 //    std::vector<std::pair<Vector,Vector> > velocities;
 //    r->GetLinkVelocities(velocities);
@@ -5061,38 +5655,55 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _ResetInternalCollisionCache();
 
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
-    _vGrabbedBodies.clear(); _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
-    FOREACHC(itgrabbedref, r->_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbedref = boost::dynamic_pointer_cast<Grabbed const>(*itgrabbedref);
-        if( !pgrabbedref ) {
-            RAVELOG_WARN_FORMAT("env=%d, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetId());
-            continue;
-        }
+    _listAttachedBodies.clear(); // will be set in the environment
+    _vGrabbedBodies.clear();
+    if( (cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies ) {
+        _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
+        for (const GrabbedPtr& pgrabbedref : r->_vGrabbedBodies) {
+            if( !pgrabbedref ) {
+                RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
+                continue;
+            }
 
-        KinBodyPtr pbodyref = pgrabbedref->_pgrabbedbody.lock();
-        KinBodyPtr pgrabbedbody;
-        if( !!pbodyref ) {
-            //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentId(pbodyref->GetEnvironmentId());
-            pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
-            if( !pgrabbedbody ) {
-                if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
-                    continue;
+            KinBodyPtr pbodyref = pgrabbedref->_pGrabbedBody.lock();
+            KinBodyPtr pgrabbedbody;
+            if( !!pbodyref ) {
+                //pgrabbedbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pbodyref->GetEnvironmentBodyIndex());
+                pgrabbedbody = GetEnv()->GetKinBody(pbodyref->GetName());
+                if( !pgrabbedbody ) {
+                    if( cloningoptions & Clone_PassOnMissingBodyReferences ) {
+                        continue;
+                    }
+                    else {
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s' from env=%s, could not find grabbed object '%s' in env=%s"), GetName()%r->GetEnv()->GetNameId()%pbodyref->GetName()%GetEnv()->GetNameId(), ORE_InvalidState);
+                    }
                 }
-                else {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("When cloning body '%s', could not find grabbed object '%s' in environmentid=%d"), GetName()%pbodyref->GetName()%pbodyref->GetEnv()->GetId(), ORE_InvalidState);
+                //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
+
+                GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
+                pgrabbed->_tRelative = pgrabbedref->_tRelative;
+                pgrabbed->_setGrabberLinkIndicesToIgnore = pgrabbedref->_setGrabberLinkIndicesToIgnore; // can do this since link indices are the same
+                CopyRapidJsonDoc(pgrabbedref->_rGrabbedUserData, pgrabbed->_rGrabbedUserData);
+                if( pgrabbedref->IsListNonCollidingLinksValid() ) {
+                    FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
+                        pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                    }
+                    pgrabbed->_SetLinkNonCollidingIsValid(true);
+                }
+                _vGrabbedBodies.push_back(pgrabbed);
+                try {
+                    // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
+                    _AttachBody(pgrabbedbody);
+                }
+                catch(...) {
+                    RAVELOG_ERROR_FORMAT("env=%s, failed in attach body", GetEnv()->GetNameId());
+                    BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
+                    _vGrabbedBodies.pop_back();
+                    throw;
                 }
             }
-            //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
-
-            GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_plinkrobot)->GetIndex())));
-            pgrabbed->_troot = pgrabbedref->_troot;
-            pgrabbed->_listNonCollidingLinks.clear();
-            FOREACHC(itlinkref, pgrabbedref->_listNonCollidingLinks) {
-                pgrabbed->_listNonCollidingLinks.push_back(_veclinks.at((*itlinkref)->GetIndex()));
-            }
-            _vGrabbedBodies.push_back(pgrabbed);
-        }
-    }
+        } // end for pgrabbedref
+    } // end if not Clone_IgnoreGrabbedBodies
 
     // Clone self-collision checker
     _selfcollisionchecker.reset();
@@ -5100,7 +5711,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
         _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
         _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
-        if( GetEnvironmentId() != 0 ) {
+        if( GetEnvironmentBodyIndex() != 0 ) {
             // This body has been added to the environment already so can call InitKinBody.
             _selfcollisionchecker->InitKinBody(shared_kinbody());
         }
@@ -5108,6 +5719,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             // InitKinBody will be called when the body is added to the environment.
         }
     }
+
+    // can copy the generator, but not the functions! use SetKinematicsGenerator
+    SetKinematicsGenerator(r->_pKinematicsGenerator);
 
     _nUpdateStampId++; // update the stamp instead of copying
 }
@@ -5128,61 +5742,10 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     }
     // do not change hash if geometry changed!
     if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
-        __hashkinematics.resize(0);
+        __hashKinematicsGeometryDynamics.resize(0);
     }
 
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
-        // check if any regrabbed bodies have the link in _listNonCollidingLinks and the link is enabled, or are missing the link in _listNonCollidingLinks and the link is disabled
-        std::map<GrabbedPtr, list<KinBody::LinkConstPtr> > mapcheckcollisions;
-        FOREACH(itlink,_veclinks) {
-            if( (*itlink)->IsEnabled() ) {
-                FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-                    if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
-                        std::list<KinBody::LinkConstPtr>::iterator itnoncolliding = find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink);
-                        if( itnoncolliding != pgrabbed->_listNonCollidingLinks.end() ) {
-                            if( pgrabbed->WasLinkNonColliding(*itlink) == 0 ) {
-                                pgrabbed->_listNonCollidingLinks.erase(itnoncolliding);
-                            }
-                            mapcheckcollisions[pgrabbed].push_back(*itlink);
-                        }
-                        else {
-                            // try to restore
-                            if( pgrabbed->WasLinkNonColliding(*itlink) == 1 ) {
-                                pgrabbed->_listNonCollidingLinks.push_back(*itlink);
-                            }
-                        }
-                    }
-                }
-            }
-            else {
-                // add since it is disabled?
-                FOREACH(itgrabbed,_vGrabbedBodies) {
-                    GrabbedPtr pgrabbed = boost::dynamic_pointer_cast<Grabbed>(*itgrabbed);
-                    if( find(pgrabbed->GetRigidlyAttachedLinks().begin(),pgrabbed->GetRigidlyAttachedLinks().end(), *itlink) == pgrabbed->GetRigidlyAttachedLinks().end() ) {
-                        if( find(pgrabbed->_listNonCollidingLinks.begin(),pgrabbed->_listNonCollidingLinks.end(),*itlink) == pgrabbed->_listNonCollidingLinks.end() ) {
-                            if( pgrabbed->WasLinkNonColliding(*itlink) != 0 ) {
-                                pgrabbed->_listNonCollidingLinks.push_back(*itlink);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-//        if( mapcheckcollisions.size() > 0 ) {
-//            CollisionOptionsStateSaver colsaver(GetEnv()->GetCollisionChecker(),0); // have to reset the collision options
-//            FOREACH(itgrabbed, mapcheckcollisions) {
-//                KinBodyPtr pgrabbedbody(itgrabbed->first->_pgrabbedbody);
-//                _RemoveAttachedBody(pgrabbedbody);
-//                CallOnDestruction destructionhook(boost::bind(&RobotBase::_AttachBody,this,pgrabbedbody));
-//                FOREACH(itlink, itgrabbed->second) {
-//                    if( pchecker->CheckCollision(*itlink, KinBodyConstPtr(pgrabbedbody)) ) {
-//                        itgrabbed->first->_listNonCollidingLinks.remove(*itlink);
-//                    }
-//                }
-//            }
-//        }
     }
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
@@ -5241,14 +5804,14 @@ void KinBody::SetZeroConfiguration()
 const std::string& KinBody::GetKinematicsGeometryHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( __hashkinematics.size() == 0 ) {
+    if( __hashKinematicsGeometryDynamics.size() == 0 ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         // should add dynamics since that affects a lot how part is treated.
         serialize(ss,SO_Kinematics|SO_Geometry|SO_Dynamics);
-        __hashkinematics = utils::GetMD5HashString(ss.str());
+        __hashKinematicsGeometryDynamics = utils::GetMD5HashString(ss.str());
     }
-    return __hashkinematics;
+    return __hashKinematicsGeometryDynamics;
 }
 
 void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits)
@@ -5304,7 +5867,7 @@ ConfigurationSpecification KinBody::GetConfigurationSpecificationIndices(const s
 UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::function<void()>&callback) const
 {
     ChangeCallbackDataPtr pdata(new ChangeCallbackData(properties,callback,shared_kinbody_const()));
-    boost::unique_lock< boost::shared_mutex > lock(GetInterfaceMutex());
+    std::unique_lock<boost::shared_mutex> lock(GetInterfaceMutex());
 
     uint32_t index = 0;
     while(properties) {
@@ -5325,6 +5888,17 @@ UserDataPtr KinBody::RegisterChangeCallback(uint32_t properties, const boost::fu
     return pdata;
 }
 
+void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
+{
+    const int numLinks = GetLinks().size();
+    BOOST_ASSERT(linkindex0 < numLinks);
+    BOOST_ASSERT(linkindex1 < numLinks);
+    const size_t index = _GetIndex1d(linkindex0, linkindex1);
+
+    _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
+    _vForcedAdjacentLinks.at(index) = 1;
+}
+
 void KinBody::_InitAndAddLink(LinkPtr plink)
 {
     CHECK_NO_INTERNAL_COMPUTATION;
@@ -5333,7 +5907,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     // check to make sure there are no repeating names in already added links
     FOREACH(itlink, _veclinks) {
         if( (*itlink)->GetName() == info._name ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("link %s is declared more than once in body %s"), info._name%GetName(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link '%s' is declared more than once in body '%s', uri is '%s'"), info._name%GetName()%GetURI(), ORE_InvalidArguments);
         }
     }
 
@@ -5349,14 +5923,9 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
-    FOREACHC(itadjacentname, info._vForcedAdjacentLinks) {
-        // make sure the same pair isn't added more than once
-        std::pair<std::string, std::string> adjpair = std::make_pair(info._name, *itadjacentname);
-        if( find(_vForcedAdjacentLinks.begin(), _vForcedAdjacentLinks.end(), adjpair) == _vForcedAdjacentLinks.end() ) {
-            _vForcedAdjacentLinks.push_back(adjpair);
-        }
-    }
+
     _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
 }
 
 void KinBody::_InitAndAddJoint(JointPtr pjoint)
@@ -5410,29 +5979,33 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
 {
+    info._modifiedFields = 0;
     info._id = _id;
-    info._uri = __struri;
+    info._uri = GetURI();
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
+    info._isPartial = false; // extracting everything
 
     info._dofValues.resize(0);
     std::vector<dReal> vDOFValues;
     GetDOFValues(vDOFValues);
     for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
-        JointPtr pJoint = GetJointFromDOFIndex(idof);
-        int jointAxis = idof - pJoint->GetDOFIndex();
-        info._dofValues.emplace_back(std::make_pair(pJoint->GetName(), jointAxis), vDOFValues[idof]);
+        const Joint& joint = _GetJointFromDOFIndex(idof);
+        int jointAxis = idof - joint.GetDOFIndex();
+        info._dofValues.emplace_back(std::make_pair(joint.GetName(), jointAxis), vDOFValues[idof]);
     }
 
-    info._transform = GetTransform();
     info._vGrabbedInfos.resize(0);
     GetGrabbedInfo(info._vGrabbedInfos);
 
-    KinBody::KinBodyStateSaver saver(shared_kinbody());
+    info._transform = GetTransform();
+
+    // in order for link transform comparision to make sense
+    KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    SetTransform(Transform()); // so that base link is at exactly _baseLinkInBodyTransform
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
-    SetTransform(Transform());
 
     // need to avoid extracting info for links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -5499,18 +6072,47 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
 
 
     FOREACHC(it, GetReadableInterfaces()) {
-        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(it->second);
-        if (!!pReadable) {
-            info._mReadableInterfaces[it->first] = pReadable;
+        if (!!it->second) {
+            // make a copy of the readable interface
+            // caller may modify and call UpdateFromInfo with modified readable interfaces
+            info._mReadableInterfaces[it->first] = it->second->CloneSelf();
         }
+    }
+
+    if( !!_prAssociatedFileEntries ) {
+        if( !info._prAssociatedFileEntries ) {
+            info._prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *info._prAssociatedFileEntries = rapidjson::Document();
+        }
+        info._prAssociatedFileEntries->CopyFrom(*_prAssociatedFileEntries, info._prAssociatedFileEntries->GetAllocator());
     }
 }
 
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 {
     UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
-    if(info._id != _id) {
-        RAVELOG_WARN_FORMAT("body %s update info ids do not match %s != %s", GetName()%_id%info._id);
+    if(_id != info._id) {
+        if( _id.empty() ) {
+            RAVELOG_DEBUG_FORMAT("env=%s, body '%s' assigning empty id to '%s'", GetEnv()->GetNameId()%GetName()%info._id);
+            SetId(info._id);
+        }
+        else if( info._id.empty() ) {
+            RAVELOG_INFO_FORMAT("env=%d, body '%s' do not update id '%s' since update has empty id", GetEnv()->GetId()%GetName()%GetId());
+        }
+        else {
+            RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
+            SetId(info._id);
+        }
+        updateFromInfoResult = UFIR_Success;
+    }
+    if( info._vLinkInfos.size() > 0 ) {
+        _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
+        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
+    }
+    else {
+        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
     }
 
     // need to avoid checking links and joints belonging to connected bodies
@@ -5566,9 +6168,25 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
-    // links
-    if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
-        return updateFromInfoResult;
+    {
+        // in order for link transform comparision to make sense, have to change the kinbody to the identify.
+        // First check if any of the link infos have modified transforms
+        KinBody::KinBodyStateSaverPtr stateSaver;
+        FOREACHC(itLinkInfo, info._vLinkInfos) {
+            // if any link has its transform field set, we need to set zero configuration before comparison
+            if( (*itLinkInfo)->IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
+                stateSaver.reset(new KinBody::KinBodyStateSaver(shared_kinbody(), Save_LinkTransformation));
+                SetTransform(Transform());
+                vector<dReal> vZeros(GetDOF(), 0);
+                SetDOFValues(vZeros, KinBody::CLA_Nothing);
+                break;
+            }
+        }
+
+        // links
+        if (!UpdateChildrenFromInfo(info._vLinkInfos, vLinks, updateFromInfoResult)) {
+            return updateFromInfoResult;
+        }
     }
 
     // joints
@@ -5578,85 +6196,116 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
 
     // name
     if (GetName() != info._name) {
+        OPENRAVE_ASSERT_OP(info._name.size(), >, 0);
         SetName(info._name);
         updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to name change", _id);
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated due to name change", GetEnv()->GetNameId()%info._name);
+    }
+
+    if( info.IsModifiedField(KinBodyInfo::KBIF_URI) && GetURI() != info._uri ) {
+        __struri = info._uri;
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated uri to '%s'", GetEnv()->GetNameId()%info._name%info._uri);
+    }
+
+    if( info.IsModifiedField(KinBodyInfo::KBIF_ReferenceURI) &&_referenceUri != info._referenceUri ) {
+        _referenceUri = info._referenceUri;
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated referenceUri to '%s'", GetEnv()->GetNameId()%info._name%info._referenceUri);
     }
 
     // transform
-    if (!GetTransform().Compare(info._transform)) {
-        SetTransform(info._transform);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) || (info._vLinkInfos.size() > 0 && info._vLinkInfos[0]->IsModifiedField(KinBody::LinkInfo::LIF_Transform)) ) {
+        Transform bodyTransform = info._transform * _invBaseLinkInBodyTransform;
+        if( GetTransform().CompareTransform(bodyTransform, g_fEpsilon) ) {
+            SetTransform(bodyTransform);
+            updateFromInfoResult = UFIR_Success;
+            RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
+        }
     }
 
-    // dof values
-    std::vector<dReal> dofValues;
-    GetDOFValues(dofValues);
-    bool bDOFChanged = false;
-    for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
-        // find the joint in the active chain
-        JointPtr joint;
-        FOREACHC(itJoint,_vecjoints) {
-            if ((*itJoint)->GetName() == it->first.first) {
-                joint = *itJoint;
-                break;
+    // don't change the dof values here since body might not be added!
+    if( info.IsModifiedField(KinBodyInfo::KBIF_DOFValues) && _nHierarchyComputed == 2 ) {
+        // dof values
+        std::vector<dReal> dofValues;
+        GetDOFValues(dofValues);
+        bool bDOFChanged = false;
+        for(std::vector<std::pair<std::pair<std::string, int>, dReal> >::const_iterator it = info._dofValues.begin(); it != info._dofValues.end(); it++) {
+            // find the joint in the active chain
+            JointPtr joint;
+            FOREACHC(itJoint,_vecjoints) {
+                if ((*itJoint)->GetName() == it->first.first) {
+                    joint = *itJoint;
+                    break;
+                }
+            }
+            if (!joint) {
+                continue;
+            }
+            if (it->first.second >= joint->GetDOF()) {
+                continue;
+            }
+            int dofIndex = joint->GetDOFIndex()+it->first.second;
+            if (RaveFabs(dofValues.at(dofIndex) - it->second) > g_fEpsilon) {
+                dofValues[dofIndex] = it->second;
+                bDOFChanged = true;
+                //RAVELOG_VERBOSE_FORMAT("body %s dof %d value changed", _id%dofIndex);
             }
         }
-        if (!joint) {
-            continue;
+        if (bDOFChanged) {
+            SetDOFValues(dofValues);
+            updateFromInfoResult = UFIR_Success;
+            RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
         }
-        if (it->first.second >= joint->GetDOF()) {
-            continue;
-        }
-        if (dofValues[joint->GetDOFIndex()+it->first.second] != it->second) {
-            dofValues[joint->GetDOFIndex()+it->first.second] = it->second;
-            bDOFChanged = true;
-        }
-    }
-    if (bDOFChanged) {
-        SetDOFValues(dofValues);
-        updateFromInfoResult = UFIR_Success;
-        RAVELOG_VERBOSE_FORMAT("body %s updated due to dof values change", _id);
     }
 
-    FOREACH(it, info._mReadableInterfaces) {
-        ReadablePtr pReadable = boost::dynamic_pointer_cast<Readable>(GetReadableInterface(it->first));
-        if (!!pReadable) {
-            if ( (*(it->second)) != (*pReadable)) {
-                rapidjson::Document docReadable;
-                dReal fUnitScale = 1.0;
-                int options = 0;
-                it->second->SerializeJSON(docReadable, docReadable.GetAllocator(), fUnitScale, options);
-                pReadable->DeserializeJSON(docReadable, fUnitScale);
-                updateFromInfoResult = UFIR_Success;
-                RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s changed", _id%it->first);
-            }
+    if( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface change", _id);
+    }
+
+    if( !!info._prAssociatedFileEntries ) {
+        if( !_prAssociatedFileEntries ) {
+            _prAssociatedFileEntries.reset(new rapidjson::Document());
+            _prAssociatedFileEntries->CopyFrom(*info._prAssociatedFileEntries, _prAssociatedFileEntries->GetAllocator());
+        }
+        else if( *_prAssociatedFileEntries != *info._prAssociatedFileEntries ) {
+            *_prAssociatedFileEntries = rapidjson::Document();
+            _prAssociatedFileEntries->CopyFrom(*info._prAssociatedFileEntries, _prAssociatedFileEntries->GetAllocator());
+        }
+    }
+
+    return updateFromInfoResult;
+}
+
+void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
+{
+    if( _pKinematicsGenerator == pGenerator ) {
+        // same pointer, so do nothing
+        return;
+    }
+    _pKinematicsGenerator = pGenerator;
+    if( !!_pKinematicsGenerator ) {
+        try {
+            _pCurrentKinematicsFunctions = _pKinematicsGenerator->GenerateKinematicsFunctions(*this);
+        }
+        catch(std::exception& ex) {
+            RAVELOG_WARN_FORMAT("env=%s, failed to generate the kinematics functions: %s", GetEnv()->GetNameId()%ex.what());
+            throw;
+        }
+        if( !!_pCurrentKinematicsFunctions ) {
+            RAVELOG_DEBUG_FORMAT("env=%s, setting custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
         }
         else {
-            // TODO: create a new Readable?
-            SetReadableInterface(it->first, it->second);
-            updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s added", _id%it->first);
+            RAVELOG_DEBUG_FORMAT("env=%s, failed to set custom kinematics functions for body %s", GetEnv()->GetNameId()%GetName());
         }
     }
-
-    // delete readableInterface
-    FOREACH(itExisting, GetReadableInterfaces()) {
-        bool bFound = false;
-        FOREACHC(it, info._mReadableInterfaces) {
-            if (itExisting->first == it->first) {
-                bFound = true;
-                break;
-            }
-        }
-        if (!bFound) {
-            ClearReadableInterface(itExisting->first);
-            updateFromInfoResult = UFIR_Success;
-            RAVELOG_VERBOSE_FORMAT("body %s updated due to readable interface %s removed", _id%itExisting->first);
+    else {
+        if( !!_pCurrentKinematicsFunctions ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
+            _pCurrentKinematicsFunctions.reset();
         }
     }
-    return updateFromInfoResult;
 }
 
 } // end namespace OpenRAVE

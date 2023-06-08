@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "qtosgviewer.h"
+#include "osglodlabel.h"
 
 #include <boost/lexical_cast.hpp>
 #include <iostream>
@@ -42,7 +43,7 @@ public:
     virtual ~ItemSelectionCallbackData() {
         boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
-            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            std::lock_guard<std::mutex> lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredItemSelectionCallbacks.erase(_iterator);
         }
     }
@@ -62,7 +63,7 @@ public:
     virtual ~ViewerThreadCallbackData() {
         boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
         if( !!pviewer ) {
-            boost::mutex::scoped_lock lock(pviewer->_mutexCallbacks);
+            std::lock_guard<std::mutex> lock(pviewer->_mutexCallbacks);
             pviewer->_listRegisteredViewerThreadCallbacks.erase(_iterator);
         }
     }
@@ -164,7 +165,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("SetProjectionMode", boost::bind(&QtOSGViewer::_SetProjectionModeCommand, this, _1, _2),
                     "sets the viewer projection mode, perspective or orthogonal");
     RegisterCommand("MoveCameraPointOfView", boost::bind(&QtOSGViewer::_MoveCameraPointOfViewCommand, this, _1, _2),
-                    "Change ghe camera point of view to be aligned to one of the main world axes, centered at scene bounding box.");
+                    "Change the camera point of view to be aligned to one of the main world axes, centered at scene bounding box.");
     RegisterCommand("MoveCameraZoom", boost::bind(&QtOSGViewer::_MoveCameraZoomCommand, this, _1, _2),
                     "Set the zooming factor of the view");
     RegisterCommand("RotateCameraXDirection", boost::bind(&QtOSGViewer::_RotateCameraXDirectionCommand, this, _1, _2),
@@ -180,6 +181,23 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
     RegisterCommand("SetEnableAvancedRenderingShaders", boost::bind(&QtOSGViewer::_SetEnableAvancedRenderingShadersCommand, this, _1, _2),
     "Turn on/off the advanced rendering shaders for the 3D scene. Default is disabled");
+
+    // Establish size limits per priority
+    _mapGUIFunctionListLimits[ViewerCommandPriority::VERY_HIGH] = 100000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::HIGH] = 100000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::MEDIUM] = 1000;
+    _mapGUIFunctionListLimits[ViewerCommandPriority::LOW] = 1000;
+
+    // Read copy QT resource to temp location and later stream that into OSG to use when making labels
+    QFile fontFile(":/fonts/NotoSans-Regular.ttf");
+    fontFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
+    QByteArray ba = fontFile.readAll();
+    std::istringstream lodFontStream(ba.toStdString());
+    OSGLODLabel::SetFont(osgText::readFontStream(lodFontStream));
+    std::istringstream widgetFontStream(ba.toStdString());
+    QOSGViewerWidget::SetFont(osgText::readFontStream(widgetFontStream));
+    fontFile.close();
+
     _bLockEnvironment = true;
     _InitGUI(bCreateStatusBar, bCreateMenu);
     _bUpdateEnvironment = true;
@@ -194,21 +212,22 @@ QtOSGViewer::~QtOSGViewer()
     // _notifyGUIFunctionComplete
     SetEnvironmentSync(false);
     {
-        boost::mutex::scoped_lock lock(_mutexGUIFunctions);
 
         list<GUIThreadFunctionPtr>::iterator itmsg;
-        FORIT(itmsg, _listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
+        FOREACH(itpriority, _mapGUIFunctionLists) {
+            FORIT(itmsg, itpriority->second) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const boost::bad_weak_ptr& ex) {
+                    // most likely viewer
+                }
+                catch(const std::exception& ex2) {
+                    RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
+                }
             }
-            catch(const boost::bad_weak_ptr& ex) {
-                // most likely viewer
-            }
-            catch(const std::exception& ex2) {
-                RAVELOG_WARN_FORMAT("unexpected exception in gui function: %s", ex2.what());
-            }
+            itpriority->second.clear();
         }
-        _listGUIFunctions.clear();
     }
 
     _condUpdateModels.notify_all();
@@ -268,6 +287,10 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
 
     if (!bCreateMenu && !bCreateMenu) {
         _CreateControlButtons();
+
+        // move HUD text out of way of control buttons if needed
+        osg::Vec2 hudTextOffset = _posgWidget->GetHUDTextOffset();
+        _posgWidget->SetHUDTextOffset(std::max(60.0f, hudTextOffset.x()), hudTextOffset.y());
     }
 
     resize(1024, 768);
@@ -310,7 +333,7 @@ bool QtOSGViewer::_HandleOSGKeyDown(int key)
 //            //RAVELOG_INFO_FORMAT("checked id %d", _pointerTypeGroup->checkedId());
 //            //if( !!_pointerTypeGroup->checkedButton() ) {
 //                //_pointerTypeGroup->checkedButton()->setChecked(false);
-//                _PostToGUIThread(boost::bind(&QAbstractButton::setChecked, _pointerTypeGroup->checkedButton(), false));
+//                _PostToGUIThread(boost::bind(&QAbstractButton::setChecked, _pointerTypeGroup->checkedButton(), false), ViewerCommandPriority::LOW);
 //            }
 //            else {
 //                // check one?
@@ -338,13 +361,13 @@ void QtOSGViewer::customEvent(QEvent * e)
 bool QtOSGViewer::_ForceUpdatePublishedBodies()
 {
     {
-        boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+        std::lock_guard<std::mutex> lockupdating(_mutexUpdating);
         if( !_bUpdateEnvironment )
             return false;
     }
 
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
-    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    std::unique_lock<std::mutex> lock(_mutexUpdateModels);
+    EnvironmentLock lockenv(GetEnv()->GetMutex());
     GetEnv()->UpdatePublishedBodies();
 
     _bModelsUpdated = false;
@@ -454,7 +477,7 @@ void QtOSGViewer::_CreateActions()
 
     bboxAct = new QAction(QIcon(":/images/bbox.png"),tr("Polygon"), this);
     bboxAct->setCheckable(true);
-    connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
+    //connect(bboxAct, SIGNAL(triggered()), this, SLOT(_ProcessBoundingBox()));
 
     connect(&_updateViewerTimer, SIGNAL(timeout()), this, SLOT(_UpdateViewerCallback()));
     _updateViewerTimer.start(1000/60); // ms
@@ -469,7 +492,7 @@ void QtOSGViewer::_UpdateViewerCallback()
         {
             std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
             {
-                boost::mutex::scoped_lock lock(_mutexCallbacks);
+                std::lock_guard<std::mutex> lock(_mutexCallbacks);
                 listRegisteredViewerThreadCallbacks = _listRegisteredViewerThreadCallbacks;
             }
             FOREACH(it,listRegisteredViewerThreadCallbacks) {
@@ -510,7 +533,7 @@ void QtOSGViewer::_Reset()
 
 
     {
-        boost::mutex::scoped_lock lock(_mutexItems);
+        std::lock_guard<std::mutex> lock(_mutexItems);
         FOREACH(it,_listRemoveItems) {
             delete *it;
         }
@@ -564,7 +587,7 @@ void QtOSGViewer::LoadEnvironment()
 
     _Reset();
     try {
-        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        EnvironmentLock lockenv(GetEnv()->GetMutex());
         GetEnv()->Reset();
 
         GetEnv()->Load(s.toLatin1().data());
@@ -594,7 +617,7 @@ void QtOSGViewer::ImportEnvironment()
         return;
     }
     try {
-        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        EnvironmentLock lockenv(GetEnv()->GetMutex());
         GetEnv()->Load(s.toLatin1().data());
 
         //  Refresh the screen.
@@ -612,7 +635,7 @@ void QtOSGViewer::SaveEnvironment()
         return;
     }
     try {
-        EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+        EnvironmentLock lockenv(GetEnv()->GetMutex());
         GetEnv()->Save(s.toLatin1().data());
     }
     catch(const std::exception& ex) {
@@ -684,10 +707,10 @@ void QtOSGViewer::polygonMode()
     _posgWidget->SetPolygonMode(wireAct->isChecked() ? 2 : 0);
 }
 
-void QtOSGViewer::_ProcessBoundingBox()
-{
-    _posgWidget->DrawBoundingBox(bboxAct->isChecked());
-}
+//void QtOSGViewer::_ProcessBoundingBox()
+//{
+//    _posgWidget->DrawBoundingBox(bboxAct->isChecked());
+//}
 
 void QtOSGViewer::axes()
 {
@@ -868,14 +891,19 @@ void QtOSGViewer::_CreateControlButtons()
 
 void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
 {
-    RobotBasePtr robot;
     KinBodyPtr kinbody;
     KinBody::LinkPtr link;
 
     std::string mass;
 
-    //  Select robot in Viewers
-    _posgWidget->SelectItemFromName(item->text(0).toLatin1().data());
+    //  Select kinbody in Viewers
+    {
+        QTreeWidgetItem* itemKinBody = item;
+        while(!!itemKinBody->parent()) {
+            itemKinBody = itemKinBody->parent();
+        }
+        _posgWidget->SelectItemFromName(itemKinBody->text(0).toLatin1().data());
+    }
 
     //  Clears details
     if (!!_qdetailsTree) {
@@ -893,8 +921,8 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
                 _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            robot = GetEnv()->GetRobot(item->parent()->parent()->text(0).toLatin1().data());
-            link  = robot->GetLink(item->text(0).toLatin1().data());
+            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toLatin1().data());
+            link  = kinbody->GetLink(item->text(0).toLatin1().data());
 
             //  Clears output string
             strs.clear();
@@ -1030,7 +1058,7 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
 
 void QtOSGViewer::_UpdateViewport()
 {
-    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
+    std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
 
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
@@ -1047,6 +1075,17 @@ void QtOSGViewer::_UpdateViewport()
     _camintrinsics.cy = (float)camheight/2;
     _camintrinsics.focal_length = zNear;
     _camintrinsics.distortion_model = "";
+
+    _cameraDistanceToFocus = _posgWidget->GetCameraDistanceToFocus();
+
+    // have to flip Z axis
+    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    _cameraTransform = GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
+}
+
+void QtOSGViewer::_SetHUDTextOffset(double xOffset, double yOffset)
+{
+    _posgWidget->SetHUDTextOffset(xOffset, yOffset);
 }
 
 bool QtOSGViewer::_SetFiguresInCamera(ostream& sout, istream& sinput)
@@ -1060,7 +1099,7 @@ bool QtOSGViewer::_SetItemVisualizationCommand(ostream& sout, istream& sinput)
     std::string itemname, visualizationmode;
     sinput >> itemname >> visualizationmode;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetItemVisualization, this, itemname, visualizationmode));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetItemVisualization, this, itemname, visualizationmode), ViewerCommandPriority::MEDIUM);
     return !!sinput;
 }
 
@@ -1111,7 +1150,7 @@ bool QtOSGViewer::_TrackLinkCommand(ostream& sout, istream& sinput)
     if( focalDistance > 0 ) {
         _SetCameraDistanceToFocus(focalDistance);
     }
-    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    EnvironmentLock lockenv(GetEnv()->GetMutex());
     KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
     if( !pbody ) {
         // restore navigation manipulator
@@ -1147,7 +1186,7 @@ bool QtOSGViewer::_TrackManipulatorCommand(ostream& sout, istream& sinput)
         _SetCameraDistanceToFocus(focalDistance);
     }
 
-    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex());
+    EnvironmentLock lockenv(GetEnv()->GetMutex());
     RobotBasePtr probot = GetEnv()->GetRobot(robotname);
     RobotBase::ManipulatorPtr requestedManipulator = NULL;
     if( !!probot ) {
@@ -1176,20 +1215,28 @@ void QtOSGViewer::_ProcessApplicationQuit()
 {
     RAVELOG_VERBOSE("processing viewer application quit\n");
     // remove all messages in order to release the locks
-    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 0 ) {
-        bool bnotify = false;
-        FOREACH(it,_listGUIFunctions) {
-            (*it)->SetFinished();
-            if( (*it)->IsBlocking() ) {
-                bnotify = true;
+    map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+    {
+        std::lock_guard<std::mutex> lockmsg(_mutexGUIFunctions);
+        mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+    }
+
+    FOREACH(itpriority, mapGUIFunctionLists) {
+        list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+        if( listGUIFunctions.size() > 0 ) {
+            bool bnotify = false;
+            FOREACH(it,listGUIFunctions) {
+                (*it)->SetFinished();
+                if( (*it)->IsBlocking() ) {
+                    bnotify = true;
+                }
+            }
+            if( bnotify ) {
+                _notifyGUIFunctionComplete.notify_all();
             }
         }
-        if( bnotify ) {
-            _notifyGUIFunctionComplete.notify_all();
-        }
+        listGUIFunctions.clear();
     }
-    _listGUIFunctions.clear();
 
 }
 
@@ -1219,7 +1266,7 @@ bool QtOSGViewer::_SetProjectionModeCommand(ostream& sout, istream& sinput)
 {
     std::string projectionMode = "";
     sinput >> projectionMode;
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetProjectionMode, this, projectionMode), ViewerCommandPriority::MEDIUM);
     return true;
 }
 
@@ -1228,7 +1275,7 @@ bool QtOSGViewer::_MoveCameraPointOfViewCommand(ostream& sout, istream& sinput)
     std::string axis = "";
     sinput >> axis;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraPointOfView, this, axis));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraPointOfView, this, axis), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1244,7 +1291,7 @@ bool QtOSGViewer::_MoveCameraZoomCommand(ostream& sout, istream& sinput)
     if(isPan) {
         sinput >> panDelta;
     }
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, (bool)isPan, panDelta));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_MoveCameraZoom, this, factor, (bool)isPan, panDelta), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1253,7 +1300,7 @@ bool QtOSGViewer::_RotateCameraXDirectionCommand(ostream& sout, istream& sinput)
     float thetaX = 0.0f;
     sinput >> thetaX;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraXDirection, this, thetaX));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraXDirection, this, thetaX), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1262,7 +1309,7 @@ bool QtOSGViewer::_RotateCameraYDirectionCommand(ostream& sout, istream& sinput)
     float thetaY = 0.0f;
     sinput >> thetaY;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraYDirection, this, thetaY));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_RotateCameraYDirection, this, thetaY), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1271,7 +1318,7 @@ bool QtOSGViewer::_PanCameraXDirectionCommand(ostream& sout, istream& sinput)
     float dx = 0.0f;
     sinput >> dx;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraXDirection, this, dx));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraXDirection, this, dx), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1280,7 +1327,7 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     float dy = 0.0f;
     sinput >> dy;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_PanCameraYDirection, this, dy), ViewerCommandPriority::LOW);
     return true;
 }
 
@@ -1347,10 +1394,10 @@ void QtOSGViewer::quitmainloop()
 void QtOSGViewer::Show(int showtype)
 {
     if( showtype ) {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this));
+        _PostToGUIThread(boost::bind(&QtOSGViewer::show, this), ViewerCommandPriority::VERY_HIGH);
     }
     else {
-        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this));
+        _PostToGUIThread(boost::bind(&QtOSGViewer::hide, this), ViewerCommandPriority::VERY_HIGH);
     }
 //    // have to put this in the message queue
 //    if (showtype ) {
@@ -1384,13 +1431,18 @@ void QtOSGViewer::_SetCameraTransform(const RaveTransform<float>& transform)
 void QtOSGViewer::_SetCamera(RaveTransform<float> trans, float focalDistance)
 {
     RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
+    RaveTransform<float> tcenter;
+    tcenter.trans.z = focalDistance;
+    tcenter = trans * tcenter;
     _SetCameraTransform(trans*trot);
+    osg::Vec3 center = osg::Vec3(tcenter.trans.x, tcenter.trans.y, tcenter.trans.z);
+    _SetCameraCenter(center);
     _SetCameraDistanceToFocus(focalDistance);
 }
 
 void QtOSGViewer::SetCamera(const RaveTransform<float>& trans, float focalDistance)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCamera, this, trans, focalDistance), ViewerCommandPriority::LOW);
 }
 
 void QtOSGViewer::_StopTrackLink()
@@ -1404,7 +1456,7 @@ void QtOSGViewer::_StopTrackLink()
 
 bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
 {
-    if(!!_ptrackinglink && _ptrackinglink == link && _currentTrackLinkRelTransform.Compare(linkRelativeTranslation)) {
+    if(!!_ptrackinglink && _ptrackinglink == link && !_currentTrackLinkRelTransform.CompareTransform(linkRelativeTranslation, 1e-7)) {
         // already tracking the requested link, nothing to be done
         return true;
     }
@@ -1435,6 +1487,11 @@ bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& 
     return true;
 }
 
+void QtOSGViewer::_SetCameraCenter(osg::Vec3 center)
+{
+    _posgWidget->SetCameraCenter(center);
+}
+
 void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 {
     _posgWidget->SetCameraDistanceToFocus(focalDistance);
@@ -1442,27 +1499,25 @@ void QtOSGViewer::_SetCameraDistanceToFocus(float focalDistance)
 
 RaveTransform<float> QtOSGViewer::GetCameraTransform() const
 {
-    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
-    // have to flip Z axis
-    RaveTransform<float> trot; trot.rot = quatFromAxisAngle(RaveVector<float>(1,0,0),(float)PI);
-    return GetRaveTransformFromMatrix(_posgWidget->GetCurrentCameraManipulator()->getMatrix()) * trot;
+    std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
+    return _cameraTransform;
 }
 
 float QtOSGViewer::GetCameraDistanceToFocus() const
 {
-    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
-    return _posgWidget->GetCameraDistanceToFocus();
+    std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
+    return _cameraDistanceToFocus;
 }
 
 geometry::RaveCameraIntrinsics<float> QtOSGViewer::GetCameraIntrinsics() const
 {
-    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
+    std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
     return _camintrinsics;
 }
 
 SensorBase::CameraIntrinsics QtOSGViewer::GetCameraIntrinsics2() const
 {
-    boost::mutex::scoped_lock lock(_mutexGUIFunctions);
+    std::lock_guard<std::mutex> lock(_mutexGUIFunctions);
     SensorBase::CameraIntrinsics intr;
     intr.fx = _camintrinsics.fx;
     intr.fy = _camintrinsics.fy;
@@ -1512,7 +1567,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, new osg::Point(fPointSize),color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1533,7 +1588,7 @@ GraphHandlePtr QtOSGViewer::plot3(const float* ppoints, int numPoints, int strid
         }
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::POINTS, osg::ref_ptr<osg::Point>(new osg::Point(fPointSize)), bhasalpha), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1548,7 +1603,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1563,7 +1618,7 @@ GraphHandlePtr QtOSGViewer::drawlinestrip(const float* ppoints, int numPoints, i
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINE_STRIP, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1577,7 +1632,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
     }
     osg::ref_ptr<osg::Vec4Array> vcolors = new osg::Vec4Array(1);
     (*vcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors)
@@ -1592,7 +1647,7 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
         (*vcolors)[i] = osg::Vec4f(colors[i * 3 + 0], colors[i * 3 + 1], colors[i * 3 + 2], 1.0f);
     }
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_Draw, this, handle, vvertices, vcolors, osg::PrimitiveSet::LINES, osg::ref_ptr<osg::LineWidth>(new osg::LineWidth(fwidth)), false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1602,17 +1657,74 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
     return GraphHandlePtr();
 }
 
-void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition)
+{
+    // Set up offset node for label
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::Matrix offsetMatrix;
+    offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
+    trans->setMatrix(offsetMatrix);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label);
+    trans->addChild(labelTrans);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vextents, const RaveTransform<float>& pose, const RaveVector<float>& color, float transparency)
 {
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    SetMatrixTransform(*trans, pose);
     osg::ref_ptr<osg::Geode> geode(new osg::Geode());
 
     osg::ref_ptr<osg::Box> box = new osg::Box();
     box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
-    box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
 
     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+    const float alpha = std::max<float>(0.0, std::min<float>(1.0f, 1.0f - transparency));
+    sd->setColor(osg::Vec4f(color.x, color.y, color.z, alpha));
     geode->addDrawable(sd);
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    handle->getOrCreateStateSet()->setRenderingHint(alpha < 1.0f ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
+GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    const RaveVector<float> color(0.33203125f, 0.5f, 0.898437f);
+    RaveTransform<float> pose;
+    pose.trans = vpos;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vextents, pose, color, 0.0f), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+{
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+
+    for (size_t i = 0; i < vpos.size(); i++) {
+        const RaveVector<float>& pos = vpos[i];
+        osg::ref_ptr<osg::Box> box = new osg::Box();
+        box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
+        box->setCenter(osg::Vec3(pos.x, pos.y, pos.z));
+
+        osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
+        sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
+        geode->addDrawable(sd);
+    }
 
     // don't do transparent bin since that is too slow for big point clouds...
     //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
@@ -1623,11 +1735,27 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
-GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
+GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false)); // copies ref counts
-    return GraphHandlePtr();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+GraphHandlePtr QtOSGViewer::drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    RaveTransform<float> aabbpose;
+    aabbpose.trans = aabb.pos;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, aabb.extents, transform*aabbpose, vcolor, transparency), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+GraphHandlePtr QtOSGViewer::drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, obb.extents, obb.transform, vcolor, transparency), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
@@ -1708,7 +1836,7 @@ void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tp
 GraphHandlePtr QtOSGViewer::drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawPlane, this, handle, tplane, vextents, vtexture), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1773,7 +1901,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     osg::ref_ptr<osg::Vec4Array> osgcolors = new osg::Vec4Array(1);
     (*osgcolors)[0] = osg::Vec4f(color.x, color.y, color.z, color.w);
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, color.w<1), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1808,7 +1936,7 @@ GraphHandlePtr QtOSGViewer::drawtrimesh(const float* ppoints, int stride, const 
     }
 
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha)); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawTriMesh, this, handle, osgvertices, osgcolors, osgindices, bhasalpha), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1824,7 +1952,7 @@ void QtOSGViewer::Reset()
 
 void QtOSGViewer::SetBkgndColor(const RaveVector<float>& color)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetBkgndColor, this, color), ViewerCommandPriority::MEDIUM);
 }
 
 void QtOSGViewer::_SetBkgndColor(const RaveVector<float>& color)
@@ -1843,11 +1971,11 @@ void QtOSGViewer::StopPlaybackTimer()
 
 void QtOSGViewer::SetSize(int w, int h)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::resize, this, w, h), ViewerCommandPriority::HIGH);
 }
 void QtOSGViewer::Move(int x, int y)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::move, this, x, y), ViewerCommandPriority::HIGH);
 }
 
 void QtOSGViewer::_RotateCameraXDirection(float thetaX)
@@ -1887,7 +2015,7 @@ void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
 
 void QtOSGViewer::SetName(const string& name)
 {
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name), ViewerCommandPriority::LOW);
 }
 
 void QtOSGViewer::_SetName(const string& name)
@@ -1912,21 +2040,17 @@ bool QtOSGViewer::LoadModel(const string& filename)
 void QtOSGViewer::UpdateFromModel()
 {
     {
-        boost::mutex::scoped_lock lock(_mutexItems);
+        std::lock_guard<std::mutex> lock(_mutexItems);
         FOREACH(it,_listRemoveItems) {
             delete *it;
         }
         _listRemoveItems.clear();
     }
 
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::lock_guard<std::mutex> lock(_mutexUpdateModels);
     vector<KinBody::BodyState> vecbodies;
 
-#if BOOST_VERSION >= 103500
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),boost::defer_lock_t());
-#else
-    EnvironmentMutex::scoped_try_lock lockenv(GetEnv()->GetMutex(),false);
-#endif
+    EnvironmentLock lockenv(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
 
     if( _bLockEnvironment && !lockenv ) {
         uint64_t basetime = utils::GetMicroTime();
@@ -1967,7 +2091,7 @@ void QtOSGViewer::UpdateFromModel()
         if( !pitem ) {
             // create a new body
             // make sure pbody is actually present
-            if( GetEnv()->GetBodyFromEnvironmentId(itbody->environmentid) == pbody ) {
+            if( GetEnv()->GetBodyFromEnvironmentBodyIndex(itbody->environmentid) == pbody ) {
 
                 // check to make sure the real GUI data is also NULL
                 if( !pbody->GetUserData(_userdatakey) ) {
@@ -2072,14 +2196,10 @@ void QtOSGViewer::UpdateFromModel()
     }
 }
 
-boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
+boost::shared_ptr<EnvironmentLock> QtOSGViewer::LockEnvironment(uint64_t timeout,bool bUpdateEnvironment)
 {
     // try to acquire the lock
-#if BOOST_VERSION >= 103500
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
-#else
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
-#endif
+    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
         if( lockenv->try_lock() ) {
@@ -2098,22 +2218,25 @@ boost::shared_ptr<EnvironmentMutex::scoped_try_lock> QtOSGViewer::LockEnvironmen
 
 void QtOSGViewer::_UpdateEnvironment()
 {
-    boost::mutex::scoped_lock lockupd(_mutexUpdating);
+    std::lock_guard<std::mutex> lockupd(_mutexUpdating);
 
     if( _bUpdateEnvironment ) {
         // process all messages
-        list<GUIThreadFunctionPtr> listGUIFunctions;
+        map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
         {
-            boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-            listGUIFunctions.swap(_listGUIFunctions);
+            std::lock_guard<std::mutex> lockmsg(_mutexGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
         }
 
-        FOREACH(itmsg, listGUIFunctions) {
-            try {
-                (*itmsg)->Call();
-            }
-            catch(const std::exception& ex) {
-                RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+        FOREACH(itpriority, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+            FOREACH(itmsg, listGUIFunctions) {
+                try {
+                    (*itmsg)->Call();
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_WARN_FORMAT("gui thread function failed: %s", ex.what());
+                }
             }
         }
 
@@ -2125,57 +2248,72 @@ void QtOSGViewer::_UpdateEnvironment()
     }
 }
 
-void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, bool block)
+void QtOSGViewer::_PostToGUIThread(const boost::function<void()>& fn, ViewerCommandPriority priority, bool block)
 {
     if( _nQuitMainLoop != -1 ) {
         // viewer quit, so anything posted won't get processed
         return;
     }
 
-    boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-    if( _listGUIFunctions.size() > 1000 ) {
-        // can happen if system is especially slow
-        //RAVELOG_WARN_FORMAT("too many gui post commands, ignoring %d", _listGUIFunctions.size());
+    std::unique_lock<std::mutex> lockmsg(_mutexGUIFunctions);
+    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
+    // Block non-essential fucntions if viewer is not processing any messages
+    if (!_bUpdateEnvironment && priority < ViewerCommandPriority::HIGH) {
+        RAVELOG_WARN("New GUI thread function of priority %d dropped due to _bUpdateEnvironment being set to false", priority);
         return;
     }
-    GUIThreadFunctionPtr pfn(new GUIThreadFunction(fn, block));
-    _listGUIFunctions.push_back(pfn);
+    // GUI thread function queue size limit
+    if (_mapGUIFunctionLists[priority].size() >= _mapGUIFunctionListLimits[priority]) {
+        // Possibly undefined behavior if _mapGUIFunctionListLimits[priority] is ever set to be 0, but that currently never happens
+        _mapGUIFunctionLists[priority].pop_front();
+        RAVELOG_WARN("Old GUI thread function of priority %d dropped due to function queue for given priority exceeding size of %d", priority, _mapGUIFunctionListLimits[priority]);
+    }
+    _mapGUIFunctionLists[priority].push_back(pfn);
     if( block ) {
         while(!pfn->IsFinished()) {
-            _notifyGUIFunctionComplete.wait(_mutexGUIFunctions);
+            _notifyGUIFunctionComplete.wait(lockmsg);
         }
     }
 }
 
 void QtOSGViewer::SetEnvironmentSync(bool bUpdate)
 {
-    boost::mutex::scoped_lock lockupdating(_mutexUpdating);
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::lock_guard<std::mutex> lockupdating(_mutexUpdating);
+    std::lock_guard<std::mutex> lock(_mutexUpdateModels);
     _bUpdateEnvironment = bUpdate;
     _condUpdateModels.notify_all();
 
     if( !bUpdate ) {
         // remove all messages in order to release the locks
-        boost::mutex::scoped_lock lockmsg(_mutexGUIFunctions);
-        if( _listGUIFunctions.size() > 0 ) {
-            bool bnotify = false;
-            FOREACH(it,_listGUIFunctions) {
-                (*it)->SetFinished();
-                if( (*it)->IsBlocking() ) {
-                    bnotify = true;
+        map<ViewerCommandPriority, list<GUIThreadFunctionPtr>> mapGUIFunctionLists;
+        {
+            std::lock_guard<std::mutex> lockmsg(_mutexGUIFunctions);
+            mapGUIFunctionLists.swap(_mapGUIFunctionLists);
+        }
+
+        // Clear GUI function lists for all priorities
+        FOREACH(itpriority, mapGUIFunctionLists) {
+            list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
+            if( listGUIFunctions.size() > 0 ) {
+                bool bnotify = false;
+                FOREACH(it,listGUIFunctions) {
+                    (*it)->SetFinished();
+                    if( (*it)->IsBlocking() ) {
+                        bnotify = true;
+                    }
+                }
+                if( bnotify ) {
+                    _notifyGUIFunctionComplete.notify_all();
                 }
             }
-            if( bnotify ) {
-                _notifyGUIFunctionComplete.notify_all();
-            }
+            listGUIFunctions.clear();
         }
-        _listGUIFunctions.clear();
     }
 }
 
 void QtOSGViewer::_DeleteItemCallback(Item* pItem)
 {
-    boost::mutex::scoped_lock lock(_mutexItems);
+    std::lock_guard<std::mutex> lock(_mutexItems);
     pItem->PrepForDeletion();
     _listRemoveItems.push_back(pItem);
 }
@@ -2183,14 +2321,14 @@ void QtOSGViewer::_DeleteItemCallback(Item* pItem)
 void QtOSGViewer::EnvironmentSync()
 {
     {
-        boost::mutex::scoped_lock lockupdating(_mutexUpdating);
+        std::lock_guard<std::mutex> lockupdating(_mutexUpdating);
         if( !_bUpdateEnvironment ) {
             RAVELOG_WARN("cannot update models from environment sync\n");
             return;
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexUpdateModels);
+    std::unique_lock<std::mutex> lock(_mutexUpdateModels);
     _bModelsUpdated = false;
     _condUpdateModels.wait(lock);
     if( !_bModelsUpdated ) {
@@ -2210,10 +2348,18 @@ void QtOSGViewer::_CloseGraphHandle(OSGSwitchPtr handle)
     _posgWidget->GetFigureRoot()->removeChild(handle);
 }
 
-void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t)
+void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float>& t)
 {
     // have to convert to smart pointers so that we can get exceptions thrown rather than dereferencing null pointers
-    SetMatrixTransform(*OSGMatrixTransformPtr(OSGTransformPtr(OSGNodePtr(handle->getChild(0))->asTransform())->asMatrixTransform()), t);
+    if( handle->getNumChildren() > 0 ) {
+        OSGNodePtr osgnode = handle->getChild(0);
+        if( !!osgnode ) {
+            OSGTransformPtr osgtransform = osgnode->asTransform();
+            if( !!osgtransform ) {
+                SetMatrixTransform(*OSGMatrixTransformPtr(osgtransform->asMatrixTransform()), t);
+            }
+        }
+    }
 }
 
 void QtOSGViewer::_SetGraphShow(OSGSwitchPtr handle, bool bShow)

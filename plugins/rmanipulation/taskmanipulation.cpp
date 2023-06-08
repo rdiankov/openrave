@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
 #define GRASPTHRESH2 dReal(0.002f)
 
 struct GRASPGOAL
@@ -176,7 +179,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             RAVELOG_WARN("could not find an rrt planner\n");
             return -1;
         }
-        RAVELOG_DEBUG(str(boost::format("using %s planner\n")%plannername));
+        RAVELOG_DEBUG_FORMAT("env=%d, using %s planner", GetEnv()->GetId()%plannername);
 
         if( graspername.size() > 0 ) {
             _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
@@ -193,7 +196,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
         return ModuleBase::SendCommand(sout,sinput);
     }
@@ -814,7 +817,7 @@ protected:
                 }
                 else if( pmanip->GetIkSolver()->Supports(IKP_Transform6D) ) {
                     tGoalEndEffector.SetTransform6D(tgoal);
-                    KinBody::KinBodyStateSaver saver(ptarget,KinBody::Save_LinkEnable);
+                    KinBody::KinBodyStateSaver statesaver(ptarget,KinBody::Save_LinkEnable);
                     ptarget->Enable(false);
                     if( pmanip->CheckEndEffectorCollision(tgoal,report) ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
@@ -1072,11 +1075,11 @@ protected:
             _robot->SetDOFValues(vinsertconfiguration);
             _robot->GetActiveDOFValues(vtrajdata);
 
-            vector<int> vindices(_robot->GetDOF());
-            for(size_t i = 0; i < vindices.size(); ++i) {
-                vindices[i] = i;
+            vector<int> indices(_robot->GetDOF());
+            for(size_t i = 0; i < indices.size(); ++i) {
+                indices[i] = i;
             }
-            ptrajfinal->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecificationIndices(vindices));
+            ptrajfinal->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecificationIndices(indices));
             planningutils::InsertActiveDOFWaypointWithRetiming(0, vtrajdata, std::vector<dReal>(), ptrajfinal, _robot, _fMaxVelMult);
         }
 
@@ -1117,7 +1120,13 @@ protected:
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = directions[index];
+            }
+        }
 
         vector<dReal> voffset;
         string cmd;
@@ -1237,9 +1246,13 @@ protected:
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
-        FOREACH(it,graspparams->vgoalconfig) {
-            *it = -*it;
+
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = -directions[index];
+            }
         }
         string cmd;
         while(!sinput.eof()) {
@@ -1346,7 +1359,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1356,7 +1368,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
@@ -1492,7 +1503,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1502,7 +1512,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 

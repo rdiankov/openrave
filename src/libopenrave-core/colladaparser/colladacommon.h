@@ -58,8 +58,15 @@ public:
     {
         LinkBinding() : index(-1) {
         }
-        LinkBinding(const std::string& kmodel, const std::string& pmodel, const std::string& vmodel) : kmodel(kmodel), pmodel(pmodel), vmodel(vmodel), index(-1) {
+        LinkBinding(const std::string& kmodel_, const std::string& pmodel_, const std::string& vmodel_) : kmodel(kmodel_), pmodel(pmodel_), vmodel(vmodel_), index(-1) {
         }
+        bool operator==(const LinkBinding& other) const {
+            return kmodel == other.kmodel &&
+                pmodel == other.pmodel &&
+                vmodel == other.vmodel &&
+                index == other.index;
+        }
+
         std::string kmodel, pmodel, vmodel;
         int index; ///< for _bindingLinkSIDs, it is the index inside the _bindingModelURIs vector
     };
@@ -69,8 +76,15 @@ public:
     {
         AxisBinding() {
         }
-        AxisBinding(const std::string& kmodelaxissidref, const std::string& nodesid, const std::string& jointsidref) : kmodelaxissidref(kmodelaxissidref), nodesid(nodesid), jointsidref(jointsidref) {
+        AxisBinding(const std::string& kmodelaxissidref_, const std::string& nodesid_, const std::string& jointsidref_) : kmodelaxissidref(kmodelaxissidref_), nodesid(nodesid_), jointsidref(jointsidref_) {
         }
+
+        bool operator==(const AxisBinding& other) const {
+            return kmodelaxissidref == other.kmodelaxissidref &&
+                nodesid == other.nodesid &&
+                jointsidref == other.jointsidref;
+        }
+
         std::string kmodelaxissidref;
         std::string nodesid;
         std::string jointsidref; ///< the sidref of the joint kmodelid/jointsid
@@ -81,8 +95,16 @@ public:
     {
         ModelBinding() {
         }
-        ModelBinding(const std::string& kmodel, const std::string& pmodel, const std::string& vmodel) : kmodel(kmodel), pmodel(pmodel), vmodel(vmodel) {
+        ModelBinding(const std::string& kmodel_, const std::string& pmodel_, const std::string& vmodel_) : kmodel(kmodel_), pmodel(pmodel_), vmodel(vmodel_) {
         }
+
+        bool operator==(const ModelBinding& other) const {
+            return kmodel == other.kmodel &&
+                pmodel == other.pmodel &&
+                vmodel == other.vmodel &&
+                ikmodelsidref == other.ikmodelsidref;
+        }
+
         std::string kmodel; ///< kmodel is a SIDREF to the instance_kinematics_model that will later be used in bind_kinematics_model
         std::string pmodel;
         std::string vmodel; ///< vmodel is the node url without any translations/rotations
@@ -94,6 +116,27 @@ public:
 
     bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override {
         return false;
+    }
+
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const ColladaXMLReadable* pOther = dynamic_cast<const ColladaXMLReadable*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return _articulated_systemURIs == pOther->_articulated_systemURIs && 
+            _bindingModelURIs == pOther->_bindingModelURIs && 
+            _bindingAxesSIDs == pOther->_bindingAxesSIDs && 
+            _bindingPassiveAxesSIDs == pOther->_bindingPassiveAxesSIDs && 
+            _bindingLinkSIDs == pOther->_bindingLinkSIDs;
+    }
+
+    ReadablePtr CloneSelf() const override {
+        boost::shared_ptr<ColladaXMLReadable> pNew(new ColladaXMLReadable());
+        *pNew = *this;
+        return pNew;
     }
 
     std::list< std::pair<std::string, bool> > _articulated_systemURIs; ///< pairs of (urls, isexternal) of the articulated_system, ordered in the same way as they are read. The first is the top-most level
@@ -117,7 +160,7 @@ typedef boost::shared_ptr<ColladaXMLReadable> ColladaXMLReadablePtr;
 boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults=true);
 /// \brief reset the global DAE
 void SetGlobalDAE(boost::shared_ptr<DAE>);
-boost::mutex& GetGlobalDAEMutex();
+std::mutex& GetGlobalDAEMutex();
 
 
 // register for typeof (MSVC only)

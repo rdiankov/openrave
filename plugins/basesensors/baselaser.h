@@ -117,10 +117,34 @@ protected:
         stringstream ss;
     };
 
+    class BaseLaser2DJSONReader : public BaseJSONReader
+    {
+public:
+        BaseLaser2DJSONReader(ReadablePtr pReadable) {
+            if (!!pReadable) {
+                _pgeom = boost::dynamic_pointer_cast<LaserGeomData>(pReadable);
+            }
+            else {
+                _pgeom.reset(new LaserGeomData());
+            }
+        }
+        virtual ~BaseLaser2DJSONReader() {}
+        ReadablePtr GetReadable() override {
+            return _pgeom;
+        }
+protected:
+        LaserGeomDataPtr _pgeom;
+    };
+
 public:
     static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseLaser2DXMLReader(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
+    }
+
+    static BaseJSONReaderPtr CreateJSONReader(ReadablePtr pReadable, const AttributesList& atts)
+    {
+        return BaseJSONReaderPtr(new BaseLaser2DJSONReader(pReadable));
     }
 
     BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
@@ -168,7 +192,7 @@ public:
             _bRenderData = true;
             return _bRenderData;
         case CC_RenderDataOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _listGraphicsHandles.clear();
             _bRenderData = false;
             return _bRenderData;
@@ -180,7 +204,7 @@ public:
             _RenderGeometry();
             return _bRenderData;
         case CC_RenderGeometryOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _graphgeometry.reset();
             _bRenderGeometry = false;
             return _bRenderData;
@@ -205,7 +229,7 @@ public:
 
             {
                 // Lock the data mutex and fill with the range data (get all in one timestep)
-                boost::mutex::scoped_lock lock(_mutexdata);
+                std::lock_guard<std::mutex> lock(_mutexdata);
                 _pdata->__trans = GetTransform();
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
                 t = GetLaserPlaneTransform();
@@ -225,7 +249,7 @@ public:
                         // store the colliding bodies
                         KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
                         if( !!plink ) {
-                            _databodyids[index] = plink->GetParent()->GetEnvironmentId();
+                            _databodyids[index] = plink->GetParent()->GetEnvironmentBodyIndex();
                         }
                     }
                     else {
@@ -247,7 +271,7 @@ public:
 
                 {
                     // Lock the data mutex and fill the arrays used for rendering
-                    boost::mutex::scoped_lock lock(_mutexdata);
+                    std::lock_guard<std::mutex> lock(_mutexdata);
                     N = (int)_pdata->ranges.size();
                     vpoints.resize(N+1);
                     for(int i = 0; i < N; ++i) {
@@ -307,7 +331,7 @@ public:
     virtual bool GetSensorData(SensorDataPtr psensordata)
     {
         if( psensordata->GetType() == ST_Laser ) {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             *boost::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
             return true;
         }
@@ -325,7 +349,7 @@ public:
     }
     bool _CollidingBodies(ostream& sout, istream& sinput)
     {
-        boost::mutex::scoped_lock lock(_mutexdata);
+        std::lock_guard<std::mutex> lock(_mutexdata);
         FOREACH(it, _databodyids) {
             sout << *it << " ";
         }
@@ -369,7 +393,7 @@ protected:
 
     virtual void _Reset()
     {
-        boost::mutex::scoped_lock lock(_mutexdata);
+        std::lock_guard<std::mutex> lock(_mutexdata);
         int N;
         if( _pgeom->resolution[0] > 0 ) {
             N = (int)( (_pgeom->max_angle[0]-_pgeom->min_angle[0])/_pgeom->resolution[0] + 0.5f)+1;
@@ -441,7 +465,7 @@ protected:
     GraphHandlePtr _graphgeometry;
     dReal _fTimeToScan;
 
-    boost::mutex _mutexdata;
+    std::mutex _mutexdata;
     bool _bRenderData, _bRenderGeometry, _bPower;
 
     friend class BaseLaser2DXMLReader;
@@ -506,7 +530,11 @@ private:
 public:
         dReal fSpinSpeed;
         Vector vSpinAxis, vSpinPos;
-        bool operator==(const Readable& other) override {
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
             const SpinningLaserGeomData* pOther = dynamic_cast<const SpinningLaserGeomData*>(&other);
             if (!pOther) {
                 return false;
@@ -516,8 +544,11 @@ public:
                 && vSpinAxis == pOther->vSpinAxis
                 && vSpinPos == pOther->vSpinPos;
         }
-        bool operator!=(const Readable& other) override {
-            return !operator==(other);
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<SpinningLaserGeomData> pNew(new SpinningLaserGeomData());
+            *pNew = *this;
+            return pNew;
         }
     };
 

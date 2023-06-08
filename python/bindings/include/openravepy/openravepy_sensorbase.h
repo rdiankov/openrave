@@ -54,7 +54,6 @@ public:
     PyCameraIntrinsics intrinsics;
     int width = 0;
     int height = 0;
-    std::string sensor_reference;
     std::string target_region;
     dReal measurement_time = 1.0;
     dReal gain = 1.0;
@@ -71,6 +70,8 @@ public:
     virtual ~PyLaserGeomData();
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
+
+    std::string hardware_id;
     py::tuple min_angle = py::make_tuple(0.0, 0.0);
     py::tuple max_angle = py::make_tuple(0.0, 0.0);
     py::tuple resolution;
@@ -100,6 +101,16 @@ public:
     virtual ~PyForce6DGeomData();
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
+
+    virtual object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+    virtual void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+
+    std::string hardware_id;
+    int polarity;
+    object correction_matrix;
+
+private:
+    void _Update(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom);
 };
 
 class PyIMUGeomData : public PySensorGeometry

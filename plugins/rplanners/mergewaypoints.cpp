@@ -379,7 +379,7 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
         bool solved = false;
         while(true) {
             solved = true;
-            size_t i = 0;
+            i = 0;
             FOREACHC(itramp,ramps) {
                 if(itramp->endTime < params->minswitchtime && i>0 && i<ramps.size()-1) {
                     solved = false;
@@ -1341,9 +1341,9 @@ void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>&ramps,Constraint
                 RAVELOG_WARN("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
                 dReal T = itramp->endTime;
                 dReal step = params->_fStepLength;
-                dReal ratio = T/step;
-                dReal ceilratio = RaveCeil(ratio);
-                RAVELOG_WARN_FORMAT("Ratio= %d, CeilRatio= %d\n",ratio%ceilratio);
+                dReal newRatio = T/step;
+                dReal ceilratio = RaveCeil(newRatio);
+                RAVELOG_WARN_FORMAT("Ratio= %d, CeilRatio= %d\n",newRatio%ceilratio);
             }
         }
         itx++;
@@ -1411,5 +1411,3 @@ void BreakIntoUnitaryRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps)
 
 
 } // end namespace mergewaypoints
-
-

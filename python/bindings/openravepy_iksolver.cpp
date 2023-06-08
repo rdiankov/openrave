@@ -72,7 +72,7 @@ object PyIkReturn::GetMapData(const std::string& key) {
 object PyIkReturn::GetMapDataDict() {
     py::dict odata;
     FOREACHC(it,_ret._mapdata) {
-        odata[it->first] = toPyArray(it->second);
+        odata[it->first.c_str()] = toPyArray(it->second);
     }
     return odata;
 }
@@ -312,7 +312,7 @@ void init_openravepy_iksolver()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<IkReturnAction>(m, "IkReturnAction" DOXY_ENUM(IkReturnAction))
+    enum_<IkReturnAction>(m, "IkReturnAction", py::arithmetic() DOXY_ENUM(IkReturnAction))
 #else
     enum_<IkReturnAction>("IkReturnAction" DOXY_ENUM(IkReturnAction))
 #endif

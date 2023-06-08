@@ -18,7 +18,10 @@ from .. import PlanningError
 
 from numpy import *
 from copy import copy as shallowcopy
-import cStringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 import logging
 log = logging.getLogger('openravepy.interfaces.TaskManipulation')
@@ -40,7 +43,9 @@ class TaskManipulation:
                 self.args += ' graspername %s '%graspername
             else:
                 self.args += ' nograsper '
-        env.Add(self.prob,True,self.args)
+        with env:
+            env.Add(self.prob,True,self.args)
+
     def  __del__(self):
         # need to lock the environment since Remove locks it
         env = self.prob.GetEnv()
@@ -58,7 +63,8 @@ class TaskManipulation:
         clone = shallowcopy(self)
         clone.prob = RaveCreateModule(envother,'TaskManipulation')
         clone.robot = envother.GetRobot(self.robot.GetName())
-        envother.Add(clone.prob,True,clone.args)
+        with envother:
+            envother.Add(clone.prob,True,clone.args)
         return clone
     
     def SetRobot(self, robot):
@@ -82,11 +88,11 @@ class TaskManipulation:
                 grasptranslationstepmult=gmodel.translationstepmult
             if graspfinestep is None:
                 graspfinestep=gmodel.finestep
-        cmd = cStringIO.StringIO()
+        cmd = StringIO()
         cmd.write('graspplanning target %s approachoffset %.15e grasps %d %d '%(target.GetName(),approachoffset, grasps.shape[0],grasps.shape[1]))
         for f in grasps.flat:
             cmd.write('%.15e '%f)
-        for name,valuerange in graspindices.iteritems():
+        for name,valuerange in graspindices.items():
             if name[0] == 'i' and len(valuerange) > 0 or name == 'grasptrans_nocol':
                 cmd.write(name)
                 cmd.write(' ')
@@ -165,7 +171,7 @@ class TaskManipulation:
         newconfigs = reshape(array([float64(s) for s in resvalues[len(configs):]]),(len(configs),self.robot.GetActiveDOF()))
         return iters,newconfigs
     
-    def ChuckFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
+    def ChuckFingers(self,offset=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None,releasegil=False):
         """See :ref:`module-taskmanipulation-closefingers`
         """
         cmd = 'CloseFingers '
@@ -188,7 +194,7 @@ class TaskManipulation:
             cmd += 'translationstepmult %.15e '%translationstepmult
         if finestep is not None:
             cmd += 'finestep %.15e '%finestep
-        res = self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd,releasegil=releasegil)
         if res is None:
             raise PlanningError('CloseFingers')
         resvalues = res
@@ -211,7 +217,7 @@ class TaskManipulation:
     def CloseFingers(self, *args, **kwargs):
         return self.ChuckFingers(*args, **kwargs)
     
-    def UnchuckFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None):
+    def UnchuckFingers(self,target=None,movingdir=None,execute=None,outputtraj=None,outputfinal=None,coarsestep=None,translationstepmult=None,finestep=None,outputtrajobj=None,releasegil=False):
         """See :ref:`module-taskmanipulation-releasefingers`
         """
         cmd = 'ReleaseFingers '
@@ -233,7 +239,7 @@ class TaskManipulation:
             cmd += 'translationstepmult %.15e '%translationstepmult
         if finestep is not None:
             cmd += 'finestep %.15e '%finestep
-        res = self.prob.SendCommand(cmd)
+        res = self.prob.SendCommand(cmd,releasegil=releasegil)
         if res is None:
             raise PlanningError('ReleaseFingers')
         resvalues = res

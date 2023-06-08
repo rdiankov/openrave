@@ -133,7 +133,8 @@ public:
                 RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
                 RobotBase::ManipulatorPtr pmanip = probot->GetManipulator(manipname);
                 if( !!pmanip ) {
-                    OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),<=,spec.GetDOF()); // make sure the planning dof includes pmanip
+                    // Don't really need to check if spec's dofs includes *all* manip dofs.
+                    // OPENRAVE_ASSERT_OP(pmanip->GetArmDOF(),<=,spec.GetDOF()); // make sure the planning dof includes pmanip
 
                     KinBody::LinkPtr endeffector = pmanip->GetEndEffector();
                     // Insert all child links of endeffector
@@ -144,9 +145,9 @@ public:
 
                     if( grabbedbodies.size() > 0 ) {
                         // look at only the grabbed body rather than the links
-                        FOREACH(itbody, grabbedbodies) {
-                            if( pmanip->IsGrabbing(**itbody) ) {
-                                FOREACH(itlink, (*itbody)->GetLinks()) {
+                        FOREACH(itgrabbed, grabbedbodies) {
+                            if( pmanip->IsGrabbing(**itgrabbed) ) {
+                                FOREACH(itlink, (*itgrabbed)->GetLinks()) {
                                     globallinklist.push_back(*itlink);
                                 }
                             }
@@ -184,7 +185,7 @@ public:
                             ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
                         }
                         ss << "]";
-                        RAVELOG_VERBOSE_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
+                        RAVELOG_VERBOSE_FORMAT("env=%s, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetNameId()%info.fmaxdistfromcenter%ss.str());
                     }
                     setCheckedManips.insert(endeffector);
                 }
@@ -198,24 +199,28 @@ public:
     /// \brief accellimits already initialized array with the current max accelerations
     void GetMaxVelocitiesAccelerations(const std::vector<dReal>& curvels, std::vector<dReal>& vellimits, std::vector<dReal>& accellimits)
     {
-        if( _maxmanipspeed<=0 && _maxmanipaccel <=0) {
+        if( _maxmanipspeed <= 0 && _maxmanipaccel <= 0) {
             return; // don't do anything
         }
 
         dReal maxmanipspeed2=_maxmanipspeed*_maxmanipspeed*0.5, maxmanipaccel2=_maxmanipaccel*_maxmanipaccel*0.5; // have to slow down maxes by a factor since cannot accurate predict how many joints will combine to form the real extents. 0.5 has been experimentally determined
-        vector<dReal> &vbestvels2 = _vbestvels2; vbestvels2.resize(vellimits.size());
-        for(size_t j = 0; j < vbestvels2.size(); ++j) {
-            vbestvels2[j] = vellimits[j]*vellimits[j];
+
+        size_t fullDOF = curvels.size();
+        OPENRAVE_ASSERT_OP(vellimits.size(), ==, fullDOF);
+        OPENRAVE_ASSERT_OP(accellimits.size(), ==, fullDOF);
+        vector<dReal> &vbestvels2 = _vbestvels2;
+        vbestvels2.resize(fullDOF);
+        for(size_t idof = 0; idof < fullDOF; ++idof) {
+            vbestvels2[idof] = vellimits[idof]*vellimits[idof];
         }
-        vector<dReal> &vbestaccels2 = _vbestaccels2; vbestaccels2.resize(accellimits.size());
-        for(size_t j = 0; j < vbestaccels2.size(); ++j) {
-            vbestaccels2[j] = accellimits[j]*accellimits[j];
+        vector<dReal> &vbestaccels2 = _vbestaccels2;
+        vbestaccels2.resize(fullDOF);
+        for(size_t idof = 0; idof < fullDOF; ++idof) {
+            vbestaccels2[idof] = accellimits[idof]*accellimits[idof];
         }
 
         uint64_t changedvelsmask=0, changedaccelsmask=0;
         OPENRAVE_ASSERT_OP(vellimits.size(),<,64);
-
-        vector<dReal> cachevellimits = vellimits, cacheaccellimits = accellimits;
 
         FOREACHC(itmanipinfo,_listCheckManips) {
             RobotBasePtr probot = itmanipinfo->pmanip->GetRobot();
@@ -225,8 +230,6 @@ public:
             probot->CalculateAngularVelocityJacobian(itmanipinfo->plink->GetIndex(), _vangularjacobian);
             probot->CalculateJacobian(itmanipinfo->plink->GetIndex(), tlink.trans, _vtransjacobian);
 
-            int armdof = itmanipinfo->pmanip->GetArmDOF();
-
             // checking for each point is too slow, so use fmaxdistfromcenter instead
             //FOREACH(itpoint,itmanipinfo->checkpoints)
             {
@@ -234,16 +237,16 @@ public:
                 dReal fmaxdistfromcenter = itmanipinfo->fmaxdistfromcenter;
 
                 Vector vpointtotalvel; // total work velocity from jacobian accounting all axes moving
-                for(int j = 0; j < armdof; ++j) {
-                    Vector vtransaxis(_vtransjacobian[j], _vtransjacobian[armdof+j], _vtransjacobian[2*armdof+j]);
-                    Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
-                    //vpointtotalvel += (vtransaxis + vangularaxis.cross(vdeltapoint))*curvels.at(j);
-                    vpointtotalvel += vtransaxis*curvels[j];
+                for(size_t idof = 0; idof < fullDOF; ++idof) {
+                    Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[fullDOF+idof], _vtransjacobian[2*fullDOF+idof]);
+                    Vector vangularaxis(_vangularjacobian[idof], _vangularjacobian[fullDOF+idof], _vangularjacobian[2*fullDOF+idof]);
+                    //vpointtotalvel += (vtransaxis + vangularaxis.cross(vdeltapoint))*curvels.at(idof);
+                    vpointtotalvel += vtransaxis*curvels[idof];
                     // RAVELOG_DEBUG_FORMAT("dof %d, vtransaxis = np.array([%.15e, %.15e, %.15e])", j%vtransaxis.x%vtransaxis.y%vtransaxis.z);
                 }
-                for(int j = 0; j < armdof; ++j) {
-                    Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
-                    Vector vd = Vector(RaveFabs(vangularaxis.y)+RaveFabs(vangularaxis.z), RaveFabs(vangularaxis.x)+RaveFabs(vangularaxis.z), RaveFabs(vangularaxis.x)+RaveFabs(vangularaxis.y))*fmaxdistfromcenter*RaveFabs(curvels.at(j));
+                for(size_t idof = 0; idof < fullDOF; ++idof) {
+                    Vector vangularaxis(_vangularjacobian[idof], _vangularjacobian[fullDOF+idof], _vangularjacobian[2*fullDOF+idof]);
+                    Vector vd = Vector(RaveFabs(vangularaxis.y)+RaveFabs(vangularaxis.z), RaveFabs(vangularaxis.x)+RaveFabs(vangularaxis.z), RaveFabs(vangularaxis.x)+RaveFabs(vangularaxis.y))*fmaxdistfromcenter*RaveFabs(curvels.at(idof));
                     if( vpointtotalvel.x < 0 ) {
                         vd.x = -vd.x;
                     }
@@ -257,11 +260,11 @@ public:
                     vpointtotalvel += vd;
                 }
 
-                for(int j = 0; j < armdof; ++j) {
-                    Vector vtransaxis(_vtransjacobian[j], _vtransjacobian[armdof+j], _vtransjacobian[2*armdof+j]);
-                    Vector vangularaxis(_vangularjacobian[j], _vangularjacobian[armdof+j], _vangularjacobian[2*armdof+j]);
+                for(size_t idof = 0; idof < fullDOF; ++idof) {
+                    Vector vtransaxis(_vtransjacobian[idof], _vtransjacobian[fullDOF+idof], _vtransjacobian[2*fullDOF+idof]);
+                    Vector vangularaxis(_vangularjacobian[idof], _vangularjacobian[fullDOF+idof], _vangularjacobian[2*fullDOF+idof]);
                     Vector vmoveaxis = vtransaxis;// + vangularaxis.cross(vdeltapoint);
-                    Vector vpointvelbase = vpointtotalvel-vmoveaxis*curvels.at(j); // remove contribution of this point
+                    Vector vpointvelbase = vpointtotalvel-vmoveaxis*curvels.at(idof); // remove contribution of this point
 
                     // |vpointvelbase + vmoveaxis*jointvel| <= maxspeed
                     // vmoveaxis^2 * jointvel^2 + vpointvelbase.dot(vmoveaxis)*jointvel + vpointvelbase^2 <= maxspeed^2
@@ -273,19 +276,19 @@ public:
                         if( numroots == 0 ) {
                             if( vpointvelbase.lengthsqr3() > maxmanipspeed2 ) {
                                 // going way too fast right now!
-                                if( curvels[j] > 0 ) {
-                                    vellimits[j] = curvels[j];
+                                if( curvels[idof] > 0 ) {
+                                    vellimits[idof] = curvels[idof];
                                 }
-                                else if( curvels[j] < 0 ) {
-                                    vellimits[j] = -curvels[j];
+                                else if( curvels[idof] < 0 ) {
+                                    vellimits[idof] = -curvels[idof];
                                 }
                             }
                         }
                         else {
                             for(int iroot = 0; iroot < numroots; ++iroot ) {
                                 dReal r = RaveFabs(roots[iroot]);
-                                if( r > 0 && r < vellimits[j] ) {
-                                    vellimits[j] = r;
+                                if( r > 0 && r < vellimits[idof] ) {
+                                    vellimits[idof] = r;
                                 }
                             }
                         }
@@ -296,9 +299,9 @@ public:
 
                     // if( maxmanipspeed2 > 0 ) {
                     //     // sqrt(flen2) * vel <= maxspeed
-                    //     if( fworkspeed2 * vbestvels2[j] >= maxmanipspeed2 ) {
-                    //         vbestvels2[j] = maxmanipspeed2/fworkspeed2;
-                    //         changedvelsmask |= (1<<j);
+                    //     if( fworkspeed2 * vbestvels2[idof] >= maxmanipspeed2 ) {
+                    //         vbestvels2[idof] = maxmanipspeed2/fworkspeed2;
+                    //         changedvelsmask |= (1<<idof);
                     //     }
                     // }
 
@@ -308,9 +311,9 @@ public:
                         Vector vaccelaxis = vmoveaxis;//(RaveFabs(vmoveaxis.x), RaveFabs(vmoveaxis.y), RaveFabs(vmoveaxis.z));
                         dReal fworkaccel2 = vaccelaxis.lengthsqr3(); ///< total speed in work space of *itpoint
 
-                        if( fworkaccel2 * vbestaccels2[j] >= maxmanipaccel2 ) {
-                            vbestaccels2[j] = maxmanipaccel2/fworkaccel2;
-                            changedaccelsmask |= (1<<j);
+                        if( fworkaccel2 * vbestaccels2[idof] >= maxmanipaccel2 ) {
+                            vbestaccels2[idof] = maxmanipaccel2/fworkaccel2;
+                            changedaccelsmask |= (1<<idof);
                         }
                     }
                 }
@@ -318,12 +321,12 @@ public:
         }
 
         // go through all the changes and update vellimits/accellimits
-        for(size_t j = 0; j < vellimits.size(); ++j) {
-            if( changedvelsmask & (1<<j) ) {
-                vellimits[j] = RaveSqrt(vbestvels2[j]);
+        for(size_t idof = 0; idof < vellimits.size(); ++idof) {
+            if( changedvelsmask & (1<<idof) ) {
+                vellimits[idof] = RaveSqrt(vbestvels2[idof]);
             }
-            if( changedaccelsmask & (1<<j) ) {
-                accellimits[j] = RaveSqrt(vbestaccels2[j]);
+            if( changedaccelsmask & (1<<idof) ) {
+                accellimits[idof] = RaveSqrt(vbestaccels2[idof]);
             }
         }
 
@@ -614,7 +617,7 @@ public:
         ss << "]; qdd=[";
         SerializeValues(ss, vDOFAccelAtViolation);
         ss << "];";
-        RAVELOG_VERBOSE_FORMAT("env=%d, maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%.15e; %s", _penv->GetId()%_maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor%ss.str());
+        RAVELOG_VERBOSE_FORMAT("env=%s, maxmanipspeed=%.15e; maxactualmanipspeed=%.15e; maxmanipaccel=%.15e; maxactualmanipaccel=%.15e; reductionFactor=%.15e; %s", _penv->GetNameId()%_maxmanipspeed%maxactualmanipspeed%_maxmanipaccel%maxactualmanipaccel%reductionFactor%ss.str());
 #endif
         return ParabolicRampInternal::CheckReturn(retcode, reductionFactor, maxactualmanipspeed, maxactualmanipaccel);
     }

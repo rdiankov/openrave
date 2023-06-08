@@ -75,7 +75,7 @@ class ConstraintPlanning:
 
     def graspAndMove(self,showgoalcup=True):
         target = self.gmodel.target
-        print 'grasping %s'%target.GetName()
+        print('grasping %s'%target.GetName())
         # only use one grasp since preshape can change
         validgrasps,validindices = self.gmodel.computeValidGrasps(returnnum=10)
         validgrasp=validgrasps[random.randint(len(validgrasps))]
@@ -102,7 +102,7 @@ class ConstraintPlanning:
                     geom.SetTransparency(0.7)
 
         try:
-            print 'moving mug without global XY rotation'
+            print('moving mug without global XY rotation')
             while True:
                 # find the z rotation axis of the cup's frame
                 localrotaxis = dot(linalg.inv(target.GetTransform()[0:3,0:3]),[0,0,1])
@@ -113,8 +113,8 @@ class ConstraintPlanning:
                 constraintfreedoms[index] = 0
                 localrotaxis = zeros(3)
                 localrotaxis[index] = 1
-                print localrotaxis
-                print 'planning with freedoms: %s, local rot axis: %s '%(constraintfreedoms,localrotaxis)
+                print(localrotaxis)
+                print('planning with freedoms: %s, local rot axis: %s '%(constraintfreedoms,localrotaxis))
                 
                 constrainterrorthresh = 0.005
                 for iter in range(3):
@@ -141,8 +141,8 @@ class ConstraintPlanning:
                         constrainttaskmatrix=dot(linalg.inv(Tee),target.GetTransform())
                         constraintmatrix = linalg.inv(target.GetTransform())
                         self.basemanip.MoveToHandPosition(matrices=[T],maxiter=3000,maxtries=1,seedik=40,constraintfreedoms=constraintfreedoms,constraintmatrix=constraintmatrix, constrainttaskmatrix=constrainttaskmatrix,constrainterrorthresh=constrainterrorthresh,steplength=0.002)
-                    except planning_error,e:
-                        print e
+                    except planning_error as e:
+                        print(e)
                     self.robot.WaitForController(0)
         finally:
             if showtarget is not None:

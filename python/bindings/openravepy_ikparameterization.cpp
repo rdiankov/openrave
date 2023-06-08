@@ -66,13 +66,13 @@ PyIkParameterization::PyIkParameterization(object o, IkParameterizationType type
     case IKP_TranslationDirection5D: SetTranslationDirection5D(extract<OPENRAVE_SHARED_PTR<PyRay> >(o)); break;
     case IKP_TranslationXY2D: SetTranslationXY2D(o); break;
     case IKP_TranslationXYOrientation3D: SetTranslationXYOrientation3D(o); break;
-    case IKP_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[0],o[1]); break;
-    case IKP_TranslationXAxisAngle4D: SetTranslationXAxisAngle4D(o[0],extract<dReal>(o[1])); break;
-    case IKP_TranslationYAxisAngle4D: SetTranslationYAxisAngle4D(o[0],extract<dReal>(o[1])); break;
-    case IKP_TranslationZAxisAngle4D: SetTranslationZAxisAngle4D(o[0],extract<dReal>(o[1])); break;
-    case IKP_TranslationXAxisAngleZNorm4D: SetTranslationXAxisAngleZNorm4D(o[0],extract<dReal>(o[1])); break;
-    case IKP_TranslationYAxisAngleXNorm4D: SetTranslationYAxisAngleXNorm4D(o[0],extract<dReal>(o[1])); break;
-    case IKP_TranslationZAxisAngleYNorm4D: SetTranslationZAxisAngleYNorm4D(o[0],extract<dReal>(o[1])); break;
+    case IKP_TranslationLocalGlobal6D: SetTranslationLocalGlobal6D(o[py::to_object(0)],o[py::to_object(1)]); break;
+    case IKP_TranslationXAxisAngle4D: SetTranslationXAxisAngle4D(o[py::to_object(0)],extract<dReal>(o[py::to_object(1)])); break;
+    case IKP_TranslationYAxisAngle4D: SetTranslationYAxisAngle4D(o[py::to_object(0)],extract<dReal>(o[py::to_object(1)])); break;
+    case IKP_TranslationZAxisAngle4D: SetTranslationZAxisAngle4D(o[py::to_object(0)],extract<dReal>(o[py::to_object(1)])); break;
+    case IKP_TranslationXAxisAngleZNorm4D: SetTranslationXAxisAngleZNorm4D(o[py::to_object(0)],extract<dReal>(o[py::to_object(1)])); break;
+    case IKP_TranslationYAxisAngleXNorm4D: SetTranslationYAxisAngleXNorm4D(o[py::to_object(0)],extract<dReal>(o[py::to_object(1)])); break;
+    case IKP_TranslationZAxisAngleYNorm4D: SetTranslationZAxisAngleYNorm4D(o[py::to_object(0)],extract<dReal>(o[py::to_object(1)])); break;
     default: throw OPENRAVE_EXCEPTION_FORMAT(_("incorrect ik parameterization type 0x%x"), type, ORE_InvalidArguments);
     }
 }
@@ -285,7 +285,7 @@ object PyIkParameterization::GetCustomDataMap()
 {
     py::dict odata;
     FOREACHC(it, _param.GetCustomDataMap()) {
-        odata[it->first] = toPyArray(it->second);
+        odata[it->first.c_str()] = toPyArray(it->second);
     }
     return odata;
 }
@@ -477,8 +477,11 @@ void init_openravepy_ikparameterization()
                                    .def(init<IkParameterization>(), "ikparam"_a)
                                    .def("__copy__", [](const PyIkParameterization& self){ return self; })
                                    .def("__deepcopy__", [](const PyIkParameterization& self, const py::dict& memo) {
+                                        return PyIkParameterization(self._param);
+                                        /*
                                         PyIkParameterizationPtr pyikparam(new PyIkParameterization(self._param));
                                         return py::to_object(pyikparam);
+                                        */
                                     })
 #else
         scope_ ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >("IkParameterization", DOXY_CLASS(IkParameterization))

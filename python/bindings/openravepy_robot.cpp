@@ -68,6 +68,7 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     _id = ConvertStringToUnicode(info._id);
     _name = ConvertStringToUnicode(info._name);
     _sBaseLinkName = ConvertStringToUnicode(info._sBaseLinkName);
+    _sIkChainEndLinkName = ConvertStringToUnicode(info._sIkChainEndLinkName);
     _sEffectorLinkName = ConvertStringToUnicode(info._sEffectorLinkName);
     _tLocalTool = ReturnTransform(info._tLocalTool);
     _vChuckingDirection = toPyArray(info._vChuckingDirection);
@@ -80,6 +81,7 @@ void PyManipulatorInfo::_Update(const RobotBase::ManipulatorInfo& info) {
     _vGripperJointNames = vGripperJointNames;
     _grippername = ConvertStringToUnicode(info._grippername);
     _toolChangerConnectedBodyToolName = ConvertStringToUnicode(info._toolChangerConnectedBodyToolName);
+    _toolChangerLinkName = ConvertStringToUnicode(info._toolChangerLinkName);
     py::list vRestrictGraspSetNames;
     FOREACHC(itname, info._vRestrictGraspSetNames) {
         vRestrictGraspSetNames.append(ConvertStringToUnicode(*itname));
@@ -99,6 +101,9 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     if( !IS_PYTHONOBJECT_NONE(_sBaseLinkName) ) {
         pinfo->_sBaseLinkName = py::extract<std::string>(_sBaseLinkName);
     }
+    if( !IS_PYTHONOBJECT_NONE(_sIkChainEndLinkName) ) {
+        pinfo->_sIkChainEndLinkName = py::extract<std::string>(_sIkChainEndLinkName);
+    }
     if( !IS_PYTHONOBJECT_NONE(_sEffectorLinkName) ) {
         pinfo->_sEffectorLinkName = py::extract<std::string>(_sEffectorLinkName);
     }
@@ -106,7 +111,7 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
         pinfo->_tLocalTool = ExtractTransform(_tLocalTool);
     }
     if( !IS_PYTHONOBJECT_NONE(_vChuckingDirection) ) {
-        pinfo->_vChuckingDirection = ExtractArray<dReal>(_vChuckingDirection);
+        pinfo->_vChuckingDirection = ExtractArray<int>(_vChuckingDirection);
     }
     if( !IS_PYTHONOBJECT_NONE(_vdirection) ) {
         pinfo->_vdirection = ExtractVector3(_vdirection);
@@ -131,6 +136,13 @@ RobotBase::ManipulatorInfoPtr PyManipulatorInfo::GetManipulatorInfo() const
     else {
         RAVELOG_WARN_FORMAT("python manipulator %s has toolChangerConnectedBodyToolName that is None", pinfo->_name);
         pinfo->_toolChangerConnectedBodyToolName.clear();
+    }
+    if( !IS_PYTHONOBJECT_NONE(_toolChangerLinkName) ) {
+        pinfo->_toolChangerLinkName = py::extract<std::string>(_toolChangerLinkName);
+    }
+    else {
+        RAVELOG_WARN_FORMAT("python manipulator %s has toolChangerLinkName that is None", pinfo->_name);
+        pinfo->_toolChangerLinkName.clear();
     }
     if( !IS_PYTHONOBJECT_NONE(_vRestrictGraspSetNames) ) {
         pinfo->_vRestrictGraspSetNames = ExtractArray<std::string>(_vRestrictGraspSetNames);
@@ -176,6 +188,9 @@ void PyAttachedSensorInfo::_Update(const RobotBase::AttachedSensorInfo& info) {
     _linkname = ConvertStringToUnicode(info._linkname);
     _trelative = ReturnTransform(info._trelative);
     _sensorname = ConvertStringToUnicode(info._sensorname);
+    _referenceAttachedSensorName = ConvertStringToUnicode(info._referenceAttachedSensorName);
+    _sensorMaker = ConvertStringToUnicode(info._sensorMaker);
+    _sensorModel = ConvertStringToUnicode(info._sensorModel);
     _sensorgeometry = toPySensorGeometry(info._sensorname, info._docSensorGeometry);
 }
 
@@ -196,6 +211,15 @@ RobotBase::AttachedSensorInfoPtr PyAttachedSensorInfo::GetAttachedSensorInfo() c
     }
     if( !IS_PYTHONOBJECT_NONE(_sensorname) ) {
         pinfo->_sensorname = py::extract<std::string>(_sensorname);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_referenceAttachedSensorName) ) {
+        pinfo->_referenceAttachedSensorName = py::extract<std::string>(_referenceAttachedSensorName);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sensorMaker) ) {
+        pinfo->_sensorMaker = py::extract<std::string>(_sensorMaker);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_sensorModel) ) {
+        pinfo->_sensorModel = py::extract<std::string>(_sensorModel);
     }
     rapidjson::Document docSensorGeometry;
     if(!!_sensorgeometry) {
@@ -223,6 +247,16 @@ void PyAttachedSensorInfo::DeserializeJSON(object obj, dReal fUnitScale, object 
     RobotBase::AttachedSensorInfo info;
     info.DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
     _Update(info);
+}
+
+PyRobotBase::PyAttachedSensorPtr toPyAttachedSensor(RobotBase::AttachedSensorPtr pAttachedSensor, PyEnvironmentBasePtr pyenv)
+{
+    if( !!pAttachedSensor ) {
+        return PyRobotBase::PyAttachedSensorPtr(new PyRobotBase::PyAttachedSensor(pAttachedSensor, pyenv));
+    }
+    else {
+        return PyRobotBase::PyAttachedSensorPtr();
+    }
 }
 
 PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo)
@@ -393,11 +427,6 @@ void PyRobotBase::PyRobotBaseInfo::DeserializeJSON(py::object obj, dReal fUnitSc
 
 void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info) {
     PyKinBody::PyKinBodyInfo::_Update(info);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    _vManipulatorInfos = info._vManipulatorInfos;
-    _vAttachedSensorInfos = info._vAttachedSensorInfos;
-    _vConnectedBodyInfos = info._vConnectedBodyInfos;
-#else
     py::list vManipulatorInfos;
     FOREACHC(itManipulatorInfo, info._vManipulatorInfos) {
         PyManipulatorInfoPtr pmanipinfo = toPyManipulatorInfo(**itManipulatorInfo);
@@ -428,7 +457,6 @@ void PyRobotBase::PyRobotBaseInfo::_Update(const RobotBase::RobotBaseInfo& info)
         vGripperInfos.append(toPyObject(rGripperInfo));
     }
     _vGripperInfos = vGripperInfos;
-#endif
 }
 
 
@@ -443,7 +471,7 @@ std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(object py
         vManipulatorInfos.resize(arraySize);
 
         for(size_t iManipulatorInfo = 0; iManipulatorInfo < arraySize; iManipulatorInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyManipulatorInfo> > pymanipinfo(pyManipList[iManipulatorInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyManipulatorInfo> > pymanipinfo(pyManipList[py::to_object(iManipulatorInfo)]);
             if (pymanipinfo.check()) {
                 vManipulatorInfos[iManipulatorInfo] = ((OPENRAVE_SHARED_PTR<PyManipulatorInfo>)pymanipinfo)->GetManipulatorInfo();
             }
@@ -469,7 +497,7 @@ std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(obj
         vAttachedSensorInfos.resize(arraySize);
 
         for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < arraySize; iAttachedSensorInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> > pyattachensensorinfo(pyAttachedSensorInfoList[iAttachedSensorInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> > pyattachensensorinfo(pyAttachedSensorInfoList[py::to_object(iAttachedSensorInfo)]);
             if (pyattachensensorinfo.check()) {
                 vAttachedSensorInfos[iAttachedSensorInfo] = ((OPENRAVE_SHARED_PTR<PyAttachedSensorInfo>)pyattachensensorinfo)->GetAttachedSensorInfo();
             }
@@ -495,7 +523,7 @@ std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(objec
         vConnectedBodyInfos.resize(arraySize);
 
         for(size_t iConnectedBodyInfo = 0; iConnectedBodyInfo < arraySize; iConnectedBodyInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> > pyconnectedbodyinfo(pyConnectedBodyInfoList[iConnectedBodyInfo]);
+            extract_<OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> > pyconnectedbodyinfo(pyConnectedBodyInfoList[py::to_object(iConnectedBodyInfo)]);
             if (pyconnectedbodyinfo.check()) {
                 vConnectedBodyInfos[iConnectedBodyInfo] = ((OPENRAVE_SHARED_PTR<PyConnectedBodyInfo>)pyconnectedbodyinfo)->GetConnectedBodyInfo();
             }
@@ -524,7 +552,7 @@ std::vector<RobotBase::GripperInfoPtr> ExtractGripperInfoArray(object pyGripperI
         for(size_t iGripperInfo = 0; iGripperInfo < arraySize; iGripperInfo++) {
             RobotBase::GripperInfoPtr pInfo(new RobotBase::GripperInfo());
             rapidjson::Document rGripperInfo;
-            toRapidJSONValue(pyGripperInfoList[iGripperInfo], rGripperInfo, rGripperInfo.GetAllocator());
+            toRapidJSONValue(pyGripperInfoList[py::to_object(iGripperInfo)], rGripperInfo, rGripperInfo.GetAllocator());
             pInfo->DeserializeJSON(rGripperInfo, fUnitScale, options);
             vGripperInfos.push_back(pInfo);
         }
@@ -544,13 +572,6 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     pInfo->_interfaceType = _interfaceType;
     pInfo->_uri = _uri;
     pInfo->_referenceUri = _referenceUri;
-    pInfo->_vLinkInfos = std::vector<KinBody::LinkInfoPtr>(begin(_vLinkInfos), end(_vLinkInfos));
-    pInfo->_vJointInfos = std::vector<KinBody::JointInfoPtr>(begin(_vJointInfos), end(_vJointInfos));
-    pInfo->_vGrabbedInfos = std::vector<KinBody::GrabbedInfoPtr>(begin(_vGrabbedInfos), end(_vGrabbedInfos));
-    pInfo->_vManipulatorInfos = std::vector<RobotBase::ManipulatorInfoPtr>(begin(_vManipulatorInfos), end(_vManipulatorInfos));
-    pInfo->_vAttachedSensorInfos = std::vector<RobotBase::AttachedSensorInfoPtr>(begin(_vAttachedSensorInfos), end(_vAttachedSensorInfos));
-    pInfo->_vConnectedBodyInfos = std::vector<RobotBase::ConnectedBodyInfoPtr>(begin(_vConnectedBodyInfos), end(_vConnectedBodyInfos));
-    pInfo->_vGripperInfos = std::vector<RobotBase::GripperInfoPtr>(begin(_vGripperInfos), end(_vGripperInfos));
 #else
     if (!IS_PYTHONOBJECT_NONE(_id)) {
         pInfo->_id = py::extract<std::string>(_id);
@@ -567,6 +588,7 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     if (!IS_PYTHONOBJECT_NONE(_referenceUri)) {
         pInfo->_referenceUri = py::extract<std::string>(_referenceUri);
     }
+#endif
     pInfo->_isRobot = true;
     std::vector<KinBody::LinkInfoPtr> vLinkInfos = ExtractLinkInfoArray(_vLinkInfos);
     pInfo->_vLinkInfos.clear();
@@ -611,7 +633,6 @@ RobotBase::RobotBaseInfoPtr PyRobotBase::PyRobotBaseInfo::GetRobotBaseInfo() con
     FOREACHC(it, vGripperInfos) {
         pInfo->_vGripperInfos.push_back(*it);
     }
-#endif
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
@@ -674,7 +695,7 @@ object PyRobotBase::PyManipulator::GetTransformPose() const {
 object PyRobotBase::PyManipulator::GetVelocity() const {
     const std::pair<Vector, Vector> velocity = _pmanip->GetVelocity();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvalues({6});
+    py::array_t<dReal> pyvalues(6);
     py::buffer_info buf = pyvalues.request();
     dReal* pvalue = (dReal*) buf.ptr;
     pvalue[0] = velocity.first.x;
@@ -700,6 +721,10 @@ object PyRobotBase::PyManipulator::GetGripperName() const {
 
 object PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName() const {
     return ConvertStringToUnicode(_pmanip->GetToolChangerConnectedBodyToolName());
+}
+
+object PyRobotBase::PyManipulator::GetToolChangerLinkName() const {
+    return ConvertStringToUnicode(_pmanip->GetToolChangerLinkName());
 }
 
 object PyRobotBase::PyManipulator::GetRestrictGraspSetNames() const {
@@ -728,6 +753,9 @@ object PyRobotBase::PyManipulator::GetIkSolver() {
 object PyRobotBase::PyManipulator::GetBase() {
     return toPyKinBodyLink(_pmanip->GetBase(),_pyenv);
 }
+object PyRobotBase::PyManipulator::GetIkChainEndLink() {
+    return toPyKinBodyLink(_pmanip->GetIkChainEndLink(),_pyenv);
+}
 object PyRobotBase::PyManipulator::GetEndEffector() {
     return toPyKinBodyLink(_pmanip->GetEndEffector(),_pyenv);
 }
@@ -753,11 +781,11 @@ void PyRobotBase::PyManipulator::SetLocalToolDirection(object odirection) {
 void PyRobotBase::PyManipulator::SetClosingDirection(object oclosingdirection)
 {
     RAVELOG_WARN("SetClosingDirection is deprecated, use SetChuckingDirection\n");
-    _pmanip->SetChuckingDirection(ExtractArray<dReal>(oclosingdirection));
+    _pmanip->SetChuckingDirection(ExtractArray<int>(oclosingdirection));
 }
 void PyRobotBase::PyManipulator::SetChuckingDirection(object ochuckingdirection)
 {
-    _pmanip->SetChuckingDirection(ExtractArray<dReal>(ochuckingdirection));
+    _pmanip->SetChuckingDirection(ExtractArray<int>(ochuckingdirection));
 }
 py::array_int PyRobotBase::PyManipulator::GetGripperJoints() {
     RAVELOG_DEBUG("GetGripperJoints is deprecated, use GetGripperIndices\n");
@@ -899,12 +927,12 @@ bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikpa
 object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptions, bool ikreturn, bool releasegil) const
 {
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ikparam,filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ikparam,filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -917,9 +945,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
     // assume transformation matrix
     else {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -935,12 +963,12 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -953,9 +981,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     // assume transformation matrix
     else {
         if( ikreturn ) {
-            IkReturn ikreturn(IKRA_Reject);
-            _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreturn,releasegil);
-            return openravepy::toPyIkReturn(ikreturn);
+            IkReturn ikreject(IKRA_Reject);
+            _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreject,releasegil);
+            return openravepy::toPyIkReturn(ikreject);
         }
         else {
             std::vector<dReal> solution;
@@ -970,7 +998,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
 object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteroptions, bool ikreturn, bool releasegil) const
 {
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
         if( ExtractIkParameterization(oparam,ikparam) ) {
@@ -1029,7 +1057,7 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freepar
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
-    EnvironmentMutex::scoped_lock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
+    EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
         if( ExtractIkParameterization(oparam,ikparam) ) {
@@ -1291,7 +1319,7 @@ object PyRobotBase::PyAttachedSensor::GetTransformPose() const {
     return toPyArray(_pattached->GetTransform());
 }
 PyRobotBasePtr PyRobotBase::PyAttachedSensor::GetRobot() const {
-    return _pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
+    return !_pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
 }
 object PyRobotBase::PyAttachedSensor::GetName() const {
     return ConvertStringToUnicode(_pattached->GetName());
@@ -1433,7 +1461,7 @@ object PyRobotBase::PyConnectedBody::GetResolvedAttachedSensors()
     std::vector<RobotBase::AttachedSensorPtr> vattachedSensors;
     _pconnected->GetResolvedAttachedSensors(vattachedSensors);
     FOREACH(itattachedSensor, vattachedSensors) {
-        //oattachedSensors.append(toPyRobotAttachedSensorulator(*itattachedSensor, _pyenv));
+        oattachedSensors.append(toPyAttachedSensor(*itattachedSensor, _pyenv));
     }
     return oattachedSensors;
 }
@@ -1556,7 +1584,7 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
     _ParseJointInfos(ojointinfos, vjointinfos);
     std::vector<RobotBase::ManipulatorInfoConstPtr> vmanipinfos(len(omanipinfos));
     for(size_t i = 0; i < vmanipinfos.size(); ++i) {
-        PyManipulatorInfoPtr pymanip = py::extract<PyManipulatorInfoPtr>(omanipinfos[i]);
+        PyManipulatorInfoPtr pymanip = py::extract<PyManipulatorInfoPtr>(omanipinfos[py::to_object(i)]);
         if( !pymanip ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ManipulatorInfo"),ORE_InvalidArguments);
         }
@@ -1564,7 +1592,7 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
     }
     std::vector<RobotBase::AttachedSensorInfoConstPtr> vattachedsensorinfos(len(oattachedsensorinfos));
     for(size_t i = 0; i < vattachedsensorinfos.size(); ++i) {
-        PyAttachedSensorInfoPtr pyattachedsensor = py::extract<PyAttachedSensorInfoPtr>(oattachedsensorinfos[i]);
+        PyAttachedSensorInfoPtr pyattachedsensor = py::extract<PyAttachedSensorInfoPtr>(oattachedsensorinfos[py::to_object(i)]);
         if( !pyattachedsensor ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.AttachedsensorInfo"),ORE_InvalidArguments);
         }
@@ -1719,7 +1747,7 @@ object PyRobotBase::GetGripperInfo(const std::string& name)
 {
     RobotBase::GripperInfoPtr pGripperInfo = _probot->GetGripperInfo(name);
     if( !pGripperInfo ) {
-        return py::object();
+        return py::none_();
     }
 
     rapidjson::Document rGripperInfo;
@@ -1962,7 +1990,7 @@ object PyRobotBase::GetActiveDOFMaxVel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxVel(values);
+    _probot->GetActiveDOFVelocityLimits(values);
     return toPyArray(values);
 }
 
@@ -1972,7 +2000,7 @@ object PyRobotBase::GetActiveDOFMaxAccel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxAccel(values);
+    _probot->GetActiveDOFAccelerationLimits(values);
     return toPyArray(values);
 }
 
@@ -1982,7 +2010,7 @@ object PyRobotBase::GetActiveDOFMaxJerk() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFMaxJerk(values);
+    _probot->GetActiveDOFJerkLimits(values);
     return toPyArray(values);
 }
 
@@ -1992,7 +2020,7 @@ object PyRobotBase::GetActiveDOFHardMaxVel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxVel(values);
+    _probot->GetActiveDOFHardVelocityLimits(values);
     return toPyArray(values);
 }
 
@@ -2002,7 +2030,7 @@ object PyRobotBase::GetActiveDOFHardMaxAccel() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxAccel(values);
+    _probot->GetActiveDOFHardAccelerationLimits(values);
     return toPyArray(values);
 }
 
@@ -2012,7 +2040,7 @@ object PyRobotBase::GetActiveDOFHardMaxJerk() const
         return py::empty_array_astype<dReal>();
     }
     std::vector<dReal> values;
-    _probot->GetActiveDOFHardMaxJerk(values);
+    _probot->GetActiveDOFHardJerkLimits(values);
     return toPyArray(values);
 }
 
@@ -2072,7 +2100,7 @@ object PyRobotBase::CalculateActiveAngularVelocityJacobian(int index) const
 }
 
 bool PyRobotBase::Grab(PyKinBodyPtr pbody) {
-    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody());
+    CHECK_POINTER(pbody); return _probot->Grab(pbody->GetBody(), rapidjson::Value());
 }
 
 // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
@@ -2082,19 +2110,35 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore)
     CHECK_POINTER(pylink_or_linkstoignore);
     KinBody::LinkPtr plink = GetKinBodyLink(pylink_or_linkstoignore);
     if( !!plink ) {
-        return _probot->Grab(pbody->GetBody(), plink);
+        return _probot->Grab(pbody->GetBody(), plink, rapidjson::Value());
     }
-    // maybe it is a set?
+    if( !IS_PYTHONOBJECT_NONE(pylink_or_linkstoignore) && len(pylink_or_linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(pylink_or_linkstoignore[0])) ) {
+        // pylink_or_linkstoignore is a list of link names to be ignored
+        std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(pylink_or_linkstoignore);
+        return _probot->Grab(pbody->GetBody(), setlinkstoignoreString, rapidjson::Value());
+    }
+    // pylink_or_linkstoignore is a list of link indices to be ignored
     std::set<int> setlinkstoignore = ExtractSet<int>(pylink_or_linkstoignore);
-    return _probot->Grab(pbody->GetBody(), setlinkstoignore);
+    return _probot->Grab(pbody->GetBody(), setlinkstoignore, rapidjson::Value());
 }
 
-bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore)
+bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object grabbedUserData)
 {
     CHECK_POINTER(pbody);
     CHECK_POINTER(pylink);
-    std::set<int> setlinkstoignore = ExtractSet<int>(linkstoignore);
-    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignore);
+    rapidjson::Document rGrabbedUserData;
+    if( !IS_PYTHONOBJECT_NONE(grabbedUserData) ) {
+        toRapidJSONValue(grabbedUserData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
+    }
+
+    if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
+        // linkstoignore is a list of link names
+        std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
+        return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreString, rGrabbedUserData);
+    }
+    // linkstoignore is a list of link indices
+    std::set<int> setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
+    return _pbody->Grab(pbody->GetBody(), GetKinBodyLink(pylink), setlinkstoignoreInt, rGrabbedUserData);
 }
 
 bool PyRobotBase::CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport)
@@ -2180,7 +2224,7 @@ class ManipulatorInfo_pickle_suite
 public:
     static py::tuple getstate(const PyManipulatorInfo& r)
     {
-        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName, r._vRestrictGraspSetNames);
+        return py::make_tuple(r._name, r._sBaseLinkName, r._sEffectorLinkName, r._tLocalTool, r._vChuckingDirection, r._vdirection, r._sIkSolverXMLId, r._vGripperJointNames, r._grippername, r._toolChangerConnectedBodyToolName, r._vRestrictGraspSetNames, r._sIkChainEndLinkName, r._toolChangerLinkName);
     }
     static void setstate(PyManipulatorInfo& r, py::tuple state) {
         r._name = state[0];
@@ -2208,6 +2252,18 @@ public:
         }
         else {
             r._vRestrictGraspSetNames = py::none_();
+        }
+        if( len(state) > 11 ) {
+            r._sIkChainEndLinkName = state[11];
+        }
+        else {
+            r._sIkChainEndLinkName = py::none_();
+        }
+        if( len(state) > 12 ) {
+            r._toolChangerLinkName = state[12];
+        }
+        else {
+            r._toolChangerLinkName = py::none_();
         }
     }
 };
@@ -2352,6 +2408,7 @@ void init_openravepy_robot()
                              .def_readwrite("_id",&PyManipulatorInfo::_id)
                              .def_readwrite("_name",&PyManipulatorInfo::_name)
                              .def_readwrite("_sBaseLinkName",&PyManipulatorInfo::_sBaseLinkName)
+                             .def_readwrite("_sIkChainEndLinkName",&PyManipulatorInfo::_sIkChainEndLinkName)
                              .def_readwrite("_sEffectorLinkName",&PyManipulatorInfo::_sEffectorLinkName)
                              .def_readwrite("_tLocalTool",&PyManipulatorInfo::_tLocalTool)
                              .def_readwrite("_vChuckingDirection",&PyManipulatorInfo::_vChuckingDirection)
@@ -2361,6 +2418,7 @@ void init_openravepy_robot()
                              .def_readwrite("_vGripperJointNames",&PyManipulatorInfo::_vGripperJointNames)
                              .def_readwrite("_grippername",&PyManipulatorInfo::_grippername)
                              .def_readwrite("_toolChangerConnectedBodyToolName",&PyManipulatorInfo::_toolChangerConnectedBodyToolName)
+                             .def_readwrite("_toolChangerLinkName",&PyManipulatorInfo::_toolChangerLinkName)
                              .def_readwrite("_vRestrictGraspSetNames",&PyManipulatorInfo::_vRestrictGraspSetNames)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                              .def("SerializeJSON", &PyManipulatorInfo::SerializeJSON,
@@ -2393,6 +2451,17 @@ void init_openravepy_robot()
             return pyinfo;
         }
                                       ))
+                             .def("__copy__", [](const PyManipulatorInfo& self){
+            return self;
+        })
+                             .def("__deepcopy__",
+                                  [](const PyManipulatorInfo &pyinfo, const py::dict& memo) {
+            auto state = ManipulatorInfo_pickle_suite::getstate(pyinfo);
+            PyManipulatorInfo pyinfo_new;
+            ManipulatorInfo_pickle_suite::setstate(pyinfo_new, state);
+            return pyinfo_new;
+        }
+                                  )
 #else
                              .def_pickle(ManipulatorInfo_pickle_suite())
 #endif
@@ -2408,6 +2477,9 @@ void init_openravepy_robot()
                                 .def_readwrite("_linkname", &PyAttachedSensorInfo::_linkname)
                                 .def_readwrite("_trelative", &PyAttachedSensorInfo::_trelative)
                                 .def_readwrite("_sensorname", &PyAttachedSensorInfo::_sensorname)
+                                .def_readwrite("_referenceAttachedSensorName",&PyAttachedSensorInfo::_referenceAttachedSensorName)
+                                .def_readwrite("_sensorMaker",&PyAttachedSensorInfo::_sensorMaker)
+                                .def_readwrite("_sensorModel",&PyAttachedSensorInfo::_sensorModel)
                                 .def_readwrite("_sensorgeometry", &PyAttachedSensorInfo::_sensorgeometry)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                                 .def("SerializeJSON", &PyAttachedSensorInfo::SerializeJSON,
@@ -2469,8 +2541,8 @@ void init_openravepy_robot()
         void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
 
         bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab2)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object, object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab5)(PyKinBodyPtr, object, object, object) = &PyRobotBase::Grab;
 
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
@@ -2482,7 +2554,7 @@ void init_openravepy_robot()
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
         bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", DOXY_CLASS(RobotBase))
+        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase))
 #else
         scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
 #endif
@@ -2650,8 +2722,8 @@ void init_openravepy_robot()
                        .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian, PY_ARGS("linkindex","quat") DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; std::vector"))
                        .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian, PY_ARGS("linkindex") DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"))
                        .def("Grab",pgrab1, PY_ARGS("body") DOXY_FN(RobotBase,Grab "KinBodyPtr"))
-                       .def("Grab",pgrab2, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
-                       .def("Grab",pgrab3, PY_ARGS("body","grablink", "linkstoignore") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; LinkPtr"))
+                       .def("Grab",pgrab3, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
+                       .def("Grab",pgrab5, PY_ARGS("body","grablink","linkstoignore","grabbedUserData") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; Linkptr; rapidjson::Document"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
                             "linkindex"_a,
@@ -2698,7 +2770,6 @@ void init_openravepy_robot()
 #else
         class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> >("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init)
 #endif
-        .def("GetEndEffectorTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransformPose", &PyRobotBase::PyManipulator::GetTransformPose, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetVelocity", &PyRobotBase::PyManipulator::GetVelocity, DOXY_FN(RobotBase::Manipulator,GetVelocity))
@@ -2706,6 +2777,7 @@ void init_openravepy_robot()
         .def("SetName",&PyRobotBase::PyManipulator::SetName, PY_ARGS("name") DOXY_FN(RobotBase::Manipulator,SetName))
         .def("GetGripperName",&PyRobotBase::PyManipulator::GetGripperName, DOXY_FN(RobotBase::Manipulator,GetGripperName))
         .def("GetToolChangerConnectedBodyToolName",&PyRobotBase::PyManipulator::GetToolChangerConnectedBodyToolName, DOXY_FN(RobotBase::Manipulator,GetToolChangerConnectedBodyToolName))
+        .def("GetToolChangerLinkName",&PyRobotBase::PyManipulator::GetToolChangerLinkName, DOXY_FN(RobotBase::Manipulator,GetToolChangerLinkName))
         .def("GetRestrictGraspSetNames",&PyRobotBase::PyManipulator::GetRestrictGraspSetNames, DOXY_FN(RobotBase::Manipulator,GetRestrictGraspSetNames))
         .def("GetRobot",&PyRobotBase::PyManipulator::GetRobot, DOXY_FN(RobotBase::Manipulator,GetRobot))
         .def("SetIkSolver",&PyRobotBase::PyManipulator::SetIkSolver, DOXY_FN(RobotBase::Manipulator,SetIkSolver))
@@ -2769,6 +2841,7 @@ void init_openravepy_robot()
         .def("GetIkParameterization",&PyRobotBase::PyManipulator::GetIkParameterization, GetIkParameterization_overloads(PY_ARGS("iktype","inworld") GetIkParameterization_doc.c_str()))
 #endif
         .def("GetBase",&PyRobotBase::PyManipulator::GetBase, DOXY_FN(RobotBase::Manipulator,GetBase))
+        .def("GetIkChainEndLink",&PyRobotBase::PyManipulator::GetIkChainEndLink, DOXY_FN(RobotBase::Manipulator,GetIkChainEndLink))
         .def("GetEndEffector",&PyRobotBase::PyManipulator::GetEndEffector, DOXY_FN(RobotBase::Manipulator,GetEndEffector))
         .def("ReleaseAllGrabbed",&PyRobotBase::PyManipulator::ReleaseAllGrabbed, DOXY_FN(RobotBase::Manipulator,ReleaseAllGrabbed))
         .def("GetGraspTransform",&PyRobotBase::PyManipulator::GetGraspTransform, DOXY_FN(RobotBase::Manipulator,GetLocalToolTransform))

@@ -11,42 +11,59 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include <openrave/plugin.h>
+#include "configurationcache.h"
 #include "configurationcachetree.h"
-
-using namespace OpenRAVE;
 
 namespace configurationcache
 {
-CollisionCheckerBasePtr CreateCacheCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
-SpaceSamplerBasePtr CreateConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::CollisionCheckerBasePtr CreateCacheCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::SpaceSamplerBasePtr CreateConfigurationJitterer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 }
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+const std::string ConfigurationCachePlugin::_pluginname = "ConfigurationCachePlugin";
+
+ConfigurationCachePlugin::ConfigurationCachePlugin()
+{
+    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("CacheChecker");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("ConfigurationJitterer");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("WorkspaceConfigurationJitterer");
+}
+
+ConfigurationCachePlugin::~ConfigurationCachePlugin() {}
+
+OpenRAVE::InterfaceBasePtr ConfigurationCachePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
-    case PT_CollisionChecker:
+    case OpenRAVE::PT_CollisionChecker:
         if( interfacename == "cachechecker") {
-            return InterfaceBasePtr(configurationcache::CreateCacheCollisionChecker(penv,sinput));
+            return configurationcache::CreateCacheCollisionChecker(penv,sinput);
         }
         break;
-    case PT_SpaceSampler:
+    case OpenRAVE::PT_SpaceSampler:
         if( interfacename == "configurationjitterer" ) {
             return configurationcache::CreateConfigurationJitterer(penv,sinput);
+        }
+        if( interfacename == "workspaceconfigurationjitterer" ) {
+            return configurationcache::CreateWorkspaceConfigurationJitterer(penv,sinput);
         }
         break;
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& ConfigurationCachePlugin::GetInterfaces() const
 {
-    info.interfacenames[PT_CollisionChecker].push_back("CacheChecker");
-    info.interfacenames[PT_SpaceSampler].push_back("ConfigurationJitterer");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& ConfigurationCachePlugin::GetPluginName() const
 {
+    return _pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new ConfigurationCachePlugin();
 }

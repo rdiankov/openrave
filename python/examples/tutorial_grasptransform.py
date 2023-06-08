@@ -177,13 +177,13 @@ def main(env,options):
     gt = GraspTransform(env,target)
     handles = []
     raw_input('This demo shows how to find the transform that moves the hand to the target.\npress ENTER to continue...')
-    print 'showing robot transform in global frame O_T_R'
+    print('showing robot transform in global frame O_T_R')
     handles = gt.drawTransform(gt.robot.GetTransform())
     raw_input('press ENTER to continue...')
-    print 'showing target transform in global frame O_T_Target'
+    print('showing target transform in global frame O_T_Target')
     handles = gt.drawTransform(gt.target.GetTransform())
     raw_input('press ENTER to continue...')
-    print 'showing grasping frame in global frame O_T_G'
+    print('showing grasping frame in global frame O_T_G')
     handles = gt.drawTransform(gt.robot.GetActiveManipulator().GetTransform())
     raw_input('press ENTER to continue...')
     raw_input('Guess what the robot will look like when the hand is on the target?\npress ENTER to continue...')

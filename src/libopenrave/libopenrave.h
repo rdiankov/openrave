@@ -22,6 +22,7 @@
 #define RAVE_LIBOPENRAVE_H
 
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
+#include <openrave/logging.h>
 #include <openrave/utils.h>
 
 //#include <boost/math/special_functions/round.hpp>
@@ -52,8 +53,12 @@
 #include <algorithm>
 #include <complex>
 
-#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), __itend__=(v).end(); it != __itend__; )
+#define _MAKEDATA(n) __itend__##n
+#define MAKEDATA(n) _MAKEDATA(n)
+#define MAKEVAR MAKEDATA(__LINE__)
+
+#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -107,7 +112,6 @@
 
 #endif
 
-#include <boost/bind.hpp>
 #include <boost/version.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM
@@ -201,9 +205,17 @@ inline void SerializeRound(std::ostream& o, double f)
 }
 
 template <class T>
-inline void SerializeRound(std::ostream& o, const RaveVector<T>& v)
+inline void SerializeRoundQuaternion(std::ostream& o, const RaveVector<T>& v)
 {
-    o << SerializationValue(v.x) << " " << SerializationValue(v.y) << " " << SerializationValue(v.z) << " " << SerializationValue(v.w) << " ";
+    // This function is used only for serializing quaternions. Need to
+    // take into account the fact that v and -v represent the same
+    // rotation. Convert v to a rotation matrix instead to get a
+    // unique representation. Then since the thrid column can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
+    RaveTransformMatrix<T> t = matrixFromQuat(v);
+    o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
 }
 
 template <class T>
@@ -215,27 +227,18 @@ inline void SerializeRound3(std::ostream& o, const RaveVector<T>& v)
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransform<T>& t)
 {
-    // because we're serializing a quaternion, have to fix what side of the hypershpere it is on
-    Vector v = t.rot;
-    for(int i = 0; i < 4; ++i) {
-        if( v[i] < g_fEpsilon ) {
-            v = -v;
-            break;
-        }
-        else if( v[i] > g_fEpsilon ) {
-            break;
-        }
-    }
-    SerializeRound(o,v);
-    SerializeRound(o,t.trans);
+    SerializeRoundQuaternion(o,t.rot);
+    SerializeRound3(o,t.trans);
 }
 
 template <class T>
 inline void SerializeRound(std::ostream& o, const RaveTransformMatrix<T>& t)
 {
+    // Since the thrid column of the rotation matrix can be uniquely
+    // determined given the first two, serializing only the first two
+    // columns is sufficient for the purpose of hash computation.
     o << SerializationValue(t.m[0]) << " " << SerializationValue(t.m[4]) << " " << SerializationValue(t.m[8]) << " "
-      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " "
-      << SerializationValue(t.m[2]) << " " << SerializationValue(t.m[6]) << " " << SerializationValue(t.m[10]) << " ";
+      << SerializationValue(t.m[1]) << " " << SerializationValue(t.m[5]) << " " << SerializationValue(t.m[9]) << " ";
     SerializeRound(o,t.trans);
 }
 
@@ -305,54 +308,6 @@ int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParam
 void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v);
 
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
-
-/// \brief The information of a currently grabbed body.
-class Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
-{
-public:
-    Grabbed(KinBodyPtr pgrabbedbody, KinBody::LinkPtr plinkrobot) : _pgrabbedbody(pgrabbedbody), _plinkrobot(plinkrobot) {
-        _enablecallback = pgrabbedbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&Grabbed::UpdateCollidingLinks, this));
-        _plinkrobot->GetRigidlyAttachedLinks(_vattachedlinks);
-    }
-    virtual ~Grabbed() {
-    }
-    KinBodyWeakPtr _pgrabbedbody;         ///< the grabbed body
-    KinBody::LinkPtr _plinkrobot;         ///< robot link that is grabbing the body
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinks;         ///< links that are not colliding with the grabbed body at the time of Grab
-    Transform _troot;         ///< root transform (of first link of body) relative to plinkrobot's transform. In other words, pbody->GetTransform() == plinkrobot->GetTransform()*troot
-    std::set<int> _setRobotLinksToIgnore; ///< original links of the robot to force ignoring
-
-    /// \brief check collision with all links to see which are valid.
-    ///
-    /// Use the robot's self-collision checker if possible
-    /// resets all cached data and re-evaluates the collisions
-    /// \param setRobotLinksToIgnore indices of the robot links to always ignore, in other words remove from non-colliding list
-    void ProcessCollidingLinks(const std::set<int>& setRobotLinksToIgnore);
-
-    inline const std::vector<KinBody::LinkPtr>& GetRigidlyAttachedLinks() const {
-        return _vattachedlinks;
-    }
-
-    void AddMoreIgnoreLinks(const std::set<int>& setRobotLinksToIgnore);
-
-    /// return -1 for unknown, 0 for no, 1 for yes
-    int WasLinkNonColliding(KinBody::LinkConstPtr plink) const;
-
-    /// \brief updates the non-colliding info while reusing the cache data from _ProcessCollidingLinks
-    ///
-    /// note that Regrab here is *very* dangerous since the robot could be a in a bad self-colliding state with the body. therefore, update the non-colliding state based on _mapLinkIsNonColliding
-    void UpdateCollidingLinks();
-
-private:
-    std::vector<KinBody::LinkPtr> _vattachedlinks;
-    UserDataPtr _enablecallback; ///< callback for grabbed body when it is enabled/disabled
-
-    std::map<KinBody::LinkConstPtr, int> _mapLinkIsNonColliding; // the collision state for each link at the time the body was grabbed.
-};
-
-typedef boost::shared_ptr<Grabbed> GrabbedPtr;
-typedef boost::shared_ptr<Grabbed const> GrabbedConstPtr;
-
 /// -1 v1 is smaller than v2
 // 0 two vectors are equivalent
 /// +1 v1 is greater than v2
@@ -526,6 +481,57 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared
     vInfos.push_back(pNewInfo);
 }
 
+template<typename T>
+void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, const char* pNameInJson, dReal fUnitScale, int options)
+{
+    std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+    bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
+    typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
+    if (!id.empty()) {
+        // only try to find old info if id is not empty
+        FOREACH(itInfo, vInfos) {
+            if ((*itInfo)->_id == id) {
+                itExistingInfo = itInfo;
+                break;
+            }
+        }
+    }
+    else {
+        // sometimes names can be empty, in which case, always create a new object
+        std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, pNameInJson);
+        if( !name.empty() ) {
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, vInfos) {
+                if ((*itInfo)->GetName() == name) {
+                    itExistingInfo = itInfo;
+                    id = (*itInfo)->_id;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // here we allow items with empty id to be created because
+    // when we load things from json, some id could be missing on file
+    // and for the partial update case, the id should be non-empty
+    if (itExistingInfo != vInfos.end()) {
+        if (isDeleted) {
+            vInfos.erase(itExistingInfo);
+            return;
+        }
+        (*itExistingInfo)->DeserializeJSON(value, fUnitScale, options);
+        (*itExistingInfo)->_id = id;
+        return;
+    }
+    if (isDeleted) {
+        return;
+    }
+    boost::shared_ptr<T> pNewInfo(new T());
+    pNewInfo->DeserializeJSON(value, fUnitScale, options);
+    pNewInfo->_id = id;
+    vInfos.push_back(pNewInfo);
+}
+
 /// \brief Recursively call UpdateFromInfo on children. If children need to be added or removed, require re-init. Returns false if update fails and caller should not continue with other parts of the update.
 template<typename InfoPtrType, typename PtrType>
 bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<PtrType>& vPointers, UpdateFromInfoResult& result)
@@ -591,6 +597,14 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
         }
         if (!pMatchExistingPointer) {
             // new element, requires re-init
+            RAVELOG_VERBOSE("could not find existing pointer which matches");
+            result = UFIR_RequireReinitialize;
+            return false;
+        }
+
+        if( !pInfo->_id.empty() && pInfo->_id != pMatchExistingPointer->GetId() ) {
+            // new element, requires re-init
+            RAVELOG_VERBOSE("could not find existing pointer which matches and can update");
             result = UFIR_RequireReinitialize;
             return false;
         }
@@ -614,6 +628,7 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
 
     if (vPointers.size() > vInfos.size()) {
         // have to delete extra, require re-init
+        RAVELOG_VERBOSE("current data has more elements than new data");
         result = UFIR_RequireReinitialize;
         return false;
     }
@@ -622,19 +637,18 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
 }
 
 template<typename T>
+bool AreSharedPtrsDeepEqual(const boost::shared_ptr<T>& pFirst, const boost::shared_ptr<T>& pSecond) {
+    return (pFirst == pSecond) || (!!pFirst && !!pSecond && *pFirst == *pSecond);
+}
+
+template<typename T>
 bool AreVectorsDeepEqual(const std::vector<boost::shared_ptr<T> >& vFirst, const std::vector<boost::shared_ptr<T> >& vSecond) {
     if (vFirst.size() != vSecond.size()) {
         return false;
     }
     for (size_t index = 0; index < vFirst.size(); index++) {
-        if (!vFirst[index] || !vSecond[index]) {
-            if (!!vFirst[index] || !!vSecond[index]) {
-                return false;
-            }
-        } else {
-            if ((*vFirst[index]) != (*vSecond[index])) {
-                return false;
-            }
+        if( !AreSharedPtrsDeepEqual(vFirst[index], vSecond[index]) ) {
+            return false;
         }
     }
     return true;
@@ -642,21 +656,19 @@ bool AreVectorsDeepEqual(const std::vector<boost::shared_ptr<T> >& vFirst, const
 
 template<typename T, std::size_t N>
 bool AreArraysDeepEqual(const boost::array<boost::shared_ptr<T>, N>& vFirst, const boost::array<boost::shared_ptr<T>, N>& vSecond) {
-    if (vFirst.size() != vSecond.size()) {
-        return false;
-    }
     for (size_t index = 0; index < vFirst.size(); index++) {
-        if (!vFirst[index] || !vSecond[index]) {
-            if (!!vFirst[index] || !!vSecond[index]) {
-                return false;
-            }
-        } else {
-            if ((*vFirst[index]) != (*vSecond[index])) {
-                return false;
-            }
+        if( !AreSharedPtrsDeepEqual(vFirst[index], vSecond[index]) ) {
+            return false;
         }
     }
     return true;
+}
+
+/// \brief copies rapidjson document pointer and data from one to another. if source pointer is nullptr, then resets destination pointer to nullptr
+inline void CopyRapidJsonDoc(const rapidjson::Value& source, rapidjson::Document& dest)
+{
+    dest = rapidjson::Document(); // to reset the allocator
+    dest.CopyFrom(source, dest.GetAllocator());
 }
 
 } // end OpenRAVE namespace

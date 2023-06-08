@@ -15,8 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
+
+using namespace boost::placeholders;
 
 class IdealController : public ControllerBase
 {
@@ -120,7 +122,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
         if( !_bPause ) {
             RobotBasePtr probot = _probot.lock();
-            EnvironmentMutex::scoped_lock lockenv(probot->GetEnv()->GetMutex());
+            EnvironmentLock lockenv(probot->GetEnv()->GetMutex());
             _vecdesired = values;
             if( _nControlTransformation ) {
                 if( !!trans ) {
@@ -142,7 +144,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         OPENRAVE_ASSERT_FORMAT0(!ptraj || GetEnv()==ptraj->GetEnv(), "trajectory needs to come from the same environment as the controller", ORE_InvalidArguments);
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         if( _bPause ) {
             RAVELOG_DEBUG("IdealController cannot start trajectories when paused\n");
             _ptraj.reset();
@@ -257,7 +259,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( _bPause ) {
             return;
         }
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
             RobotBasePtr probot = _probot.lock();
@@ -282,7 +284,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
-                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(abs(bodyid));
                     if( !pbody ) {
                         RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
                         continue;
@@ -352,10 +354,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 if( !!grabinfo.trelativepose ) {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                probot->Grab(grabinfo.pbody, plink);
+                probot->Grab(grabinfo.pbody, plink, rapidjson::Value());
             }
             FOREACH(it,listgrab) {
-                probot->Grab(it->first,it->second);
+                probot->Grab(it->first,it->second, rapidjson::Value());
             }
             // set _bIsDone after all computation is done!
             _bIsDone = bIsDone;
@@ -536,7 +538,7 @@ private:
     {
         GrabBody() : offset(0), robotlinkindex(0) {
         }
-        GrabBody(int offset, int robotlinkindex, KinBodyPtr pbody) : offset(offset), robotlinkindex(robotlinkindex), pbody(pbody) {
+        GrabBody(int offset_, int robotlinkindex_, KinBodyPtr pbody_) : offset(offset_), robotlinkindex(robotlinkindex_), pbody(pbody_) {
         }
         int offset;
         int robotlinkindex;
@@ -560,7 +562,7 @@ private:
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
     boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
-    boost::mutex _mutex;
+    std::mutex _mutex;
 };
 
 ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput)

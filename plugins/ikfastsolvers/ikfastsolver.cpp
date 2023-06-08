@@ -13,15 +13,20 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#pragma GCC diagnostic ignored "-Wshadow"   // 'int nSameStateRepeatCount = 0;' shadowed many times all over about 300-400 lines apart
+
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
 
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
 #endif
+
+using namespace boost::placeholders;
 
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase
@@ -300,7 +305,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
             FOREACH(itmanip, probot->GetManipulators()) {
                 smanipnames << (*itmanip)->GetName() << ", ";
             }
-            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator '%s' not found in robot '%s' (%d) with manips [%s]"), pmanip->GetName()%probot->GetName()%probot->GetEnvironmentId()%smanipnames.str(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator '%s' not found in robot '%s' (%d) with manips [%s]"), pmanip->GetName()%probot->GetName()%probot->GetEnvironmentBodyIndex()%smanipnames.str(), ORE_InvalidArguments);
         }
 
         _cblimits = probot->RegisterChangeCallback(KinBody::Prop_JointLimits,boost::bind(&IkFastSolver<IkReal>::SetJointLimits,boost::bind(&utils::sptr_from<IkFastSolver<IkReal> >, weak_solver())));
@@ -1177,6 +1182,7 @@ protected:
                 RAY r = param.GetTranslationDirection5D();
                 IkReal eetrans[3] = {(IkReal)r.pos.x, (IkReal)r.pos.y, (IkReal)r.pos.z};
                 IkReal eerot[9] = {(IkReal)r.dir.x, (IkReal)r.dir.y, (IkReal)r.dir.z, 0,0,0,0,0,0};
+                //RAVELOG_INFO_FORMAT("translationdirection5d: %.17e %.17e %.17e %.17e 0 0 0 %.17e 0 0 0 %.17e", r.dir.x%r.dir.y%r.dir.z%r.pos.x%r.pos.y%r.pos.z);
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                 if( !bret ) {
 #ifdef OPENRAVE_HAS_LAPACK
@@ -1194,28 +1200,28 @@ protected:
                             eerot[0] = r.dir.x-0.01;
                             eerot[1] = r.dir.y-0.01;
                             eerot[2] = r.dir.z-0.01;
-                            dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                            eerot[0] /= fnorm;
-                            eerot[1] /= fnorm;
-                            eerot[2] /= fnorm;
+                            dReal fnorm1 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                            eerot[0] /= fnorm1;
+                            eerot[1] /= fnorm1;
+                            eerot[2] /= fnorm1;
                             bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                             if( !bret ) {
                                 eerot[0] = r.dir.x-0.04;
                                 eerot[1] = r.dir.y-0.04;
                                 eerot[2] = r.dir.z;
-                                dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                                eerot[0] /= fnorm;
-                                eerot[1] /= fnorm;
-                                eerot[2] /= fnorm;
+                                dReal fnorm2 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                eerot[0] /= fnorm2;
+                                eerot[1] /= fnorm2;
+                                eerot[2] /= fnorm2;
                                 bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                                 if( !bret ) {
                                     eerot[0] = r.dir.x+0.04;
                                     eerot[1] = r.dir.y+0.04;
                                     eerot[2] = r.dir.z;
-                                    dReal fnorm = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
-                                    eerot[0] /= fnorm;
-                                    eerot[1] /= fnorm;
-                                    eerot[2] /= fnorm;
+                                    dReal fnorm3 = RaveSqrt(eerot[0]*eerot[0] + eerot[1]*eerot[1] + eerot[2]*eerot[2]);
+                                    eerot[0] /= fnorm3;
+                                    eerot[1] /= fnorm3;
+                                    eerot[2] /= fnorm3;
                                     bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                                 }
                             }
@@ -1307,7 +1313,12 @@ protected:
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         ikfast::IkSolutionList<IkReal> solutions;
-        if( !_CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tIkChainEndlinkToEE;
+        if (!!pmanip->GetIkChainEndLink()) {
+            tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+
+        if( !_CallIk(param,vfree, tIkChainEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             return IKRA_RejectKinematics;
         }
 
@@ -1865,7 +1876,12 @@ protected:
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         RobotBasePtr probot = pmanip->GetRobot();
         ikfast::IkSolutionList<IkReal> solutions;
-        if( _CallIk(param,vfree, pmanip->GetLocalToolTransform(), solutions) ) {
+        Transform tIkChainEndlinkToEE;
+        if (!!pmanip->GetIkChainEndLink()) {
+            tIkChainEndlinkToEE = pmanip->GetIkChainEndLink()->GetTransform().inverse() * pmanip->GetEndEffector()->GetTransform();
+        }
+
+        if( _CallIk(param,vfree, tIkChainEndlinkToEE * pmanip->GetLocalToolTransform(), solutions) ) {
             vector<IkReal> vsolfree;
             std::vector<IkReal> sol(pmanip->GetArmIndices().size());
             for(size_t isolution = 0; isolution < solutions.GetNumSolutions(); ++isolution) {
@@ -2306,7 +2322,7 @@ protected:
                     for(size_t j = 0; j < vravesols[0].first.size(); ++j) {
                         vravesols[i].first[j] = vravesols[0].first[j];
                     }
-                    for(size_t k = 0; k < _qbigrangeindices.size(); ++k) {
+                    for( k = 0; k < _qbigrangeindices.size(); ++k) {
                         if( vextravalues[k].size() > 1 ) {
                             size_t repeat = vcumproduct.at(k);
                             int j = _qbigrangeindices[k];

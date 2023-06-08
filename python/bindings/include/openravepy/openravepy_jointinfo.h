@@ -65,12 +65,17 @@ public:
     object _filenamecollision = py::none_();
     object _vRenderScale = toPyVector3(Vector(1,1,1));
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
+    object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
+    object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
+    object _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
+    object _vPositiveCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
 
     py::list _vSideWalls;
     float _containerBaseHeight = 0.0;
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
+    py::dict _calibrationBoardParameters;
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -99,6 +104,7 @@ public:
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;
+    bool _bIgnoreSelfCollision = false;
     bool _bVisible = true;
 
 private:
@@ -140,11 +146,14 @@ class PyJointControlInfo_RobotController
 {
 public:
     PyJointControlInfo_RobotController();
-    PyJointControlInfo_RobotController(const KinBody::JointInfo::JointControlInfo_RobotController& jci);
-    KinBody::JointInfo::JointControlInfo_RobotControllerPtr GetJointControlInfo();
+    PyJointControlInfo_RobotController(const JointControlInfo_RobotController& jci);
+    JointControlInfo_RobotControllerPtr GetJointControlInfo();
 
-    int robotId = -1;
-    object robotControllerDOFIndex = toPyVector3(Vector(-1, -1, -1));
+    std::string controllerType;
+    object robotControllerAxisIndex;
+    object robotControllerAxisMult;
+    object robotControllerAxisOffset;
+    py::list robotControllerAxisProductCode;
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
 
@@ -152,15 +161,15 @@ class PyJointControlInfo_IO
 {
 public:
     PyJointControlInfo_IO();
-    PyJointControlInfo_IO(const KinBody::JointInfo::JointControlInfo_IO& jci);
-    KinBody::JointInfo::JointControlInfo_IOPtr GetJointControlInfo();
+    PyJointControlInfo_IO(const JointControlInfo_IO& jci);
+    JointControlInfo_IOPtr GetJointControlInfo();
 
-    int deviceId = -1;
-    object vMoveIONames = py::list();
-    object vUpperLimitIONames = py::list();
-    object vUpperLimitSensorIsOn = py::list();
-    object vLowerLimitIONames = py::list();
-    object vLowerLimitSensorIsOn = py::list();
+    std::string deviceType;
+    object moveIONames = py::list();
+    object upperLimitIONames = py::list();
+    object upperLimitSensorIsOn = py::list();
+    object lowerLimitIONames = py::list();
+    object lowerLimitSensorIsOn = py::list();
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> PyJointControlInfo_IOPtr;
 
@@ -168,9 +177,9 @@ class PyJointControlInfo_ExternalDevice
 {
 public:
     PyJointControlInfo_ExternalDevice();
-    PyJointControlInfo_ExternalDevice(const KinBody::JointInfo::JointControlInfo_ExternalDevice &jci);
-    KinBody::JointInfo::JointControlInfo_ExternalDevicePtr GetJointControlInfo();
-    std::string externalDeviceId;
+    PyJointControlInfo_ExternalDevice(const JointControlInfo_ExternalDevice &jci);
+    JointControlInfo_ExternalDevicePtr GetJointControlInfo();
+    std::string externalDeviceType;
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
 
@@ -210,7 +219,7 @@ public:
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
     object _bIsCircular = py::list();
     bool _bIsActive = true;
-    KinBody::JointControlMode _controlMode = KinBody::JointControlMode::JCM_None;
+    JointControlMode _controlMode = JCM_None;
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;
     PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
@@ -242,6 +251,10 @@ public:
         void SetTransparency(float f);
         void SetAmbientColor(object ocolor);
         void SetDiffuseColor(object ocolor);
+        void SetNegativeCropContainerMargins(object negativeCropContainerMargins);
+        void SetPositiveCropContainerMargins(object positiveCropContainerMargins);
+        void SetNegativeCropContainerEmptyMargins(object negativeCropContainerEmptyMargins);
+        void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
         void SetRenderFilename(const string& filename);
         void SetName(const std::string& name);
         bool IsDraw();
@@ -251,7 +264,7 @@ public:
         object GetTransform();
         object GetTransformPose();
         dReal GetSphereRadius() const;
-        dReal GetCylinderRadius() const ;
+        dReal GetCylinderRadius() const;
         dReal GetCylinderHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
@@ -264,11 +277,20 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
+        object GetNegativeCropContainerMargins() const;
+        object GetPositiveCropContainerMargins() const;
+        object GetNegativeCropContainerEmptyMargins() const;
+        object GetPositiveCropContainerEmptyMargins() const;
+        object GetCalibrationBoardNumDots() const;
+        object GetCalibrationBoardDotsDistances() const;
+        object GetCalibrationBoardDotColor() const;
+        object GetCalibrationBoardPatternName() const;
+        object GetCalibrationBoardDotDiameterDistanceRatios() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
         bool __ne__(OPENRAVE_SHARED_PTR<PyGeometry> p);
-        int __hash__();
+        long __hash__();
     };
 
     PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv);
@@ -278,11 +300,13 @@ public:
 
     object GetName();
     int GetIndex();
+    void Enable(bool bEnable);
     bool IsEnabled() const;
     bool SetVisible(bool visible);
     bool IsVisible() const;
     bool IsStatic() const;
-    void Enable(bool bEnable);
+    void SetIgnoreSelfCollision(bool bIgnore);
+    bool IsSelfCollisionIgnored() const;
 
     object GetParent() const;
 
@@ -295,6 +319,10 @@ public:
 
     object ComputeAABB() const;
     object ComputeAABBFromTransform(object otransform) const;
+
+    object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+    object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const;
 
     object GetTransform() const;
     object GetTransformPose() const;
@@ -323,6 +351,7 @@ public:
     void InitGeometries(object ogeometryinfos);
 
     void AddGeometry(object ogeometryinfo, bool addToGroups);
+    void AddGeometryToGroup(object ogeometryinfo, const std::string& groupname);
 
     void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
     void SetGeometriesFromGroup(const std::string& name);
@@ -362,7 +391,7 @@ public:
     object __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyLink> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyLink> p);
-    int __hash__();
+    long __hash__();
 };
 
 class PyJoint
@@ -402,6 +431,7 @@ public:
     bool IsCircular(int iaxis) const;
     bool IsRevolute(int iaxis) const;
     bool IsPrismatic(int iaxis) const;
+    bool IsActive() const;
     bool IsStatic() const;
 
     int GetDOF() const;
@@ -465,7 +495,7 @@ public:
 
     void SetStringParameters(const std::string& key, object ovalue);
 
-    KinBody::JointControlMode GetControlMode() const;
+    JointControlMode GetControlMode() const;
     void UpdateInfo();
     object GetInfo();
     object UpdateAndGetInfo();
@@ -475,7 +505,7 @@ public:
     object __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyJoint> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyJoint> p);
-    int __hash__();
+    long __hash__();
 };
 
 class PyKinBodyStateSaver
@@ -524,6 +554,7 @@ public:
     object __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyManageData> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyManageData> p);
+    long __hash__();
 };
 typedef OPENRAVE_SHARED_PTR<PyManageData> PyManageDataPtr;
 typedef OPENRAVE_SHARED_PTR<PyManageData const> PyManageDataConstPtr;

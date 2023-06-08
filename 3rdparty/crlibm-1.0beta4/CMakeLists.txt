@@ -120,10 +120,12 @@ set(crlibm_SOURCES ${crlibm_SOURCES}
   ${source_dir}/atan_fast.h      ${source_dir}/csh_fast.h        ${source_dir}/expm1.h            ${source_dir}/log.h     ${source_dir}/pow.h       ${source_dir}/trigo_fast.h)
 
 add_library(crlibm STATIC ${crlibm_SOURCES})
-set_target_properties(crlibm PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS}")
+target_include_directories(crlibm PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(crlibm PUBLIC "-DUSE_CRLIBM")
 
 # also build a native version for checking libm on the host machine at build-time
 add_library(crlibm-native STATIC ${crlibm_SOURCES})
+target_include_directories(crlibm-native PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
-  set_target_properties(crlibm-native PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} ${NATIVE_COMPILE_FLAGS}")
+  set_target_properties(crlibm-native PROPERTIES COMPILE_FLAGS "${NATIVE_COMPILE_FLAGS}")
 endif()

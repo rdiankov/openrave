@@ -90,8 +90,12 @@ object pyGetReverseTrajectory(PyTrajectoryBasePtr pytraj)
     return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
 }
 
-void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep)
+void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep, bool releasegil=true)
 {
+    openravepy::PythonThreadSaverPtr statesaver;
+    if( releasegil ) {
+        statesaver.reset(new openravepy::PythonThreadSaver());
+    }
     OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
 }
 
@@ -177,6 +181,10 @@ public:
     virtual ~PyAffineTrajectoryRetimer() {
     }
 
+    std::string GetPlannerName() const {
+        return _retimer.GetPlannerName();
+    }
+
     object PlanPath(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, bool hastimestamps=false, bool releasegil=true)
     {
         openravepy::PythonThreadSaverPtr statesaver;
@@ -187,6 +195,21 @@ public:
             statesaver.reset(new openravepy::PythonThreadSaver());
         }
         PlannerStatus status = _retimer.PlanPath(ptraj,vmaxvelocities, vmaxaccelerations, hastimestamps);
+        statesaver.reset(); // to re-lock the GIL
+        return openravepy::toPyPlannerStatus(status);
+    }
+
+    object PlanPathWithJerkLimits(PyTrajectoryBasePtr pytraj, object omaxvelocities, object omaxaccelerations, object omaxjerks, bool hastimestamps=false, bool releasegil=true)
+    {
+        openravepy::PythonThreadSaverPtr statesaver;
+        TrajectoryBasePtr ptraj = openravepy::GetTrajectory(pytraj);
+        std::vector<dReal> vmaxvelocities = ExtractArray<dReal>(omaxvelocities);
+        std::vector<dReal> vmaxaccelerations = ExtractArray<dReal>(omaxaccelerations);
+        std::vector<dReal> vmaxjerks = ExtractArray<dReal>(omaxjerks);
+        if( releasegil ) {
+            statesaver.reset(new openravepy::PythonThreadSaver());
+        }
+        PlannerStatus status = _retimer.PlanPath(ptraj, vmaxvelocities, vmaxaccelerations, vmaxjerks, hastimestamps);
         statesaver.reset(); // to re-lock the GIL
         return openravepy::toPyPlannerStatus(status);
     }
@@ -203,10 +226,11 @@ public:
     {
         PlannerBase::PlannerParametersConstPtr parameters = openravepy::GetPlannerParametersConst(oparameters);
         std::list<KinBodyPtr> listCheckBodies;
-        for(size_t i = 0; i < len(olistCheckBodies); ++i) {
-            KinBodyPtr pbody = openravepy::GetKinBody(olistCheckBodies[i]);
+        size_t numCheckBodies = len(olistCheckBodies);
+        for(size_t i = 0; i < numCheckBodies; ++i) {
+            KinBodyPtr pbody = openravepy::GetKinBody(olistCheckBodies[py::to_object(i)]);
             BOOST_ASSERT(!!pbody);
-            _pyenv = GetPyEnvFromPyKinBody(olistCheckBodies[i]);
+            _pyenv = GetPyEnvFromPyKinBody(olistCheckBodies[py::to_object(i)]);
             listCheckBodies.push_back(pbody);
         }
         _pconstraints.reset(new OpenRAVE::planningutils::DynamicsCollisionConstraint(parameters, listCheckBodies, filtermask));
@@ -230,12 +254,39 @@ public:
             ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
             ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
             ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
-            ofilterreturn["returncode"] = pfilterreturn->_returncode;
+            ofilterreturn["returncode"] = static_cast<ConstraintFilterOptions>(pfilterreturn->_returncode);
             ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
             return ofilterreturn;
         }
         else {
             return py::to_object(_pconstraints->Check(q0, q1, dq0, dq1, timeelapsed, interval, options));
+        }
+    }
+
+    object CheckWithAccelerations(object oq0, object oq1, object odq0, object odq1, object oddq0, object oddq1, dReal timeelapsed, uint32_t interval=0x3, uint32_t options=0xffff, bool filterreturn=false)
+    {
+        std::vector<dReal> q0 = ExtractArray<dReal>(oq0);
+        std::vector<dReal> q1 = ExtractArray<dReal>(oq1);
+        std::vector<dReal> dq0 = ExtractArray<dReal>(odq0);
+        std::vector<dReal> dq1 = ExtractArray<dReal>(odq1);
+        std::vector<dReal> ddq0 = ExtractArray<dReal>(oddq0);
+        std::vector<dReal> ddq1 = ExtractArray<dReal>(oddq1);
+        IntervalType intervalType = static_cast<IntervalType>(interval);
+        if( filterreturn ) {
+            ConstraintFilterReturnPtr pfilterreturn(new ConstraintFilterReturn());
+            _pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, intervalType, options, pfilterreturn);
+            py::dict ofilterreturn;
+            ofilterreturn["configurations"] = toPyArray(pfilterreturn->_configurations);
+            ofilterreturn["configurationtimes"] = toPyArray(pfilterreturn->_configurationtimes);
+            ofilterreturn["invalidvalues"] = toPyArray(pfilterreturn->_invalidvalues);
+            ofilterreturn["invalidvelocities"] = toPyArray(pfilterreturn->_invalidvelocities);
+            ofilterreturn["fTimeWhenInvalid"] = pfilterreturn->_fTimeWhenInvalid;
+            ofilterreturn["returncode"] = static_cast<ConstraintFilterOptions>(pfilterreturn->_returncode);
+            ofilterreturn["reportstr"] = pfilterreturn->_report.__str__();
+            return ofilterreturn;
+        }
+        else {
+            return py::to_object(_pconstraints->Check(q0, q1, dq0, dq1, ddq0, ddq1, timeelapsed, intervalType, options));
         }
     }
 
@@ -316,7 +367,7 @@ object pyMergeTrajectories(object pytrajectories)
     std::list<TrajectoryBaseConstPtr> listtrajectories;
     PyEnvironmentBasePtr pyenv;
     for(size_t i = 0; i < len(pytrajectories); ++i) {
-        extract_<PyTrajectoryBasePtr> epytrajectory(pytrajectories[i]);
+        extract_<PyTrajectoryBasePtr> epytrajectory(pytrajectories[py::to_object(i)]);
         PyTrajectoryBasePtr pytrajectory = (PyTrajectoryBasePtr)epytrajectory;
         if( !pyenv ) {
             pyenv = openravepy::toPyEnvironment(pytrajectory);
@@ -336,7 +387,7 @@ public:
     }
     PyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv) : joint(toPyKinBodyJoint(OPENRAVE_CONST_POINTER_CAST<KinBody::Joint>(p.joint), pyenv)), parentindex(p.parentindex), transform(ReturnTransform(p.transform)), d(p.d), a(p.a), theta(p.theta), alpha(p.alpha) {
     }
-    PyDHParameter(object joint, int parentindex, object transform, dReal d, dReal a, dReal theta, dReal alpha) : joint(joint), parentindex(parentindex), transform(transform), d(d), a(a), theta(theta), alpha(alpha) {
+    PyDHParameter(object joint_, int parentindex_, object transform_, dReal d_, dReal a_, dReal theta_, dReal alpha_) : joint(joint_), parentindex(parentindex_), transform(transform_), d(d_), a(a_), theta(theta_), alpha(alpha_) {
     }
     virtual ~PyDHParameter() {
     }
@@ -397,7 +448,7 @@ public:
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {
             IkParameterization ikparam;
-            if( ExtractIkParameterization(oparameterizations[i],ikparam) ) {
+            if( ExtractIkParameterization(oparameterizations[py::to_object(i)],ikparam) ) {
                 listparameterizationsPtr.push_back(ikparam);
             }
             else {
@@ -474,11 +525,14 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(RetimeTrajectory_overloads, planningutils::pyRet
 BOOST_PYTHON_FUNCTION_OVERLOADS(ExtendActiveDOFWaypoint_overloads, planningutils::pyExtendActiveDOFWaypoint, 5, 8)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertActiveDOFWaypointWithRetiming_overloads, planningutils::pyInsertActiveDOFWaypointWithRetiming, 5, 9)
 BOOST_PYTHON_FUNCTION_OVERLOADS(InsertWaypointWithSmoothing_overloads, planningutils::pyInsertWaypointWithSmoothing, 4, 7)
+BOOST_PYTHON_FUNCTION_OVERLOADS(VerifyTrajectory_overloads, planningutils::pyVerifyTrajectory, 3, 4)
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Check_overloads, Check, 5, 8)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckWithAccelerations_overloads, CheckWithAccelerations, 7, 10)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads, PlanPath, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads2, PlanPath, 3, 5)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPath_overloads3, PlanPath, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PlanPathWithJerkLimits_overloads, PlanPathWithJerkLimits, 4, 6)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -538,9 +592,13 @@ void InitPlanningUtils()
                                .staticmethod("ReverseTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                               .def_static("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
+                               .def_static("VerifyTrajectory",planningutils::pyVerifyTrajectory,
+                                           "parameters"_a,
+                                           "trajectory"_a,
+                                           "samplingstep"_a,
+                                           "releasegil"_a=true, DOXY_FN1(VerifyTrajectory))
 #else
-                               .def("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep") DOXY_FN1(VerifyTrajectory))
+                               .def("VerifyTrajectory",planningutils::pyVerifyTrajectory, PY_ARGS("parameters","trajectory","samplingstep", "releasegil") DOXY_FN1(VerifyTrajectory))
                                .staticmethod("VerifyTrajectory")
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -710,6 +768,14 @@ void InitPlanningUtils()
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >(planningutils, "DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
         .def(init<object, int, object, dReal, dReal, dReal, dReal>(), "joint"_a, "parentindex"_a, "transform"_a, "d"_a, "a"_a, "theta"_a, "alpha"_a)
+        .def("__copy__", [](const planningutils::PyDHParameter& self){
+                return self;
+            })
+        .def("__deepcopy__", [](const planningutils::PyDHParameter& self, const py::dict& memo) {
+                return planningutils::PyDHParameter(
+                    /*self.joint*/ py::none_(), self.parentindex, self.transform, self.d, self.a, self.theta, self.alpha
+                    );
+            })
 #else
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
@@ -812,6 +878,7 @@ void InitPlanningUtils()
         .def("PlanPath",&planningutils::PyActiveDOFTrajectorySmoother::PlanPath,PlanPath_overloads(PY_ARGS("traj","releasegil") DOXY_FN(planningutils::ActiveDOFTrajectorySmoother,PlanPath)))
 #endif
         ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyActiveDOFTrajectoryRetimer, planningutils::PyActiveDOFTrajectoryRetimerPtr >(planningutils, "ActiveDOFTrajectoryRetimer", DOXY_CLASS(planningutils::ActiveDOFTrajectoryRetimer))
         .def(init<PyRobotBasePtr, const std::string&, const std::string&>(), "robot"_a, "plannername"_a, "plannerparameters"_a)
@@ -838,6 +905,8 @@ void InitPlanningUtils()
         class_<planningutils::PyAffineTrajectoryRetimer, planningutils::PyAffineTrajectoryRetimerPtr >("AffineTrajectoryRetimer", DOXY_CLASS(planningutils::AffineTrajectoryRetimer), no_init)
         .def(init<const std::string&, const std::string&>(py::args("plannername", "plannerparameters")))
 #endif
+
+        .def("GetPlannerName", &planningutils::PyAffineTrajectoryRetimer::GetPlannerName, DOXY_FN(planningutils::AffineTrajectoryRetimer, GetPlannerName))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("PlanPath", &planningutils::PyAffineTrajectoryRetimer::PlanPath,
              "traj"_a,
@@ -849,6 +918,20 @@ void InitPlanningUtils()
              )
 #else
         .def("PlanPath",&planningutils::PyAffineTrajectoryRetimer::PlanPath,PlanPath_overloads2(PY_ARGS("traj","maxvelocities", "maxaccelerations", "hastimestamps", "releasegil") DOXY_FN(planningutils::AffineTrajectoryRetimer,PlanPath)))
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .def("PlanPath", &planningutils::PyAffineTrajectoryRetimer::PlanPathWithJerkLimits,
+             "traj"_a,
+             "maxvelocities"_a,
+             "maxaccelerations"_a,
+             "maxjerks"_a,
+             "hastimestamps"_a = false,
+             "releasegil"_a = true,
+             DOXY_FN(planningutils::AffineTrajectoryRetimer, PlanPathWithJerkLimits)
+             )
+#else
+        .def("PlanPath", &planningutils::PyAffineTrajectoryRetimer::PlanPathWithJerkLimits, PlanPathWithJerkLimits_overloads(PY_ARGS("traj", "maxvelocities", "maxaccelerations", "maxjerks", "hastimestamps", "releasegil") DOXY_FN(planningutils::AffineTrajectoryRetimer, PlanPathWithJerkLimits)))
 #endif
         ;
 
@@ -875,8 +958,22 @@ void InitPlanningUtils()
              "filterreturn"_a = false,
              DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
              )
+        .def("CheckWithAccelerations", &planningutils::PyDynamicsCollisionConstraint::CheckWithAccelerations,
+             "q0"_a,
+             "q1"_a,
+             "dq0"_a,
+             "dq1"_a,
+             "ddq0"_a,
+             "ddq1"_a,
+             "timeelapsed"_a,
+             "interval"_a = 0x3,
+             "options"_a = 0xffff,
+             "filterreturn"_a = false,
+             DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)
+             )
 #else
-        .def("Check",&planningutils::PyDynamicsCollisionConstraint::Check,Check_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("Check", &planningutils::PyDynamicsCollisionConstraint::Check, Check_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
+        .def("CheckWithAccelerations", &planningutils::PyDynamicsCollisionConstraint::CheckWithAccelerations, CheckWithAccelerations_overloads(PY_ARGS("q0","q1", "dq0", "dq1", "ddq0", "ddq1", "timeelapsed", "interval", "options", "filterreturn") DOXY_FN(planningutils::DynamicsCollisionConstraint,Check)))
 #endif
         .def("GetReport", &planningutils::PyDynamicsCollisionConstraint::GetReport, DOXY_FN(planningutils::DynamicsCollisionConstraint,GetReport))
         .def("SetPlannerParameters", &planningutils::PyDynamicsCollisionConstraint::SetPlannerParameters, PY_ARGS("parameters") DOXY_FN(planningutils::DynamicsCollisionConstraint,SetPlannerParameters))

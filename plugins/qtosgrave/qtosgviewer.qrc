@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/" >
+        <file>fonts/NotoSans-Regular.ttf</file>
         <file>images/Import.png</file>
         <file>images/save.png</file>
         <file>images/smooth.png</file>

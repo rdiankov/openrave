@@ -17,7 +17,7 @@
    -------------------------------------------------------------------- */
 #include "qtosg.h"
 #include "osgrenderitem.h"
-
+#include "osglodlabel.h"
 #include <osgUtil/SmoothingVisitor>
 #include <osg/BlendFunc>
 #include <osg/PolygonOffset>
@@ -108,12 +108,21 @@ public:
     }
     virtual void apply(osg::Node &node) {
         if( !done ) {
-            if( &node == _osgSceneRoot.get() ) {
+            std::vector<OSGNodePtr>::const_iterator itNode = std::find(_seenNodes.begin(), _seenNodes.end(), &node);
+            if ( itNode != _seenNodes.end() ) {
+                // node path is a cycle, so set world coordinate to identity since there is no root node
+                wcMatrix.makeIdentity();
+                done = true;
+                _seenNodes.clear();
+            }
+            else if( &node == _osgSceneRoot.get() ) {
                 // found the path, so get the world coordinate system
                 wcMatrix.set( osg::computeLocalToWorld(getNodePath()));
                 done = true;
+                _seenNodes.clear();
             }
             else {
+                _seenNodes.emplace_back(&node);
                 traverse(node);
             }
         }
@@ -122,6 +131,7 @@ public:
     void Reset() {
         done = false;
         wcMatrix.makeIdentity();
+        _seenNodes.clear();
     }
 
     bool IsDone() {
@@ -131,6 +141,7 @@ public:
     osg::Matrix wcMatrix;
 private:
     OSGNodePtr _osgSceneRoot;
+    std::vector<OSGNodePtr> _seenNodes;
     bool done;
 };
 
@@ -175,7 +186,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
-    _environmentid = pbody->GetEnvironmentId();
+    _environmentid = pbody->GetEnvironmentBodyIndex();
     _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
     _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
 }
@@ -398,6 +409,76 @@ void KinBodyItem::Load()
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     geode->addDrawable(geom);
                     pgeometrydata->addChild(geode);
+
+                    if(orgeom->GetType() == GT_TriMesh){
+                        // CropContainerMargins and CropContainerEmptyMargins only exists in GT_Cage and GT_Container
+                        break;
+                    }
+
+                    DrawCropContainerMargins(
+                        pgeometrydata, 
+                        orgeom->GetContainerInnerExtents(), 
+                        orgeom->GetNegativeCropContainerMargins(), 
+                        orgeom->GetPositiveCropContainerMargins(), 
+                        orgeom->GetDiffuseColor() * 0.5 // shade of the geometry color
+                    );
+
+                    DrawCropContainerMargins(
+                        pgeometrydata, 
+                        orgeom->GetContainerInnerExtents(), 
+                        orgeom->GetNegativeCropContainerEmptyMargins(), 
+                        orgeom->GetPositiveCropContainerEmptyMargins(), 
+                        orgeom->GetDiffuseColor() + (-orgeom->GetDiffuseColor() + RaveVector<float>(1, 1, 1)) * 0.5 // tint of the geometry color
+                    );
+
+                    break;
+                }
+                // Board is a Box, dots are a separate Mesh from the board's collision Mesh
+                case GT_CalibrationBoard: {
+                    // Make board
+                    Vector v;
+                    osg::ref_ptr<osg::Box> board = new osg::Box();
+                    board->setCenter(osg::Vec3f(0, 0, -orgeom->GetBoxExtents().z));
+                    board->setHalfLengths(osg::Vec3f(orgeom->GetBoxExtents().x,orgeom->GetBoxExtents().y,orgeom->GetBoxExtents().z));
+
+                    // Make dot mesh
+                    osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+
+                    TriMesh mesh = TriMesh();
+                    orgeom->GetCalibrationBoardDotMesh(mesh);
+                    osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
+                    vertices->reserveArray(mesh.vertices.size());
+                    for(size_t i = 0; i < mesh.vertices.size(); ++i) {
+                        RaveVector<float> rv = mesh.vertices[i];
+                        vertices->push_back(osg::Vec3(rv.x, rv.y, rv.z));
+                    }
+                    geom->setVertexArray(vertices.get());
+
+                    osg::DrawElementsUInt* geom_prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
+                    for(size_t i = 0; i < mesh.indices.size(); ++i) {
+                        (*geom_prim)[i] = mesh.indices[i];
+                    }
+                    geom->addPrimitiveSet(geom_prim);
+                    osgUtil::SmoothingVisitor::smooth(*geom);
+
+                    // Set color of dot grid mesh
+                    RaveVector<float> dotColor = orgeom->GetCalibrationBoardDotColor();
+                    osg::ref_ptr<osg::Material> dotMat = new osg::Material;
+                    dotMat->setDiffuse( osg::Material::FRONT, osg::Vec4(dotColor.x,dotColor.y,dotColor.z,1) );
+                    dotMat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,1) );
+                    dotMat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
+                    
+                    // Place the two parts into the same pgeometrydata
+                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(board.get());
+                    geode->addDrawable(sd.get());
+                    osg::ref_ptr<osg::Geode> geode2 = new osg::Geode;
+                    geode2->addDrawable(geom);
+                    osg::ref_ptr<osg::StateSet> geode2state = geode2->getOrCreateStateSet();
+                    geode2state->setAttributeAndModes(dotMat, osg::StateAttribute::ON | osg::StateAttribute::PROTECTED);
+
+                    pgeometrydata->addChild(geode.get());
+                    pgeometrydata->addChild(geode2.get());
                     break;
                 }
                 default:
@@ -595,7 +676,7 @@ bool KinBodyItem::UpdateFromOSG()
         }
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+    boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
     if( !!lockenv ) {
         _pbody->SetLinkTransformations(vtrans,_vjointvalues);
         _pbody->GetLinkTransformations(_vtrans,_vjointvalues);
@@ -608,13 +689,13 @@ bool KinBodyItem::UpdateFromOSG()
 
 void KinBodyItem::GetDOFValues(vector<dReal>& vjoints) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vjoints = _vjointvalues;
 }
 
 void KinBodyItem::GetLinkTransformations(vector<Transform>& vtrans, std::vector<dReal>& vdofvalues) const
 {
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     vtrans = _vtrans;
     vdofvalues = _vjointvalues;
 }
@@ -628,7 +709,7 @@ bool KinBodyItem::UpdateFromModel()
     vector<dReal> vjointvalues;
 
     {
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
+        boost::shared_ptr<EnvironmentLock> lockenv = LockEnvironmentWithTimeout(_pbody->GetEnv(), 50000);
         if( !lockenv ) {
             return false;
         }
@@ -640,7 +721,7 @@ bool KinBodyItem::UpdateFromModel()
         }
 
         // make sure the body is still present!
-        if( _pbody->GetEnv()->GetBodyFromEnvironmentId(_environmentid) == _pbody ) {
+        if( _pbody->GetEnv()->GetBodyFromEnvironmentBodyIndex(_environmentid) == _pbody ) {
             _pbody->GetLinkTransformations(_vtrans, _vjointvalues);
             _pbody->GetDOFValues(vjointvalues);
         }
@@ -661,7 +742,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     }
 
     if( _bReload || _bDrawStateChanged ) {
-        EnvironmentMutex::scoped_try_lock lockenv(_pbody->GetEnv()->GetMutex());
+        EnvironmentLock lockenv(_pbody->GetEnv()->GetMutex());
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
@@ -669,7 +750,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutexjoints);
+    std::lock_guard<std::mutex> lock(_mutexjoints);
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
 
@@ -848,39 +929,8 @@ void RobotItem::Load()
             peesep->addChild(CreateOSGXYZAxes(0.1, 0.0005));
 
             // add text
-            {
-                OSGGroupPtr ptextsep = new osg::Group();
-                osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
-                peesep->addChild(ptextsep);
-
-                osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
-                matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
-
-                // Temporarily disable this code since it conflicts with shaders. Text labels are improved in the MR https://github.com/rdiankov/openrave/pull/887
-                // osg::ref_ptr<osgText::Text> text = new osgText::Text();
-
-                // //Set the screen alignment - always face the screen
-                // text->setAxisAlignment(osgText::Text::SCREEN);
-                // text->setCharacterSizeMode(osgText::Text::SCREEN_COORDS);
-                // text->setCharacterSize(50.0);
-
-                // text->setColor(osg::Vec4(0,0,0,1));
-                // text->setEnableDepthWrites(false);
-
-                // text->setBackdropType(osgText::Text::DROP_SHADOW_BOTTOM_RIGHT);
-                // text->setBackdropColor(osg::Vec4(1,1,1,1));
-
-
-                // text->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::OFF);
-                // //text->setFontResolution(18,18);
-
-                // text->setText((*itmanip)->GetName());//str(boost::format("EE%d")%index));
-                // textGeode->addDrawable(text);
-                // ptextsep->addChild(textGeode);
-            }
+            osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel((*itmanip)->GetName());
+            peesep->addChild(labelTrans);
         }
     }
 
@@ -909,10 +959,10 @@ void RobotItem::Load()
                 peesep->addChild(ptextsep);
 
                 osg::Matrix matrix;
-                OSGMatrixTransformPtr ptrans = new osg::MatrixTransform();
-                ptrans->setReferenceFrame(osg::Transform::RELATIVE_RF);
+                OSGMatrixTransformPtr ptransform = new osg::MatrixTransform();
+                ptransform->setReferenceFrame(osg::Transform::RELATIVE_RF);
                 matrix.setTrans(osg::Vec3f(0, 0, 0));//.02f,0.02f,0.02f));
-                ptextsep->addChild(ptrans);
+                ptextsep->addChild(ptransform);
 
                 osg::ref_ptr<osgText::Text> text = new osgText::Text();
 
@@ -974,6 +1024,70 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     }
 
     return true;
+}
+
+void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& lineColor){
+    if(negativeCropContainerMargins == Vector(0, 0, 0) && positiveCropContainerMargins == Vector(0, 0, 0)){
+        // do nothing if CropContainerMargins are all zeros
+        return;
+    }
+
+    Vector lowerBound = extents * -0.5;
+    lowerBound.z = 0;
+    lowerBound += negativeCropContainerMargins;
+    Vector upperBound = extents * 0.5;
+    upperBound.z = extents.z;
+    upperBound -= positiveCropContainerMargins;
+    
+    osg::Geode *lineGeode = new osg::Geode;
+    osg::Geometry *lineGeometry = new osg::Geometry;
+    osg::Vec3Array *linePointVector = new osg::Vec3Array;
+
+    // bottom 4 edges
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
+
+    // middle 4 edges
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+
+    // top 4 edges
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
+    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+
+    lineGeometry->setVertexArray(linePointVector);
+    lineGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES, 0, linePointVector->size()));
+    lineGeode->addDrawable(lineGeometry);
+
+    // setup line width
+    osg::LineWidth* linewidth = new osg::LineWidth();
+    linewidth->setWidth(3.0);
+    lineGeode->getOrCreateStateSet()->setAttributeAndModes(linewidth, osg::StateAttribute::ON);
+    
+    // setup line color
+    osg::ref_ptr<osg::Material> lineMaterial = new osg::Material;
+    lineMaterial->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(lineColor.x, lineColor.y, lineColor.z, 1));
+    lineGeode->getOrCreateStateSet()->setAttributeAndModes(lineMaterial, osg::StateAttribute::PROTECTED);
+
+    pgeometrydata->addChild(lineGeode);
 }
 
 }

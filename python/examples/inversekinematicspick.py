@@ -47,7 +47,7 @@ def main(env,options):
     "Main example code."
     if options.iktype is not None:
         # cannot use .names due to python 2.5 (or is it boost version?)
-        for value,type in IkParameterization.Type.values.iteritems():
+        for value,type in IkParameterization.Type.values.items():
             if type.name.lower() == options.iktype.lower():
                 iktype = type
                 break
@@ -60,7 +60,7 @@ def main(env,options):
         ikmodels = []
         for robot in env.GetRobots():
             for manip in robot.GetManipulators():
-                print manip
+                print(manip)
                 try:
                     robot.SetActiveManipulator(manip)
                     ikmodel = databases.inversekinematics.InverseKinematicsModel(robot, iktype=iktype)
@@ -69,8 +69,8 @@ def main(env,options):
                         if not ikmodel.has():
                             continue
                     ikmodels.append(ikmodel)
-                except Exception, e:
-                    print 'failed manip %s'%manip, e
+                except Exception as e:
+                    print('failed manip %s %r'%(manip, e))
                 
         if len(ikmodels) == 0:
             raveLogWarn('no manipulators found that can be loaded with iktype %s'%str(iktype))

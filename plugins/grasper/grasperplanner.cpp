@@ -38,7 +38,7 @@ public:
     }
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = pbase;
 
         if( _robot->GetActiveDOF() <= 0 ) {
@@ -69,7 +69,7 @@ public:
         if(!_parameters) {
             return PlannerStatus(PS_Failed);
         }
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         RobotBase::RobotStateSaver saver(_robot);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
 
@@ -145,7 +145,7 @@ public:
                 AABB ab;
                 {
                     // have to compute in the target's coordinate system since aabb extents change
-                    KinBody::KinBodyStateSaver saver(_parameters->targetbody);
+                    KinBody::KinBodyStateSaver saver756(_parameters->targetbody);
                     _parameters->targetbody->SetTransform(Transform());
                     ab = _parameters->targetbody->ComputeAABB();
                 }
@@ -407,7 +407,7 @@ public:
             for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 FOREACHC(itmanip, _robot->GetManipulators()) {
                     BOOST_ASSERT((*itmanip)->GetChuckingDirection().size() == (*itmanip)->GetGripperIndices().size());
-                    vector<dReal>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
+                    vector<int>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
                     FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
                         if(( *itchucking != 0) &&( *itgripper == _robot->GetActiveDOFIndices().at(i)) ) {
                             vchuckingdir.at(i) = *itchucking;

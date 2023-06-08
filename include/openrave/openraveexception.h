@@ -21,6 +21,7 @@
 #include <openrave/config.h>
 
 #include <exception>
+#include <string>
 
 namespace OpenRAVE {
 
@@ -39,6 +40,15 @@ enum OpenRAVEErrorCode {
     ORE_InvalidState=10, ///< the state of the object is not consistent with its parameters, or cannot be used. This is usually due to a programming error where a vector is not the correct length, etc.
     ORE_Timeout=11, ///< process timed out
     ORE_InvalidURI=12, ///< uri in input scene file is invalid, causing scene loading failures
+    ORE_BodyNameConflict=13, ///< body with same name is trying to be added to the environment
+    ORE_SensorNameConflict=14, ///< sensor with same name is trying to be added to the environment
+    ORE_BodyIdConflict=15, ///< body with same id is trying to be added to the environment
+
+    ORE_EnvironmentFormatUnrecognized = 0x0100, ///< the environment format to load is not recognized.
+    
+    ORE_CurlTimeout=0x1000, ///< curl download timed out
+    ORE_CurlInvalidHandle=0x1001, ///< the curl handle cannot be created
+    ORE_CurlInvalidResponse=0x1002, ///< curl downloaded response is invalid
 };
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.

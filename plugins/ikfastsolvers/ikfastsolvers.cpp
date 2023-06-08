@@ -13,29 +13,59 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "ikfastsolvers.h"
 #include "plugindefs.h"
 #include <boost/lexical_cast.hpp>
-#include <openrave/plugin.h>
 
-namespace ik_barrettwam { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_pa10 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_puma { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_pr2_head { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_pr2_head_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_pr2_leftarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_pr2_leftarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_pr2_rightarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_pr2_rightarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_schunk_lwa3 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_katana5d { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
-namespace ik_katana5d_trans { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_barrettwam { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_pa10 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_puma { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_pr2_head { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_pr2_head_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_pr2_leftarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_pr2_leftarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_pr2_rightarm { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_pr2_rightarm_torso { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_schunk_lwa3 { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_katana5d { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
+//namespace ik_katana5d_trans { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
 
-IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, EnvironmentBasePtr penv);
-ModuleBasePtr CreateIkFastModule(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, OpenRAVE::EnvironmentBasePtr penv);
+OpenRAVE::ModuleBasePtr CreateIkFastModule(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 void DestroyIkFastLibraries();
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
-{    
+const std::string IKFastSolversPlugin::_pluginname = "IKFastSolversPlugin";
+
+IKFastSolversPlugin::IKFastSolversPlugin()
+{
+    _interfaces[PT_Module].push_back("ikfast");
+    _interfaces[PT_IkSolver].push_back("ikfast");
+    //_interfaces[PT_IkSolver].push_back("wam7ikfast");
+    //_interfaces[PT_IkSolver].push_back("pa10ikfast");
+    //_interfaces[PT_IkSolver].push_back("pumaikfast");
+    //_interfaces[PT_IkSolver].push_back("ikfast_pr2_head");
+    //_interfaces[PT_IkSolver].push_back("ikfast_pr2_head_torso");
+    //_interfaces[PT_IkSolver].push_back("ikfast_pr2_rightarm");
+    //_interfaces[PT_IkSolver].push_back("ikfast_pr2_rightarm_torso");
+    //_interfaces[PT_IkSolver].push_back("ikfast_pr2_leftarm");
+    //_interfaces[PT_IkSolver].push_back("ikfast_pr2_leftarm_torso");
+    //_interfaces[PT_IkSolver].push_back("ikfast_schunk_lwa3");
+    //_interfaces[PT_IkSolver].push_back("ikfast_katana5d");
+    //_interfaces[PT_IkSolver].push_back("ikfast_katana5d_trans");
+}
+
+IKFastSolversPlugin::~IKFastSolversPlugin()
+{
+    Destroy();
+}
+
+void IKFastSolversPlugin::Destroy()
+{
+    DestroyIkFastLibraries();
+}
+
+OpenRAVE::InterfaceBasePtr IKFastSolversPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
     switch(type) {
     case PT_IkSolver: {
         if( interfacename == "ikfast" ) {
@@ -44,7 +74,7 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             if( !!sinput ) {
                 // check if ikthreshold parameter exists
                 dReal ikthreshold=1e-4;
-                vector<dReal> vfreeinc;
+                std::vector<dReal> vfreeinc;
                 std::string paramname;
                 sinput >> paramname;
                 if( !!sinput ) {
@@ -59,53 +89,53 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
                 // have to append any left over numbers
                 vector<dReal> vfreeinctemp((istream_iterator<dReal>(sinput)), istream_iterator<dReal>());
                 vfreeinc.insert(vfreeinc.end(), vfreeinctemp.begin(), vfreeinctemp.end());
-                
+
                 // look at all the ikfast problem solvers
-                IkSolverBasePtr psolver = CreateIkSolverFromName(ikfastname, vfreeinc, ikthreshold, penv);
+                OpenRAVE::IkSolverBasePtr psolver = CreateIkSolverFromName(ikfastname, vfreeinc, ikthreshold, penv);
                 if( !!psolver ) {
                     return psolver;
                 }
             }
         }
-        else {
-            vector<dReal> vfreeinc((istream_iterator<dReal>(sinput)), istream_iterator<dReal>());
-            if( interfacename == "wam7ikfast" ) {
-                return ik_barrettwam::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "pa10ikfast" ) {
-                return ik_pa10::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "pumaikfast" ) {
-                return ik_puma::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_pr2_head" ) {
-                return ik_pr2_head::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_pr2_head_torso" ) {
-                return ik_pr2_head_torso::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_pr2_rightarm" ) {
-                return ik_pr2_rightarm::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_pr2_rightarm_torso" ) {
-                return ik_pr2_rightarm_torso::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_pr2_leftarm" ) {
-                return ik_pr2_leftarm::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_pr2_leftarm_torso" ) {
-                return ik_pr2_leftarm_torso::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_schunk_lwa3" ) {
-                return ik_schunk_lwa3::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_katana5d" ) {
-                return ik_katana5d::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-            else if( interfacename == "ikfast_katana5d_trans" ) {
-                return ik_katana5d_trans::CreateIkSolver(penv, sinput, vfreeinc);
-            }
-        }
+//        else {
+//            vector<dReal> vfreeinc((istream_iterator<dReal>(sinput)), istream_iterator<dReal>());
+//            if( interfacename == "wam7ikfast" ) {
+//                return ik_barrettwam::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "pa10ikfast" ) {
+//                return ik_pa10::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "pumaikfast" ) {
+//                return ik_puma::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_pr2_head" ) {
+//                return ik_pr2_head::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_pr2_head_torso" ) {
+//                return ik_pr2_head_torso::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_pr2_rightarm" ) {
+//                return ik_pr2_rightarm::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_pr2_rightarm_torso" ) {
+//                return ik_pr2_rightarm_torso::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_pr2_leftarm" ) {
+//                return ik_pr2_leftarm::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_pr2_leftarm_torso" ) {
+//                return ik_pr2_leftarm_torso::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_schunk_lwa3" ) {
+//                return ik_schunk_lwa3::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_katana5d" ) {
+//                return ik_katana5d::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//            else if( interfacename == "ikfast_katana5d_trans" ) {
+//                return ik_katana5d_trans::CreateIkSolver(penv, sinput, vfreeinc);
+//            }
+//        }
         break;
     }
     case PT_Module:
@@ -117,28 +147,19 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
         break;
     }
 
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& IKFastSolversPlugin::GetInterfaces() const
 {
-    info.interfacenames[PT_Module].push_back("ikfast");
-    info.interfacenames[PT_IkSolver].push_back("ikfast");
-    info.interfacenames[PT_IkSolver].push_back("wam7ikfast");
-    info.interfacenames[PT_IkSolver].push_back("pa10ikfast");
-    info.interfacenames[PT_IkSolver].push_back("pumaikfast");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_head");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_head_torso");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_rightarm");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_rightarm_torso");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_leftarm");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_pr2_leftarm_torso");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_schunk_lwa3");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_katana5d");
-    info.interfacenames[PT_IkSolver].push_back("ikfast_katana5d_trans");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& IKFastSolversPlugin::GetPluginName() const
 {
-    DestroyIkFastLibraries();
+    return _pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new IKFastSolversPlugin();
 }

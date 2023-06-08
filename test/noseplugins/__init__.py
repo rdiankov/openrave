@@ -1,9 +1,9 @@
-import capture
-import nosexcover
+from . import capture
+from . import nosexcover
 
 try:
-    import multiprocess
-    import xunitmultiprocess
+    from . import multiprocess
+    from . import xunitmultiprocess
 except ImportError:
     # fails for python 2.5
     pass

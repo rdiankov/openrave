@@ -24,12 +24,12 @@ public:
     {
 public:
         ConveyorLink(const std::string& name, Transform tinernal, KinBodyPtr parent) : Link(parent) {
-            _info._t = tinernal;
+            _info.SetTransform(tinernal);
             _info._mass = 0.01; // just an estimate
             _info._vinertiamoments = Vector(1,1,1);
             _info._name = name;
             _info._bStatic = false;
-            _info._bIsEnabled = true;
+            _Enable(true);
         }
     };
 
@@ -60,6 +60,30 @@ public:
 
         bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
             return false;
+        }
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const ConveyorInfo* pOther = dynamic_cast<const ConveyorInfo*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return _mimic == pOther->_mimic &&
+                _linkParent == pOther->_linkParent &&
+                _trajfollow == pOther->_trajfollow &&
+                _fLinkDensity == pOther->_fLinkDensity &&
+                _listGeometries == pOther->_listGeometries &&
+                _namebase == pOther->_namebase &&
+                _bIsCircular == pOther->_bIsCircular &&
+                _bCreated == pOther->_bCreated;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<ConveyorInfo> pNew(new ConveyorInfo());
+            *pNew = *this;
+            return pNew;
         }
         
         boost::shared_ptr<KinBody::Mimic> _mimic; // always has to mimic
@@ -95,7 +119,7 @@ public:
             return _cmdata;
         }
 
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override {
             if( !!_pcurreader ) {
                 if( _pcurreader->startElement(name,atts) == PE_Support ) {
                     return PE_Support;
@@ -119,7 +143,7 @@ public:
             return PE_Support;
         }
 
-        virtual bool endElement(const std::string& name)
+        virtual bool endElement(const std::string& name) override
         {
             if( !!_pcurreader ) {
                 if( _pcurreader->endElement(name) ) {
@@ -170,7 +194,7 @@ public:
             return false;
         }
 
-        virtual void characters(const std::string& ch)
+        virtual void characters(const std::string& ch) override
         {
             if( !!_pcurreader ) {
                 _pcurreader->characters(ch);
@@ -200,7 +224,7 @@ protected:
     virtual ~Conveyor() {
     }
 
-    virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation)
+    virtual bool SetController(ControllerBasePtr controller, const std::vector<int>& jointindices, int nControlTransformation) override
     {
         _pController = controller;
         if( !!_pController ) {
@@ -213,10 +237,10 @@ protected:
         return true;
     }
 
-    virtual ControllerBasePtr GetController() const {
+    virtual ControllerBasePtr GetController() const override {
         return _pController;
     }
-    virtual void SimulationStep(dReal fElapsedTime)
+    virtual void SimulationStep(dReal fElapsedTime) override
     {
         RobotBase::SimulationStep(fElapsedTime);
         if( !!_pController ) {

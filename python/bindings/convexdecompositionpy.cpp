@@ -105,7 +105,7 @@ object computeConvexDecomposition(const boost::multi_array<float, 2>& vertices, 
     const py::buffer_info& vertices_info = vertices.request();
     const std::vector<ssize_t> &vertices_shape = vertices_info.shape;
     BOOST_ASSERT(vertices_shape.size() == 2);
-    const size_t nvertices = vertices_shape[0];
+    //const size_t nvertices = vertices_shape[0];
     BOOST_ASSERT(vertices_shape[1] == 3);
     float const* const p_vertices = (float *) vertices_info.ptr;
 
@@ -178,7 +178,14 @@ BOOST_PYTHON_FUNCTION_OVERLOADS(computeConvexDecomposition_overloads, computeCon
 
 OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
 {
-    import_array();
+    // expansion of the macro `import_array()` in
+    // numpy/core/include/numpy/__multiarray_api.h
+    if (_import_array() < 0) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_ImportError, "numpy.core.multiarray failed to import");
+        return;
+    }
+
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     numeric::array::set_module_and_type("numpy", "ndarray");
     int_from_number<int>();
@@ -193,7 +200,7 @@ OPENRAVE_PYTHON_MODULE(convexdecompositionpy)
     class_< cdpy_exception >( "_cdpy_exception_" )
     .def( init<const std::string&>() )
     .def( init<const cdpy_exception&>() )
-    .def( "message", &cdpy_exception::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&cdpy_exception::message, return_copy_const_ref()) )
     .def( "__str__", &cdpy_exception::message, return_copy_const_ref() )
     ;
     OpenRAVEBoostPythonExceptionTranslator<cdpy_exception>();

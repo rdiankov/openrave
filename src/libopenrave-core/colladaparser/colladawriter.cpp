@@ -18,8 +18,6 @@
 using namespace ColladaDOM150;
 
 #include <locale>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/time_facet.hpp>
 #include <boost/algorithm/string.hpp>
 #include <ctime>
 
@@ -246,7 +244,7 @@ public:
     {
         axis_sids() : dofvalue(0) {
         }
-        axis_sids(const string& axissid, const string& valuesid, const string& jointnodesid) : axissid(axissid), valuesid(valuesid), jointnodesid(jointnodesid), dofvalue(0) {
+        axis_sids(const string& axissid_, const string& valuesid_, const string& jointnodesid_) : axissid(axissid_), valuesid(valuesid_), jointnodesid(jointnodesid_), dofvalue(0) {
         }
         string axissid, valuesid, jointnodesid;
         dReal dofvalue; // if valuesid is empty, use this float value. This is in degrees or meters
@@ -512,7 +510,7 @@ private:
     /// \brief Write down environment
     virtual bool Write(const std::string& scenename=std::string())
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         std::list<KinBodyPtr> listbodies(vbodies.begin(),vbodies.end());
@@ -537,7 +535,7 @@ private:
         int globalid = 0;
         FOREACHC(itbody,listbodies) {
             BOOST_ASSERT((*itbody)->GetEnv()==_penv);
-            BOOST_ASSERT(_mapBodyIds.find((*itbody)->GetEnvironmentId()) == _mapBodyIds.end());
+            BOOST_ASSERT(_mapBodyIds.find((*itbody)->GetEnvironmentBodyIndex()) == _mapBodyIds.end());
             const std::string& bodyId = (*itbody)->_id;
             // try to restore what id was used
             // check for id that has format bodyX_motion
@@ -556,7 +554,7 @@ private:
                         }
                     }
                     if (!bDuplicateIdFound) {
-                        _mapBodyIds[(*itbody)->GetEnvironmentId()] = numericBodyId;
+                        _mapBodyIds[(*itbody)->GetEnvironmentBodyIndex()] = numericBodyId;
                     }
                 }
                 catch (const boost::bad_lexical_cast&) {
@@ -566,8 +564,8 @@ private:
         }
         FOREACHC(itbody,listbodies) {
             // for body ids not in bodyX_motion format that cannot be restored, use new unique numeric ids
-            if (_mapBodyIds.find((*itbody)->GetEnvironmentId()) == _mapBodyIds.end()) {
-                _mapBodyIds[(*itbody)->GetEnvironmentId()] = globalid++;
+            if (_mapBodyIds.find((*itbody)->GetEnvironmentBodyIndex()) == _mapBodyIds.end()) {
+                _mapBodyIds[(*itbody)->GetEnvironmentBodyIndex()] = globalid++;
             }
         }
         FOREACHC(itbody,listbodies) {
@@ -595,9 +593,9 @@ private:
     /// \brief Write one robot as a file
     virtual bool Write(RobotBasePtr probot)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
-        _mapBodyIds[probot->GetEnvironmentId()] = 0;
+        _mapBodyIds[probot->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(probot);
         _AssignJointSids(probot);
 
@@ -621,9 +619,9 @@ private:
         if( pbody->IsRobot() ) {
             return Write(RaveInterfaceCast<RobotBase>(pbody));
         }
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
-        _mapBodyIds[pbody->GetEnvironmentId()] = 0;
+        _mapBodyIds[pbody->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(pbody);
         _AssignJointSids(pbody);
 
@@ -689,7 +687,7 @@ private:
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBodyExternal(KinBodyPtr pbody, domInstance_kinematics_sceneRef ikscene)
     {
         RAVELOG_DEBUG(str(boost::format("writing body %s as external reference")%pbody->GetName()));
-        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
         //string asmid = str(boost::format("%s_motion")%asid);
         string asmid = str(boost::format("%s_motion")%asid);
         string iasmid = str(boost::format("%s_motion_inst")%asid);
@@ -845,7 +843,7 @@ private:
 
                 // write bindings
                 {
-                    std::string smodelref = str(boost::format("ikmodel_extern%d_%d")%_mapBodyIds[pbody->GetEnvironmentId()]%imodel);
+                    std::string smodelref = str(boost::format("ikmodel_extern%d_%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%imodel);
                     domKinematics_newparamRef param = daeSafeCast<domKinematics_newparam>(ias_external->add(COLLADA_ELEMENT_NEWPARAM));
                     param->setSid(smodelref.c_str());
                     daeSafeCast<domKinematics_newparam::domSIDREF>(param->add(COLLADA_ELEMENT_SIDREF))->setValue(itmodel->ikmodelsidref.c_str());
@@ -855,7 +853,7 @@ private:
                         // have to write another level of parameters
                         domKinematics_newparamRef param2 = daeSafeCast<domKinematics_newparam>(ias->add(COLLADA_ELEMENT_NEWPARAM));
                         daeSafeCast<domKinematics_newparam::domSIDREF>(param2->add(COLLADA_ELEMENT_SIDREF))->setValue(str(boost::format("%s/%s")%articulated_system_motion->getId()%smodelref).c_str());
-                        smodelref = str(boost::format("ikmodel%d_%d")%_mapBodyIds[pbody->GetEnvironmentId()]%imodel);
+                        smodelref = str(boost::format("ikmodel%d_%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%imodel);
                         param2->setSid(smodelref.c_str());
                     }
                     iasout->vkinematicsbindings.emplace_back(smodelref,  sidref);
@@ -877,7 +875,7 @@ private:
                     }
                 }
                 ipmout->ipm->setUrl(_ComputeExternalURI(daeURI(*ipmout->ipm,itmodel->pmodel)));
-                ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%_mapBodyIds[pbody->GetEnvironmentId()]).c_str());
+                ipmout->ipm->setSid(str(boost::format("pmodel%d_inst")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]).c_str());
                 ipmout->pmout.reset(new physics_model_output()); // need a physics model output in case this is a robot and is grabbing links
                 ipmout->pmout->pbody = pbody;
                 ipmout->pmout->vrigidbodysids.resize(pbody->GetLinks().size());
@@ -934,8 +932,8 @@ private:
     /// \brief Write robot in a given scene
     virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBody(KinBodyPtr pbody)
     {
-        RAVELOG_VERBOSE(str(boost::format("writing robot as instance_articulated_system (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentId()]%pbody->GetName()));
-        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        RAVELOG_VERBOSE(str(boost::format("writing robot as instance_articulated_system (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
+        string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
         string askid = str(boost::format("%s_kinematics")%asid);
         string asmid = str(boost::format("%s_motion")%asid);
         string iassid = str(boost::format("%s_inst")%asmid);
@@ -1122,20 +1120,48 @@ private:
 
         boost::shared_ptr<kinematics_model_output> kmout = _GetKinematics_model(pbody);
         kmodelid += "/";
-        FOREACHC(itjoint,pbody->GetJoints()) {
+
+        // note which links and joints are part of connected bodies
+        std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pbody->GetJoints().size(),0);
+        if( pbody->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            FOREACH(itconnectedBody, probot->GetConnectedBodies()) {
+                RobotBase::ConnectedBody& connectedBody = **itconnectedBody;
+                if( (*itconnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<KinBody::JointPtr> vResolvedJoints;
+                connectedBody.GetResolvedJoints(vResolvedJoints);
+                FOREACHC(itResolvedJoint, vResolvedJoints) {
+                    for(int ijointindex = 0; ijointindex < (int)pbody->GetJoints().size(); ++ijointindex) {
+                        if( pbody->GetJoints()[ijointindex] == *itResolvedJoint ) {
+                            vConnectedJoints[ijointindex] = 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        for(int ijoint = 0; ijoint < (int)vConnectedJoints.size(); ++ijoint) {
+            if (vConnectedJoints[ijoint]) {
+                // skip joints added by connected body
+                continue;
+            }
+            KinBody::JointConstPtr pjoint = pbody->GetJoints()[ijoint];
             domExtraRef pextra = daeSafeCast<domExtra>(articulated_system_motion->add(COLLADA_ELEMENT_EXTRA));
-            pextra->setName(str(boost::format("motor_%s")%_GetJointSid(*itjoint)).c_str());
+            pextra->setName(str(boost::format("motor_%s")%_GetJointSid(pjoint)).c_str());
             pextra->setType("attach_actuator");
             domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
             ptec->setProfile("OpenRAVE");
             daeElementRef bind_actuator = ptec->add("bind_actuator");
-            bind_actuator->setAttribute("joint",str(boost::format("%s%s")%kmodelid%_GetJointSid(*itjoint)).c_str());
+            bind_actuator->setAttribute("joint",str(boost::format("%s%s")%kmodelid%_GetJointSid(pjoint)).c_str());
 
-            if( !!(*itjoint)->GetInfo()._infoElectricMotor ) {
-                ElectricMotorActuatorInfoPtr infoElectricMotor = (*itjoint)->GetInfo()._infoElectricMotor;
+            if( !!pjoint->GetInfo()._infoElectricMotor ) {
+                ElectricMotorActuatorInfoPtr infoElectricMotor = pjoint->GetInfo()._infoElectricMotor;
                 daeElementRef instance_actuator = ptec->add("instance_actuator");
 
-                std::string stractuator = str(boost::format("body%d_actuator_%s")%_mapBodyIds[pbody->GetEnvironmentId()]%_GetJointSid(*itjoint));
+                std::string stractuator = str(boost::format("body%d_actuator_%s")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%_GetJointSid(pjoint));
                 std::string url = std::string("#") + stractuator;
                 instance_actuator->setAttribute("url",url.c_str());
 
@@ -1206,8 +1232,8 @@ private:
     /// \brief Write common kinematic body in a given scene, called by _WriteKinBody
     virtual boost::shared_ptr<instance_kinematics_model_output> _WriteInstance_kinematics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
-        RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentId()]%pbody->GetName()));
+        EnvironmentLock lockenv(_penv->GetMutex());
+        RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
         boost::shared_ptr<kinematics_model_output> kmout = WriteKinematics_model(pbody);
 
         boost::shared_ptr<instance_kinematics_model_output> ikmout(new instance_kinematics_model_output());
@@ -1320,7 +1346,7 @@ private:
 
     virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout;
         if( _bReuseSimilar ) {
             kmout = _GetKinematics_model(pbody);
@@ -1638,7 +1664,7 @@ private:
             // write the float/int parameters for all joints
             FOREACH(itjoint, vjoints) {
                 KinBody::JointConstPtr pjoint = itjoint->second;
-                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == KinBody::JCM_None ) {
+                if( pjoint->GetFloatParameters().size() == 0 && pjoint->GetIntParameters().size() == 0 && pjoint->GetStringParameters().size() == 0 && pjoint->GetControlMode() == JCM_None ) {
                     continue;
                 }
                 string jointsid = _GetJointSid(pjoint);
@@ -1674,86 +1700,95 @@ private:
                     string_value->setAttribute("name",itparam->first.c_str());
                     string_value->setCharData(itparam->second);
                 }
-                if( pjoint->GetControlMode() != KinBody::JCM_None ) {
+                if( pjoint->GetControlMode() != JCM_None ) {
                     daeElementRef param_controlMode = ptec->add("controlMode");
                     param_controlMode->setCharData(boost::lexical_cast<std::string>(pjoint->_info._controlMode).c_str());
                     switch( pjoint->_info._controlMode ) {
-                    case KinBody::JCM_RobotController: {
+                    case JCM_RobotController: {
                         daeElementRef param_jointcontrolinfo_robotcontroller = ptec->add("jointcontrolinfo_robotcontroller");
                         // robotId
-                        daeElementRef param_robotId = param_jointcontrolinfo_robotcontroller->add("robotId");
-                        param_robotId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotId).c_str());
-                        // robotControllerDOFIndex
+                        daeElementRef param_controllerType = param_jointcontrolinfo_robotcontroller->add("controllerType");
+                        param_controllerType->setCharData(pjoint->_info._jci_robotcontroller->controllerType.c_str());
+                        // robotControllerAxis[Index, Mult, Offset, ProductCode]
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
-                            daeElementRef param_robotControllerDOFIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerDOFIndex");
-                            param_robotControllerDOFIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_robotControllerDOFIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerDOFIndex[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisIndex");
+                            param_robotControllerAxisIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisIndex[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisMult = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisMult");
+                            param_robotControllerAxisMult->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisMult->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisMult[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisOffset = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisOffset");
+                            param_robotControllerAxisOffset->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisOffset->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisOffset[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
+                            param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
                         }
                         break;
-                    } // end case KinBody::JCM_RobotController
-                    case KinBody::JCM_IO: {
+                    } // end case JCM_RobotController
+                    case JCM_IO: {
                         daeElementRef param_jointcontrolinfo_io = ptec->add("jointcontrolinfo_io");
                         // deviceId
-                        daeElementRef param_deviceId = param_jointcontrolinfo_io->add("deviceId");
-                        param_deviceId->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_io->deviceId).c_str());
+                        daeElementRef param_deviceType = param_jointcontrolinfo_io->add("deviceType");
+                        param_deviceType->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_io->deviceType).c_str());
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
-                            // vMoveIONames
-                            daeElementRef param_vMoveIONames = param_jointcontrolinfo_io->add("vMoveIONames");
-                            param_vMoveIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vMoveIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vMoveIONames[iaxis].size()).c_str());
+                            // moveIONames
+                            daeElementRef param_moveIONames = param_jointcontrolinfo_io->add("moveIONames");
+                            param_moveIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_moveIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->moveIONames[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itioname, pjoint->_info._jci_io->vMoveIONames[iaxis]) {
+                            FOREACHC(itioname, pjoint->_info._jci_io->moveIONames[iaxis]) {
                                 ss << *itioname << " ";
                             }
-                            param_vMoveIONames->setCharData(ss.str());
+                            param_moveIONames->setCharData(ss.str());
 
-                            // vUpperLimitIONames
-                            daeElementRef param_vUpperLimitIONames = param_jointcontrolinfo_io->add("vUpperLimitIONames");
-                            param_vUpperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vUpperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitIONames[iaxis].size()).c_str());
+                            // upperLimitIONames
+                            daeElementRef param_upperLimitIONames = param_jointcontrolinfo_io->add("upperLimitIONames");
+                            param_upperLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_upperLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->upperLimitIONames[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itioname, pjoint->_info._jci_io->vUpperLimitIONames[iaxis]) {
+                            FOREACHC(itioname, pjoint->_info._jci_io->upperLimitIONames[iaxis]) {
                                 ss << *itioname << " ";
                             }
-                            param_vUpperLimitIONames->setCharData(ss.str());
+                            param_upperLimitIONames->setCharData(ss.str());
 
                             // vUpperLimitSensorIsOn
-                            daeElementRef param_vUpperLimitSensorIsOn = param_jointcontrolinfo_io->add("vUpperLimitSensorIsOn");
-                            param_vUpperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vUpperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis].size()).c_str());
+                            daeElementRef param_upperLimitSensorIsOn = param_jointcontrolinfo_io->add("upperLimitSensorIsOn");
+                            param_upperLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_upperLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->upperLimitSensorIsOn[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itiovalue, pjoint->_info._jci_io->vUpperLimitSensorIsOn[iaxis]) {
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->upperLimitSensorIsOn[iaxis]) {
                                 ss << (int)*itiovalue << " ";
                             }
-                            param_vUpperLimitSensorIsOn->setCharData(ss.str());
+                            param_upperLimitSensorIsOn->setCharData(ss.str());
 
                             // vLowerLimitIONames
-                            daeElementRef param_vLowerLimitIONames = param_jointcontrolinfo_io->add("vLowerLimitIONames");
-                            param_vLowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vLowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitIONames[iaxis].size()).c_str());
+                            daeElementRef param_lowerLimitIONames = param_jointcontrolinfo_io->add("lowerLimitIONames");
+                            param_lowerLimitIONames->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_lowerLimitIONames->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->lowerLimitIONames[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itioname, pjoint->_info._jci_io->vLowerLimitIONames[iaxis]) {
+                            FOREACHC(itioname, pjoint->_info._jci_io->lowerLimitIONames[iaxis]) {
                                 ss << *itioname << " ";
                             }
-                            param_vLowerLimitIONames->setCharData(ss.str());
+                            param_lowerLimitIONames->setCharData(ss.str());
 
                             // vLowerLimitSensorIsOn
-                            daeElementRef param_vLowerLimitSensorIsOn = param_jointcontrolinfo_io->add("vLowerLimitSensorIsOn");
-                            param_vLowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
-                            param_vLowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis].size()).c_str());
+                            daeElementRef param_lowerLimitSensorIsOn = param_jointcontrolinfo_io->add("lowerLimitSensorIsOn");
+                            param_lowerLimitSensorIsOn->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_lowerLimitSensorIsOn->setAttribute("count", boost::lexical_cast<std::string>(pjoint->_info._jci_io->lowerLimitSensorIsOn[iaxis].size()).c_str());
                             ss.str(""); ss.clear();
-                            FOREACHC(itiovalue, pjoint->_info._jci_io->vLowerLimitSensorIsOn[iaxis]) {
+                            FOREACHC(itiovalue, pjoint->_info._jci_io->lowerLimitSensorIsOn[iaxis]) {
                                 ss << (int)*itiovalue << " ";
                             }
-                            param_vLowerLimitSensorIsOn->setCharData(ss.str());
+                            param_lowerLimitSensorIsOn->setCharData(ss.str());
                         }
                         break;
                     } // end case KinBody::JCM_IO
-                    case KinBody::JCM_ExternalDevice: {
+                    case JCM_ExternalDevice: {
                         daeElementRef param_jointcontrolinfo_externaldevice = ptec->add("jointcontrolinfo_externaldevice");
                         // robotId
-                        daeElementRef param_externalDeviceId = param_jointcontrolinfo_externaldevice->add("externalDeviceId");
-                        param_externalDeviceId->setCharData(pjoint->_info._jci_externaldevice->externalDeviceId.c_str());
+                        daeElementRef param_externalDeviceType = param_jointcontrolinfo_externaldevice->add("externalDeviceType");
+                        param_externalDeviceType->setCharData(pjoint->_info._jci_externaldevice->externalDeviceType.c_str());
                         break;
                     } // end case KinBody::JCM_ExternalDevice
                     default: {
@@ -1838,7 +1873,7 @@ private:
         pmout.reset(new physics_model_output());
         pmout->pbody = pbody;
         pmout->pmodel = daeSafeCast<domPhysics_model>(_physicsModelsLib->add(COLLADA_ELEMENT_PHYSICS_MODEL));
-        string pmodelid = str(boost::format("pmodel%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        string pmodelid = str(boost::format("pmodel%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
         pmout->pmodel->setId(pmodelid.c_str());
         pmout->pmodel->setName(pbody->GetName().c_str());
         Transform tbaseinv = pbody->GetTransform().inverse();
@@ -2044,6 +2079,51 @@ private:
                     psidewall->add("type")->setCharData(ss.str());
                     ss.clear(); ss.str("");
                 }
+                break;
+            }
+            case GT_CalibrationBoard: {
+                daeElementRef pcalibrationboard = ptec->add("calibration_board");
+                ss << geom->GetBoxExtents().x << " " << geom->GetBoxExtents().y << " " << geom->GetBoxExtents().z;
+                pcalibrationboard->add("half_extents")->setCharData(ss.str());
+
+                daeElementRef pparams = pcalibrationboard->add("parameters");
+                std::vector<KinBody::GeometryInfo::CalibrationBoardParameters> vParamsInfo = geom->GetInfo()._calibrationBoardParameters;
+                if (vParamsInfo.size() == 0) {
+                    vParamsInfo.push_back(KinBody::GeometryInfo::CalibrationBoardParameters());
+                }
+                const KinBody::GeometryInfo::CalibrationBoardParameters& paramsInfo = vParamsInfo[0];
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.numDotsX;
+                pparams->add("num_dots_x")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.numDotsX;
+                pparams->add("num_dots_y")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotsDistanceX;
+                pparams->add("dots_distance_x")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotsDistanceY;
+                pparams->add("dots_distance_y")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotColor.x << " " << paramsInfo.dotColor.y << " " << paramsInfo.dotColor.z << " " << paramsInfo.dotColor.w;
+                pparams->add("dot_color")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.patternName;
+                pparams->add("pattern_name")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.dotDiameterDistanceRatio;
+                pparams->add("dot_diameter_distance_ratio")->setCharData(ss.str());
+
+                ss.str(""); ss.clear();
+                ss << paramsInfo.bigDotDiameterDistanceRatio;
+                pparams->add("big_dot_diameter_distance_ratio")->setCharData(ss.str());
                 break;
             }
             case GT_Sphere:
@@ -2458,6 +2538,10 @@ private:
                 daeElementRef frame_origin = ptec->add("frame_origin");
                 frame_origin->setAttribute("link",vlinksidrefs.at((*itmanip)->GetBase()->GetIndex()).c_str());
             }
+            if( !!(*itmanip)->GetIkChainEndLink() ) {
+                daeElementRef frame_endlink = ptec->add("frame_endlink");
+                frame_endlink->setAttribute("link",vlinksidrefs.at((*itmanip)->GetIkChainEndLink()->GetIndex()).c_str());
+            }
             daeElementRef frame_tip = ptec->add("frame_tip");
             if( !!(*itmanip)->GetEndEffector() ) {
                 frame_tip->setAttribute("link",vlinksidrefs.at((*itmanip)->GetEndEffector()->GetIndex()).c_str());
@@ -2507,6 +2591,8 @@ private:
 
             daeElementRef pToolChangerConnectedBodyToolName = ptec->add("toolChangerConnectedBodyToolName");
             pToolChangerConnectedBodyToolName->setCharData((*itmanip)->GetToolChangerConnectedBodyToolName().c_str());
+            daeElementRef pToolChangerLinkName = ptec->add("toolChangerLinkName");
+            pToolChangerLinkName->setCharData((*itmanip)->GetToolChangerLinkName().c_str());
 
             FOREACHC(itname, (*itmanip)->GetRestrictGraspSetNames()) {
                 daeElementRef restrict_graspset_name = ptec->add("restrict_graspset_name");
@@ -2538,7 +2624,7 @@ private:
                 }
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
                 if( !!popenravesensor ) {
-                    string strsensor = str(boost::format("robot%d_sensor%d")%_mapBodyIds[probot->GetEnvironmentId()]%sensorindex);
+                    string strsensor = str(boost::format("robot%d_sensor%d")%_mapBodyIds[probot->GetEnvironmentBodyIndex()]%sensorindex);
                     mapAttachedSensorIDs[*itattachedsensor] = strsensor;
                     sensorindex++;
                 }
@@ -2557,6 +2643,13 @@ private:
                 daeElementRef frame_origin = ptec->add("frame_origin");
                 frame_origin->setAttribute("link",vlinksidrefs.at((*itattachedsensor)->GetAttachingLink()->GetIndex()).c_str());
                 _WriteTransformation(frame_origin,(*itattachedsensor)->GetRelativeTransform());
+
+                // write referenceAttachedSensorName to <reference_attach_sensor name="other_attached_sensor">
+                std::string referenceAttachedSensorName = (*itattachedsensor)->GetInfo()._referenceAttachedSensorName;
+                if( referenceAttachedSensorName.size() > 0 ) {
+                    daeElementRef reference_attach_sensor = ptec->add("reference_attach_sensor");
+                    reference_attach_sensor->setAttribute("name", referenceAttachedSensorName.c_str());
+                }
 
                 SensorBasePtr popenravesensor = (*itattachedsensor)->GetSensor();
                 if( !!popenravesensor ) {
@@ -2584,15 +2677,6 @@ private:
                                 else {
                                     RAVELOG_INFO_FORMAT("resetting target_region %s since not present in environment anymore", camgeom.target_region);
                                     camgeom.target_region = "";
-                                }
-                            }
-                            if( camgeom.sensor_reference.size() > 0 ) {
-                                // have to convert to equivalent collada url
-                                FOREACH(itattid, mapAttachedSensorIDs) {
-                                    if( camgeom.sensor_reference == itattid->first->GetSensor()->GetName() ) {
-                                        camgeom.sensor_reference = std::string("#") + itattid->second;
-                                        break;
-                                    }
                                 }
                             }
                             camgeom.SerializeXML(extrawriter,0);
@@ -2682,30 +2766,40 @@ private:
         pextra->setType("collision");
         domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
         ptec->setProfile("OpenRAVE");
-        FOREACHC(itadjacent,pbody->_vForcedAdjacentLinks) {
-            KinBody::LinkPtr plink0 = pbody->GetLink(itadjacent->first);
-            KinBody::LinkPtr plink1 = pbody->GetLink(itadjacent->second);
-            if( !!plink0 && !!plink1 ) {
-                daeElementRef pignore = ptec->add("ignore_link_pair");
-                pignore->setAttribute("link0",vlinksidrefs.at(plink0->GetIndex()).c_str());
-                pignore->setAttribute("link1",vlinksidrefs.at(plink1->GetIndex()).c_str());
+        const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
+        for (int linkIndex0 = 0; linkIndex0 < (int)links.size(); ++linkIndex0) {
+            const KinBody::LinkPtr plink0 = links.at(linkIndex0);
+            if (!plink0) {
+                RAVELOG_WARN_FORMAT("env=%d body \"%s\" link %d / %d is null so skip writing ignore link pair.", pbody->GetEnv()->GetId()%pbody->GetName()%linkIndex0%links.size());
+                continue;
+            }
+            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < (int)links.size(); ++linkIndex1) {
+                if (pbody->AreAdjacentLinks(linkIndex0, linkIndex1)) {
+                    const KinBody::LinkPtr plink1 = links.at(linkIndex1);
+                    if (!plink1) {
+                        RAVELOG_WARN_FORMAT("env=%d body \"%s\" link %d / %d is null so skip writing ignore link pair.", pbody->GetEnv()->GetId()%pbody->GetName()%linkIndex1%links.size());
+                        continue;
+                    }
+                    daeElementRef pignore = ptec->add("ignore_link_pair");
+                    pignore->setAttribute("link0",vlinksidrefs.at(linkIndex0).c_str());
+                    pignore->setAttribute("link1",vlinksidrefs.at(linkIndex1).c_str());
+                }
+            }
+        }
+        std::vector<KinBody::LinkPtr> vConnectedLinks;
+        if( pbody->IsRobot() ) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
+                if( (*itConnectedBody)->IsActive() == 0 ) {
+                    // not active, so will not be mapped onto real robot
+                    continue;
+                }
+                std::vector<KinBody::LinkPtr> vResolvedLinks;
+                (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
+                vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
             }
         }
         if( IsWrite("link_collision_state") ) {
-            std::vector<KinBody::LinkPtr> vConnectedLinks;
-            if( pbody->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-                FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
-                    if( (*itConnectedBody)->IsActive() == 0 ) {
-                        // not active, so will not be mapped onto real robot
-                        continue;
-                    }
-                    std::vector<KinBody::LinkPtr> vResolvedLinks;
-                    (*itConnectedBody)->GetResolvedLinks(vResolvedLinks);
-                    vConnectedLinks.insert(vConnectedLinks.end(), vResolvedLinks.begin(), vResolvedLinks.end());
-                }
-            }
-
             FOREACHC(itlink,pbody->GetLinks()) {
                 if (std::find(vConnectedLinks.begin(), vConnectedLinks.end(), *itlink) != vConnectedLinks.end()) {
                     // skip links that are part of the connected body
@@ -2718,6 +2812,10 @@ private:
         }
         if( IsForceWrite("bind_instance_geometry") ) {
             FOREACHC(itlink, pbody->GetLinks()) {
+                if (std::find(vConnectedLinks.begin(), vConnectedLinks.end(), *itlink) != vConnectedLinks.end()) {
+                    // skip links that are part of the connected body
+                    continue;
+                }
                 FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
                     int igeom = 0;
                     FOREACHC(itgeominfo, itgeomgroup->second) {
@@ -2829,10 +2927,10 @@ private:
     }
 
     virtual std::string _GetNodeId(KinBodyConstPtr pbody) {
-        return str(boost::format("visual%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        return str(boost::format("visual%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
     }
     virtual std::string _GetNodeId(KinBody::LinkConstPtr plink) {
-        return str(boost::format("v%d.%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetNodeSid(plink));
+        return str(boost::format("v%d.%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentBodyIndex()]%_GetNodeSid(plink));
     }
     virtual std::string _GetNodeSid(KinBody::LinkConstPtr plink) {
         const std::string& linksid = _GetLinkSid(plink);
@@ -2871,7 +2969,7 @@ private:
         }
 
         // assign sid
-        std::map<KinBody::LinkConstPtr, std::string>& mapLinkSids = _mapBodyLinkSids[pBody->GetEnvironmentId()];
+        std::map<KinBody::LinkConstPtr, std::string>& mapLinkSids = _mapBodyLinkSids[pBody->GetEnvironmentBodyIndex()];
 
         // exisitng link id, if not duplicated, takes priority
         FOREACHC(itLink, vLinks) {
@@ -2917,18 +3015,18 @@ private:
     }
 
     virtual std::string _GetLinkSid(KinBody::LinkConstPtr plink) {
-        return _mapBodyLinkSids[plink->GetParent()->GetEnvironmentId()][plink];
+        return _mapBodyLinkSids[plink->GetParent()->GetEnvironmentBodyIndex()][plink];
     }
     virtual std::string _GetMotionId(KinBodyConstPtr pbody) {
-        return str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        return str(boost::format("body%d_motion")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
     }
 
     virtual std::string _GetGeometryId(KinBody::LinkConstPtr plink, int igeom) {
-        return str(boost::format("g%d_%s_geom%d")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom);
+        return str(boost::format("g%d_%s_geom%d")%_mapBodyIds[plink->GetParent()->GetEnvironmentBodyIndex()]%_GetLinkSid(plink)%igeom);
     }
 
     virtual std::string _GetExtraGeometryId(KinBody::LinkConstPtr plink, const std::string& groupname, int igeom) {
-        return str(boost::format("g%d_%s_extrageom%d_%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentId()]%_GetLinkSid(plink)%igeom%groupname);
+        return str(boost::format("g%d_%s_extrageom%d_%s")%_mapBodyIds[plink->GetParent()->GetEnvironmentBodyIndex()]%_GetLinkSid(plink)%igeom%groupname);
     }
 
     /// \brief assign unique sid for all joints in a body
@@ -2979,7 +3077,7 @@ private:
         }
 
         // assign sid
-        std::map<KinBody::JointConstPtr, std::string>& mapJointSids = _mapBodyJointSids[pBody->GetEnvironmentId()];
+        std::map<KinBody::JointConstPtr, std::string>& mapJointSids = _mapBodyJointSids[pBody->GetEnvironmentBodyIndex()];
 
         // existing joint id, if not duplicated, takes priority
         FOREACHC(itJoint, vJoints) {
@@ -3025,7 +3123,7 @@ private:
     }
 
     virtual std::string _GetJointSid(KinBody::JointConstPtr pjoint) {
-        return _mapBodyJointSids[pjoint->GetParent()->GetEnvironmentId()][pjoint];
+        return _mapBodyJointSids[pjoint->GetParent()->GetEnvironmentBodyIndex()][pjoint];
     }
 
     virtual std::string _GetJointNodeSid(KinBody::JointConstPtr pjoint, int iaxis) {
@@ -3033,7 +3131,7 @@ private:
     }
 
     virtual std::string _GetKinematicsModelId(KinBodyConstPtr pbody) {
-        return str(boost::format("kmodel%d")%_mapBodyIds[pbody->GetEnvironmentId()]);
+        return str(boost::format("kmodel%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
     }
 
     /// \brief compute the link transform when all joints are zero (regardless of mimic joints). This is the state
@@ -3114,7 +3212,7 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3174,7 +3272,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 
 void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
     std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3198,7 +3296,7 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         EnvironmentBasePtr penv = listbodies.front()->GetEnv();
         ColladaWriter writer(penv,atts);
@@ -3262,7 +3360,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 
 void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3309,7 +3407,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 
 void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
     std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3333,7 +3431,7 @@ void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 
 void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output,  const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     output.clear();
     if( listbodies.size() > 0 ) {
         EnvironmentBasePtr penv = listbodies.front()->GetEnv();

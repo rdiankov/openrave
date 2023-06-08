@@ -42,7 +42,7 @@ inline object to_object(const std::string& t) {
     return bytes(t);
 }
 inline object handle_to_object(PyObject* pyo) {
-    return cast<object>(pyo);
+    return reinterpret_steal<object>(pyo);
 }
 template <typename T>
 inline object to_array_astype(PyObject* pyo) {
@@ -58,6 +58,13 @@ template <typename T>
 struct extract_ {
     extract_() = delete; // disable default constructor
     explicit extract_(const object& o) {
+        detail::make_caster<T> conv;
+        if (!conv.load(o, true)) {
+            _bcheck = false;
+            return;
+        }
+        _data = detail::cast_op<T>(conv);
+#if 0
         try {
             _data = extract<T>(o); // in pybind11 actually does the extract/cast, which is not good since it will throw exception
         }
@@ -65,6 +72,7 @@ struct extract_ {
             _bcheck = false;
             RAVELOG_WARN_FORMAT("Cannot extract type %s from a pybind11::object: %s", std::string(typeid(T).name())%ex.what());
         }
+#endif
     }
     // user-defined conversion:
     // https://en.cppreference.com/w/cpp/language/cast_operator
@@ -94,7 +102,11 @@ using array_int = array_t<int>; // py::array_int
 // is_none is not supported by older versions of python
 #define IS_PYTHONOBJECT_NONE(o) (o).is_none()
 
+#if PY_MAJOR_VERSION >= 3
+#define IS_PYTHONOBJECT_STRING(o) (!(o).is_none() && (PyUnicode_Check((o).ptr())))
+#else
 #define IS_PYTHONOBJECT_STRING(o) (!(o).is_none() && (PyString_Check((o).ptr()) || PyUnicode_Check((o).ptr())))
+#endif
 
 namespace openravepy
 {
@@ -102,14 +114,8 @@ namespace py = pybind11;
 
 inline py::object ConvertStringToUnicode(const std::string& s)
 {
-    /*
-       TGN: Is the following an alternative?
-       ```
-       PyObject *pyo = PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr);
-       return py::cast<py::object>(pyo); // py::handle_to_object(pyo);
-       ```
-     */
-    return py::to_object(s);
+    PyObject *pyo = PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr);
+    return py::reinterpret_steal<py::object>(pyo);
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY
@@ -142,7 +148,7 @@ inline py::array_t<bool> toPyArray(const std::vector<bool>& v)
     py::array_t<bool> arr;
     arr.resize({(int) v.size()});
     for(size_t i = 0; i < v.size(); ++i) {
-        arr[i] = v[i];
+        arr.mutable_at(i) = v[i];
     }
     return arr;
 }
