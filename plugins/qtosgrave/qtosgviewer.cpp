@@ -1336,7 +1336,7 @@ bool QtOSGViewer::_SetEnableAvancedRenderingShadersCommand(ostream& sout, istrea
     bool enabled = false;
     sinput >> enabled;
 
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetEnableAvancedRenderingShaders, this, enabled));
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetEnableAvancedRenderingShaders, this, enabled), ViewerCommandPriority::HIGH);
     return true;
 }
 
