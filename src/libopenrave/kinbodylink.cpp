@@ -656,8 +656,6 @@ void KinBody::Link::SetTransform(const Transform& t)
 {
     _info._t = t;
     GetParent()->_nUpdateStampId++;
-    // strictly speaking, __hashkinematics should be invalidated because link transform might be changed permanently. However, this is usually a temporary change and original transform is restored and invalidating __hashkinematics here would trigger recomputation of hash all the time.
-
 }
 
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)
