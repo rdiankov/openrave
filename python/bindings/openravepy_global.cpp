@@ -1839,7 +1839,7 @@ void init_openravepy_global()
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >(m, "PluginInfo", DOXY_CLASS(PLUGININFO))
+    class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >(m, "PluginInfo", DOXY_CLASS(PLUGININFO), py::dynamic_attr())
     .def(init<const PLUGININFO&>(), "info"_a)
 #else
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
