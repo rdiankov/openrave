@@ -207,9 +207,9 @@ latex_documents = [
 
 # Additional stuff for the LaTeX preamble.
 pngmath_latex_preamble = """
-   \usepackage{amsmath}
-   \usepackage{amsfonts}
-   \usepackage{amssymb}
+   \\usepackage{amsmath}
+   \\usepackage{amsfonts}
+   \\usepackage{amssymb}
 """
 
 # Documents to append as an appendix to all manuals.
