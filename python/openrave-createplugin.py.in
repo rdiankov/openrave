@@ -51,6 +51,7 @@ if __name__ == "__main__":
     for typeKey, type in enum_to_dict(InterfaceType).items():
         if typeKey == 'probleminstance':
             continue
+        name = str(type).lower()
         name = name[name.find('.')+1:] # TGN: remove "InterfaceType."; need to double check
         parser.add_option('--'+name, action='append',type='string',dest=name,default=[], help='create a %s interface'%name)
     (options, args) = parser.parse_args()
