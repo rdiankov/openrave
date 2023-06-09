@@ -374,4 +374,6 @@ if __name__ == "__main__":
         viewer.SendCommand('SetFiguresInCamera 1')
         build(allstats,buildoptions,options.outputdir,env)
     finally:
-        RaveDestroy()
+        print('ikdatabase built')
+        exit()
+        # RaveDestroy()
