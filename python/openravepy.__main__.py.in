@@ -25,7 +25,8 @@ from numpy import *
 from OpenGL import GL
 from optparse import OptionParser
 
-__builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
+if __name__ == "__main__":
+    __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 
 try:
     import openravepy
@@ -60,7 +61,8 @@ def vararg_callback(option, opt_str, value, parser):
     del parser.rargs[:len(value)]
     setattr(parser.values, option.dest, value)
 
-if __name__ == "__main__":
+def main():
+    global openravepy
     parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
                           usage='%prog [options] [loadable openrave xml/robot files...]')
     OpenRAVEGlobalArguments.addOptions(parser,testmode=False)
@@ -281,3 +283,6 @@ if __name__ == "__main__":
             env.Destroy()
     finally:
         RaveDestroy()
+
+if __name__ == "__main__":
+    main()
