@@ -106,13 +106,13 @@ build_locale_installed: build/locale/index.pot ;
 $(filter-out locale/en/LC_MESSAGES/openravesphinx.po, locale/%/LC_MESSAGES/openravesphinx.po): build_locale_installed
 	echo "language='$*'\n\
 locale_dirs = ['locale']" > tempconf_$*.py
-	sphinx-gettext-helper -c tempconf_$*.py -p build/locale --update --statistics
+	sphinx-intl -c tempconf_$*.py update -p build/locale
 	rm -f tempconf_$*.py
 
 $(filter-out locale/en/LC_MESSAGES/openravesphinx.mo, locale/%/LC_MESSAGES/openravesphinx.mo): locale/%/LC_MESSAGES/*.po
 	echo "language='$*'\n\
 locale_dirs = ['locale']" > tempconf_$*.py
-	sphinx-gettext-helper -c tempconf_$*.py -p build/locale --build --statistics
+	sphinx-intl -c tempconf_$*.py build # -p build/locale
 	rm -f tempconf_$*.py
 	msgfmt locale/$*/LC_MESSAGES/openravesphinx.po -o locale/$*/LC_MESSAGES/openravesphinx.mo
 	rm -rf build/$*/sphinxhtml/.doctrees build/$*/sphinxjson/.doctrees
