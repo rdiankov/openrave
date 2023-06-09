@@ -48,8 +48,9 @@ from openravepy import *
 if __name__ == "__main__":
     parser = OptionParser(usage='usage: %prog pluginname [options] ', description='Sets up a project directory and initial files for creating OpenRAVE plugins and executables.')
     parser.add_option('--usecore', action='store_true',dest='usecore',default=False, help='If set, will create an executable that links to the core instead of creating a plugin.')
-    for type in enum_to_dict(InterfaceType).values():
-        name = str(type).lower()
+    for typeKey, type in enum_to_dict(InterfaceType).items():
+        if typeKey == 'probleminstance':
+            continue
         name = name[name.find('.')+1:] # TGN: remove "InterfaceType."; need to double check
         parser.add_option('--'+name, action='append',type='string',dest=name,default=[], help='create a %s interface'%name)
     (options, args) = parser.parse_args()

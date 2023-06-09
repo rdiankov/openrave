@@ -80,6 +80,7 @@ else:
     from numpy import array
 
 from ..openravepy_int import RaveGetDefaultViewerType
+from ..openravepy_int import IkParameterization
 from . import DatabaseGenerator
 from . import inversekinematics
 from . import kinematicreachability

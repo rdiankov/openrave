@@ -24,7 +24,7 @@ sys.path.append(os.path.abspath('openravepy'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig','sphinx.ext.todo','sphinx.ext.ifconfig','sphinx.ext.viewcode','sphinx.ext.autosummary','only_directives','gen_gallery','shellblock_directive','exampleblock_directive']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.imgmath', 'sphinx.ext.ifconfig','sphinx.ext.todo','sphinx.ext.ifconfig','sphinx.ext.viewcode','sphinx.ext.autosummary','only_directives','gen_gallery','shellblock_directive','exampleblock_directive']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -207,7 +207,7 @@ latex_documents = [
 #latex_use_parts = False
 
 # Additional stuff for the LaTeX preamble.
-pngmath_latex_preamble = """
+imgmath_latex_preamble = """
    \\usepackage{amsmath}
    \\usepackage{amsfonts}
    \\usepackage{amssymb}
