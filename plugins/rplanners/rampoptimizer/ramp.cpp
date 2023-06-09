@@ -334,7 +334,7 @@ void ParabolicCurve::FindRampIndex(dReal t, int& index, dReal& remainder) const
         int index_ = 0;
         dReal curTime = 0;
         std::vector<Ramp>::const_iterator itramp = _ramps.begin();
-        while ((itramp - 1) != _ramps.end() && t >= curTime) {
+        while( itramp != _ramps.end() && t >= curTime ) {
             curTime += itramp->duration;
             itramp++;
             index_++;
@@ -989,7 +989,7 @@ void ParabolicPath::FindRampNDIndex(dReal t, int& index, dReal& remainder) const
         int index_ = 0;
         dReal curTime = 0;
         std::vector<RampND>::const_iterator itrampnd = _rampnds.begin();
-        while ((itrampnd - 1) != _rampnds.end() && t >= curTime) {
+        while( itrampnd != _rampnds.end() && t >= curTime ) {
             curTime += itrampnd->GetDuration();
             itrampnd++;
             index_++;
