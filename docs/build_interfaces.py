@@ -21,13 +21,8 @@ import shutil
 from openravepy.misc import mkdir_recursive
 
 def getsvnurl(dirname):
-    outinfo=subprocess.Popen(['svn','info',dirname],stdout=subprocess.PIPE).communicate()[0]
-    url=None
-    for line in outinfo.splitlines():
-        if line.startswith('URL:'):
-            url=line[4:].strip()
-            break
-    return url
+    # TODO check source/plugins.rst output and give proper string
+    return dirname
 
 if __name__ == "__main__":
     parser = OptionParser(description='Builds an rst file of the interfaces provided')
