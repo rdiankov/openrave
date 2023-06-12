@@ -1850,6 +1850,7 @@ void init_openravepy_global()
             class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
             .def(init<>())
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
+            .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
             .def(init<const std::string&>(), "xmldata"_a)
             .def("__copy__", [](const PyConfigurationSpecification& self){
                 return self;
@@ -1861,6 +1862,7 @@ void init_openravepy_global()
 #else
             class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
             .def(init<PyConfigurationSpecificationPtr>(py::args("spec")) )
+            .def(init<const ConfigurationSpecification::Group&>(py::args("group")) )
             .def(init<const std::string&>(py::args("xmldata")) )
             .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #endif
