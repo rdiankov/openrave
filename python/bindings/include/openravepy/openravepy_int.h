@@ -872,8 +872,10 @@ OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::Con
 OPENRAVEPY_API PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_global(py::module& m);
+void init_openravepy_global_functions(py::module& m);
 #else
 void init_openravepy_global();
+void init_openravepy_global_functions();
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void InitPlanningUtils(py::module& m);

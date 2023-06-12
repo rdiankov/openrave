@@ -3319,6 +3319,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_viewer(m);
 
     openravepy::InitPlanningUtils(m);
+    openravepy::init_openravepy_global_functions(m);
 #else
     openravepy::init_openravepy_global();
     openravepy::InitPlanningUtils();

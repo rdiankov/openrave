@@ -2039,6 +2039,17 @@ void init_openravepy_global()
 #endif
         ;
     }
+}
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_global_functions(py::module& m)
+#else
+void init_openravepy_global_functions()
+#endif
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+#endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
 #else
