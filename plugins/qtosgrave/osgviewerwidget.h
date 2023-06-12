@@ -15,18 +15,16 @@
 #define OPENRAVE_QTOSG_VIEWERCONTEXT_H
 
 #include "qtosg.h"
-#include "osgrenderitem.h"
 #include "osgpick.h"
 #include "osgskybox.h"
+#include "osgrenderitem.h"
+#include "outlineshaderpipeline.h"
 
 #include <QTime>
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
-#include <QtWidgets/QOpenGLWidget>
-
-#include <osg/AnimationPath>
-#include <osgManipulator/Dragger>
+#include <QOpenGLWidget>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
@@ -45,7 +43,7 @@ class QOSGViewerWidget : public QOpenGLWidget
 {
 public:
 
-    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey,
+    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey, bool useMultiSamples=false,
                      const boost::function<bool(int)> &onKeyDown = boost::function<bool(int)>(),
                      double metersinunit = 1, QWidget *parent = 0);
 
@@ -101,6 +99,8 @@ public:
     /// \brief Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.
     virtual void PanCameraYDirection(float dy);
 
+    /// \param value Enables / disables avanced rendering shaders. It can be heavy on GPU usage.
+    virtual void SetEnabledRenderingShaders(bool value);
 
     /// \param axis, the axis to align camera to. It will translate the camera so the whole scene can be visible, and new center of view will be the scene's bounding box center.
     void MoveCameraPointOfView(const std::string& axis);
@@ -240,7 +240,7 @@ protected:
     osg::ref_ptr<osg::Light> _CreateAmbientLight(osg::Vec4 color, int lightid);
 
     /// \brief Initialize lighting
-    void _InitializeLights(int nlights);
+    void _InitializeLights();
 
     /// \brief Stores matrix transform
     void _StoreMatrixTransform();
@@ -299,6 +299,9 @@ protected:
     virtual void keyReleaseEvent(QKeyEvent *event);
 
     virtual bool event(QEvent *event);
+
+    bool _useMultiSamples;
+    OutlineShaderPipeline _outlineRenderPipeline;
 
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into

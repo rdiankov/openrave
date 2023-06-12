@@ -22,7 +22,7 @@ if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND 
   
   link_directories(${OPENRAVE_LINK_DIRS})
 
-  set(QTOSG_SRCS objecttree.cpp osgcartoon.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h qtreemodel.cpp qtreemodel.h osgrenderitem.cpp osgrenderitem.h qtreeitem.cpp qtreeitem.h qtosgviewer.cpp qtosgrave.cpp osgskybox.cpp osgskybox.h osglodlabel.cpp osglodlabel.h)
+  set(QTOSG_SRCS objecttree.cpp osgcartoon.cpp osgviewerwidget.cpp osgviewerwidget.h osgpick.cpp osgpick.h qtreemodel.cpp qtreemodel.h osgrenderitem.cpp osgrenderitem.h qtreeitem.cpp qtreeitem.h qtosgviewer.cpp qtosgrave.cpp osgskybox.cpp osgskybox.h osglodlabel.cpp osglodlabel.h outlineshaderpipeline.h outlineshaderpipeline.cpp)
   set(QTOSG_MOCS qtosgviewer.h qtreemodel.h)
   set(QTOSG_RCCS qtosgviewer.qrc)
 

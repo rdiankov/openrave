@@ -20,6 +20,9 @@
 #include <osg/ArgumentParser>
 #include "osgviewerwidget.h"
 
+#define ENABLE_OPENGL_MULTISAMPLING 0 //< this brings lots of improvements into final geometry edges rendering, but its slow on controllers on board cards. One should enable that if using standalone video card
+#define OPENGL_NUM_MULTISAMPLING_SAMPLES 8 //< can be set to 8 in standalone graphics cards. This settings will only be effective if ENABLE_OPENGL_MULTISAMPLING is set to 1
+
 namespace qtosgrave {
 
 #define ITEM_DELETER boost::bind(DeleteItemCallbackSafe,weak_viewer(),_1)
@@ -176,6 +179,8 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     "Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.");
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
+    RegisterCommand("SetEnableAvancedRenderingShaders", boost::bind(&QtOSGViewer::_SetEnableAvancedRenderingShadersCommand, this, _1, _2),
+    "Turn on/off the advanced rendering shaders for the 3D scene. Default is disabled");
 
     // Establish size limits per priority
     _mapGUIFunctionListLimits[ViewerCommandPriority::VERY_HIGH] = 100000;
@@ -248,13 +253,23 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
         connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
     }
 
-    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
+    // Configure sample buffers in the default surface format, which will allow Qt to enable the sample
+    // buffers so color buffer can be oversampled to achieve antialiasing (MSAA antialiasing)
+    QSurfaceFormat surfaceFormat;
+    surfaceFormat.setProfile(QSurfaceFormat::CompatibilityProfile);
+    surfaceFormat.setDepthBufferSize(24);
+    surfaceFormat.setSwapInterval(2);
+#if ENABLE_OPENGL_MULTISAMPLING
+    surfaceFormat.setSamples(OPENGL_NUM_MULTISAMPLING_SAMPLES);
+#endif
+    QSurfaceFormat::setDefaultFormat(surfaceFormat);
+
+    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, ENABLE_OPENGL_MULTISAMPLING == 1, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
 
     setCentralWidget(_posgWidget);
 
     _RepaintWidgets();
     _posgWidget->SetFacesMode(false);
-    _posgWidget->SetLight(false);
 
     _qtree = new QTreeView;
 
@@ -687,22 +702,6 @@ void QtOSGViewer::_ChangeViewToYZ()
 
 }
 
-//void QtOSGViewer::_ProcessLightChange()
-//{
-//    if (lightAct->isChecked()) {
-//        lightAct->setIcon(QIcon(":/images/lightoff.png"));
-//    }
-//    else {
-//        lightAct->setIcon(QIcon(":/images/lighton.png"));
-//    }
-//    _posgWidget->SetLight(!lightAct->isChecked());
-//}
-
-//void QtOSGViewer::_ProcessFacesModeChange()
-//{
-//    _posgWidget->SetFacesMode(!facesAct->isChecked());
-//}
-
 void QtOSGViewer::polygonMode()
 {
     _posgWidget->SetPolygonMode(wireAct->isChecked() ? 2 : 0);
@@ -858,7 +857,6 @@ void QtOSGViewer::_CreateDockWidgets()
 
 void QtOSGViewer::_CreateControlButtons()
 {
-
     QWidget *controlWidget = new QWidget(_posgWidget);
     controlWidget->setGeometry(10, 10, 50, 150);
 
@@ -1333,6 +1331,15 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_SetEnableAvancedRenderingShadersCommand(ostream& sout, istream& sinput)
+{
+    bool enabled = false;
+    sinput >> enabled;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetEnableAvancedRenderingShaders, this, enabled), ViewerCommandPriority::HIGH);
+    return true;
+}
+
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
     if (projectionMode == "orthogonal")
@@ -1528,6 +1535,8 @@ void QtOSGViewer::_Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertic
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
     osg::ref_ptr<osg::Geode> geode(new osg::Geode());
     osg::ref_ptr<osg::Geometry> geometry(new osg::Geometry());
+
+    geode->getOrCreateStateSet()->addUniform(new osg::Uniform("osg_LightEnabled", false));
 
     geometry->setVertexArray(vertices.get());
     geometry->setColorArray(colors.get());
@@ -1982,6 +1991,11 @@ void QtOSGViewer::_RotateCameraYDirection(float thetaY)
 void QtOSGViewer::_PanCameraXDirection(float dx)
 {
     _posgWidget->PanCameraXDirection(dx);
+}
+
+void QtOSGViewer::_SetEnableAvancedRenderingShaders(bool value)
+{
+    _posgWidget->SetEnabledRenderingShaders(value);
 }
 
 void QtOSGViewer::_PanCameraYDirection(float dy)

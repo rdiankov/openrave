@@ -48,9 +48,12 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 
         // set a diffuse color
         osg::ref_ptr<osg::StateSet> state = psep->getOrCreateStateSet();
+
         osg::ref_ptr<osg::Material> mat = new osg::Material;
         mat->setDiffuse(osg::Material::FRONT, colors[i]);
         mat->setAmbient(osg::Material::FRONT, colors[i]);
+        state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", colors[i]));
+        state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", colors[i]));
         state->setAttribute( mat );
 
         osg::Matrix matrix;
@@ -96,7 +99,6 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 
     return proot;
 }
-
 
 // Visitor to return the coordinates of a node with respect to another node
 class WorldCoordOfNodeVisitor : public osg::NodeVisitor
@@ -151,6 +153,7 @@ Item::Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot) : _osgSceneRoot(
     _osgWorldTransform->addChild(_osgdata);
 
     _osgSceneRoot->addChild(_osgWorldTransform);
+    _osgSceneRoot->getOrCreateStateSet()->addUniform(new osg::Uniform("isSelected", 0));
 }
 
 Item::~Item()
@@ -168,67 +171,9 @@ bool Item::ContainsOSGNode(OSGNodePtr pNode)
 void Item::SetVisualizationMode(const std::string& visualizationmode)
 {
     if( _visualizationmode != visualizationmode ) {
-
-        // have to undo the previous mode
-        if( !!_osgwireframe ) {
-            _osgWorldTransform->removeChild(_osgwireframe);
-            _osgwireframe.release();
-        }
-
-        // start the new node
         _visualizationmode = visualizationmode;
-
-        if( _visualizationmode == "selected" ) {
-            _osgwireframe = new osg::Group;
-            _osgWorldTransform->addChild(_osgwireframe);
-            _osgwireframe->addChild(_osgdata);
-
-            // set up the state so that the underlying color is not seen through
-            // and that the drawing mode is changed to wireframe, and a polygon offset
-            // is added to ensure that we see the wireframe itself, and turn off
-            // so texturing too.
-            osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
-            osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
-            polyoffset->setFactor(-1.0f);
-            polyoffset->setUnits(-1.0f);
-            osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
-            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK,osg::PolygonMode::LINE);
-            stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-
-#if 1
-            osg::ref_ptr<osg::Material> material = new osg::Material;
-            material->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-            material->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-
-            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-#else
-            // version which sets the color of the wireframe.
-            osg::ref_ptr<osg::Material> material = new osg::Material;
-            material->setColorMode(osg::Material::OFF); // switch glColor usage off
-            // turn all lighting off
-            material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            // except emission... in which we set the color we desire
-            material->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,1.0f,0.0f,1.0f));
-            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-#endif
-
-            stateset->setTextureMode(0,GL_TEXTURE_2D,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-
-            osg::ref_ptr<osg::LineStipple> linestipple = new osg::LineStipple;
-            linestipple->setFactor(1);
-            linestipple->setPattern(0xf0f0);
-            stateset->setAttributeAndModes(linestipple,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-
-            _osgwireframe->setStateSet(stateset);
-        }
-        else if( _visualizationmode.size() > 0 ) {
-            RAVELOG_INFO_FORMAT("unknown visualization type %s", visualizationmode);
-        }
+        // need to force cast int to match correct function call so to match shader uniform type
+        _osgdata->getOrCreateStateSet()->addUniform(new osg::Uniform("isSelected",  (int)(_visualizationmode == "selected") ));
     }
 }
 
@@ -277,6 +222,8 @@ void KinBodyItem::Load()
         posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
 
         posglinkroot->addChild(posglinktrans);
+
+        posglinkroot->getOrCreateStateSet()->addUniform(new osg::Uniform("outlineEnabled", true));
 
 //        std::vector< boost::shared_ptr<KinBody::Link> > vParentLinks;
 //        porlink->GetParentLinks(vParentLinks);
@@ -342,28 +289,23 @@ void KinBodyItem::Load()
             if( !bSucceeded || _viewmode == VG_RenderCollision ) {
                 float x,y,z,w;
 
+                // set a diffuse color
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
                 float transparency = orgeom->GetTransparency();
-                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
-                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
-                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
-                    transparency = 0.5f;
-                }
 
                 // create custom
                 if( !pgeometrydata ) {
                     pgeometrydata = new osg::Group();
                 }
 
-                // set a diffuse color
                 osg::ref_ptr<osg::StateSet> state = pgeometrydata->getOrCreateStateSet();
-
                 x = orgeom->GetDiffuseColor().x;
                 y = orgeom->GetDiffuseColor().y;
                 z = orgeom->GetDiffuseColor().z;
                 w = 1;
 
-                mat->setDiffuse( osg::Material::FRONT, osg::Vec4f(x,y,z,w) );
+                mat->setDiffuse( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+                state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(x,y,z,1 - transparency)));
 
                 x = orgeom->GetAmbientColor().x;
                 y = orgeom->GetAmbientColor().y;
@@ -371,43 +313,32 @@ void KinBodyItem::Load()
                 w = 1.0f;
 
                 mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
+                state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(x,y,z,w)));
+
+
+                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
+                    mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
+                    mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
+                    state->addUniform(new osg::Uniform("osg_MaterialDiffuseColor", osg::Vec4f(0.6f,0.6f,1.0f, 0.5f)));
+                    state->addUniform(new osg::Uniform("osg_MaterialAmbientColor", osg::Vec4f(0.4f,0.4f,1.0f, 0.5f)));
+                    transparency = 0.5f;
+                }
 
                 //mat->setShininess( osg::Material::FRONT, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
-
+                pgeometrydata->setNodeMask(~TRANSPARENT_ITEM_MASK);
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
+            	    state->setMode(GL_BLEND, osg::StateAttribute::ON);
+                    state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
 
-                    if( 1 ) {
-                        // fast
-                        state->setMode(GL_BLEND, osg::StateAttribute::ON);
-                        state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-                    }
-                    else {
-                        // slow
-                        //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-                        //state->setRenderBinDetails(0, "transparent");
-                        //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
+                    pgeometrydata->setNodeMask(TRANSPARENT_ITEM_MASK);
+                    osg::Depth* depth = new osg::Depth;
+                    depth->setWriteMask( false );
+                    state->setAttributeAndModes( depth, osg::StateAttribute::ON);
 
-                        // Enable blending, select transparent bin.
-                        state->setMode( GL_BLEND, osg::StateAttribute::ON );
-                        state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
-
-                        // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
-                        state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
-
-                        // Conversely, disable writing to depth buffer so that
-                        // a transparent polygon will allow polygons behind it to shine thru.
-                        // OSG renders transparent polygons after opaque ones.
-                        osg::Depth* depth = new osg::Depth;
-                        depth->setWriteMask( false );
-                        state->setAttributeAndModes( depth, osg::StateAttribute::ON );
-
-                        // Disable conflicting modes.
-                        state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-                    }
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
@@ -562,7 +493,6 @@ void KinBodyItem::Load()
                 pgeometryroot->setName(str(boost::format("geom%d")%igeom));
                 //  Apply external transform to local transform
                 posglinktrans->addChild(pgeometryroot);
-
                 _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }
         }
@@ -600,7 +530,8 @@ void KinBodyItem::Load()
     // have to add the left over links to the root group
     for(size_t ilink = 0; ilink < addedlinks.size(); ++ilink) {
         if( addedlinks[ilink] == 0 ) {
-            _osgdata->addChild(_veclinks.at(ilink).first);
+            OSGGroupPtr osgLink = _veclinks.at(ilink).first;
+           _osgdata->addChild(osgLink);
         }
     }
 

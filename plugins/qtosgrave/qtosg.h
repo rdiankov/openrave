@@ -137,6 +137,8 @@ public:
     boost::function<void()> _fn;
 };
 
+const int TRANSPARENT_ITEM_MASK = 0x0101;
+
 // common used typedefs
 typedef osg::ref_ptr<osg::Node> OSGNodePtr;
 typedef osg::ref_ptr<osg::Group> OSGGroupPtr;

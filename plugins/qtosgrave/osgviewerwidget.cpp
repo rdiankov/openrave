@@ -12,25 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "osgviewerwidget.h"
-#include "osgcartoon.h"
 #include "osgskybox.h"
+#include "outlineshaderpipeline.h"
+
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QOpenGLFunctions>
 
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
 #include <osg/CullFace>
+#include <osg/BlendFunc>
+#include <osg/PolygonOffset>
 #include <osg/ComputeBoundsVisitor>
 #include <osg/CoordinateSystemNode>
-#include <osg/BlendFunc>
 #include <osgGA/NodeTrackerManipulator>
 #include <osgManipulator/CommandManager>
 #include <osgManipulator/TabBoxDragger>
 #include <osgManipulator/TabPlaneDragger>
-#include <osgManipulator/TabPlaneTrackballDragger>
 #include <osgManipulator/TrackballDragger>
 #include <osgManipulator/Translate1DDragger>
 #include <osgManipulator/Translate2DDragger>
 #include <osgManipulator/TranslateAxisDragger>
+#include <osgManipulator/TabPlaneTrackballDragger>
+
+// set to true if want to compile using fallback toon shading for countours (no advanced shaders will be used:more compatible with older controllers)
+#define DISABLE_ADVANCED_CONTOUR_LINE_SHADERS false
 
 namespace qtosgrave {
 
@@ -422,7 +430,6 @@ public:
         return true;
     }
 
-
     virtual bool seekToMousePointer( const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& us )
     {
         SetSeekMode(false);
@@ -587,7 +594,7 @@ void QOSGViewerWidget::SetFont(osgText::Font* font) {
     QOSGViewerWidget::OSG_FONT = font;
 }
 
-QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
+QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey, bool useMultiSamples,
                                    const boost::function<bool(int)>& onKeyDown, double metersinunit,
                                    QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
@@ -596,11 +603,16 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     setMouseTracking(true);
     _userdatakey = userdatakey;
     _penv = penv;
+    _useMultiSamples = useMultiSamples;
     _bSwitchMouseLeftMiddleButton = false;
     _bLightOn = true;
     _bIsSelectiveActive = false;
     _metersinunit = metersinunit;
+
     _osgview = new osgViewer::View();
+    // disable viewer default light since we are settinup custom lights
+    _osgview->setLightingMode(osg::View::NO_LIGHT);
+
     _osghudview = new osgViewer::View();
     _osgviewer = new osgViewer::CompositeViewer();
     _osgviewer->setKeyEventSetsDone(0); // disable Escape key from killing the viewer!
@@ -684,15 +696,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         osg::ref_ptr<osg::Geode> geodetext = new osg::Geode;
         geodetext->addDrawable(_osgHudText);
         _osgCameraHUD->addChild(geodetext);
-    }
-
-    _InitializeLights(2);
-
-    {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
-        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
-        _osgLightsGroup->addChild(toon);
-        toon->addChild(_osgSceneRoot);
     }
 
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
@@ -803,19 +806,23 @@ void QOSGViewerWidget::SetSceneData()
     //  Normalize object normals
     rootscene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
     rootscene->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::ON);
+    osg::ref_ptr<osg::PolygonOffset> polyoffset = new osg::PolygonOffset;
+    polyoffset->setFactor(1.0f);
+    polyoffset->setUnits(1.0f);
+    rootscene->getOrCreateStateSet()->setAttributeAndModes(polyoffset.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
-    if (_bLightOn) {
-        rootscene->addChild(_osgLightsGroup);
-    }
-    else {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
-        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
-        rootscene->addChild(toon);
-        toon->addChild(_osgSceneRoot);
-    }
-
+    rootscene->addChild(_osgSceneRoot);
     rootscene->addChild(_osgFigureRoot);
-    _osgview->setSceneData(rootscene.get());
+
+    QRect screenGeometry = QApplication::screens()[0]->geometry();
+    osg::ref_ptr<osg::Group> outlineScene = _outlineRenderPipeline.CreateOutlineSceneFromOriginalScene(GetCamera(), rootscene, screenGeometry.width(), screenGeometry.height(), _useMultiSamples);
+    _osgview->setSceneData(outlineScene);
+
+    // set DISABLE_ADVANCED_CONTOUR_LINE_SHADERS to true to run using compatible code
+    _outlineRenderPipeline.SetCompatibilityModeEnabled(DISABLE_ADVANCED_CONTOUR_LINE_SHADERS);
+
+    osgViewer::Viewer::Windows windows;
+    _osgviewer->getWindows(windows);
 }
 
 void QOSGViewerWidget::ResetViewToHome()
@@ -826,17 +833,11 @@ void QOSGViewerWidget::ResetViewToHome()
 
 void QOSGViewerWidget::SetHome()
 {
-    if (!!_osgLightsGroup) {
+    //if (!!_osgLightsGroup) {
         const osg::BoundingSphere& bs = _osgSceneRoot->getBound();
         _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(1.5*bs.radius(),0,1.5*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
         _osgview->home();
-    }
-}
-
-void QOSGViewerWidget::SetLight(bool enabled)
-{
-    _bLightOn = enabled;
-    SetSceneData();
+    //}
 }
 
 void QOSGViewerWidget::SetFacesMode(bool enabled)
@@ -1121,6 +1122,11 @@ void QOSGViewerWidget::PanCameraYDirection(float dy)
     _PanCameraTowardsDirection(dy, osg::Vec3d(0,1,0));
 }
 
+void QOSGViewerWidget::SetEnabledRenderingShaders(bool value)
+{
+    _outlineRenderPipeline.SetCompatibilityModeEnabled(!value);
+}
+
 double QOSGViewerWidget::GetCameraNearPlane()
 {
     return _zNear;
@@ -1167,6 +1173,8 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     _osgHudText->setFontResolution(textheight, textheight);
     SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
     _UpdateHUDAxisTransform(width, height);
+
+    _outlineRenderPipeline.HandleResize(width, height);
 }
 
 osg::Vec2 QOSGViewerWidget::GetHUDTextOffset()
@@ -1362,7 +1370,7 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
     view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );
     _osgviewer->addView( view.get() );
-    _osgviewer->addView( hudview.get() );
+    //_osgviewer->addView( hudview.get() );
 
     _osgDefaultManipulator = new OpenRAVETrackball(this);
     _osgDefaultManipulator->setWheelZoomFactor(0.2);
@@ -1395,28 +1403,13 @@ void QOSGViewerWidget::_GetRAVEEnvironmentUpVector(osg::Vec3d& upVector)
 
 osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
 {
-    osg::ref_ptr<osg::DisplaySettings> ds = osg::DisplaySettings::instance();
-
-    osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
-    traits->windowName = "";
-    traits->windowDecoration = false;
-    traits->x = x;
-    traits->y = y;
-    traits->width = w;
-    traits->height = h;
-    traits->doubleBuffer = true;
-    traits->alpha = ds->getMinimumNumAlphaBits();
-    traits->stencil = ds->getMinimumNumStencilBits();
-    traits->sampleBuffers = ds->getMultiSamples();
-    traits->samples = ds->getNumMultiSamples();
-
-    osg::ref_ptr<osg::Camera> camera(new osg::Camera());
-    camera->setGraphicsContext(new osgViewer::GraphicsWindowEmbedded(traits.get()));
+    osg::ref_ptr<osg::Camera> camera = GetCamera();
+    camera->setGraphicsContext(new osgViewer::GraphicsWindowEmbedded(x,y, w, h));
 
     camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
-    camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
+    camera->setViewport(new osg::Viewport(0, 0, w, h));
     _zNear = 0.01/metersinunit;
-    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), _zNear, 100.0/metersinunit);
+    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(w)/static_cast<double>(h), _zNear, 100.0/metersinunit);
     camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }
@@ -1536,73 +1529,6 @@ osg::ref_ptr<osg::Light> QOSGViewerWidget::_CreateAmbientLight(osg::Vec4 color, 
     light->setQuadraticAttenuation(0.2);
     return light;
 }
-
-void QOSGViewerWidget::_InitializeLights(int nlights)
-{
-    _vLightTransform.resize(nlights);
-
-    // we need the scene's state set to enable the light for the entire scene
-    _osgLightsGroup = new osg::Group();
-    _lightStateSet = _osgLightsGroup->getOrCreateStateSet();
-
-    // Create 3 Lights
-    osg::Vec4 lightColors[] = { osg::Vec4(1.0, 1.0, 1.0, 1.0),
-                                osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0),
-                                osg::Vec4(1.0, 1.0, 1.0, 1.0), osg::Vec4(1.0, 1.0, 1.0, 1.0) };
-
-    osg::Vec3 lightPosition[] = { osg::Vec3(0, 0, 3.5),
-                                  osg::Vec3(0, 0, 2.5), osg::Vec3(-2, -2.5, 2.5),
-                                  osg::Vec3(2, 2.5, 2.5), osg::Vec3(-2, 2.5, 2.5) };
-
-    osg::Vec3 lightDirection[] = {osg::Vec3(0.0, 0.0, -1.0),
-                                  osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0),
-                                  osg::Vec3(0.0, 0.0, -1.0), osg::Vec3(0.0, 0.0, -1.0) };
-
-    int lightid = 0;
-    for (int i = 0; i < nlights; i++)
-    {
-        // osg::ref_ptr<osg::Geode> lightMarker = new osg::Geode();
-        // lightMarker->addDrawable(new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(), 1)));
-        // lightMarker->getOrCreateStateSet()->setAttribute(_CreateSimpleMaterial(lightColors[i]));
-
-        osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource();
-
-        if (i == 0) {
-            osg::ref_ptr<osg::Light> light = _CreateAmbientLight(lightColors[i], lightid++);
-            lightSource->setLight(light.get());
-        }
-        else {
-            osg::ref_ptr<osg::Light> light = _CreateLight(lightColors[i], lightid++);
-            lightSource->setLight(light.get());
-        }
-
-        lightSource->getLight()->setDirection(lightDirection[i]);
-        lightSource->setLocalStateSetModes(osg::StateAttribute::ON);
-        lightSource->setStateSetModes(*_lightStateSet, osg::StateAttribute::ON);
-        //lightSource->setReferenceFrame(osg::LightSource::ABSOLUTE_RF);
-
-        _vLightTransform[i] = new osg::PositionAttitudeTransform();
-        _vLightTransform[i]->addChild(lightSource.get());
-        // _vLightTransform[i]->addChild(lightMarker);
-        _vLightTransform[i]->setPosition(lightPosition[i]);
-        _vLightTransform[i]->setScale(osg::Vec3(0.1,0.1,0.1));
-        _osgLightsGroup->addChild(_vLightTransform[i].get());
-    }
-}
-
-//void QOSGViewerWidget::_UpdateFromOSG()
-//{
-//    std::vector<KinBody::BodyState> vecbodies;
-//    _penv->GetPublishedBodies(vecbodies);
-//    FOREACH(itbody,vecbodies) {
-//        BOOST_ASSERT( !!itbody->pbody );
-//        KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
-//        KinBodyItemPtr pitem = boost::dynamic_pointer_cast<KinBodyItem>(pbody->GetUserData(_userdatakey));
-//        if (!!pitem) {
-//            pitem->UpdateFromOSG();
-//        }
-//    }
-//}
 
 osg::Camera *QOSGViewerWidget::GetCamera()
 {
@@ -1860,6 +1786,8 @@ void QOSGViewerWidget::initializeGL() {
 void QOSGViewerWidget::paintGL()
 {
     try {
+        // need to set this every frame since defaultFrameBufferObject can change due to resize or other situations.
+        GetCamera()->getGraphicsContext()->setDefaultFboId(defaultFramebufferObject());
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }
     catch(const std::exception& ex) {
