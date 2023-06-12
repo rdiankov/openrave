@@ -3112,6 +3112,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
+    init_python_bindings(m);
 #else // USE_PYBIND11_PYTHON_BINDINGS
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
