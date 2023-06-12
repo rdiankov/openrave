@@ -381,34 +381,26 @@ void KinBodyItem::Load()
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
-                    if( 1 ) {
-                        // fast
-                        state->setMode(GL_BLEND, osg::StateAttribute::ON);
-                        state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-                    }
-                    else {
-                        // slow
-                        //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-                        //state->setRenderBinDetails(0, "transparent");
-                        //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
+                    //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                    //state->setRenderBinDetails(0, "transparent");
+                    //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
 
-                        // Enable blending, select transparent bin.
-                        state->setMode( GL_BLEND, osg::StateAttribute::ON );
-                        state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
+                    // Enable blending, select transparent bin.
+                    state->setMode( GL_BLEND, osg::StateAttribute::ON );
+                    state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
 
-                        // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
-                        state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
+                    // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
+                    state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
 
-                        // Conversely, disable writing to depth buffer so that
-                        // a transparent polygon will allow polygons behind it to shine thru.
-                        // OSG renders transparent polygons after opaque ones.
-                        osg::Depth* depth = new osg::Depth;
-                        depth->setWriteMask( false );
-                        state->setAttributeAndModes( depth, osg::StateAttribute::ON );
+                    // Conversely, disable writing to depth buffer so that
+                    // a transparent polygon will allow polygons behind it to shine thru.
+                    // OSG renders transparent polygons after opaque ones.
+                    osg::Depth* depth = new osg::Depth;
+                    depth->setWriteMask( false );
+                    state->setAttributeAndModes( depth, osg::StateAttribute::ON );
 
-                        // Disable conflicting modes.
-                        state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-                    }
+                    // Disable conflicting modes.
+                    state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
