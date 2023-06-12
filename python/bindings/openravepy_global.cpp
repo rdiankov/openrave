@@ -1842,154 +1842,11 @@ void init_openravepy_global()
     ;
 
     {
-        int (PyConfigurationSpecification::*addgroup1)(const std::string&, int, const std::string&) = &PyConfigurationSpecification::AddGroup;
-        int (PyConfigurationSpecification::*addgroup2)(const ConfigurationSpecification::Group&) = &PyConfigurationSpecification::AddGroup;
-
-        scope_ configurationspecification =
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
-            .def(init<>())
-            .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
-            .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
-            .def(init<const std::string&>(), "xmldata"_a)
-            .def("__copy__", [](const PyConfigurationSpecification& self){
-                return self;
-            })
-            .def("__deepcopy__", [](const PyConfigurationSpecification& pyspec, const py::dict& memo) {
-                return PyConfigurationSpecification(pyspec._spec);
-            })
-            .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
+        class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr > configurationspecification(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification));
 #else
-            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
-            .def(init<PyConfigurationSpecificationPtr>(py::args("spec")) )
-            .def(init<const ConfigurationSpecification::Group&>(py::args("group")) )
-            .def(init<const std::string&>(py::args("xmldata")) )
-            .def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName))
+        class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr > configurationspecification("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification)):
 #endif
-            .def("SerializeJSON", &PyConfigurationSpecification::SerializeJSON, DOXY_FN(ConfigurationSpecification, SerializeJSON))
-            .def("DeserializeJSON", &PyConfigurationSpecification::DeserializeJSON, PY_ARGS("obj") DOXY_FN(ConfigurationSpecification, DeserializeJSON))
-            .def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup))
-            .def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup))
-            .def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF))
-            .def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid))
-            .def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets))
-            .def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups, PY_ARGS("adddeltatime") DOXY_FN(ConfigurationSpecification,AddVelocityGroups))
-            .def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups, PY_ARGS("deriv", "adddeltatime") DOXY_FN(ConfigurationSpecification,AddDerivativeGroups))
-            .def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups,
-                 "groupname"_a,
-                 "exactmatch"_a = true,
-                 DOXY_FN(ConfigurationSpecification, RemoveGroups)
-                 )
-#else
-            .def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, RemoveGroups_overloads(PY_ARGS("groupname","exactmatch") DOXY_FN(ConfigurationSpecification, RemoveGroups)))
-#endif
-            .def("AddGroup",addgroup1, PY_ARGS("name","dof","interpolation") DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"))
-            .def("AddGroup",addgroup2, PY_ARGS("group") DOXY_FN(ConfigurationSpecification,AddGroup "const"))
-            .def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification))
-            .def("ConvertToDerivativeSpecification",&PyConfigurationSpecification::ConvertToDerivativeSpecification, PY_ARGS("timederivative") DOXY_FN(ConfigurationSpecification, ConvertToDerivativeSpecification))
-            .def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("ExtractTransform", &PyConfigurationSpecification::ExtractTransform,
-                 "transform"_a,
-                 "data"_a,
-                 "body"_a,
-                 "timederivative"_a = 0,
-                 DOXY_FN(ConfigurationSpecification,ExtractTransform)
-                 )
-#else
-            .def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(PY_ARGS("transform","data","body","timederivative") DOXY_FN(ConfigurationSpecification,ExtractTransform)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("ExtractAffineValues", &PyConfigurationSpecification::ExtractAffineValues,
-                 "data"_a,
-                 "body"_a,
-                 "affinedofs"_a,
-                 "timederivative"_a = 0,
-                 DOXY_FN(ConfigurationSpecification,ExtractAffineValues)
-                 )
-#else
-            .def("ExtractAffineValues",&PyConfigurationSpecification::ExtractAffineValues,ExtractAffineValues_overloads(PY_ARGS("data","body","affinedofs","timederivative") DOXY_FN(ConfigurationSpecification,ExtractAffineValues)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("ExtractIkParameterization", &PyConfigurationSpecification::ExtractIkParameterization,
-                 "data"_a,
-                 "timederivative"_a = 0,
-                 "robotname"_a = "",
-                 "manipulatorname"_a = "",
-                 DOXY_FN(ConfigurationSpecification, ExtractIkParameterization)
-                 )
-#else
-            .def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(PY_ARGS("data","timederivative","robotname","manipulatorname") DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("ExtractJointValues", &PyConfigurationSpecification::ExtractJointValues,
-                 "data"_a,
-                 "body"_a,
-                 "indices"_a,
-                 "timederivative"_a = 0,
-                 DOXY_FN(ConfigurationSpecification,ExtractJointValues)
-                 )
-#else
-            .def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(PY_ARGS("data","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,ExtractJointValues)))
-#endif
-            .def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime, PY_ARGS("data") DOXY_FN(ConfigurationSpecification,ExtractDeltaTime))
-            .def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime, PY_ARGS("data","deltatime") DOXY_FN(ConfigurationSpecification,InsertDeltaTime))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("InsertJointValues", &PyConfigurationSpecification::InsertJointValues,
-                 "data"_a,
-                 "values"_a,
-                 "body"_a,
-                 "indices"_a,
-                 "timederivative"_a = 0,
-                 DOXY_FN(ConfigurationSpecification, InsertJointValues)
-                 )
-#else
-            .def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues, PY_ARGS("data","values","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,InsertJointValues))
-#endif
-            .def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedBodies))
-            .def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedIndices))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def("ConvertData", &PyConfigurationSpecification::ConvertData,
-                 "targetspec"_a,
-                 "sourcedata"_a,
-                 "numpoints"_a,
-                 "env"_a,
-                 "filluninitialized"_a = true,
-                 DOXY_FN(ConfigurationSpecification, ConvertData)
-                 )
-#else
-            .def("ConvertData", &PyConfigurationSpecification::ConvertData, PY_ARGS("targetspec", "sourcedata", "numpoints", "env", "filluninitialized") DOXY_FN(ConfigurationSpecification, ConvertData))
-#endif
-            .def("ConvertDataFromPrevious", &PyConfigurationSpecification::ConvertDataFromPrevious, PY_ARGS("targetdata", "targetspec", "sourcedata", "numpoints", "env") DOXY_FN(ConfigurationSpecification, ConvertData))
-            .def("GetGroups", &PyConfigurationSpecification::GetGroups, /*PY_ARGS("env")*/ "returns a list of the groups")
-            .def("__eq__",&PyConfigurationSpecification::__eq__)
-            .def("__ne__",&PyConfigurationSpecification::__ne__)
-            .def("__add__",&PyConfigurationSpecification::__add__)
-            .def("__iadd__",&PyConfigurationSpecification::__iadd__)
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            .def(py::pickle(
-                     [](const PyConfigurationSpecification& pyspec) {
-                std::stringstream ss;
-                ss << pyspec._spec;
-                return py::make_tuple(ss.str());
-            },
-                     [](py::tuple state) {
-                // __setstate__
-                if(state.size() != 1) {
-                    throw std::runtime_error("Invalid state");
-                }
-                return PyConfigurationSpecification(state[0].cast<std::string>());
-            }
-                     ))
-#else
-            .def_pickle(ConfigurationSpecification_pickle_suite())
-#endif
-            .def("__str__",&PyConfigurationSpecification::__str__)
-            .def("__unicode__",&PyConfigurationSpecification::__unicode__)
-            .def("__repr__",&PyConfigurationSpecification::__repr__)
-        ;
 
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -2005,6 +1862,151 @@ void init_openravepy_global()
                            .def_readwrite("dof",&ConfigurationSpecification::Group::dof)
             ;
         }
+
+        int (PyConfigurationSpecification::*addgroup1)(const std::string&, int, const std::string&) = &PyConfigurationSpecification::AddGroup;
+        int (PyConfigurationSpecification::*addgroup2)(const ConfigurationSpecification::Group&) = &PyConfigurationSpecification::AddGroup;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def(init<>());
+        configurationspecification.def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a);
+        configurationspecification.def(init<const ConfigurationSpecification::Group&>(), "group"_a);
+        configurationspecification.def(init<const std::string&>(), "xmldata"_a);
+        configurationspecification.def("__copy__", [](const PyConfigurationSpecification& self){
+                                      return self;
+                                  });
+        configurationspecification.def("__deepcopy__", [](const PyConfigurationSpecification& pyspec, const py::dict& memo) {
+                                      return PyConfigurationSpecification(pyspec._spec);
+                                  });
+        configurationspecification.def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName));
+#else
+        configurationspecification.def(init<PyConfigurationSpecificationPtr>(py::args("spec")) );
+        configurationspecification.def(init<const ConfigurationSpecification::Group&>(py::args("group")) );
+        configurationspecification.def(init<const std::string&>(py::args("xmldata")) );
+        configurationspecification.def("GetGroupFromName",&PyConfigurationSpecification::GetGroupFromName, return_value_policy<copy_const_reference>(), DOXY_FN(ConfigurationSpecification,GetGroupFromName));
+#endif
+        configurationspecification.def("SerializeJSON", &PyConfigurationSpecification::SerializeJSON, DOXY_FN(ConfigurationSpecification, SerializeJSON));
+        configurationspecification.def("DeserializeJSON", &PyConfigurationSpecification::DeserializeJSON, PY_ARGS("obj") DOXY_FN(ConfigurationSpecification, DeserializeJSON));
+        configurationspecification.def("FindCompatibleGroup",&PyConfigurationSpecification::FindCompatibleGroup, DOXY_FN(ConfigurationSpecification,FindCompatibleGroup));
+        configurationspecification.def("FindTimeDerivativeGroup",&PyConfigurationSpecification::FindTimeDerivativeGroup, DOXY_FN(ConfigurationSpecification,FindTimeDerivativeGroup));
+        configurationspecification.def("GetDOF",&PyConfigurationSpecification::GetDOF,DOXY_FN(ConfigurationSpecification,GetDOF));
+        configurationspecification.def("IsValid",&PyConfigurationSpecification::IsValid,DOXY_FN(ConfigurationSpecification,IsValid));
+        configurationspecification.def("ResetGroupOffsets",&PyConfigurationSpecification::ResetGroupOffsets,DOXY_FN(ConfigurationSpecification,ResetGroupOffsets));
+        configurationspecification.def("AddVelocityGroups",&PyConfigurationSpecification::AddVelocityGroups, PY_ARGS("adddeltatime") DOXY_FN(ConfigurationSpecification,AddVelocityGroups));
+        configurationspecification.def("AddDerivativeGroups",&PyConfigurationSpecification::AddDerivativeGroups, PY_ARGS("deriv", "adddeltatime") DOXY_FN(ConfigurationSpecification,AddDerivativeGroups));
+        configurationspecification.def("AddDeltaTimeGroup",&PyConfigurationSpecification::AddDeltaTimeGroup,DOXY_FN(ConfigurationSpecification,AddDeltaTimeGroup));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups,
+                                       "groupname"_a,
+                                       "exactmatch"_a = true,
+                                       DOXY_FN(ConfigurationSpecification, RemoveGroups)
+                                       );
+#else
+        configurationspecification.def("RemoveGroups", &PyConfigurationSpecification::RemoveGroups, RemoveGroups_overloads(PY_ARGS("groupname","exactmatch") DOXY_FN(ConfigurationSpecification, RemoveGroups)));
+#endif
+        configurationspecification.def("AddGroup",addgroup1, PY_ARGS("name","dof","interpolation") DOXY_FN(ConfigurationSpecification,AddGroup "const std::string; int; const std::string"));
+        configurationspecification.def("AddGroup",addgroup2, PY_ARGS("group") DOXY_FN(ConfigurationSpecification,AddGroup "const"));
+        configurationspecification.def("ConvertToVelocitySpecification",&PyConfigurationSpecification::ConvertToVelocitySpecification,DOXY_FN(ConfigurationSpecification,ConvertToVelocitySpecification));
+        configurationspecification.def("ConvertToDerivativeSpecification",&PyConfigurationSpecification::ConvertToDerivativeSpecification, PY_ARGS("timederivative") DOXY_FN(ConfigurationSpecification, ConvertToDerivativeSpecification));
+        configurationspecification.def("GetTimeDerivativeSpecification",&PyConfigurationSpecification::GetTimeDerivativeSpecification,DOXY_FN(ConfigurationSpecification,GetTimeDerivativeSpecification));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def("ExtractTransform", &PyConfigurationSpecification::ExtractTransform,
+                                       "transform"_a,
+                                       "data"_a,
+                                       "body"_a,
+                                       "timederivative"_a = 0,
+                                       DOXY_FN(ConfigurationSpecification,ExtractTransform)
+                                       );
+#else
+        configurationspecification.def("ExtractTransform",&PyConfigurationSpecification::ExtractTransform,ExtractTransform_overloads(PY_ARGS("transform","data","body","timederivative") DOXY_FN(ConfigurationSpecification,ExtractTransform)));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def("ExtractAffineValues", &PyConfigurationSpecification::ExtractAffineValues,
+                                       "data"_a,
+                                       "body"_a,
+                                       "affinedofs"_a,
+                                       "timederivative"_a = 0,
+                                       DOXY_FN(ConfigurationSpecification,ExtractAffineValues)
+                                       );
+#else
+        configurationspecification.def("ExtractAffineValues",&PyConfigurationSpecification::ExtractAffineValues,ExtractAffineValues_overloads(PY_ARGS("data","body","affinedofs","timederivative") DOXY_FN(ConfigurationSpecification,ExtractAffineValues)));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def("ExtractIkParameterization", &PyConfigurationSpecification::ExtractIkParameterization,
+                                       "data"_a,
+                                       "timederivative"_a = 0,
+                                       "robotname"_a = "",
+                                       "manipulatorname"_a = "",
+                                       DOXY_FN(ConfigurationSpecification, ExtractIkParameterization)
+                                       );
+#else
+        configurationspecification.def("ExtractIkParameterization",&PyConfigurationSpecification::ExtractIkParameterization,ExtractIkParameterization_overloads(PY_ARGS("data","timederivative","robotname","manipulatorname") DOXY_FN(ConfigurationSpecification,ExtractIkParameterization)));
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def("ExtractJointValues", &PyConfigurationSpecification::ExtractJointValues,
+                                       "data"_a,
+                                       "body"_a,
+                                       "indices"_a,
+                                       "timederivative"_a = 0,
+                                       DOXY_FN(ConfigurationSpecification,ExtractJointValues)
+                                       );
+#else
+        configurationspecification.def("ExtractJointValues",&PyConfigurationSpecification::ExtractJointValues,ExtractJointValues_overloads(PY_ARGS("data","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,ExtractJointValues)));
+#endif
+        configurationspecification.def("ExtractDeltaTime",&PyConfigurationSpecification::ExtractDeltaTime, PY_ARGS("data") DOXY_FN(ConfigurationSpecification,ExtractDeltaTime));
+        configurationspecification.def("InsertDeltaTime",&PyConfigurationSpecification::InsertDeltaTime, PY_ARGS("data","deltatime") DOXY_FN(ConfigurationSpecification,InsertDeltaTime));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def("InsertJointValues", &PyConfigurationSpecification::InsertJointValues,
+                                       "data"_a,
+                                       "values"_a,
+                                       "body"_a,
+                                       "indices"_a,
+                                       "timederivative"_a = 0,
+                                       DOXY_FN(ConfigurationSpecification, InsertJointValues)
+                                       );
+#else
+        configurationspecification.def("InsertJointValues",&PyConfigurationSpecification::InsertJointValues, PY_ARGS("data","values","body","indices","timederivative") DOXY_FN(ConfigurationSpecification,InsertJointValues));
+#endif
+        configurationspecification.def("ExtractUsedBodies", &PyConfigurationSpecification::ExtractUsedBodies, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedBodies));
+        configurationspecification.def("ExtractUsedIndices", &PyConfigurationSpecification::ExtractUsedIndices, PY_ARGS("env") DOXY_FN(ConfigurationSpecification, ExtractUsedIndices));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def("ConvertData", &PyConfigurationSpecification::ConvertData,
+                                       "targetspec"_a,
+                                       "sourcedata"_a,
+                                       "numpoints"_a,
+                                       "env"_a,
+                                       "filluninitialized"_a = true,
+                                       DOXY_FN(ConfigurationSpecification, ConvertData)
+                                       );
+#else
+        configurationspecification.def("ConvertData", &PyConfigurationSpecification::ConvertData, PY_ARGS("targetspec", "sourcedata", "numpoints", "env", "filluninitialized") DOXY_FN(ConfigurationSpecification, ConvertData));
+#endif
+        configurationspecification.def("ConvertDataFromPrevious", &PyConfigurationSpecification::ConvertDataFromPrevious, PY_ARGS("targetdata", "targetspec", "sourcedata", "numpoints", "env") DOXY_FN(ConfigurationSpecification, ConvertData));
+        configurationspecification.def("GetGroups", &PyConfigurationSpecification::GetGroups, /*PY_ARGS("env")*/ "returns a list of the groups");
+        configurationspecification.def("__eq__",&PyConfigurationSpecification::__eq__);
+        configurationspecification.def("__ne__",&PyConfigurationSpecification::__ne__);
+        configurationspecification.def("__add__",&PyConfigurationSpecification::__add__);
+        configurationspecification.def("__iadd__",&PyConfigurationSpecification::__iadd__);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        configurationspecification.def(py::pickle(
+                                           [](const PyConfigurationSpecification& pyspec) {
+                                               std::stringstream ss;
+                                               ss << pyspec._spec;
+                                               return py::make_tuple(ss.str());
+                                           },
+                                           [](py::tuple state) {
+                                               // __setstate__
+                                               if(state.size() != 1) {
+                                                   throw std::runtime_error("Invalid state");
+                                               }
+                                               return PyConfigurationSpecification(state[0].cast<std::string>());
+                                           }
+                                       ));
+#else
+        configurationspecification.def_pickle(ConfigurationSpecification_pickle_suite());
+#endif
+        configurationspecification.def("__str__",&PyConfigurationSpecification::__str__);
+        configurationspecification.def("__unicode__",&PyConfigurationSpecification::__unicode__);
+        configurationspecification.def("__repr__",&PyConfigurationSpecification::__repr__);
     }
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     openravepy::spec_from_group();
