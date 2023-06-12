@@ -1171,8 +1171,23 @@ void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, 
     boxMaterial->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
     boxGeode->getOrCreateStateSet()->setAttributeAndModes(boxMaterial, osg::StateAttribute::PROTECTED);
     boxGeode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
-    boxGeode->getOrCreateStateSet()->setMode(GL_BLEND, osg::StateAttribute::ON);
-    boxGeode->getOrCreateStateSet()->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+
+    // Enable blending, select transparent bin.
+    boxGeode->getOrCreateStateSet()->setMode( GL_BLEND, osg::StateAttribute::ON );
+    boxGeode->getOrCreateStateSet()->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
+
+    // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
+    boxGeode->getOrCreateStateSet()->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
+
+    // Conversely, disable writing to depth buffer so that
+    // a transparent polygon will allow polygons behind it to shine thru.
+    // OSG renders transparent polygons after opaque ones.
+    osg::Depth* depth = new osg::Depth;
+    depth->setWriteMask( false );
+    boxGeode->getOrCreateStateSet()->setAttributeAndModes( depth, osg::StateAttribute::ON );
+
+    // Disable conflicting modes.
+    boxGeode->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
     pgeometrydata->addChild(boxGeode);
 }
