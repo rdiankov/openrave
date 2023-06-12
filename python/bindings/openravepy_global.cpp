@@ -1031,6 +1031,11 @@ object pyRaveInvertFileLookup(const std::string& filename)
     return py::none_();
 }
 
+object RaveGlobalState()
+{
+    return openravepy::toPyUserData(OpenRAVE::RaveGlobalState());
+}
+
 object RaveGetPluginInfo()
 {
     py::list plugins;
@@ -2163,9 +2168,9 @@ void init_openravepy_global()
     def("RaveHasInterface",OpenRAVE::RaveHasInterface, PY_ARGS("type","name") DOXY_FN1(RaveHasInterface));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    m.def("RaveGlobalState",openravepy::RaveGlobalState,DOXY_FN1(RaveGlobalState));
 #else
-    def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    def("RaveGlobalState",openravepy::RaveGlobalState,DOXY_FN1(RaveGlobalState));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveClone", openravepy::pyRaveClone,

@@ -737,35 +737,55 @@ void init_openravepy_sensor()
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData1)() = &PySensorBase::GetSensorData;
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ sensor = class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, PyInterfaceBase>(m, "Sensor", DOXY_CLASS(SensorBase))
+        class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, PyInterfaceBase> sensor(m, "Sensor", DOXY_CLASS(SensorBase));
 #else
-        scope_ sensor = class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> >("Sensor", DOXY_CLASS(SensorBase), no_init)
+        class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> > sensor("Sensor", DOXY_CLASS(SensorBase), no_init);
 #endif
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("Configure", &PySensorBase::Configure,
-                        "command"_a,
-                        "blocking"_a = false,
-                        DOXY_FN(SensorBase, Configure)
-                        )
-#else   
-                       .def("Configure",&PySensorBase::Configure, Configure_overloads(PY_ARGS("command","blocking") DOXY_FN(SensorBase,Configure)))
+        // SensorType belongs to Sensor
+        enum_<SensorBase::SensorType>(sensor, "Type", py::arithmetic() DOXY_ENUM(SensorType))
+#else
+        enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
 #endif
-                       .def("SimulationStep",&PySensorBase::SimulationStep, PY_ARGS("timeelapsed") DOXY_FN(SensorBase,SimulationStep))
-                       .def("GetSensorData",GetSensorData1, DOXY_FN(SensorBase,GetSensorData))
-                       .def("GetSensorData",GetSensorData2, DOXY_FN(SensorBase,GetSensorData))
-                       .def("CreateSensorData",&PySensorBase::CreateSensorData, DOXY_FN(SensorBase,CreateSensorData))
-                       .def("GetSensorGeometry",&PySensorBase::GetSensorGeometry,DOXY_FN(SensorBase,GetSensorGeometry))
-                       .def("SetSensorGeometry",&PySensorBase::SetSensorGeometry, DOXY_FN(SensorBase,SetSensorGeometry))
-                       .def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform))
-                       .def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(SensorBase,GetTransform))
-                       .def("GetTransformPose",&PySensorBase::GetTransformPose, DOXY_FN(SensorBase,GetTransform))
-                       .def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName))
-                       .def("SetName",&PySensorBase::SetName, DOXY_FN(SensorBase,SetName))
-                       .def("Supports",&PySensorBase::Supports, DOXY_FN(SensorBase,Supports))
-                       .def("__str__",&PySensorBase::__str__)
-                       .def("__unicode__",&PySensorBase::__unicode__)
-                       .def("__repr__",&PySensorBase::__repr__)
+        .value("Invalid",SensorBase::ST_Invalid)
+        .value("Laser",SensorBase::ST_Laser)
+        .value("Camera",SensorBase::ST_Camera)
+        .value("JointEncoder",SensorBase::ST_JointEncoder)
+        .value("Force6D",SensorBase::ST_Force6D)
+        .value("IMU",SensorBase::ST_IMU)
+        .value("Odometry",SensorBase::ST_Odometry)
+        .value("Tactile",SensorBase::ST_Tactile)
+        .value("Actuator",SensorBase::ST_Actuator)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .export_values()
+#endif
         ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        sensor.def("Configure", &PySensorBase::Configure,
+              "command"_a,
+              "blocking"_a = false,
+              DOXY_FN(SensorBase, Configure)
+              );
+#else   
+        sensor.def("Configure",&PySensorBase::Configure, Configure_overloads(PY_ARGS("command","blocking") DOXY_FN(SensorBase,Configure)));
+#endif
+        sensor.def("SimulationStep",&PySensorBase::SimulationStep, PY_ARGS("timeelapsed") DOXY_FN(SensorBase,SimulationStep));
+        sensor.def("GetSensorData",GetSensorData1, DOXY_FN(SensorBase,GetSensorData));
+        sensor.def("GetSensorData",GetSensorData2, DOXY_FN(SensorBase,GetSensorData));
+        sensor.def("CreateSensorData",&PySensorBase::CreateSensorData, DOXY_FN(SensorBase,CreateSensorData));
+        sensor.def("GetSensorGeometry",&PySensorBase::GetSensorGeometry,DOXY_FN(SensorBase,GetSensorGeometry));
+        sensor.def("SetSensorGeometry",&PySensorBase::SetSensorGeometry, DOXY_FN(SensorBase,SetSensorGeometry));
+        sensor.def("SetTransform",&PySensorBase::SetTransform, DOXY_FN(SensorBase,SetTransform));
+        sensor.def("GetTransform",&PySensorBase::GetTransform, DOXY_FN(SensorBase,GetTransform));
+        sensor.def("GetTransformPose",&PySensorBase::GetTransformPose, DOXY_FN(SensorBase,GetTransform));
+        sensor.def("GetName",&PySensorBase::GetName, DOXY_FN(SensorBase,GetName));
+        sensor.def("SetName",&PySensorBase::SetName, DOXY_FN(SensorBase,SetName));
+        sensor.def("Supports",&PySensorBase::Supports, DOXY_FN(SensorBase,Supports));
+        sensor.def("__str__",&PySensorBase::__str__);
+        sensor.def("__unicode__",&PySensorBase::__unicode__);
+        sensor.def("__repr__",&PySensorBase::__repr__);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<PyCameraIntrinsics, OPENRAVE_SHARED_PTR<PyCameraIntrinsics> >(sensor, "CameraIntrinsics", DOXY_CLASS(geometry::RaveCameraIntrinsics))
@@ -910,26 +930,6 @@ void init_openravepy_sensor()
 #endif
             ;
         }
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        // SensorType belongs to Sensor
-        enum_<SensorBase::SensorType>(sensor, "Type", py::arithmetic() DOXY_ENUM(SensorType))
-#else
-        enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
-#endif
-        .value("Invalid",SensorBase::ST_Invalid)
-        .value("Laser",SensorBase::ST_Laser)
-        .value("Camera",SensorBase::ST_Camera)
-        .value("JointEncoder",SensorBase::ST_JointEncoder)
-        .value("Force6D",SensorBase::ST_Force6D)
-        .value("IMU",SensorBase::ST_IMU)
-        .value("Odometry",SensorBase::ST_Odometry)
-        .value("Tactile",SensorBase::ST_Tactile)
-        .value("Actuator",SensorBase::ST_Actuator)
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        .export_values()
-#endif
-        ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         enum_<SensorBase::ConfigureCommand>(sensor, "ConfigureCommand", py::arithmetic() DOXY_ENUM(ConfigureCommand))
