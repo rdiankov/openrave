@@ -209,12 +209,16 @@ protected:
 class OPENRAVEPY_API PythonGILSaver
 {
 public:
-    PythonGILSaver() {
-        PyEval_ReleaseLock();
+    PythonGILSaver()
+        : _pythreadstate(PyEval_SaveThread()) {
     }
-    virtual ~PythonGILSaver() {
-        PyEval_AcquireLock();
+
+    virtual ~PythonGILSaver() noexcept {
+        PyEval_RestoreThread(_pythreadstate);
     }
+
+private:
+    PyThreadState* _pythreadstate;
 };
 
 class OPENRAVEPY_API AutoPyArrayObjectDereferencer
