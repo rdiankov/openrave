@@ -3365,7 +3365,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
     initializer.init_openravepy_trajectory();
     initializer.init_openravepy_planner();
     initializer.init_openravepy_controller();
-    initializer.init_openravepy_global();
 
     openravepy::InitPlanningUtils();
     openravepy::init_openravepy_sensorsystem();
