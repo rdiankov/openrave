@@ -171,13 +171,6 @@ typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint> PyJointPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-typedef py::class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, PyInterfaceBase> PyCollisionCheckerBaseBinder;
-#else
-typedef py::class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, bases<PyInterfaceBase> > PyCollisionCheckerBaseBinder;
-#endif
-typedef OPENRAVE_SHARED_PTR<PyCollisionCheckerBaseBinder> PyCollisionCheckerBaseBinderPtr;
-
 inline uint64_t GetMicroTime()
 {
 #ifdef _WIN32
@@ -732,13 +725,6 @@ OPENRAVEPY_API void UnlockEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv);
 OPENRAVEPY_API PyEnvironmentBasePtr RaveGetEnvironment(int id);
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-PyCollisionCheckerBaseBinderPtr init_openravepy_collisioncheckerclass(py::module& m);
-void init_openravepy_collisionchecker(py::module& m, PyCollisionCheckerBaseBinder& collisionchecker);
-#else
-PyCollisionCheckerBaseBinderPtr init_openravepy_collisioncheckerclass();
-void init_openravepy_collisionchecker(PyCollisionCheckerBaseBinder& collisionchecker);
-#endif
 OPENRAVEPY_API CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API CollisionReportPtr GetCollisionReport(py::object);

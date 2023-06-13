@@ -3096,6 +3096,18 @@ py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
 }
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
+struct OpenRAVEPyInitializer:
+    public CollisionCheckerBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    OpenRAVEPyInitializer(py::module& m): CollisionCheckerBaseInitializer(m)
+#else
+    OpenRAVEPyInitializer(): CollisionCheckerBaseInitializer()
+#endif
+    {
+    }
+};
+
 } // namespace openravepy
 
 OPENRAVE_PYTHON_MODULE(openravepy_int)
@@ -3300,13 +3312,15 @@ Because race conditions can pop up when trying to lock the openrave environment 
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    PyCollisionCheckerBaseBinderPtr pCollisionChecker = openravepy::init_openravepy_collisioncheckerclass(m);
+    OpenRAVEPyInitializer initializer(m);
+    // PyCollisionCheckerBaseBinderPtr pCollisionChecker = openravepy::init_openravepy_collisioncheckerclass(m);
     openravepy::init_openravepy_global(m);
     openravepy::init_openravepy_controller(m);
     openravepy::init_openravepy_ikparameterization(m);
     openravepy::init_openravepy_iksolver(m);
     openravepy::init_openravepy_kinbody(m);
-    openravepy::init_openravepy_collisionchecker(m, *pCollisionChecker);
+    // openravepy::init_openravepy_collisionchecker(m, *pCollisionChecker);
+    initializer.init_openravepy_collisionchecker(m);
     openravepy::init_openravepy_sensor(m);
     openravepy::init_openravepy_sensorsystem(m);
     openravepy::init_openravepy_robot(m);

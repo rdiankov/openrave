@@ -99,5 +99,18 @@ public:
     virtual bool CheckSelfCollision(object o1, PyCollisionReportPtr pReport);
 };
 
+struct CollisionCheckerBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    CollisionCheckerBaseInitializer(py::module& m);
+    void init_openravepy_collisionchecker(py::module& m);
+    py::class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, PyInterfaceBase> collisionchecker;
+#else
+    CollisionCheckerBaseInitializer();
+    void init_openravepy_collisionchecker();
+    py::class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, bases<PyInterfaceBase> > collisionchecker;
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_COLLISIONCHECKERBASE_H

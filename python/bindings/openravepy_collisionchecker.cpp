@@ -760,23 +760,19 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-PyCollisionCheckerBaseBinderPtr init_openravepy_collisioncheckerclass(py::module& m)
+CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer(py::module& m):
+    collisionchecker(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
 #else
-PyCollisionCheckerBaseBinderPtr init_openravepy_collisioncheckerclass()
+CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer():
+    collisionchecker("CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
 #endif
 {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    PyCollisionCheckerBaseBinderPtr pCollisionchecker(new PyCollisionCheckerBaseBinder(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase)));
-#else
-    PyCollisionCheckerBaseBinderPtr pCollisionchecker(new PyCollisionCheckerBaseBinder("CollisionChecker", DOXY_CLASS(CollisionCheckerBase)));
-#endif
-    return pCollisionchecker;
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_collisionchecker(py::module& m, PyCollisionCheckerBaseBinder &collisionchecker)
+void CollisionCheckerBaseInitializer::init_openravepy_collisionchecker(py::module& m)
 #else
-void init_openravepy_collisionchecker()
+void CollisionCheckerBaseInitializer::init_openravepy_collisionchecker()
 #endif
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
