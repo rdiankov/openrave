@@ -90,7 +90,6 @@ if (OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS OR OpenRAVE_USE_PYBIND11_PYTHON3_BINDI
 else()
   find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS python)
 endif()
-set_and_check(OpenRAVE_PYTHON_DIR "${OpenRAVE_PYTHON_DIR}")
 
 # Backward compatibility only.
 get_target_property(libopenrave_LOCATION OpenRAVE::libopenrave LOCATION)
