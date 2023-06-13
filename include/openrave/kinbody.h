@@ -2402,6 +2402,7 @@ private:
     /// \param uri the new URI to set for the interface
     virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri=std::string());
     virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
+    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
 
     /// \brief initializes an complex kinematics body with links and joints
     ///
