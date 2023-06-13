@@ -368,9 +368,11 @@ struct KinBodyInitializer
     KinBodyInitializer(py::module& m_);
     void init_openravepy_kinbody();
     py::module& m;
+    py::class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, PyInterfaceBase> kinbody;
 #else
     KinBodyInitializer();
     void init_openravepy_kinbody();
+    py::class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, bases<PyInterfaceBase> > kinbody;
 #endif
 };
 

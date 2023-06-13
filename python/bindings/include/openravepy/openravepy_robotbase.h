@@ -456,9 +456,11 @@ struct RobotBaseInitializer
     RobotBaseInitializer(py::module& m_);
     void init_openravepy_robot();
     py::module& m;
+    py::class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody> robot;
 #else
     RobotBaseInitializer();
     void init_openravepy_robot();
+    py::class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> > robot;
 #endif
 };
 

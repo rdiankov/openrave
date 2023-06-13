@@ -2346,9 +2346,11 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseInfo_DeserializeJSON_overloads
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-RobotBaseInitializer::RobotBaseInitializer(py::module& m_): m(m_)
+RobotBaseInitializer::RobotBaseInitializer(py::module& m_): m(m_),
+    robot(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase))
 #else
-RobotBaseInitializer::RobotBaseInitializer()
+RobotBaseInitializer::RobotBaseInitializer():
+    robot("Robot", DOXY_CLASS(RobotBase), no_init)
 #endif
 {
 }
@@ -2540,12 +2542,6 @@ void RobotBaseInitializer::init_openravepy_robot()
     ;
 
     {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody> robot(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase));
-#else
-        class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> > robot("Robot", DOXY_CLASS(RobotBase), no_init);
-#endif
-
         object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipiks)(object, int, bool, bool) const = &PyRobotBase::PyManipulator::FindIKSolutions;

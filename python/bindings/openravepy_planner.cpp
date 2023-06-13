@@ -434,9 +434,11 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetStateValues_overloads, SetStateValues,
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-PlannerBaseInitializer::PlannerBaseInitializer(py::module& m_): m(m_)
+PlannerBaseInitializer::PlannerBaseInitializer(py::module& m_): m(m_),
+    planner(m, "Planner", DOXY_CLASS(PlannerBase))
 #else
-PlannerBaseInitializer::PlannerBaseInitializer()
+PlannerBaseInitializer::PlannerBaseInitializer():
+    planner("Planner", DOXY_CLASS(PlannerBase), no_init)
 #endif
 {
 }
@@ -485,12 +487,6 @@ void PlannerBaseInitializer::init_openravepy_planner()
     ;
 
     {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, PyInterfaceBase> planner(m, "Planner", DOXY_CLASS(PlannerBase));
-#else
-        class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> > planner("Planner", DOXY_CLASS(PlannerBase), no_init);
-#endif
-
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // PlannerParameters belongs to Planner
         class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >(planner, "PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))

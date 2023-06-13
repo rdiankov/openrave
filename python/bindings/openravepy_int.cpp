@@ -3349,23 +3349,27 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_viewer(m);
     openravepy::init_openravepy_global_functions(m);
 #else
+    OpenRAVEPyInitializer initializer();
     openravepy::init_openravepy_global();
-    openravepy::InitPlanningUtils();
+    initializer.init_openravepy_ikparameterization();
+    initializer.init_openravepy_iksolver();
+    initializer.init_openravepy_kinbody();
+    initializer.init_openravepy_collisionchecker();
+    initializer.init_openravepy_collisionreport();
+    initializer.init_openravepy_sensor();
+    initializer.init_openravepy_robot();
+    initializer.init_openravepy_module();
+    initializer.init_openravepy_physicsengine();
+    initializer.init_openravepy_trajectory();
+    initializer.init_openravepy_planner();
+    initializer.init_openravepy_controller();
+    initializer.init_openravepy_global();
 
-    openravepy::init_openravepy_collisionchecker();
-    openravepy::init_openravepy_controller();
-    openravepy::init_openravepy_ikparameterization();
-    openravepy::init_openravepy_iksolver();
-    openravepy::init_openravepy_kinbody();
-    openravepy::init_openravepy_robot();
-    openravepy::init_openravepy_module();
-    openravepy::init_openravepy_physicsengine();
-    openravepy::init_openravepy_planner();
-    openravepy::init_openravepy_trajectory();
-    openravepy::init_openravepy_sensor();
+    openravepy::InitPlanningUtils();
     openravepy::init_openravepy_sensorsystem();
     openravepy::init_openravepy_spacesampler();
     openravepy::init_openravepy_viewer();
+    openravepy::init_openravepy_global_functions();
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
