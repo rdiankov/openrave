@@ -486,6 +486,8 @@ void KinBody::Destroy()
 
     _ResetInternalCollisionCache();
     _selfcollisionchecker.reset();
+
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -630,15 +632,6 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     return true;
 }
 
-bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri)
-{
-    std::vector<GeometryInfoConstPtr> newgeometries; newgeometries.reserve(geometries.size());
-    FOREACHC(it, geometries) {
-        newgeometries.push_back(GeometryInfoConstPtr(&(*it), utils::null_deleter()));
-    }
-    return InitFromGeometries(newgeometries, uri);
-}
-
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
@@ -647,9 +640,58 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
     plink->_info._name = "base";
+    plink->_vGeometries.reserve(geometries.size());
     plink->_info._bStatic = true;
     FOREACHC(itinfo,geometries) {
         Link::GeometryPtr geom(new Link::Geometry(plink,**itinfo));
+        geom->_info.InitCollisionMesh();
+        plink->_vGeometries.push_back(geom);
+        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
+    }
+    _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
+    __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
+    return true;
+}
+
+bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri)
+{
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(),>,0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
+    Destroy();
+    LinkPtr plink(new Link(shared_kinbody()));
+    plink->_index = 0;
+    plink->_info._name = "base";
+    plink->_info._bStatic = true;
+    plink->_vGeometries.reserve(geometries.size());
+    for(const KinBody::GeometryInfo& ginfo : geometries) {
+        Link::GeometryPtr geom(new Link::Geometry(plink,ginfo));
+        geom->_info.InitCollisionMesh();
+        plink->_vGeometries.push_back(geom);
+        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
+    }
+    _veclinks.push_back(plink);
+    _vLinkTransformPointers.clear();
+    __struri = uri;
+    _referenceUri.clear(); // because completely removing the previous body, should reset
+    _prAssociatedFileEntries.reset();
+    return true;
+}
+
+bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri)
+{
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(),>,0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
+    Destroy();
+    LinkPtr plink(new Link(shared_kinbody()));
+    plink->_index = 0;
+    plink->_info._name = "base";
+    plink->_info._bStatic = true;
+    plink->_vGeometries.reserve(geometries.size());
+    for(const KinBody::GeometryInfo& ginfo : geometries) {
+        Link::GeometryPtr geom(new Link::Geometry(plink,ginfo));
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
@@ -4802,7 +4844,6 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    __hashkinematics.resize(0);
     const size_t numLinks = GetLinks().size();
 
     // create the adjacency list
@@ -5532,7 +5573,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _name = r->_name;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
-    __hashkinematics = r->__hashkinematics;
+    __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;
     _vTempJoints = r->_vTempJoints;
 
     _vLinkTransformPointers.clear(); _vLinkTransformPointers.reserve(r->_veclinks.size());
@@ -5741,7 +5782,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     }
     // do not change hash if geometry changed!
     if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
-        __hashkinematics.resize(0);
+        __hashKinematicsGeometryDynamics.resize(0);
     }
 
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
@@ -5803,14 +5844,14 @@ void KinBody::SetZeroConfiguration()
 const std::string& KinBody::GetKinematicsGeometryHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( __hashkinematics.size() == 0 ) {
+    if( __hashKinematicsGeometryDynamics.size() == 0 ) {
         ostringstream ss;
         ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
         // should add dynamics since that affects a lot how part is treated.
         serialize(ss,SO_Kinematics|SO_Geometry|SO_Dynamics);
-        __hashkinematics = utils::GetMD5HashString(ss.str());
+        __hashKinematicsGeometryDynamics = utils::GetMD5HashString(ss.str());
     }
-    return __hashkinematics;
+    return __hashKinematicsGeometryDynamics;
 }
 
 void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues, uint32_t checklimits)

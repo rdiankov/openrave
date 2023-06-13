@@ -56,33 +56,28 @@ if( IVCON_FOUND )
   message(STATUS "Geometry Parsing: Using ivcon")
   include_directories(${IVCON_INCLUDE_DIR})
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_IVCON")
-  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${IVCON_LIBRARY})
 endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
-add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
-
 if( COLLADA_DOM_FOUND )
   set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
 endif()
-if( IVCON_FOUND )
-  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${IVCON_LIBRARY})
-endif()
 
+add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
-                                  CLEAN_DIRECT_OUTPUT 1
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-
-target_link_libraries(libopenrave-core PRIVATE boost_assertion_failed PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES})
-if( MSVC )
-  install(TARGETS libopenrave-core RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
-else()
-  install(TARGETS libopenrave-core DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}base)
-endif()
+target_link_libraries(libopenrave-core
+  PRIVATE boost_assertion_failed ${IVCON_LIBRARY}
+  PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES}
+)
+install(TARGETS libopenrave-core
+  EXPORT openrave-targets
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}
+)
 install(FILES openrave-core.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}dev)
 
 if( OPT_CBINDINGS )
@@ -92,15 +87,16 @@ if( OPT_CBINDINGS )
   set_target_properties(libopenrave-core_c PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core_c 
    SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
     VERSION ${OPENRAVE_VERSION}
-    CLEAN_DIRECT_OUTPUT 1
     COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_C_CORE_DLL_EXPORTS -DOPENRAVE_C_CORE_DLL -DOPENRAVE_CORE_DLL"
     LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-  target_link_libraries (libopenrave-core_c PRIVATE boost_assertion_failed PUBLIC libopenrave-core ${OPENRAVE_CORE_LIBRARIES})
-  if( MSVC )
-    install(TARGETS libopenrave-core_c RUNTIME DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base LIBRARY DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base ARCHIVE DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
-  else()
-    install(TARGETS libopenrave-core_c DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}cbindings-base)
-  endif()
+  target_link_libraries (libopenrave-core_c
+    PRIVATE boost_assertion_failed
+    PUBLIC libopenrave-core
+  )
+  install(TARGETS libopenrave-core_c
+    EXPORT openrave-targets
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}
+  )
   install(FILES openrave-core_c.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}cbindings-dev)
 endif()
 
@@ -118,10 +114,14 @@ if( OPT_STATIC )
   set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
                                                 SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                                 VERSION ${OPENRAVE_VERSION}
-                                                CLEAN_DIRECT_OUTPUT 1
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
-
-  target_link_libraries(libopenrave-core_static PRIVATE boost_assertion_failed PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES})
-  install(TARGETS libopenrave-core_static DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev)
+  target_link_libraries(libopenrave-core_static
+    PRIVATE boost_assertion_failed ${IVCON_LIBRARY}
+    PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES}
+  )
+  install(TARGETS libopenrave-core_static
+    EXPORT openrave-targets
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}
+  )
 endif()
