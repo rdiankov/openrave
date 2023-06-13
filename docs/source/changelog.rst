@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.116.0
+===============
+
+* Add GeomeryInfo::GetSideWallExists
+
 Version 0.115.1
 ===============
 

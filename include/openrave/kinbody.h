@@ -417,6 +417,8 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
+        uint8_t GetSideWallExists() const;
+
         inline const std::string& GetId() const {
             return _id;
         }
@@ -733,7 +735,9 @@ public:
         /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
         AABB ComputeAABB(const Transform& trans) const;
 
-        uint8_t GetSideWallExists() const;
+        inline uint8_t GetSideWallExists() const {
+            return _info.GetSideWallExists();
+        }
 
         void serialize(std::ostream& o, int options) const;
 

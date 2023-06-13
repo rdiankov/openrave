@@ -1459,6 +1459,14 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
     return ab;
 }
 
+uint8_t KinBody::GeometryInfo::GetSideWallExists() const
+{
+    uint8_t mask = 0;
+    for (size_t i = 0; i < _vSideWalls.size(); ++i) {
+        mask |= 1 << _vSideWalls[i].type;
+    }
+    return mask;
+}
 
 KinBody::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
@@ -1694,15 +1702,6 @@ void KinBody::Geometry::SetName(const std::string& name)
     LinkPtr parent(_parent);
     _info._name = name;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
-}
-
-uint8_t KinBody::Geometry::GetSideWallExists() const
-{
-    uint8_t mask = 0;
-    for (size_t i = 0; i < _info._vSideWalls.size(); ++i) {
-        mask |= 1 << _info._vSideWalls[i].type;
-    }
-    return mask;
 }
 
 void KinBody::Geometry::UpdateInfo()
