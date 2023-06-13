@@ -3097,12 +3097,13 @@ py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 struct OpenRAVEPyInitializer:
-    public CollisionCheckerBaseInitializer
+    public CollisionCheckerBaseInitializer,
+    public CollisionReportInitializer
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    OpenRAVEPyInitializer(py::module& m): CollisionCheckerBaseInitializer(m)
+    OpenRAVEPyInitializer(py::module& m): CollisionCheckerBaseInitializer(m), CollisionReportInitializer(m)
 #else
-    OpenRAVEPyInitializer(): CollisionCheckerBaseInitializer()
+    OpenRAVEPyInitializer(): CollisionCheckerBaseInitializer(), CollisionReportInitializer()
 #endif
     {
     }
@@ -3321,6 +3322,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
     openravepy::init_openravepy_kinbody(m);
     // openravepy::init_openravepy_collisionchecker(m, *pCollisionChecker);
     initializer.init_openravepy_collisionchecker(m);
+    initializer.init_openravepy_collisionreport(m);
     openravepy::init_openravepy_sensor(m);
     openravepy::init_openravepy_sensorsystem(m);
     openravepy::init_openravepy_robot(m);
