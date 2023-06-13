@@ -146,5 +146,17 @@ public:
     PlannerBasePtr GetPlanner();
 };
 
+struct PlannerBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    PlannerBaseInitializer(py::module& m_);
+    void init_openravepy_planner();
+    py::module& m;
+#else
+    PlannerBaseInitializer();
+    void init_openravepy_planner();
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_PLANNERBASE_H

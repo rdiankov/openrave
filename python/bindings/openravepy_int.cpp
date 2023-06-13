@@ -31,6 +31,11 @@
 #include <openravepy/openravepy_module.h>
 #include <openravepy/openravepy_physicalenginebase.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_controllerbase.h>
+#include <openravepy/openravepy_ikparameterization.h>
+#include <openravepy/openravepy_iksolverbase.h>
+#include <openravepy/openravepy_plannerbase.h>
+#include <openravepy/openravepy_trajectorybase.h>
 
 #define OPENRAVE_EXCEPTION_CLASS_NAME "_OpenRAVEException"
 
@@ -3098,12 +3103,22 @@ py::object GetCodeStringOpenRAVEException(OpenRAVEException* p)
 
 struct OpenRAVEPyInitializer:
     public CollisionCheckerBaseInitializer,
-    public CollisionReportInitializer
+    public CollisionReportInitializer,
+    public ControllerBaseInitializer,
+    public IkParameterizationInitializer,
+    public IkSolverBaseInitializer,
+    public KinBodyInitializer,
+    public ModuleBaseInitializer,
+    public PhysicsEngineBaseInitializer,
+    public PlannerBaseInitializer,
+    public RobotBaseInitializer,
+    public SensorBaseInitializer,
+    public TrajectoryBaseInitializer
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    OpenRAVEPyInitializer(py::module& m): CollisionCheckerBaseInitializer(m), CollisionReportInitializer(m)
+    OpenRAVEPyInitializer(py::module& m_): CollisionCheckerBaseInitializer(m_), CollisionReportInitializer(m_), ControllerBaseInitializer(m_), IkParameterizationInitializer(m_), IkSolverBaseInitializer(m_), KinBodyInitializer(m_), ModuleBaseInitializer(m_), PhysicsEngineBaseInitializer(m_), PlannerBaseInitializer(m_), RobotBaseInitializer(m_), SensorBaseInitializer(m_), TrajectoryBaseInitializer(m_)
 #else
-    OpenRAVEPyInitializer(): CollisionCheckerBaseInitializer(), CollisionReportInitializer()
+    OpenRAVEPyInitializer(): CollisionCheckerBaseInitializer(), CollisionReportInitializer(), ControllerBaseInitializer(), IkParameterizationInitializer(), IkSolverBaseInitializer(), KinBodyInitializer(), ModuleBaseInitializer(), PhysicsEngineBaseInitializer(), PlannerBaseInitializer(), RobotBaseInitializer(), SensorBaseInitializer(), TrajectoryBaseInitializer()
 #endif
     {
     }
@@ -3314,29 +3329,24 @@ Because race conditions can pop up when trying to lock the openrave environment 
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     OpenRAVEPyInitializer initializer(m);
-    // PyCollisionCheckerBaseBinderPtr pCollisionChecker = openravepy::init_openravepy_collisioncheckerclass(m);
     openravepy::init_openravepy_global(m);
-    openravepy::init_openravepy_controller(m);
-    openravepy::init_openravepy_ikparameterization(m);
-    openravepy::init_openravepy_iksolver(m);
-    openravepy::init_openravepy_kinbody(m);
-    // openravepy::init_openravepy_collisionchecker(m, *pCollisionChecker);
-    initializer.init_openravepy_collisionchecker(m);
-    initializer.init_openravepy_collisionreport(m);
-    openravepy::init_openravepy_sensor(m);
-    openravepy::init_openravepy_sensorsystem(m);
-    openravepy::init_openravepy_robot(m);
-
-    openravepy::init_openravepy_module(m);
-    openravepy::init_openravepy_physicsengine(m);
-    openravepy::init_openravepy_trajectory(m);
-    openravepy::init_openravepy_planner(m);
-
-
-    openravepy::init_openravepy_spacesampler(m);
-    openravepy::init_openravepy_viewer(m);
+    initializer.init_openravepy_ikparameterization();
+    initializer.init_openravepy_iksolver();
+    initializer.init_openravepy_kinbody();
+    initializer.init_openravepy_collisionchecker();
+    initializer.init_openravepy_collisionreport();
+    initializer.init_openravepy_sensor();
+    initializer.init_openravepy_robot();
+    initializer.init_openravepy_module();
+    initializer.init_openravepy_physicsengine();
+    initializer.init_openravepy_trajectory();
+    initializer.init_openravepy_planner();
+    initializer.init_openravepy_controller();
 
     openravepy::InitPlanningUtils(m);
+    openravepy::init_openravepy_sensorsystem(m);
+    openravepy::init_openravepy_spacesampler(m);
+    openravepy::init_openravepy_viewer(m);
     openravepy::init_openravepy_global_functions(m);
 #else
     openravepy::init_openravepy_global();

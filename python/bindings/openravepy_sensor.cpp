@@ -725,10 +725,16 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyForce6DGeomData_DeserializeJSON_overloa
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_sensor(py::module& m)
+SensorBaseInitializer::SensorBaseInitializer(py::module& m_): m(m_),
+    sensor(m, "Sensor", DOXY_CLASS(SensorBase))
 #else
-void init_openravepy_sensor()
+SensorBaseInitializer::SensorBaseInitializer():
+    sensor("Sensor", DOXY_CLASS(SensorBase), no_init)
 #endif
+{
+}
+
+void SensorBaseInitializer::init_openravepy_sensor()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
@@ -737,11 +743,6 @@ void init_openravepy_sensor()
     {
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData1)() = &PySensorBase::GetSensorData;
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, PyInterfaceBase> sensor(m, "Sensor", DOXY_CLASS(SensorBase));
-#else
-        class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> > sensor("Sensor", DOXY_CLASS(SensorBase), no_init);
-#endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // SensorData is inside SensorBase

@@ -450,6 +450,18 @@ public:
     virtual void __enter__();
 };
 
+struct RobotBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    RobotBaseInitializer(py::module& m_);
+    void init_openravepy_robot();
+    py::module& m;
+#else
+    RobotBaseInitializer();
+    void init_openravepy_robot();
+#endif
+};
+
 } // namespace openravepy
 
 #endif // OPENRAVEPY_INTERNAL_ROBOT_H

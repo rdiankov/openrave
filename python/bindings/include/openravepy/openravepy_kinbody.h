@@ -362,6 +362,18 @@ protected:
 template <typename T>
 py::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, py::object oname = py::none_(), int index = -1);
 
+struct KinBodyInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    KinBodyInitializer(py::module& m_);
+    void init_openravepy_kinbody();
+    py::module& m;
+#else
+    KinBodyInitializer();
+    void init_openravepy_kinbody();
+#endif
+};
+
 } // namespace openravepy
 
 #endif

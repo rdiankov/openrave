@@ -4655,10 +4655,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABBForGeometryGroup_overload
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_kinbody(py::module& m)
+KinBodyInitializer::KinBodyInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_kinbody()
+KinBodyInitializer::KinBodyInitializer()
 #endif
+{
+}
+
+void KinBodyInitializer::init_openravepy_kinbody()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a

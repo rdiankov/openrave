@@ -2346,10 +2346,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseInfo_DeserializeJSON_overloads
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_robot(py::module& m)
+RobotBaseInitializer::RobotBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_robot()
+RobotBaseInitializer::RobotBaseInitializer()
 #endif
+{
+}
+
+void RobotBaseInitializer::init_openravepy_robot()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a

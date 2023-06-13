@@ -760,7 +760,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer(py::module& m):
+CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer(py::module& m_): m(m_),
     collisionchecker(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
 #else
 CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer():
@@ -770,7 +770,7 @@ CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer():
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-CollisionReportInitializer::CollisionReportInitializer(py::module& m):
+CollisionReportInitializer::CollisionReportInitializer(py::module& m_): m(m_),
     collisionreport(m, "CollisionReport", DOXY_CLASS(CollisionReport))
 #else
 CollisionReportInitializer::CollisionReportInitializer():
@@ -779,11 +779,7 @@ CollisionReportInitializer::CollisionReportInitializer():
 {
 }
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void CollisionCheckerBaseInitializer::init_openravepy_collisionchecker(py::module& m)
-#else
 void CollisionCheckerBaseInitializer::init_openravepy_collisionchecker()
-#endif
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
@@ -891,11 +887,7 @@ void CollisionCheckerBaseInitializer::init_openravepy_collisionchecker()
 #endif
 }
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void CollisionReportInitializer::init_openravepy_collisionreport(py::module& m)
-#else
 void CollisionReportInitializer::init_openravepy_collisionreport()
-#endif
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a

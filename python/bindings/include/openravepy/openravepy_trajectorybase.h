@@ -112,5 +112,17 @@ private:
     mutable std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation
 };
 
+struct TrajectoryBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    TrajectoryBaseInitializer(py::module& m_);
+    void init_openravepy_trajectory();
+    py::module& m;
+#else
+    TrajectoryBaseInitializer();
+    void init_openravepy_trajectory();
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_TRAJECTORYBASE_H

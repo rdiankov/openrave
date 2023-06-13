@@ -65,8 +65,9 @@ public:
 struct CollisionReportInitializer
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    CollisionReportInitializer(py::module& m);
-    void init_openravepy_collisionreport(py::module& m);
+    CollisionReportInitializer(py::module& m_);
+    void init_openravepy_collisionreport();
+    py::module& m;
     py::class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> > collisionreport;
 #else
     CollisionReportInitializer();

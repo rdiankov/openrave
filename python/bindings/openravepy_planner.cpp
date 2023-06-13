@@ -434,10 +434,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetStateValues_overloads, SetStateValues,
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_planner(py::module& m)
+PlannerBaseInitializer::PlannerBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_planner()
+PlannerBaseInitializer::PlannerBaseInitializer()
 #endif
+{
+}
+
+void PlannerBaseInitializer::init_openravepy_planner()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;
