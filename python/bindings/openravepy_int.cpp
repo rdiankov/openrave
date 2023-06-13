@@ -3300,12 +3300,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    PyCollisionCheckerBaseBinderPtr pCollisionChecker = openravepy::init_openravepy_collisioncheckerclass(m);
     openravepy::init_openravepy_global(m);
     openravepy::init_openravepy_controller(m);
     openravepy::init_openravepy_ikparameterization(m);
     openravepy::init_openravepy_iksolver(m);
     openravepy::init_openravepy_kinbody(m);
-    openravepy::init_openravepy_collisionchecker(m);
+    openravepy::init_openravepy_collisionchecker(m, *pCollisionChecker);
     openravepy::init_openravepy_sensor(m);
     openravepy::init_openravepy_sensorsystem(m);
     openravepy::init_openravepy_robot(m);
