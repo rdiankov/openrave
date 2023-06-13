@@ -6,7 +6,15 @@ ChangeLog
 Version 0.114.1 Development
 =========================
 
+Core
+----
+
 * Allow updating of environment objects via JSON Reader (via `.Environment.DeserializeJSONWithMapping`) where only **name** specified, but not **id**.
+
+Python
+------
+
+* Add toPyArray override
 
 Version 0.9.0
 =============
