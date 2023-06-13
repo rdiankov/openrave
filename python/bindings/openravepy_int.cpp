@@ -3141,6 +3141,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
     init_python_bindings(m);
+    init_openravepy_global_basic(m);
 #else // USE_PYBIND11_PYTHON_BINDINGS
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
@@ -3154,6 +3155,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     float_from_number<float>();
     float_from_number<double>();
     init_python_bindings();
+    init_openravepy_global_basic();
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 

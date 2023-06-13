@@ -745,6 +745,26 @@ void SensorBaseInitializer::init_openravepy_sensor()
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+        // SensorType belongs to Sensor
+        enum_<SensorBase::SensorType>(sensor, "Type", py::arithmetic() DOXY_ENUM(SensorType))
+#else
+        enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
+#endif
+        .value("Invalid",SensorBase::ST_Invalid)
+        .value("Laser",SensorBase::ST_Laser)
+        .value("Camera",SensorBase::ST_Camera)
+        .value("JointEncoder",SensorBase::ST_JointEncoder)
+        .value("Force6D",SensorBase::ST_Force6D)
+        .value("IMU",SensorBase::ST_IMU)
+        .value("Odometry",SensorBase::ST_Odometry)
+        .value("Tactile",SensorBase::ST_Tactile)
+        .value("Actuator",SensorBase::ST_Actuator)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        .export_values()
+#endif
+        ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
         // SensorData is inside SensorBase
         class_<PySensorBase::PySensorData, OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> >(sensor, "SensorData", DOXY_CLASS(SensorBase::SensorData))
 #else
@@ -768,26 +788,6 @@ void SensorBaseInitializer::init_openravepy_sensor()
         .value("RenderGeometryOn",SensorBase::CC_RenderGeometryOn)
         .value("RenderGeometryOff",SensorBase::CC_RenderGeometryOff)
         .value("RenderGeometryCheck",SensorBase::CC_RenderGeometryCheck)
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        .export_values()
-#endif
-        ;
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        // SensorType belongs to Sensor
-        enum_<SensorBase::SensorType>(sensor, "Type", py::arithmetic() DOXY_ENUM(SensorType))
-#else
-        enum_<SensorBase::SensorType>("Type" DOXY_ENUM(SensorType))
-#endif
-        .value("Invalid",SensorBase::ST_Invalid)
-        .value("Laser",SensorBase::ST_Laser)
-        .value("Camera",SensorBase::ST_Camera)
-        .value("JointEncoder",SensorBase::ST_JointEncoder)
-        .value("Force6D",SensorBase::ST_Force6D)
-        .value("IMU",SensorBase::ST_IMU)
-        .value("Odometry",SensorBase::ST_Odometry)
-        .value("Tactile",SensorBase::ST_Tactile)
-        .value("Actuator",SensorBase::ST_Actuator)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .export_values()
 #endif
@@ -926,25 +926,11 @@ void SensorBaseInitializer::init_openravepy_sensor()
 
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ actuatorsensordata = 
             // ActuatorSensorData is inside SensorBase
-            class_<PySensorBase::PyActuatorSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyActuatorSensorData>, PySensorBase::PySensorData>(sensor, "ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData))
+            class_<PySensorBase::PyActuatorSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyActuatorSensorData>, PySensorBase::PySensorData> actuatorsensordata(sensor, "ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData));
 #else
-            class_<PySensorBase::PyActuatorSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyActuatorSensorData>, bases<PySensorBase::PySensorData> >("ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData),no_init)
+            class_<PySensorBase::PyActuatorSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyActuatorSensorData>, bases<PySensorBase::PySensorData> > actuatorsensordata("ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData),no_init);
 #endif
-            .def_readonly("state",&PySensorBase::PyActuatorSensorData::state)
-            .def_readonly("measuredcurrent",&PySensorBase::PyActuatorSensorData::measuredcurrent)
-            .def_readonly("measuredtemperature",&PySensorBase::PyActuatorSensorData::measuredtemperature)
-            .def_readonly("appliedcurrent",&PySensorBase::PyActuatorSensorData::appliedcurrent)
-            .def_readonly("maxtorque",&PySensorBase::PyActuatorSensorData::maxtorque)
-            .def_readonly("maxcurrent",&PySensorBase::PyActuatorSensorData::maxcurrent)
-            .def_readonly("nominalcurrent",&PySensorBase::PyActuatorSensorData::nominalcurrent)
-            .def_readonly("maxvelocity",&PySensorBase::PyActuatorSensorData::maxvelocity)
-            .def_readonly("maxacceleration",&PySensorBase::PyActuatorSensorData::maxacceleration)
-            .def_readonly("maxjerk",&PySensorBase::PyActuatorSensorData::maxjerk)
-            .def_readonly("staticfriction",&PySensorBase::PyActuatorSensorData::staticfriction)
-            .def_readonly("viscousfriction",&PySensorBase::PyActuatorSensorData::viscousfriction)
-            ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             // ActuatorState belongs to ActuatorSensorData
@@ -961,6 +947,19 @@ void SensorBaseInitializer::init_openravepy_sensor()
             .export_values()
 #endif
             ;
+
+            actuatorsensordata.def_readonly("state",&PySensorBase::PyActuatorSensorData::state);
+            actuatorsensordata.def_readonly("measuredcurrent",&PySensorBase::PyActuatorSensorData::measuredcurrent);
+            actuatorsensordata.def_readonly("measuredtemperature",&PySensorBase::PyActuatorSensorData::measuredtemperature);
+            actuatorsensordata.def_readonly("appliedcurrent",&PySensorBase::PyActuatorSensorData::appliedcurrent);
+            actuatorsensordata.def_readonly("maxtorque",&PySensorBase::PyActuatorSensorData::maxtorque);
+            actuatorsensordata.def_readonly("maxcurrent",&PySensorBase::PyActuatorSensorData::maxcurrent);
+            actuatorsensordata.def_readonly("nominalcurrent",&PySensorBase::PyActuatorSensorData::nominalcurrent);
+            actuatorsensordata.def_readonly("maxvelocity",&PySensorBase::PyActuatorSensorData::maxvelocity);
+            actuatorsensordata.def_readonly("maxacceleration",&PySensorBase::PyActuatorSensorData::maxacceleration);
+            actuatorsensordata.def_readonly("maxjerk",&PySensorBase::PyActuatorSensorData::maxjerk);
+            actuatorsensordata.def_readonly("staticfriction",&PySensorBase::PyActuatorSensorData::staticfriction);
+            actuatorsensordata.def_readonly("viscousfriction",&PySensorBase::PyActuatorSensorData::viscousfriction);
         }
     }
 
