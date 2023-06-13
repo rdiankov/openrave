@@ -542,7 +542,7 @@ typedef geometry::RaveAxisAlignedBox<dReal> AABB;
 typedef geometry::ray<dReal> RAY;
 typedef geometry::RaveOrientedBox<dReal> OrientedBox;
 typedef geometry::RaveAxisAlignedBox<dReal> AxisAlignedBox;
-    
+
 // for compatibility
 //@{
 using mathextra::dot2;
@@ -862,7 +862,7 @@ protected:
         \param timederivative the number of times to take the time derivative of the position
      */
     ConfigurationSpecification ConvertToDerivativeSpecification(uint32_t timederivative=1) const;
-    
+
     /// \brief returns a new specification of just particular time-derivative groups.
     ///
     /// \param timederivative the time derivative to query groups from. 0 is positions/joint values, 1 is velocities, 2 is accelerations, etc
@@ -999,7 +999,7 @@ protected:
         \param[out] usedconfigindices for every used index, returns the first configuration space index it came from
      */
     void ExtractUsedIndices(KinBodyConstPtr pbody, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
-    
+
     /** \brief extracts all the unique dof indices that the configuration holds for a particular body
 
         \param[in] pBodyName the name of the body to query for
@@ -1175,7 +1175,7 @@ public:
     }
 
     /// \brief returns a string version of \ref GetType
-    inline const std::string& GetName() const;
+    inline const std::string& GetTypeString() const;
 
     /// \brief Returns the minimum degree of freedoms required for the IK type. Does \b not count custom data.
     static int GetDOF(IkParameterizationType type) {
@@ -1220,11 +1220,11 @@ public:
     inline void SetDirection3D(const Vector& dir) {
         _type = IKP_Direction3D; _transform.rot = dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetRay4D(const RAY& ray) {
         _type = IKP_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetLookat3D(const Vector& trans) {
         _type = IKP_Lookat3D; _transform.trans = trans;
     }
@@ -1232,11 +1232,11 @@ public:
     inline void SetLookat3D(const RAY& ray) {
         _type = IKP_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetTranslationDirection5D(const RAY& ray) {
         _type = IKP_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetTranslationXY2D(const Vector& trans) {
         _type = IKP_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
     }
@@ -2209,6 +2209,7 @@ public:
         std::swap(_transform, r._transform);
         std::swap(_type, r._type);
         std::swap(_id, r._id);
+        std::swap(_name, r._name);
         _mapCustomData.swap(r._mapCustomData);
     }
 
@@ -2216,8 +2217,12 @@ public:
 
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
+    /// \brief converts the unit scale of the geometry
+    void ConvertUnitScale(dReal fUnitScale);
+
     bool operator==(const IkParameterization& other) const {
         return _id == other._id
+               && _name == other._name
                && _type == other._type
                && _transform == other._transform
                && _mapCustomData == other._mapCustomData;
@@ -2232,9 +2237,18 @@ public:
         return _id;
     }
 
+    /// \brief return a user-specified name for this ik parameter
+    inline const std::string& GetName() const {
+        return _name;
+    }
+
     /// \brief Sets the id for ikparam, used by scene lodaer
     void SetId(const std::string& id) {
         _id = id;
+    }
+
+    void SetName(const std::string& name) {
+        _name = name;
     }
 
 protected:
@@ -2345,7 +2359,8 @@ protected:
     ///< for IKP_Transform6D, rot is a unit length quaternion
     Transform _transform;
     IkParameterizationType _type;
-    std::string _id;
+    std::string _id; ///< the unique id used for tracking the resource
+    std::string _name; ///< the user-specified name used for targetting and displaying
 
     std::map<std::string, std::vector<dReal> > _mapCustomData;
 
@@ -2894,7 +2909,7 @@ inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vd
 }
 
 // define inline functions
-const std::string& IkParameterization::GetName() const
+const std::string& IkParameterization::GetTypeString() const
 {
     std::map<IkParameterizationType,std::string>::const_iterator it = RaveGetIkParameterizationMap().find(_type);
     if( it != RaveGetIkParameterizationMap().end() ) {

@@ -3007,8 +3007,13 @@ double RaveRandomDouble(IntervalType interval)
 void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale) const
 {
     rIkParameterization.SetObject();
-    orjson::SetJsonValueByKey(rIkParameterization, "id", GetId(), allocator);
-    orjson::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(rIkParameterization, "id", _id, allocator);
+    }
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rIkParameterization, "name", _name, allocator);
+    }
+    orjson::SetJsonValueByKey(rIkParameterization, "type", GetTypeString(), allocator);
 
     Transform transform = _transform;
     transform.trans *= fUnitScale;
@@ -3071,6 +3076,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
+    orjson::LoadJsonValueByKey(rIkParameterization, "name", _name);
 
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
@@ -3202,6 +3208,33 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
             orjson::LoadJsonValueByKey(*it, "values", _mapCustomData[id]);
         }
     }
+    // TODO have to scale _mapCustomData by fUnitScale
+}
+
+void IkParameterization::ConvertUnitScale(dReal fUnitScale)
+{
+    switch (_type & ~IKP_VelocityDataBit) {
+    case IKP_Transform6D:
+    case IKP_Translation3D:
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXYOrientation3D:
+    case IKP_Ray4D:
+    case IKP_Lookat3D:
+    case IKP_TranslationDirection5D:
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        _transform.trans *= fUnitScale;
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        _transform.trans *= fUnitScale;
+        _transform.rot *= fUnitScale;
+        break;
+    }
+
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
