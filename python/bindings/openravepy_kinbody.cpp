@@ -441,6 +441,16 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
     }
 }
 
+object PyGeometryInfo::GetBoxHalfExtents()
+{
+    return toPyVector3(ExtractVector<dReal>(_vGeomData));
+}
+
+object PyGeometryInfo::GetCageBaseHalfExtents()
+{
+    return toPyVector3(ExtractVector<dReal>(_vGeomData));
+}
+
 object PyGeometryInfo::GetContainerOuterExtents()
 {
     return toPyVector3(ExtractVector<dReal>(_vGeomData));
@@ -4898,6 +4908,8 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vPositiveCropContainerEmptyMargins", &PyGeometryInfo::_vPositiveCropContainerEmptyMargins)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
+                          .def("GetBoxHalfExtents",&PyGeometryInfo::GetBoxHalfExtents, DOXY_FN(GeomeryInfo,GetBoxHalfExtents))
+                          .def("GetCageBaseHalfExtents",&PyGeometryInfo::GetCageBaseHalfExtents, DOXY_FN(GeomeryInfo,GetCageBaseHalfExtents))
                           .def("GetContainerOuterExtents",&PyGeometryInfo::GetContainerOuterExtents, DOXY_FN(GeomeryInfo,GetContainerOuterExtents))
                           .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))

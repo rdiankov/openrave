@@ -51,6 +51,8 @@ public:
     KinBody::GeometryInfoPtr GetGeometryInfo();
     void FillGeometryInfo(KinBody::GeometryInfo& geominfo);
 
+    object GetBoxHalfExtents();
+    object GetCageBaseHalfExtents();
     object GetContainerOuterExtents();
     object GetContainerInnerExtents();
     void SetContainerOuterExtents(object oOuterExtents);

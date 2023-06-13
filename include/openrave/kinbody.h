@@ -401,6 +401,13 @@ public:
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
+        inline const Vector& GetBoxHalfExtents() const {
+            return _vGeomData;
+        }
+
+        inline const Vector& GetCageBaseHalfExtents() const {
+            return _vGeomData;
+        }
 
         /// \brief compute the inner empty volume in the geometry coordinate system
         ///
