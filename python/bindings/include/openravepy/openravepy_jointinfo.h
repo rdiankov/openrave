@@ -49,6 +49,12 @@ public:
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
     KinBody::GeometryInfoPtr GetGeometryInfo();
+    void FillGeometryInfo(KinBody::GeometryInfo& geominfo);
+
+    object GetContainerOuterExtents();
+    object GetContainerInnerExtents();
+    void SetContainerOuterExtents(object oOuterExtents);
+    void SetContainerInnerExtents(object oInnerExtents);
 
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());

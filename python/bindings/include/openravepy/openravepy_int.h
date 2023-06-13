@@ -606,6 +606,10 @@ OPENRAVEPY_API bool ExtractRay(py::object o, RAY& r);
 
 OPENRAVEPY_API py::object toPyTriMesh(const TriMesh& mesh);
 OPENRAVEPY_API bool ExtractTriMesh(py::object o, TriMesh& mesh);
+
+/// \brief extracts the geometries from pyGeometryInfoList into vGeometryInfos
+OPENRAVEPY_API void ExtractGeometryInfoArray(py::object pyGeometryInfoList, std::vector<KinBody::GeometryInfo>& vGeometryInfos);
+
 OPENRAVEPY_API std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(py::object pyLinkInfoList);
 OPENRAVEPY_API std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(py::object pyJointInfoList);
 OPENRAVEPY_API KinBody::GrabbedInfoPtr ExtractGrabbedInfo(py::object pyGrabbedInfo);

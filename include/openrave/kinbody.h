@@ -417,6 +417,20 @@ public:
             return _name;
         }
 
+        inline const Vector& GetContainerOuterExtents() const {
+            return _vGeomData;
+        }
+        inline const Vector& GetContainerInnerExtents() const {
+            return _vGeomData2;
+        }
+
+        inline void SetContainerOuterExtents(const Vector& outerExtents) {
+            _vGeomData = outerExtents;
+        }
+        inline void SetContainerInnerExtents(const Vector& innerExtents) {
+            _vGeomData2 = innerExtents;
+        }
+
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -637,10 +651,10 @@ public:
             return _info._vGeomData;
         }
         inline const Vector& GetContainerOuterExtents() const {
-            return _info._vGeomData;
+            return _info.GetContainerOuterExtents();
         }
         inline const Vector& GetContainerInnerExtents() const {
-            return _info._vGeomData2;
+            return _info.GetContainerInnerExtents();
         }
         inline const Vector& GetContainerBottomCross() const {
             return _info._vGeomData3;

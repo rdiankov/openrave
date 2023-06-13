@@ -3,18 +3,26 @@
 ChangeLog
 #########
 
-Version 0.114.1 Development
-=========================
+Version 0.115.1
+===============
+
+Python
+------
+
+* Add conversion python bindings override
+
+Version 0.115.0
+===============
+
+* Allow KinBody::Geometry.InitFromGeometries to be called with a vector of GeometryInfo objects.
+
+Version 0.114.1
+===============
 
 Core
 ----
 
 * Allow updating of environment objects via JSON Reader (via `.Environment.DeserializeJSONWithMapping`) where only **name** specified, but not **id**.
-
-Python
-------
-
-* Add toPyArray override
 
 Version 0.9.0
 =============
