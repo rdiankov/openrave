@@ -571,7 +571,7 @@ public:
                 break;
             }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam %s."),ikpcur.GetName(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam '%s'."),ikpcur.GetTypeString(),ORE_InvalidArguments);
             break;
         };
         return totalerror2;

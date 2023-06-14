@@ -3,8 +3,38 @@
 ChangeLog
 #########
 
-Version 0.114.1 Development
-=========================
+Version 0.117.0
+===============
+
+* Add a command to toggle crop container margins visibility
+
+* Render crop container margins as colored boxes, add corresponding labels
+
+* Fix transparency rendering logic in OSG
+
+Version 0.116.0
+===============
+
+* Add GeomeryInfo::GetSideWallExists
+
+Version 0.115.1
+===============
+
+Python
+------
+
+* Add conversion python bindings override
+
+Version 0.115.0
+===============
+
+* Allow KinBody::Geometry.InitFromGeometries to be called with a vector of GeometryInfo objects.
+
+Version 0.114.1
+===============
+
+Core
+----
 
 * Allow updating of environment objects via JSON Reader (via `.Environment.DeserializeJSONWithMapping`) where only **name** specified, but not **id**.
 

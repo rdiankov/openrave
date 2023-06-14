@@ -34,6 +34,7 @@ public:
     virtual ~PyIkParameterization();
 
     IkParameterizationType GetType();
+    object GetName();
 
     int GetDOF();
 
