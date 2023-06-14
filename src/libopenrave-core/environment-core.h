@@ -2394,7 +2394,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1))
     {
         SharedLock lock777(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -2402,7 +2402,7 @@ public:
         }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
-            handles->Add((*itviewer)->drawlabel(label, worldPosition));
+            handles->Add((*itviewer)->drawlabel(label, worldPosition, color));
         }
         return handles;
     }

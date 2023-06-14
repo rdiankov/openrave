@@ -3,6 +3,15 @@
 ChangeLog
 #########
 
+Version 0.117.0
+===============
+
+* Add a command to toggle crop container margins visibility
+
+* Render crop container margins as colored boxes, add corresponding labels
+
+* Fix transparency rendering logic in OSG
+
 Version 0.116.0
 ===============
 

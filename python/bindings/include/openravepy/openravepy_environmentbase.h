@@ -246,7 +246,7 @@ public:
 
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_());
 
-    object drawlabel(const std::string &label, object worldPosition);
+    object drawlabel(const std::string &label, object worldPosition, object ocolor=py::none_());
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
     object drawboxarray(object opos, object oextents, object ocolor=py::none_());
