@@ -799,7 +799,6 @@ void init_openravepy_collisionchecker()
     // should this be inside CollisionReport, instead of module "m"?
     class_<PyCollisionReport::PYCONTACT, OPENRAVE_SHARED_PTR<PyCollisionReport::PYCONTACT> >(m, "Contact", DOXY_CLASS(CollisionReport::CONTACT))
     .def(init<>())
-    .def(init<const CollisionReport::CONTACT&>(), "c"_a)
 #else
     class_<PyCollisionReport::PYCONTACT, OPENRAVE_SHARED_PTR<PyCollisionReport::PYCONTACT> >("Contact", DOXY_CLASS(CollisionReport::CONTACT))
 #endif
@@ -812,7 +811,6 @@ void init_openravepy_collisionchecker()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> >(m, "CollisionReport", DOXY_CLASS(CollisionReport))
     .def(init<>())
-    .def(init<CollisionReportPtr>(), "preport"_a)
 #else
     class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> >("CollisionReport", DOXY_CLASS(CollisionReport))
 #endif
@@ -866,7 +864,6 @@ void init_openravepy_collisionchecker()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, PyInterfaceBase>(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
-    .def(init<CollisionCheckerBasePtr, PyEnvironmentBasePtr>(), "pcollisionchecker"_a, "penv"_a)
 #else
     class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, bases<PyInterfaceBase> >("CollisionChecker", DOXY_CLASS(CollisionCheckerBase), no_init)
 #endif
