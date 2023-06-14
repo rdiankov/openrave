@@ -57,6 +57,26 @@ KinBody::KinBodyInfoPtr ExtractKinBodyInfo(object obj)
     return NULL;
 }
 
+void ExtractGeometryInfoArray(py::object pyGeometryInfoList, std::vector<KinBody::GeometryInfo>& vGeometryInfos)
+{
+    vGeometryInfos.clear();
+    if( IS_PYTHONOBJECT_NONE(pyGeometryInfoList) ) {
+        return;
+    }
+    const size_t arraySize = len(pyGeometryInfoList);
+    vGeometryInfos.resize(arraySize);
+
+    for(size_t igeom = 0; igeom < arraySize; igeom++) {
+        extract_<OPENRAVE_SHARED_PTR<PyGeometryInfo> > pyGeometryInfo(pyGeometryInfoList[py::to_object(igeom)]);
+        if (pyGeometryInfo.check()) {
+            ((OPENRAVE_SHARED_PTR<PyGeometryInfo>)pyGeometryInfo)->FillGeometryInfo(vGeometryInfos[igeom]);
+        }
+        else{
+            throw openrave_exception("Bad GeometryInfo");
+        }
+    }
+}
+
 std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoList)
 {
     if( IS_PYTHONOBJECT_NONE(pyLinkInfoList) ) {
@@ -77,8 +97,8 @@ std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(object pyLinkInfoList)
             }
         }
     }
-    catch(...) {
-        RAVELOG_WARN("Cannot do ExtractArray for LinkInfos");
+    catch(std::exception& ex) {
+        RAVELOG_WARN_FORMAT("Cannot do ExtractArray for LinkInfos: %s", ex.what());
     }
     return vLinkInfos;
 }
@@ -335,9 +355,15 @@ void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, object option
     Init(*pgeominfo);
 }
 
-KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
+KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo()
+{
     KinBody::GeometryInfoPtr pinfo(new KinBody::GeometryInfo());
-    KinBody::GeometryInfo& info = *pinfo;
+    FillGeometryInfo(*pinfo);
+    return pinfo;
+}
+
+void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
+{
     info.SetTransform(ExtractTransform(_t));
     info._vGeomData = ExtractVector<dReal>(_vGeomData);
     info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
@@ -413,7 +439,36 @@ KinBody::GeometryInfoPtr PyGeometryInfo::GetGeometryInfo() {
 #endif
 
     }
-    return pinfo;
+}
+
+object PyGeometryInfo::GetBoxHalfExtents()
+{
+    return toPyVector3(ExtractVector<dReal>(_vGeomData));
+}
+
+object PyGeometryInfo::GetCageBaseHalfExtents()
+{
+    return toPyVector3(ExtractVector<dReal>(_vGeomData));
+}
+
+object PyGeometryInfo::GetContainerOuterExtents()
+{
+    return toPyVector3(ExtractVector<dReal>(_vGeomData));
+}
+
+object PyGeometryInfo::GetContainerInnerExtents()
+{
+    return toPyVector3(ExtractVector<dReal>(_vGeomData2));
+}
+
+void PyGeometryInfo::SetContainerOuterExtents(object oOuterExtents)
+{
+    _vGeomData = oOuterExtents;
+}
+
+void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
+{
+    _vGeomData2 = oInnerExtents;
 }
 
 PyLinkInfo::PyLinkInfo() {
@@ -4823,7 +4878,6 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >(m, "GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
                           .def(init<>())
-                          //.def(init<const KinBody::GeometryInfo&>(), "info"_a)
 #else
     object geometryinfo = class_<PyGeometryInfo, OPENRAVE_SHARED_PTR<PyGeometryInfo> >("GeometryInfo", DOXY_CLASS(KinBody::GeometryInfo))
 #endif
@@ -4853,6 +4907,12 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vPositiveCropContainerEmptyMargins", &PyGeometryInfo::_vPositiveCropContainerEmptyMargins)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
+                          .def("GetBoxHalfExtents",&PyGeometryInfo::GetBoxHalfExtents, DOXY_FN(GeomeryInfo,GetBoxHalfExtents))
+                          .def("GetCageBaseHalfExtents",&PyGeometryInfo::GetCageBaseHalfExtents, DOXY_FN(GeomeryInfo,GetCageBaseHalfExtents))
+                          .def("GetContainerOuterExtents",&PyGeometryInfo::GetContainerOuterExtents, DOXY_FN(GeomeryInfo,GetContainerOuterExtents))
+                          .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                                "unitScale"_a = 1.0,
@@ -5183,7 +5243,6 @@ void init_openravepy_kinbody()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> >(m, "GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
                          .def(init<>())
-                         .def(init<const RobotBase::GrabbedInfo&>(), "info"_a)
 #else
     object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
 #endif

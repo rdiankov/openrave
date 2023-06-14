@@ -241,6 +241,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
+
     _environmentid = pbody->GetEnvironmentBodyIndex();
     _geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&KinBodyItem::_HandleGeometryChangedCallback,this));
     _drawcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkDraw, boost::bind(&KinBodyItem::_HandleDrawChangedCallback,this));
@@ -380,34 +381,26 @@ void KinBodyItem::Load()
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
                     state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
-                    if( 1 ) {
-                        // fast
-                        state->setMode(GL_BLEND, osg::StateAttribute::ON);
-                        state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
-                    }
-                    else {
-                        // slow
-                        //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-                        //state->setRenderBinDetails(0, "transparent");
-                        //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
+                    //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+                    //state->setRenderBinDetails(0, "transparent");
+                    //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
 
-                        // Enable blending, select transparent bin.
-                        state->setMode( GL_BLEND, osg::StateAttribute::ON );
-                        state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
+                    // Enable blending, select transparent bin.
+                    state->setMode( GL_BLEND, osg::StateAttribute::ON );
+                    state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
 
-                        // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
-                        state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
+                    // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
+                    state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
 
-                        // Conversely, disable writing to depth buffer so that
-                        // a transparent polygon will allow polygons behind it to shine thru.
-                        // OSG renders transparent polygons after opaque ones.
-                        osg::Depth* depth = new osg::Depth;
-                        depth->setWriteMask( false );
-                        state->setAttributeAndModes( depth, osg::StateAttribute::ON );
+                    // Conversely, disable writing to depth buffer so that
+                    // a transparent polygon will allow polygons behind it to shine thru.
+                    // OSG renders transparent polygons after opaque ones.
+                    osg::Depth* depth = new osg::Depth;
+                    depth->setWriteMask( false );
+                    state->setAttributeAndModes( depth, osg::StateAttribute::ON );
 
-                        // Disable conflicting modes.
-                        state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
-                    }
+                    // Disable conflicting modes.
+                    state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
                 //pgeometrydata->setStateSet(state);
@@ -484,21 +477,54 @@ void KinBodyItem::Load()
                         break;
                     }
 
-                    DrawCropContainerMargins(
-                        pgeometrydata, 
-                        orgeom->GetContainerInnerExtents(), 
-                        orgeom->GetNegativeCropContainerMargins(), 
-                        orgeom->GetPositiveCropContainerMargins(), 
-                        orgeom->GetDiffuseColor() * 0.5 // shade of the geometry color
-                    );
+                    std::pair<std::string, std::string> linkGeometryNames(porlink->GetName(), orgeom->GetName());
+                    if (_visibleCropContainerMargins.count(linkGeometryNames) != 0) {
+                        DrawCropContainerMargins(
+                            pgeometrydata,
+                            orgeom->GetContainerInnerExtents(),
+                            orgeom->GetNegativeCropContainerMargins(),
+                            orgeom->GetPositiveCropContainerMargins(),
+                            RaveVector<float>(0, 0.8, 0), // green
+                            0.75
+                        );
+                        _cropContainerMarginsLabel = _pbody->GetEnv()->drawlabel("Crop container margins", 
+                            _pbody->GetTransform().trans +
+                            // put label on top, at (+x, +y) corner
+                            RaveVector<float>(
+                                (orgeom->GetContainerInnerExtents().x - orgeom->GetNegativeCropContainerMargins().x - orgeom->GetPositiveCropContainerMargins().x) * 0.5,
+                                (orgeom->GetContainerInnerExtents().y - orgeom->GetNegativeCropContainerMargins().y - orgeom->GetPositiveCropContainerMargins().y) * 0.5,
+                                orgeom->GetContainerInnerExtents().z - orgeom->GetNegativeCropContainerMargins().z - orgeom->GetPositiveCropContainerMargins().z
+                            ) +
+                            // adjust for length of the label
+                            RaveVector<float>(-0.025, -0.28, 0),
+                            // green color
+                            RaveVector<float>(0, 0.8, 0, 1)
+                        );
+                    }
 
-                    DrawCropContainerMargins(
-                        pgeometrydata, 
-                        orgeom->GetContainerInnerExtents(), 
-                        orgeom->GetNegativeCropContainerEmptyMargins(), 
-                        orgeom->GetPositiveCropContainerEmptyMargins(), 
-                        orgeom->GetDiffuseColor() + (-orgeom->GetDiffuseColor() + RaveVector<float>(1, 1, 1)) * 0.5 // tint of the geometry color
-                    );
+                    if (_visibleCropContainerEmptyMargins.count(linkGeometryNames) != 0) {
+                        DrawCropContainerMargins(
+                            pgeometrydata,
+                            orgeom->GetContainerInnerExtents(),
+                            orgeom->GetNegativeCropContainerEmptyMargins(),
+                            orgeom->GetPositiveCropContainerEmptyMargins(),
+                            RaveVector<float>(0.5, 0, 0.5), // purple
+                            0.25
+                        );
+                        _cropContainerEmptyMarginsLabel = _pbody->GetEnv()->drawlabel("Crop container empty margins", 
+                            _pbody->GetTransform().trans +
+                            // put label on top, at (-x, -y) corner
+                            RaveVector<float>(
+                                -(orgeom->GetContainerInnerExtents().x - orgeom->GetNegativeCropContainerEmptyMargins().x - orgeom->GetPositiveCropContainerEmptyMargins().x) * 0.5,
+                                -(orgeom->GetContainerInnerExtents().y - orgeom->GetNegativeCropContainerEmptyMargins().y - orgeom->GetPositiveCropContainerEmptyMargins().y) * 0.5,
+                                orgeom->GetContainerInnerExtents().z - orgeom->GetNegativeCropContainerEmptyMargins().z - orgeom->GetPositiveCropContainerEmptyMargins().z
+                            ) +
+                            // adjust for length of the label
+                            RaveVector<float>(0.025, 0.35, 0),
+                            // purple color
+                            RaveVector<float>(0.5, 0, 0.5, 1)
+                        );
+                    }
 
                     break;
                 }
@@ -864,6 +890,28 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
     return true;
 }
 
+
+void KinBodyItem::SetCropContainerMarginsVisible(const std::string& linkName, const std::string& geometryName, const std::string& cropContainerMarginsType, bool visible)
+{
+    std::pair<std::string, std::string> linkGeometryNames(linkName, geometryName);
+    if (cropContainerMarginsType == "cropContainerMargins") {
+        if (visible) {
+            _visibleCropContainerMargins.insert(linkGeometryNames);
+        } else {
+            _visibleCropContainerMargins.erase(linkGeometryNames);
+        }
+        Load();
+    }
+    else if (cropContainerMarginsType == "cropContainerEmptyMargins") {
+        if (visible) {
+            _visibleCropContainerEmptyMargins.insert(linkGeometryNames);
+        } else {
+            _visibleCropContainerEmptyMargins.erase(linkGeometryNames);
+        }
+        Load();
+    }
+}
+
 void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
 {
     if(!_pbody ) {
@@ -1095,68 +1143,53 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     return true;
 }
 
-void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& lineColor){
+void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency){
     if(negativeCropContainerMargins == Vector(0, 0, 0) && positiveCropContainerMargins == Vector(0, 0, 0)){
         // do nothing if CropContainerMargins are all zeros
         return;
     }
 
-    Vector lowerBound = extents * -0.5;
-    lowerBound.z = 0;
-    lowerBound += negativeCropContainerMargins;
-    Vector upperBound = extents * 0.5;
-    upperBound.z = extents.z;
-    upperBound -= positiveCropContainerMargins;
-    
-    osg::Geode *lineGeode = new osg::Geode;
-    osg::Geometry *lineGeometry = new osg::Geometry;
-    osg::Vec3Array *linePointVector = new osg::Vec3Array;
+    osg::ref_ptr<osg::Box> box = new osg::Box();
+    box->setCenter(osg::Vec3f(
+        (negativeCropContainerMargins.x - positiveCropContainerMargins.x) * 0.5,
+        (negativeCropContainerMargins.y - positiveCropContainerMargins.y) * 0.5,
+        (extents.z + negativeCropContainerMargins.z - positiveCropContainerMargins.z) * 0.5
+    ));
+    box->setHalfLengths(osg::Vec3f(
+        (extents.x - negativeCropContainerMargins.x - positiveCropContainerMargins.x) * 0.5,
+        (extents.y - negativeCropContainerMargins.y - positiveCropContainerMargins.y) * 0.5,
+        (extents.z - negativeCropContainerMargins.z - positiveCropContainerMargins.z) * 0.5
+    ));
 
-    // bottom 4 edges
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
+    osg::Geode *boxGeode = new osg::Geode;
+    osg::ref_ptr<osg::ShapeDrawable> shapeDrawable = new osg::ShapeDrawable(box.get());
+    boxGeode->addDrawable(shapeDrawable.get());
 
-    // middle 4 edges
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,lowerBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
+    // setup color and transparency
+    osg::ref_ptr<osg::Material> boxMaterial = new osg::Material;
+    boxMaterial->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(color.x, color.y, color.z, 1));
+    boxMaterial->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
+    boxGeode->getOrCreateStateSet()->setAttributeAndModes(boxMaterial, osg::StateAttribute::PROTECTED);
+    boxGeode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
 
-    // top 4 edges
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,lowerBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(upperBound.x,upperBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,upperBound.y,upperBound.z));
-    linePointVector->push_back(osg::Vec3f(lowerBound.x,lowerBound.y,upperBound.z));
+    // Enable blending, select transparent bin.
+    boxGeode->getOrCreateStateSet()->setMode( GL_BLEND, osg::StateAttribute::ON );
+    boxGeode->getOrCreateStateSet()->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
 
-    lineGeometry->setVertexArray(linePointVector);
-    lineGeometry->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES, 0, linePointVector->size()));
-    lineGeode->addDrawable(lineGeometry);
+    // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
+    boxGeode->getOrCreateStateSet()->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
 
-    // setup line width
-    osg::LineWidth* linewidth = new osg::LineWidth();
-    linewidth->setWidth(3.0);
-    lineGeode->getOrCreateStateSet()->setAttributeAndModes(linewidth, osg::StateAttribute::ON);
-    
-    // setup line color
-    osg::ref_ptr<osg::Material> lineMaterial = new osg::Material;
-    lineMaterial->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(lineColor.x, lineColor.y, lineColor.z, 1));
-    lineGeode->getOrCreateStateSet()->setAttributeAndModes(lineMaterial, osg::StateAttribute::PROTECTED);
+    // Conversely, disable writing to depth buffer so that
+    // a transparent polygon will allow polygons behind it to shine thru.
+    // OSG renders transparent polygons after opaque ones.
+    osg::Depth* depth = new osg::Depth;
+    depth->setWriteMask( false );
+    boxGeode->getOrCreateStateSet()->setAttributeAndModes( depth, osg::StateAttribute::ON );
 
-    pgeometrydata->addChild(lineGeode);
+    // Disable conflicting modes.
+    boxGeode->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
+
+    pgeometrydata->addChild(boxGeode);
 }
 
 }
