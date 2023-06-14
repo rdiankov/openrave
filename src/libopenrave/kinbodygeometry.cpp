@@ -1459,6 +1459,14 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
     return ab;
 }
 
+uint8_t KinBody::GeometryInfo::GetSideWallExists() const
+{
+    uint8_t mask = 0;
+    for (size_t i = 0; i < _vSideWalls.size(); ++i) {
+        mask |= 1 << _vSideWalls[i].type;
+    }
+    return mask;
+}
 
 KinBody::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
@@ -1696,15 +1704,6 @@ void KinBody::Geometry::SetName(const std::string& name)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 }
 
-uint8_t KinBody::Geometry::GetSideWallExists() const
-{
-    uint8_t mask = 0;
-    for (size_t i = 0; i < _info._vSideWalls.size(); ++i) {
-        mask |= 1 << _info._vSideWalls[i].type;
-    }
-    return mask;
-}
-
 void KinBody::Geometry::UpdateInfo()
 {
 }
@@ -1817,28 +1816,28 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
 
     // negativeCropContainerMargins
     if(GetNegativeCropContainerMargins() != info._vNegativeCropContainerMargins){
-        _info._vNegativeCropContainerMargins = info._vNegativeCropContainerMargins;
+        SetNegativeCropContainerMargins(info._vNegativeCropContainerMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s negativeCropContainerMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
     // positiveCropContainerMargins
     if(GetPositiveCropContainerMargins() != info._vPositiveCropContainerMargins){
-        _info._vPositiveCropContainerMargins = info._vPositiveCropContainerMargins;
+        SetPositiveCropContainerMargins(info._vPositiveCropContainerMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
     // negativeCropContainerEmptyMargins
     if(GetNegativeCropContainerEmptyMargins() != info._vNegativeCropContainerEmptyMargins){
-        _info._vNegativeCropContainerEmptyMargins = info._vNegativeCropContainerEmptyMargins;
+        SetNegativeCropContainerEmptyMargins(info._vNegativeCropContainerEmptyMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s negativeCropContainerEmptyMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
     // positiveCropContainerEmptyMargins
     if(GetPositiveCropContainerEmptyMargins() != info._vPositiveCropContainerEmptyMargins){
-        _info._vPositiveCropContainerEmptyMargins = info._vPositiveCropContainerEmptyMargins;
+        SetPositiveCropContainerEmptyMargins(info._vPositiveCropContainerEmptyMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerEmptyMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
