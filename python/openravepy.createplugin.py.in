@@ -18,7 +18,8 @@ import os, sys, platform
 from subprocess import Popen, PIPE
 from openravepy.openravepy_ext import enum_to_dict
 
-__builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
+if __name__ == "__main__":
+    __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 
 try:
     import openravepy
@@ -45,7 +46,9 @@ except ImportError:
 
 from openravepy import *
 
-if __name__ == "__main__":
+def main():
+    global openravepy
+    global type
     parser = OptionParser(usage='usage: %prog pluginname [options] ', description='Sets up a project directory and initial files for creating OpenRAVE plugins and executables.')
     parser.add_option('--usecore', action='store_true',dest='usecore',default=False, help='If set, will create an executable that links to the core instead of creating a plugin.')
     for typeKey, type in enum_to_dict(InterfaceType).items():
@@ -245,3 +248,6 @@ finally:
     RaveDestroy()
 """%(pluginname,interface_tests_py)
         open(os.path.join(plugindir,'testplugin.py'),'w').write(testplugin_py)
+
+if __name__ == "__main__":
+    main()

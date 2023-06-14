@@ -20,7 +20,8 @@ __license__ = 'Apache License, Version 2.0'
 import sys
 from optparse import OptionParser
 
-__builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
+if __name__ == "__main__":
+    __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
 
 try:
     import openravepy
@@ -48,7 +49,9 @@ except ImportError:
 
 from openravepy import *
 
-if __name__ == "__main__":
+def main():
+    global openravepy
+    global type
     parser = OptionParser(usage='usage: %prog openrave-filename [options]', description='Queries information about OpenRAVE-loadable robots')
     parser.add_option('--list',action='store',type='string',dest='dolist',default=None,
                       help='Lists the manipulators/sensors/links/joints names of the robot.')
@@ -165,3 +168,6 @@ if __name__ == "__main__":
                     print(env.GetBodies()[0].GetKinematicsGeometryHash())
     finally:
         env.Destroy()
+
+if __name__ == "__main__":
+    main()
