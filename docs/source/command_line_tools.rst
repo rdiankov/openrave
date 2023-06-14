@@ -47,7 +47,7 @@ features it supports:
 
   **Output**:
 
-.. shell-block:: openrave.py --listdatabases
+.. shell-block:: python3 -m openravepy --listdatabases
 
 * Can set custom collision, physics, and viewer::
 
@@ -75,7 +75,7 @@ Given that environment xml files can now contain tags for any interface, it is p
 Command-line
 ~~~~~~~~~~~~
 
-.. shell-block:: openrave.py --help
+.. shell-block:: python3 -m openravepy --help
 
 .. _tool-openrave-robot:
 
