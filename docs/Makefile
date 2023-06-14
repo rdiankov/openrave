@@ -64,6 +64,7 @@ openravepy_internal_doc: openravepy_changed build/en/coreapixml/index.xml build/
 	#touch openravepy_internal_doc
 
 source/interface_types.rst source/interface_types: openrave_plugins_changed build_interfaces.py
+	rm -f openravepy
 	python build_interfaces.py --outdir=source
 
 source/openravepy/openravepy.rst: openravepy_changed

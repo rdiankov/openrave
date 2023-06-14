@@ -107,7 +107,7 @@ Each robot can hold several different types of hashes depending on the informati
 Command-line
 ~~~~~~~~~~~~
 
-.. shell-block:: openrave-robot.py --help
+.. shell-block:: python3 -m openravepy.robot --help
 
 .. _tool-openrave-createplugin:
 
@@ -125,7 +125,7 @@ This command line will create a plugin that offers a **MyNewModule** :class:`.Mo
 Command-line
 ~~~~~~~~~~~~
 
-.. shell-block:: openrave-createplugin.py --help
+.. shell-block:: python3 -m openravepy.createplugin --help
 
 .. _tool-openrave:
 

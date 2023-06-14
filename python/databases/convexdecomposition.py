@@ -55,7 +55,7 @@ Approximates each of the links with a set of convex hulls using John Ratcliff's 
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database convexdecomposition --help
+.. shell-block:: python3 -m openravepy --database convexdecomposition --help
 
 Class Definitions
 -----------------
