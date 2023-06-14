@@ -3433,11 +3433,13 @@ protected:
     ///          - dynamic acc limits
     ///            |ddq| <= a(q, dq)
     ///          - manip speed limits
-    ///            |J(q) dq| <= |dr+|
+    ///            |J(q) dq|^2 <= |dr+|^2
     ///          - manip accel limits
-    ///            |J(q) ddq + dJ(q, dq) dq| <= |ddr+|
+    ///            |J(q) ddq + dJ(q, dq) dq|^2 <= |ddr+|^2
+    ///          - toruqe limits:
+    ///            tq- <= M(q)ddq + C(q, dq) <= tq+
     ///          in this function, we first focus on boundary condition (t0 and t1). thus, q and dq are assume to be known.
-    ///          dynamics acc limits becomes closed-form inequalities about ddq, while manip speed/accel are not. thus, we only support dynamic acc limits only in this function. (btw, manip speed is not relevant in this function).
+    ///          dynamics acc limits becomes closed-form inequalities about ddq, while others are not. thus, we only support dynamic acc limits only in this function. (btw, manip speed is not relevant in this function).
     /// \param[out] vVelLimits, vAccelLimits : resultant acceleration limits. expected to have the default value in it.
     /// \param[in] vVelocityLimits : just in case, clamp velocity by velocity limits, since dynamic limit might be ill-condition.
     /// \param[in] x0Vect, v0Vect, x1Vect, v1Vect : positions(q) and velocities(dq) at t0 and t1.
@@ -3468,7 +3470,7 @@ protected:
     ///        this function assumes that slowdown along with Check2 is computationally expensive and roughly checking the whole rampndVect might be slightly efficient.
     ///        this function handles the mostly same time-based conditions checked in Check2. but, this function considers these in dedicated ways to compute initial guess. the method to reduce limits is different for the types of constraints.
     ///
-    /// \param[out] vellimits, accellimits : should contain initial values. then, resultant limits are computed in this function. size and order are same as _parameters's config.
+    /// \param[in/out] vellimits, accellimits : when input, should contain initial values. when output, resultant limits are computed in this function. size and order are same as _parameters's config.
     /// \param[in] v0Vect, v1Vect : velocities at t0 and t1 (boundary condition)
     /// \param[in] rampndVect : vector of rampnd to check
     /// \param[in] usedBody : if not null pointer, enable dynamics limits computation.
@@ -3499,7 +3501,7 @@ protected:
         //   - slowdown method
         //     scale down only the joints which violate the limits. because this function is just an estimation, if GetAVec is not violating the dynamic limit while accellimits violates the dynamic limit, do not clamp the limit for now not to avoid from making the limit too conservative.
         //     different from main slowdown loop, do not scale down the vel limits for now, since reducing of dq might not always have solution.
-        //     for now, do not multiply fiSearchVelAccelMult. compared with manip accel/speed, dynamic limits are closed-form and less inaccurate.
+        //     for now, do not multiply fiSearchVelAccelMult nor fReductionRatio. compared with manip accel/speed, dynamic limits are closed-form and less inaccurate.
         bool bHasDynamicLimitViolation = false; // true if dynamic limit violation
         if( _dynamicLimitInfo.bUseDynamicLimits && !!usedBody ) {
             std::vector<dReal>& vTmpX = _dynamicLimitInfo.vCacheTmpX, vTmpV = _dynamicLimitInfo.vCacheTmpV, vTmpA = _dynamicLimitInfo.vCacheTmpA, vTmpALim = _dynamicLimitInfo.vCacheTmpALim;
@@ -3538,12 +3540,25 @@ protected:
 
         // check manip accel/speed
         //   - nature of manip accel/speed constraints
-        //     |J(q) dq| <= |dr+|
-        //     |J(q) ddq + dJ(q, dq) dq| <= |ddr+|
+        //     |J(q) dq|^2 <= |dr+|^2
+        //     |J(q) ddq + dJ(q, dq) dq|^2 <= |ddr+|^2
         //     depending on q, dq, and ddq. once ddq violation is obseved, we can reduce dq and/or ddq. reducing of only dq or reducing of only ddq might not always have solution. reducing of both dq and ddq always has solution. this relationship is case-by-case
+        //   - how reducing affects (example of manip accel)
+        //     for example, let violation ratio ka = |ddr|/|ddr+|, kv=ka^{1/2}
+        //     if we scale by ka and kv, e.g. use ka*ddq and kv*dq, we get:
+        //       |J(q) (ka*ddq) + dJ(q, (kv*dq)) (kv*dq)|^2 ~= (|ka|*|J(q) ddq + dJ(q, dq) dq|)^2  =  (|ka|*|ddr|)^2
+        //     and
+        //       (|ka|*|ddr|)^2 <= |ddr+|^2
+        //     but, we might have larger scaling mult because:
+        //       - in the smoother's algorithm, we don't scale ddq and dq themselves, but we scale the limits, ddq+ and dq+. ddq and dq are the results from ramp creation based on newly scaled ddq+ and dq+. thus, the relationship is not straightforward.
+        //       - due to the newly computed ramp, the profiles of q, dq, and ddq might be different.
+        //     thus,
+        //       - if we scale down ka and kv, we might get conservative ramps.
+        //       - if we gradually scale down with using larger mults than ka and kv, we might get more aggressive ramps
         //   - slowdown method
         //     scale down the vel and acc limits, mostly in the same manner of main slowdown loop.
-        //     note : different from the old initial guess computation by GetMaxVelocitiesAccelerations, 1) use same computation as later slowdown iteration. 2) scale down vellimits as well, since scaling down of the acc limits might not be enough to scale down the max manip accel theoretically.
+        //     this function is called from _ComputeInterpolationWithInitialGuess, and we iterate slowdown loop several times by using fReductionRatio and fiSearchVelAccelMult to get more aggressive ramp.
+        //     note : different from the old initial guess computation by GetMaxVelocitiesAccelerations, 1) use same computation as later slowdown iteration. 2) scale down vellimits as well, since scaling down of the acc limits might not be enough to scale down the max manip accel theoretically. 3) slowdown by GetMaxVelocitiesAccelerations is bit inaccurate than that by CheckManipConstraints2. in addition, the behavior looks slightly less deterministic (sometimes return larger limits, but sometimes slower limits).
         bool bHasManipViolation = false;
         if( _bmanipconstraints ) {
             try {
@@ -3643,20 +3658,22 @@ protected:
     ///
     ///        the motivation to compute initial guess is:
     ///          - in Check2 function, limits are checked along with collision checking. collision checking would be computationally expensive. it would be preferable to slowdown the ramps initially before Check2 function. especially, there would be more chance to reject the ramp which causes too long duration before Check2.
-    ///          - due to various reasons (for example, ramp modification by CheckPathAllConstraints), checking based on shortcutRampNDVect is not perfet. 1) if there is such ramp modification, this function is supposed to give the good initial guess. 2) if there is no such ramp modification, this function gives the constraint-respecting ramps.
-    ///          - because we can roughly slowdown the ramp before Check2, we can try slightly better limits to respect the constraints. thus, more chance to get better duration and better shortcut results.
+    ///          - due to various reasons (for example, ramp modification by CheckPathAllConstraints), checking based on shortcutRampNDVect is not perfet. 1) but, even if there is such ramp modification, this function is supposed to give the good initial guess. 2) if there is no such ramp modification, this function gives the constraint-respecting ramps.
+    ///          - because we can roughly slowdown the ramp before Check2, we can spend computation time to get slightly better limits to respect the constraints. thus, more chance to get better duration and better shortcut results.
     ///
     ///        current time-based constraints:
     ///          - dynamic acc limits
     ///            |ddq| <= a(q, dq)
     ///          - manip speed limits
-    ///            |J(q) dq| <= |dr+|
+    ///            |J(q) dq|^2 <= |dr+|^2
     ///          - manip accel limits
-    ///            |J(q) ddq + dJ(q, dq) dq| <= |ddr+|
+    ///            |J(q) ddq + dJ(q, dq) dq|^2 <= |ddr+|^2
+    ///          - toruqe limits: TODO : torque limits are not fully supported in this function yet!!
+    ///            tq- <= M(q)ddq + C(q, dq) <= tq+
     ///
     ///        internal loop
     ///          - different from the caller's main loop, this function has internal loop to gradually reduce the limits, instead of reducing the limit in one iteration.
-    ///          - in the above constraints, dynamic acc limits can be written closed-form inequalities of ddq. however, not for manip speed/accel limits. in addition, we need to re-compute the ramps once limits are reduced. thus, reducing the limits gradually can lead more chance to get better solutions.
+    ///          - in the above constraints, dynamic acc limits can be written closed-form inequalities of ddq. however, not for other limits right now. in addition, we need to re-compute the ramps once limits are reduced. thus, reducing the limits gradually can lead more chance to get better solutions. see also _CheckTimeBasedConstraintsForInitialSlowDown in detail.
     ///
     ///        note that internally uses debugging member variables (_vShortcutStats and _ssshortcutprogress) if SMOOTHER2_PROGRESS_DEBUG is enabled in _ComputeInterpolation.
     ///
@@ -3679,12 +3696,13 @@ protected:
                                                const int nMaxInitialGuessSlowDown = 3)
     {
         bSlowedDown = false;
+        const int iLastInitialGuessSlowDown = nMaxInitialGuessSlowDown-1;
         for(int iInitialGuessSlowDown = 0; iInitialGuessSlowDown < nMaxInitialGuessSlowDown; ++iInitialGuessSlowDown) {
             if( !_ComputeInterpolation(shortcutRampNDVect, segmentTime, iIterProgress,
                                        t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
                 return false;
             }
-            const dReal fReductionRatio = (iInitialGuessSlowDown == nMaxInitialGuessSlowDown-1) ? 1.0 : 0.5; // if the last loop, use the computed limits (e.g. 1.0). otherwise, use slightly larger limits (e.g. 0.5) to compute like bisection method.
+            const dReal fReductionRatio = (iInitialGuessSlowDown == iLastInitialGuessSlowDown) ? 1.0 : 0.5; // if the last loop, use the computed limits (e.g. 1.0). otherwise, use slightly larger limits (e.g. 0.5) to compute like bisection method.
             RampOptimizer::CheckReturn retcheck = _CheckTimeBasedConstraintsForInitialSlowDown(vellimits, accellimits, v0Vect, v1Vect, shortcutRampNDVect, usedBody, fReductionRatio);
             if( retcheck.retcode == 0 ) {
                 // if initial guess check passed, return true. note that this does not guarantee to pass Check2 later on, because checked ramp and conditions are slightly different.
@@ -3703,7 +3721,9 @@ protected:
                                    t0, t1, minTimeStep, x0Vect, x1Vect, v0Vect, v1Vect, vellimits, accellimits, iSlowDown, iters, numIters) ) {
             return false;
         }
-        // even if initial guess check didn't pass, return true. failing of _CheckTimeBasedConstraintsForInitialSlowDown does not mean failing of Check2 later on. no need to reject such ramp and limits and Check2 function can handle the ramp and limits later on.
+        // even if initial guess check didn't pass, return true. reaching here does not mean failing of the main slowdown loop, thus no need to reject such ramp and limits and Check2 function can handle the ramp and limits later on. the reasons are:
+        // - failing of _CheckTimeBasedConstraintsForInitialSlowDown does not mean failing of Check2 in the main slowdown loop later on.
+        // - in the last iteration, we might have already reached to the limit respecting ramp. but the after the last iteration in the above, we don't check the limits and we don't know it's successful or not.
         _ComputeVelAccelMults(fVelMult, fAccelMult, vellimits, accellimits);
         return true;
     }
