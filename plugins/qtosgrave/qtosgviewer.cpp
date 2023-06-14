@@ -177,6 +177,11 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
 
+    // Crop-margin visualization commands: toggle whether visualizations are displayed inside containers for 
+    // crop container margins and crop container empty margins
+    RegisterCommand("SetCropContainerMarginsVisible", boost::bind(&QtOSGViewer::_SetCropContainerMarginsVisibleCommand, this, _1, _2),
+    "Sets whether crop container margins are visualized or not");
+
     // Establish size limits per priority
     _mapGUIFunctionListLimits[ViewerCommandPriority::VERY_HIGH] = 100000;
     _mapGUIFunctionListLimits[ViewerCommandPriority::HIGH] = 100000;
@@ -1333,6 +1338,19 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_SetCropContainerMarginsVisibleCommand(ostream& sout, istream& sinput)
+{
+    std::string bodyName = "";
+    std::string linkName = "";
+    std::string geometryName = "";
+    std::string cropContainerMarginsType = "";
+    bool visible = false;
+    sinput >> bodyName >> linkName >> geometryName >> cropContainerMarginsType >> visible;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropContainerMarginsVisible, this, bodyName, linkName, geometryName, cropContainerMarginsType, visible), ViewerCommandPriority::LOW);
+    return true;
+}
+
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
     if (projectionMode == "orthogonal")
@@ -1648,23 +1666,23 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
     return GraphHandlePtr();
 }
 
-void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition)
+void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
 {
     // Set up offset node for label
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
     osg::Matrix offsetMatrix;
     offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
     trans->setMatrix(offsetMatrix);
-    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label, color);
     trans->addChild(labelTrans);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
-GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition), ViewerCommandPriority::MEDIUM); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition, color), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1997,6 +2015,14 @@ void QtOSGViewer::_MoveCameraPointOfView(const std::string& axis)
 void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
     _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
+}
+
+void QtOSGViewer::_SetCropContainerMarginsVisible(const std::string& bodyName, const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible)
+{
+    KinBodyItemPtr kinBody = _posgWidget->GetItemFromName(bodyName);
+    if (kinBody != nullptr) {
+        kinBody->SetCropContainerMarginsVisible(linkName, geometryName, cropContainerType, visible);
+    }
 }
 
 void QtOSGViewer::SetName(const string& name)

@@ -66,7 +66,38 @@ protected:
 
     void define_passes()
     {
-        // implement pass #1 (solid surfaces)
+
+        // implement pass #1 (outlines)
+        {
+            osg::ref_ptr<osg::StateSet> ss = new osg::StateSet;
+            osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
+            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
+            ss->setAttributeAndModes(polymode.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+
+            osg::ref_ptr<osg::CullFace> cf = new osg::CullFace;
+            cf->setMode(osg::CullFace::FRONT);
+            ss->setAttributeAndModes(cf.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+
+            ss->setAttributeAndModes(_wf_lw.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
+
+            _wf_mat->setColorMode(osg::Material::OFF);
+            _wf_mat->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+            _wf_mat->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+            _wf_mat->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+
+            // set by outline colour so no need to set here.
+            //_wf_mat->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
+
+            ss->setAttributeAndModes(_wf_mat.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+
+            ss->setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
+            ss->setTextureMode(0, GL_TEXTURE_1D, osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
+            ss->setTextureMode(0, GL_TEXTURE_2D, osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
+
+            addPass(ss.get());
+        }
+
+        // implement pass #2 (solid surfaces)
         {
             std::ostringstream vert_source;
             vert_source <<
@@ -122,37 +153,6 @@ protected:
             ss->setTextureAttributeAndModes(0, texenv.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
 
             addPass(ss.get());
-        }
-
-        // implement pass #2 (outlines)
-        {
-            osg::ref_ptr<osg::StateSet> ss = new osg::StateSet;
-            osg::ref_ptr<osg::PolygonMode> polymode = new osg::PolygonMode;
-            polymode->setMode(osg::PolygonMode::FRONT_AND_BACK, osg::PolygonMode::LINE);
-            ss->setAttributeAndModes(polymode.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-
-            osg::ref_ptr<osg::CullFace> cf = new osg::CullFace;
-            cf->setMode(osg::CullFace::FRONT);
-            ss->setAttributeAndModes(cf.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-
-            ss->setAttributeAndModes(_wf_lw.get(), osg::StateAttribute::OVERRIDE | osg::StateAttribute::ON);
-
-            _wf_mat->setColorMode(osg::Material::OFF);
-            _wf_mat->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
-            _wf_mat->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
-            _wf_mat->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
-
-            // set by outline colour so no need to set here.
-            //_wf_mat->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0, 0, 0, 1));
-
-            ss->setAttributeAndModes(_wf_mat.get(), osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-
-            ss->setMode(GL_LIGHTING, osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            ss->setTextureMode(0, GL_TEXTURE_1D, osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-            ss->setTextureMode(0, GL_TEXTURE_2D, osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-
-            addPass(ss.get());
-
         }
     }
 

@@ -401,6 +401,13 @@ public:
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
+        inline const Vector& GetBoxHalfExtents() const {
+            return _vGeomData;
+        }
+
+        inline const Vector& GetCageBaseHalfExtents() const {
+            return _vGeomData;
+        }
 
         /// \brief compute the inner empty volume in the geometry coordinate system
         ///
@@ -410,11 +417,27 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
+        uint8_t GetSideWallExists() const;
+
         inline const std::string& GetId() const {
             return _id;
         }
         inline const std::string& GetName() const {
             return _name;
+        }
+
+        inline const Vector& GetContainerOuterExtents() const {
+            return _vGeomData;
+        }
+        inline const Vector& GetContainerInnerExtents() const {
+            return _vGeomData2;
+        }
+
+        inline void SetContainerOuterExtents(const Vector& outerExtents) {
+            _vGeomData = outerExtents;
+        }
+        inline void SetContainerInnerExtents(const Vector& innerExtents) {
+            _vGeomData2 = innerExtents;
         }
 
         ///< for sphere it is radius
@@ -637,10 +660,10 @@ public:
             return _info._vGeomData;
         }
         inline const Vector& GetContainerOuterExtents() const {
-            return _info._vGeomData;
+            return _info.GetContainerOuterExtents();
         }
         inline const Vector& GetContainerInnerExtents() const {
-            return _info._vGeomData2;
+            return _info.GetContainerInnerExtents();
         }
         inline const Vector& GetContainerBottomCross() const {
             return _info._vGeomData3;
@@ -712,7 +735,9 @@ public:
         /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
         AABB ComputeAABB(const Transform& trans) const;
 
-        uint8_t GetSideWallExists() const;
+        inline uint8_t GetSideWallExists() const {
+            return _info.GetSideWallExists();
+        }
 
         void serialize(std::ostream& o, int options) const;
 
