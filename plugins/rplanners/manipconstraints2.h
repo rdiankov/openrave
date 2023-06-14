@@ -179,15 +179,15 @@ public:
                         }
                     }
                     info.fmaxdistfromcenter = RaveSqrt(info.fmaxdistfromcenter);
-#ifdef PROGRESS_DEBUG
-                    std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "[";
-                    FOREACH(itpoint, info.checkpoints) {
-                        ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
+                    if( IS_DEBUGLEVEL(Level_Debug) ) {
+                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                        ss << "[";
+                        FOREACH(itpoint, info.checkpoints) {
+                            ss << "[" << itpoint->x << ", " << itpoint->y << ", " << itpoint->z << "], ";
+                        }
+                        ss << "]";
+                        RAVELOG_DEBUG_FORMAT("env=%d, fmaxdistfromcenter=%f;manipname='%s';maxmanipspeed=%f;maxmanipaccel=%f;checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%manipname%_maxmanipspeed%_maxmanipaccel%ss.str());
                     }
-                    ss << "]";
-                    RAVELOG_DEBUG_FORMAT("env=%d, fmaxdistfromcenter=%f, checkpoints=%s", pbody->GetEnv()->GetId()%info.fmaxdistfromcenter%ss.str());
-#endif
                     setCheckedManips.insert(endeffector);
                 }
             }
