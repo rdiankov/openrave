@@ -60,7 +60,18 @@ inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
     }
 }
 
-
+bool StringEndsWith(const std::string& input, const std::string& suffix, bool ignoreCase = true) {
+    if (input.length() < suffix.length()) {
+        return false;
+    }
+    if (ignoreCase) {
+        return std::equal(input.end() - suffix.length(), input.end(), suffix.begin(), suffix.end(), [](char l, char r) -> bool {
+            return std::tolower(l) == std::tolower(r);
+        });
+    } else {
+        return std::equal(input.end() - suffix.length(), input.end(), suffix.begin(), suffix.end());
+    }
+}
 
 class TimedUniqueLock : public std::unique_lock<std::timed_mutex> {
 public:
@@ -584,14 +595,19 @@ public:
 
     bool LoadURI(const std::string& uri, const AttributesList& atts) override
     {
-        if ( _IsColladaURI(uri) ) {
+        std::string path;
+        if (!_IsURI(uri, path)) {
+            RAVELOG_WARN("Failed to load URI: %s is not a URI.", uri.c_str());
+            return false;
+        }
+        if (_IsColladaFile(path)) {
             return RaveParseColladaURI(shared_from_this(), uri, atts);
         }
-        else if ( _IsJSONURI(uri) ) {
+        else if (_IsJSONFile(path)) {
             _ClearRapidJsonBuffer();
             return RaveParseJSONURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
-        else if ( _IsMsgPackURI(uri) ) {
+        else if (_IsMsgPackFile(path)) {
             _ClearRapidJsonBuffer();
             return RaveParseMsgPackURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
@@ -605,10 +621,13 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
-        if( _IsColladaURI(filename) ) {
-            if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
-                UpdatePublishedBodies();
-                return true;
+        std::string path;
+        if (_IsURI(filename, path)) {
+            if (_IsColladaFile(path)) {
+                if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
+                    UpdatePublishedBodies();
+                    return true;
+                }
             }
         }
         else if( _IsColladaFile(filename) ) {
@@ -1635,21 +1654,24 @@ public:
             }
         }
 
-        if( _IsColladaURI(filename) ) {
-            if( !RaveParseColladaURI(shared_from_this(), robot, filename, atts) ) {
-                return RobotBasePtr();
+        std::string path;
+        if (_IsURI(filename, path)) {
+            if (_IsColladaFile(path)) {
+                if( !RaveParseColladaURI(shared_from_this(), robot, filename, atts) ) {
+                    return RobotBasePtr();
+                }
             }
-        }
-        else if( _IsJSONURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
-                return RobotBasePtr();
+            else if (_IsJSONFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
             }
-        }
-        else if( _IsMsgPackURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
-                return RobotBasePtr();
+            else if (_IsMsgPackFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
             }
         }
         else if( _IsColladaFile(filename) ) {
@@ -1826,23 +1848,27 @@ public:
             }
         }
 
-        if( _IsColladaURI(filename) ) {
-            if( !RaveParseColladaURI(shared_from_this(), body, filename, atts) ) {
-                return KinBodyPtr();
+        std::string path;
+        if (_IsURI(filename, path)) {
+            if (_IsColladaFile(path)) {
+                if( !RaveParseColladaURI(shared_from_this(), body, filename, atts) ) {
+                    return KinBodyPtr();
+                }
+            }
+            else if (_IsJSONFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
+            }
+            else if (_IsMsgPackFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
             }
         }
-        else if( _IsJSONURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
-                return KinBodyPtr();
-            }
-        }
-        else if( _IsMsgPackURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
-                return KinBodyPtr();
-            }
-        }
+
         else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
@@ -2033,26 +2059,32 @@ public:
         bool bIsMsgPackURI = false;
         bool bIsMsgPackFile = false;
         bool bIsXFile = false;
-        if( _IsColladaURI(filename) ) {
-            bIsColladaURI = true;
+
+        std::string path;
+        if (_IsURI(filename, path)) {
+            if (_IsColladaFile(path)) {
+                bIsColladaURI = true;
+            }
+            else if (_IsJSONFile(path)) {
+                bIsJSONURI = true;
+            }
+            else if (_IsMsgPackFile(path)) {
+                bIsMsgPackURI = true;
+            }
         }
-        else if( _IsJSONURI(filename) ) {
-            bIsJSONURI = true;
-        }
-        else if( _IsMsgPackURI(filename) ) {
-            bIsMsgPackURI = true;
-        }
-        else if( _IsColladaFile(filename) ) {
-            bIsColladaFile = true;
-        }
-        else if( _IsJSONFile(filename) ) {
-            bIsJSONFile = true;
-        }
-        else if( _IsMsgPackFile(filename) ) {
-            bIsMsgPackFile = true;
-        }
-        else if( _IsXFile(filename) ) {
-            bIsXFile = true;
+        else {
+            if (_IsColladaFile(filename)) {
+                bIsColladaFile = true;
+            }
+            else if (_IsJSONFile(filename)) {
+                bIsJSONFile = true;
+            }
+            else if (_IsMsgPackFile(filename)) {
+                bIsMsgPackFile = true;
+            }
+            else if (_IsXFile(filename)) {
+                bIsXFile = true;
+            }
         }
 
         if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsJSONURI||bIsMsgPackURI||bIsColladaFile||bIsJSONFile||bIsMsgPackFile||bIsXFile) ) {
@@ -4076,28 +4108,18 @@ protected:
         return lockenv;
     }
 
-    static bool _IsColladaURI(const std::string& uri)
+    static bool _IsURI(const std::string& uri, std::string& path)
     {
-        string scheme, authority, path, query, fragment;
+        string scheme, authority, query, fragment;
         string s1, s3, s6, s8;
         static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
         bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && scheme.size() > 0 && _IsColladaFile(path); //scheme.size() > 0;
+        return bmatch && !scheme.empty();
     }
 
     static bool _IsColladaFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 4 ) {
-            return false;
-        }
-        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'd' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
-            return true;
-        }
-        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'z' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".dae") || StringEndsWith(filename, ".zae");
     }
     static bool _IsColladaData(const std::string& data)
     {
@@ -4106,11 +4128,7 @@ protected:
 
     static bool _IsXFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 2 ) {
-            return false;
-        }
-        return filename[len-2] == '.' && ::tolower(filename[len-1]) == 'x';
+        return StringEndsWith(filename, ".x");
     }
 
     static bool _IsXData(const std::string& data)
@@ -4130,57 +4148,22 @@ protected:
 
     static bool _IsOpenRAVEFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 4 ) {
-            return false;
-        }
-        if(( filename[len-4] == '.') &&( ::tolower(filename[len-3]) == 'x') &&( ::tolower(filename[len-2]) == 'm') &&( ::tolower(filename[len-1]) == 'l') ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".xml");
     }
     static bool _IsRigidModelFile(const std::string& filename)
     {
         static boost::array<std::string,21> s_geometryextentsions = { { "iv","vrml","wrl","stl","blend","3ds","ase","obj","ply","dxf","lwo","lxo","ac","ms3d","x","mesh.xml","irrmesh","irr","nff","off","raw"}};
-        FOREACH(it, s_geometryextentsions) {
-            if( filename.size() > it->size()+1 ) {
-                size_t len = filename.size();
-                if( filename.at(len-it->size()-1) == '.' ) {
-                    bool bsuccess = true;
-                    for(size_t i = 0; i < it->size(); ++i) {
-                        if( ::tolower(filename[len-i-1]) != (*it)[it->size()-i-1] ) {
-                            bsuccess = false;
-                            break;
-                        }
-                    }
-                    if( bsuccess ) {
-                        return true;
-                    }
-                }
+        for (const std::string& ext : s_geometryextentsions) {
+            if (StringEndsWith(filename, ext)) {
+                return true;
             }
         }
         return false;
     }
 
-    static bool _IsJSONURI(const std::string& uri)
-    {
-        string scheme, authority, path, query, fragment;
-        string s1, s3, s6, s8;
-        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
-        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && scheme.size() > 0 && _IsJSONFile(path); //scheme.size() > 0;
-    }
-
     static bool _IsJSONFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 5 ) {
-            return false;
-        }
-        if( filename[len-5] == '.' && ::tolower(filename[len-4]) == 'j' && ::tolower(filename[len-3]) == 's' && ::tolower(filename[len-2]) == 'o' && ::tolower(filename[len-1]) == 'n' ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".json");
     }
 
     static bool _IsJSONData(const std::string& data)
@@ -4188,26 +4171,10 @@ protected:
         return data.size() >= 2 && data[0] == '{';
     }
 
-    static bool _IsMsgPackURI(const std::string& uri)
-    {
-        string scheme, authority, path, query, fragment;
-        string s1, s3, s6, s8;
-        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
-        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && scheme.size() > 0 && _IsMsgPackFile(path); //scheme.size() > 0;
-    }
-
     static bool _IsMsgPackFile(const std::string& filename)
     {
         // .msgpack
-        size_t len = filename.size();
-        if( len < 8 ) {
-            return false;
-        }
-        if( filename[len-8] == '.' && ::tolower(filename[len-7]) == 'm' && ::tolower(filename[len-6]) == 's' && ::tolower(filename[len-5]) == 'g' && ::tolower(filename[len-4]) == 'p' && ::tolower(filename[len-3]) == 'a' && ::tolower(filename[len-2]) == 'c' && ::tolower(filename[len-1]) == 'k' ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".msgpack");
     }
 
     static bool _IsMsgPackData(const std::string& data)
