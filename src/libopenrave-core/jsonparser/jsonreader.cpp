@@ -1058,9 +1058,8 @@ bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson:
 
 bool RaveParseJSON(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
-    JSONReader reader(atts, penv, ".json");
     KinBodyPtr pbody;
-    if( reader.ExtractFirst(doc, pbody, alloc) ) {
+    if (RaveParseJSON(penv, pbody, doc, atts, alloc)) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }
@@ -1096,16 +1095,8 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::s
 
 bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
-    std::string fullFilename = RaveFindLocalFile(filename);
-    if (fullFilename.size() == 0 ) {
-        return false;
-    }
-    rapidjson::Document doc(&alloc);
-    OpenRapidJsonDocument(fullFilename, doc);
-    JSONReader reader(atts, penv, ".json");
-    reader.SetFilename(fullFilename);
     KinBodyPtr pbody;
-    if( reader.ExtractFirst(doc, pbody, alloc) ) {
+    if (RaveParseJSONFile(penv, pbody, filename, atts, alloc)) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }
@@ -1155,23 +1146,8 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::st
 
 bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
-    JSONReader reader(atts, penv, ".json");
-    reader.SetURI(uri);
-    rapidjson::Document doc(&alloc);
-#if OPENRAVE_CURL
-    if (reader.IsDownloadingFromRemote()) {
-        reader.OpenRemoteDocument(uri, doc);
-    } else
-#endif
-    {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
-        if (fullFilename.size() == 0 ) {
-            return false;
-        }
-        OpenRapidJsonDocument(fullFilename, doc);
-    }
     KinBodyPtr pbody;
-    if( reader.ExtractOne(doc, pbody, uri, alloc) ) {
+    if (RaveParseJSONURI(penv, pbody, uri, atts, alloc)) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }
@@ -1197,11 +1173,8 @@ bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::s
 
 bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
-    rapidjson::Document doc(&alloc);
-    orjson::ParseJson(doc, data);
-    JSONReader reader(atts, penv, ".json");
     KinBodyPtr pbody;
-    if( reader.ExtractFirst(doc, pbody, alloc) ) {
+    if (RaveParseJSONData(penv, pbody, data, atts, alloc)) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }
@@ -1237,16 +1210,8 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std
 
 bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
-    std::string fullFilename = RaveFindLocalFile(filename);
-    if (fullFilename.size() == 0 ) {
-        return false;
-    }
-    rapidjson::Document doc(&alloc);
-    OpenMsgPackDocument(fullFilename, doc);
-    JSONReader reader(atts, penv, ".msgpack");
-    reader.SetFilename(fullFilename);
     KinBodyPtr pbody;
-    if( reader.ExtractFirst(doc, pbody, alloc) ) {
+    if(RaveParseMsgPackFile(penv, pbody, filename, atts, alloc)) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }
@@ -1297,24 +1262,8 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std:
 
 bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
-    JSONReader reader(atts, penv, ".msgpack");
-    reader.SetURI(uri);
-    rapidjson::Document doc(&alloc);
-#if OPENRAVE_CURL
-    if (reader.IsDownloadingFromRemote()) {
-        reader.OpenRemoteDocument(uri, doc);
-    } else
-#endif
-    {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
-        if (fullFilename.size() == 0 ) {
-            RAVELOG_DEBUG_FORMAT("could not resolve uri='%s' into a path", uri);
-            return false;
-        }
-        OpenMsgPackDocument(fullFilename, doc);
-    }
     KinBodyPtr pbody;
-    if( reader.ExtractOne(doc, pbody, uri, alloc) ) {
+    if (RaveParseMsgPackURI(penv, pbody, uri, atts, alloc)) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }
@@ -1340,11 +1289,8 @@ bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std
 
 bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
-    rapidjson::Document doc(&alloc);
-    MsgPack::ParseMsgPack(doc, data);
-    JSONReader reader(atts, penv, ".msgpack");
     KinBodyPtr pbody;
-    if( reader.ExtractFirst(doc, pbody, alloc) ) {
+    if (RaveParseMsgPackData(penv, pbody, data, atts, alloc)) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }
