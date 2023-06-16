@@ -6,7 +6,7 @@ include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS})
 set(openrave_libraries)
 set(openrave_static_libraries)
 
-get_target_property(FPARSER_TYPE ${FPARSER_LIBRARIES} TYPE)
+get_target_property(FPARSER_TYPE "${FPARSER_LIBRARIES}" TYPE)
 if( FPARSER_TYPE STREQUAL STATIC_LIBRARY)
   set(openrave_static_libraries ${openrave_static_libraries} ${FPARSER_LIBRARIES})
 else()
