@@ -2052,135 +2052,75 @@ public:
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentLock lockenv(GetMutex());
-        bool bIsColladaURI = false;
-        bool bIsColladaFile = false;
-        bool bIsJSONURI = false;
-        bool bIsJSONFile = false;
-        bool bIsMsgPackURI = false;
-        bool bIsMsgPackFile = false;
-        bool bIsXFile = false;
+        bool bIsCollada = false;
+        bool bIsJSON = false;
+        bool bIsMsgPack = false;
+        bool bIsX = false;
 
         std::string path;
-        if (_IsURI(filename, path)) {
-            if (_IsColladaFile(path)) {
-                bIsColladaURI = true;
-            }
-            else if (_IsJSONFile(path)) {
-                bIsJSONURI = true;
-            }
-            else if (_IsMsgPackFile(path)) {
-                bIsMsgPackURI = true;
-            }
+        bool bIsURI = _IsURI(filename, path);
+        if (bIsURI) {
+            path = filename;
         }
-        else {
-            if (_IsColladaFile(filename)) {
-                bIsColladaFile = true;
-            }
-            else if (_IsJSONFile(filename)) {
-                bIsJSONFile = true;
-            }
-            else if (_IsMsgPackFile(filename)) {
-                bIsMsgPackFile = true;
-            }
-            else if (_IsXFile(filename)) {
-                bIsXFile = true;
-            }
+        if (_IsColladaFile(path)) {
+            bIsCollada = true;
+        }
+        else if (_IsJSONFile(path)) {
+            bIsJSON = true;
+        }
+        else if (_IsMsgPackFile(path)) {
+            bIsMsgPack = true;
+        }
+        else if (_IsXFile(path)) {
+            bIsX = true;
         }
 
-        if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsJSONURI||bIsMsgPackURI||bIsColladaFile||bIsJSONFile||bIsMsgPackFile||bIsXFile) ) {
-            if( type == PT_KinBody ) {
-                BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
-                KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                if( bIsColladaURI ) {
+        if (type == PT_KinBody || type == PT_Robot) {
+            BOOST_ASSERT(!pinterface || (pinterface->GetInterfaceType() == PT_KinBody || pinterface->GetInterfaceType() == PT_Robot));
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
+            if (bIsCollada) {
+                if (bIsURI) {
                     if( !RaveParseColladaURI(shared_from_this(), pbody, filename, atts) ) {
                         return InterfaceBasePtr();
                     }
-                }
-                else if( bIsJSONURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsMsgPackURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsColladaFile ) {
+                } else {
                     if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
                         return InterfaceBasePtr();
                     }
                 }
-                else if( bIsJSONFile ) {
-                    _ClearRapidJsonBuffer();
+            } else if (bIsJSON) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
                     if( !RaveParseJSONFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
-                else if( bIsMsgPackFile ) {
-                    _ClearRapidJsonBuffer();
+            } else if (bIsMsgPack) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if( !RaveParseMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
                     if( !RaveParseMsgPackFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
-                else if( bIsXFile ) {
-                    if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
-                        return InterfaceBasePtr();
-                    }
+            } else if (bIsX) {
+                if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
+                    return InterfaceBasePtr();
                 }
-                pinterface = pbody;
-            }
-            else if( type == PT_Robot ) {
-                BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                if( bIsColladaURI ) {
-                    if( !RaveParseColladaURI(shared_from_this(), probot, filename, atts) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsJSONURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseJSONURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsMsgPackURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseMsgPackURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsColladaFile ) {
-                    if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsJSONFile ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseJSONFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsMsgPackFile ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseMsgPackFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsXFile ) {
-                    if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                pinterface = probot;
-            }
-            else {
+            } else {
                 return InterfaceBasePtr();
             }
+            pinterface = (type == PT_Robot) ? OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody) : pbody;
             pinterface->__struri = filename;
         }
+
         else {
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
             boost::shared_ptr<OpenRAVEXMLParser::InterfaceXMLReadable> preadable = boost::dynamic_pointer_cast<OpenRAVEXMLParser::InterfaceXMLReadable>(preader->GetReadable());
