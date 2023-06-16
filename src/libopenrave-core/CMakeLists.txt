@@ -77,6 +77,7 @@ endif()
 link_directories(${OPENRAVE_LINK_DIRS})
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
+target_include_directories(libopenrave-core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
@@ -123,6 +124,7 @@ if( OPT_STATIC )
     set(LIBOPENRAVE_CORE_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core)
   endif()
 
+  target_include_directories(libopenrave-core_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   set_target_properties(libopenrave-core_static PROPERTIES OUTPUT_NAME ${LIBOPENRAVE_CORE_NAME}
                                                 SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                                 VERSION ${OPENRAVE_VERSION}

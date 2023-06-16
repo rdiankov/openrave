@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
+#include "stringutils.h"
 
 #if OPENRAVE_CURL
 #include "jsondownloader.h"
@@ -34,20 +35,13 @@
 
 namespace OpenRAVE {
 
-static bool _EndsWith(const std::string& fullString, const std::string& endString) {
-    if (fullString.length() >= endString.length()) {
-        return fullString.compare(fullString.length() - endString.length(), endString.length(), endString) == 0;
-    }
-    return false;
-}
-
 /// \brief if filename endswith oldSuffix, replace it with newSuffix
 ///
 /// \return true if replaced oldSuffix with newSuffix
 static bool _ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
     // fix extension, replace dae with json
     // this is done for ease of migration
-    if (_EndsWith(filename, oldSuffix)) {
+    if (StringEndsWith(filename, oldSuffix)) {
         size_t len = filename.size();
         size_t suffixLen = oldSuffix.size();
         filename = filename.substr(0, len-suffixLen) + newSuffix;
@@ -469,11 +463,11 @@ protected:
         }
         else if (!IsDownloadingFromRemote()) {
             boost::shared_ptr<rapidjson::Document> newDoc;
-            if (_EndsWith(fullFilename, ".json")) {
+            if (StringEndsWith(fullFilename, ".json")) {
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenRapidJsonDocument(fullFilename, *newDoc);
             }
-            else if (_EndsWith(fullFilename, ".msgpack")) {
+            else if (StringEndsWith(fullFilename, ".msgpack")) {
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenMsgPackDocument(fullFilename, *newDoc);
             }

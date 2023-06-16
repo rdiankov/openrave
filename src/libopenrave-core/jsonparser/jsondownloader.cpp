@@ -16,20 +16,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "jsondownloader.h"
+#include "stringutils.h"
 
 #if OPENRAVE_CURL
 
 #include <openrave/openravemsgpack.h>
 
 namespace OpenRAVE {
-
-static bool _EndsWith(const std::string& fullString, const std::string& endString)
-{
-    if (fullString.length() >= endString.length()) {
-        return fullString.compare(fullString.length() - endString.length(), endString.length(), endString) == 0;
-    }
-    return false;
-}
 
 /// \brief get the scheme of the uri, e.g. file: or openrave:
 static void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
@@ -198,10 +191,10 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
             }
 
             // parse data
-            if (_EndsWith(pContext->uri, ".json")) {
+            if (StringEndsWith(pContext->uri, ".json")) {
                 _ParseJsonDocument(pContext->buffer, pContext->uri, *pContext->pDoc);
             }
-            else if (_EndsWith(pContext->uri, ".msgpack")) {
+            else if (StringEndsWith(pContext->uri, ".msgpack")) {
                 _ParseMsgPackDocument(pContext->buffer, pContext->uri, *pContext->pDoc);
             }
             else {

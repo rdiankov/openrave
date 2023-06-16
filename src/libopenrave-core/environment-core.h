@@ -20,6 +20,7 @@
 #include "ravep.h"
 #include "colladaparser/colladacommon.h"
 #include "jsonparser/jsoncommon.h"
+#include "stringutils.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -57,19 +58,6 @@ inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
     if (vec.size() < size) {
         //RAVELOG_WARN_FORMAT("resizing 0x%x from %d to %d", &vec%(vec.size())%(index + 1));
         vec.resize(size);
-    }
-}
-
-bool StringEndsWith(const std::string& input, const std::string& suffix, bool ignoreCase = true) {
-    if (input.length() < suffix.length()) {
-        return false;
-    }
-    if (ignoreCase) {
-        return std::equal(input.end() - suffix.length(), input.end(), suffix.begin(), suffix.end(), [](char l, char r) -> bool {
-            return std::tolower(l) == std::tolower(r);
-        });
-    } else {
-        return std::equal(input.end() - suffix.length(), input.end(), suffix.begin(), suffix.end());
     }
 }
 
