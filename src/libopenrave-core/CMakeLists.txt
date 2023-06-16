@@ -4,13 +4,19 @@ if( HAVE_MKSTEMP )
 endif()
 
 set(OPENRAVE_CORE_LIBRARIES ${openrave_libraries} ${OPENRAVE_CURL_LIBRARIES})
+set(OPENRAVE_CORE_STATIC_LIBRARIES ${openrave_static_libraries})
 set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h  xmlreaders-core.cpp genericcollisionchecker.cpp genericphysicsengine.cpp genericrobot.cpp multicontroller.cpp generictrajectory.cpp jsonparser/jsoncommon.cpp jsonparser/jsonreader.cpp jsonparser/jsonwriter.cpp jsonparser/jsondownloader.cpp)
 
 if( libpcrecpp_FOUND )
   # pcre for url parsing
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${libpcrecpp_CFLAGS_OTHER}")
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${libpcrecpp_LDFLAGS_OTHER}")
-  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${libpcrecpp_LIBRARIES})
+  get_target_property(libpcrecpp_TYPE ${libpcrecpp_LIBRARIES} TYPE)
+  if(libpcrecpp_TYPE STREQUAL STATIC_LIBRARY)
+    set(OPENRAVE_CORE_STATIC_LIBRARIES ${OPENRAVE_CORE_STATIC_LIBRARIES} ${libpcrecpp_LIBRARIES})
+  else()
+    set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${libpcrecpp_LIBRARIES})
+  endif()
   include_directories(${libpcrecpp_INCLUDE_DIRS})
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${libpcrecpp_LIBRARY_DIRS})
   add_definitions(-DHAVE_PCRECPP)
@@ -25,7 +31,13 @@ if( COLLADA_DOM_FOUND )
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_DOM_LDFLAGS_OTHER}")
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
   include_directories(SYSTEM ${COLLADA_DOM_INCLUDE_DIRS})
-  set (OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
+
+  get_target_property(COLLADA_DOM_TYPE ${COLLADA_DOM_LIBRARIES} TYPE)
+  if( COLLADA_DOM_TYPE STREQUAL STATIC_LIBRARY)
+    set (OPENRAVE_CORE_STATIC_LIBRARIES ${OPENRAVE_CORE_STATIC_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
+  else()
+    set (OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
+  endif()
   message(STATUS "Geometry Parsing: Collada DOM ${COLLADA_DOM_VERSION}")
   set(openrave_core_SOURCES ${openrave_core_SOURCES} colladaparser/colladareader.cpp colladaparser/colladawriter.cpp colladaparser/colladacommon.cpp)
 endif()
@@ -60,10 +72,6 @@ endif()
 
 link_directories(${OPENRAVE_LINK_DIRS})
 
-if( COLLADA_DOM_FOUND )
-  set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${COLLADA_DOM_LIBRARIES})
-endif()
-
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
@@ -71,7 +79,7 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 target_link_libraries(libopenrave-core
-  PRIVATE boost_assertion_failed ${IVCON_LIBRARY}
+  PRIVATE boost_assertion_failed ${IVCON_LIBRARY} ${OPENRAVE_CORE_STATIC_LIBRARIES}
   PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES}
 )
 install(TARGETS libopenrave-core
@@ -117,7 +125,7 @@ if( OPT_STATIC )
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   target_link_libraries(libopenrave-core_static
-    PRIVATE boost_assertion_failed ${IVCON_LIBRARY}
+    PRIVATE boost_assertion_failed ${IVCON_LIBRARY} ${OPENRAVE_CORE_STATIC_LIBRARIES}
     PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES}
   )
   install(TARGETS libopenrave-core_static
