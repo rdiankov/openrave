@@ -352,7 +352,7 @@ std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList)
     const size_t arraySize = len(pyOrientedBoxList);
     std::vector<OrientedBox> vOrientedBox(arraySize);
     for(size_t iOrientedBox = 0; iOrientedBox < arraySize; ++iOrientedBox) {
-        vOrientedBox[iOrientedBox] = ExtractOrientedBox(pyOrientedBoxList[iOrientedBox]);
+        vOrientedBox[iOrientedBox] = ExtractOrientedBox(pyOrientedBoxList[py::to_object(iOrientedBox)]);
     }
     return vOrientedBox;
 }
@@ -1569,8 +1569,6 @@ void init_openravepy_global()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >(m, "GraphHandle", DOXY_CLASS(GraphHandle))
-    .def(init<>())
-    .def(init<GraphHandlePtr>(), "handle"_a)
 #else
     class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)
 #endif
@@ -1581,8 +1579,6 @@ void init_openravepy_global()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >(m, "UserData", DOXY_CLASS(UserData))
-    .def(init<>())
-    .def(init<UserDataPtr>(), "handle"_a)
 #else
     class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
 #endif
@@ -1592,7 +1588,6 @@ void init_openravepy_global()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, PyUserData >(m, "SerializableData", DOXY_CLASS(SerializableData))
     .def(init<>())
-    .def(init<SerializableDataPtr>(), "handle"_a)
 #else
     class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, bases<PyUserData> >("SerializableData", DOXY_CLASS(SerializableData))
 #endif
@@ -1610,7 +1605,6 @@ void init_openravepy_global()
     class_<PyRay, OPENRAVE_SHARED_PTR<PyRay> >(m, "Ray", DOXY_CLASS(geometry::ray))
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "dir"_a)
-    .def(init<const RAY&>(), "r"_a)
     .def("__copy__", [](const PyRay& self){
             return self;
         })
@@ -1658,7 +1652,6 @@ void init_openravepy_global()
     class_<PyAABB, OPENRAVE_SHARED_PTR<PyAABB> >(m, "AABB", DOXY_CLASS(geometry::aabb))
     .def(init<>())
     .def(init<object, object>(), "pos"_a, "extents"_a)
-    .def(init<const AABB&>(), "ab"_a)
     .def("__copy__", [](const PyAABB& self){
             return self;
         })
@@ -1714,7 +1707,6 @@ void init_openravepy_global()
     class_<PyOrientedBox, OPENRAVE_SHARED_PTR<PyOrientedBox> >(m, "OrientedBox", DOXY_CLASS(geometry::OrientedBox))
     .def(init<>())
     .def(init<object, object>(), "pose"_a, "extents"_a)
-    .def(init<const OrientedBox&>(), "obb"_a)
     .def("__copy__", [](const PyOrientedBox& self){
             return self;
         })
@@ -1768,7 +1760,6 @@ void init_openravepy_global()
     class_<PyTriMesh, OPENRAVE_SHARED_PTR<PyTriMesh> >(m, "TriMesh", DOXY_CLASS(TriMesh))
     .def(init<>())
     .def(init<object, object>(), "vertices"_a, "indices"_a)
-    .def(init<const TriMesh&>(), "mesh"_a)
     .def("__copy__", [](const PyTriMesh& self){
             return self;
         })
@@ -1808,10 +1799,8 @@ void init_openravepy_global()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyReadable, PyReadablePtr >(m, "Readable", DOXY_CLASS(eadable))
-    .def(init<ReadablePtr>(), "readableraw"_a)
 #else
     class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
-    .def(init<ReadablePtr>(py::args("readableraw")))
 #endif
     .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1840,7 +1829,6 @@ void init_openravepy_global()
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >(m, "PluginInfo", DOXY_CLASS(PLUGININFO))
-    .def(init<const PLUGININFO&>(), "info"_a)
 #else
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
 #endif
@@ -1856,7 +1844,6 @@ void init_openravepy_global()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
             .def(init<>())
-            .def(init<const ConfigurationSpecification&>(), "spec"_a)
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
             .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
             .def(init<const std::string&>(), "xmldata"_a)

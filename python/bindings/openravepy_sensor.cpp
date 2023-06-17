@@ -738,7 +738,6 @@ void init_openravepy_sensor()
         OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> (PySensorBase::*GetSensorData2)(SensorBase::SensorType) = &PySensorBase::GetSensorData;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         scope_ sensor = class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, PyInterfaceBase>(m, "Sensor", DOXY_CLASS(SensorBase))
-                        .def(init<SensorBasePtr, PyEnvironmentBasePtr>(), "psensor"_a, "pyenv"_a)
 #else
         scope_ sensor = class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> >("Sensor", DOXY_CLASS(SensorBase), no_init)
 #endif
@@ -782,8 +781,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // SensorData is inside SensorBase
         class_<PySensorBase::PySensorData, OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> >(sensor, "SensorData", DOXY_CLASS(SensorBase::SensorData))
-        .def(init<SensorBase::SensorType>(), "type"_a)
-        .def(init<SensorBase::SensorDataPtr>(), "pdata"_a)
 #else
         class_<PySensorBase::PySensorData, OPENRAVE_SHARED_PTR<PySensorBase::PySensorData> >("SensorData", DOXY_CLASS(SensorBase::SensorData),no_init)
 #endif
@@ -794,8 +791,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // LaserSensorData is inside SensorBase
         class_<PySensorBase::PyLaserSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyLaserSensorData>, PySensorBase::PySensorData>(sensor, "LaserSensorData", DOXY_CLASS(SensorBase::LaserSensorData))
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::LaserSensorData>>(), "pgeom"_a, "pdata"_a)
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const>>(), "pgeom"_a)
 #else
         class_<PySensorBase::PyLaserSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyLaserSensorData>, bases<PySensorBase::PySensorData> >("LaserSensorData", DOXY_CLASS(SensorBase::LaserSensorData),no_init)
 #endif
@@ -807,8 +802,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // CameraSensorData is inside SensorBase
         class_<PySensorBase::PyCameraSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyCameraSensorData>, PySensorBase::PySensorData>(sensor, "CameraSensorData", DOXY_CLASS(SensorBase::CameraSensorData))
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::CameraSensorData>>(), "pgeom"_a, "pdata"_a)
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const>>(), "pgeom"_a)
 #else
         class_<PySensorBase::PyCameraSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyCameraSensorData>, bases<PySensorBase::PySensorData> >("CameraSensorData", DOXY_CLASS(SensorBase::CameraSensorData),no_init)
 #endif
@@ -821,8 +814,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // JointEncoderSensorData is inside SensorBase
         class_<PySensorBase::PyJointEncoderSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyJointEncoderSensorData>, PySensorBase::PySensorData>(sensor, "JointEncoderSensorData", DOXY_CLASS(SensorBase::JointEncoderSensorData))
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::JointEncoderGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::JointEncoderSensorData>>(), "pgeom"_a, "pdata"_a)
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::JointEncoderGeomData const>>(), "pgeom"_a)
 #else
         class_<PySensorBase::PyJointEncoderSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyJointEncoderSensorData>, bases<PySensorBase::PySensorData> >("JointEncoderSensorData", DOXY_CLASS(SensorBase::JointEncoderSensorData),no_init)
 #endif
@@ -834,8 +825,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // Force6DSensorData is inside SensorBase
         class_<PySensorBase::PyForce6DSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyForce6DSensorData>, PySensorBase::PySensorData>(sensor, "Force6DSensorData", DOXY_CLASS(SensorBase::Force6DSensorData))
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::Force6DSensorData>>(), "pgeom"_a, "pdata"_a)
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const>>(), "pgeom"_a)
 #else
         class_<PySensorBase::PyForce6DSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyForce6DSensorData>, bases<PySensorBase::PySensorData> >("Force6DSensorData", DOXY_CLASS(SensorBase::Force6DSensorData),no_init)
 #endif
@@ -846,8 +835,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // IMUSensorData is inside SensorBase
         class_<PySensorBase::PyIMUSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyIMUSensorData>, PySensorBase::PySensorData>(sensor, "IMUSensorData", DOXY_CLASS(SensorBase::IMUSensorData))
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::IMUGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::IMUSensorData>>(), "pgeom"_a, "pdata"_a)
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::IMUGeomData const>>(), "pgeom"_a)
 #else
         class_<PySensorBase::PyIMUSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyIMUSensorData>, bases<PySensorBase::PySensorData> >("IMUSensorData", DOXY_CLASS(SensorBase::IMUSensorData),no_init)
 #endif
@@ -862,8 +849,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // OdometrySensorData is inside SensorBase
         class_<PySensorBase::PyOdometrySensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyOdometrySensorData>, PySensorBase::PySensorData>(sensor, "OdometrySensorData", DOXY_CLASS(SensorBase::OdometrySensorData))
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::OdometryGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::OdometrySensorData>>(), "pgeom"_a, "pdata"_a)
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::OdometryGeomData const>>(), "pgeom"_a)
 #else
         class_<PySensorBase::PyOdometrySensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyOdometrySensorData>, bases<PySensorBase::PySensorData> >("OdometrySensorData", DOXY_CLASS(SensorBase::OdometrySensorData),no_init)
 #endif
@@ -878,8 +863,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         // TactileSensorData is inside SensorBase
         class_<PySensorBase::PyTactileSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyTactileSensorData>, PySensorBase::PySensorData>(sensor, "TactileSensorData", DOXY_CLASS(SensorBase::TactileSensorData))
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::TactileGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::TactileSensorData>>(), "pgeom"_a, "pdata"_a)
-        .def(init<OPENRAVE_SHARED_PTR<SensorBase::TactileGeomData const>>(), "pgeom"_a)
 #else
         class_<PySensorBase::PyTactileSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyTactileSensorData>, bases<PySensorBase::PySensorData> >("TactileSensorData", DOXY_CLASS(SensorBase::TactileSensorData),no_init)
 #endif
@@ -894,8 +877,6 @@ void init_openravepy_sensor()
             scope_ actuatorsensordata = 
             // ActuatorSensorData is inside SensorBase
             class_<PySensorBase::PyActuatorSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyActuatorSensorData>, PySensorBase::PySensorData>(sensor, "ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData))
-            .def(init<OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const>, OPENRAVE_SHARED_PTR<SensorBase::ActuatorSensorData>>(), "pgeom"_a, "pdata"_a)
-            .def(init<OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const>>(), "pdata"_a)
 #else
             class_<PySensorBase::PyActuatorSensorData, OPENRAVE_SHARED_PTR<PySensorBase::PyActuatorSensorData>, bases<PySensorBase::PySensorData> >("ActuatorSensorData", DOXY_CLASS(SensorBase::ActuatorSensorData),no_init)
 #endif
@@ -984,7 +965,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyCameraGeomData, OPENRAVE_SHARED_PTR<PyCameraGeomData>, PySensorGeometry>(m, "CameraGeomData", DOXY_CLASS(SensorBase::CameraGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const>>(), "pgeom"_a)
 #else
     class_<PyCameraGeomData, OPENRAVE_SHARED_PTR<PyCameraGeomData>, bases<PySensorGeometry> >("CameraGeomData", DOXY_CLASS(SensorBase::CameraGeomData))
 #endif
@@ -1016,7 +996,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyLaserGeomData, OPENRAVE_SHARED_PTR<PyLaserGeomData>, PySensorGeometry>(m, "LaserGeomData", DOXY_CLASS(SensorBase::LaserGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::LaserGeomData const>>(), "pgeom"_a)
 #else
     class_<PyLaserGeomData, OPENRAVE_SHARED_PTR<PyLaserGeomData>, bases<PySensorGeometry> >("LaserGeomData", DOXY_CLASS(SensorBase::LaserGeomData))
 #endif
@@ -1026,12 +1005,12 @@ void init_openravepy_sensor()
     .def_readwrite("max_range",&PyLaserGeomData::max_range)
     .def_readwrite("time_increment",&PyLaserGeomData::time_increment)
     .def_readwrite("time_scan",&PyLaserGeomData::time_scan)
+    .def_readwrite("resolution",&PyLaserGeomData::resolution)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyJointEncoderGeomData, OPENRAVE_SHARED_PTR<PyJointEncoderGeomData>, PySensorGeometry>(m, "JointEncoderGeomData", DOXY_CLASS(SensorBase::JointEncoderGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::JointEncoderGeomData const>>(), "pgeom"_a)
 #else
     class_<PyJointEncoderGeomData, OPENRAVE_SHARED_PTR<PyJointEncoderGeomData>, bases<PySensorGeometry> >("JointEncoderGeomData", DOXY_CLASS(SensorBase::JointEncoderGeomData))
 #endif
@@ -1041,7 +1020,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyForce6DGeomData, OPENRAVE_SHARED_PTR<PyForce6DGeomData>, PySensorGeometry>(m, "Force6DGeomData", DOXY_CLASS(SensorBase::Force6DGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const>>(), "pgeom"_a)
 #else
     class_<PyForce6DGeomData, OPENRAVE_SHARED_PTR<PyForce6DGeomData>, bases<PySensorGeometry> >("Force6DGeomData", DOXY_CLASS(SensorBase::Force6DGeomData))
 #endif
@@ -1068,7 +1046,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyIMUGeomData, OPENRAVE_SHARED_PTR<PyIMUGeomData>, PySensorGeometry>(m, "IMUGeomData", DOXY_CLASS(SensorBase::IMUGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::IMUGeomData const>>(), "pgeom"_a)
 #else
     class_<PyIMUGeomData, OPENRAVE_SHARED_PTR<PyIMUGeomData>, bases<PySensorGeometry> >("IMUGeomData", DOXY_CLASS(SensorBase::IMUGeomData))
 #endif
@@ -1078,7 +1055,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyOdometryGeomData, OPENRAVE_SHARED_PTR<PyOdometryGeomData>, PySensorGeometry>(m, "OdometryGeomData", DOXY_CLASS(SensorBase::OdometryGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::OdometryGeomData const>>(), "pgeom"_a)
 #else
     class_<PyOdometryGeomData, OPENRAVE_SHARED_PTR<PyOdometryGeomData>, bases<PySensorGeometry> >("OdometryGeomData", DOXY_CLASS(SensorBase::OdometryGeomData))
 #endif
@@ -1088,7 +1064,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyTactileGeomData, OPENRAVE_SHARED_PTR<PyTactileGeomData>, PySensorGeometry>(m, "TactileGeomData", DOXY_CLASS(SensorBase::TactileGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::TactileGeomData const>>(), "pgeom"_a)
 #else
     class_<PyTactileGeomData, OPENRAVE_SHARED_PTR<PyTactileGeomData>, bases<PySensorGeometry> >("TactileGeomData", DOXY_CLASS(SensorBase::TactileGeomData))
 #endif
@@ -1098,7 +1073,6 @@ void init_openravepy_sensor()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyActuatorGeomData, OPENRAVE_SHARED_PTR<PyActuatorGeomData>, PySensorGeometry>(m, "ActuatorGeomData", DOXY_CLASS(SensorBase::ActuatorGeomData))
     .def(init<>())
-    .def(init<OPENRAVE_SHARED_PTR<SensorBase::ActuatorGeomData const>>(), "pgeom"_a)
 #else
     class_<PyActuatorGeomData, OPENRAVE_SHARED_PTR<PyActuatorGeomData>, bases<PySensorGeometry> >("ActuatorGeomData", DOXY_CLASS(SensorBase::ActuatorGeomData))
 #endif

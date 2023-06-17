@@ -49,6 +49,14 @@ public:
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
     KinBody::GeometryInfoPtr GetGeometryInfo();
+    void FillGeometryInfo(KinBody::GeometryInfo& geominfo);
+
+    object GetBoxHalfExtents();
+    object GetCageBaseHalfExtents();
+    object GetContainerOuterExtents();
+    object GetContainerInnerExtents();
+    void SetContainerOuterExtents(object oOuterExtents);
+    void SetContainerInnerExtents(object oInnerExtents);
 
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());
@@ -65,6 +73,10 @@ public:
     object _filenamecollision = py::none_();
     object _vRenderScale = toPyVector3(Vector(1,1,1));
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
+    object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
+    object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
+    object _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
+    object _vPositiveCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
 
     py::list _vSideWalls;
     float _containerBaseHeight = 0.0;
@@ -100,6 +112,7 @@ public:
     object _vForcedAdjacentLinks = py::list();
     bool _bStatic = false;
     bool _bIsEnabled = true;
+    bool _bIgnoreSelfCollision = false;
     bool _bVisible = true;
 
 private:
@@ -246,6 +259,10 @@ public:
         void SetTransparency(float f);
         void SetAmbientColor(object ocolor);
         void SetDiffuseColor(object ocolor);
+        void SetNegativeCropContainerMargins(object negativeCropContainerMargins);
+        void SetPositiveCropContainerMargins(object positiveCropContainerMargins);
+        void SetNegativeCropContainerEmptyMargins(object negativeCropContainerEmptyMargins);
+        void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
         void SetRenderFilename(const string& filename);
         void SetName(const std::string& name);
         bool IsDraw();
@@ -268,6 +285,10 @@ public:
         float GetTransparency() const;
         object GetDiffuseColor() const;
         object GetAmbientColor() const;
+        object GetNegativeCropContainerMargins() const;
+        object GetPositiveCropContainerMargins() const;
+        object GetNegativeCropContainerEmptyMargins() const;
+        object GetPositiveCropContainerEmptyMargins() const;
         object GetCalibrationBoardNumDots() const;
         object GetCalibrationBoardDotsDistances() const;
         object GetCalibrationBoardDotColor() const;
@@ -287,11 +308,13 @@ public:
 
     object GetName();
     int GetIndex();
+    void Enable(bool bEnable);
     bool IsEnabled() const;
     bool SetVisible(bool visible);
     bool IsVisible() const;
     bool IsStatic() const;
-    void Enable(bool bEnable);
+    void SetIgnoreSelfCollision(bool bIgnore);
+    bool IsSelfCollisionIgnored() const;
 
     object GetParent() const;
 

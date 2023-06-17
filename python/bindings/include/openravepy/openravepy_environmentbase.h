@@ -246,10 +246,12 @@ public:
 
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_());
 
-    object drawlabel(const std::string &label, object worldPosition);
+    object drawlabel(const std::string &label, object worldPosition, object ocolor=py::none_());
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
     object drawboxarray(object opos, object oextents, object ocolor=py::none_());
+    object drawaabb(object oaabb, object otransform, object ocolor=py::none_(), float transparency=0.0f);
+    object drawobb(object oobb, object ocolor=py::none_(), float transparency=0.0f);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture);

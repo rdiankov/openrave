@@ -60,8 +60,9 @@ using py::scope;
 
 namespace numeric = py::numeric;
 
+
 // convert from rapidjson to python object
-object toPyObject(const rapidjson::Value& value)
+py::object toPyObject(const rapidjson::Value& value)
 {
     switch (value.GetType()) {
     case rapidjson::kObjectType:
@@ -503,6 +504,15 @@ object toPyArray(const Transform& t)
     pdata[4] = t.trans.x; pdata[5] = t.trans.y; pdata[6] = t.trans.z;
     return py::to_array_astype<dReal>(pyvalues);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+}
+
+object toPyArray(const std::vector<KinBody::GeometryInfo>& infos)
+{
+    py::list pyvalues;
+    for(size_t i = 0; i < infos.size(); ++i) {
+        pyvalues.append(toPyGeometryInfo(infos[i]));
+    }
+    return pyvalues;
 }
 
 object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos)
@@ -2043,7 +2053,7 @@ object PyEnvironmentBase::GetBodyFromEnvironmentBodyIndex(int bodyIndex)
 object PyEnvironmentBase::GetBodiesFromEnvironmentBodyIndices(object bodyIndices)
 {
     const std::vector<int> vBodyIndices = ExtractArray<int>(bodyIndices);
-    
+
     std::vector<KinBodyPtr> vbodies;
     _penv->GetBodiesFromEnvironmentBodyIndices(vBodyIndices, vbodies);
 
@@ -2362,7 +2372,7 @@ size_t PyEnvironmentBase::_getGraphColors(object ocolors, std::vector<float>&vco
     return 1;
 }
 
-size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<float>>& vvectors) {
+size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<float> >& vvectors) {
     std::vector<float> vpoints;
     if( PyObject_HasAttrString(odata.ptr(),"shape") ) {
         object datashape = odata.attr("shape");
@@ -2374,7 +2384,7 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
             }
             for(size_t i = 0; i < n/3; ++i) {
                 vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
-                            py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
+                                                        py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
             }
             return n/3;
         }
@@ -2387,7 +2397,7 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
             const object& o = odata.attr("flat");
             for(size_t i = 0; i < num; ++i) {
                 vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[py::to_object(3*i)]),
-                            py::extract<float>(o[py::to_object(3*i+1)]), py::extract<float>(o[py::to_object(3*i+2)])));
+                                                        py::extract<float>(o[py::to_object(3*i+1)]), py::extract<float>(o[py::to_object(3*i+2)])));
             }
             return num;
         }
@@ -2402,7 +2412,7 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
     }
     for(size_t i = 0; i < n/3; ++i) {
         vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
-                    py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
+                                                py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
     }
     return vvectors.size();
 }
@@ -2477,9 +2487,9 @@ object PyEnvironmentBase::drawarrow(object op1, object op2, float linewidth, obj
     return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
 }
 
-object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition)
+object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition, object ocolor)
 {
-    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition)));
+    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition), ExtractVector4(ocolor)));
 }
 
 object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
@@ -2497,31 +2507,51 @@ object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocol
     if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
         vcolor = ExtractVector34(ocolor,1.0f);
     }
-    std::vector<RaveVector<float>> vvectors;
+    std::vector<RaveVector<float> > vvectors;
     const size_t numpos = _getListVector(opos, vvectors);
     if (numpos <= 0) {
-        throw OpenRAVEException("a list of positions is empty" ,ORE_InvalidArguments);
+        throw OpenRAVEException("a list of positions is empty",ORE_InvalidArguments);
     }
     return toPyGraphHandle(_penv->drawboxarray(vvectors,ExtractVector3(oextents)));
+}
+
+object PyEnvironmentBase::drawaabb(object oaabb, object otransform, object ocolor, float transparency)
+{
+    const AABB aabb = ExtractAABB(oaabb);
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    return toPyGraphHandle(_penv->drawaabb(aabb, ExtractTransform(otransform), vcolor, transparency));
+}
+
+object PyEnvironmentBase::drawobb(object oobb, object ocolor, float transparency)
+{
+    const OrientedBox obb = ExtractOrientedBox(oobb);
+    RaveVector<float> vcolor(1,0.5,0.5,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    return toPyGraphHandle(_penv->drawobb(obb, vcolor, transparency));
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<dReal> >&_vtexture)
 {
     size_t x = _vtexture.size();
-    if(x<1){
+    if(x<1) {
         throw OpenRAVEException(_("_vtexture is empty"), ORE_InvalidArguments);
     }
     size_t y = _vtexture[0].size();
-    if(y<1){
+    if(y<1) {
         throw OpenRAVEException(_("_vtexture[0] is empty"), ORE_InvalidArguments);
     }
     boost::multi_array<float,3> vtexture(boost::extents[x][y][1]);
-    for(int i=0; i<x; i++){
-        if(_vtexture[i].size() != y){
+    for(int i=0; i<x; i++) {
+        if(_vtexture[i].size() != y) {
             throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
         }
-        for(int j=0; j<y; j++){
+        for(int j=0; j<y; j++) {
             vtexture[i][j][0] = _vtexture[i][j];
         }
     }
@@ -2529,27 +2559,27 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
 }
 object PyEnvironmentBase::drawplane(object otransform, object oextents, const std::vector<std::vector<std::vector<dReal> > >&_vtexture){
     size_t x = _vtexture.size();
-    if(x<1){
+    if(x<1) {
         throw OpenRAVEException(_("_vtexture is empty"), ORE_InvalidArguments);
     }
     size_t y = _vtexture[0].size();
-    if(y<1){
+    if(y<1) {
         throw OpenRAVEException(_("_vtexture[0] is empty"), ORE_InvalidArguments);
     }
     size_t z = _vtexture[0][0].size();
-    if(z<1){
+    if(z<1) {
         throw OpenRAVEException(_("_vtexture[0][0] is empty"), ORE_InvalidArguments);
     }
     boost::multi_array<float,3> vtexture(boost::extents[x][y][z]);
-    for(int i=0; i<x; i++){
-        if(_vtexture[i].size() != y){
+    for(int i=0; i<x; i++) {
+        if(_vtexture[i].size() != y) {
             throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
         }
-        for(int j=0; j<y; j++){
-            if(_vtexture[i][j].size() != z){
+        for(int j=0; j<y; j++) {
+            if(_vtexture[i][j].size() != z) {
                 throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d][%d] size is different"))%i%j), ORE_InvalidArguments);
             }
-            for(int k=0; k<z; k++){
+            for(int k=0; k<z; k++) {
                 vtexture[i][j][k] = _vtexture[i][j][k];
             }
         }
@@ -2592,8 +2622,13 @@ object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object oc
             return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,ExtractVector34(ocolors,1.0f)));
         }
         else {
-            BOOST_ASSERT(extract<size_t>(shape[0])==vpoints.size()/3);
-            return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,extract<boost::multi_array<float,2> >(ocolors)));
+            const py::numeric::array array = extract<py::numeric::array>(ocolors);
+            BOOST_ASSERT(array.ndim() == 2);
+            BOOST_ASSERT(array.shape(0) == vpoints.size() / 3);
+            BOOST_ASSERT(array.shape(1) == 3 || array.shape(1) == 4);
+            boost::multi_array<float, 2> colors(std::vector<size_t>({static_cast<unsigned long>(array.shape(0)), static_cast<unsigned long>(array.shape(1))}));
+            colors.assign(array.data(), array.data() + array.size());
+            return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,std::move(colors)));
         }
     }
     return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
@@ -3010,7 +3045,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(plot3_overloads, plot3, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinestrip_overloads, drawlinestrip, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlinelist_overloads, drawlinelist, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawarrow_overloads, drawarrow, 2, 4)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlabel_overloads, drawlabel, 2, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawlabel_overloads, drawlabel, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawbox_overloads, drawbox, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawboxarray_overloads, drawboxarray, 2, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(drawtrimesh_overloads, drawtrimesh, 1, 3)
@@ -3371,7 +3406,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def(init<int>(), "options"_a = (int) ECO_StartSimulationThread)
                      .def(init<std::string, int>(), "name"_a, "options"_a = (int) ECO_StartSimulationThread)
-                     .def(init<EnvironmentBasePtr>(), "penv"_a)
                      .def(init<const PyEnvironmentBase&>(), "penv"_a)
 #else
                      .def(init<optional<int> >(py::args("options")))
@@ -3613,10 +3647,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("drawlabel", &PyEnvironmentBase::drawlabel,
                           "label"_a,
                           "worldPosition"_a,
+                          "color"_a = py::none_(),
                           DOXY_FN(EnvironmentBase,drawlabel)
                           )
 #else
-                     .def("drawlabel",&PyEnvironmentBase::drawlabel,drawlabel_overloads(PY_ARGS("label","worldPosition") DOXY_FN(EnvironmentBase,drawlabel)))
+                     .def("drawlabel",&PyEnvironmentBase::drawlabel,drawlabel_overloads(PY_ARGS("label","worldPosition","color") DOXY_FN(EnvironmentBase,drawlabel)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("drawbox", &PyEnvironmentBase::drawbox,
@@ -3637,6 +3672,24 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           )
 #else
                      .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawboxarray_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawboxarray)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("drawaabb", &PyEnvironmentBase::drawaabb,
+                          "aabb"_a,
+                          "transform"_a,
+                          "color"_a = py::none_(),
+                          "transparency"_a = 0.0f,
+                          DOXY_FN(EnvironmentBase,drawaabb)
+                          )
+                     .def("drawobb", &PyEnvironmentBase::drawobb,
+                          "obb"_a,
+                          "color"_a = py::none_(),
+                          "transparency"_a = 0.0f,
+                          DOXY_FN(EnvironmentBase,drawobb)
+                          )
+#else
+                     .def("drawaabb",&PyEnvironmentBase::drawbox,drawbox_overloads(PY_ARGS("aabb","transform","color","transparency") DOXY_FN(EnvironmentBase,drawaabb)))
+                     .def("drawobb",&PyEnvironmentBase::drawbox,drawbox_overloads(PY_ARGS("obb","color","transparency") DOXY_FN(EnvironmentBase,drawobb)))
 #endif
                      .def("drawplane",drawplane1, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))
                      .def("drawplane",drawplane2, PY_ARGS("transform","extents","texture") DOXY_FN(EnvironmentBase,drawplane))

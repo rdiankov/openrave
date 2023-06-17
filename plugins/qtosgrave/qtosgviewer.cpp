@@ -177,6 +177,11 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
     RegisterCommand("PanCameraYDirection", boost::bind(&QtOSGViewer::_PanCameraYDirectionCommand, this, _1, _2),
     "Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.");
 
+    // Crop-margin visualization commands: toggle whether visualizations are displayed inside containers for 
+    // crop container margins and crop container empty margins
+    RegisterCommand("SetCropContainerMarginsVisible", boost::bind(&QtOSGViewer::_SetCropContainerMarginsVisibleCommand, this, _1, _2),
+    "Sets whether crop container margins are visualized or not");
+
     // Establish size limits per priority
     _mapGUIFunctionListLimits[ViewerCommandPriority::VERY_HIGH] = 100000;
     _mapGUIFunctionListLimits[ViewerCommandPriority::HIGH] = 100000;
@@ -1333,6 +1338,19 @@ bool QtOSGViewer::_PanCameraYDirectionCommand(ostream& sout, istream& sinput)
     return true;
 }
 
+bool QtOSGViewer::_SetCropContainerMarginsVisibleCommand(ostream& sout, istream& sinput)
+{
+    std::string bodyName = "";
+    std::string linkName = "";
+    std::string geometryName = "";
+    std::string cropContainerMarginsType = "";
+    bool visible = false;
+    sinput >> bodyName >> linkName >> geometryName >> cropContainerMarginsType >> visible;
+
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_SetCropContainerMarginsVisible, this, bodyName, linkName, geometryName, cropContainerMarginsType, visible), ViewerCommandPriority::LOW);
+    return true;
+}
+
 void QtOSGViewer::_SetProjectionMode(const std::string& projectionMode)
 {
     if (projectionMode == "orthogonal")
@@ -1648,42 +1666,43 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
     return GraphHandlePtr();
 }
 
-void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition)
+void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
 {
     // Set up offset node for label
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
     osg::Matrix offsetMatrix;
     offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
     trans->setMatrix(offsetMatrix);
-    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label, color);
     trans->addChild(labelTrans);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
-GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition), ViewerCommandPriority::MEDIUM); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition, color), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vextents, const RaveTransform<float>& pose, const RaveVector<float>& color, float transparency)
 {
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    SetMatrixTransform(*trans, pose);
     osg::ref_ptr<osg::Geode> geode(new osg::Geode());
 
     osg::ref_ptr<osg::Box> box = new osg::Box();
     box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
-    box->setCenter(osg::Vec3(vpos.x, vpos.y, vpos.z));
 
     osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
-    sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
+    const float alpha = std::max<float>(0.0, std::min<float>(1.0f, 1.0f - transparency));
+    sd->setColor(osg::Vec4f(color.x, color.y, color.z, alpha));
     geode->addDrawable(sd);
 
     // don't do transparent bin since that is too slow for big point clouds...
     //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    handle->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+    handle->getOrCreateStateSet()->setRenderingHint(alpha < 1.0f ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
 
     trans->addChild(geode);
     handle->addChild(trans);
@@ -1693,7 +1712,10 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vpos, c
 GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    const RaveVector<float> color(0.33203125f, 0.5f, 0.898437f);
+    RaveTransform<float> pose;
+    pose.trans = vpos;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, vextents, pose, color, 0.0f), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1726,6 +1748,22 @@ GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float>>& v
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
     _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+GraphHandlePtr QtOSGViewer::drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    RaveTransform<float> aabbpose;
+    aabbpose.trans = aabb.pos;
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, aabb.extents, transform*aabbpose, vcolor, transparency), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
+}
+
+GraphHandlePtr QtOSGViewer::drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency)
+{
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBox, this, handle, obb.extents, obb.transform, vcolor, transparency), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -1977,6 +2015,14 @@ void QtOSGViewer::_MoveCameraPointOfView(const std::string& axis)
 void QtOSGViewer::_MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
     _posgWidget->MoveCameraZoom(factor, isPan, panDelta);
+}
+
+void QtOSGViewer::_SetCropContainerMarginsVisible(const std::string& bodyName, const std::string& linkName, const std::string& geometryName, const std::string& cropContainerType, bool visible)
+{
+    KinBodyItemPtr kinBody = _posgWidget->GetItemFromName(bodyName);
+    if (kinBody != nullptr) {
+        kinBody->SetCropContainerMarginsVisible(linkName, geometryName, cropContainerType, visible);
+    }
 }
 
 void QtOSGViewer::SetName(const string& name)
@@ -2314,7 +2360,7 @@ void QtOSGViewer::_CloseGraphHandle(OSGSwitchPtr handle)
     _posgWidget->GetFigureRoot()->removeChild(handle);
 }
 
-void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float> t)
+void QtOSGViewer::_SetGraphTransform(OSGSwitchPtr handle, const RaveTransform<float>& t)
 {
     // have to convert to smart pointers so that we can get exceptions thrown rather than dereferencing null pointers
     if( handle->getNumChildren() > 0 ) {

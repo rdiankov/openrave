@@ -12,6 +12,7 @@
 // You should have received a copy of the GNU Lesser General Public License along with this program.
 // If not, see <http://www.gnu.org/licenses/>.
 #include "openraveplugindefs.h"
+#include <cfloat>
 #include <fstream>
 #include <openrave/planningutils.h>
 
@@ -409,6 +410,13 @@ public:
         _uniformsampler->SetSeed(_parameters->_nRandomGeneratorSeed);
 
         _fileIndexMod = 10000; // for trajectory saving
+        if( !!_logginguniformsampler ) {
+            _fileIndex = _logginguniformsampler->SampleSequenceOneUInt32();
+        }
+        else {
+            _fileIndex = RaveRandomInt();
+        }
+        _fileIndex = _fileIndex%_fileIndexMod;
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         _dumplevel = Level_Debug;
 #else
@@ -486,20 +494,13 @@ public:
 
         if( IS_DEBUGLEVEL(_dumplevel) ) {
             // Save parameters for planning
-            uint32_t randNum;
-            if( !!_logginguniformsampler ) {
-                randNum = _logginguniformsampler->SampleSequenceOneUInt32();
-            }
-            else {
-                randNum = RaveRandomInt();
-            }
-            std::string filename = str(boost::format("%s/parabolicsmoother2_%d.parameters.xml")%RaveGetHomeDirectory()%(randNum%1000));
+            std::string filename = str(boost::format("%s/parabolicsmoother2_%d.parameters.xml")%RaveGetHomeDirectory()%_fileIndex);
             ofstream f(filename.c_str());
             f << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
             f << *_parameters;
             RavePrintfA(str(boost::format("env=%d, planner parameters saved to %s")%_environmentid%filename), _dumplevel);
         }
-        _DumpTrajectory(ptraj, _dumplevel);
+        _DumpTrajectory(ptraj, _dumplevel, 0);
 
         // Save velocities
         std::vector<KinBody::KinBodyStateSaverPtr> vstatesavers;
@@ -519,7 +520,7 @@ public:
             vstatesavers.push_back(statesaver);
         }
 
-        uint32_t baseTime = utils::GetMilliTime();
+        uint64_t baseTime = utils::GetMicroTime();
         ConfigurationSpecification posSpec = _parameters->_configurationspecification;
         ConfigurationSpecification velSpec = posSpec.ConvertToVelocitySpecification();
         ConfigurationSpecification timeSpec;
@@ -603,7 +604,7 @@ public:
                             _totalTimeCheckPathAllConstraints_SegmentFeasible2 = 0;
 #endif
                             std::string description = str(boost::format("env=%d, Failed to initialize from cubic waypoints")%_environmentid);
-                            _DumpTrajectory(ptraj, _dumplevel);
+                            _DumpTrajectory(ptraj, _dumplevel, 1);
                             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                         }
 #ifdef SMOOTHER2_TIMING_DEBUG
@@ -684,7 +685,7 @@ public:
             if( !_SetMileStones(vWaypoints, parabolicpath) ) {
                 std::string description = str(boost::format("env=%d, Failed to initialize from piecewise linear waypoints")%_environmentid);
                 RAVELOG_WARN(description);
-                _DumpTrajectory(ptraj, _dumplevel);
+                _DumpTrajectory(ptraj, _dumplevel, 2);
                 return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
             }
             RAVELOG_DEBUG_FORMAT("env=%d, Finished initializing linear waypoints via _SetMileStones. #waypoint: %d -> %d", _environmentid%ptraj->GetNumWaypoints()%vWaypoints.size());
@@ -698,6 +699,7 @@ public:
         }
 
         // Main planning loop
+        uint64_t mergeStartTime = 0, shortcutStartTime = 0, conversionStartTime = 0;
         try {
             _bUsePerturbation = true;
             _feasibilitychecker.tol = parameters->_vConfigResolution;
@@ -716,6 +718,7 @@ public:
 #endif
             if( !!parameters->_setstatevaluesfn && _parameters->_nMaxIterations > 0 ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
+                mergeStartTime = utils::GetMicroTime();
 #ifdef SMOOTHER2_TIMING_DEBUG
                 _tShortcutStart = utils::GetMicroTime();
 #endif
@@ -727,6 +730,7 @@ public:
                     }
                 }
 #endif
+                shortcutStartTime = utils::GetMicroTime();
                 numShortcuts = _Shortcut(parabolicpath, parameters->_nMaxIterations, this, parameters->_fStepLength*0.99);
 #ifdef SMOOTHER2_TIMING_DEBUG
                 _tShortcutEnd = utils::GetMicroTime();
@@ -745,6 +749,7 @@ public:
             }
 
             // Now start converting parabolicpath to OpenRAVE trajectory
+            conversionStartTime = utils::GetMicroTime();
             ConfigurationSpecification newSpec = posSpec;
             newSpec.AddDerivativeGroups(1, true);
             int waypointOffset = newSpec.AddGroup("iswaypoint", 1, "next");
@@ -946,7 +951,7 @@ public:
                                     description = str(boost::format("env=%d, original RampND %d/%d does not satisfy constraints. retcode=0x%x")%_environmentid%irampnd%parabolicpath.GetRampNDVect().size()%checkret.retcode);
                                 }
                                 RAVELOG_WARN(description);
-                                _DumpTrajectory(ptraj, _dumplevel);
+                                _DumpTrajectory(ptraj, _dumplevel, 3);
                                 return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                             }
                         }
@@ -981,12 +986,19 @@ public:
             ptraj->Swap(_pdummytraj);
         }
         catch (const std::exception& ex) {
-            _DumpTrajectory(ptraj, _dumplevel);
+            _DumpTrajectory(ptraj, _dumplevel, 4);
             std::string description = str(boost::format("env=%d, Main planning loop threw exception %s")%_environmentid%ex.what());
             RAVELOG_WARN(description);
             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s.", _environmentid%(0.001f*(float)(utils::GetMilliTime() - baseTime)));
+
+        if( mergeStartTime != 0 && shortcutStartTime != 0 && conversionStartTime != 0 ) {
+            const uint64_t currentTime = utils::GetMicroTime();
+            RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s. (init=%fs, merge=%fs, shortcut=%fs, conv=%fs)", _environmentid%(1e-6*(currentTime - baseTime))%(1e-6*(mergeStartTime - baseTime))%(1e-6*(shortcutStartTime - mergeStartTime))%(1e-6*(conversionStartTime - shortcutStartTime))%(1e-6*(currentTime - conversionStartTime)));
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("env=%d, path optimizing - computation time = %f s.", _environmentid%(1e-6*(utils::GetMicroTime() - baseTime)));
+        }
 
         if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
             RAVELOG_DEBUG_FORMAT("env=%d, Start sampling trajectory after shortcutting (for verification)", _environmentid);
@@ -997,11 +1009,11 @@ public:
             catch (const std::exception& ex) {
                 std::string description = str(boost::format("env=%d, Sampling for verification failed: %s")%_environmentid%ex.what());
                 RAVELOG_WARN(description);
-                _DumpTrajectory(ptraj, _dumplevel);
+                _DumpTrajectory(ptraj, _dumplevel, 5);
                 return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
             }
         }
-        _DumpTrajectory(ptraj, _dumplevel);
+        _DumpTrajectory(ptraj, _dumplevel, 6);
 
 #ifdef SMOOTHER2_TIMING_DEBUG
         dReal tTotalShortcutTime = 0.000001f*(float)(_tShortcutEnd - _tShortcutStart);
@@ -1679,15 +1691,7 @@ protected:
             return nummerges;
         }
 
-        uint32_t fileindex;
-        if( !!_logginguniformsampler ) {
-            fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
-        }
-        else {
-            fileindex = RaveRandomInt();
-        }
-        fileindex = fileindex%_fileIndexMod;
-        _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 2);
+        _DumpParabolicPath(parabolicpath, _dumplevel, 2);
 
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         std::vector<int>& vShortcutStats = _vShortcutStats; // vShortcutStats[SS_X] keeps the number of times a shortcut iter finishes with the status SS_X
@@ -2412,12 +2416,12 @@ protected:
 
         // Report status
         RAVELOG_DEBUG_FORMAT("env=%d, merging ramps finished, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", _environmentid%nummerges%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
-        _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 3);
+        _DumpParabolicPath(parabolicpath, _dumplevel, 3);
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         curtime = utils::GetMicroTime();
         RAVELOG_DEBUG_FORMAT("env=%d, shortcut stats:\n  successful=%d\n  initialInterpolationFailed=%d\n  interpolatedSegmentTooLong=%d\n  interpolatedSegmentTooLongFromSlowDown=%d\n  timeInstantsTooClose=%d\n  check2CollisionFailed=%d\n  check2Failed=%d\n  lastSegmentFailed=%d\n  maxManipSpeedFailed=%d\n  maxManipAccelFailed=%d\n  slowDownFailed=%d\n  stateSettingFailed=%d\n  redundantShortcut=%d\n  _vZeroVelPointInfos.size()=%d\n  time since last successful shortcut=%.15e\n  final duration ratio=%.15e", _environmentid%vShortcutStats[SS_Successful]%vShortcutStats[SS_InitialInterpolationFailed]%vShortcutStats[SS_InterpolatedSegmentTooLong]%vShortcutStats[SS_InterpolatedSegmentTooLongFromSlowDown]%vShortcutStats[SS_TimeInstantsTooClose]%vShortcutStats[SS_Check2CollisionFailed]%vShortcutStats[SS_Check2Failed]%vShortcutStats[SS_LastSegmentFailed]%vShortcutStats[SS_MaxManipSpeedFailed]%vShortcutStats[SS_MaxManipAccelFailed]%vShortcutStats[SS_SlowDownFailed]%vShortcutStats[SS_StateSettingFailed]%vShortcutStats[SS_RedundantShortcut]%_vZeroVelPointInfos.size()%(0.000001f*(float)(curtime - latestSuccessfulShortcutTimestamp))%(tTotal/tOriginal));
         {
-            std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
+            std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%_fileIndex);
             std::ofstream f(shortcutprogressfilename.c_str());
             f << shortcutprogress.str();
             RAVELOG_DEBUG_FORMAT("env=%d, shortcutprogress saved to %s", _environmentid%shortcutprogressfilename);
@@ -2431,15 +2435,7 @@ protected:
     int _Shortcut(RampOptimizer::ParabolicPath& parabolicpath, int numIters, RampOptimizer::RandomNumberGeneratorBase* rng, dReal minTimeStep)
     {
         int numShortcuts = 0;
-        uint32_t fileindex;
-        if( !!_logginguniformsampler ) {
-            fileindex = _logginguniformsampler->SampleSequenceOneUInt32();
-        }
-        else {
-            fileindex = RaveRandomInt();
-        }
-        fileindex = fileindex%_fileIndexMod;
-        _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 0);
+        _DumpParabolicPath(parabolicpath, _dumplevel, 0);
 
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         std::vector<int>& vShortcutStats = _vShortcutStats; // vShortcutStats[SS_X] keeps the number of times a shortcut iter finishes with the status SS_X
@@ -2483,8 +2479,8 @@ protected:
         // every time a shortcut attempt is successful)
 
         dReal score = 1.0;                 // if the current iteration is successful, we calculate a score
-        dReal currentBestScore = 1.0;      // keeps track of the best shortcut score so far
-        dReal iCurrentBestScore = 1.0;
+        dReal currentBestScore = 0.0;      // keeps track of the best shortcut score so far
+        dReal iCurrentBestScore = DBL_MAX;
         dReal cutoffRatio = _parameters->durationImprovementCutoffRatio; // we stop shortcutting if the progress made is considered too little (score/currentBestScore < cutoffRatio)
 
         dReal specialShortcutWeight = 0.1; // if the sampled number is less than this weight, we sample t0 and t1 around a zerovelpoint
@@ -3274,10 +3270,6 @@ protected:
                 }
                 _vZeroVelPointInfos.resize(writeIndex);
 
-                // Keep track of the multipliers
-                fStartTimeVelMult = min(1.0, fCurVelMult * fiSearchVelAccelMult);
-                fStartTimeAccelMult = min(1.0, fCurAccelMult * fiSearchVelAccelMult);
-
                 // Now replace the original trajectory segment by the shortcut
                 parabolicpath.ReplaceSegment(t0, t1, shortcutRampNDVectOut);
                 iIterProgress += 0x10000000;
@@ -3296,7 +3288,6 @@ protected:
                 iIterProgress += 0x10000000;
 
                 tTotal = parabolicpath.GetDuration();
-                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d successful, numSlowDowns=%d, tTotal=%.15e", _environmentid%iters%numIters%numSlowDowns%tTotal);
 
                 // Calculate the score
                 score = diff/nItersFromPrevSuccessful;
@@ -3305,6 +3296,12 @@ protected:
                     iCurrentBestScore = 1.0/currentBestScore;
                 }
                 nItersFromPrevSuccessful = 0;
+
+                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d successful, numSlowDowns=%d, tTotal=%.15e, t0=%.15e, t1=%.15e, fVelAccMult=[%f, %f]->[%f,%f], score=%.15e, bestScore=%.15e", _environmentid%iters%numIters%numSlowDowns%tTotal%t0%t1%fStartTimeVelMult%fStartTimeAccelMult%fCurVelMult%fCurAccelMult%score%currentBestScore);
+
+                // Keep track of the multipliers
+                fStartTimeVelMult = min(1.0, fCurVelMult * fiSearchVelAccelMult);
+                fStartTimeAccelMult = min(1.0, fCurAccelMult * fiSearchVelAccelMult);
 
                 if( (score*iCurrentBestScore < cutoffRatio) && (numShortcuts > 5)) {
                     // We have already shortcut for a bit (numShortcuts > 5). The progress made in
@@ -3331,12 +3328,12 @@ protected:
         else {
             RAVELOG_DEBUG_FORMAT("env=%d, finished at shortcut iter=%d, successful=%d, slowdowns=%d, endTime: %.15e -> %.15e; diff = %.15e", _environmentid%iters%numShortcuts%numSlowDowns%tOriginal%tTotal%(tOriginal - tTotal));
         }
-        _DumpParabolicPath(parabolicpath, _dumplevel, fileindex, 1);
+        _DumpParabolicPath(parabolicpath, _dumplevel, 1);
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         curtime = utils::GetMicroTime();
         RAVELOG_DEBUG_FORMAT("env=%d, shortcut stats:\n  successful=%d\n  initialInterpolationFailed=%d\n  interpolatedSegmentTooLong=%d\n  interpolatedSegmentTooLongFromSlowDown=%d\n  timeInstantsTooClose=%d\n  check2CollisionFailed=%d\n  check2Failed=%d\n  lastSegmentFailed=%d\n  maxManipSpeedFailed=%d\n  maxManipAccelFailed=%d\n  slowDownFailed=%d\n  stateSettingFailed=%d\n  redundantShortcut=%d\n  _vZeroVelPointInfos.size()=%d\n  time since last successful shortcut=%.15e\n  final duration percentage=%.15e", _environmentid%vShortcutStats[SS_Successful]%vShortcutStats[SS_InitialInterpolationFailed]%vShortcutStats[SS_InterpolatedSegmentTooLong]%vShortcutStats[SS_InterpolatedSegmentTooLongFromSlowDown]%vShortcutStats[SS_TimeInstantsTooClose]%vShortcutStats[SS_Check2CollisionFailed]%vShortcutStats[SS_Check2Failed]%vShortcutStats[SS_LastSegmentFailed]%vShortcutStats[SS_MaxManipSpeedFailed]%vShortcutStats[SS_MaxManipAccelFailed]%vShortcutStats[SS_SlowDownFailed]%vShortcutStats[SS_StateSettingFailed]%vShortcutStats[SS_RedundantShortcut]%_vZeroVelPointInfos.size()%(0.000001f*(float)(curtime - latestSuccessfulShortcutTimestamp))%(tTotal/tOriginal));
         {
-            std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%fileindex);
+            std::string shortcutprogressfilename = str(boost::format("%s/shortcutprogress%d.xml")%RaveGetHomeDirectory()%_fileIndex);
             std::ofstream f(shortcutprogressfilename.c_str());
             f << shortcutprogress.str();
             RAVELOG_DEBUG_FORMAT("env=%d, shortcutprogress saved to %s", _environmentid%shortcutprogressfilename);
@@ -3349,37 +3346,31 @@ protected:
         return numShortcuts;
     }
 
-    void _DumpParabolicPath(RampOptimizer::ParabolicPath& parabolicpath, DebugLevel level=Level_Verbose, uint32_t fileindex=10000, int option=-1) const
+    /// \brief dump ParabolicPath.
+    /// \param[in] parabolicpath : parabolicpath to dump
+    /// \param[in] level : debug level
+    /// \param[in] option : option to determine the additional file name.
+    void _DumpParabolicPath(const RampOptimizer::ParabolicPath& parabolicpath, const DebugLevel level, const int option) const
     {
         if( !IS_DEBUGLEVEL(level) ) {
             return;
         }
-        if( fileindex == 10000 ) {
-            // No particular index given. Randomly choose one.
-            if( !!_logginguniformsampler ) {
-                fileindex  = _logginguniformsampler->SampleSequenceOneUInt32();
-            }
-            else {
-                fileindex = RaveRandomInt();
-            }
-            fileindex = fileindex%_fileIndexMod;
-        }
 
         std::string filename;
         if( option == 0 ) {
-            filename = str(boost::format("%s/parabolicpath%d.beforeshortcut.xml")%RaveGetHomeDirectory()%fileindex);
+            filename = str(boost::format("%s/parabolicpath%d.beforeshortcut.xml")%RaveGetHomeDirectory()%_fileIndex);
         }
         else if( option == 1 ) {
-            filename = str(boost::format("%s/parabolicpath%d.aftershortcut.xml")%RaveGetHomeDirectory()%fileindex);
+            filename = str(boost::format("%s/parabolicpath%d.aftershortcut.xml")%RaveGetHomeDirectory()%_fileIndex);
         }
         else if( option == 2 ) {
-            filename = str(boost::format("%s/parabolicpath%d.beforemerge.xml")%RaveGetHomeDirectory()%fileindex);
+            filename = str(boost::format("%s/parabolicpath%d.beforemerge.xml")%RaveGetHomeDirectory()%_fileIndex);
         }
         else if( option == 3 ) {
-            filename = str(boost::format("%s/parabolicpath%d.aftermerge.xml")%RaveGetHomeDirectory()%fileindex);
+            filename = str(boost::format("%s/parabolicpath%d.aftermerge.xml")%RaveGetHomeDirectory()%_fileIndex);
         }
         else {
-            filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%fileindex);
+            filename = str(boost::format("%s/parabolicpath%d.xml")%RaveGetHomeDirectory()%_fileIndex);
         }
         ofstream f(filename.c_str());
         f << std::setprecision(RampOptimizer::g_nPrec);
@@ -3389,28 +3380,53 @@ protected:
         return;
     }
 
-    std::string _DumpTrajectory(TrajectoryBasePtr ptraj, DebugLevel level)
+    /// \brief dump openrave trajectory
+    /// \param[in] ptraj : trajectory to dump
+    /// \param[in] level : debug level
+    /// \param[in] option : option to determine the additional file name.
+    void _DumpTrajectory(TrajectoryBasePtr ptraj, const DebugLevel level, const int option)
     {
         if( IS_DEBUGLEVEL(level) ) {
-            std::string filename = _DumpTrajectory(ptraj);
+            std::string filename = _DumpTrajectory(ptraj, option);
             RavePrintfA(str(boost::format("env=%d, Wrote trajectory to %s")%_environmentid%filename), level);
-            return filename;
-        }
-        else {
-            return std::string();
         }
     }
 
-    std::string _DumpTrajectory(TrajectoryBasePtr ptraj)
+    /// \brief dump openrave trajectory
+    /// \param[in] ptraj : trajectory to dump
+    /// \param[in] level : debug level
+    /// \param[in] option : option to determine the additional file name.
+    /// \return filename to dump
+    std::string _DumpTrajectory(TrajectoryBasePtr ptraj, const int option)
     {
-        uint32_t randNum;
-        if( !!_logginguniformsampler ) {
-            randNum = _logginguniformsampler->SampleSequenceOneUInt32();
+        std::string filename;
+        switch( option )
+        {
+        case 0:
+            filename = str(boost::format("%s/parabolicsmoother2_%d_init.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
+        case 1:
+            filename = str(boost::format("%s/parabolicsmoother2_%d_convfromcubic.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
+        case 2:
+            filename = str(boost::format("%s/parabolicsmoother2_%d_setmilestonefail.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
+        case 3:
+            filename = str(boost::format("%s/parabolicsmoother2_%d_constraintfail.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
+        case 4:
+            filename = str(boost::format("%s/parabolicsmoother2_%d_exception.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
+        case 5:
+            filename = str(boost::format("%s/parabolicsmoother2_%d_sampleverifyfail.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
+        case 6:
+            filename = str(boost::format("%s/parabolicsmoother2_%d_result.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
+        default:
+            filename = str(boost::format("%s/parabolicsmoother2_%d.traj.xml")%RaveGetHomeDirectory()%_fileIndex);
+            break;
         }
-        else {
-            randNum = RaveRandomInt();
-        }
-        std::string filename = str(boost::format("%s/parabolicsmoother2_%d.traj.xml")%RaveGetHomeDirectory()%(randNum%1000));
         ofstream f(filename.c_str());
         f << std::setprecision(RampOptimizer::g_nPrec);
         ptraj->serialize(f);
@@ -3438,6 +3454,7 @@ protected:
     // for logging
     SpaceSamplerBasePtr _logginguniformsampler; ///< used for logging, seed is randomly set
     uint32_t _fileIndexMod; ///< maximum number of trajectory index allowed when saving
+    uint32_t _fileIndex; ///< file index used for saved trajectory naming.
     DebugLevel _dumplevel;  ///< minimum debug level which triggers trajectory saving
     std::vector<int> _vShortcutStats; ///< keeps track of the number of times a shortcut iter finishes with each ShortcutStatus
 

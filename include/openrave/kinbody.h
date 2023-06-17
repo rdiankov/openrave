@@ -359,7 +359,11 @@ public:
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
-                   && _calibrationBoardParameters == other._calibrationBoardParameters;
+                   && _calibrationBoardParameters == other._calibrationBoardParameters
+                   && _vNegativeCropContainerMargins == other._vNegativeCropContainerMargins
+                   && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins
+                   && _vNegativeCropContainerEmptyMargins == other._vNegativeCropContainerEmptyMargins
+                   && _vPositiveCropContainerEmptyMargins == other._vPositiveCropContainerEmptyMargins;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -397,6 +401,13 @@ public:
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
+        inline const Vector& GetBoxHalfExtents() const {
+            return _vGeomData;
+        }
+
+        inline const Vector& GetCageBaseHalfExtents() const {
+            return _vGeomData;
+        }
 
         /// \brief compute the inner empty volume in the geometry coordinate system
         ///
@@ -406,11 +417,27 @@ public:
         /// \brief computes the bounding box in the world. tGeometryWorld is for the world transform.
         AABB ComputeAABB(const Transform& tGeometryWorld) const;
 
+        uint8_t GetSideWallExists() const;
+
         inline const std::string& GetId() const {
             return _id;
         }
         inline const std::string& GetName() const {
             return _name;
+        }
+
+        inline const Vector& GetContainerOuterExtents() const {
+            return _vGeomData;
+        }
+        inline const Vector& GetContainerInnerExtents() const {
+            return _vGeomData2;
+        }
+
+        inline void SetContainerOuterExtents(const Vector& outerExtents) {
+            _vGeomData = outerExtents;
+        }
+        inline void SetContainerInnerExtents(const Vector& innerExtents) {
+            _vGeomData2 = innerExtents;
         }
 
         ///< for sphere it is radius
@@ -490,6 +517,10 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
+        Vector _vNegativeCropContainerMargins = Vector(0,0,0); ///< The negative crop margins component
+        Vector _vPositiveCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
+        Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
+        Vector _vPositiveCropContainerEmptyMargins = Vector(0,0,0); ///< The positive crop empty margins component
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
@@ -629,10 +660,10 @@ public:
             return _info._vGeomData;
         }
         inline const Vector& GetContainerOuterExtents() const {
-            return _info._vGeomData;
+            return _info.GetContainerOuterExtents();
         }
         inline const Vector& GetContainerInnerExtents() const {
-            return _info._vGeomData2;
+            return _info.GetContainerInnerExtents();
         }
         inline const Vector& GetContainerBottomCross() const {
             return _info._vGeomData3;
@@ -651,6 +682,18 @@ public:
         }
         inline const std::string& GetName() const {
             return _info._name;
+        }
+        inline const Vector& GetNegativeCropContainerMargins() const {
+            return _info._vNegativeCropContainerMargins;
+        }
+        inline const Vector& GetPositiveCropContainerMargins() const {
+            return _info._vPositiveCropContainerMargins;
+        }
+        inline const Vector& GetNegativeCropContainerEmptyMargins() const {
+            return _info._vNegativeCropContainerEmptyMargins;
+        }
+        inline const Vector& GetPositiveCropContainerEmptyMargins() const {
+            return _info._vPositiveCropContainerEmptyMargins;
         }
 
         /// \brief returns the local collision mesh
@@ -692,7 +735,9 @@ public:
         /// \brief returns an axis aligned bounding box given that the geometry is transformed by trans
         AABB ComputeAABB(const Transform& trans) const;
 
-        uint8_t GetSideWallExists() const;
+        inline uint8_t GetSideWallExists() const {
+            return _info.GetSideWallExists();
+        }
 
         void serialize(std::ostream& o, int options) const;
 
@@ -726,6 +771,18 @@ public:
 
         /// \brief sets the name of the geometry
         void SetName(const std::string& name);
+
+        /// \brief set the negative crop margin of the geometry
+        void SetNegativeCropContainerMargins(const Vector& negativeCropContainerMargins);
+
+        /// \brief set the positive crop margin of the geometry
+        void SetPositiveCropContainerMargins(const Vector& positiveCropContainerMargins);
+
+        /// \brief set the negative crop empty margin of the geometry
+        void SetNegativeCropContainerEmptyMargins(const Vector& negativeCropContainerEmptyMargins);
+
+        /// \brief set the positive crop empty margin of the geometry
+        void SetPositiveCropContainerEmptyMargins(const Vector& positiveCropContainerEmptyMargins);
 
         /// \brief generates the dot mesh of a calibration board
         inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
@@ -871,9 +928,11 @@ public:
         /// shouldn't be affected by physics (including gravity). Collision still works.
         bool _bStatic = false;
 
-        /// \true false if the link is disabled. disabled links do not participate in collision detection
-        bool _bIsEnabled = true;
-        bool __padding0, __padding1; // for 4-byte alignment
+        bool _bIsEnabled = true; ///< false if the link is disabled. disabled links do not participate in collision detection
+
+        bool _bIgnoreSelfCollision = false; ///< true if the link ignored from self collision computation. If true, this link is not considered in self collision check against any other links.
+
+        bool __padding; // for 4-byte alignment
 
         enum LinkInfoField : uint32_t
         {
@@ -958,6 +1017,12 @@ public:
 
         /// \brief returns true if the link is enabled. \see Enable
         bool IsEnabled() const;
+
+        /// \brief sets this link to be ignored in self collision checking.
+        void SetIgnoreSelfCollision(bool bIgnore);
+
+        /// \brief returns true if the link is ignored from self collision. \see IgnoreSelfCollision
+        bool IsSelfCollisionIgnored() const;
 
         /// \brief Sets all the geometries of the link as visible or non visible.
         ///
@@ -2362,6 +2427,7 @@ private:
     /// \param uri the new URI to set for the interface
     virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri=std::string());
     virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
+    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
 
     /// \brief initializes an complex kinematics body with links and joints
     ///
@@ -3497,7 +3563,7 @@ protected:
     Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup
 
 private:
-    mutable std::string __hashkinematics;
+    mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const {
         return OPENRAVE_KINBODY_HASH;

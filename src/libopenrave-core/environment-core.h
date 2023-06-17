@@ -985,7 +985,8 @@ public:
         }
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
-        pbody->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup);
+        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup&~KinBody::Prop_LinkDynamics);
+        pbody->_PostprocessChangedParameters(maskPotentialyChanged);
         _CallBodyCallbacks(pbody, 1);
     }
 
@@ -1025,7 +1026,8 @@ public:
         }
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
-        robot->_PostprocessChangedParameters(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup);
+        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup&~KinBody::Prop_LinkDynamics);
+        robot->_PostprocessChangedParameters(maskPotentialyChanged);
         _CallBodyCallbacks(robot, 1);
     }
 
@@ -2392,7 +2394,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition)
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1))
     {
         SharedLock lock777(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -2400,7 +2402,7 @@ public:
         }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
-            handles->Add((*itviewer)->drawlabel(label, worldPosition));
+            handles->Add((*itviewer)->drawlabel(label, worldPosition, color));
         }
         return handles;
     }
@@ -2425,6 +2427,30 @@ public:
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
             handles->Add((*itviewer)->drawboxarray(vpos, vextents));
+        }
+        return handles;
+    }
+    virtual OpenRAVE::GraphHandlePtr drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency)
+    {
+        SharedLock lock782(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawaabb(aabb, transform, vcolor, transparency));
+        }
+        return handles;
+    }
+    virtual OpenRAVE::GraphHandlePtr drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency)
+    {
+        SharedLock lock782(_mutexInterfaces);
+        if( _listViewers.size() == 0 ) {
+            return OpenRAVE::GraphHandlePtr();
+        }
+        GraphHandleMultiPtr handles(new GraphHandleMulti());
+        FOREACHC(itviewer, _listViewers) {
+            handles->Add((*itviewer)->drawobb(obb, vcolor, transparency));
         }
         return handles;
     }
@@ -3512,7 +3538,7 @@ protected:
                     if( bPhysicsEngineChanged ) {
                         GetPhysicsEngine()->InitKinBody(pnewbody);
                     }
-                    pnewbody->__hashkinematics = body.__hashkinematics;
+                    pnewbody->__hashKinematicsGeometryDynamics = body.__hashKinematicsGeometryDynamics;
                     if( pnewbody->IsRobot() ) {
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
@@ -3551,7 +3577,7 @@ protected:
                 pnewbody->_ComputeInternalInformation();
                 GetCollisionChecker()->InitKinBody(pnewbody);
                 GetPhysicsEngine()->InitKinBody(pnewbody);
-                pnewbody->__hashkinematics = body.__hashkinematics; /// _ComputeInternalInformation resets the hashes
+                pnewbody->__hashKinematicsGeometryDynamics = body.__hashKinematicsGeometryDynamics;
                 if( pnewbody->IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
