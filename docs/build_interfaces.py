@@ -18,6 +18,7 @@ from optparse import OptionParser
 import os
 import subprocess
 import shutil
+from six import ensure_str
 from openravepy.misc import mkdir_recursive
 
 def getsvnurl(dirname):
@@ -72,13 +73,13 @@ Interface Types
                         try:
                             commandtext = interface.SendCommand('help label %s-%s-'%(type,name.lower()))
                             if commandtext is not None:
-                                itext +=  commandtext
+                                itext +=  ensure_str(commandtext)
                         except (openrave_exception,RuntimeError) as e:
                             print(e)
                         interfaceinfo[type].append([name,pluginname,itext])
                         interface = None # destroy
         
-        sortedtypes = interfaceinfo.keys()
+        sortedtypes = list(interfaceinfo.keys())
         sortedtypes.sort(key=lambda x: str(x))
         for type in sortedtypes:
             descs = interfaceinfo[type]
