@@ -24,6 +24,13 @@ def getsvnurl(dirname):
     # TODO check source/plugins.rst output and give proper string
     return dirname
 
+def GetPluginName(filename):
+    dirname,libname = os.path.split(filename)
+    pluginname = os.path.splitext(libname)[0]
+    if pluginname.startswith('lib'):
+        pluginname = pluginname[3:]
+    return pluginname
+
 if __name__ == "__main__":
     parser = OptionParser(description='Builds an rst file of the interfaces provided')
     parser.add_option('--outdir',action="store",type='string',dest='outdir',default='en',
@@ -48,11 +55,7 @@ Interface Types
             interfaceinfo[type] = []
         for filename,info in plugininfo:
             dirname,libname = os.path.split(filename)
-            pluginname = os.path.splitext(libname)[0]
-            if pluginname.startswith('lib'):
-                pluginname = pluginname[3:]
-            info.dirname = dirname
-            info.pluginname = pluginname
+            pluginname = GetPluginName(filename)
             for type,names in info.interfacenames:
                 for name in names:
                     print(name)
@@ -111,22 +114,24 @@ Plugins
 -------
 """
         # sort plugins by root name
-        plugininfo.sort(key=lambda x: x[1].pluginname)
+        plugininfo.sort(key=lambda x: GetPluginName(x[0]))
         for filename,info in plugininfo:
-            print(info.pluginname)
-            text += '.. _plugin-%s:\n\n'%info.pluginname # link
-            text += info.pluginname + '\n' + '-'*len(info.pluginname) + '\n\n'
+            dirname,libname = os.path.split(filename)
+            pluginname = GetPluginName(filename)
+            print(pluginname)
+            text += '.. _plugin-%s:\n\n'%pluginname # link
+            text += pluginname + '\n' + '-'*len(pluginname) + '\n\n'
             text += 'Offers: '
             for type,names in info.interfacenames:
                 for name in names:
                     text += ':ref:`%s:%s <%s-%s>` '%(str(type),name,str(type),name.lower())
             text += '\n\n'
             text += 'OpenRAVE Version: %s\n\n'%info.version
-            if info.pluginname in coreplugins:
-                revision,url = coreplugins[info.pluginname]
+            if pluginname in coreplugins:
+                revision,url = coreplugins[pluginname]
                 text += 'Core Plugin: Last updated r%s\n\nURL: %s'%(revision,url)
             else:
-                url=getsvnurl(os.path.join(info.dirname,'..'))
+                url=getsvnurl(os.path.join(dirname,'..'))
                 if url is not None:
                     text += 'URL: '+url
             text += '\n\n'
