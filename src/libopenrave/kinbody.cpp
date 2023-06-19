@@ -5966,6 +5966,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
 
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 void KinBody::_InitAndAddJoint(JointPtr pjoint)
@@ -6015,6 +6016,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     else {
         _vPassiveJoints.push_back(pjoint);
     }
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 void KinBody::ExtractInfo(KinBodyInfo& info)
