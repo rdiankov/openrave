@@ -1957,59 +1957,6 @@ void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularve
     }
 }
 
-OpenRAVEException::OpenRAVEException() : std::exception(), _s("unknown exception"), _error(ORE_Failed)
-{
-}
-
-OpenRAVEException::OpenRAVEException(const std::string& s, OpenRAVEErrorCode error) : std::exception()
-{
-    _error = error;
-    _s = "openrave (";
-    _s += RaveGetErrorCodeString(_error);
-    _s += "): ";
-    _s += s;
-}
-
-char const* OpenRAVEException::what() const throw() {
-    return _s.c_str();
-}
-
-const std::string& OpenRAVEException::message() const {
-    return _s;
-}
-
-OpenRAVEErrorCode OpenRAVEException::GetCode() const {
-    return _error;
-}
-
-const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
-{
-    switch(error) {
-    case ORE_Failed: return "Failed";
-    case ORE_InvalidArguments: return "InvalidArguments";
-    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
-    case ORE_CommandNotSupported: return "CommandNotSupported";
-    case ORE_Assert: return "Assert";
-    case ORE_InvalidPlugin: return "InvalidPlugin";
-    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
-    case ORE_NotImplemented: return "NotImplemented";
-    case ORE_InconsistentConstraints: return "InconsistentConstraints";
-    case ORE_NotInitialized: return "NotInitialized";
-    case ORE_InvalidState: return "InvalidState";
-    case ORE_Timeout: return "Timeout";
-    case ORE_InvalidURI: return "InvalidURI";
-    case ORE_BodyNameConflict: return "BodyNameConflict";
-    case ORE_SensorNameConflict: return "SensorNameConflict";
-    case ORE_BodyIdConflict: return "BodyIdConflict";
-    case ORE_EnvironmentFormatUnrecognized: return "EnvironmentFormatUnrecognized";
-    case ORE_CurlTimeout: return "CurlTimeout";
-    case ORE_CurlInvalidHandle: return "CurlInvalidHandle";
-    case ORE_CurlInvalidResponse: return "CurlInvalidResponse";
-    }
-    // should throw an exception?
-    return "";
-}
-
 void CollisionReport::Reset(int coloptions)
 {
     options = coloptions;

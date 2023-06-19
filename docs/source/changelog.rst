@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.119.0
+===============
+
+* Add OpenRAVE units enums and helper functions
+
 Version 0.118.0
 ===============
 

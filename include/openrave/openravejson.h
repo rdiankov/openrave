@@ -20,6 +20,7 @@
 
 #include <openrave/config.h>
 #include <openrave/openraveexception.h>
+#include <openrave/units.h>
 #include <openrave/sensor.h>
 
 #include <array>
@@ -48,16 +49,17 @@
     { \
         if (!(OpenRAVE::orjson::LoadJsonValueByKey(rValue, key, param))) \
         { \
-            throw OPENRAVE_EXCEPTION_FORMAT("[%s, %u] assert(OpenRAVE::orjson::LoadJsonValueByKey(%s, %s, %s))", __FILE__%__LINE__%#rValue%key%#param,  OpenRAVE::ORE_InvalidArguments); \
+            throw OPENRAVE_EXCEPTION_FORMAT("[%s, %u] assert(OpenRAVE::orjson::LoadJsonValueByKey(%s, %s, %s))", __FILE__%__LINE__%# rValue%key%# param,  OpenRAVE::ORE_InvalidArguments); \
         } \
     }
 #endif // ORJSON_LOAD_REQUIRED_JSON_VALUE_BY_KEY
+
 namespace OpenRAVE {
 
 namespace orjson {
 
 /// \brief gets a string of the Value type for debugging purposes
-inline std::string GetJsonTypeName(const rapidjson::Value& v) {
+inline const char* GetJsonTypeName(const rapidjson::Value& v) {
     int type = v.GetType();
     switch (type) {
     case 0:
@@ -496,7 +498,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>&
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
 {
     if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load TriMesh of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
 
     if (!v.HasMember("vertices") || !v["vertices"].IsArray() || v["vertices"].Size() % 3 != 0) {
@@ -519,7 +521,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t) {
     if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load RaveOrientedBox of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
     if (!v.HasMember("extents") || !v["extents"].IsArray() || v["extents"].Size() != 3) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"extents\" malformatted", OpenRAVE::ORE_InvalidArguments);
@@ -530,6 +532,44 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOri
 
     LoadJsonValue(v["extents"], t.extents);
     LoadJsonValue(v["transform"], t.transform);
+}
+
+///< \brief skips loading keys that are not present
+inline void LoadJsonValue(const rapidjson::Value& rUnitInfo, OpenRAVE::UnitInfo& unitInfo) {
+    if (!rUnitInfo.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load UnitInfo of non-object rapidjson.", OpenRAVE::ORE_InvalidArguments);
+    }
+    rapidjson::Value::ConstMemberIterator it = rUnitInfo.FindMember("lengthUnit");
+    if( it != rUnitInfo.MemberEnd() ) {
+        if( !it->value.IsString() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/lengthUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
+        }
+        unitInfo.lengthUnit = OpenRAVE::GetLengthUnitFromString(it->value.GetString(), unitInfo.lengthUnit);
+    }
+
+    it = rUnitInfo.FindMember("massUnit");
+    if( it != rUnitInfo.MemberEnd() ) {
+        if( !it->value.IsString() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/massUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
+        }
+        unitInfo.massUnit = OpenRAVE::GetMassUnitFromString(it->value.GetString(), unitInfo.massUnit);
+    }
+
+    it = rUnitInfo.FindMember("timeUnit");
+    if( it != rUnitInfo.MemberEnd() ) {
+        if( !it->value.IsString() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/timeUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
+        }
+        unitInfo.timeUnit = OpenRAVE::GetTimeUnitFromString(it->value.GetString(), unitInfo.timeUnit);
+    }
+
+    it = rUnitInfo.FindMember("angleUnit");
+    if( it != rUnitInfo.MemberEnd() ) {
+        if( !it->value.IsString() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/angleUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
+        }
+        unitInfo.angleUnit = OpenRAVE::GetAngleUnitFromString(it->value.GetString(), unitInfo.angleUnit);
+    }
 }
 
 //Save a data structure to rapidjson::Value format
@@ -630,6 +670,14 @@ inline void SaveJsonValue(rapidjson::Value& rTransform, const OpenRAVE::RaveTran
     rTransform.PushBack(t.trans[0], alloc);
     rTransform.PushBack(t.trans[1], alloc);
     rTransform.PushBack(t.trans[2], alloc);
+}
+
+inline void SaveJsonValue(rapidjson::Value& rUnitInfo, const OpenRAVE::UnitInfo& unitInfo, rapidjson::Document::AllocatorType& alloc) {
+    rUnitInfo.SetObject();
+    rUnitInfo.AddMember(rapidjson::Document::StringRefType("lengthUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit)), alloc);
+    rUnitInfo.AddMember(rapidjson::Document::StringRefType("massUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetMassUnitString(unitInfo.massUnit)), alloc);
+    rUnitInfo.AddMember(rapidjson::Document::StringRefType("timeUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetTimeUnitString(unitInfo.timeUnit)), alloc);
+    rUnitInfo.AddMember(rapidjson::Document::StringRefType("angleUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetAngleUnitString(unitInfo.angleUnit)), alloc);
 }
 
 template<class T>
