@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.119.0
+===============
+
+* Add OpenRAVE units enums and helper functions
+
+Version 0.118.0
+===============
+
+* kinematics geometry dynamics hash cache is not properly invalidated when connected body active state cahnges
+
 Version 0.117.0
 ===============
 
