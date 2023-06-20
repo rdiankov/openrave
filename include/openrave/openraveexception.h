@@ -26,7 +26,8 @@
 namespace OpenRAVE {
 
 /// %OpenRAVE error codes
-enum OpenRAVEErrorCode {
+enum OpenRAVEErrorCode
+{
     ORE_Failed=0,
     ORE_InvalidArguments=1, ///< passed in input arguments are not valid
     ORE_EnvironmentNotLocked=2,
@@ -44,12 +45,21 @@ enum OpenRAVEErrorCode {
     ORE_SensorNameConflict=14, ///< sensor with same name is trying to be added to the environment
     ORE_BodyIdConflict=15, ///< body with same id is trying to be added to the environment
 
+    ORE_LengthUnitInvalid = 16, ///< Cannot find the specific LengthUnit
+    ORE_MassUnitInvalid = 17, ///< Cannot find the specific MassUnit
+    ORE_TimeUnitInvalid = 18, ///< Cannot find the specific TimeUnit
+    ORE_AngleUnitInvalid = 19, ///< Cannot find the specific AngleUnit
+
     ORE_EnvironmentFormatUnrecognized = 0x0100, ///< the environment format to load is not recognized.
-    
+
     ORE_CurlTimeout=0x1000, ///< curl download timed out
     ORE_CurlInvalidHandle=0x1001, ///< the curl handle cannot be created
     ORE_CurlInvalidResponse=0x1002, ///< curl downloaded response is invalid
 };
+
+/** \brief returns a string representation of the error code
+ */
+OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);
 
 /// \brief Exception that all OpenRAVE internal methods throw; the error codes are held in \ref OpenRAVEErrorCode.
 class OPENRAVE_API OpenRAVEException : public std::exception

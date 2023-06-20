@@ -3,7 +3,18 @@ set (openrave_SOURCES openrave.cpp)
 
 include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS})
 
-set(openrave_libraries ${FPARSER_LIBRARIES})
+set(openrave_libraries)
+set(openrave_static_libraries)
+
+if( TARGET "${FPARSER_LIBRARIES}" )
+  get_target_property(FPARSER_TYPE "${FPARSER_LIBRARIES}" TYPE)
+endif()
+if( FPARSER_TYPE STREQUAL STATIC_LIBRARY)
+  set(openrave_static_libraries ${openrave_static_libraries} ${FPARSER_LIBRARIES})
+else()
+  set(openrave_libraries ${openrave_libraries} ${FPARSER_LIBRARIES})
+endif()
+  
 if( TARGET crlibm-native )
   set(openrave_libraries ${openrave_libraries} ${CRLIBM_LIBRARY})
   if( CRLIBM_INCLUDE_DIR )

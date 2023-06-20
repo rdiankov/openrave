@@ -218,7 +218,6 @@ void init_openravepy_physicsengine()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
     class_<PyPhysicsEngineBase, OPENRAVE_SHARED_PTR<PyPhysicsEngineBase>, PyInterfaceBase>(m, "PhysicsEngine", DOXY_CLASS(PhysicsEngineBase))
-    .def(init<PhysicsEngineBasePtr, PyEnvironmentBasePtr>(), "physicsengine"_a, "env"_a)
 #else
     class_<PyPhysicsEngineBase, OPENRAVE_SHARED_PTR<PyPhysicsEngineBase>, bases<PyInterfaceBase> >("PhysicsEngine", DOXY_CLASS(PhysicsEngineBase), no_init)
 #endif

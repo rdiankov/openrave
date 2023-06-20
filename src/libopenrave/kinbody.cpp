@@ -3537,11 +3537,11 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                     }
                     fFriction += vDOFVelocities.at(pjoint->GetDOFIndex())*pActuatorInfo->viscous_friction;
 
-                    if (pActuatorInfo->rotor_inertia > 0.0) {
-                        // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
-                        const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
-                        fRotorAccelerationTorque += vDOFAccelerations.at(pjoint->GetDOFIndex()) * fInertiaOnLoadSide;
-                    }
+                }
+                if (pActuatorInfo->rotor_inertia > 0.0) {
+                    // converting inertia on motor side to load side requires multiplying by gear ratio squared because inertia unit is mass * distance^2
+                    const dReal fInertiaOnLoadSide = pActuatorInfo->rotor_inertia * pActuatorInfo->gear_ratio * pActuatorInfo->gear_ratio;
+                    fRotorAccelerationTorque += vDOFAccelerations.at(pjoint->GetDOFIndex()) * fInertiaOnLoadSide;
                 }
 
                 doftorques.at(pjoint->GetDOFIndex()) += fFriction + fRotorAccelerationTorque;
@@ -5966,6 +5966,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
 
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 void KinBody::_InitAndAddJoint(JointPtr pjoint)
@@ -6015,6 +6016,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     else {
         _vPassiveJoints.push_back(pjoint);
     }
+    __hashKinematicsGeometryDynamics.resize(0);
 }
 
 void KinBody::ExtractInfo(KinBodyInfo& info)

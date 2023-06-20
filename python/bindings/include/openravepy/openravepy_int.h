@@ -209,12 +209,16 @@ protected:
 class OPENRAVEPY_API PythonGILSaver
 {
 public:
-    PythonGILSaver() {
-        PyEval_ReleaseLock();
+    PythonGILSaver()
+        : _pythreadstate(PyEval_SaveThread()) {
     }
-    virtual ~PythonGILSaver() {
-        PyEval_AcquireLock();
+
+    virtual ~PythonGILSaver() noexcept {
+        PyEval_RestoreThread(_pythreadstate);
     }
+
+private:
+    PyThreadState* _pythreadstate;
 };
 
 class OPENRAVEPY_API AutoPyArrayObjectDereferencer
@@ -606,6 +610,10 @@ OPENRAVEPY_API bool ExtractRay(py::object o, RAY& r);
 
 OPENRAVEPY_API py::object toPyTriMesh(const TriMesh& mesh);
 OPENRAVEPY_API bool ExtractTriMesh(py::object o, TriMesh& mesh);
+
+/// \brief extracts the geometries from pyGeometryInfoList into vGeometryInfos
+OPENRAVEPY_API void ExtractGeometryInfoArray(py::object pyGeometryInfoList, std::vector<KinBody::GeometryInfo>& vGeometryInfos);
+
 OPENRAVEPY_API std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(py::object pyLinkInfoList);
 OPENRAVEPY_API std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(py::object pyJointInfoList);
 OPENRAVEPY_API KinBody::GrabbedInfoPtr ExtractGrabbedInfo(py::object pyGrabbedInfo);

@@ -930,6 +930,7 @@ protected:
 
     void _UpdateLimits()
     {
+        RobotBase::RobotStateSaver robotsaver(_probot, KinBody::Save_ActiveDOF);
         _probot->SetActiveDOFs(_vActiveIndices, _nActiveAffineDOFs, _vActiveAffineAxis);
         _probot->GetActiveDOFLimits(_lower, _upper);
         _range.resize(_lower.size());
