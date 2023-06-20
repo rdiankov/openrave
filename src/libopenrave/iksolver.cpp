@@ -22,24 +22,23 @@ void IkFailureInfo::Clear()
 {
     _action = IKRA_Reject;
     _vconfig.resize(0);
-    _preport.reset();
+    _pReportInfo.reset();
     _description.clear();
     _mapdata.clear();
     _index = -1;
     _bIkParamValid = false;
 }
 
-void IkFailureInfo::InitCollisionReport(const CollisionReportPtr& pnewreport)
+void IkFailureInfo::InitCollisionReportInfo(const CollisionReportPtr& pnewreport)
 {
     if( !!pnewreport ) {
-        if( !_preport ) {
-            _preport.reset(new CollisionReport());
+        if( !_pReportInfo ) {
+            _pReportInfo.reset(new CollisionReportInfo());
         }
-        *_preport = *pnewreport;
-        _preport->FillBodyNames();
+        _pReportInfo->InitInfoFromReport(*pnewreport);
     }
     else {
-        _preport.reset();
+        _pReportInfo.reset();
     }
 }
 
@@ -58,10 +57,10 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     if( _bIkParamValid ) {
         orjson::SetJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam, alloc);
     }
-    if( !!_preport ) {
-        rapidjson::Value rCollisionReport;
-        _preport->SaveToJson(rCollisionReport, alloc);
-        orjson::SetJsonValueByKey(rIkFailureInfo, "collisionReport", rCollisionReport, alloc);
+    if( !!_pReportInfo ) {
+        rapidjson::Value rCollisionReportInfo;
+        _pReportInfo->SaveToJson(rCollisionReportInfo, alloc);
+        orjson::SetJsonValueByKey(rIkFailureInfo, "collisionReportInfo", rCollisionReportInfo, alloc);
     }
     orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
     if( _mapdata.size() > 0 ) {

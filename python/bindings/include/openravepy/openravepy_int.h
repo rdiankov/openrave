@@ -96,6 +96,7 @@ class PyKinBody;
 class PyRobotBase;
 class PyEnvironmentBase;
 class PyCollisionReport;
+class PyCollisionReportInfo;
 class PyPhysicsEngineBase;
 class PyCollisionCheckerBase;
 class PyIkSolverBase;
@@ -139,6 +140,7 @@ typedef OPENRAVE_SHARED_PTR<PyPhysicsEngineBase const> PyPhysicsEngineBaseConstP
 typedef OPENRAVE_SHARED_PTR<PyCollisionCheckerBase> PyCollisionCheckerBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyCollisionCheckerBase const> PyCollisionCheckerBaseConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyCollisionReport> PyCollisionReportPtr;
+typedef OPENRAVE_SHARED_PTR<PyCollisionReportInfo> PyCollisionReportInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyCollisionReport const> PyCollisionReportConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyPlannerBase> PyPlannerBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyPlannerBase const> PyPlannerBaseConstPtr;
@@ -716,8 +718,8 @@ class OPENRAVEPY_API PySensorGeometry
 public:
     virtual ~PySensorGeometry() {
     }
-    virtual SensorBase::SensorType GetType()=0;
-    virtual SensorBase::SensorGeometryPtr GetGeometry()=0;
+    virtual SensorBase::SensorType GetType() = 0;
+    virtual SensorBase::SensorGeometryPtr GetGeometry() = 0;
 };
 
 typedef OPENRAVE_SHARED_PTR<PySensorGeometry> PySensorGeometryPtr;
@@ -747,6 +749,7 @@ OPENRAVEPY_API PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr, 
 OPENRAVEPY_API CollisionReportPtr GetCollisionReport(py::object);
 OPENRAVEPY_API CollisionReportPtr GetCollisionReport(PyCollisionReportPtr);
 OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(CollisionReportPtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PyCollisionReportInfoPtr toPyCollisionReportInfo(CollisionReportInfoPtr);
 OPENRAVEPY_API void UpdateCollisionReport(PyCollisionReportPtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API void UpdateCollisionReport(py::object, PyEnvironmentBasePtr);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

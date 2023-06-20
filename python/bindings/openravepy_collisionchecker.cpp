@@ -150,6 +150,23 @@ object PyCollisionReport::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
+PyCollisionReportInfo::PyCollisionReportInfo() : reportInfo(new CollisionReportInfo()) {
+}
+PyCollisionReportInfo::PyCollisionReportInfo(CollisionReportInfoPtr reportInfo_) : reportInfo(reportInfo_) {
+}
+PyCollisionReportInfo::~PyCollisionReportInfo() {
+}
+
+void PyCollisionReportInfo::init()
+{
+    body1Name = reportInfo->body1Name;
+    body2Name = reportInfo->body2Name;
+    body1LinkName = reportInfo->body1LinkName;
+    body2LinkName = reportInfo->body2LinkName;
+    body1GeomName = reportInfo->body1GeomName;
+    body2GeomName = reportInfo->body2GeomName;
+}
+
 PyCollisionCheckerBase::PyCollisionCheckerBase(CollisionCheckerBasePtr pCollisionChecker, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pCollisionChecker, pyenv), _pCollisionChecker(pCollisionChecker) {
 }
 PyCollisionCheckerBase::~PyCollisionCheckerBase() {
@@ -745,6 +762,16 @@ void UpdateCollisionReport(object o, PyEnvironmentBasePtr pyenv)
     }
 }
 
+PyCollisionReportInfoPtr toPyCollisionReportInfo(CollisionReportInfoPtr pReportInfo)
+{
+    if( !pReportInfo ) {
+	return PyCollisionReportInfoPtr();
+    }
+    PyCollisionReportInfoPtr pyReportInfo(new PyCollisionReportInfo(pReportInfo));
+    pyReportInfo->init();
+    return pyReportInfo;
+}
+
 PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv, const std::string& name)
 {
     CollisionCheckerBasePtr p = OpenRAVE::RaveCreateCollisionChecker(GetEnvironment(pyenv), name);
@@ -837,6 +864,20 @@ void init_openravepy_collisionchecker()
          Reset_overloads(PY_ARGS("coloptions")
                          "Reset report"))
 #endif
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyCollisionReportInfo, OPENRAVE_SHARED_PTR<PyCollisionReportInfo> >(m, "CollisionReportInfo", DOXY_CLASS(CollisionReportInfo))
+    .def(init<>())
+#else
+    class_<PyCollisionReportInfo, OPENRAVE_SHARED_PTR<PyCollisionReportInfo> >("CollisionReportInfo", DOXY_CLASS(CollisionReportInfo))
+#endif
+    .def_readonly("body1Name", &PyCollisionReportInfo::body1Name)
+    .def_readonly("body2Name", &PyCollisionReportInfo::body2Name)
+    .def_readonly("body1LinkName", &PyCollisionReportInfo::body1LinkName)
+    .def_readonly("body2LinkName", &PyCollisionReportInfo::body2LinkName)
+    .def_readonly("body1GeomName", &PyCollisionReportInfo::body1GeomName)
+    .def_readonly("body2GeomName", &PyCollisionReportInfo::body2GeomName)
     ;
 
     bool (PyCollisionCheckerBase::*pcolb)(PyKinBodyPtr) = &PyCollisionCheckerBase::CheckCollision;

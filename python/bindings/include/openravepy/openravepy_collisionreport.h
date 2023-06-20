@@ -62,6 +62,22 @@ public:
     CollisionReportPtr report;
 };
 
+class PyCollisionReportInfo
+{
+public:
+    PyCollisionReportInfo();
+    PyCollisionReportInfo(CollisionReportInfoPtr reportInfo);
+    virtual ~PyCollisionReportInfo();
+
+    void init();
+
+    std::string body1Name, body2Name;
+    std::string body1LinkName, body2LinkName;
+    std::string body1GeomName, body2GeomName;
+
+    CollisionReportInfoPtr reportInfo;
+};
+
 } // namespace openravepy
 
 #endif // OPENRAVEPY_INTERNAL_COLLISIONREPORT_H

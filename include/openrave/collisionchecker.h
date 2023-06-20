@@ -149,7 +149,7 @@ public:
     std::string body1GeomName, body2GeomName; ///< names of colliding body geometries
     std::vector<OpenRAVE::Vector> contacts; ///< contact points
 };
-
+typedef boost::shared_ptr<CollisionReportInfo> CollisionReportInfoPtr;
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 

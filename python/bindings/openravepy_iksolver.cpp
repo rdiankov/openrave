@@ -64,9 +64,9 @@ object PyIkFailureInfo::GetIkParam() {
         return py::none_();
     }
 }
-object PyIkFailureInfo::GetCollisionReport() {
-    if( !!_ikFailureInfo._preport ) {
-        return py::to_object(openravepy::toPyCollisionReport(_ikFailureInfo._preport, /*penv*/ NULL));
+object PyIkFailureInfo::GetCollisionReportInfo() {
+    if( !!_ikFailureInfo._pReportInfo ) {
+        return py::to_object(openravepy::toPyCollisionReportInfo(_ikFailureInfo._pReportInfo));
     }
     else {
         return py::none_();
@@ -420,7 +420,7 @@ void init_openravepy_iksolver()
     .def("GetAction", &PyIkFailureInfo::GetAction, "Returns the corresponding IkReturnAction.")
     .def("GetConfiguration", &PyIkFailureInfo::GetConfiguration, "Returns the configuration that fails the check by the iksolver/registered filters.")
     .def("GetIkParam", &PyIkFailureInfo::GetIkParam, "Returns the ikparam that fails the check by the iksolver/registered filters.")
-    .def("GetCollisionReport", &PyIkFailureInfo::GetCollisionReport, "Returns the collision report generated during ik computation.")
+    .def("GetCollisionReportInfo", &PyIkFailureInfo::GetCollisionReportInfo, "Returns the collision report info generated during ik computation.")
     .def("GetDescription", &PyIkFailureInfo::GetDescription, "Returns the description of this failure.")
     .def("GetMapData", &PyIkFailureInfo::GetMapData, PY_ARGS("key") "Returns an array of numbers corresponding the entry specified by key in IkFailureInfo::_mapdata. If key does not exist in the map, returns None.")
     .def("GetMapDataDict", &PyIkFailureInfo::GetMapDataDict, "Returns a dictionary copy of IkFailureInfo::_mapdata")

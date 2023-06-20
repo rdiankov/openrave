@@ -30,7 +30,7 @@ public:
     IkReturnAction GetAction();
     object GetConfiguration();
     object GetIkParam();
-    object GetCollisionReport();
+    object GetCollisionReportInfo();
     std::string GetDescription();
     object GetMapData(const std::string& key);
     object GetMapDataDict();

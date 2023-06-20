@@ -82,7 +82,13 @@ public:
         _vconfig = ikFailureInfo._vconfig;
         _description = ikFailureInfo._description;
         _mapdata = ikFailureInfo._mapdata;
-        InitCollisionReport(ikFailureInfo._preport);
+        if( !!ikFailureInfo._pReportInfo ) {
+            _pReportInfo.reset(new CollisionReportInfo());
+            *_pReportInfo = *ikFailureInfo._pReportInfo;
+        }
+        else {
+            _pReportInfo.reset();
+        }
         if( ikFailureInfo.HasValidIkParam() ) {
             SetIkParam(ikFailureInfo.GetIkParam());
         }
@@ -94,8 +100,8 @@ public:
     /// \brief clears the data. _action is left unchanged.
     void Clear();
 
-    /// \brief initializes _preport according to the passed in report.
-    void InitCollisionReport(const CollisionReportPtr& preport);
+    /// \brief initializes _pReportInfo from the passed in report.
+    void InitCollisionReportInfo(const CollisionReportPtr& preport);
 
     void SetDescription(const std::string& description);
 
@@ -124,7 +130,7 @@ public:
     typedef std::map<std::string, std::vector<dReal> > CustomData;
     IkReturnAction _action = IKRA_Reject; ///< the IkReturnAction corresponding to this failure
     std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
-    CollisionReportPtr _preport;   ///< the collision report from when some collision checking fails.
+    CollisionReportInfoPtr _pReportInfo; ///< the collision report info from when some collisions were detected.
     std::string _description;      ///< a string describing the failure
     CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
     int _index; // for debugging
@@ -190,7 +196,6 @@ public:
     std::vector< dReal > _vsolution; ///< the solution
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
-    //std::vector<CollisionReport> _reports; ///< all the reports that are written with the collision information if ik failed due to collisions. Only valid if _action has IKRA_RejectSelfCollision or IKRA_RejectEnvCollision set. (TODO)
     std::vector<IkFailureInfoPtr> _vIkFailureInfos;
 };
 
