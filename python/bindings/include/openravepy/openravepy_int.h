@@ -734,6 +734,8 @@ OPENRAVEPY_API py::object GetUserData(UserDataPtr pdata);
 
 OPENRAVEPY_API EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API EnvironmentBasePtr GetEnvironment(py::object);
+OPENRAVEPY_API PyEnvironmentBasePtr GetPyEnvironment(EnvironmentBasePtr);
+OPENRAVEPY_API py::object GetPyEnvironmentObject(EnvironmentBasePtr);
 OPENRAVEPY_API void LockEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API void UnlockEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv);
