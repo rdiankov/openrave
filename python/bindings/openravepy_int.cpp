@@ -2966,6 +2966,16 @@ EnvironmentBasePtr GetEnvironment(object o)
     return EnvironmentBasePtr();
 }
 
+PyEnvironmentBasePtr GetPyEnvironment(EnvironmentBasePtr penv)
+{
+    return PyEnvironmentBasePtr(new PyEnvironmentBase(penv));
+}
+
+py::object GetPyEnvironmentObject(EnvironmentBasePtr penv)
+{
+    return py::to_object(PyEnvironmentBasePtr(new PyEnvironmentBase(penv)));
+}
+
 object toPyEnvironment(object o)
 {
     extract_<PyInterfaceBasePtr> pyinterface(o);

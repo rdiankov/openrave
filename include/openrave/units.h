@@ -93,10 +93,11 @@ public:
     }
 
     LengthUnit lengthUnit = LU_Millimeter;
-    MassUnit massUnit = MU_Kilogram;
+    MassUnit massUnit = MU_Gram;
     TimeUnit timeUnit = TU_Second;
     AngleUnit angleUnit = AU_Degree;
 };
+BOOST_STATIC_ASSERT(sizeof(UnitInfo)==4);
 
 //
 // Length
