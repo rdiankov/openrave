@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2023
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -89,6 +89,7 @@
 
 #include <openrave/smart_ptr.h>
 #include <openrave/openraveexception.h>
+#include <openrave/units.h>
 
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
@@ -2511,10 +2512,6 @@ enum DOFAffine
     DOF_RotationMask=(DOF_RotationAxis|DOF_Rotation3D|DOF_RotationQuat), ///< mask for all bits representing 3D rotations
     DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
 };
-
-/** \brief returns a string representation of the error code
- */
-OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);
 
 /** \brief Given a mask of affine dofs and a dof inside that mask, returns the index where the value could be found.
 

@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.119.1
+===============
+
+* Fix not considering rotor inertia in inverse dynamics when velocity is 0
+
+Version 0.119.0
+===============
+
+* Add OpenRAVE units enums and helper functions
+
 Version 0.118.0
 ===============
 

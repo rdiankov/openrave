@@ -15,6 +15,7 @@ set(openrave_lib_SOURCES
   kinbodystatesaver.cpp
   libopenrave.cpp
   libopenrave.h
+  openraveexception.cpp
   openravemathextra.cpp
   openravemsgpack.cpp
   planner.cpp
@@ -29,6 +30,7 @@ set(openrave_lib_SOURCES
   robotmanipulator.cpp
   sensorsystem.cpp
   trajectory.cpp
+  units.cpp
   utils.cpp
   xmlreaders.cpp
   ${rave_header_files})
