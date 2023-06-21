@@ -84,7 +84,7 @@ set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE
                                   COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_CORE_DLL_EXPORTS -DOPENRAVE_CORE_DLL"
                                   LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
 target_link_libraries(libopenrave-core
-  PRIVATE boost_assertion_failed ${IVCON_LIBRARY} ${OPENRAVE_CORE_STATIC_LIBRARIES}
+  PRIVATE boost_assertion_failed ${IVCON_LIBRARY} ${OPENRAVE_CORE_STATIC_LIBRARIES} openrave_gpgme
   PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES}
 )
 install(TARGETS libopenrave-core
@@ -131,7 +131,7 @@ if( OPT_STATIC )
                                                 COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} "
                                                 LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS}")
   target_link_libraries(libopenrave-core_static
-    PRIVATE boost_assertion_failed ${IVCON_LIBRARY} ${OPENRAVE_CORE_STATIC_LIBRARIES}
+    PRIVATE boost_assertion_failed ${IVCON_LIBRARY} ${OPENRAVE_CORE_STATIC_LIBRARIES} openrave_gpgme
     PUBLIC libopenrave_static ${OPENRAVE_CORE_LIBRARIES}
   )
   install(TARGETS libopenrave-core_static

@@ -599,6 +599,10 @@ public:
             _ClearRapidJsonBuffer();
             return RaveParseMsgPackURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
+        else if (_IsEncryptedFile(path)) {
+            _ClearRapidJsonBuffer();
+            return RaveParseEncryptedURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
+        }
         else {
             RAVELOG_WARN_FORMAT("load failed on uri '%s' since could not determine the file type", uri);
         }
@@ -1661,6 +1665,12 @@ public:
                     return RobotBasePtr();
                 }
             }
+            else if (_IsEncryptedFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
+            }
         }
         else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), robot, filename, atts) ) {
@@ -1855,6 +1865,12 @@ public:
                     return KinBodyPtr();
                 }
             }
+            else if (_IsEncryptedFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
+            }
         }
 
         else if( _IsColladaFile(filename) ) {
@@ -2043,6 +2059,7 @@ public:
         bool bIsCollada = false;
         bool bIsJSON = false;
         bool bIsMsgPack = false;
+        bool bIsEncrypted = false;
         bool bIsX = false;
 
         std::string path;
@@ -2058,6 +2075,9 @@ public:
         }
         else if (_IsMsgPackFile(path)) {
             bIsMsgPack = true;
+        }
+        else if (_IsEncryptedFile(path)) {
+            bIsEncrypted = true;
         }
         else if (_IsXFile(path)) {
             bIsX = true;
@@ -2097,6 +2117,17 @@ public:
                     if( !RaveParseMsgPackFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
+                }
+            } else if (bIsEncrypted) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if ( !RaveParseEncryptedURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
+                    // Direct PGP file not supported for now, must be fetched through URI.
+                    // TODO
+                    return InterfaceBasePtr();
                 }
             } else if (bIsX) {
                 if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
@@ -4106,6 +4137,17 @@ protected:
     }
 
     static bool _IsMsgPackData(const std::string& data)
+    {
+        return data.size() > 0 && !std::isprint(data[0]);
+    }
+
+    static bool _IsEncryptedFile(const std::string& filename)
+    {
+        return StringEndsWith(filename, ".pgp") || StringEndsWith(filename, ".gpg");
+    }
+
+    // Encrypted data is also binary, so functionally it is indistinguishable from MsgPack data.
+    static bool _IsEncryptedData(const std::string& data)
     {
         return data.size() > 0 && !std::isprint(data[0]);
     }

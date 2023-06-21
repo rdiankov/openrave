@@ -1291,4 +1291,57 @@ bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
     return false;
 }
 
+///// Support for PGP-encrypted data
+
+bool RaveParseEncryptedURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    JSONReader reader(atts, penv, ".gpg");
+    reader.SetURI(uri);
+    rapidjson::Document rEnvInfo(&alloc);
+#if OPENRAVE_CURL
+    if (reader.IsDownloadingFromRemote()) {
+        reader.OpenRemoteDocument(uri, rEnvInfo);
+    } else
+#endif
+    {
+        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        if (fullFilename.size() == 0 ) {
+            return false;
+        }
+        OpenRapidJsonDocument(fullFilename, rEnvInfo);
+    }
+    std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
+    return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
+
+bool RaveParseEncryptedURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    JSONReader reader(atts, penv, ".gpg");
+    reader.SetURI(uri);
+    rapidjson::Document doc(&alloc);
+#if OPENRAVE_CURL
+    if (reader.IsDownloadingFromRemote()) {
+        reader.OpenRemoteDocument(uri, doc);
+    } else
+#endif
+    {
+        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        if (fullFilename.size() == 0 ) {
+            return false;
+        }
+        OpenRapidJsonDocument(fullFilename, doc);
+    }
+    return reader.ExtractOne(doc, ppbody, uri, alloc);
+}
+
+bool RaveParseEncryptedURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    KinBodyPtr pbody;
+    if (RaveParseEncryptedURI(penv, pbody, uri, atts, alloc)) {
+        pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
+        return true;
+    }
+    return false;
+}
+
+} // namespace OpenRAVE
