@@ -53,27 +53,20 @@ bool RaveParseEncryptedURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const st
 bool RaveParseEncryptedURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 
 void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts);
-void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts);
 void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts);
 
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteJSONStream(EnvironmentBasePtr penv, const ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteJSONStream(KinBodyPtr pbody, const ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, const ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteJSONStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 
 void RaveWriteMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteMsgPackFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteMsgPackStream(EnvironmentBasePtr penv, const ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteMsgPackStream(KinBodyPtr pbody, const ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, const ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteMsgPackStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
-void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 
 }

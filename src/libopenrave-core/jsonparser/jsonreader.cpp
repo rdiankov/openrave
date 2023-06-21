@@ -41,11 +41,8 @@ namespace OpenRAVE {
 static bool _ReplaceFilenameSuffix(std::string& filename, const std::string& oldSuffix, const std::string& newSuffix) {
     // fix extension, replace dae with json
     // this is done for ease of migration
-    if (StringEndsWith(filename, oldSuffix)) {
-        size_t len = filename.size();
-        size_t suffixLen = oldSuffix.size();
-        filename = filename.substr(0, len-suffixLen) + newSuffix;
-        return true;
+    if (RemoveSuffix(filename, oldSuffix)) {
+        filename += newSuffix;
     }
 
     return false;

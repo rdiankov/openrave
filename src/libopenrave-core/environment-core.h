@@ -758,32 +758,15 @@ public:
         }
 
         if( _IsJSONFile(filename) ) {
-            if( listbodies.size() == 1 ) {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
-            }
-            else {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONFile(listbodies,filename,atts,*_prLoadEnvAlloc);
-            }
+            _ClearRapidJsonBuffer();
+            RaveWriteJSONFile(listbodies,filename,atts,*_prLoadEnvAlloc);
         }
         else if( _IsMsgPackFile(filename) ) {
-            if( listbodies.size() == 1 ) {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
-            }
-            else {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
-            }
+            _ClearRapidJsonBuffer();
+            RaveWriteMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
         }
         else {
-            if( listbodies.size() == 1 ) {
-                RaveWriteColladaFile(listbodies.front(),filename,atts);
-            }
-            else {
-                RaveWriteColladaFile(listbodies,filename,atts);
-            }
+            RaveWriteColladaFile(listbodies,filename,atts);
         }
     }
 
@@ -841,12 +824,7 @@ public:
         }
         }
 
-        if( listbodies.size() == 1 ) {
-            RaveWriteJSON(listbodies.front(), rEnvironment, allocator, atts);
-        }
-        else {
-            RaveWriteJSON(listbodies, rEnvironment, allocator, atts);
-        }
+        RaveWriteJSON(listbodies, rEnvironment, allocator, atts);
     }
 
     virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) override
@@ -917,31 +895,16 @@ public:
         }
         }
 
-        if( listbodies.size() == 1 ) {
-            if (filetype == "collada") {
-                RaveWriteColladaMemory(listbodies.front(), output, atts);
-            }
-            else if (filetype == "json") {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
-            }
-            else if (filetype == "msgpack") {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
-            }
+        if (filetype == "collada") {
+            RaveWriteColladaMemory(listbodies, output, atts);
         }
-        else {
-            if (filetype == "collada") {
-                RaveWriteColladaMemory(listbodies, output, atts);
-            }
-            else if (filetype == "json") {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONMemory(listbodies, output, atts,*_prLoadEnvAlloc);
-            }
-            else if (filetype == "msgpack") {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
-            }
+        else if (filetype == "json") {
+            _ClearRapidJsonBuffer();
+            RaveWriteJSONMemory(listbodies, output, atts,*_prLoadEnvAlloc);
+        }
+        else if (filetype == "msgpack") {
+            _ClearRapidJsonBuffer();
+            RaveWriteMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
         }
     }
 
