@@ -54,24 +54,6 @@ static void _FastCopyFromFDToRapidJSONStringBuffer(int fd, rapidjson::StringBuff
     };
 }
 
-/// \brief get the scheme of the uri, e.g. file: or openrave:
-static void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
-{
-    path = uri;
-    size_t hashindex = path.find_last_of('#');
-    if (hashindex != std::string::npos) {
-        fragment = path.substr(hashindex + 1);
-        path = path.substr(0, hashindex);
-    }
-
-    size_t colonindex = path.find_first_of(':');
-    if (colonindex != std::string::npos) {
-        // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
-        scheme = path.substr(0, colonindex);
-        path = path.substr(colonindex + 1);
-    }
-}
-
 // Need to forward declare this
 static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext);
 
@@ -292,7 +274,7 @@ static size_t _WriteBackDataFromCurl(const char *data, size_t size, size_t dataS
 void JSONDownloaderScope::_QueueDownloadURI(const std::string& uri, rapidjson::Document* pDoc)
 {
     std::string scheme, path, fragment;
-    _ParseURI(uri, scheme, path, fragment);
+    ParseURI(uri, scheme, path, fragment);
 
     if (scheme.empty() && path.empty()) {
         RAVELOG_WARN_FORMAT("unknown uri \"%s\"", uri);
@@ -426,7 +408,7 @@ bool JSONDownloaderScope::_IsExpandableReferenceUri(const std::string& reference
         return false;
     }
     std::string scheme, path, fragment;
-    _ParseURI(referenceUri, scheme, path, fragment);
+    ParseURI(referenceUri, scheme, path, fragment);
     if (!fragment.empty()) {
         return true;
     }

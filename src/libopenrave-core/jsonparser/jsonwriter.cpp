@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
+#include "stringutils.h"
 
 #include <openrave/openravejson.h>
 #include <openrave/openravemsgpack.h>
@@ -153,30 +154,13 @@ protected:
         }
     }
 
-    /// \brief get the scheme of the uri, e.g. file: or openrave:
-    void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
-    {
-        path = uri;
-        size_t hashindex = path.find_last_of('#');
-        if (hashindex != std::string::npos) {
-            fragment = path.substr(hashindex + 1);
-            path = path.substr(0, hashindex);
-        }
-
-        size_t colonindex = path.find_first_of(':');
-        if (colonindex != std::string::npos) {
-            scheme = path.substr(0, colonindex);
-            path = path.substr(colonindex + 1);
-        }
-    }
-
     std::string _CanonicalizeURI(const std::string& uri)
     {
         if (uri.empty()) {
             return uri;
         }
         std::string scheme, path, fragment;
-        _ParseURI(uri, scheme, path, fragment);
+        ParseURI(uri, scheme, path, fragment);
 
         if (_vForceResolveOpenRAVEScheme.size() > 0 && scheme == "file") {
             // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"

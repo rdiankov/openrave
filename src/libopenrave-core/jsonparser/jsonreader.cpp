@@ -74,24 +74,6 @@ static void OpenRapidJsonDocument(const std::string& filename, rapidjson::Docume
     }
 }
 
-/// \brief get the scheme of the uri, e.g. file: or openrave:
-static void ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
-{
-    path = uri;
-    size_t hashindex = path.find_last_of('#');
-    if (hashindex != std::string::npos) {
-        fragment = path.substr(hashindex + 1);
-        path = path.substr(0, hashindex);
-    }
-
-    size_t colonindex = path.find_first_of(':');
-    if (colonindex != std::string::npos) {
-        // notice: in python code, like realtimerobottask3.py, it pass scheme as {openravescene: mujin}. No colon,
-        scheme = path.substr(0, colonindex);
-        path = path.substr(colonindex + 1);
-    }
-}
-
 static std::string ResolveURI(const std::string& scheme, const std::string& path, const std::string& curdir, const std::vector<std::string>& vOpenRAVESchemeAliases)
 {
     if (scheme.empty() && path.empty() ) {
