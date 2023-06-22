@@ -22,14 +22,18 @@
 
 #if  __cplusplus >= 201703L
 #define OPENRAVE_NODISCARD [[nodiscard]]
+#include <string_view>
+using string_view = std::string_view;
 #else
 #define OPENRAVE_NODISCARD __attribute__((warn_unused_result))
+#include <boost/utility/string_view.hpp>
+using string_view = ::boost::string_view;
 #endif
 
 namespace OpenRAVE {
 
 // Returns true if a string begins with a matching prefix.
-OPENRAVE_NODISCARD inline bool StringStartsWith(const std::string& input, const std::string& prefix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline bool StringStartsWith(string_view input, string_view prefix, bool ignoreCase = true) {
     if (input.length() < prefix.length()) {
         return false;
     }
@@ -43,7 +47,7 @@ OPENRAVE_NODISCARD inline bool StringStartsWith(const std::string& input, const 
 }
 
 // Returns true if a string ends with a matching suffix.
-OPENRAVE_NODISCARD inline bool StringEndsWith(const std::string& input, const std::string& suffix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline bool StringEndsWith(string_view input, string_view suffix, bool ignoreCase = true) {
     if (input.length() < suffix.length()) {
         return false;
     }
@@ -57,7 +61,7 @@ OPENRAVE_NODISCARD inline bool StringEndsWith(const std::string& input, const st
 }
 
 // Attempt to remove a matching prefix from a string in-place. Nothing is done if the prefix does not match.
-inline bool RemovePrefix(std::string& input, const std::string& prefix, bool ignoreCase = true) {
+inline bool RemovePrefix(std::string& input, string_view prefix, bool ignoreCase = true) {
     if (!StringStartsWith(input, prefix, ignoreCase)) {
         return false;
     }
@@ -66,7 +70,7 @@ inline bool RemovePrefix(std::string& input, const std::string& prefix, bool ign
 }
 
 // Attempt to remove a matching suffix from a string in-place. Nothing is done if the suffix does not match.
-inline bool RemoveSuffix(std::string& input, const std::string& suffix, bool ignoreCase = true) {
+inline bool RemoveSuffix(std::string& input, string_view suffix, bool ignoreCase = true) {
     if (!StringEndsWith(input, suffix, ignoreCase)) {
         return false;
     }
@@ -75,19 +79,19 @@ inline bool RemoveSuffix(std::string& input, const std::string& suffix, bool ign
 }
 
 // Attempt to remove a matching prefix from a string, returning a copy. An empty string is returned if the prefix does not match.
-OPENRAVE_NODISCARD inline std::string RemovePrefix(const std::string& input, const std::string& prefix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline std::string RemovePrefix(string_view input, string_view prefix, bool ignoreCase = true) {
     if (!StringStartsWith(input, prefix, ignoreCase)) {
         return "";
     }
-    return input.substr(prefix.length());
+    return std::string(input.substr(prefix.length()));
 }
 
 // Attempt to remove a matching suffix from a string, returning a copy. An empty string is returned if the suffix does not match.
-OPENRAVE_NODISCARD inline std::string RemoveSuffix(const std::string& input, const std::string& suffix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline std::string RemoveSuffix(string_view input, string_view suffix, bool ignoreCase = true) {
     if (!StringEndsWith(input, suffix, ignoreCase)) {
         return "";
     }
-    return input.substr(0, input.size() - suffix.length());
+    return std::string(input.substr(0, input.size() - suffix.length()));
 }
 
 } // namespace OpenRAVE
