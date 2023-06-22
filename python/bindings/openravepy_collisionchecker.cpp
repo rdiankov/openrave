@@ -167,6 +167,13 @@ void PyCollisionReportInfo::init()
     body2GeomName = reportInfo->body2GeomName;
 }
 
+std::string PyCollisionReportInfo::__str__()
+{
+    return boost::str(boost::format("(%s:%s:%s)x(%s:%s:%s)")
+                      % body1Name % body1LinkName % body1GeomName
+                      % body2Name % body2LinkName % body2GeomName);
+}
+
 PyCollisionCheckerBase::PyCollisionCheckerBase(CollisionCheckerBasePtr pCollisionChecker, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pCollisionChecker, pyenv), _pCollisionChecker(pCollisionChecker) {
 }
 PyCollisionCheckerBase::~PyCollisionCheckerBase() {
@@ -765,7 +772,7 @@ void UpdateCollisionReport(object o, PyEnvironmentBasePtr pyenv)
 PyCollisionReportInfoPtr toPyCollisionReportInfo(CollisionReportInfoPtr pReportInfo)
 {
     if( !pReportInfo ) {
-	return PyCollisionReportInfoPtr();
+        return PyCollisionReportInfoPtr();
     }
     PyCollisionReportInfoPtr pyReportInfo(new PyCollisionReportInfo(pReportInfo));
     pyReportInfo->init();
@@ -878,6 +885,7 @@ void init_openravepy_collisionchecker()
     .def_readonly("body2LinkName", &PyCollisionReportInfo::body2LinkName)
     .def_readonly("body1GeomName", &PyCollisionReportInfo::body1GeomName)
     .def_readonly("body2GeomName", &PyCollisionReportInfo::body2GeomName)
+    .def("__str__", &PyCollisionReportInfo::__str__)
     ;
 
     bool (PyCollisionCheckerBase::*pcolb)(PyKinBodyPtr) = &PyCollisionCheckerBase::CheckCollision;

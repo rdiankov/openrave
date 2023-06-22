@@ -71,6 +71,8 @@ public:
 
     void init();
 
+    std::string __str__();
+
     std::string body1Name, body2Name;
     std::string body1LinkName, body2LinkName;
     std::string body1GeomName, body2GeomName;
