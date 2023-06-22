@@ -47,6 +47,7 @@ static void _FastCopyFromFDToRapidJSONStringBuffer(int fd, rapidjson::StringBuff
         } else if (bytes == -1) {
             int err = errno;
             RAVELOG_WARN("Reading from memfd failed: %s\n", strerror(err));
+            break;
         } else {
             ::memcpy(buffer.Push(bytes), buf, bytes);
         }
