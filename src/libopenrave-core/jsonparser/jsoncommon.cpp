@@ -213,7 +213,7 @@ bool GpgEncrypt(std::istream& inputStream, std::string& outputBuffer, const std:
     GpgME::Data plainData(&plainStream);
     StringBufferProvider cipherStringBuffer(outputBuffer);
     GpgME::Data cipherData(&cipherStringBuffer);
-    GpgME::EncryptionResult result = gpgCtx->encrypt({key}, plainData, cipherData, GpgME::Context::EncryptionFlags::None);
+    GpgME::EncryptionResult result = gpgCtx->encrypt({key}, plainData, cipherData, GpgME::Context::EncryptionFlags::AlwaysTrust);
     if (result.error().code() == GPG_ERR_NO_ERROR) {
         return true;
     } else {
