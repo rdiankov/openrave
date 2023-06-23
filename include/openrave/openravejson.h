@@ -672,6 +672,20 @@ inline void SaveJsonValue(rapidjson::Value& rTransform, const OpenRAVE::RaveTran
     rTransform.PushBack(t.trans[2], alloc);
 }
 
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetArray();
+    // TODO, what's a better way to serialize?
+    bool bHas4Values = t[3] != 0;
+    int numvalues = bHas4Values ? 4 : 3;
+    v.Reserve(numvalues, alloc);
+    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
+        rapidjson::Value tmpv;
+        SaveJsonValue(tmpv, t[ivalue], alloc);
+        v.PushBack(tmpv, alloc);
+    }
+}
+
 inline void SaveJsonValue(rapidjson::Value& rUnitInfo, const OpenRAVE::UnitInfo& unitInfo, rapidjson::Document::AllocatorType& alloc) {
     rUnitInfo.SetObject();
     rUnitInfo.AddMember(rapidjson::Document::StringRefType("lengthUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit)), alloc);
@@ -698,20 +712,6 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
     for (size_t ivec = 0; ivec < t.size() && ivec < n; ++ivec) {
         rapidjson::Value tmpv;
         SaveJsonValue(tmpv, t[ivec], alloc);
-        v.PushBack(tmpv, alloc);
-    }
-}
-
-template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetArray();
-    // TODO, what's a better way to serialize?
-    bool bHas4Values = t[3] != 0;
-    int numvalues = bHas4Values ? 4 : 3;
-    v.Reserve(numvalues, alloc);
-    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
-        rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t[ivalue], alloc);
         v.PushBack(tmpv, alloc);
     }
 }

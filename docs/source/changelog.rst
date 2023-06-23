@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.119.4
+===============
+
+* support std::vector<OpenRAVE::RaveVector<T>> serialization
+
 Version 0.119.3
 ===============
 
