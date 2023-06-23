@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.119.3
+===============
+
+* Expose ConvertUnitScale to python
+
 Version 0.119.1
 ===============
 
