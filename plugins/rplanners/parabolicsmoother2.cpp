@@ -3488,11 +3488,15 @@ protected:
     /// \param[in] r0, r1 : ratio in [0.0, 1.0] to sample t0 and t1 within range.
     /// \param[in] tTotal : max time
     /// \param[in] minTimeStep : min time between t1 and t0
+    /// \param[in] tCenterArg : center of time. t0 <= tCenterArg <= t1
+    /// \param[in] cutoffTime : cutoff time of range of t0 and t1 sampling.
     void _SampleTimeAroundCenter(dReal& t0, dReal& t1,
                                  const dReal r0, const dReal r1,
                                  const dReal tTotal, const dReal minTimeStep,
-                                 const dReal tCenter, const dReal cutoffTime) const
+                                 const dReal tCenterArg, const dReal cutoffTime) const
     {
+        // first, make sure 0<=tCenter<=tTotal. otherwise, something wrong with the caller side.
+        const dReal tCenter = std::max(std::min(tCenterArg, tTotal), 0.0);
         // compute tentative min max
         dReal fMaxT1 = std::min(tTotal, tCenter + cutoffTime);
         dReal fMinT0 = std::max(0.0, tCenter - cutoffTime);
