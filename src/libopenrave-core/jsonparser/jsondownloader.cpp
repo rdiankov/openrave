@@ -22,88 +22,41 @@
 
 #include <openrave/openravemsgpack.h>
 
-#if OPENRAVE_ENCRYPTION
-#include <sys/mman.h>
-#include <gpgme.h>
-#include <gpgme++/context.h>
-#include <gpgme++/data.h>
-#include <gpgme++/decryptionresult.h>
-#include <gpgme++/global.h>
-#include <gpgme++/keylistresult.h>
-#endif
-
 namespace OpenRAVE {
-
-// Copies entire contents of a file descriptor to rapidjson stringbuffer.
-static void _FastCopyFromFDToRapidJSONStringBuffer(int fd, rapidjson::StringBuffer& buffer) {
-    buffer.Clear();
-    ::lseek(fd, 0, SEEK_SET);
-    char buf[4096];
-    ssize_t bytes = 0;
-    while (true) {
-        bytes = ::read(fd, buf, sizeof(buf));
-        if (bytes == 0) {
-            break;
-        } else if (bytes == -1) {
-            int err = errno;
-            RAVELOG_WARN("Reading from memfd failed: %s\n", strerror(err));
-            break;
-        } else {
-            ::memcpy(buffer.Push(bytes), buf, bytes);
-        }
-    };
-}
 
 // Need to forward declare this
 static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext);
 
-static bool _ParseEncryptedDocument(OpenRAVE::JSONDownloadContextPtr pContext) {
-#if OPENRAVE_ENCRYPTION
-    // gpgme_check_version must be executed at least once before we create a context.
-    RAVELOG_DEBUG("GPG version: %s\n", gpgme_check_version(NULL));
-    std::unique_ptr<GpgME::Context> gpgCtx = GpgME::Context::create(GpgME::Protocol::OpenPGP);
-    if (!gpgCtx) {
-        RAVELOG_ERROR("Failed to initialize GPG context.");
-        return false;
-    }
-
-    GpgME::Data cipherData(pContext->buffer.GetString(), pContext->buffer.GetSize());
-    int memfd = ::memfd_create("openrave_decrypted", MFD_CLOEXEC);
-    GpgME::Data plainData(memfd);
-    GpgME::DecryptionResult result = gpgCtx->decrypt(cipherData, plainData);
-    if (result.error().code() != GPG_ERR_NO_ERROR) {
-        RAVELOG_ERROR("gpg error: %s\n", result.error().asString());
-        ::close(memfd);
-        return false;
-    } else {
-        RAVELOG_INFO("Fetched encrypted file from %s\n", pContext->uri.c_str());
+static bool _DecryptDocument(OpenRAVE::JSONDownloadContextPtr pContext)
+{
+    // Make a copy of the input, because the decryption functions don't store a copy so data needs to be alive
+    std::string input = pContext->buffer;
+    pContext->buffer.clear();
+    std::istringstream iss(input, std::ios::in | std::ios::binary);
+    if (GpgDecrypt(iss, pContext->buffer)) {
         if (RemoveSuffix(pContext->uri, ".gpg") || RemoveSuffix(pContext->uri, ".pgp")) {
-            _FastCopyFromFDToRapidJSONStringBuffer(memfd, pContext->buffer);
             _ParseDocument(pContext);
-            ::close(memfd);
             return true;
         }
-        ::close(memfd);
-        return false;
+    } else {
+        RAVELOG_ERROR("Failed to decrypt document.");
     }
-#else
-        throw OPENRAVE_EXCEPTION_FORMAT("Encryption not enabled in OpenRAVE, but an encrypted file was received.");
-#endif
+    return false;
 }
 
 static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext)
 {
     if (StringEndsWith(pContext->uri, ".json")) {
-        rapidjson::ParseResult ok = pContext->pDoc->Parse<rapidjson::kParseFullPrecisionFlag>(pContext->buffer.GetString());
+        rapidjson::ParseResult ok = pContext->pDoc->Parse<rapidjson::kParseFullPrecisionFlag>(pContext->buffer.data(), pContext->buffer.size());
         if (!ok) {
             throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", pContext->uri, ORE_CurlInvalidResponse);
         }
     }
     else if (StringEndsWith(pContext->uri, ".msgpack")) {
-        MsgPack::ParseMsgPack(*(pContext->pDoc), pContext->buffer.GetString(), pContext->buffer.GetSize());
+        MsgPack::ParseMsgPack(*(pContext->pDoc), pContext->buffer.data(), pContext->buffer.size());
     }
     else if (StringEndsWith(pContext->uri, ".gpg") || StringEndsWith(pContext->uri, ".pgp")) {
-        _ParseEncryptedDocument(pContext);
+        _DecryptDocument(pContext);
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("Do not know how to parse data from uri '%s', supported is json/msgpack", pContext->uri, ORE_EnvironmentFormatUnrecognized);
@@ -249,7 +202,7 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
             // reuse the context object later
             const rapidjson::Document& doc = *pContext->pDoc;
             pContext->pDoc = nullptr;
-            pContext->buffer.Clear();
+            pContext->buffer.clear();
             _downloader._vDownloadContextPool.emplace_back();
             _downloader._vDownloadContextPool.back().swap(pContext);
 
@@ -267,7 +220,7 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
 static size_t _WriteBackDataFromCurl(const char *data, size_t size, size_t dataSize, JSONDownloadContext* pContext)
 {
     const size_t numBytes = size * dataSize;
-    std::memcpy(pContext->buffer.Push(numBytes), data, numBytes);
+    pContext->buffer.append(data, numBytes);
     return numBytes;
 }
 

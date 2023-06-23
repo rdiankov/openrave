@@ -14,6 +14,7 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#define RAPIDJSON_HAS_STDSTRING 1
 #include "jsoncommon.h"
 #include "stringutils.h"
 
@@ -68,6 +69,19 @@ static void OpenRapidJsonDocument(const std::string& filename, rapidjson::Docume
     rapidjson::ParseResult ok = doc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
     if (!ok) {
         throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", filename, ORE_InvalidArguments);
+    }
+}
+
+/// \brief open and cache a json document
+static void OpenEncryptedDocument(const std::string& filename, rapidjson::Document& doc)
+{
+    std::ifstream ifs(filename.c_str());
+    std::string outputBuffer;
+    if (GpgDecrypt(ifs, outputBuffer)) {
+        rapidjson::ParseResult ok = doc.Parse<rapidjson::kParseFullPrecisionFlag>(outputBuffer);
+        if (!ok) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", filename, ORE_InvalidArguments);
+        }
     }
 }
 
@@ -1287,7 +1301,7 @@ bool RaveParseEncryptedURI(EnvironmentBasePtr penv, const std::string& uri, Upda
         if (fullFilename.size() == 0 ) {
             return false;
         }
-        OpenRapidJsonDocument(fullFilename, rEnvInfo);
+        OpenEncryptedDocument(fullFilename, rEnvInfo);
     }
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
@@ -1308,7 +1322,7 @@ bool RaveParseEncryptedURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const st
         if (fullFilename.size() == 0 ) {
             return false;
         }
-        OpenRapidJsonDocument(fullFilename, doc);
+        OpenEncryptedDocument(fullFilename, doc);
     }
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }

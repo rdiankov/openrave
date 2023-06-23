@@ -707,6 +707,14 @@ public:
                 _ClearRapidJsonBuffer();
                 RaveWriteMsgPackFile(shared_from_this(),filename,atts,*_prLoadEnvAlloc);
             }
+            else if (StringEndsWith(filename, ".json.gpg")) {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc, MimeType::JSON);
+            }
+            else if (StringEndsWith(filename, ".msgpack.gpg")) {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc, MimeType::MsgPack);
+            }
             else {
                 RaveWriteColladaFile(shared_from_this(),filename,atts);
             }
@@ -764,6 +772,14 @@ public:
         else if( _IsMsgPackFile(filename) ) {
             _ClearRapidJsonBuffer();
             RaveWriteMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
+        }
+        else if( StringEndsWith(filename, ".json.gpg") ) {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedFile(listbodies,filename,atts,*_prLoadEnvAlloc, MimeType::JSON);
+        }
+        else if( StringEndsWith(filename, ".msgpack.gpg") ) {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedFile(listbodies,filename,atts,*_prLoadEnvAlloc, MimeType::MsgPack);
         }
         else {
             RaveWriteColladaFile(listbodies,filename,atts);
@@ -848,6 +864,14 @@ public:
                 _ClearRapidJsonBuffer();
                 RaveWriteMsgPackMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
             }
+            else if (filetype == "json.gpg") {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc, MimeType::JSON);
+            }
+            else if (filetype == "msgpack.gpg") {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc, MimeType::MsgPack);
+            }
             return;
 
         case SO_Body: {
@@ -905,6 +929,14 @@ public:
         else if (filetype == "msgpack") {
             _ClearRapidJsonBuffer();
             RaveWriteMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
+        }
+        else if (filetype == "json.gpg") {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedMemory(listbodies, output, atts,*_prLoadEnvAlloc, MimeType::JSON);
+        }
+        else if (filetype == "msgpack.gpg") {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedMemory(listbodies, output, atts,*_prLoadEnvAlloc, MimeType::MsgPack);
         }
     }
 

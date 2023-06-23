@@ -38,7 +38,7 @@ public:
 
     std::string uri; ///< canonicalized uri of the download
     CURL* curl = nullptr; ///< the curl handle for this download
-    rapidjson::StringBuffer buffer; ///< buffer used to receive downloaded data
+    std::string buffer; ///< buffer used to receive downloaded data
     rapidjson::Document* pDoc = nullptr; ///< if non-null, the caller-supplied document to put results into
     uint64_t startTimestampUS = 0; ///< start timestamp in microseconds
 };
