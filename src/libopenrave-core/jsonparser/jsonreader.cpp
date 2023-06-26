@@ -27,6 +27,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
+#include "mujincontrollerclient/mujinjson.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -708,11 +709,12 @@ protected:
             }
         }
 
+
+        KinBody::KinBodyInfoPtr pNewKinBodyInfo;
         if( insertIndex >= 0 ) {
             RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%referenceUri%currentFilename);
-        }
-        else {
-            KinBody::KinBodyInfoPtr pNewKinBodyInfo;
+            pNewKinBodyInfo = envInfo._vBodyInfos[insertIndex];
+        } else {
             bool isNewRobot = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "isRobot", false);
             if( isNewRobot ) {
                 pNewKinBodyInfo.reset(new RobotBase::RobotBaseInfo());
@@ -720,35 +722,35 @@ protected:
             else {
                 pNewKinBodyInfo.reset(new KinBody::KinBodyInfo());
             }
-            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
+        }
+        pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
 
-            if( !originBodyId.empty() ) {
-                pNewKinBodyInfo->_id = originBodyId;
-            }
+        if( !originBodyId.empty() ) {
+            pNewKinBodyInfo->_id = originBodyId;
+        }
 
-            if( pNewKinBodyInfo->_name.empty() ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rRefKinBodyInfo)%currentFilename);
-            }
+        if( pNewKinBodyInfo->_name.empty() ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rRefKinBodyInfo)%currentFilename);
+        }
 
-            if( originBodyId.empty() ) {
-                // try matching with names
-                for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
-                    KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
-                    if( !originBodyName.empty() && pExistingBodyInfo->_name == originBodyName ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, found existing body with id='%s', name='%s', so overwriting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
-                        envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
-                        insertIndex = ibody;
-                        break;
-                    }
+        if( originBodyId.empty() ) {
+            // try matching with names
+            for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
+                KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
+                if( !originBodyName.empty() && pExistingBodyInfo->_name == originBodyName ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, found existing body with id='%s', name='%s', so overwriting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
+                    envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
+                    insertIndex = ibody;
+                    break;
                 }
             }
+        }
 
-            if( insertIndex < 0 ) {
-                // might get overwritten later, so ok if name is empty
-                insertIndex = envInfo._vBodyInfos.size();
-                envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
-                RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
-            }
+        if( insertIndex < 0 ) {
+            // might get overwritten later, so ok if name is empty
+            insertIndex = envInfo._vBodyInfos.size();
+            envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
+            RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
         }
         return insertIndex;
     }
