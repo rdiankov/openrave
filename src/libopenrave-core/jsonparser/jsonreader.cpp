@@ -27,6 +27,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
+#include <unordered_set>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -177,7 +178,9 @@ public:
                 ss >> timeout;
                 _downloadTimeoutUS = timeout * 1000000; // convert timeout from seconds to microseconds
             }
-
+            else if (itatt->first == "excludeBodyId") {
+                _excludeBodyIds.emplace(itatt->second);
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -309,6 +312,10 @@ public:
                     pKinBodyInfo->SerializeJSON(rTempKinBodyInfo, rTempKinBodyInfo.GetAllocator(), fUnitScale, options);
                     throw OPENRAVE_EXCEPTION_FORMAT("Has body with no name in file '%s', so cannot load the scene: %s", _filename%orjson::DumpJson(rTempKinBodyInfo), ORE_InvalidArguments);
                 }
+            }
+            if ( _excludeBodyIds.count(pKinBodyInfo->_id) ) {
+                itBodyInfo = envInfo._vBodyInfos.erase(itBodyInfo);
+                continue;
             }
 
             ++itBodyInfo;
@@ -1032,6 +1039,7 @@ protected:
     std::string _uri; ///< original uri used to open reader
     std::string _defaultSuffix; ///< defaultSuffix of the main document, either ".json" or ".msgpack"
     std::vector<std::string> _vOpenRAVESchemeAliases;
+    std::unordered_set<std::string> _excludeBodyIds; ///< list of body ids to exclude from importing
     bool _bMustResolveURI = false; ///< if true, throw exception if object uri does not resolve
     bool _bMustResolveEnvironmentURI = false; ///< if true, throw exception if environment uri does not resolve
     bool _bIgnoreInvalidBodies = false; ///< if true, ignores any invalid bodies
