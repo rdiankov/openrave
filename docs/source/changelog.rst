@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.119.5
+===============
+
+* Instead of sampling and rejecting times, directly sample times in `ParabolicSmoother2`.
+
 Version 0.119.4
 ===============
 
