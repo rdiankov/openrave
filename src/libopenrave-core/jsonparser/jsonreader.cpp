@@ -27,7 +27,6 @@
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
-#include "mujincontrollerclient/mujinjson.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
