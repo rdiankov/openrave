@@ -326,8 +326,9 @@ object PyGeometryInfo::ComputeInnerEmptyVolume()
 {
     Transform tInnerEmptyVolume;
     Vector abInnerEmptyExtents;
-    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    if( pgeominfo->ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
+    KinBody::GeometryInfo geominfo;
+    FillGeometryInfo(geominfo);
+    if( geominfo.ComputeInnerEmptyVolume(tInnerEmptyVolume, abInnerEmptyExtents) ) {
         return py::make_tuple(ReturnTransform(tInnerEmptyVolume), toPyVector3(abInnerEmptyExtents));
     }
     return py::make_tuple(py::none_(), py::none_());
@@ -336,6 +337,13 @@ object PyGeometryInfo::ComputeInnerEmptyVolume()
 object PyGeometryInfo::ComputeAABB(object otransform) {
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
     return toPyAABB(pgeominfo->ComputeAABB(ExtractTransform(otransform)));
+}
+
+void PyGeometryInfo::ConvertUnitScale(dReal fUnitScale) {
+    KinBody::GeometryInfo geominfo;
+    FillGeometryInfo(geominfo);
+    geominfo.ConvertUnitScale(fUnitScale);
+    Init(geominfo); // init all the python structs again
 }
 
 object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
@@ -4907,6 +4915,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vPositiveCropContainerEmptyMargins", &PyGeometryInfo::_vPositiveCropContainerEmptyMargins)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
+                          .def("ConvertUnitScale",&PyGeometryInfo::ConvertUnitScale, PY_ARGS("unitScale") DOXY_FN(GeomeryInfo,ConvertUnitScale))
                           .def("GetBoxHalfExtents",&PyGeometryInfo::GetBoxHalfExtents, DOXY_FN(GeomeryInfo,GetBoxHalfExtents))
                           .def("GetCageBaseHalfExtents",&PyGeometryInfo::GetCageBaseHalfExtents, DOXY_FN(GeomeryInfo,GetCageBaseHalfExtents))
                           .def("GetContainerOuterExtents",&PyGeometryInfo::GetContainerOuterExtents, DOXY_FN(GeomeryInfo,GetContainerOuterExtents))

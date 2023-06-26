@@ -45,6 +45,7 @@ public:
 
     object ComputeInnerEmptyVolume();
     object ComputeAABB(object otransform);
+    void ConvertUnitScale(dReal fUnitScale);
 
     object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
