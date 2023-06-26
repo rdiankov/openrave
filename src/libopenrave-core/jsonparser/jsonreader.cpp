@@ -72,7 +72,7 @@ static void OpenRapidJsonDocument(const std::string& filename, rapidjson::Docume
     }
 }
 
-/// \brief open and cache a json document
+/// \brief open and cache an encrypted document
 static void OpenEncryptedDocument(const std::string& filename, rapidjson::Document& doc)
 {
     std::ifstream ifs(filename.c_str());
@@ -463,6 +463,10 @@ protected:
             else if (StringEndsWith(fullFilename, ".msgpack")) {
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenMsgPackDocument(fullFilename, *newDoc);
+            }
+            else if (StringEndsWith(fullFilename, ".gpg") || StringEndsWith(fullFilename, ".pgp")) {
+                newDoc.reset(new rapidjson::Document(&alloc));
+                OpenEncryptedDocument(fullFilename, *newDoc);
             }
             if (!!newDoc) {
                 doc = newDoc;
