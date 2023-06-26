@@ -708,7 +708,6 @@ protected:
             }
         }
 
-
         KinBody::KinBodyInfoPtr pNewKinBodyInfo;
         if( insertIndex >= 0 ) {
             RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%referenceUri%currentFilename);
