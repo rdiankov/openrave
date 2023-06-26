@@ -24,10 +24,11 @@
 #include <gpgme++/context.h>
 #include <gpgme++/data.h>
 #include <gpgme++/decryptionresult.h>
+#include <gpgme++/encryptionresult.h>
+#include <gpgme++/engineinfo.h>
 #include <gpgme++/global.h>
 #include <gpgme++/keylistresult.h>
 #include <gpgme++/interfaces/dataprovider.h>
-#include <gpgme++/encryptionresult.h>
 #endif
 
 namespace OpenRAVE {

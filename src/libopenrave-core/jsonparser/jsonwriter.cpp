@@ -330,7 +330,7 @@ void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const A
 {
     std::string keyName;
     for (const std::pair<std::string, std::string>& attribute : atts) {
-        if (attribute.first == "openravekey") {
+        if (attribute.first == "gpgkey") {
             keyName = attribute.second;
             break;
         }
@@ -360,7 +360,7 @@ void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostr
 {
     std::string keyName;
     for (const std::pair<std::string, std::string>& attribute : atts) {
-        if (attribute.first == "openravekey") {
+        if (attribute.first == "gpgkey") {
             keyName = attribute.second;
             break;
         }
