@@ -2719,6 +2719,7 @@ public:
         }
         info._uInt64Parameters = _mapUInt64Parameters;
         info._unit = _unit;
+        info._lastModified = _lastModified;
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -2732,6 +2733,8 @@ public:
 
         EnvironmentLock lockenv(GetMutex());
         std::vector<dReal> vDOFValues;
+
+        _lastModified = info._lastModified;
 
         if( updateMode != UFIM_OnlySpecifiedBodiesExact ) {
             // copy basic info into EnvironmentBase
@@ -4270,6 +4273,8 @@ protected:
     bool _bEnableSimulation;            ///< enable simulation loop
     bool _bShutdownSimulation; ///< if true, the simulation thread should shutdown
     bool _bRealTime;
+
+    std::chrono::system_clock::time_point _lastModified;
 
     friend class EnvironmentXMLReader;
 };
