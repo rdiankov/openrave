@@ -697,6 +697,9 @@ protected:
 
             const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
             RAVELOG_VERBOSE_FORMAT("Deserializing rRefKinBodyInfo=%s into insertIndex=%d, isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
+            if (!isPartial) {
+                pNewKinBodyInfo->Reset();
+            }
         } else {
             bool isNewRobot = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "isRobot", false);
             if( isNewRobot ) {
