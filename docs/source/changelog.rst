@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.119.5
+===============
+
+* Add excludeBodyId option to JSON reader
+
 Version 0.119.4
 ===============
 
