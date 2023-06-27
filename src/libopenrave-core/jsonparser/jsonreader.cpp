@@ -313,7 +313,7 @@ public:
                     throw OPENRAVE_EXCEPTION_FORMAT("Has body with no name in file '%s', so cannot load the scene: %s", _filename%orjson::DumpJson(rTempKinBodyInfo), ORE_InvalidArguments);
                 }
             }
-            if ( _excludeBodyIds.count(pKinBodyInfo->_id) ) {
+            if ( _excludeBodyIds.find(pKinBodyInfo->_id) != _excludeBodyIds.end() ) {
                 itBodyInfo = envInfo._vBodyInfos.erase(itBodyInfo);
                 continue;
             }
