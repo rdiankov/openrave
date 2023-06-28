@@ -2799,6 +2799,25 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(unit.first, unit.second);
 }
 
+void PyEnvironmentBase::SetUnitInfo(const py::dict& unitInfo){
+    UnitInfo unit;
+    unit.lengthUnit = GetLengthUnitFromString(unitInfo["lengthUnit"].cast<std::string>(), LU_Meter);
+    unit.massUnit = GetMassUnitFromString(unitInfo["massUnit"].cast<std::string>(), MU_Gram);
+    unit.timeUnit = GetTimeUnitFromString(unitInfo["timeUnit"].cast<std::string>(), TU_Second);
+    unit.angleUnit = GetAngleUnitFromString(unitInfo["angleUnit"].cast<std::string>(), AU_Degree);
+    _penv->SetUnitInfo(unit);
+}
+
+py::dict PyEnvironmentBase::GetUnitInfo() const {
+    UnitInfo unitInfo = _penv->GetUnitInfo();
+    py::dict unit;
+    unit["lengthUnit"] = GetLengthUnitString(unitInfo.lengthUnit);
+    unit["massUnit"] = GetMassUnitString(unitInfo.massUnit);
+    unit["timeUnit"] = GetTimeUnitString(unitInfo.timeUnit);
+    unit["angleUnit"] = GetAngleUnitString(unitInfo.angleUnit);
+    return unit;
+}
+
 int PyEnvironmentBase::GetId() const
 {
     return _penv->GetId();
