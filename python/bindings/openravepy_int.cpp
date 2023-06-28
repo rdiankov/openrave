@@ -3806,13 +3806,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
     object lengthUnit = enum_<LengthUnit>("LengthUnit" DOXY_ENUM(LengthUnit))
 #endif
-                          .value("m",  LU_Meter)
-                          .value("cm", LU_Centimeter)
-                          .value("mm", LU_Millimeter)
-                          .value("um", LU_Micrometer)
-                          .value("nm", LU_Nanometer)
-                          .value("in", LU_Inch)
-                          .value("ft", LU_Foot)
+                          .value("Meter", LU_Meter)
+                          .value("Centimeter", LU_Centimeter)
+                          .value("Millimeter", LU_Millimeter)
+                          .value("Micrometer", LU_Micrometer)
+                          .value("Nanometer", LU_Nanometer)
+                          .value("Inch", LU_Inch)
+                          .value("Foot", LU_Foot)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3820,10 +3820,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
     object massUnit = enum_<MassUnit>("MassUnit" DOXY_ENUM(MassUnit))
 #endif
-                          .value("g",  MU_Gram)
-                          .value("kg", MU_Kilogram)
-                          .value("mg", MU_Milligram)
-                          .value("lb", MU_Pound)
+                          .value("Gram", MU_Gram)
+                          .value("Kilogram", MU_Kilogram)
+                          .value("Milligram", MU_Milligram)
+                          .value("Pound", MU_Pound)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3831,11 +3831,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
     object timeUnit = enum_<TimeUnit>("TimeUnit" DOXY_ENUM(TimeUnit))
 #endif
-                          .value("s",  TU_Second)
-                          .value("ms", TU_Millisecond)
-                          .value("us", TU_Microsecond)
-                          .value("ns", TU_Nanosecond)
-                          .value("ps", TU_Picosecond)
+                          .value("Second", TU_Second)
+                          .value("Millisecond", TU_Millisecond)
+                          .value("Microsecond", TU_Microsecond)
+                          .value("Nanosecond", TU_Nanosecond)
+                          .value("Picosecond", TU_Picosecond)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3843,8 +3843,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
     object angleUnit = enum_<AngleUnit>("AngleUnit" DOXY_ENUM(AngleUnit))
 #endif
-                          .value("rad",  AU_Radian)
-                          .value("deg", AU_Degree)
+                          .value("Radian", AU_Radian)
+                          .value("Degree", AU_Degree)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
