@@ -37,6 +37,7 @@ enum LengthUnit : int8_t
     LU_Nanometer = -9,
     LU_Inch = 0x10,
     LU_Foot = 0x11,
+    LU_TenthMillimeter = 0x12,
 };
 
 OPENRAVE_API const char* GetLengthUnitString(LengthUnit unit);
@@ -136,6 +137,9 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "meter") == 0 ) {
         return T(1.0);
     }
+    if (strcmp(pUnit, "0.1mm") == 0 ) {
+        return T(1e4);
+    }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported length unit '%s'", pUnit, ORE_LengthUnitInvalid);
 }
@@ -169,6 +173,9 @@ inline T GetLengthUnitStandardValue(const LengthUnit unit)
     }
     if( unit == OpenRAVE::LU_Foot ) {
         return T(3.2808398950131235); // 304.8 mm/ft
+    }
+    if( unit == OpenRAVE::LU_TenthMillimeter ) {
+        return T(1e4);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported length unit '%s'", GetLengthUnitString(unit), ORE_LengthUnitInvalid);
