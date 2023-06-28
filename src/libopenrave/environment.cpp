@@ -19,6 +19,7 @@
 EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo()
 {
     _gravity = Vector(0,0,-9.797930195020351);
+    _unitInfo.lengthUnit = LU_Meter;
 }
 
 EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseInfo& other)

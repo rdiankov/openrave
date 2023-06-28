@@ -2684,6 +2684,16 @@ public:
         _unit = unit;
     }
 
+    virtual UnitInfo GetUnitInfo() const
+    {
+        return _unitInfo;
+    }
+
+    virtual void SetUnit(UnitInfo unitInfo)
+    {
+        _unitInfo = unitInfo;
+    }
+
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
     virtual void ExtractInfo(EnvironmentBaseInfo& info) override
     {
@@ -2719,6 +2729,7 @@ public:
         }
         info._uInt64Parameters = _mapUInt64Parameters;
         info._unit = _unit;
+        info._unitInfo = _unitInfo;
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -2741,6 +2752,7 @@ public:
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
             _unit = info._unit;
+            _unitInfo = info._unitInfo;
 
             // set gravity
             if (!!_pPhysicsEngine) {
@@ -3221,6 +3233,8 @@ protected:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
         _unit = std::make_pair("meter",1.0); //default unit settings
+        _unitInfo = UnitInfo();
+        _unitInfo.lengthUnit = LU_Meter; //default unit settings
 
         _vRapidJsonLoadBuffer.resize(4000000);
         _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
@@ -4254,6 +4268,7 @@ protected:
     vector<KinBody::BodyState> _vPublishedBodies; ///< protected by _mutexInterfaces
     string _homedirectory;
     std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters
+    UnitInfo _unitInfo; ///< unitInfo that describes length unit, mass unit, time unit and angle unit
 
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 

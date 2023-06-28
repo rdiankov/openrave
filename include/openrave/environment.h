@@ -768,6 +768,16 @@ public:
     /// \param unit (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
     virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
 
+    /// \brief unitInfo
+    ///
+    /// \return UnitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual UnitInfo GetUnitInfo() const = 0;
+
+    /// \brief set unitInfo for the current environment.
+    ///
+    /// \param unitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual void SetUnit(UnitInfo unitInfo) = 0;
+
     //@}
 
     /// \brief returns the unique id of the environment
@@ -844,6 +854,7 @@ public:
         std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
         std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
+        UnitInfo _unitInfo; ///< environment unitInfo
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
