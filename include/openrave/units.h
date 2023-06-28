@@ -130,7 +130,7 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "in") == 0 || strcmp(pUnit, "inch") == 0 ) {
         return T(39.370078740157481); // 25.4 mm/in
     }
-    if (strcmp(pUnit, "ft") == 0 || strcmp(pUnit, "foot") == 0 ) {
+    if (strcmp(pUnit, "ft") == 0 || strcmp(pUnit, "foot") == 0 || strcmp(pUnit, "feet") == 0 ) {
         return T(3.2808398950131235); // 304.8 mm/ft
     }
     if (strcmp(pUnit, "meter") == 0 ) {
