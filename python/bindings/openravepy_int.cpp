@@ -3847,6 +3847,26 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           .value("Degree", AU_Degree)
     ;
 
+    m.def("GetLengthUnitStandardValue", 
+          [](const LengthUnit unit){ return OpenRAVE::GetLengthUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetLengthUnitStandardValue)
+          );
+
+    m.def("GetMassUnitStandardValue", 
+          [](const MassUnit unit){ return OpenRAVE::GetMassUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetMassUnitStandardValue)
+          );
+
+    m.def("GetTimeUnitStandardValue", 
+          [](const TimeUnit unit){ return OpenRAVE::GetTimeUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetTimeUnitStandardValue)
+          );
+
+    m.def("GetAngleUnitStandardValue", 
+          [](const AngleUnit unit){ return OpenRAVE::GetAngleUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetAngleUnitStandardValue)
+          );
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.attr("__version__") = OPENRAVE_VERSION_STRING;
     m.attr("__author__") = "Rosen Diankov, Guangning Tan";
