@@ -2792,20 +2792,20 @@ object PyEnvironmentBase::GetUserData() const {
 
 void PyEnvironmentBase::SetUnitInfo(const py::dict& unitInfo){
     UnitInfo unit;
-    unit.lengthUnit = GetLengthUnitFromString(unitInfo["lengthUnit"].cast<std::string>(), LU_Meter);
-    unit.massUnit = GetMassUnitFromString(unitInfo["massUnit"].cast<std::string>(), MU_Gram);
-    unit.timeUnit = GetTimeUnitFromString(unitInfo["timeUnit"].cast<std::string>(), TU_Second);
-    unit.angleUnit = GetAngleUnitFromString(unitInfo["angleUnit"].cast<std::string>(), AU_Degree);
+    unit.lengthUnit = unitInfo["lengthUnit"].cast<LengthUnit>();
+    unit.massUnit = unitInfo["massUnit"].cast<MassUnit>();
+    unit.timeUnit = unitInfo["timeUnit"].cast<TimeUnit>();
+    unit.angleUnit = unitInfo["angleUnit"].cast<AngleUnit>();
     _penv->SetUnitInfo(unit);
 }
 
 py::dict PyEnvironmentBase::GetUnitInfo() const {
     UnitInfo unitInfo = _penv->GetUnitInfo();
     py::dict unit;
-    unit["lengthUnit"] = GetLengthUnitString(unitInfo.lengthUnit);
-    unit["massUnit"] = GetMassUnitString(unitInfo.massUnit);
-    unit["timeUnit"] = GetTimeUnitString(unitInfo.timeUnit);
-    unit["angleUnit"] = GetAngleUnitString(unitInfo.angleUnit);
+    unit["lengthUnit"] = unitInfo.lengthUnit;
+    unit["massUnit"] = unitInfo.massUnit;
+    unit["timeUnit"] = unitInfo.timeUnit;
+    unit["angleUnit"] = unitInfo.angleUnit;
     return unit;
 }
 
