@@ -2728,7 +2728,6 @@ public:
             info._gravity = _pPhysicsEngine->GetGravity();
         }
         info._uInt64Parameters = _mapUInt64Parameters;
-        info._unit = _unit;
         info._unitInfo = _unitInfo;
     }
 
@@ -2751,7 +2750,6 @@ public:
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
-            _unit = info._unit;
             _unitInfo = info._unitInfo;
 
             // set gravity
@@ -3232,7 +3230,6 @@ protected:
         _bRealTime = true;
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
-        _unit = std::make_pair("meter",1.0); //default unit settings
         _unitInfo = UnitInfo();
         _unitInfo.lengthUnit = LU_Meter; //default unit settings
 
