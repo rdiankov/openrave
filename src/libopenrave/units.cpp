@@ -45,10 +45,10 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
     if( strcmp(pLengthUnit, "cm") == 0 ) {
         return LU_Centimeter;
     }
-    if( strcmp(pLengthUnit, "mm") == 0 || strcmp(pLengthUnit, "millimeter") == 0 ) {
+    if( strcmp(pLengthUnit, "mm") == 0 ) {
         return LU_Millimeter;
     }
-    if( strcmp(pLengthUnit, "um") == 0 || strcmp(pLengthUnit, "micrometer") == 0 ) {
+    if( strcmp(pLengthUnit, "um") == 0 ) {
         return LU_Micrometer;
     }
     if( strcmp(pLengthUnit, "nm") == 0 ) {
@@ -65,6 +65,12 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
     }
     if( strcmp(pLengthUnit, "0.1mm") == 0 ) {
         return LU_TenthMillimeter;
+    }
+    if( strcmp(pLengthUnit, "millimeter") == 0 ) {
+        return LU_Millimeter;
+    }
+    if( strcmp(pLengthUnit, "micrometer") == 0 ) {
+        return LU_Micrometer;
     }
     throw OpenRAVEException(str(boost::format("Do not support LengthUnit '%s'")%pLengthUnit), ORE_LengthUnitInvalid);
 }
