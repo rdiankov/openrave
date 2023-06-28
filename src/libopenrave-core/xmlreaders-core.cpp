@@ -3507,7 +3507,9 @@ public:
         else if(xmlname == "unit"){
             std::pair<std::string, dReal> unit;
             _ss >> unit.first >> unit.second;
-            _penv->SetUnit(unit);
+            UnitInfo unitInfo;
+            unitInfo.lengthUnit = GetLengthUnitFromString(unit.first.c_str(), LU_Meter);
+            _penv->SetUnitInfo(unitInfo);
         }
 
         if( xmlname !=_processingtag ) {

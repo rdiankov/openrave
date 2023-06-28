@@ -42,6 +42,7 @@ enum LengthUnit : int8_t
 OPENRAVE_API const char* GetLengthUnitString(LengthUnit unit);
 
 OPENRAVE_API LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLengthUnit);
+OPENRAVE_API LengthUnit GetLengthUnitFromString(const std::string& pLengthUnit, LengthUnit defaultLengthUnit);
 
 /// \brief mass unit
 enum MassUnit : int8_t
@@ -55,6 +56,7 @@ enum MassUnit : int8_t
 OPENRAVE_API const char* GetMassUnitString(MassUnit unit);
 
 OPENRAVE_API MassUnit GetMassUnitFromString(const char* pMassUnit, MassUnit defaultMassUnit);
+OPENRAVE_API MassUnit GetMassUnitFromString(const std::string& pMassUnit, MassUnit defaultMassUnit);
 
 /// \brief time unit
 enum TimeUnit : int8_t
@@ -69,6 +71,7 @@ enum TimeUnit : int8_t
 OPENRAVE_API const char* GetTimeUnitString(TimeUnit unit);
 
 OPENRAVE_API TimeUnit GetTimeUnitFromString(const char* pTimeUnit, TimeUnit defaultTimeUnit);
+OPENRAVE_API TimeUnit GetTimeUnitFromString(const std::string& pTimeUnit, TimeUnit defaultTimeUnit);
 
 /// \brief angle unit
 enum AngleUnit : int8_t
@@ -80,6 +83,7 @@ enum AngleUnit : int8_t
 OPENRAVE_API const char* GetAngleUnitString(AngleUnit unit);
 
 OPENRAVE_API AngleUnit GetAngleUnitFromString(const char* pAngleUnit, AngleUnit defaultAngleUnit);
+OPENRAVE_API AngleUnit GetAngleUnitFromString(const std::string& pAngleUnit, AngleUnit defaultAngleUnit);
 
 /// \brief holds a struct of unit of the fundamental types so users know which they are working with.
 class OPENRAVE_API UnitInfo

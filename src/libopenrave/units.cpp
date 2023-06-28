@@ -65,6 +65,11 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
     throw OpenRAVEException(str(boost::format("Do not support LengthUnit '%s'")%pLengthUnit), ORE_LengthUnitInvalid);
 }
 
+LengthUnit GetLengthUnitFromString(const std::string& pLengthUnit, LengthUnit defaultLengthUnit)
+{
+    return GetLengthUnitFromString(pLengthUnit.c_str(), defaultLengthUnit);
+}
+
 const char* GetMassUnitString(MassUnit unit)
 {
     switch(unit) {
@@ -94,6 +99,11 @@ MassUnit GetMassUnitFromString(const char* pMassUnit, MassUnit defaultMassUnit)
         return MU_Pound;
     }
     throw OpenRAVEException(str(boost::format("Do not support MassUnit '%s'")%pMassUnit), ORE_MassUnitInvalid);
+}
+
+MassUnit GetMassUnitFromString(const std::string& pMassUnit, MassUnit defaultMassUnit)
+{
+    return GetMassUnitFromString(pMassUnit.c_str(), defaultMassUnit);
 }
 
 const char* GetTimeUnitString(TimeUnit unit)
@@ -131,6 +141,11 @@ TimeUnit GetTimeUnitFromString(const char* pTimeUnit, TimeUnit defaultTimeUnit)
     throw OpenRAVEException(str(boost::format("Do not support TimeUnit '%s'")%pTimeUnit), ORE_TimeUnitInvalid);
 }
 
+TimeUnit GetTimeUnitFromString(const std::string& pTimeUnit, TimeUnit defaultTimeUnit)
+{
+    return GetTimeUnitFromString(pTimeUnit.c_str(), defaultTimeUnit);
+}
+
 const char* GetAngleUnitString(AngleUnit unit)
 {
     switch(unit) {
@@ -152,6 +167,11 @@ AngleUnit GetAngleUnitFromString(const char* pAngleUnit, AngleUnit defaultAngleU
         return AU_Degree;
     }
     throw OpenRAVEException(str(boost::format("Do not support AngleUnit '%s'")%pAngleUnit), ORE_AngleUnitInvalid);
+}
+
+AngleUnit GetAngleUnitFromString(const std::string& pAngleUnit, AngleUnit defaultAngleUnit)
+{
+    return GetAngleUnitFromString(pAngleUnit.c_str(), defaultAngleUnit);
 }
 
 } // end namespace OpenRAVE
