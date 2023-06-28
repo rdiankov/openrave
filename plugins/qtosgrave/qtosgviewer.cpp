@@ -253,7 +253,7 @@ void QtOSGViewer::_InitGUI(bool bCreateStatusBar, bool bCreateMenu)
         connect(QApplication::instance(), SIGNAL(aboutToQuit()), this, SLOT(_ProcessApplicationQuit()));
     }
 
-    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetEnv()->GetUnit().second, this);
+    _posgWidget = new QOSGViewerWidget(GetEnv(), _userdatakey, boost::bind(&QtOSGViewer::_HandleOSGKeyDown, this, _1), GetLengthUnitStandardValue<dReal>(GetEnv()->GetUnitInfo().lengthUnit), this);
 
     setCentralWidget(_posgWidget);
 

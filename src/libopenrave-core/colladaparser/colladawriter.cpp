@@ -428,9 +428,9 @@ private:
             contribAuthor->setValue(author.c_str());
 
             domAsset::domUnitRef units = daeSafeCast<domAsset::domUnit>( asset->add( COLLADA_ELEMENT_UNIT ) );
-            std::pair<std::string, dReal> unit = _penv->GetUnit();
-            units->setMeter(unit.second);
-            units->setName(unit.first.c_str());
+            UnitInfo unitInfo = _penv->GetUnitInfo();
+            units->setMeter(GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
+            units->setName(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit));
 
             domAsset::domUp_axisRef zup = daeSafeCast<domAsset::domUp_axis>( asset->add( COLLADA_ELEMENT_UP_AXIS ) );
             zup->setValue(UP_AXIS_Z_UP);

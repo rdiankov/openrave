@@ -187,7 +187,7 @@ public:
         }
 
         // set global scale when initalize jsonreader.
-        _fGlobalScale = 1.0 / _penv->GetUnit().second;
+        _fGlobalScale = 1.0 / GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit);
         _deserializeOptions = 0;
 
 

@@ -776,7 +776,7 @@ public:
     /// \brief set unitInfo for the current environment.
     ///
     /// \param unitInfo that describes length unit, mass unit, time unit and angle unit
-    virtual void SetUnit(UnitInfo unitInfo) = 0;
+    virtual void SetUnitInfo(UnitInfo unitInfo) = 0;
 
     //@}
 

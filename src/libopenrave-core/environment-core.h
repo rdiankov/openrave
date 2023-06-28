@@ -2689,7 +2689,7 @@ public:
         return _unitInfo;
     }
 
-    virtual void SetUnit(UnitInfo unitInfo)
+    virtual void SetUnitInfo(UnitInfo unitInfo)
     {
         _unitInfo = unitInfo;
     }
