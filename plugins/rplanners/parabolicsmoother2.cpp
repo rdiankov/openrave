@@ -2529,9 +2529,9 @@ protected:
                    - there are not so many shortcut iterations left (compared to the number of zerovelpoints)
                  */
                 size_t index = _uniformsampler->SampleSequenceOneUInt32()%_vZeroVelPointInfos.size();
-                dReal t = _vZeroVelPointInfos[index].point;
-                t0 = t - rng->Rand()*min(specialShortcutCutoffTime, t);
-                t1 = t + rng->Rand()*min(specialShortcutCutoffTime, tTotal - t);
+                const dReal tCenter = _vZeroVelPointInfos[index].point;
+                _SampleTimeAroundCenter(t0, t1,
+                                        rng->Rand(), rng->Rand(), tTotal, minTimeStep, tCenter, specialShortcutCutoffTime);
 
                 if( numIters - iters <= (int)_vZeroVelPointInfos.size() ) {
                     // By the time we reach here, it is likely that these multipliers have been
@@ -2543,11 +2543,8 @@ protected:
             }
             else {
                 // Proceed normally
-                t0 = rng->Rand()*tTotal;
-                t1 = rng->Rand()*tTotal;
-                if( t0 > t1 ) {
-                    RampOptimizer::Swap(t0, t1);
-                }
+                _SampleTime(t0, t1,
+                            rng->Rand(), rng->Rand(), tTotal, minTimeStep);
                 // 2019/04/26: Might be too constrained to only allow time instants that are not further apart than the largest ramp time. _maxInitialRampTime could be small due to various reasons. In such cases, shortcut performance will be poor.
                 // if( t1 - t0 > 2*_maxInitialRampTime ) {
                 //     t1 = t0 + 2*_maxInitialRampTime;
@@ -2558,15 +2555,6 @@ protected:
             shortcutprogress << utils::GetMicroTime() << " " << tTotal << " " << t0 << " " << t1 << " ";
 #endif
 
-            if( t1 - t0 < minTimeStep ) {
-                // The sampled t0 and t1 are too close to be useful
-                RAVELOG_VERBOSE_FORMAT("env=%d, shortcut iter=%d/%d, the sampled t0=%.15e and t1=%.15e are too close (minTimeStep=%.15e)", _environmentid%iters%numIters%t0%t1%minTimeStep);
-#ifdef SMOOTHER2_PROGRESS_DEBUG
-                ++vShortcutStats[SS_TimeInstantsTooClose];
-                shortcutprogress << SS_TimeInstantsTooClose << "\n";
-#endif
-                continue;
-            }
 #ifdef SMOOTHER2_DISABLE_VVISITEDDISCRETIZATION
 #else
             {
@@ -3431,6 +3419,100 @@ protected:
         f << std::setprecision(RampOptimizer::g_nPrec);
         ptraj->serialize(f);
         return filename;
+    }
+
+    /// \brief ensure that t0 and t1 for smoother have valid values.
+    ///        1. at least, within range in [0, tTotal]
+    ///        2. t0 <= t1
+    ///        this ensure is used just in case, since the computed t0 and t1 might violate these assumptions due to numerical epsilons even if it's feasible theoretically.
+    inline void _EnsureValidlySampledTimes(dReal& t0, dReal& t1, const dReal tTotal) const
+    {
+        t0 = std::max(0.0, std::min(t0, tTotal));
+        t1 = std::max(0.0, std::min(t1, tTotal));
+        if( t0 > t1 ) {
+            RampOptimizer::Swap(t0, t1);
+        }
+    }
+
+    /// \brief sample times t0 and t1 in [0, tTotal].
+    ///        constraints
+    ///          0 <= t0 <= tTotal
+    ///          0 <= t1 <= tTotal
+    ///          t0 + minTimeStep <= t1
+    ///          where, minTimeStep >= 0, tTotal >= minTimeStep
+    ///        <=>
+    ///          0  <= t0 <= tTotal - minTimeStep
+    ///          t0 + minTimeStep <= t1 <= tTotal
+    ///          where, minTimeStep >= 0, tTotal >= minTimeStep
+    ///        note that t0 and t1 are always feasible
+    /// \param[out] t0, t1 : t0 and t1
+    /// \param[in] r0, r1 : ratio in [0.0, 1.0] to sample t0 and t1 within range.
+    /// \param[in] tTotal : max time. tTotal > 0
+    /// \param[in] minTimeStep : min time between t1 and t0. minTimeStep>=0.
+    void _SampleTime(dReal& t0, dReal& t1,
+                     const dReal r0, const dReal r1,
+                     const dReal tTotal, const dReal minTimeStep) const
+    {
+        // sample within range
+        t0 = r0*(tTotal - minTimeStep);
+        const dReal fMinT1 = t0 + minTimeStep;
+        t1 = r1*(tTotal - fMinT1) + fMinT1;
+        // ensure
+        _EnsureValidlySampledTimes(t0, t1, tTotal);
+    }
+
+    /// \brief sample times t0 and t1 in [0, tTotal] around tCenter.
+    ///        memo for previous implementation to sample t0 and t1
+    ///          t0 = tCenter - r0'*min(cutoffTime, tCenter) <-> tCenter-cutoffTime<=t0<=t or 0<=t0<=tCenter <-> max(0, tCenter-cutoffTime)<=t0<=t
+    ///          t1 = tCenter + r1'*min(cutoffTime, tTotal-tCenter) <-> tCenter<=t1<=tCenter+cutoffTime or tCenter<=t1<=tTotal <-> tCenter<=t1<=min(tTotal, tCenter+cutoffTime)
+    ///
+    ///        constraints
+    ///          max(0, tCenter-cutoffTime) <= t0 <= tCenter
+    ///          tCenter <= t1 <= min(tTotal, tCenter+cutoffTime)
+    ///          t0 + minTimeStep <= t1
+    ///          where, minTimeStep >= 0, tTotal >= minTimeStep, cutoffTime>0, tTotal>=tCenter>=0
+    ///        <=>
+    ///          max(0, tCenter-cutoffTime) <= t0 <= min(tCenter, min(tTotal, tCenter+cutoffTime) - minTimeStep)
+    ///          max(t0 + minTimeStep, tCenter) <= t1 <= min(tTotal, tCenter+cutoffTime)
+    ///          where, minTimeStep >= 0, tTotal >= minTimeStep, cutoffTime>0
+    ///
+    ///        case 1. if t0 is feasible, t1 is also feasible in the above.
+    ///        case 2. if t0 is infeasible, relax the condition to solve the problem.
+    ///                among the constraints, cutoffTime is not mandatory. if relax cutoffTime, the problem becomes feasible by solving the following.
+    ///
+    ///          0 <= t0 <= min(tCenter, tTotal - minTimeStep)
+    ///          max(t0 + minTimeStep, tCenter) <= t1 <= tTotal
+    ///          where, minTimeStep >= 0, tTotal >= minTimeStep, tTotal>=tCenter>=0
+    ///
+    /// \param[out] t0, t1 : t0 and t1
+    /// \param[in] r0, r1 : ratio in [0.0, 1.0] to sample t0 and t1 within range.
+    /// \param[in] tTotal : max time
+    /// \param[in] minTimeStep : min time between t1 and t0
+    /// \param[in] tCenterArg : center of time. t0 <= tCenterArg <= t1
+    /// \param[in] cutoffTime : cutoff time of range of t0 and t1 sampling.
+    void _SampleTimeAroundCenter(dReal& t0, dReal& t1,
+                                 const dReal r0, const dReal r1,
+                                 const dReal tTotal, const dReal minTimeStep,
+                                 const dReal tCenterArg, const dReal cutoffTime) const
+    {
+        // first, make sure 0<=tCenter<=tTotal. otherwise, something wrong with the caller side.
+        const dReal tCenter = std::max(std::min(tCenterArg, tTotal), 0.0);
+        // compute tentative min max
+        dReal fMaxT1 = std::min(tTotal, tCenter + cutoffTime);
+        dReal fMinT0 = std::max(0.0, tCenter - cutoffTime);
+        dReal fMaxT0 = std::min(tCenter, fMaxT1 - minTimeStep);
+        // if t0 range is infeasible (case1), re-write min max to relax the condition.
+        if( fMaxT0 < fMinT0 ) {
+            fMaxT0 = std::min(tCenter, tTotal - minTimeStep);
+            fMinT0 = 0.0;
+            fMaxT1 = tTotal;
+        }
+        // sample within range
+        t0 = r0*(fMaxT0 - fMinT0) + fMinT0;
+        const dReal fMinT1 = std::max(tCenter, t0 + minTimeStep); // fMinT1 <= tTotal is respected
+        t1 = r1*(fMaxT1 - fMinT1) + fMinT1;
+        // ensure
+        _EnsureValidlySampledTimes(t0, t1, tTotal);
     }
 
     /// Members

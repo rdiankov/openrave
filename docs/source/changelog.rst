@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.119.6
+===============
+
+* Add excludeBodyId option to JSON reader
+
+Version 0.119.5
+===============
+
+* Instead of sampling and rejecting times, directly sample times in `ParabolicSmoother2`.
+
 Version 0.119.4
 ===============
 
