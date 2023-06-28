@@ -2790,15 +2790,6 @@ object PyEnvironmentBase::GetUserData() const {
     return openravepy::GetUserData(_penv->GetUserData());
 }
 
-void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
-    _penv->SetUnit(std::make_pair(unitname, unitmult));
-}
-
-object PyEnvironmentBase::GetUnit() const {
-    std::pair<std::string, dReal> unit = _penv->GetUnit();
-    return py::make_tuple(unit.first, unit.second);
-}
-
 void PyEnvironmentBase::SetUnitInfo(const py::dict& unitInfo){
     UnitInfo unit;
     unit.lengthUnit = GetLengthUnitFromString(unitInfo["lengthUnit"].cast<std::string>(), LU_Meter);
@@ -3768,10 +3759,8 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("SetUserData",setuserdata1, PY_ARGS("data") DOXY_FN(InterfaceBase,SetUserData))
                      .def("SetUserData",setuserdata2, PY_ARGS("data") DOXY_FN(InterfaceBase,SetUserData))
                      .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
-                     .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
                      .def("GetUnitInfo",&PyEnvironmentBase::GetUnitInfo, DOXY_FN(EnvironmentBase,GetUnitInfo))
                      .def("GetId",&PyEnvironmentBase::GetId, DOXY_FN(EnvironmentBase,GetId))
-                     .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
                      .def("SetUnitInfo",&PyEnvironmentBase::SetUnitInfo, PY_ARGS("unitInfo") DOXY_FN(EnvironmentBase,SetUnitInfo))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
