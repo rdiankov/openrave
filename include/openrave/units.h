@@ -118,7 +118,7 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "mm") == 0 || strcmp(pUnit, "millimeter") == 0 ) {
         return T(1000.0);
     }
-    if (strcmp(pUnit, "um") == 0 ) {
+    if (strcmp(pUnit, "um") == 0 || strcmp(pUnit, "micrometer") == 0 ) {
         return T(1e6);
     }
     if (strcmp(pUnit, "nm") == 0 ) {

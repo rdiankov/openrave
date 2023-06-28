@@ -47,7 +47,7 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
     if( strcmp(pLengthUnit, "mm") == 0 || strcmp(pLengthUnit, "millimeter") == 0 ) {
         return LU_Millimeter;
     }
-    if( strcmp(pLengthUnit, "um") == 0 ) {
+    if( strcmp(pLengthUnit, "um") == 0 || strcmp(pLengthUnit, "micrometer") == 0 ) {
         return LU_Micrometer;
     }
     if( strcmp(pLengthUnit, "nm") == 0 ) {
