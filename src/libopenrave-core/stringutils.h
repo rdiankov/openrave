@@ -32,6 +32,15 @@ using string_view = ::boost::string_view;
 
 namespace OpenRAVE {
 
+bool DecomposeURI(
+    const std::string& uri,
+    std::string& scheme,
+    std::string& authority,
+    std::string& path,
+    std::string& query,
+    std::string& fragment
+);
+
 // Returns true if a string begins with a matching prefix.
 OPENRAVE_NODISCARD inline bool StringStartsWith(string_view input, string_view prefix, bool ignoreCase = true) {
     if (input.length() < prefix.length()) {

@@ -4127,7 +4127,6 @@ protected:
 
     static bool _IsMsgPackFile(const std::string& filename)
     {
-        // .msgpack
         return StringEndsWith(filename, ".msgpack");
     }
 

@@ -5,7 +5,23 @@ endif()
 
 set(OPENRAVE_CORE_LIBRARIES ${openrave_libraries} ${OPENRAVE_CURL_LIBRARIES})
 set(OPENRAVE_CORE_STATIC_LIBRARIES ${openrave_static_libraries})
-set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h  xmlreaders-core.cpp genericcollisionchecker.cpp genericphysicsengine.cpp genericrobot.cpp multicontroller.cpp generictrajectory.cpp jsonparser/jsoncommon.cpp jsonparser/jsonreader.cpp jsonparser/jsonwriter.cpp jsonparser/jsondownloader.cpp)
+set(openrave_core_SOURCES
+  openrave-core.cpp
+  environment-core.h
+  openrave-core.h
+  ravep.h
+  xmlreaders-core.cpp
+  genericcollisionchecker.cpp
+  genericphysicsengine.cpp
+  genericrobot.cpp
+  multicontroller.cpp
+  generictrajectory.cpp
+  stringutils.cpp
+  jsonparser/jsoncommon.cpp
+  jsonparser/jsonreader.cpp
+  jsonparser/jsonwriter.cpp
+  jsonparser/jsondownloader.cpp
+)
 
 if( libpcrecpp_FOUND )
   # pcre for url parsing
