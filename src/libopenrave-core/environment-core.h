@@ -614,6 +614,16 @@ public:
         EnvironmentLock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
         std::string path;
+
+        std::string scheme, authority, query, fragment;
+        if (!DecomposeURI(filename, scheme, authority, path, query, fragment)) {
+            RAVELOG_ERROR("Not a filename or uri: %s", filename.c_str());
+            return false;
+        }
+        RAVELOG_INFO("scheme: %s authority: %s path: %s query: %s fragment: %s", scheme.c_str(), authority.c_str(), path.c_str(), query.c_str(), fragment.c_str());
+
+        
+
         if (_IsURI(filename, path)) {
             if (_IsColladaFile(path)) {
                 if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
