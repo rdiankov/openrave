@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.119.7
+===============
+
+* Support loading kinbody data with a references chain of 3 layers or more.
+
 Version 0.119.6
 ===============
 

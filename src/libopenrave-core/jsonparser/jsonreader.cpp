@@ -571,7 +571,7 @@ protected:
 
         int insertIndex = -1;
 
-        // deal with uri that has just #originBodyId
+        // deal with uri that has just #fragment
         if(scheme.empty() && path.empty() && !fragment.empty()) {
             // reference to itself
             bool bFoundBody = false;
@@ -666,16 +666,6 @@ protected:
             else {
                 RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us]", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
             }
-
-            if( insertIndex >= 0 ) {
-                const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
-                RAVELOG_VERBOSE_FORMAT("Deserializing rRefKinBodyInfo=%s into insertIndex=%d, isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
-                if( !isPartial ) {
-                    envInfo._vBodyInfos.at(insertIndex)->Reset();
-                }
-
-                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, _deserializeOptions);
-            }
         }
         else {
             RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
@@ -701,25 +691,23 @@ protected:
                         *((KinBody::KinBodyInfo*)pNewRobotInfo.get())  = *pExistingBodyInfo;
                         pExistingBodyInfo = pNewRobotInfo;
                     }
-
-                    const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
-                    RAVELOG_VERBOSE_FORMAT("Deserializing again rRefKinBodyInfo=%s into insertIndex=%d with isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
-                    if( !isPartial ) {
-                        pExistingBodyInfo->Reset();
-                    }
-
-                    pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
                     insertIndex = ibody;
                     break;
                 }
             }
         }
 
+        KinBody::KinBodyInfoPtr pNewKinBodyInfo;
         if( insertIndex >= 0 ) {
             RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%referenceUri%currentFilename);
-        }
-        else {
-            KinBody::KinBodyInfoPtr pNewKinBodyInfo;
+            pNewKinBodyInfo = envInfo._vBodyInfos[insertIndex];
+
+            const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
+            RAVELOG_VERBOSE_FORMAT("Deserializing rRefKinBodyInfo=%s into insertIndex=%d, isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
+            if (!isPartial) {
+                pNewKinBodyInfo->Reset();
+            }
+        } else {
             bool isNewRobot = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "isRobot", false);
             if( isNewRobot ) {
                 pNewKinBodyInfo.reset(new RobotBase::RobotBaseInfo());
@@ -727,35 +715,37 @@ protected:
             else {
                 pNewKinBodyInfo.reset(new KinBody::KinBodyInfo());
             }
-            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
+        }
 
-            if( !originBodyId.empty() ) {
-                pNewKinBodyInfo->_id = originBodyId;
-            }
+        pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
 
-            if( pNewKinBodyInfo->_name.empty() ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rRefKinBodyInfo)%currentFilename);
-            }
+        if( !originBodyId.empty() ) {
+            pNewKinBodyInfo->_id = originBodyId;
+        }
 
-            if( originBodyId.empty() ) {
-                // try matching with names
-                for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
-                    KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
-                    if( !originBodyName.empty() && pExistingBodyInfo->_name == originBodyName ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, found existing body with id='%s', name='%s', so overwriting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
-                        envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
-                        insertIndex = ibody;
-                        break;
-                    }
+        if( pNewKinBodyInfo->_name.empty() ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rRefKinBodyInfo)%currentFilename);
+        }
+
+        if( originBodyId.empty() ) {
+            // try matching with names
+            for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
+                KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
+                if( !originBodyName.empty() && pExistingBodyInfo->_name == originBodyName ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, found existing body with id='%s', name='%s', so overwriting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
+                    envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
+                    insertIndex = ibody;
+                    break;
                 }
             }
+        }
 
-            if( insertIndex < 0 ) {
-                // might get overwritten later, so ok if name is empty
-                insertIndex = envInfo._vBodyInfos.size();
-                envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
-                RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
-            }
+        // insert the new body info now if it hasn't been inserted
+        if( insertIndex < 0 ) {
+            // might get overwritten later, so ok if name is empty
+            insertIndex = envInfo._vBodyInfos.size();
+            envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
+            RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
         }
         return insertIndex;
     }
