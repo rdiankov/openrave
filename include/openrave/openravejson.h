@@ -199,6 +199,8 @@ public:
 template<class T> inline std::string GetJsonString(const T& t);
 
 template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t); // forward decl
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveAxisAlignedBox<T>& t, rapidjson::Document::AllocatorType& alloc); // forward decl
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveAxisAlignedBox<T>& t); // forward decl
 template<class T> inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc); // forward decl
 template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t); // forward decl
 inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc); // forward decl
@@ -516,6 +518,22 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
         t.vertices.push_back(vertex);
     }
     LoadJsonValue(v["indices"], t.indices);
+}
+
+template<class T>
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveAxisAlignedBox<T>& t) {
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load RaveOrientedBox of non-object.", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("extents") || !v["extents"].IsArray() || v["extents"].Size() != 3) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveAxisAlignedBox, \"extents\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("pos") || !v["pos"].IsArray() || v["pos"].Size() != 3) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveAxisAlignedBox, \"pos\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+
+    LoadJsonValue(v["extents"], t.extents);
+    LoadJsonValue(v["pos"], t.pos);
 }
 
 template<class T>
@@ -934,6 +952,13 @@ inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::SensorBase::Camer
     SetJsonValueByKey(v, "focalLength", t.focal_length, alloc);
     SetJsonValueByKey(v, "distortionModel", t.distortion_model, alloc);
     SetJsonValueByKey(v, "distortionCoeffs", t.distortion_coeffs, alloc);
+}
+
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveAxisAlignedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    SetJsonValueByKey(v, "extents", t.extents, alloc);
+    SetJsonValueByKey(v, "pos", t.pos, alloc);
 }
 
 template<class T>
