@@ -358,6 +358,8 @@ public:
         return ReadRobotData(robot,data,atts);
     }
 
+    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
+
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
@@ -387,6 +389,8 @@ public:
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadKinBodyData(body,data,atts);
     }
+
+    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 

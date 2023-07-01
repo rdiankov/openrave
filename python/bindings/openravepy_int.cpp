@@ -1864,6 +1864,19 @@ object PyEnvironmentBase::ReadRobotData(const string &data, object odictatts)
     return py::to_object(openravepy::toPyRobot(probot,shared_from_this()));
 }
 
+object PyEnvironmentBase::ReadRobotJSON(py::object oEnvInfo, object odictatts, const string& uri)
+{
+    AttributesList dictatts = toAttributesList(odictatts);
+    rapidjson::Document rEnvInfo;
+    toRapidJSONValue(oEnvInfo, rEnvInfo, rEnvInfo.GetAllocator());
+    RobotBasePtr probot;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        probot = _penv->ReadRobotJSON(RobotBasePtr(), rEnvInfo, dictatts, uri);
+    }
+    return py::to_object(openravepy::toPyRobot(probot, shared_from_this()));
+}
+
 object PyEnvironmentBase::ReadKinBodyURI(const string &filename)
 {
     KinBodyPtr pbody;
@@ -1903,6 +1916,19 @@ object PyEnvironmentBase::ReadKinBodyData(const string &data, object odictatts)
         pbody = _penv->ReadKinBodyData(KinBodyPtr(), data, dictatts);
     }
     return py::to_object(openravepy::toPyKinBody(pbody,shared_from_this()));
+}
+
+object PyEnvironmentBase::ReadKinBodyJSON(py::object oEnvInfo, object odictatts, const string& uri)
+{
+    AttributesList dictatts = toAttributesList(odictatts);
+    rapidjson::Document rEnvInfo;
+    toRapidJSONValue(oEnvInfo, rEnvInfo, rEnvInfo.GetAllocator());
+    KinBodyPtr pbody;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pbody = _penv->ReadKinBodyJSON(RobotBasePtr(), rEnvInfo, dictatts, uri);
+    }
+    return py::to_object(openravepy::toPyKinBody(pbody, shared_from_this()));
 }
 
 PyInterfaceBasePtr PyEnvironmentBase::ReadInterfaceURI(const std::string& filename)
@@ -3045,6 +3071,8 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadJSON_overloads, LoadJSON, 2, 4)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ReadRobotJSON_overloads, ReadRobotJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ReadKinBodyJSON_overloads, ReadKinBody, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
@@ -3477,7 +3505,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           DOXY_FN(EnvironmentBase, LoadJSON)
                           )
 #else
-                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","updateMode", "atts", "uri") DOXY_FN(EnvironmentBase,LoadJSON)))
+                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","updateMode","atts","uri") DOXY_FN(EnvironmentBase,LoadJSON)))
 #endif
                      .def("Load",load1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,Load))
                      .def("Load",load2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,Load))
@@ -3511,6 +3539,16 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("ReadRobotXMLData",readrobotxmldata1, PY_ARGS("data") DOXY_FN(EnvironmentBase,ReadRobotData "RobotBasePtr; const std::string; const AttributesList"))
                      .def("ReadRobotData",readrobotxmldata2, PY_ARGS("data","atts") DOXY_FN(EnvironmentBase,ReadRobotData "RobotBasePtr; const std::string; const AttributesList"))
                      .def("ReadRobotXMLData",readrobotxmldata2, PY_ARGS("data","atts") DOXY_FN(EnvironmentBase,ReadRobotData "RobotBasePtr; const std::string; const AttributesList"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("ReadRobotJSON", &PyEnvironmentBase::ReadRobotJSON,
+                          "envInfo"_a,
+                          "atts"_a = py::none_(),
+                          "uri"_a = "",
+                          DOXY_FN(EnvironmentBase, ReadRobotJSON)
+                     )
+#else
+                     .def("ReadRobotJSON",&PyEnvironmentBase::ReadRobotJSON,ReadRobotJSON_overloads(PY_ARGS("envInfo","atts","uri") DOXY_FN(EnvironmentBase,ReadRobotJSON)))
+#endif
                      .def("ReadKinBodyURI",readkinbodyxmlfile1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,ReadKinBodyURI "const std::string"))
                      .def("ReadKinBodyXMLFile",readkinbodyxmlfile1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,ReadKinBodyURI "const std::string"))
                      .def("ReadKinBodyURI",readkinbodyxmlfile2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,ReadKinBodyURI "KinBody; const std::string; const AttributesList"))
@@ -3519,6 +3557,16 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("ReadKinBodyXMLData",readkinbodyxmldata1, PY_ARGS("data") DOXY_FN(EnvironmentBase,ReadKinBodyData "KinBodyPtr; const std::string; const AttributesList"))
                      .def("ReadKinBodyData",readkinbodyxmldata2, PY_ARGS("data","atts") DOXY_FN(EnvironmentBase,ReadKinBodyData "KinBodyPtr; const std::string; const AttributesList"))
                      .def("ReadKinBodyXMLData",readkinbodyxmldata2, PY_ARGS("data","atts") DOXY_FN(EnvironmentBase,ReadKinBodyData "KinBodyPtr; const std::string; const AttributesList"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                     .def("ReadKinBodyJSON", &PyEnvironmentBase::ReadKinBodyJSON,
+                          "envInfo"_a,
+                          "atts"_a = py::none_(),
+                          "uri"_a = "",
+                          DOXY_FN(EnvironmentBase, ReadKinBodyJSON)
+                     )
+#else
+                    .def("ReadKinBodyJSON",&PyEnvironmentBase::ReadKinBodyJSON,ReadKinBodyJSON_overloads(PY_ARGS("envInfo","atts","uri") DOXY_FN(EnvironmentBase,ReadKinBodyJSON)))
+#endif
                      .def("ReadInterfaceURI",readinterfacexmlfile1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,ReadInterfaceURI "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
                      .def("ReadInterfaceXMLFile",readinterfacexmlfile1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,ReadInterfaceURI "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
                      .def("ReadInterfaceURI",readinterfacexmlfile2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,ReadInterfaceURI "InterfaceBasePtr; InterfaceType; const std::string; const AttributesList"))
