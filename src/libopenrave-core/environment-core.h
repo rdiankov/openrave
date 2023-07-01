@@ -1815,7 +1815,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
 
-        if( !!robot ) {  // TODO: move this to a shared place?
+        if( !!robot ) {  // TODO: move this to a shared place
             SharedLock lock681(_mutexInterfaces);
             FOREACH(itviewer, _listViewers) {
                 (*itviewer)->RemoveKinBody(robot);
@@ -2027,7 +2027,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
 
-        if( !!body ) {  // TODO: move this to a shared place?
+        if( !!body ) {  // TODO: move this to a shared place
             SharedLock lock937(_mutexInterfaces);
             FOREACH(itviewer, _listViewers) {
                 (*itviewer)->RemoveKinBody(body);
