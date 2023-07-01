@@ -155,6 +155,16 @@ public:
                 std::stringstream ss(itatt->second);
                 _vOpenRAVESchemeAliases = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
             }
+            else if (itatt->first == "sceneuri") {
+                std::string scheme, path, fragment;
+                ParseURI(itatt->second, scheme, path, fragment);
+                if (!scheme.empty() && !path.empty() && fragment.empty()) {
+                    // valid scene uri
+                    _uri = itatt->second;
+                } else {
+                    RAVELOG_WARN_FORMAT("User provided invalid sceneuri '%s', ignored", itatt->second);
+                }
+            }
             else if (itatt->first == "mustresolveuri") {
                 _bMustResolveURI = _stricmp(itatt->second.c_str(), "true") == 0 || itatt->second=="1";
             }
