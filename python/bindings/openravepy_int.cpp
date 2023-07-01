@@ -1715,7 +1715,7 @@ bool PyEnvironmentBase::LoadURI(const std::string &filename, object odictatts)
     openravepy::PythonThreadSaver threadsaver;
     return _penv->LoadURI(filename, dictatts);
 }
-py::object PyEnvironmentBase::LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts)
+py::object PyEnvironmentBase::LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts, const std::string &uri)
 {
     AttributesList dictatts = toAttributesList(odictatts);
     rapidjson::Document rEnvInfo;
@@ -1724,7 +1724,7 @@ py::object PyEnvironmentBase::LoadJSON(py::object oEnvInfo, UpdateFromInfoMode u
     bool bSuccess = false;
     {
         openravepy::PythonThreadSaver threadsaver;
-        bSuccess = _penv->LoadJSON(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, dictatts);
+        bSuccess = _penv->LoadJSON(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, dictatts, uri);
     }
 
     if( !bSuccess ) {
@@ -3044,7 +3044,7 @@ PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadURI_overloads, LoadURI, 1, 2)
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadJSON_overloads, LoadJSON, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(LoadJSON_overloads, LoadJSON, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetCamera_overloads, SetCamera, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StartSimulation_overloads, StartSimulation, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(StopSimulation_overloads, StopSimulation, 0, 1)
@@ -3473,10 +3473,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           "envInfo"_a,
                           "updateMode"_a,
                           "atts"_a = py::none_(),
+                          "uri"_a = "",
                           DOXY_FN(EnvironmentBase, LoadJSON)
                           )
 #else
-                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","updateMode", "atts") DOXY_FN(EnvironmentBase,LoadJSON)))
+                     .def("LoadJSON",&PyEnvironmentBase::LoadJSON,LoadJSON_overloads(PY_ARGS("envInfo","updateMode", "atts", "uri") DOXY_FN(EnvironmentBase,LoadJSON)))
 #endif
                      .def("Load",load1, PY_ARGS("filename") DOXY_FN(EnvironmentBase,Load))
                      .def("Load",load2, PY_ARGS("filename","atts") DOXY_FN(EnvironmentBase,Load))

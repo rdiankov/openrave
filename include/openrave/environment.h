@@ -279,7 +279,9 @@ public:
     /// \param vCreatedBodies the bodies created in this operation
     /// \param vModifiedBodies the bodies modified in this operation
     /// \param vRemovedBodies the bodies removed from the environment in this operation
-    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList()) = 0;
+    /// \param atts attributes that is passed to JSONReader for further options.
+    /// \param uri the URI of the scene. Used to inject the URI into the environment.
+    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);

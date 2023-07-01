@@ -675,11 +675,11 @@ public:
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
-    bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts) override
+    bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, const std::string &uri) override
     {
         EnvironmentLock lockenv(GetMutex());
         _ClearRapidJsonBuffer();
-        return RaveParseJSON(shared_from_this(), rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, atts, *_prLoadEnvAlloc);
+        return RaveParseJSON(shared_from_this(), uri, rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, atts, *_prLoadEnvAlloc);
     }
 
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts) override
