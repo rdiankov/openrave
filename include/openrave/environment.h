@@ -761,12 +761,14 @@ public:
     /// \brief unit - (name, mult factor to meters)
     ///
     /// \return (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual std::pair<std::string, dReal> GetUnit() const = 0;
+    /// \deprecated (23/07/03), use GetUnitInfo instead.
+    virtual std::pair<std::string, dReal> GetUnit() const RAVE_DEPRECATED = 0;
 
     /// \brief set units for the current environment.
     ///
     /// \param unit (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
+    /// \deprecated (23/07/03), use SetUnitInfo instead.
+    virtual void SetUnit(std::pair<std::string, dReal> unit) RAVE_DEPRECATED = 0;
 
     /// \brief unitInfo
     ///
