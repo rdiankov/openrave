@@ -292,9 +292,11 @@ public:
     void SetUserData(object o);
     object GetUserData() const;
 
-    py::dict GetUnitInfo() const;
+    void SetUnit(std::string unitname, dReal unitmult);
     void SetUnitInfo(const py::dict& unitInfo);
 
+    object GetUnit() const;
+    py::dict GetUnitInfo() const;
     int GetId() const;
 
     object ExtractInfo() const;
