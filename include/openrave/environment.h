@@ -758,6 +758,16 @@ public:
     virtual void SetDebugLevel(int level) = 0;
     virtual int GetDebugLevel() const = 0;
 
+    /// \brief unit - (name, mult factor to meters)
+    ///
+    /// \return (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
+    virtual std::pair<std::string, dReal> GetUnit() const = 0;
+
+    /// \brief set units for the current environment.
+    ///
+    /// \param unit (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
+    virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
+
     /// \brief unitInfo
     ///
     /// \return UnitInfo that describes length unit, mass unit, time unit and angle unit
@@ -843,6 +853,7 @@ public:
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
+        std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
         UnitInfo _unitInfo; ///< environment unitInfo
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;

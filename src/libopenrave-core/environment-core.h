@@ -2674,6 +2674,16 @@ public:
         }
     }
 
+    virtual std::pair<std::string, dReal> GetUnit() const
+    {
+        return _unit;
+    }
+
+    virtual void SetUnit(std::pair<std::string, dReal> unit)
+    {
+        _unit = unit;
+    }
+
     virtual UnitInfo GetUnitInfo() const
     {
         return _unitInfo;
@@ -4254,6 +4264,7 @@ protected:
 
     vector<KinBody::BodyState> _vPublishedBodies; ///< protected by _mutexInterfaces
     string _homedirectory;
+    std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters
     UnitInfo _unitInfo; ///< unitInfo that describes length unit, mass unit, time unit and angle unit
 
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
