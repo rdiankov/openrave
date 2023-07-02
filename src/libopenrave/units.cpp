@@ -23,10 +23,11 @@ const char* GetLengthUnitString(LengthUnit unit)
 {
     switch(unit) {
     case LU_Meter: return "m";
-    case LU_Centimeter: return "cm";
     case LU_Millimeter: return "mm";
     case LU_Micrometer: return "um";
     case LU_Nanometer: return "nm";
+    case LU_Centimeter: return "cm";
+    case LU_Decimeter: return "dm";
     case LU_Inch: return "in";
     case LU_Foot: return "ft";
     }
@@ -41,9 +42,6 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
     if( strcmp(pLengthUnit, "m") == 0 ) {
         return LU_Meter;
     }
-    if( strcmp(pLengthUnit, "cm") == 0 ) {
-        return LU_Centimeter;
-    }
     if( strcmp(pLengthUnit, "mm") == 0 ) {
         return LU_Millimeter;
     }
@@ -55,6 +53,12 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
     }
     if( strcmp(pLengthUnit, "meter") == 0 ) { // rare so do later
         return LU_Meter;
+    }
+    if( strcmp(pLengthUnit, "cm") == 0 ) {
+        return LU_Centimeter;
+    }
+    if( strcmp(pLengthUnit, "dm") == 0 ) {
+        return LU_Decimeter;
     }
     if( strcmp(pLengthUnit, "in") == 0 || strcmp(pLengthUnit, "inch") == 0 ) {
         return LU_Inch;
