@@ -855,7 +855,6 @@ public:
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
-        std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
         UnitInfo _unitInfo; ///< environment unitInfo
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
