@@ -121,6 +121,12 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "revision", _revision);
     }
 
+    if (rEnvInfo.HasMember("unit")) {
+        std::pair<std::string, dReal> unit;
+        _unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
+        orjson::LoadJsonValueByKey(rEnvInfo, "unit", unit);
+    }
+
     if (rEnvInfo.HasMember("unitInfo")) {
         orjson::LoadJsonValueByKey(rEnvInfo, "unitInfo", _unitInfo);
     }
