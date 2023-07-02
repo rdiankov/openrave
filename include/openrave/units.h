@@ -31,7 +31,8 @@ namespace OpenRAVE {
 enum LengthUnit : int8_t
 {
     LU_Meter = 0,
-    LU_Centimeter = -1,
+    LU_Decimeter = -1,
+    LU_Centimeter = -2,
     LU_Millimeter = -3,
     LU_Micrometer = -6,
     LU_Nanometer = -9,
@@ -123,6 +124,9 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "cm") == 0 ) {
         return T(100.0);
     }
+    if (strcmp(pUnit, "dm") == 0 ) {
+        return T(10.0);
+    }
     if (strcmp(pUnit, "in") == 0 || strcmp(pUnit, "inch") == 0 ) {
         return T(39.370078740157481); // 25.4 mm/in
     }
@@ -158,6 +162,9 @@ inline T GetLengthUnitStandardValue(const LengthUnit unit)
         return T(1e9);
     }
     if( unit == OpenRAVE::LU_Centimeter ) {
+        return T(100.0);
+    }
+    if( unit == OpenRAVE::LU_Decimeter ) {
         return T(10.0);
     }
     if( unit == OpenRAVE::LU_Inch ) {
