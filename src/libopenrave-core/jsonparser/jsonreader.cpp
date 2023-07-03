@@ -33,8 +33,6 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-
 namespace OpenRAVE {
 
 static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
