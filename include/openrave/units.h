@@ -366,7 +366,7 @@ inline T GetAngleUnitStandardValue(const char* pUnit)
         return T(1.0);
     }
     if (strcmp(pUnit, "deg") == 0 ) {
-        return T(0.017453292519943295);
+        return T(57.29577951308232);
     }
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_LengthUnitInvalid);
 }
@@ -384,7 +384,7 @@ inline T GetAngleUnitStandardValue(const AngleUnit unit)
         return T(1.0);
     }
     if( unit == OpenRAVE::AU_Degree ) {
-        return T(0.017453292519943295);
+        return T(57.29577951308232);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_LengthUnitInvalid);
