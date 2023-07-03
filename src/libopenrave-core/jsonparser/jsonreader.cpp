@@ -33,7 +33,41 @@
 #include <boost/filesystem/operations.hpp>
 #endif
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 namespace OpenRAVE {
+
+static inline int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
+{
+    // from_iso_extended_string expects 6 digits for microseconds
+    const char* pTimeZoneStartP = strrchr(pIsoFormatDateTime, '+');
+    const char* pTimeZoneStartN = strrchr(pIsoFormatDateTime, '-');
+    const char* pTimeZoneStart = pTimeZoneStartP;
+    if( !!pTimeZoneStartN ) {
+        if( !pTimeZoneStart ) {
+            pTimeZoneStart = pTimeZoneStartN;
+        }
+        else if( pTimeZoneStartN > pTimeZoneStartP ) {
+            pTimeZoneStart = pTimeZoneStartN;
+        }
+    }
+
+    const char* pMicrosecondStart = strrchr(pIsoFormatDateTime, '.');
+    if( !!pMicrosecondStart ) {
+        int numdigits = pTimeZoneStart - pMicrosecondStart;
+        if( numdigits < 7 ) {
+            // have to add zeros
+            std::string newDate(pIsoFormatDateTime, pTimeZoneStart - pIsoFormatDateTime);
+            for(int i = 0; i < 7-numdigits; ++i) {
+                newDate.push_back('0');
+            }
+            newDate += pTimeZoneStart;
+            return (boost::posix_time::from_iso_extended_string(newDate) - boost::posix_time::from_time_t(0)).total_microseconds();
+        }
+    }
+
+    return (boost::posix_time::from_iso_extended_string(pIsoFormatDateTime) - boost::posix_time::from_time_t(0)).total_microseconds();
+}
 
 static bool _EndsWith(const std::string& fullString, const std::string& endString) {
     if (fullString.length() >= endString.length()) {
@@ -862,6 +896,13 @@ protected:
             }
         }
         pBody->SetName(pKinBodyInfo->_name);
+        {
+            const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
+            if ( !!modifiedAt ) {
+                // modifiedAt is in RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
+                pBody->SetLastModified(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
+            }
+        }
         _ExtractTransform(rBodyInfo, pBody, fUnitScale);
         pBodyOut = pBody;
         return true;

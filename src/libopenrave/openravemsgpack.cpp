@@ -14,7 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#define RAPIDJSON_HAS_STDSTRING 1
 #include "libopenrave.h"
 
 #include <openrave/openravemsgpack.h>
@@ -69,12 +68,37 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
                 break;
             case msgpack::type::EXT: {
                 if (o.via.ext.type() == -1) {
-                    using time_point = std::chrono::system_clock::time_point;
-                    const time_point tp = o.as<time_point>();
-                    time_t lm_timet = std::chrono::system_clock::to_time_t(tp);
-                    std::string lastModifiedStr(32, '\0');
-                    lastModifiedStr.resize(std::strftime(&lastModifiedStr[0], lastModifiedStr.size(), "%FT%T%z", std::localtime(&lm_timet)));
-                    v.SetString(lastModifiedStr, v.GetAllocator());
+                    const std::chrono::system_clock::time_point tp = o.as<std::chrono::system_clock::time_point>();
+                    const std::time_t parsedTime = std::chrono::system_clock::to_time_t(tp);
+
+                    // RFC 3339 Nano format
+                    char formatted[sizeof("2006-01-02T15:04:05.999999999Z07:00")];
+
+                    // The extension does not include timezone information. By convention, we format to local time.
+                    struct tm datetime = {0};
+                    std::size_t size = std::strftime(formatted, sizeof(formatted), "%FT%T", localtime_r(&parsedTime, &datetime));
+
+                    // Add nanoseconds portion if present
+                    const long nanoseconds = (std::chrono::duration_cast<chrono::nanoseconds>(tp.time_since_epoch()).count() % 1000000000 + 1000000000) % 1000000000;
+                    if (nanoseconds != 0) {
+                        size += sprintf(formatted + size, ".%09lu", nanoseconds);
+                        // remove trailing zeros
+                        while (formatted[size - 1] == '0') {
+                            --size;
+                        }
+                    }
+                    if (datetime.tm_gmtoff == 0) {
+                        formatted[size] = 'Z';
+                    } else {
+                        size += std::strftime(formatted + size, sizeof(formatted) - size, "%z", &datetime);
+                        // fix timezone format (0000 -> 00:00)
+                        formatted[size] = formatted[size - 1];
+                        formatted[size - 1] = formatted[size - 2];
+                        formatted[size - 2] = ':';
+                    }
+                    formatted[++size] = '\0';
+
+                    return v.SetString(formatted, size, v.GetAllocator());
                 } else {
                     RAVELOG_WARN("Unrecognized msgpack extension type.");
                 }
