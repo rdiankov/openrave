@@ -4160,7 +4160,7 @@ py::object PyKinBody::GetAssociatedFileEntries() const
     return py::none_();
 }
 
-uint64_t PyKinBody::GetLastModified() const
+int64_t PyKinBody::GetLastModified() const
 {
     return _pbody->GetLastModified();
 }

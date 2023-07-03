@@ -37,36 +37,37 @@
 
 namespace OpenRAVE {
 
-static inline int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
+static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
 {
-    // from_iso_extended_string expects 6 digits for microseconds
-    const char* pTimeZoneStartP = strrchr(pIsoFormatDateTime, '+');
-    const char* pTimeZoneStartN = strrchr(pIsoFormatDateTime, '-');
-    const char* pTimeZoneStart = pTimeZoneStartP;
-    if( !!pTimeZoneStartN ) {
-        if( !pTimeZoneStart ) {
-            pTimeZoneStart = pTimeZoneStartN;
+    // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
+    struct tm datetime;
+    const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
+
+    int64_t timestamp = std::mktime(&datetime) - timezone;
+    timestamp *= 1000000;
+
+    if (*remain == '.') {
+        int64_t fraction = 0, multiplier = 100000000;
+        while (std::isdigit(*(++remain)) && multiplier > 0) {
+            fraction += (*remain - '0') * multiplier;
+            multiplier /= 10;
         }
-        else if( pTimeZoneStartN > pTimeZoneStartP ) {
-            pTimeZoneStart = pTimeZoneStartN;
-        }
+        timestamp += fraction / 1000; // nanoseconds convert to microseconds
     }
 
-    const char* pMicrosecondStart = strrchr(pIsoFormatDateTime, '.');
-    if( !!pMicrosecondStart ) {
-        int numdigits = pTimeZoneStart - pMicrosecondStart;
-        if( numdigits < 7 ) {
-            // have to add zeros
-            std::string newDate(pIsoFormatDateTime, pTimeZoneStart - pIsoFormatDateTime);
-            for(int i = 0; i < 7-numdigits; ++i) {
-                newDate.push_back('0');
+    if (*remain == '+' || *remain == '-') {
+        const bool positive = (*(remain++) == '+');
+        int64_t tz_hour = 0, tz_min = 0;
+        if (std::sscanf(remain, "%ld:%ld", &tz_hour, &tz_min) == 2) {
+            if (positive) {
+                timestamp -= (tz_hour * 3600 + tz_min * 60) * 1000000;
+            } else {
+                timestamp += (tz_hour * 3600 + tz_min * 60) * 1000000;
             }
-            newDate += pTimeZoneStart;
-            return (boost::posix_time::from_iso_extended_string(newDate) - boost::posix_time::from_time_t(0)).total_microseconds();
         }
     }
 
-    return (boost::posix_time::from_iso_extended_string(pIsoFormatDateTime) - boost::posix_time::from_time_t(0)).total_microseconds();
+    return timestamp;
 }
 
 static bool _EndsWith(const std::string& fullString, const std::string& endString) {
@@ -260,6 +261,13 @@ public:
         else {
             // extract everything
             _penv->ExtractInfo(envInfo);
+        }
+
+        {
+            const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
+            if ( !!modifiedAt ) {
+                envInfo._lastModified = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+            }
         }
 
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
@@ -899,7 +907,6 @@ protected:
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
             if ( !!modifiedAt ) {
-                // modifiedAt is in RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
                 pBody->SetLastModified(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
             }
         }

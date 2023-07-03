@@ -2908,6 +2908,9 @@ public:
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }
+                if (info._lastModified > pMatchExistingBody->_lastModified) {
+                    pMatchExistingBody->_lastModified = info._lastModified;
+                }
                 vModifiedBodies.push_back(pMatchExistingBody);
                 if (updateFromInfoResult == UFIR_Success) {
                     continue;
@@ -3005,6 +3008,7 @@ public:
                     }
                     vBodies.push_back(pNewBody);
                 }
+                pNewBody->_lastModified = info._lastModified;
                 vCreatedBodies.push_back(pNewBody);
             }
 
