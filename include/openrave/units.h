@@ -98,10 +98,10 @@ public:
         return lengthUnit != rhs.lengthUnit || massUnit != rhs.massUnit || timeUnit != rhs.timeUnit || angleUnit != rhs.angleUnit;
     }
 
-    LengthUnit lengthUnit = LU_Millimeter;
-    MassUnit massUnit = MU_Gram;
-    TimeUnit timeUnit = TU_Second;
-    AngleUnit angleUnit = AU_Degree;
+    LengthUnit lengthUnit = LU_Millimeter; ///< standard in industrial applications
+    MassUnit massUnit = MU_Kilogram; ///< SI unit
+    TimeUnit timeUnit = TU_Second; ///< SI unit
+    AngleUnit angleUnit = AU_Degree; ///< easier to set for users
 };
 BOOST_STATIC_ASSERT(sizeof(UnitInfo)==4);
 
