@@ -279,7 +279,9 @@ public:
     /// \param vCreatedBodies the bodies created in this operation
     /// \param vModifiedBodies the bodies modified in this operation
     /// \param vRemovedBodies the bodies removed from the environment in this operation
-    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList()) = 0;
+    /// \param atts attributes that is passed to JSONReader for further options.
+    /// \param uri the URI of the scene. Used to inject the URI into the environment.
+    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
@@ -356,6 +358,17 @@ public:
         return ReadRobotData(robot,data,atts);
     }
 
+    /** \brief Initialize a robot from rapidjson document.
+
+        The robot should not be added to the environment when calling this function.
+        \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled.
+        \param rEnvInfo the rapidjson document that contains the robot information.
+        \param atts attributes that is passed to JSONReader for further options.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
+        \returns the robot that is created.
+     */
+    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
+
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
@@ -385,6 +398,17 @@ public:
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadKinBodyData(body,data,atts);
     }
+
+    /** \brief Initializes a kinematic body from rapidjson document.
+
+        The body should not be added to the environment when calling this function.
+        \param body If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled.
+        \param rEnvInfo the rapidjson document that contains the robot information.
+        \param atts attributes that is passed to JSONReader for further options.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
+        \returns the body that is created.
+     */
+    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 

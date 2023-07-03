@@ -675,11 +675,11 @@ public:
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
 
-    bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts) override
+    bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, const std::string &uri) override
     {
         EnvironmentLock lockenv(GetMutex());
         _ClearRapidJsonBuffer();
-        return RaveParseJSON(shared_from_this(), rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, atts, *_prLoadEnvAlloc);
+        return RaveParseJSON(shared_from_this(), uri, rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, atts, *_prLoadEnvAlloc);
     }
 
     virtual void Save(const std::string& filename, SelectionOptions options, const AttributesList& atts) override
@@ -1625,10 +1625,7 @@ public:
 
         if( !!robot ) {
             SharedLock lock617(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(robot);
-            }
-            // is there better check than this? this is checking all elements in vecobides...
+
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
                 throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
@@ -1746,9 +1743,6 @@ public:
 
         if( !!robot ) {
             SharedLock lock681(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(robot);
-            }
 
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
@@ -1811,15 +1805,36 @@ public:
         return robot;
     }
 
+    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts, const std::string &uri)
+    {
+        EnvironmentLock lockenv(GetMutex());
+
+        if( !!robot ) {  // TODO: move this to a shared place
+            SharedLock lock681(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(robot);
+            }
+
+            int bodyIndex = robot->GetEnvironmentBodyIndex();
+            if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
+                throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
+            }
+        }
+
+        _ClearRapidJsonBuffer();
+        if( !RaveParseJSON(shared_from_this(), uri, robot, rEnvInfo, atts, *_prLoadEnvAlloc) ) {
+            robot.reset();
+        }
+        return robot;
+    }
+
     virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts) override
     {
         EnvironmentLock lockenv(GetMutex());
 
         if( !!body ) {
             SharedLock lock285(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(body);
-            }
+
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
                 throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
@@ -1937,9 +1952,7 @@ public:
 
         if( !!body ) {
             SharedLock lock937(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(body);
-            }
+
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
                 throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
@@ -1996,6 +2009,28 @@ public:
                     body->__struri = itatt->second;
                 }
             }
+        }
+        return body;
+    }
+
+    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts, const std::string &uri)
+    {
+        EnvironmentLock lockenv(GetMutex());
+
+        if( !!body ) {  // TODO: move this to a shared place
+            SharedLock lock937(_mutexInterfaces);
+            FOREACH(itviewer, _listViewers) {
+                (*itviewer)->RemoveKinBody(body);
+            }
+            int bodyIndex = body->GetEnvironmentBodyIndex();
+            if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
+                throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
+            }
+        }
+
+        _ClearRapidJsonBuffer();
+        if( !RaveParseJSON(shared_from_this(), uri, body, rEnvInfo, atts, *_prLoadEnvAlloc) ) {
+            body.reset();
         }
         return body;
     }

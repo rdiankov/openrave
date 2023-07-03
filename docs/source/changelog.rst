@@ -3,6 +3,22 @@
 ChangeLog
 #########
 
+Version 0.120.0
+===============
+
+* Add optional uri argument for LoadJSON
+* Add ReadRobotJSON and ReadKinBodyJSON
+
+Version 0.119.8
+===============
+
+* Remove RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
+Version 0.119.7
+===============
+
+* Support loading kinbody data with a references chain of 3 layers or more.
+
 Version 0.119.6
 ===============
 

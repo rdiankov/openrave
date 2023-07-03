@@ -127,7 +127,7 @@ public:
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
     bool LoadURI(const std::string &filename, object odictatts=py::none_());
-    py::object LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_());
+    py::object LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_(), const std::string &uri = "");
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
@@ -141,10 +141,12 @@ public:
     object ReadRobotURI(const std::string &filename, object odictatts);
     object ReadRobotData(const std::string &data);
     object ReadRobotData(const std::string &data, object odictatts);
+    object ReadRobotJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = "");
     object ReadKinBodyURI(const std::string &filename);
     object ReadKinBodyURI(const std::string &filename, object odictatts);
     object ReadKinBodyData(const std::string &data);
     object ReadKinBodyData(const std::string &data, object odictatts);
+    object ReadKinBodyJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = "");
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
     //@}
