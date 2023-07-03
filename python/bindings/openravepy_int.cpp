@@ -3818,8 +3818,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
     object lengthUnit = enum_<LengthUnit>("LengthUnit" DOXY_ENUM(LengthUnit))
 #endif
                           .value("Meter", LU_Meter)
+                          .value("Decimeter", LU_Decimeter)
                           .value("Centimeter", LU_Centimeter)
                           .value("Millimeter", LU_Millimeter)
+                          .value("100Micrometer", LU_100Micrometer)
                           .value("Micrometer", LU_Micrometer)
                           .value("Nanometer", LU_Nanometer)
                           .value("Inch", LU_Inch)
