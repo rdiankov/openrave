@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.123.0
+===============
+
+* Add "axial" geometry type.
+
 Version 0.122.0
 ===============
 

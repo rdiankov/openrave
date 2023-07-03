@@ -642,6 +642,7 @@ private:
         case OpenRAVE::GT_Cylinder:
             odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
             break;
+        case OpenRAVE::GT_Axial:
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_Cage:
         case OpenRAVE::GT_CalibrationBoard: // calibration board is box-shaped but has z-offset. so have to use trimesh.

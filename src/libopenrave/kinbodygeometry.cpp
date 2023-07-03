@@ -379,6 +379,11 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         break;
     }
 
+    case GT_Axial:
+        if( _vAxialSlices.size() != rhs._vAxialSlices.size() ) {
+            return 30;
+        }
+        // use collision mesh to make the rest of the comparison
     case GT_TriMesh:
         if( _meshcollision.vertices.size() != rhs._meshcollision.vertices.size() ) {
             return 17;
@@ -475,6 +480,70 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         int numverts = (int)(fTessellation*48.0f) + 3;
         AppendCylinderTriangulation(Vector(0, 0, 0), rad, len, numverts, _meshcollision);
+        break;
+    }
+    case GT_Axial: {
+        if (_vAxialSlices.size() > 1) {
+			// there has to be at least two slices: top and bottom
+            // sort the axial slices by the Z value
+            std::sort(_vAxialSlices.begin(), _vAxialSlices.end());
+
+            int numberOfSections = (int)(fTessellation*48.0f) + 3;
+            int numberOfAxialSlices = _vAxialSlices.size();
+            _meshcollision.vertices.reserve(2+numberOfAxialSlices*(numberOfSections+1));
+            _meshcollision.indices.reserve((numberOfAxialSlices*2)*(numberOfSections+1));
+
+            // add top center point
+            _meshcollision.vertices.push_back(Vector(0, 0, _vAxialSlices.front().z));
+
+            // add bottom center point
+            _meshcollision.vertices.push_back(Vector(0, 0, _vAxialSlices.back().z));
+
+            // tessellate the surfaces
+            dReal dAngle = 2 * PI / (dReal)numberOfSections;
+            for(int sectionIndex = 0; sectionIndex <= numberOfSections; sectionIndex++) {
+                dReal dTheta = (dReal)sectionIndex * dAngle;
+                dReal sinTheta = RaveSin(dTheta);
+                dReal cosTheta = RaveCos(dTheta);
+
+                // add every slice's outer edge vertices
+                FOREACH(axialSlice, _vAxialSlices) {
+                    _meshcollision.vertices.push_back(Vector(axialSlice->radius*cosTheta, axialSlice->radius*sinTheta, axialSlice->z));
+                }
+
+                // we can start adding vertices after the first section only
+                if (sectionIndex < 1) {
+                    continue;
+                }
+
+                int numberOfVertices = (int)(_meshcollision.vertices.size());
+
+                // add top circle surface
+                _meshcollision.indices.push_back(0);
+                _meshcollision.indices.push_back(numberOfVertices-numberOfAxialSlices);
+                _meshcollision.indices.push_back(numberOfVertices-2*numberOfAxialSlices);
+
+                // add bottom circle surface
+                _meshcollision.indices.push_back(1);
+                _meshcollision.indices.push_back(numberOfVertices-numberOfAxialSlices-1);
+                _meshcollision.indices.push_back(numberOfVertices-1);
+
+                // add the upper side triangles
+                for(int index = 0; index < numberOfAxialSlices-1; index++) {
+                    _meshcollision.indices.push_back(index+numberOfVertices-numberOfAxialSlices);
+                    _meshcollision.indices.push_back(index+numberOfVertices-numberOfAxialSlices+1);
+                    _meshcollision.indices.push_back(index+numberOfVertices-2*numberOfAxialSlices);
+                }
+
+                // add the lower side triangles
+                for(int index = 1; index < numberOfAxialSlices; index++) {
+                    _meshcollision.indices.push_back(index+(numberOfVertices-numberOfAxialSlices));
+                    _meshcollision.indices.push_back(index+(numberOfVertices-2*numberOfAxialSlices));
+                    _meshcollision.indices.push_back(index+(numberOfVertices-2*numberOfAxialSlices)-1);
+                }
+            }
+        }
+
         break;
     }
     case GT_Cage: {
@@ -799,6 +868,13 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         _vGeomData *= fUnitScale;
         break;
 
+    case GT_Axial:
+        FOREACH(itAxialSlice, _vAxialSlices) {
+            itAxialSlice->z *= fUnitScale;
+            itAxialSlice->radius *= fUnitScale;
+        }
+        break;
+        
     case GT_TriMesh:
         FOREACH(itvertex, _meshcollision.vertices) {
             *itvertex *= fUnitScale;
@@ -827,6 +903,7 @@ void KinBody::GeometryInfo::Reset()
     _vGeomData3 = Vector();
     _vGeomData4 = Vector();
     _vSideWalls.clear();
+    _vAxialSlices.clear();
     _vDiffuseColor = Vector(1,1,1);
     _vAmbientColor = Vector(0,0,0);
     _meshcollision.vertices.clear();
@@ -862,6 +939,8 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
         return "sphere";
     case GT_Cylinder:
         return "cylinder";
+    case GT_Axial:
+        return "axial";
     case GT_TriMesh:
         return "trimesh";
     case GT_CalibrationBoard:
@@ -935,6 +1014,17 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
         break;
 
+    case GT_Axial: {
+        rapidjson::Value rAxial;
+        rAxial.SetArray();
+        rAxial.Reserve(_vAxialSlices.size()*2, allocator);
+        FOREACH(itAxialSlice, _vAxialSlices) {
+            rAxial.PushBack(itAxialSlice->z*fUnitScale, allocator);
+            rAxial.PushBack(itAxialSlice->radius*fUnitScale, allocator);
+        }
+        orjson::SetJsonValueByKey(rGeometryInfo, "axial", rAxial, allocator);
+        break;
+    }
     case GT_TriMesh: {
         // has to be scaled correctly
         rapidjson::Value rTriMesh;
@@ -1012,6 +1102,9 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         else if (typestr == "cylinder") {
             type = GT_Cylinder;
+        }
+        else if (typestr == "axial") {
+            type = GT_Axial;
         }
         else if (typestr == "trimesh" || typestr == "mesh") {
             type = GT_TriMesh;
@@ -1211,6 +1304,31 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             _meshcollision.Clear();
         }
         break;
+
+    case GT_Axial:
+        if (value.HasMember("axial") && value["axial"].IsArray()) {
+            const rapidjson::Value::ConstArray& rAxial = value["axial"].GetArray();
+            if (rAxial.Size() < 4 || rAxial.Size() % 2 != 0) {
+                // invalid axial array
+                RAVELOG_DEBUG("there has to be at least 2 axial slices (4 elements) and even number of elements");
+                break;
+            }
+            std::vector<AxialSlice> vAxialSlices;
+            for (rapidjson::SizeType i = 0; i < rAxial.Size(); i += 2) {
+                if (rAxial[i].IsFloat() && rAxial[i + 1].IsFloat()) {
+                    AxialSlice axialSlice;
+                    orjson::LoadJsonValue(rAxial[i], axialSlice.z);
+                    orjson::LoadJsonValue(rAxial[i+1], axialSlice.radius);
+                    vAxialSlices.push_back(axialSlice);
+                }
+            }
+            if (vAxialSlices != _vAxialSlices) {
+                _vAxialSlices = vAxialSlices;
+                _meshcollision.Clear();
+            }
+        }
+        break;
+
     case GT_TriMesh:
         if (value.HasMember("mesh")) {
             orjson::LoadJsonValueByKey(value, "mesh", _meshcollision);
@@ -1423,6 +1541,7 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         break;
 
     }
+    case GT_Axial:
     case GT_TriMesh: {
         // Cage: init collision mesh?
         // just use _meshcollision
@@ -1764,6 +1883,12 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     else if (GetType() == GT_Cylinder) {
         if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y) {
             RAVELOG_VERBOSE_FORMAT("geometry %s cylinder changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
+    }
+    else if (GetType() == GT_Axial) {
+        if (_info._vAxialSlices != info._vAxialSlices) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s axial changed", _info._id);
             return UFIR_RequireReinitialize;
         }
     }

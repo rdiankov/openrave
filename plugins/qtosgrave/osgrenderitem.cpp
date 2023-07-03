@@ -443,6 +443,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Extract geometry from collision Mesh
+                case GT_Axial:
                 case GT_Cage:
                 case GT_Container:
                 case GT_TriMesh: {
@@ -472,7 +473,7 @@ void KinBodyItem::Load()
                     geode->addDrawable(geom);
                     pgeometrydata->addChild(geode);
 
-                    if(orgeom->GetType() == GT_TriMesh){
+                    if(orgeom->GetType() == GT_TriMesh || orgeom->GetType() == GT_Axial){
                         // CropContainerMargins and CropContainerEmptyMargins only exists in GT_Cage and GT_Container
                         break;
                     }

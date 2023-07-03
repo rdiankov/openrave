@@ -178,6 +178,7 @@ private:
                     // cylinder axis aligned to Y
                     child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
                     break;
+                case GT_Axial:
                 case GT_TriMesh: {
                     if( geom->GetCollisionMesh().indices.size() >= 3 ) {
                         btTriangleMesh* ptrimesh = new btTriangleMesh();

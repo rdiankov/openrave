@@ -36,6 +36,17 @@ public:
     int type = 0;
 };
 
+class PyAxialSlice
+{
+public:
+    PyAxialSlice();
+    PyAxialSlice(const KinBody::GeometryInfo::AxialSlice& axialslice);
+    void Get(KinBody::GeometryInfo::AxialSlice& axialslice);
+
+    float z = 0.0;
+    float radius = 0.0;
+};
+
 class PyGeometryInfo
 {
 public:
@@ -80,6 +91,7 @@ public:
     object _vPositiveCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
 
     py::list _vSideWalls;
+    py::list _vAxialSlices;
     float _containerBaseHeight = 0.0;
     float _fTransparency = 0.0;
     bool _bVisible = true;
@@ -295,6 +307,7 @@ public:
         object GetCalibrationBoardDotColor() const;
         object GetCalibrationBoardPatternName() const;
         object GetCalibrationBoardDotDiameterDistanceRatios() const;
+        int GetNumberOfAxialSlices() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
