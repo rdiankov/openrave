@@ -405,8 +405,19 @@ public:
         return false;
     }
 
-    void SetURI(const std::string& uri) {
-        _uri = uri;
+    void SetURI(const std::string& uri)
+    {
+        if (uri.empty()) {
+            _uri.clear();
+            return;
+        }
+        std::string scheme, path, fragment;
+        ParseURI(uri, scheme, path, fragment);
+        if (!scheme.empty() && !path.empty()) {
+            _uri = uri;
+            return;
+        }
+        RAVELOG_WARN_FORMAT("SetURI ignore invalid uri '%s'", uri);
     }
 
     void SetFilename(const std::string& filename)
@@ -535,12 +546,7 @@ protected:
             // ensure uri is set
             if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
                 // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
-                if( !currentUri.empty() || !currentFilename.empty() ) {
-                    pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
-                }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("Could not set uri for body '%s' since currentUri and currentFilename are empty", pKinBodyInfo->_name);
-                }
+                pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
             }
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if( !!pRobotBaseInfo ) {
@@ -1042,21 +1048,24 @@ protected:
 };
 
 
-bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     KinBodyPtr pbody;
     if( reader.ExtractFirst(doc, pbody, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);

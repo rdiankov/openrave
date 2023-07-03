@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+Version 0.120.0
+===============
+
+* Add optional uri argument for LoadJSON
+* Add ReadRobotJSON and ReadKinBodyJSON
+
 Version 0.119.8
 ===============
 
