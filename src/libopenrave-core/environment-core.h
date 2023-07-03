@@ -1625,10 +1625,7 @@ public:
 
         if( !!robot ) {
             SharedLock lock617(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(robot);
-            }
-            // is there better check than this? this is checking all elements in vecobides...
+
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
                 throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
@@ -1746,9 +1743,6 @@ public:
 
         if( !!robot ) {
             SharedLock lock681(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(robot);
-            }
 
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
@@ -1817,9 +1811,7 @@ public:
 
         if( !!body ) {
             SharedLock lock285(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(body);
-            }
+
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
                 throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
@@ -1937,9 +1929,7 @@ public:
 
         if( !!body ) {
             SharedLock lock937(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(body);
-            }
+
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
                 throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
