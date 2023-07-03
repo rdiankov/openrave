@@ -123,8 +123,8 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
     if (rEnvInfo.HasMember("unit")) {
         std::pair<std::string, dReal> unit;
-        _unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
         orjson::LoadJsonValueByKey(rEnvInfo, "unit", unit);
+        _unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
     }
 
     if (rEnvInfo.HasMember("unitInfo")) {
