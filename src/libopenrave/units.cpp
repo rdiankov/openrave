@@ -29,7 +29,7 @@ const char* GetLengthUnitString(LengthUnit unit)
     case LU_Nanometer: return "nm";
     case LU_Inch: return "in";
     case LU_Foot: return "ft";
-    case LU_TenthMillimeter: return "0.1mm";
+    case LU_100Micrometer: return "0.1mm";
     }
     return "(unknown)";
 }
@@ -64,7 +64,10 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
         return LU_Foot;
     }
     if( strcmp(pLengthUnit, "0.1mm") == 0 ) {
-        return LU_TenthMillimeter;
+        return LU_100Micrometer;
+    }
+    if( strcmp(pLengthUnit, "100um") == 0 ) {
+        return LU_100Micrometer;
     }
     if( strcmp(pLengthUnit, "millimeter") == 0 ) {
         return LU_Millimeter;

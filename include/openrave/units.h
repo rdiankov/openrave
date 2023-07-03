@@ -33,11 +33,11 @@ enum LengthUnit : int8_t
     LU_Meter = 0,
     LU_Centimeter = -1,
     LU_Millimeter = -3,
+    LU_100Micrometer = -4,
     LU_Micrometer = -6,
     LU_Nanometer = -9,
     LU_Inch = 0x10,
     LU_Foot = 0x11,
-    LU_TenthMillimeter = 0x12,
 };
 
 OPENRAVE_API const char* GetLengthUnitString(LengthUnit unit);
@@ -137,6 +137,9 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "meter") == 0 ) {
         return T(1.0);
     }
+    if (strcmp(pUnit, "100um") == 0 ) {
+        return T(1e4);
+    }
     if (strcmp(pUnit, "0.1mm") == 0 ) {
         return T(1e4);
     }
@@ -174,7 +177,7 @@ inline T GetLengthUnitStandardValue(const LengthUnit unit)
     if( unit == OpenRAVE::LU_Foot ) {
         return T(3.2808398950131235); // 304.8 mm/ft
     }
-    if( unit == OpenRAVE::LU_TenthMillimeter ) {
+    if( unit == OpenRAVE::LU_100Micrometer ) {
         return T(1e4);
     }
 
