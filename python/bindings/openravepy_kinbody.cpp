@@ -20,6 +20,8 @@
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
 #include <openravepy/openravepy_collisionreport.h>
+#include "openravepy/openravepy_kinbody.h"
+
 
 namespace openravepy {
 
@@ -4158,6 +4160,11 @@ py::object PyKinBody::GetAssociatedFileEntries() const
     return py::none_();
 }
 
+uint64_t PyKinBody::GetLastModified() const
+{
+    return _pbody->GetLastModified();
+}
+
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
@@ -5827,6 +5834,7 @@ void init_openravepy_kinbody()
                          .def("UpdateFromKinBodyInfo",&PyKinBody::UpdateFromKinBodyInfo,PY_ARGS("info") DOXY_FN(KinBody,UpdateFromKinBodyInfo))
                          .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
                          .def("GetAssociatedFileEntries",&PyKinBody::GetAssociatedFileEntries, DOXY_FN(KinBody,GetAssociatedFileEntries))
+                         .def("GetLastModified",&PyKinBody::GetLastModified, DOXY_FN(KinBody,GetLastModified))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CreateKinBodyStateSaver", &PyKinBody::CreateKinBodyStateSaver,
                               "options"_a = py::none_(),
