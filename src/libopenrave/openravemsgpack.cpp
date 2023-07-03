@@ -98,7 +98,7 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
                     }
                     formatted[++size] = '\0';
 
-                    return v.SetString(formatted, size, v.GetAllocator());
+                    v.SetString(formatted, size, v.GetAllocator());
                 } else {
                     RAVELOG_WARN("Unrecognized msgpack extension type.");
                 }
