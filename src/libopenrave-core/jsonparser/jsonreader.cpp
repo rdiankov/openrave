@@ -372,7 +372,7 @@ public:
     bool ExtractFirst(const rapidjson::Value& doc, KinBodyPtr& ppbody, rapidjson::Document::AllocatorType& alloc)
     {
         // extract the first articulated system found.
-        dReal fUnitScale = _GetUnitScale(doc, 1.0);
+        dReal fUnitScale = _GetUnitScale(doc, LU_Meter);
         if (doc.HasMember("bodies") && (doc)["bodies"].IsArray()) {
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
             for (rapidjson::Value::ConstValueIterator itr = (doc)["bodies"].Begin(); itr != (doc)["bodies"].End(); ++itr) {
@@ -393,7 +393,7 @@ public:
         // find the body by uri fragment
         if (rEnvInfo.HasMember("bodies") && (rEnvInfo)["bodies"].IsArray()) {
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
-            dReal fUnitScale = _GetUnitScale(rEnvInfo, 1.0);
+            dReal fUnitScale = _GetUnitScale(rEnvInfo, LU_Meter);
             for (rapidjson::Value::ConstValueIterator itr = (rEnvInfo)["bodies"].Begin(); itr != (rEnvInfo)["bodies"].End(); ++itr) {
                 std::string bodyId;
                 orjson::LoadJsonValueByKey(*itr, "id", bodyId);
@@ -494,7 +494,7 @@ protected:
 
     void _ProcessEnvInfoBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& alloc, const std::string& currentUri, const std::string& currentFilename, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
     {
-        dReal fUnitScale = _GetUnitScale(rEnvInfo, 1.0);
+        dReal fUnitScale = _GetUnitScale(rEnvInfo, LU_Meter);
         std::vector<int> vInputToBodyInfoMapping;
         if (rEnvInfo.HasMember("bodies")) {
             const rapidjson::Value& rBodies = rEnvInfo["bodies"];
@@ -640,7 +640,7 @@ protected:
                 RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
                 return -1;
             }
-            fRefUnitScale = _GetUnitScale(*referenceDoc, 1.0); // for now default has to be meters... fUnitScale);
+            fRefUnitScale = _GetUnitScale(*referenceDoc, LU_Meter); // for now default has to be meters... fUnitScale);
 
             bool bFoundBody = false;
             for(rapidjson::Value::ConstValueIterator it = (*referenceDoc)["bodies"].Begin(); it != (*referenceDoc)["bodies"].End(); it++) {
@@ -750,9 +750,14 @@ protected:
         return insertIndex;
     }
 
-    inline dReal _GetUnitScale(const rapidjson::Value& doc, dReal defaultScale)
+    inline dReal _GetUnitScale(const rapidjson::Value& doc, LengthUnit defaultLengthUnit)
     {
-        std::pair<std::string, dReal> unit = {"", defaultScale};
+        if (doc.HasMember("unitInfo")) {
+            UnitInfo unitInfo;
+            orjson::LoadJsonValueByKey(doc, "unitInfo", unitInfo);
+            return GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit) * _fGlobalScale * _fGeomScale;
+        }
+        std::pair<std::string, dReal> unit = {"", GetLengthUnitStandardValue<dReal>(defaultLengthUnit)};
         orjson::LoadJsonValueByKey(doc, "unit", unit);
         return unit.second * _fGlobalScale * _fGeomScale;
     }
