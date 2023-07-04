@@ -41,7 +41,7 @@ static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateT
         return 0;
     }
     // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
-    struct tm datetime;
+    struct tm datetime = {0};
     const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
     if (remain == nullptr) {
         return 0;
