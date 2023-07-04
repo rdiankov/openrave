@@ -264,7 +264,7 @@ public:
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
             if ( !!modifiedAt ) {
-                envInfo._lastModified = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+                envInfo._lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
             }
         }
 
@@ -901,7 +901,7 @@ protected:
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
             if ( !!modifiedAt ) {
-                pBody->SetLastModified(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
+                pBody->SetLastModifiedAtUS(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
             }
         }
         _ExtractTransform(rBodyInfo, pBody, fUnitScale);

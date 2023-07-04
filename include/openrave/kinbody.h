@@ -3386,12 +3386,12 @@ private:
      */
     void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
 
-    inline int64_t GetLastModified() {
-        return _lastModified;
+    inline int64_t GetLastModifiedAtUS() {
+        return _lastModifiedAtUS;
     }
 
-    inline void SetLastModified(int64_t lastModified) {
-        _lastModified = lastModified;
+    inline void SetLastModifiedAtUS(int64_t lastModifiedAtUS) {
+        _lastModifiedAtUS = lastModifiedAtUS;
     }
 
     //@}
@@ -3570,7 +3570,7 @@ protected:
     Transform _baseLinkInBodyTransform; ///< the transform of the base link in the body coordinate frame. The body transform returned is baselink->GetTransform() * _baseLinkInBodyTransform.inverse(). When setting a transform, the base link transform becomes body->GetTransform() * _baseLinkInBodyTransform
     Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
-    int64_t _lastModified; ///< last modified time of the kinbody, in microseconds
+    int64_t _lastModifiedAtUS; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
 
 private:
     mutable std::vector<dReal> _vTempJoints;

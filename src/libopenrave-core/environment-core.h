@@ -2943,8 +2943,8 @@ public:
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }
-                if (info._lastModified > pMatchExistingBody->_lastModified) {
-                    pMatchExistingBody->_lastModified = info._lastModified;
+                if (info._lastModifiedAtUS > pMatchExistingBody->_lastModifiedAtUS) {
+                    pMatchExistingBody->_lastModifiedAtUS = info._lastModifiedAtUS;
                 }
                 vModifiedBodies.push_back(pMatchExistingBody);
                 if (updateFromInfoResult == UFIR_Success) {
@@ -3043,7 +3043,7 @@ public:
                     }
                     vBodies.push_back(pNewBody);
                 }
-                pNewBody->_lastModified = info._lastModified;
+                pNewBody->_lastModifiedAtUS = info._lastModifiedAtUS;
                 vCreatedBodies.push_back(pNewBody);
             }
 

@@ -435,7 +435,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _nNonAdjacentLinkCache = 0x80000000;
     _nUpdateStampId = 0;
     _bAreAllJoints1DOFAndNonCircular = false;
-    _lastModified = 0;
+    _lastModifiedAtUS = 0;
 }
 
 KinBody::~KinBody()
