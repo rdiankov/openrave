@@ -868,6 +868,7 @@ public:
         std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
         std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
+        int64_t _lastModifiedAtUS = 0; ///< us, linux epoch, last modified time of the environment when it was originally loaded from the environment.
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;

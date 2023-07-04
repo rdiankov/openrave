@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.121.0
+===============
+
+* Add a modifiedAt field for KinBody and EnvironmentInfo that tracks the modifiedAt on the filename.
+
 Version 0.120.0
 ===============
 
