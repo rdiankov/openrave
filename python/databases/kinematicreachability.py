@@ -41,7 +41,7 @@ This is the reachability when counting the total number of configurations possib
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database kinematicreachability --help
+.. shell-block:: python3 -m openravepy --database kinematicreachability --help
 
 Class Definitions
 -----------------
