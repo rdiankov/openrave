@@ -20,8 +20,6 @@
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
 #include <openravepy/openravepy_collisionreport.h>
-#include "openravepy/openravepy_kinbody.h"
-
 
 namespace openravepy {
 
