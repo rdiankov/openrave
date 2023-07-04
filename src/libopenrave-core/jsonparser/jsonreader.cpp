@@ -269,7 +269,7 @@ public:
 
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
-            if ( modifiedAt == nullptr ) {
+            if ( modifiedAt != nullptr ) {
                 envInfo._lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
             }
         }
@@ -906,7 +906,7 @@ protected:
         pBody->SetName(pKinBodyInfo->_name);
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
-            if ( modifiedAt == nullptr ) {
+            if ( modifiedAt != nullptr ) {
                 pBody->SetLastModifiedAtUS(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
             }
         }
