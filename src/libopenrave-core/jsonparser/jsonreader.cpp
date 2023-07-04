@@ -37,9 +37,15 @@ namespace OpenRAVE {
 
 static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
 {
+    if (pIsoFormatDateTime == nullptr) {
+        return 0;
+    }
     // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
     struct tm datetime;
     const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
+    if (remain == nullptr) {
+        return 0;
+    }
 
     int64_t timestamp = std::mktime(&datetime) - timezone;
     timestamp *= 1000000;
@@ -263,7 +269,7 @@ public:
 
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
-            if ( !!modifiedAt ) {
+            if ( modifiedAt == nullptr ) {
                 envInfo._lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
             }
         }
@@ -900,7 +906,7 @@ protected:
         pBody->SetName(pKinBodyInfo->_name);
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
-            if ( !!modifiedAt ) {
+            if ( modifiedAt == nullptr ) {
                 pBody->SetLastModifiedAtUS(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
             }
         }
