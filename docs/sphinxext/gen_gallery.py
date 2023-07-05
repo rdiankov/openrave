@@ -16,7 +16,7 @@ from docutils.parsers.rst import Directive, Parser
 import os, glob, re, sys, warnings
 import openravepy
 from types import ModuleType
-import Image
+from PIL import Image
 
 class GalleryDirective(Directive):
     required_arguments = 1  # examples, gallery
@@ -81,10 +81,10 @@ class GalleryDirective(Directive):
                 except IOError:
                     im = None
             if im is not None:
-                if im.size[0]*maxheight/im.size[1] > maxwidth:
-                    newsize = [maxwidth,im.size[1]*maxwidth/im.size[0]]
+                if im.size[0]*maxheight//im.size[1] > maxwidth:
+                    newsize = [maxwidth,im.size[1]*maxwidth//im.size[0]]
                 else:
-                    newsize = [im.size[0]*maxheight/im.size[1],maxheight]
+                    newsize = [im.size[0]*maxheight//im.size[1],maxheight]
                 imthumb = im.resize(newsize, Image.ANTIALIAS)
                 with open(os.path.join(imagewritedir,imthumbname),'w') as f:
                     imthumb.save(f)

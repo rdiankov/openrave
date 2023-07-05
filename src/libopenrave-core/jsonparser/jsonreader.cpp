@@ -35,6 +35,45 @@
 
 namespace OpenRAVE {
 
+static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
+{
+    if (pIsoFormatDateTime == nullptr) {
+        return 0;
+    }
+    // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
+    struct tm datetime = {0};
+    const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
+    if (remain == nullptr) {
+        return 0;
+    }
+
+    int64_t timestamp = std::mktime(&datetime) - timezone;
+    timestamp *= 1000000;
+
+    if (*remain == '.') {
+        int64_t fraction = 0, multiplier = 100000000;
+        while (std::isdigit(*(++remain)) && multiplier > 0) {
+            fraction += (*remain - '0') * multiplier;
+            multiplier /= 10;
+        }
+        timestamp += fraction / 1000; // nanoseconds convert to microseconds
+    }
+
+    if (*remain == '+' || *remain == '-') {
+        const bool positive = (*(remain++) == '+');
+        int64_t tz_hour = 0, tz_min = 0;
+        if (std::sscanf(remain, "%ld:%ld", &tz_hour, &tz_min) == 2) {
+            if (positive) {
+                timestamp -= (tz_hour * 3600 + tz_min * 60) * 1000000;
+            } else {
+                timestamp += (tz_hour * 3600 + tz_min * 60) * 1000000;
+            }
+        }
+    }
+
+    return timestamp;
+}
+
 static bool _EndsWith(const std::string& fullString, const std::string& endString) {
     if (fullString.length() >= endString.length()) {
         return fullString.compare(fullString.length() - endString.length(), endString.length(), endString) == 0;
@@ -228,6 +267,13 @@ public:
             _penv->ExtractInfo(envInfo);
         }
 
+        {
+            const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
+            if ( modifiedAt != nullptr ) {
+                envInfo._lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+            }
+        }
+
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
 
         std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rEnvInfo, "referenceUri", "");
@@ -405,8 +451,19 @@ public:
         return false;
     }
 
-    void SetURI(const std::string& uri) {
-        _uri = uri;
+    void SetURI(const std::string& uri)
+    {
+        if (uri.empty()) {
+            _uri.clear();
+            return;
+        }
+        std::string scheme, path, fragment;
+        ParseURI(uri, scheme, path, fragment);
+        if (!scheme.empty() && !path.empty()) {
+            _uri = uri;
+            return;
+        }
+        RAVELOG_WARN_FORMAT("SetURI ignore invalid uri '%s'", uri);
     }
 
     void SetFilename(const std::string& filename)
@@ -535,12 +592,7 @@ protected:
             // ensure uri is set
             if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
                 // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
-                if( !currentUri.empty() || !currentFilename.empty() ) {
-                    pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
-                }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("Could not set uri for body '%s' since currentUri and currentFilename are empty", pKinBodyInfo->_name);
-                }
+                pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
             }
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if( !!pRobotBaseInfo ) {
@@ -857,6 +909,12 @@ protected:
             }
         }
         pBody->SetName(pKinBodyInfo->_name);
+        {
+            const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
+            if ( modifiedAt != nullptr ) {
+                pBody->SetLastModifiedAtUS(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
+            }
+        }
         _ExtractTransform(rBodyInfo, pBody, fUnitScale);
         pBodyOut = pBody;
         return true;
@@ -1047,21 +1105,24 @@ protected:
 };
 
 
-bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     KinBodyPtr pbody;
     if( reader.ExtractFirst(doc, pbody, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);

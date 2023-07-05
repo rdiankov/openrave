@@ -3,6 +3,27 @@
 ChangeLog
 #########
 
+Version 0.121.1
+===============
+
+* Improved message in openravejson.h
+
+Version 0.121.0
+===============
+
+* Add a modifiedAt field for KinBody and EnvironmentInfo that tracks the modifiedAt on the filename.
+
+Version 0.120.0
+===============
+
+* Add optional uri argument for LoadJSON
+* Add ReadRobotJSON and ReadKinBodyJSON
+
+Version 0.119.8
+===============
+
+* Remove RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
 Version 0.119.7
 ===============
 

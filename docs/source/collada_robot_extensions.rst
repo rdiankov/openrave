@@ -1307,7 +1307,7 @@ Although COLLADA is very flexible in terms of referencing libraries of models, i
 
 For most cases, the **<kinematics_scene>** defined in the separate robot file can be left intact and overrides can happen inside **<instance_kinematics_scene>**. For example, a minimal file that references a robot and sets joint0's value to 1.5 is:
 
-.. code-bloxk:: xml
+.. code-block:: xml
 
   <COLLADA xmlns="http://www.collada.org/2008/03/COLLADASchema" version="1.5.0">
     <asset>

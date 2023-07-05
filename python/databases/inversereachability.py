@@ -38,7 +38,7 @@ Description
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database inversereachability --help
+.. shell-block:: python3 -m openravepy --database inversereachability --help
 
 Class Definitions
 -----------------
