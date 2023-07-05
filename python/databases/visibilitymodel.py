@@ -58,7 +58,7 @@ configurations with the manipulator, and display.
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database visibilitymodel --help
+.. shell-block:: python3 -m openravepy --database visibilitymodel --help
 
 Class Definitions
 -----------------
@@ -80,6 +80,7 @@ else:
     from numpy import array
 
 from ..openravepy_int import RaveGetDefaultViewerType
+from ..openravepy_int import IkParameterization
 from . import DatabaseGenerator
 from . import inversekinematics
 from . import kinematicreachability

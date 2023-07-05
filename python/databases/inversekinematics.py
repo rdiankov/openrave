@@ -133,7 +133,7 @@ Reference
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database inversekinematics --help
+.. shell-block:: python3 -m openravepy --database inversekinematics --help
 
 Class Definitions
 -----------------

@@ -33,7 +33,7 @@
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database linkstatistics --help
+.. shell-block:: python3 -m openravepy --database linkstatistics --help
 
 Description
 -----------

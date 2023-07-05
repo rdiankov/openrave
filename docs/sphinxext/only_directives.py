@@ -44,10 +44,9 @@ def json_only_directive(name, arguments, options, content, lineno,
 #         html_only.traverse = only_base.dont_traverse
 
 def setup(app):
-    app.add_directive('htmlonly', html_only_directive, True, (0, 0, 0))
-    app.add_directive('latexonly', latex_only_directive, True, (0, 0, 0))
-    app.add_directive('jsononly', json_only_directive, True, (0, 0, 0)
-)
+    app.add_directive('htmlonly', html_only_directive)
+    app.add_directive('latexonly', latex_only_directive)
+    app.add_directive('jsononly', json_only_directive)
     # This will *really* never see the light of day As it turns out,
     # this results in "broken" image nodes since they never get
     # processed, so best not to do this.

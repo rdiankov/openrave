@@ -12,6 +12,7 @@
 # serve to show the default.
 
 import sys, os
+import six
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -23,7 +24,7 @@ sys.path.append(os.path.abspath('openravepy'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.pngmath', 'sphinx.ext.ifconfig','sphinx.ext.todo','sphinx.ext.ifconfig','sphinx.ext.viewcode','sphinx.ext.autosummary','only_directives','gen_gallery','shellblock_directive','exampleblock_directive']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest', 'sphinx.ext.intersphinx', 'sphinx.ext.todo', 'sphinx.ext.imgmath', 'sphinx.ext.ifconfig','sphinx.ext.todo','sphinx.ext.ifconfig','sphinx.ext.viewcode','sphinx.ext.autosummary','only_directives','gen_gallery','shellblock_directive','exampleblock_directive']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -48,7 +49,7 @@ copyright = u'2006-2012, Rosen Diankov and contributors'
 # The short X.Y version.
 __builtins__['__openravepy_build_doc__'] = True
 import openravepy
-version = unicode(openravepy.__version__)
+version = six.text_type(openravepy.__version__)
 # The full version, including alpha/beta/rc tags.
 #import pysvn
 #entry=pysvn.Client().info('..')
@@ -206,10 +207,10 @@ latex_documents = [
 #latex_use_parts = False
 
 # Additional stuff for the LaTeX preamble.
-pngmath_latex_preamble = """
-   \usepackage{amsmath}
-   \usepackage{amsfonts}
-   \usepackage{amssymb}
+imgmath_latex_preamble = """
+   \\usepackage{amsmath}
+   \\usepackage{amsfonts}
+   \\usepackage{amssymb}
 """
 
 # Documents to append as an appendix to all manuals.
