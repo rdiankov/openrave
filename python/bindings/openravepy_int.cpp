@@ -2817,12 +2817,14 @@ object PyEnvironmentBase::GetUserData() const {
 }
 
 void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
-    _penv->SetUnit(std::make_pair(unitname, unitmult));
+    UnitInfo unitInfo = _penv->GetUnitInfo();
+    unitInfo.lengthUnit = GetLengthUnitFromString(unitname, LU_Meter);
+    _penv->SetUnitInfo(unitInfo);
 }
 
 object PyEnvironmentBase::GetUnit() const {
-    std::pair<std::string, dReal> unit = _penv->GetUnit();
-    return py::make_tuple(unit.first, unit.second);
+    UnitInfo unitInfo = _penv->GetUnitInfo();
+    return py::make_tuple(std::string(GetLengthUnitString(unitInfo.lengthUnit)), GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
 }
 
 void PyEnvironmentBase::SetUnitInfo(const py::dict& unitInfo){
