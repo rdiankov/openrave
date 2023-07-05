@@ -3,10 +3,14 @@
 ChangeLog
 #########
 
-Version 0.121.1
+Version 0.122.0
 ===============
 
 * Add Reset function in IkParameterization
+
+Version 0.121.1
+===============
+
 * Improved message in openravejson.h
 
 Version 0.121.0
