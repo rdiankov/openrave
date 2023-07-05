@@ -3508,7 +3508,7 @@ public:
             std::pair<std::string, dReal> unit;
             _ss >> unit.first >> unit.second;
             UnitInfo unitInfo;
-            unitInfo.lengthUnit = GetLengthUnitFromString(unit.first.c_str(), LU_Meter);
+            unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
             _penv->SetUnitInfo(unitInfo);
         }
 
