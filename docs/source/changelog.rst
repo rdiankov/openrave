@@ -6,6 +6,7 @@ ChangeLog
 Version 0.121.1
 ===============
 
+* Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
 * Improved message in openravejson.h
 
 Version 0.121.0
