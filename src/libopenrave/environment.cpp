@@ -20,6 +20,7 @@ EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo()
 {
     _gravity = Vector(0,0,-9.797930195020351);
     _unitInfo.lengthUnit = LU_Meter;
+    _unitInfo.angleUnit = AU_Radian;
 }
 
 EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseInfo& other)

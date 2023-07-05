@@ -3270,7 +3270,8 @@ protected:
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
         _unitInfo = UnitInfo();
-        _unitInfo.lengthUnit = LU_Meter; //default unit settings
+        _unitInfo.lengthUnit = LU_Meter; // default unit settings
+        _unitInfo.angleUnit = AU_Radian; // default unit settings
 
         _vRapidJsonLoadBuffer.resize(4000000);
         _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
