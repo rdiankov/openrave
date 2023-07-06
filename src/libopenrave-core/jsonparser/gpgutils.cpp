@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2013 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2023 Tan Li Boon <liboon.tan@mujin.co.jp>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
