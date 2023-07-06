@@ -3960,6 +3960,54 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetLengthUnitFromString", 
+          [](const std::string& pLengthUnit, LengthUnit defaultLengthUnit){ return OpenRAVE::GetLengthUnitFromString(pLengthUnit, defaultLengthUnit); },
+          DOXY_FN1(OpenRAVE::GetLengthUnitFromString)
+          );
+#else
+    def("GetLengthUnitFromString", 
+        [](const std::string& pLengthUnit, LengthUnit defaultLengthUnit){ return OpenRAVE::GetLengthUnitFromString(pLengthUnit, defaultLengthUnit); },
+        DOXY_FN1(OpenRAVE::GetLengthUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMassUnitFromString", 
+          [](const std::string& pMassUnit, MassUnit defaultMassUnit){ return OpenRAVE::GetMassUnitFromString(pMassUnit, defaultMassUnit); },
+          DOXY_FN1(OpenRAVE::GetMassUnitFromString)
+          );
+#else
+    def("GetMassUnitFromString", 
+        [](const std::string& pMassUnit, MassUnit defaultMassUnit){ return OpenRAVE::GetMassUnitFromString(pMassUnit, defaultMassUnit); },
+        DOXY_FN1(OpenRAVE::GetMassUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetTimeUnitFromString", 
+          [](const std::string& pTimeUnit, TimeUnit defaultTimeUnit){ return OpenRAVE::GetTimeUnitFromString(pTimeUnit, defaultTimeUnit); },
+          DOXY_FN1(OpenRAVE::GetTimeUnitFromString)
+          );
+#else
+    def("GetTimeUnitFromString", 
+        [](const std::string& pTimeUnit, TimeUnit defaultTimeUnit){ return OpenRAVE::GetTimeUnitFromString(pTimeUnit, defaultTimeUnit); },
+        DOXY_FN1(OpenRAVE::GetTimeUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetAngleUnitFromString", 
+          [](const std::string& pAngleUnit, AngleUnit defaultAngleUnit){ return OpenRAVE::GetAngleUnitFromString(pAngleUnit, defaultAngleUnit); },
+          DOXY_FN1(OpenRAVE::GetAngleUnitFromString)
+          );
+#else
+    def("GetAngleUnitFromString", 
+        [](const std::string& pAngleUnit, AngleUnit defaultAngleUnit){ return OpenRAVE::GetAngleUnitFromString(pAngleUnit, defaultAngleUnit); },
+        DOXY_FN1(OpenRAVE::GetAngleUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GetLengthUnitConversionScale", 
           [](const LengthUnit sourceUnit, const LengthUnit targetUnit){ return OpenRAVE::GetLengthUnitConversionScale<dReal>(sourceUnit, targetUnit); },
           DOXY_FN1(OpenRAVE::GetLengthUnitConversionScale)
