@@ -1811,9 +1811,6 @@ public:
 
         if( !!robot ) {  // TODO: move this to a shared place
             SharedLock lock681(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(robot);
-            }
 
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
@@ -2019,9 +2016,7 @@ public:
 
         if( !!body ) {  // TODO: move this to a shared place
             SharedLock lock937(_mutexInterfaces);
-            FOREACH(itviewer, _listViewers) {
-                (*itviewer)->RemoveKinBody(body);
-            }
+
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
                 throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
@@ -2785,7 +2780,13 @@ public:
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
-            _unitInfo = info._unitInfo;
+            if( _unit != info._unit ) {
+                RAVELOG_WARN_FORMAT("env=%s, env unit (%s,%f) does not match one coming from UpdateFromInfo (%s,%f)", GetNameId()%_unit.first%_unit.second%info._unit.first%info._unit.second);
+                if( _unit.second != info._unit.second ) {
+                    // if scales are different, cannot proceed
+                    throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit (%s,%f) does not match one coming from UpdateFromInfo (%s,%f)", GetNameId()%_unit.first%_unit.second%info._unit.first%info._unit.second, ORE_InvalidArguments);
+                }
+            }
 
             // set gravity
             if (!!_pPhysicsEngine) {
