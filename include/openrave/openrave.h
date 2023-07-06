@@ -1171,6 +1171,14 @@ public:
         }
     }
 
+    void Reset() {
+        _transform.identity();
+        _type = IKP_None;
+        _id.clear();
+        _name.clear();
+        _mapCustomData.clear();
+    }
+
     inline IkParameterizationType GetType() const {
         return _type;
     }
