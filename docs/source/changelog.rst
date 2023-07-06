@@ -8,6 +8,11 @@ Version 0.122.0
 
 * Add Reset function in IkParameterization
 
+Version 0.121.2
+===============
+
+* Remove leftover RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
 Version 0.121.1
 ===============
 
