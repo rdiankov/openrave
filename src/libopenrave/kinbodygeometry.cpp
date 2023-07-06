@@ -16,10 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "libopenrave.h"
-
-
-
-
+#include "openrave/kinbody.h"
 
 
 namespace OpenRAVE {
@@ -165,26 +162,50 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-void AppendCylinderTriangulation(const Vector& pos, const dReal& rad, const dReal& len, const int& numverts, TriMesh& tri) {
+static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal topRad, const dReal botRad, const dReal halfHeight, const uint numFaces, TriMesh& tri) {
     // once again, cylinder is on z axis
-    dReal dtheta = 2 * PI / (dReal)numverts;
-    int base = tri.vertices.size();
-    tri.vertices.push_back(Vector(0,0,len) + pos);
-    tri.vertices.push_back(Vector(0,0,-len) + pos);
-    tri.vertices.push_back(Vector(rad,0,len) + pos);
-    tri.vertices.push_back(Vector(rad,0,-len) + pos);
-    for(int i = 0; i < numverts+1; ++i) {
-        dReal s = rad * RaveSin(dtheta * (dReal)i);
-        dReal c = rad * RaveCos(dtheta * (dReal)i);
-        int off = (int)tri.vertices.size();
-        tri.vertices.push_back(Vector(c, s, len) + pos);
-        tri.vertices.push_back(Vector(c, s, -len) + pos);
+    const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
 
-        tri.indices.push_back(base);       tri.indices.push_back(off-2);       tri.indices.push_back(off);
-        tri.indices.push_back(base+1);       tri.indices.push_back(off+1);       tri.indices.push_back(off-1);
-        tri.indices.push_back(off-2);   tri.indices.push_back(off-1);       tri.indices.push_back(off);
-        tri.indices.push_back(off);     tri.indices.push_back(off-1);       tri.indices.push_back(off+1);
+    const int32_t base = tri.vertices.size();
+    tri.vertices.emplace_back(pos.x, pos.y, pos.z + halfHeight); // top center
+    tri.vertices.emplace_back(pos.x, pos.y, pos.z - halfHeight); // bottom center
+
+    for (uint i = 0; i < numFaces; ++i) {
+        const dReal unitX = RaveCos(dTheta * i);
+        const dReal unitY = RaveSin(dTheta * i);
+        const int32_t off = tri.vertices.size();
+
+        // line on the side
+        tri.vertices.emplace_back(pos.x + unitX * topRad, pos.y + unitY * topRad, pos.z + halfHeight); // line top
+        tri.vertices.emplace_back(pos.x + unitX * botRad, pos.y + unitY * botRad, pos.z - halfHeight); // line bottom
+
+        if (i > 0) {
+            // four triangles
+            tri.indices.insert(tri.indices.end(), {
+                // 1. top face triangle, top center, last line top, this line top
+                base, off - 2, off,
+                // 2. bottom face triangle, bottom center, this line bottom, last line bottom
+                base + 1, off + 1, off - 1,
+                // 3. side face triangle 1, last line top, last line bottom, this line top
+                off - 2, off - 1, off,
+                // 4. side face triangle 2, this line top, last line bottom, this line bottom
+                off, off - 1, off + 1,
+            });
+        }
     }
+
+    // close the loop
+    const int32_t off = tri.vertices.size();
+    tri.indices.insert(tri.indices.end(), {
+        base, off - 2, base + 2,
+        base + 1, base + 3, off - 1,
+        off - 2, off - 1, base + 2,
+        base + 2, off - 1, base + 3,
+    });
+}
+
+static void AppendCylinderTriangulation(const Vector& pos, const dReal rad, const dReal len, const uint numverts, TriMesh& tri) {
+    return AppendConicalFrustumTriangulation(pos, rad, rad, len, numverts, tri);
 }
 
 void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation) const
@@ -472,9 +493,15 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
     case GT_Cylinder: {
         // cylinder is on z axis
-        dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         int numverts = (int)(fTessellation*48.0f) + 3;
-        AppendCylinderTriangulation(Vector(0, 0, 0), rad, len, numverts, _meshcollision);
+        AppendConicalFrustumTriangulation(
+            Vector(0, 0, 0),
+            GetCylinderTopRadius(),
+            GetCylinderBottomRadius(),
+            GetCylinderHeight()*0.5f,
+            numverts,
+            _meshcollision
+        );
         break;
     }
     case GT_Cage: {
@@ -931,8 +958,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
 
     case GT_Cylinder:
-        orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", _vGeomData.x*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", _vGeomData.z*fUnitScale, allocator);
         break;
 
     case GT_TriMesh: {
@@ -1198,13 +1226,20 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         break;
     case GT_Cylinder:
         vGeomDataTemp = _vGeomData;
-        if (value.HasMember("radius")) {
-            orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
+        if (orjson::LoadJsonValueByKey(value, "topRadius", vGeomDataTemp.x) ||
+            orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x)) {
+            // use topRadius, or fallback to radius
             vGeomDataTemp.x *= fUnitScale;
         }
         if (value.HasMember("height")) {
             orjson::LoadJsonValueByKey(value, "height", vGeomDataTemp.y);
             vGeomDataTemp.y *= fUnitScale;
+        }
+        if (orjson::LoadJsonValueByKey(value, "bottomRadius", vGeomDataTemp.z)) {
+            vGeomDataTemp.z *= fUnitScale;
+        } else {
+            // use bottomRadius, or fallback to topRadius
+            vGeomDataTemp.z = vGeomDataTemp.x;
         }
         if (vGeomDataTemp != _vGeomData) {
             _vGeomData = vGeomDataTemp;
@@ -1466,6 +1501,14 @@ uint8_t KinBody::GeometryInfo::GetSideWallExists() const
         mask |= 1 << _vSideWalls[i].type;
     }
     return mask;
+}
+
+dReal KinBody::GeometryInfo::GetCylinderRadius() const
+{
+    if (_vGeomData.x != _vGeomData.z) {
+        RAVELOG_WARN("Using deprecated GetCylinderRadius, please use GetCylinderTopRadius and GetCylinderBottomRadius");
+    }
+    return _vGeomData.x;
 }
 
 KinBody::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
