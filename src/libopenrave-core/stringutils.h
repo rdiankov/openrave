@@ -26,72 +26,78 @@
 using string_view = std::string_view;
 #else
 #define OPENRAVE_NODISCARD __attribute__((warn_unused_result))
+
 #include <boost/utility/string_view.hpp>
+
 using string_view = ::boost::string_view;
 #endif
 
 namespace OpenRAVE {
 
 // Returns true if a string begins with a matching prefix.
-OPENRAVE_NODISCARD inline bool StringStartsWith(string_view input, string_view prefix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline bool StringStartsWith(string_view input, string_view prefix, bool ignoreCase = true)
+{
     if (input.length() < prefix.length()) {
         return false;
     }
     if (ignoreCase) {
-        return std::equal(input.begin(), input.begin() + prefix.length(), prefix.begin(), prefix.end(), [](char l, char r) -> bool {
+        return std::equal(prefix.begin(), prefix.end(), input.begin(), [](char l, char r) -> bool {
             return std::tolower(l) == std::tolower(r);
         });
-    } else {
-        return std::equal(input.begin(), input.begin() + prefix.length(), prefix.begin(), prefix.end());
     }
+    return std::equal(prefix.begin(), prefix.end(), input.begin());
 }
 
 // Returns true if a string ends with a matching suffix.
-OPENRAVE_NODISCARD inline bool StringEndsWith(string_view input, string_view suffix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline bool StringEndsWith(string_view input, string_view suffix, bool ignoreCase = true)
+{
     if (input.length() < suffix.length()) {
         return false;
     }
     if (ignoreCase) {
-        return std::equal(input.end() - suffix.length(), input.end(), suffix.begin(), suffix.end(), [](char l, char r) -> bool {
+        return std::equal(suffix.rbegin(), suffix.rend(), input.rbegin(), [](char l, char r) -> bool {
             return std::tolower(l) == std::tolower(r);
         });
-    } else {
-        return std::equal(input.end() - suffix.length(), input.end(), suffix.begin(), suffix.end());
     }
+    return std::equal(suffix.rbegin(), suffix.rend(), input.rbegin());
 }
 
 // Attempt to remove a matching prefix from a string in-place. Nothing is done if the prefix does not match.
-inline bool RemovePrefix(std::string& input, string_view prefix, bool ignoreCase = true) {
+inline bool RemovePrefix(std::string& input, string_view prefix, bool ignoreCase = true)
+{
     if (!StringStartsWith(input, prefix, ignoreCase)) {
         return false;
     }
-    input.erase(input.begin(), input.begin() + prefix.length());
+    input.erase(0, prefix.length());
     return true;
 }
 
 // Attempt to remove a matching suffix from a string in-place. Nothing is done if the suffix does not match.
-inline bool RemoveSuffix(std::string& input, string_view suffix, bool ignoreCase = true) {
+inline bool RemoveSuffix(std::string& input, string_view suffix, bool ignoreCase = true)
+{
     if (!StringEndsWith(input, suffix, ignoreCase)) {
         return false;
     }
-    input.erase(input.end() - suffix.length(), input.end());
+    input.erase(input.length() - suffix.length());
     return true;
 }
 
 // Attempt to remove a matching prefix from a string, returning a copy. An empty string is returned if the prefix does not match.
-OPENRAVE_NODISCARD inline std::string RemovePrefix(string_view input, string_view prefix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline std::string RemovePrefix(string_view input, string_view prefix, bool ignoreCase = true)
+{
     if (!StringStartsWith(input, prefix, ignoreCase)) {
         return "";
     }
-    return std::string(input.substr(prefix.length()));
+    return {input.begin() + prefix.length(), input.end()};
 }
 
 // Attempt to remove a matching suffix from a string, returning a copy. An empty string is returned if the suffix does not match.
-OPENRAVE_NODISCARD inline std::string RemoveSuffix(string_view input, string_view suffix, bool ignoreCase = true) {
+OPENRAVE_NODISCARD inline std::string RemoveSuffix(string_view input, string_view suffix, bool ignoreCase = true)
+{
     if (!StringEndsWith(input, suffix, ignoreCase)) {
         return "";
     }
-    return std::string(input.substr(0, input.size() - suffix.length()));
+    return {input.begin(), input.end() - suffix.length()};
 }
 
 /// \brief get the scheme of the uri, e.g. file: or openrave:

@@ -301,7 +301,7 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 void RaveWriteEncryptedFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
 {
     std::ofstream ofs(filename, std::ios::binary);
-    RaveWriteEncryptedStream(penv, ofs, atts, alloc, mimeType);
+    RaveWriteEncryptedStream(std::move(penv), ofs, atts, alloc, mimeType);
 }
 
 void RaveWriteEncryptedFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
@@ -312,9 +312,8 @@ void RaveWriteEncryptedFile(const std::list<KinBodyPtr>& listbodies, const std::
 
 void RaveWriteEncryptedMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
 {
-    using vectorstream = ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>>;
-    vectorstream vs(std::ios::binary);
-    RaveWriteEncryptedStream(penv, vs, atts, alloc, mimeType);
+    ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>> vs(std::ios::binary);
+    RaveWriteEncryptedStream(std::move(penv), vs, atts, alloc, mimeType);
     vs.swap_vector(output);
 }
 
@@ -336,22 +335,16 @@ void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const A
         }
     }
 
-    std::string output_buffer;
     std::stringstream ss;
     switch (mimeType) {
-    case MimeType::JSON: {
+    case MimeType::JSON:
         RaveWriteJSONStream(penv, ss, atts, alloc);
         break;
-    }
-    case MimeType::MsgPack: {
+    case MimeType::MsgPack:
         RaveWriteMsgPackStream(penv, ss, atts, alloc);
         break;
     }
-    }
-    ss.seekg(0, std::ios::beg);
-    if (GpgEncrypt(ss, output_buffer, keyName)) {
-        os.write(output_buffer.data(), output_buffer.size());
-    } else {
+    if (!GpgEncrypt(ss, os, keyName)) {
         RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
     }
 }
@@ -366,22 +359,17 @@ void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostr
         }
     }
 
-    std::string output_buffer;
     std::stringstream ss;
     switch (mimeType) {
-    case MimeType::JSON: {
+    case MimeType::JSON:
         RaveWriteJSONStream(listbodies, ss, atts, alloc);
         break;
-    }
-    case MimeType::MsgPack: {
+    case MimeType::MsgPack:
         RaveWriteMsgPackStream(listbodies, ss, atts, alloc);
         break;
     }
-    }
     ss.seekg(0, std::ios::beg);
-    if (GpgEncrypt(ss, output_buffer, keyName)) {
-        os.write(output_buffer.data(), output_buffer.size());
-    } else {
+    if (!GpgEncrypt(ss, os, keyName)) {
         RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
     }
 }

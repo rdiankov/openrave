@@ -80,8 +80,8 @@ void RaveWriteEncryptedMemory(const std::list<KinBodyPtr>& listbodies, std::vect
 void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType);
 void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType);
 
-bool GpgDecrypt(std::istream& inputStream, std::string& outputBuffer);
-bool GpgEncrypt(std::istream& inputStream, std::string& outputBuffer, const std::string& keyName);
+bool GpgDecrypt(std::istream& inputStream, std::ostream& outputData);
+bool GpgEncrypt(std::istream& inputStream, std::ostream& outputData, const std::string& keyName);
 
 }
 #endif

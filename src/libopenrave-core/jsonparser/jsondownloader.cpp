@@ -27,21 +27,18 @@ namespace OpenRAVE {
 // Need to forward declare this
 static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext);
 
-static bool _DecryptDocument(OpenRAVE::JSONDownloadContextPtr pContext)
+static void _DecryptDocument(OpenRAVE::JSONDownloadContextPtr pContext)
 {
-    // Make a copy of the input, because the decryption functions don't store a copy so data needs to be alive
-    std::string input = pContext->buffer;
-    pContext->buffer.clear();
-    std::istringstream iss(input, std::ios::in | std::ios::binary);
-    if (GpgDecrypt(iss, pContext->buffer)) {
+    std::istringstream iss(pContext->buffer, std::ios::in | std::ios::binary);
+    std::ostringstream oss;
+    if (GpgDecrypt(iss, oss)) {
         if (RemoveSuffix(pContext->uri, ".gpg") || RemoveSuffix(pContext->uri, ".pgp")) {
+            pContext->buffer = oss.str();
             _ParseDocument(pContext);
-            return true;
         }
     } else {
         RAVELOG_ERROR("Failed to decrypt document.");
     }
-    return false;
 }
 
 static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext)

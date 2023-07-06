@@ -116,9 +116,10 @@ static void OpenRapidJsonDocument(const std::string& filename, rapidjson::Docume
 static void OpenEncryptedDocument(const std::string& filename, rapidjson::Document& doc)
 {
     std::ifstream ifs(filename.c_str());
-    std::string outputBuffer;
-    if (GpgDecrypt(ifs, outputBuffer)) {
-        rapidjson::ParseResult ok = doc.Parse<rapidjson::kParseFullPrecisionFlag>(outputBuffer);
+    std::stringstream ss;
+    if (GpgDecrypt(ifs, ss)) {
+        rapidjson::IStreamWrapper isw(ss);
+        rapidjson::ParseResult ok = doc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
         if (!ok) {
             throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", filename, ORE_InvalidArguments);
         }

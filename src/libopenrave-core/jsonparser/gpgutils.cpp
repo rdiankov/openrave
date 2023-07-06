@@ -18,15 +18,11 @@
 #include "stringutils.h"
 
 #if OPENRAVE_ENCRYPTION
-#include <iostream>
-#include <sys/mman.h>
 #include <gpgme.h>
 #include <gpgme++/context.h>
 #include <gpgme++/data.h>
 #include <gpgme++/decryptionresult.h>
 #include <gpgme++/encryptionresult.h>
-#include <gpgme++/engineinfo.h>
-#include <gpgme++/global.h>
 #include <gpgme++/keylistresult.h>
 #include <gpgme++/interfaces/dataprovider.h>
 #endif
@@ -37,110 +33,93 @@ namespace OpenRAVE {
 
 class IStreamProvider final : public GpgME::DataProvider {
 public:
-    IStreamProvider(std::istream& stream)
-        : _stream(stream)
-        , _size(_stream.seekg(0, std::ios::end).tellg()) {
+    explicit IStreamProvider(std::istream& stream) : _stream(stream)
+    {
         _stream.seekg(0, std::ios::beg);
     }
     IStreamProvider(const IStreamProvider&) = delete;
-    IStreamProvider(IStreamProvider&& other) noexcept = delete;
-    ~IStreamProvider() noexcept {}
+    IStreamProvider(IStreamProvider&& other) = delete;
+    ~IStreamProvider() override = default;
 
-    bool isSupported(GpgME::DataProvider::Operation op) const override {
-        return (op == GpgME::DataProvider::Operation::Read)
-            || (op == GpgME::DataProvider::Operation::Seek)
-            || (op == GpgME::DataProvider::Operation::Release);
+    bool isSupported(GpgME::DataProvider::Operation op) const override
+    {
+        return op == GpgME::DataProvider::Operation::Read || op == GpgME::DataProvider::Operation::Seek;
     }
 
-    ssize_t read(void *buffer, size_t bufSize) override {
-        const size_t to_read = std::min(_size - _stream.tellg(), bufSize);
-        _stream.read(static_cast<char*>(buffer), to_read);
-        return _stream.bad() ? -1 : to_read;
+    ssize_t read(void *buffer, size_t bufSize) override
+    {
+        return _stream.readsome(static_cast<char *>(buffer), bufSize);
     }
 
-    ssize_t write(const void *buffer, size_t bufSize) override {
+    ssize_t write(const void *, size_t) override
+    {
         return -1;
     }
 
-    off_t seek(off_t offset, int whence) override {
+    off_t seek(off_t offset, int whence) override
+    {
         switch (whence) {
-        case SEEK_SET: {
-            _stream.seekg(offset, std::ios::beg);
-            break;
+        case SEEK_SET:
+            return _stream.rdbuf()->pubseekoff(offset, std::ios::beg, std::ios::in);
+        case SEEK_CUR:
+            return _stream.rdbuf()->pubseekoff(offset, std::ios::cur, std::ios::in);
+        case SEEK_END:
+            return _stream.rdbuf()->pubseekoff(offset, std::ios::end, std::ios::in);
+        default:
+            return -1;
         }
-        case SEEK_CUR: {
-            _stream.seekg(offset, std::ios::cur);
-            break;
-        }
-        case SEEK_END: {
-            _stream.seekg(offset, std::ios::end);
-            break;
-        }
-        }
-        return _stream.bad() ? -1 : off_t(_stream.tellg());
     }
 
     void release() override {}
 
 private:
     std::istream& _stream;
-    size_t _size;
 };
 
-class StringBufferProvider final : public GpgME::DataProvider {
+class OStreamProvider final : public GpgME::DataProvider {
 public:
-    StringBufferProvider(std::string& buffer) : _buffer(buffer) {}
-    StringBufferProvider(const StringBufferProvider&) = delete;
-    StringBufferProvider(StringBufferProvider&& other) noexcept = delete;
-    ~StringBufferProvider() noexcept {}
+    explicit OStreamProvider(std::ostream& stream) : _stream(stream) {}
+    OStreamProvider(const OStreamProvider&) = delete;
+    OStreamProvider(OStreamProvider&& other) = delete;
+    ~OStreamProvider() override = default;
 
-    bool isSupported(GpgME::DataProvider::Operation op) const override {
-        return true;
+    bool isSupported(GpgME::DataProvider::Operation op) const override
+    {
+        return op == GpgME::DataProvider::Operation::Write || op == GpgME::DataProvider::Operation::Seek;
     }
 
-    ssize_t read(void *buffer, size_t bufSize) override {
-        const size_t delta = std::min(_buffer.size() - _pos, bufSize);
-        ::memcpy(buffer, &_buffer[0], delta);
-        _pos += delta;
-        return delta;
+    ssize_t read(void *buffer, size_t bufSize) override
+    {
+        return -1;
     }
 
-    ssize_t write(const void *buffer, size_t bufSize) override {
-        const size_t delta = _buffer.size() - _pos;
-        if (delta < bufSize) {
-            _buffer.resize(_buffer.size() + (bufSize - delta));
-        }
-        ::memcpy(&_buffer[0] + _pos, buffer, bufSize);
-        _pos += bufSize;
-        return bufSize;
+    ssize_t write(const void *buffer, size_t bufSize) override
+    {
+        return _stream.write(static_cast<const char *>(buffer), bufSize).good() ? bufSize : -1;
     }
 
-    off_t seek(off_t offset, int whence) override {
+    off_t seek(off_t offset, int whence) override
+    {
         switch (whence) {
-        case SEEK_SET: {
-            _pos = offset;
-            break;
+            case SEEK_SET:
+                return _stream.rdbuf()->pubseekoff(offset, std::ios::beg, std::ios::out);
+            case SEEK_CUR:
+                return _stream.rdbuf()->pubseekoff(offset, std::ios::cur, std::ios::out);
+            case SEEK_END:
+                return _stream.rdbuf()->pubseekoff(offset, std::ios::end, std::ios::out);
+            default:
+                return -1;
         }
-        case SEEK_CUR: {
-            _pos += offset;
-            break;
-        }
-        case SEEK_END: {
-            _pos = _buffer.size() - offset;
-            break;
-        }
-        }
-        return _pos;
     }
 
-    void release() override { _pos = 0; }
+    void release() override {}
 
 private:
-    std::string& _buffer;
-    std::streampos _pos;
+    std::ostream& _stream;
 };
 
-GpgME::Error FindGPGKeyByName(std::unique_ptr<GpgME::Context>& gpgCtx, const std::string& keyName, GpgME::Key& outKey) {
+static GpgME::Error FindGPGKeyByName(std::unique_ptr<GpgME::Context>& gpgCtx, const std::string& keyName, GpgME::Key& outKey)
+{
     GpgME::Error err = gpgCtx->startKeyListing();
     if (err.code() != GPG_ERR_NO_ERROR) {
         return err;
@@ -163,10 +142,10 @@ GpgME::Error FindGPGKeyByName(std::unique_ptr<GpgME::Context>& gpgCtx, const std
     return keylistresults.error();
 }
 
-bool GpgDecrypt(std::istream& inputStream, std::string& outputBuffer)
+bool GpgDecrypt(std::istream& inputStream, std::ostream& outputStream)
 {
     // gpgme_check_version must be executed at least once before we create a context.
-    const char* gpg_version = gpgme_check_version(NULL);
+    const char *gpg_version = gpgme_check_version(nullptr);
     RAVELOG_DEBUG("GPG version: %s\n", gpg_version);
     std::unique_ptr<GpgME::Context> gpgCtx = GpgME::Context::create(GpgME::Protocol::OpenPGP);
     if (!gpgCtx) {
@@ -174,23 +153,22 @@ bool GpgDecrypt(std::istream& inputStream, std::string& outputBuffer)
         return false;
     }
 
-    IStreamProvider cipherStream(inputStream);
-    GpgME::Data cipherData(&cipherStream);
-    StringBufferProvider plainStream(outputBuffer);
-    GpgME::Data plainData(&plainStream);
+    IStreamProvider inputData(inputStream);
+    GpgME::Data cipherData(&inputData);
+    OStreamProvider outputData(outputStream);
+    GpgME::Data plainData(&outputData);
     GpgME::DecryptionResult result = gpgCtx->decrypt(cipherData, plainData);
     if (result.error().code() == GPG_ERR_NO_ERROR) {
         return true;
-    } else {
-        RAVELOG_ERROR("%s\n", result.error().asString());
-        return false;
     }
+    RAVELOG_ERROR("%s\n", result.error().asString());
+    return false;
 }
 
-bool GpgEncrypt(std::istream& inputStream, std::string& outputBuffer, const std::string& keyName)
+bool GpgEncrypt(std::istream& inputStream, std::ostream& outputStream, const std::string& keyName)
 {
     // gpgme_check_version must be executed at least once before we create a context.
-    const char* gpg_version = gpgme_check_version(NULL);
+    const char *gpg_version = gpgme_check_version(nullptr);
     RAVELOG_DEBUG("GPG version: %s\n", gpg_version);
     std::unique_ptr<GpgME::Context> gpgCtx = GpgME::Context::create(GpgME::Protocol::OpenPGP);
     if (!gpgCtx) {
@@ -210,26 +188,25 @@ bool GpgEncrypt(std::istream& inputStream, std::string& outputBuffer, const std:
         return false;
     }
 
-    IStreamProvider plainStream(inputStream);
-    GpgME::Data plainData(&plainStream);
-    StringBufferProvider cipherStringBuffer(outputBuffer);
-    GpgME::Data cipherData(&cipherStringBuffer);
+    IStreamProvider inputData(inputStream);
+    GpgME::Data plainData(&inputData);
+    OStreamProvider outputData(outputStream);
+    GpgME::Data cipherData(&outputData);
     GpgME::EncryptionResult result = gpgCtx->encrypt({key}, plainData, cipherData, GpgME::Context::EncryptionFlags::AlwaysTrust);
     if (result.error().code() == GPG_ERR_NO_ERROR) {
         return true;
-    } else {
-        RAVELOG_ERROR("%s\n", result.error().asString());
-        return false;
     }
+    RAVELOG_ERROR("%s\n", result.error().asString());
+    return false;
 }
 
 #else
 
-bool GpgDecrypt(std::istream& inputStream, std::string& outputBuffer) {
+bool GpgDecrypt(std::istream&, std::ostream&) {
     throw OPENRAVE_EXCEPTION_FORMAT("Encryption not enabled in OpenRAVE, but decryption was requested.");
 }
 
-bool GpgEncrypt(std::istream& inputStream, std::string& outputBuffer, const std::string& keyName) {
+bool GpgEncrypt(std::istream&, std::ostream&, const std::string&) {
     throw OPENRAVE_EXCEPTION_FORMAT("Encryption not enabled in OpenRAVE, but encryption was requested.");
 }
 
