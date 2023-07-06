@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.121.3
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
+
 Version 0.121.2
 ===============
 
