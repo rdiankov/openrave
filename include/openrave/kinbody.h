@@ -401,6 +401,9 @@ public:
             return _vGeomData.y;
         }
         inline dReal GetCylinderBottomRadius() const {
+            if (_vGeomData.z == 0) {
+                return _vGeomData.x;
+            }
             return _vGeomData.z;
         }
         inline const Vector& GetBoxExtents() const {
@@ -446,7 +449,7 @@ public:
         }
 
         ///< for sphere it is radius
-        ///< for cylinder, first 2 values are topRadius, height and bottomRadius
+        ///< for cylinder, first 3 values are topRadius, height and bottomRadius
         ///< for trimesh, none
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.

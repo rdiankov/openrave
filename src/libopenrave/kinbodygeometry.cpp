@@ -162,7 +162,8 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal topRad, const dReal botRad, const dReal halfHeight, const uint numFaces, TriMesh& tri) {
+static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal topRad, const dReal botRad, const dReal halfHeight, const uint numFaces, TriMesh& tri)
+{
     // once again, cylinder is on z axis
     const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
 
@@ -204,7 +205,8 @@ static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal top
     });
 }
 
-static void AppendCylinderTriangulation(const Vector& pos, const dReal rad, const dReal len, const uint numverts, TriMesh& tri) {
+static void AppendCylinderTriangulation(const Vector& pos, const dReal rad, const dReal len, const uint numverts, TriMesh& tri)
+{
     return AppendConicalFrustumTriangulation(pos, rad, rad, len, numverts, tri);
 }
 
@@ -337,7 +339,7 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         break;
 
     case GT_Cylinder:
-        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.y - rhs._vGeomData.y*fUnitScale) > fEpsilon ) {
+        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.y - rhs._vGeomData.y*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.z - rhs._vGeomData.z*fUnitScale) > fEpsilon ) {
             return 8;
         }
         break;
@@ -958,9 +960,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
 
     case GT_Cylinder:
-        orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", _vGeomData.x*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", _vGeomData.z*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", GetCylinderTopRadius()*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "height", GetCylinderHeight()*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", GetCylinderBottomRadius()*fUnitScale, allocator);
         break;
 
     case GT_TriMesh: {
@@ -1237,9 +1239,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         if (orjson::LoadJsonValueByKey(value, "bottomRadius", vGeomDataTemp.z)) {
             vGeomDataTemp.z *= fUnitScale;
-        } else {
-            // use bottomRadius, or fallback to topRadius
-            vGeomDataTemp.z = vGeomDataTemp.x;
         }
         if (vGeomDataTemp != _vGeomData) {
             _vGeomData = vGeomDataTemp;
@@ -1376,12 +1375,14 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         ab.extents.x = ab.extents.y = ab.extents.z = _vGeomData[0];
         ab.pos = tglobal.trans;
         break;
-    case GT_Cylinder:
-        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*_vGeomData.x;
-        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*_vGeomData.x;
-        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_vGeomData.x;
+    case GT_Cylinder: {
+        const dReal biggerRadius = max(GetCylinderTopRadius(), GetCylinderBottomRadius());
+        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*biggerRadius;
+        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*biggerRadius;
+        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*biggerRadius;
         ab.pos = tglobal.trans; //+(dReal)0.5*_vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
+    }
     case GT_Cage: {
         // have to return the entire volume, even the inner region since a lot of code use the bounding box to compute cropping and other functions
         const Vector& vCageBaseExtents = _vGeomData;
@@ -1505,7 +1506,7 @@ uint8_t KinBody::GeometryInfo::GetSideWallExists() const
 
 dReal KinBody::GeometryInfo::GetCylinderRadius() const
 {
-    if (_vGeomData.x != _vGeomData.z) {
+    if (_vGeomData.z == 0 || _vGeomData.x != _vGeomData.z) {
         RAVELOG_WARN("Using deprecated GetCylinderRadius, please use GetCylinderTopRadius and GetCylinderBottomRadius");
     }
     return _vGeomData.x;
@@ -1708,15 +1709,17 @@ bool KinBody::Geometry::ValidateContactNormal(const Vector& _position, Vector& _
         break;
     }
     case GT_Cylinder: { // z-axis
-        dReal fInsideCircle = position.x*position.x+position.y*position.y-_info._vGeomData.x*_info._vGeomData.x;
-        dReal fInsideHeight = 2.0f*RaveFabs(position.z)-_info._vGeomData.y;
-        if((fInsideCircle < -feps)&&(fInsideHeight > -feps)&&(normal.z*position.z<0)) {
-            _normal = -_normal;
-            return true;
-        }
-        if((fInsideCircle > -feps)&&(fInsideHeight < -feps)&&(normal.x*position.x+normal.y*position.y < 0)) {
-            _normal = -_normal;
-            return true;
+        if (GetCylinderTopRadius() == GetCylinderBottomRadius()) {
+            dReal fInsideCircle = position.x * position.x + position.y * position.y - _info._vGeomData.x * _info._vGeomData.x;
+            dReal fInsideHeight = 2.0f * RaveFabs(position.z) - _info._vGeomData.y;
+            if ((fInsideCircle < -feps) && (fInsideHeight > -feps) && (normal.z * position.z < 0)) {
+                _normal = -_normal;
+                return true;
+            }
+            if ((fInsideCircle > -feps) && (fInsideHeight < -feps) && (normal.x * position.x + normal.y * position.y < 0)) {
+                _normal = -_normal;
+                return true;
+            }
         }
         break;
     }
