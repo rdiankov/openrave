@@ -484,7 +484,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
     case GT_Axial: {
         if (_vAxialSlices.size() > 1) {
-			// there has to be at least two slices: top and bottom
+            // there has to be at least two slices: top and bottom
             // sort the axial slices by the Z value
             std::sort(_vAxialSlices.begin(), _vAxialSlices.end());
 
@@ -1315,12 +1315,10 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             }
             std::vector<AxialSlice> vAxialSlices;
             for (rapidjson::SizeType i = 0; i < rAxial.Size(); i += 2) {
-                if (rAxial[i].IsFloat() && rAxial[i + 1].IsFloat()) {
-                    AxialSlice axialSlice;
-                    orjson::LoadJsonValue(rAxial[i], axialSlice.zOffset);
-                    orjson::LoadJsonValue(rAxial[i+1], axialSlice.radius);
-                    vAxialSlices.push_back(axialSlice);
-                }
+                AxialSlice axialSlice;
+                orjson::LoadJsonValue(rAxial[i], axialSlice.zOffset);
+                orjson::LoadJsonValue(rAxial[i+1], axialSlice.radius);
+                vAxialSlices.push_back(axialSlice);
             }
             if (vAxialSlices != _vAxialSlices) {
                 _vAxialSlices = vAxialSlices;
