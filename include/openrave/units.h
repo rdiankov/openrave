@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <cstring>
+#include <sstream>
 
 #include <boost/format.hpp>
 
@@ -96,6 +97,15 @@ public:
     }
     inline bool operator!=(const UnitInfo& rhs) const {
         return lengthUnit != rhs.lengthUnit || massUnit != rhs.massUnit || timeUnit != rhs.timeUnit || angleUnit != rhs.angleUnit;
+    }
+    std::string toString() const { // converts UnitInfo into strings
+        std::stringstream ss;
+        ss << "("
+           << GetLengthUnitString(lengthUnit) << ", "
+           << GetMassUnitString(massUnit) << ", "
+           << GetTimeUnitString(timeUnit) << ", "
+           << GetAngleUnitString(angleUnit) << ")";
+        return ss.str();
     }
 
     LengthUnit lengthUnit = LU_Millimeter; ///< standard in industrial applications
