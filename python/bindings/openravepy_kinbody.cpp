@@ -4142,9 +4142,10 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
-object PyKinBody::ExtractInfo() const {
+object PyKinBody::ExtractInfo(ExtractInfoOptions options) const
+{
     KinBody::KinBodyInfo info;
-    _pbody->ExtractInfo(info);
+    _pbody->ExtractInfo(info, options);
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
@@ -4683,6 +4684,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianTranslation_overloads, Comp
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianAxisAngle_overloads, ComputeHessianAxisAngle, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, ComputeInverseDynamics, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractInfo_overloads, ExtractInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, CreateKinBodyStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatParameters, 0, 2)
@@ -4774,6 +4776,16 @@ void init_openravepy_kinbody()
                           .value("Cage",GT_Cage)
                           .value("CalibrationBoard",GT_CalibrationBoard)
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object pyExtractInfoOptions = enum_<ExtractInfoOptions>(m, "ExtractInfoOptions" DOXY_ENUM(ExtractInfoOptions))
+#else
+    object pyExtractInfoOptions = enum_<ExtractInfoOptions>("ExtractInfoOptions" DOXY_ENUM(ExtractInfoOptions))
+#endif
+                          .value("Everything",EIO_Everything)
+                          .value("SkipDOFValues",EIO_SkipDOFValues)
+    ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
 #else
@@ -5838,10 +5850,11 @@ void init_openravepy_kinbody()
                               "options"_a = py::none_(),
                               "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver"
                               )
+                         .def("ExtractInfo", &PyKinBody::ExtractInfo, "options"_a=EIO_Everything, DOXY_FN(KinBody, ExtractInfo))
 #else
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
+                         .def("ExtractInfo", &PyKinBody::ExtractInfo, ExtractInfo_overloads(PY_ARGS("options") DOXY_FN(KinBody, ExtractInfo))
 #endif
-                         .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)

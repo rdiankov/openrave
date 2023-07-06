@@ -343,7 +343,7 @@ public:
     py::object GetAssociatedFileEntries() const;
     int64_t GetLastModifiedAtUS() const;
 
-    py::object ExtractInfo() const;
+    py::object ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
 
     PyInterfaceBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);

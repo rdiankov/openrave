@@ -1062,12 +1062,12 @@ protected:
                                 KinBody::KinBodyInfoPtr pKinBodyInfo;
                                 if (pbody->IsRobot()) {
                                     RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
-                                    RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo);
+                                    RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo, EIO_Everything);
                                     pKinBodyInfo = pRobotInfo;
                                 }
                                 else {
                                     pKinBodyInfo.reset(new KinBody::KinBodyInfo());
-                                    pbody->ExtractInfo(*pKinBodyInfo);
+                                    pbody->ExtractInfo(*pKinBodyInfo, EIO_Everything);
                                 }
                                 envInfo._vBodyInfos.push_back(pKinBodyInfo);
                             }

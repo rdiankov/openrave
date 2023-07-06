@@ -28,7 +28,7 @@ class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /// \brief Result of UpdateFromInfo() call
-enum UpdateFromInfoResult
+enum UpdateFromInfoResult : uint8_t
 {
     UFIR_NoChange = 0, ///< Nothing changed
     UFIR_Success = 1, ///< Updated successfully
@@ -36,8 +36,15 @@ enum UpdateFromInfoResult
     UFIR_RequireReinitialize = 3, ///< Failed to update, require InitFromInfo() to be called before update can succeed
 };
 
+enum ExtractInfoOptions : uint8_t
+{
+    EIO_Everything = 0, ///< extract everything
+    EIO_SkipDOFValues = 1, ///< extracts everything but dof values, this allows extraction even when body is not added to the environment
+};
+
 /// \brief The type of geometry primitive.
-enum GeometryType {
+enum GeometryType : uint8_t
+{
     GT_None = 0,
     GT_Box = 1,
     GT_Sphere = 2,
@@ -48,7 +55,8 @@ enum GeometryType {
     GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
 };
 
-enum DynamicsConstraintsType {
+enum DynamicsConstraintsType : int8_t
+{
     DC_Unknown = -1, ///< constraints type is not set.
     DC_IgnoreTorque        = 0, ///< Do no check torque limits
     DC_NominalTorque       = 1, ///< Compute and check torque limits using nominal torque
@@ -57,7 +65,8 @@ enum DynamicsConstraintsType {
 
 OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type);
 
-enum JointControlMode {
+enum JointControlMode : uint8_t
+{
     JCM_None = 0, ///< unspecified
     JCM_RobotController = 1, ///< joint controlled by the robot controller
     JCM_IO = 2,              ///< joint controlled by I/O signals
@@ -3407,7 +3416,10 @@ private:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(KinBodyInfo& info);
+    ///
+    /// if bSkipDOFValues is false, body needs to be added to the environment in order to work.
+    /// \param bSkipDOFValues if true, then will skip extracting the DOF values of the kinbody and initializing _dofValues. This allows the fucntion to be called even if the body is not added to the environment.
+    virtual void ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);

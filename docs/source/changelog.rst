@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.123
+=============
+
+* Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
+
 Version 0.122.0
 ===============
 
