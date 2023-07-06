@@ -3,10 +3,19 @@
 ChangeLog
 #########
 
-Version 0.121.1
+Version 0.121.3
 ===============
 
 * Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
+
+Version 0.121.2
+===============
+
+* Remove leftover RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
+Version 0.121.1
+===============
+
 * Improved message in openravejson.h
 
 Version 0.121.0
