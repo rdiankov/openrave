@@ -69,7 +69,7 @@ static const IkReturnAction IKFR_Reject RAVE_DEPRECATED = IKRA_Reject;
 static const IkReturnAction IKFR_Quit RAVE_DEPRECATED = IKRA_Quit;
 typedef IkReturnAction IkFilterReturn RAVE_DEPRECATED;
 
-class OPENRAVE_API IkFailureInfo
+class OPENRAVE_API IkFailureInfo : public orjson::JsonSerializable
 {
 public:
     IkFailureInfo()
@@ -105,7 +105,9 @@ public:
 
     void SetDescription(const std::string& description);
 
-    void SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const;
+    void SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const override;
+
+    void LoadFromJson(const rapidjson::Value& rReport) override;
 
     inline void SetIkParam(const IkParameterization& ikparam) {
         if( ikparam.GetType() != IKP_None ) {

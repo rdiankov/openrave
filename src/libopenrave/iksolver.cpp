@@ -72,6 +72,28 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     }
 }
 
+void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
+{
+    Clear();
+    {
+        uint64_t actionInt = (uint64_t) _action;
+        orjson::LoadJsonValueByKey(rIkFailureInfo, "action", actionInt);
+        _action = (IkReturnAction) actionInt;
+    }
+    orjson::LoadJsonValueByKey(rIkFailureInfo, "config", _vconfig);
+    _bIkParamValid = orjson::LoadJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam);
+    if( rIkFailureInfo.HasMember("collisionReportInfo") ) {
+        if (!_pReportInfo) {
+            _pReportInfo.reset(new CollisionReportInfo());
+        }
+        _pReportInfo->LoadFromJson(rIkFailureInfo["collisionReportInfo"]);
+    }
+    orjson::LoadJsonValueByKey(rIkFailureInfo, "description", _description);
+    if( rIkFailureInfo.HasMember("mapdata") ) {
+        orjson::LoadJsonValue(rIkFailureInfo["mapdata"], _mapdata);
+    }
+}
+
 IkFailureAccumulator::IkFailureAccumulator()
 {
 }
