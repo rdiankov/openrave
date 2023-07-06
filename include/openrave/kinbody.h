@@ -561,18 +561,18 @@ public:
         /// \brief A slice used to construct axial geometry.
         struct AxialSlice
         {
-            dReal z; ///< z coordinate of the axial slice
+            dReal zOffset; ///< z coordinate of the axial slice
             dReal radius; ///< radius of the axial slice
 
             int Compare(const AxialSlice& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
             bool operator==(const AxialSlice& other) const {
-                return z == other.z && radius == other.radius;
+                return zOffset == other.zOffset && radius == other.radius;
             }
             bool operator!=(const AxialSlice& other) const {
                 return !operator==(other);
             }
             bool operator<(const AxialSlice& other) const {
-                return z < other.z;
+                return zOffset < other.zOffset;
             }
         };
 

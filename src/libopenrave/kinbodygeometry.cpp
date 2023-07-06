@@ -494,10 +494,10 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
             _meshcollision.indices.reserve((numberOfAxialSlices*2)*(numberOfSections+1));
 
             // add top center point
-            _meshcollision.vertices.push_back(Vector(0, 0, _vAxialSlices.front().z));
+            _meshcollision.vertices.push_back(Vector(0, 0, _vAxialSlices.front().zOffset));
 
             // add bottom center point
-            _meshcollision.vertices.push_back(Vector(0, 0, _vAxialSlices.back().z));
+            _meshcollision.vertices.push_back(Vector(0, 0, _vAxialSlices.back().zOffset));
 
             // tessellate the surfaces
             dReal dAngle = 2 * PI / (dReal)numberOfSections;
@@ -508,7 +508,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 
                 // add every slice's outer edge vertices
                 FOREACH(axialSlice, _vAxialSlices) {
-                    _meshcollision.vertices.push_back(Vector(axialSlice->radius*cosTheta, axialSlice->radius*sinTheta, axialSlice->z));
+                    _meshcollision.vertices.push_back(Vector(axialSlice->radius*cosTheta, axialSlice->radius*sinTheta, axialSlice->zOffset));
                 }
 
                 // we can start adding vertices after the first section only
@@ -870,7 +870,7 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
 
     case GT_Axial:
         FOREACH(itAxialSlice, _vAxialSlices) {
-            itAxialSlice->z *= fUnitScale;
+            itAxialSlice->zOffset *= fUnitScale;
             itAxialSlice->radius *= fUnitScale;
         }
         break;
@@ -1019,7 +1019,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         rAxial.SetArray();
         rAxial.Reserve(_vAxialSlices.size()*2, allocator);
         FOREACH(itAxialSlice, _vAxialSlices) {
-            rAxial.PushBack(itAxialSlice->z*fUnitScale, allocator);
+            rAxial.PushBack(itAxialSlice->zOffset*fUnitScale, allocator);
             rAxial.PushBack(itAxialSlice->radius*fUnitScale, allocator);
         }
         orjson::SetJsonValueByKey(rGeometryInfo, "axial", rAxial, allocator);
@@ -1317,7 +1317,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             for (rapidjson::SizeType i = 0; i < rAxial.Size(); i += 2) {
                 if (rAxial[i].IsFloat() && rAxial[i + 1].IsFloat()) {
                     AxialSlice axialSlice;
-                    orjson::LoadJsonValue(rAxial[i], axialSlice.z);
+                    orjson::LoadJsonValue(rAxial[i], axialSlice.zOffset);
                     orjson::LoadJsonValue(rAxial[i+1], axialSlice.radius);
                     vAxialSlices.push_back(axialSlice);
                 }

@@ -43,7 +43,7 @@ public:
     PyAxialSlice(const KinBody::GeometryInfo::AxialSlice& axialslice);
     void Get(KinBody::GeometryInfo::AxialSlice& axialslice);
 
-    float z = 0.0;
+    float zOffset = 0.0;
     float radius = 0.0;
 };
 

@@ -274,11 +274,11 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
 PyAxialSlice::PyAxialSlice() {
 }
 PyAxialSlice::PyAxialSlice(const KinBody::GeometryInfo::AxialSlice& axialslice) {
-    z = axialslice.z;
+    zOffset = axialslice.zOffset;
     radius = axialslice.radius;
 }
 void PyAxialSlice::Get(KinBody::GeometryInfo::AxialSlice& axialslice) {
-    axialslice.z = z;
+    axialslice.zOffset = zOffset;
     axialslice.radius = radius;
 }
 
@@ -5018,7 +5018,7 @@ void init_openravepy_kinbody()
 #else
     object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >("AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
 #endif
-                      .def_readwrite("z",&PyAxialSlice::z)
+                      .def_readwrite("zOffset",&PyAxialSlice::zOffset)
                       .def_readwrite("radius",&PyAxialSlice::radius)
     ;
 
