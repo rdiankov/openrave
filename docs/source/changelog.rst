@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.121.2
+===============
+
+* Remove leftover RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
 Version 0.121.1
 ===============
 
