@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.122.0
+===============
+
+* Add conical frustum geometry support (extending current cylinder).
+
 Version 0.121.2
 ===============
 
