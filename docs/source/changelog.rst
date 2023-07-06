@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.121.3
-===============
+Version 0.123
+=============
 
 * Replace unit with UnitInfo object
+
+Version 0.122.0
+===============
+
+* Add Reset function in IkParameterization
 
 Version 0.121.2
 ===============
