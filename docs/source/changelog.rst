@@ -3,6 +3,52 @@
 ChangeLog
 #########
 
+Version 0.121.1
+===============
+
+* Improved message in openravejson.h
+
+Version 0.121.0
+===============
+
+* Add a modifiedAt field for KinBody and EnvironmentInfo that tracks the modifiedAt on the filename.
+
+Version 0.120.0
+===============
+
+* Add optional uri argument for LoadJSON
+* Add ReadRobotJSON and ReadKinBodyJSON
+
+Version 0.119.8
+===============
+
+* Remove RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
+Version 0.119.7
+===============
+
+* Support loading kinbody data with a references chain of 3 layers or more.
+
+Version 0.119.6
+===============
+
+* Add excludeBodyId option to JSON reader
+
+Version 0.119.5
+===============
+
+* Instead of sampling and rejecting times, directly sample times in `ParabolicSmoother2`.
+
+Version 0.119.4
+===============
+
+* support std::vector<OpenRAVE::RaveVector<T>> serialization
+
+Version 0.119.3
+===============
+
+* Expose ConvertUnitScale to python
+
 Version 0.119.1
 ===============
 

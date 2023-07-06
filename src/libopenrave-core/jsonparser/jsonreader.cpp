@@ -29,12 +29,52 @@
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
+#include <unordered_set>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
 #endif
 
 namespace OpenRAVE {
+
+static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
+{
+    if (pIsoFormatDateTime == nullptr) {
+        return 0;
+    }
+    // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
+    struct tm datetime = {0};
+    const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
+    if (remain == nullptr) {
+        return 0;
+    }
+
+    int64_t timestamp = std::mktime(&datetime) - timezone;
+    timestamp *= 1000000;
+
+    if (*remain == '.') {
+        int64_t fraction = 0, multiplier = 100000000;
+        while (std::isdigit(*(++remain)) && multiplier > 0) {
+            fraction += (*remain - '0') * multiplier;
+            multiplier /= 10;
+        }
+        timestamp += fraction / 1000; // nanoseconds convert to microseconds
+    }
+
+    if (*remain == '+' || *remain == '-') {
+        const bool positive = (*(remain++) == '+');
+        int64_t tz_hour = 0, tz_min = 0;
+        if (std::sscanf(remain, "%ld:%ld", &tz_hour, &tz_min) == 2) {
+            if (positive) {
+                timestamp -= (tz_hour * 3600 + tz_min * 60) * 1000000;
+            } else {
+                timestamp += (tz_hour * 3600 + tz_min * 60) * 1000000;
+            }
+        }
+    }
+
+    return timestamp;
+}
 
 /// \brief if filename endswith oldSuffix, replace it with newSuffix
 ///
@@ -164,7 +204,9 @@ public:
                 ss >> timeout;
                 _downloadTimeoutUS = timeout * 1000000; // convert timeout from seconds to microseconds
             }
-
+            else if (itatt->first == "excludeBodyId") {
+                _excludeBodyIds.emplace(itatt->second);
+            }
         }
         if (_vOpenRAVESchemeAliases.size() == 0) {
             _vOpenRAVESchemeAliases.push_back("openrave");
@@ -210,6 +252,13 @@ public:
         else {
             // extract everything
             _penv->ExtractInfo(envInfo);
+        }
+
+        {
+            const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
+            if ( modifiedAt != nullptr ) {
+                envInfo._lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+            }
         }
 
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
@@ -296,6 +345,10 @@ public:
                     pKinBodyInfo->SerializeJSON(rTempKinBodyInfo, rTempKinBodyInfo.GetAllocator(), fUnitScale, options);
                     throw OPENRAVE_EXCEPTION_FORMAT("Has body with no name in file '%s', so cannot load the scene: %s", _filename%orjson::DumpJson(rTempKinBodyInfo), ORE_InvalidArguments);
                 }
+            }
+            if ( _excludeBodyIds.find(pKinBodyInfo->_id) != _excludeBodyIds.end() ) {
+                itBodyInfo = envInfo._vBodyInfos.erase(itBodyInfo);
+                continue;
             }
 
             ++itBodyInfo;
@@ -385,8 +438,19 @@ public:
         return false;
     }
 
-    void SetURI(const std::string& uri) {
-        _uri = uri;
+    void SetURI(const std::string& uri)
+    {
+        if (uri.empty()) {
+            _uri.clear();
+            return;
+        }
+        std::string scheme, path, fragment;
+        ParseURI(uri, scheme, path, fragment);
+        if (!scheme.empty() && !path.empty()) {
+            _uri = uri;
+            return;
+        }
+        RAVELOG_WARN_FORMAT("SetURI ignore invalid uri '%s'", uri);
     }
 
     void SetFilename(const std::string& filename)
@@ -519,12 +583,7 @@ protected:
             // ensure uri is set
             if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
                 // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
-                if( !currentUri.empty() || !currentFilename.empty() ) {
-                    pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
-                }
-                else {
-                    RAVELOG_VERBOSE_FORMAT("Could not set uri for body '%s' since currentUri and currentFilename are empty", pKinBodyInfo->_name);
-                }
+                pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
             }
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if( !!pRobotBaseInfo ) {
@@ -555,7 +614,7 @@ protected:
 
         int insertIndex = -1;
 
-        // deal with uri that has just #originBodyId
+        // deal with uri that has just #fragment
         if(scheme.empty() && path.empty() && !fragment.empty()) {
             // reference to itself
             bool bFoundBody = false;
@@ -650,16 +709,6 @@ protected:
             else {
                 RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us]", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
             }
-
-            if( insertIndex >= 0 ) {
-                const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
-                RAVELOG_VERBOSE_FORMAT("Deserializing rRefKinBodyInfo=%s into insertIndex=%d, isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
-                if( !isPartial ) {
-                    envInfo._vBodyInfos.at(insertIndex)->Reset();
-                }
-
-                envInfo._vBodyInfos.at(insertIndex)->DeserializeJSON(rRefKinBodyInfo, fUnitScale, _deserializeOptions);
-            }
         }
         else {
             RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
@@ -685,25 +734,23 @@ protected:
                         *((KinBody::KinBodyInfo*)pNewRobotInfo.get())  = *pExistingBodyInfo;
                         pExistingBodyInfo = pNewRobotInfo;
                     }
-
-                    const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
-                    RAVELOG_VERBOSE_FORMAT("Deserializing again rRefKinBodyInfo=%s into insertIndex=%d with isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
-                    if( !isPartial ) {
-                        pExistingBodyInfo->Reset();
-                    }
-
-                    pExistingBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
                     insertIndex = ibody;
                     break;
                 }
             }
         }
 
+        KinBody::KinBodyInfoPtr pNewKinBodyInfo;
         if( insertIndex >= 0 ) {
             RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%referenceUri%currentFilename);
-        }
-        else {
-            KinBody::KinBodyInfoPtr pNewKinBodyInfo;
+            pNewKinBodyInfo = envInfo._vBodyInfos[insertIndex];
+
+            const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
+            RAVELOG_VERBOSE_FORMAT("Deserializing rRefKinBodyInfo=%s into insertIndex=%d, isPartial=%d", orjson::DumpJson(rRefKinBodyInfo)%insertIndex%isPartial);
+            if (!isPartial) {
+                pNewKinBodyInfo->Reset();
+            }
+        } else {
             bool isNewRobot = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "isRobot", false);
             if( isNewRobot ) {
                 pNewKinBodyInfo.reset(new RobotBase::RobotBaseInfo());
@@ -711,35 +758,37 @@ protected:
             else {
                 pNewKinBodyInfo.reset(new KinBody::KinBodyInfo());
             }
-            pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
+        }
 
-            if( !originBodyId.empty() ) {
-                pNewKinBodyInfo->_id = originBodyId;
-            }
+        pNewKinBodyInfo->DeserializeJSON(rRefKinBodyInfo, fRefUnitScale, _deserializeOptions);
 
-            if( pNewKinBodyInfo->_name.empty() ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rRefKinBodyInfo)%currentFilename);
-            }
+        if( !originBodyId.empty() ) {
+            pNewKinBodyInfo->_id = originBodyId;
+        }
 
-            if( originBodyId.empty() ) {
-                // try matching with names
-                for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
-                    KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
-                    if( !originBodyName.empty() && pExistingBodyInfo->_name == originBodyName ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%d, found existing body with id='%s', name='%s', so overwriting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
-                        envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
-                        insertIndex = ibody;
-                        break;
-                    }
+        if( pNewKinBodyInfo->_name.empty() ) {
+            RAVELOG_DEBUG_FORMAT("env=%d, kinbody id='%s' has empty name, coming from file '%s', perhaps it will get overwritten later. Data is %s. Scope is '%s'", _penv->GetId()%originBodyId%currentFilename%orjson::DumpJson(rRefKinBodyInfo)%currentFilename);
+        }
+
+        if( originBodyId.empty() ) {
+            // try matching with names
+            for(int ibody = 0; ibody < (int)envInfo._vBodyInfos.size(); ++ibody) {
+                KinBody::KinBodyInfoPtr& pExistingBodyInfo = envInfo._vBodyInfos[ibody];
+                if( !originBodyName.empty() && pExistingBodyInfo->_name == originBodyName ) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, found existing body with id='%s', name='%s', so overwriting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
+                    envInfo._vBodyInfos[ibody] = pNewKinBodyInfo;
+                    insertIndex = ibody;
+                    break;
                 }
             }
+        }
 
-            if( insertIndex < 0 ) {
-                // might get overwritten later, so ok if name is empty
-                insertIndex = envInfo._vBodyInfos.size();
-                envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
-                RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
-            }
+        // insert the new body info now if it hasn't been inserted
+        if( insertIndex < 0 ) {
+            // might get overwritten later, so ok if name is empty
+            insertIndex = envInfo._vBodyInfos.size();
+            envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
+            RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
         }
         return insertIndex;
     }
@@ -846,6 +895,12 @@ protected:
             }
         }
         pBody->SetName(pKinBodyInfo->_name);
+        {
+            const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
+            if ( modifiedAt != nullptr ) {
+                pBody->SetLastModifiedAtUS(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
+            }
+        }
         _ExtractTransform(rBodyInfo, pBody, fUnitScale);
         pBodyOut = pBody;
         return true;
@@ -1023,6 +1078,7 @@ protected:
     std::string _uri; ///< original uri used to open reader
     std::string _defaultSuffix; ///< defaultSuffix of the main document, either ".json" or ".msgpack"
     std::vector<std::string> _vOpenRAVESchemeAliases;
+    std::unordered_set<std::string> _excludeBodyIds; ///< list of body ids to exclude from importing
     bool _bMustResolveURI = false; ///< if true, throw exception if object uri does not resolve
     bool _bMustResolveEnvironmentURI = false; ///< if true, throw exception if environment uri does not resolve
     bool _bIgnoreInvalidBodies = false; ///< if true, ignores any invalid bodies
@@ -1035,22 +1091,26 @@ protected:
 };
 
 
-bool RaveParseJSON(EnvironmentBasePtr penv, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
+    JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     KinBodyPtr pbody;
-    if (RaveParseJSON(penv, pbody, doc, atts, alloc)) {
+    if( reader.ExtractFirst(doc, pbody, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
         return true;
     }

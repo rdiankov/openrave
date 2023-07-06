@@ -672,6 +672,20 @@ inline void SaveJsonValue(rapidjson::Value& rTransform, const OpenRAVE::RaveTran
     rTransform.PushBack(t.trans[2], alloc);
 }
 
+template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetArray();
+    // TODO, what's a better way to serialize?
+    bool bHas4Values = t[3] != 0;
+    int numvalues = bHas4Values ? 4 : 3;
+    v.Reserve(numvalues, alloc);
+    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
+        rapidjson::Value tmpv;
+        SaveJsonValue(tmpv, t[ivalue], alloc);
+        v.PushBack(tmpv, alloc);
+    }
+}
+
 inline void SaveJsonValue(rapidjson::Value& rUnitInfo, const OpenRAVE::UnitInfo& unitInfo, rapidjson::Document::AllocatorType& alloc) {
     rUnitInfo.SetObject();
     rUnitInfo.AddMember(rapidjson::Document::StringRefType("lengthUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit)), alloc);
@@ -698,20 +712,6 @@ inline void SaveJsonValue(rapidjson::Value& v, const std::vector<T>& t, rapidjso
     for (size_t ivec = 0; ivec < t.size() && ivec < n; ++ivec) {
         rapidjson::Value tmpv;
         SaveJsonValue(tmpv, t[ivec], alloc);
-        v.PushBack(tmpv, alloc);
-    }
-}
-
-template<class T>
-inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::RaveVector<T>& t, rapidjson::Document::AllocatorType& alloc) {
-    v.SetArray();
-    // TODO, what's a better way to serialize?
-    bool bHas4Values = t[3] != 0;
-    int numvalues = bHas4Values ? 4 : 3;
-    v.Reserve(numvalues, alloc);
-    for (int ivalue = 0; ivalue < numvalues; ++ivalue) {
-        rapidjson::Value tmpv;
-        SaveJsonValue(tmpv, t[ivalue], alloc);
         v.PushBack(tmpv, alloc);
     }
 }
@@ -832,7 +832,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::SensorBase::Camer
 template<class T>
 bool inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t) {
     if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object (\"" + std::string(GetJsonTypeName(v)) + "\") for key \"" + std::string(key) + "\".", OpenRAVE::ORE_InvalidArguments);
     }
     rapidjson::Value::ConstMemberIterator itMember = v.FindMember(key);
     if( itMember != v.MemberEnd() ) {
@@ -853,7 +853,7 @@ bool inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t)
 template<class T, class U>
 inline void LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t, const U& d) {
     if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object (\"" + std::string(GetJsonTypeName(v)) + "\") for key \"" + std::string(key) + "\".", OpenRAVE::ORE_InvalidArguments);
     }
     if (v.HasMember(key)) {
         LoadJsonValue(v[key], t);
@@ -867,7 +867,7 @@ inline void LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t,
 template<class T, class U>
 T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t) {
     if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot get value of non-object.", OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot get value of non-object (\"" + std::string(GetJsonTypeName(v)) + "\") for key \"" + std::string(key) + "\".", OpenRAVE::ORE_InvalidArguments);
     }
     if (v.HasMember(key)) {
         const rapidjson::Value& child = v[key];
@@ -883,7 +883,7 @@ T GetJsonValueByKey(const rapidjson::Value& v, const char* key, const U& t) {
 template<class T>
 inline T GetJsonValueByKey(const rapidjson::Value& v, const char* key) {
     if (!v.IsObject()) {
-        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object.", OpenRAVE::ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object (\"" + std::string(GetJsonTypeName(v)) + "\") for key \"" + std::string(key) + "\".", OpenRAVE::ORE_InvalidArguments);
     }
     T r = T();
     if (v.HasMember(key)) {
@@ -897,6 +897,26 @@ inline T GetJsonValueByKey(const rapidjson::Value& v, const char* key) {
 
 inline std::string GetStringJsonValueByKey(const rapidjson::Value& v, const char* key, const std::string& defaultValue=std::string()) {
     return GetJsonValueByKey<std::string, std::string>(v, key, defaultValue);
+}
+
+/// \brief default value is returned when there is no key or value is null
+inline const char* GetCStringJsonValueByKey(const rapidjson::Value& v, const char* key, const char* pDefaultValue=nullptr) {
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object (\"" + std::string(GetJsonTypeName(v)) + "\") for key \"" + std::string(key) + "\".", OpenRAVE::ORE_InvalidArguments);
+    }
+    rapidjson::Value::ConstMemberIterator itMember = v.FindMember(key);
+    if (itMember != v.MemberEnd() ) {
+        const rapidjson::Value& child = itMember->value;
+        if (!child.IsNull()) {
+            if( child.IsString() ) {
+                return child.GetString();
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT0("In GetCStringJsonValueByKey, expecting a String, but got a different object type", OpenRAVE::ORE_InvalidArguments);
+            }
+        }
+    }
+    return pDefaultValue; // not present
 }
 
 template<class T>

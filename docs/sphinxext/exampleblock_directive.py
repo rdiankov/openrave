@@ -35,7 +35,7 @@ class ExamplePostBlockDirective(Directive):
 Command-line
 ------------
 
-.. shell-block:: openrave.py --example %s --help
+.. shell-block:: python3 -m openravepy --example %s --help
 
 Main Python Code
 ----------------
