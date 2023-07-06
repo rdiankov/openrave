@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.122.0
+===============
+
+* Add Reset function in IkParameterization
+
 Version 0.121.2
 ===============
 
