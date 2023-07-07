@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.122.1
+Version 0.122.2
 ===============
 
 * Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
+
+Version 0.122.1
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
 
 Version 0.122.0
 ===============
