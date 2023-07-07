@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.121.3
+Version 0.122.1
 ===============
 
 * Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
+
+Version 0.122.0
+===============
+
+* Add Reset function in IkParameterization
 
 Version 0.121.2
 ===============
