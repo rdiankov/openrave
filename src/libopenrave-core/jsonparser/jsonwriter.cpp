@@ -327,10 +327,10 @@ void RaveWriteEncryptedMemory(const std::list<KinBodyPtr>& listbodies, std::vect
 
 void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
 {
-    std::string keyName;
+    std::unordered_set<std::string> keyIds;
     for (const std::pair<std::string, std::string>& attribute : atts) {
-        if (attribute.first == "gpgkey") {
-            keyName = attribute.second;
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
             break;
         }
     }
@@ -344,17 +344,17 @@ void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const A
         RaveWriteMsgPackStream(penv, ss, atts, alloc);
         break;
     }
-    if (!GpgEncrypt(ss, os, keyName)) {
+    if (!GpgEncrypt(ss, os, keyIds)) {
         RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
     }
 }
 
 void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
 {
-    std::string keyName;
+    std::unordered_set<std::string> keyIds;
     for (const std::pair<std::string, std::string>& attribute : atts) {
-        if (attribute.first == "gpgkey") {
-            keyName = attribute.second;
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
             break;
         }
     }
@@ -368,8 +368,7 @@ void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostr
         RaveWriteMsgPackStream(listbodies, ss, atts, alloc);
         break;
     }
-    ss.seekg(0, std::ios::beg);
-    if (!GpgEncrypt(ss, os, keyName)) {
+    if (!GpgEncrypt(ss, os, keyIds)) {
         RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
     }
 }

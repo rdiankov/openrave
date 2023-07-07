@@ -23,6 +23,7 @@
 
 #include "../ravep.h"
 #include <openrave/openravejson.h>
+#include <unordered_set>
 
 namespace OpenRAVE
 {
@@ -81,7 +82,7 @@ void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const A
 void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType);
 
 bool GpgDecrypt(std::istream& inputStream, std::ostream& outputData);
-bool GpgEncrypt(std::istream& inputStream, std::ostream& outputData, const std::string& keyName);
+bool GpgEncrypt(std::istream& inputStream, std::ostream& outputData, const std::unordered_set<string>& keyIds);
 
 }
 #endif

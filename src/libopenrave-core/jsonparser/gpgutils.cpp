@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2023 Tan Li Boon <liboon.tan@mujin.co.jp>
+// Copyright (C) 2023 Tan Li Boon <undisputed.seraphim@gmail.com>
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -118,26 +118,29 @@ private:
     std::ostream& _stream;
 };
 
-static GpgME::Error FindGPGKeyByName(std::unique_ptr<GpgME::Context>& gpgCtx, const std::string& keyName, GpgME::Key& outKey)
+static GpgME::Error FindGPGKeyByName(std::unique_ptr<GpgME::Context>& gpgCtx, const std::unordered_set<std::string>& keyIds, std::vector<GpgME::Key>& outKeys)
 {
     GpgME::Error err = gpgCtx->startKeyListing();
     if (err.code() != GPG_ERR_NO_ERROR) {
         return err;
     }
-    do {
-        outKey = gpgCtx->nextKey(err);
+    for (;;) {
+        GpgME::Key key = gpgCtx->nextKey(err);
         if (err.code() != GPG_ERR_NO_ERROR) {
             break;
         }
-        if (keyName.empty()) {
+        if (keyIds.empty()) {
             RAVELOG_WARN("No key encryption key; OpenRAVE will use the first key if available.");
             break;
         }
-        if (StringEndsWith(keyName, outKey.shortKeyID())) {
-            RAVELOG_INFO("Using GPG key from %s\n", outKey.userID(0).name());
-            break;
+        for (const std::string& keyId : keyIds) {
+            if (StringStartsWith(keyId, key.shortKeyID())) {
+                outKeys.push_back(key);
+                RAVELOG_INFO("Using GPG key from %s\n", key.userID(0).name());
+                break;
+            }
         }
-    } while (err.code() != GPG_ERR_NO_ERROR);
+    }
     GpgME::KeyListResult keylistresults = gpgCtx->endKeyListing();
     return keylistresults.error();
 }
@@ -161,11 +164,11 @@ bool GpgDecrypt(std::istream& inputStream, std::ostream& outputStream)
     if (result.error().code() == GPG_ERR_NO_ERROR) {
         return true;
     }
-    RAVELOG_ERROR("%s\n", result.error().asString());
+    RAVELOG_ERROR(result.error().asString());
     return false;
 }
 
-bool GpgEncrypt(std::istream& inputStream, std::ostream& outputStream, const std::string& keyName)
+bool GpgEncrypt(std::istream& inputStream, std::ostream& outputStream, const std::unordered_set<std::string>& keyIds)
 {
     // gpgme_check_version must be executed at least once before we create a context.
     const char *gpg_version = gpgme_check_version(nullptr);
@@ -177,14 +180,14 @@ bool GpgEncrypt(std::istream& inputStream, std::ostream& outputStream, const std
     }
 
     GpgME::Error err;
-    GpgME::Key key;
-    err = FindGPGKeyByName(gpgCtx, keyName, key);
+    std::vector<GpgME::Key> keys;
+    err = FindGPGKeyByName(gpgCtx, keyIds, keys);
     if (err.code() != GPG_ERR_NO_ERROR) {
-        RAVELOG_ERROR("Failed to find GPG key %s: %s\n", keyName.c_str(), err.asString());
+        RAVELOG_ERROR("Failed to find GPG keys: %s\n", err.asString());
         return false;
     }
-    if (key.isNull() || key.isInvalid()) {
-        RAVELOG_ERROR("Either the specified key '%s' was not found, or there are no keys available.", keyName.c_str());
+    if (!keyIds.empty() && keys.size() < keyIds.size()) {
+        RAVELOG_ERROR("Either the specified keys were not found, or there are no keys available.");
         return false;
     }
 
@@ -192,7 +195,7 @@ bool GpgEncrypt(std::istream& inputStream, std::ostream& outputStream, const std
     GpgME::Data plainData(&inputData);
     OStreamProvider outputData(outputStream);
     GpgME::Data cipherData(&outputData);
-    GpgME::EncryptionResult result = gpgCtx->encrypt({key}, plainData, cipherData, GpgME::Context::EncryptionFlags::AlwaysTrust);
+    GpgME::EncryptionResult result = gpgCtx->encrypt(keys, plainData, cipherData, GpgME::Context::EncryptionFlags::AlwaysTrust);
     if (result.error().code() == GPG_ERR_NO_ERROR) {
         return true;
     }
