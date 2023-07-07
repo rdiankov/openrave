@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.123
+Version 0.123.0
 =============
 
 * Replace unit with UnitInfo object
+
+Version 0.122.1
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
 
 Version 0.122.0
 ===============

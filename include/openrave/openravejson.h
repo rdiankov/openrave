@@ -203,6 +203,7 @@ template<class T> inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE:
 template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t); // forward decl
 inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc); // forward decl
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t); // forward decl
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveTransform<T>& t);
 
 //store a json value to local data structures
 //for compatibility with ptree, type conversion is made. will remove them in the future
@@ -478,7 +479,7 @@ inline void LoadJsonValue(const rapidjson::Value& v, std::map<std::string, T>& t
 }
 
 template<class T>
-inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveTransform<T>& t) {
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveTransform<T>& t) {
     if (v.IsArray()) {
         if(v.Size() != 7) {
             throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Transform. Array length does not match (%d != 7)", GetJsonTypeName(v)%v.Size(), OpenRAVE::ORE_InvalidArguments);
