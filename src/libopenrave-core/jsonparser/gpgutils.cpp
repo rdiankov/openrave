@@ -129,6 +129,9 @@ static GpgME::Error FindGPGKeyByName(std::unique_ptr<GpgME::Context>& gpgCtx, co
         if (err.code() != GPG_ERR_NO_ERROR) {
             break;
         }
+        if (!key.canEncrypt()) {
+            continue;
+        }
         if (keyIds.empty()) {
             RAVELOG_WARN("No key encryption key; OpenRAVE will use the first key if available.");
             break;
