@@ -2781,7 +2781,8 @@ public:
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
             if( _unitInfo != info._unitInfo ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString(), ORE_InvalidArguments);
+                RAVELOG_WARN_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString());
+                // throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString(), ORE_InvalidArguments);
             }
 
             // set gravity
