@@ -2772,10 +2772,10 @@ public:
             _mapUInt64Parameters = info._uInt64Parameters;
             if( _unit != info._unit ) {
                 RAVELOG_WARN_FORMAT("env=%s, env unit (%s,%f) does not match one coming from UpdateFromInfo (%s,%f)", GetNameId()%_unit.first%_unit.second%info._unit.first%info._unit.second);
-                if( _unit.second != info._unit.second ) {
-                    // if scales are different, cannot proceed
-                    throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit (%s,%f) does not match one coming from UpdateFromInfo (%s,%f)", GetNameId()%_unit.first%_unit.second%info._unit.first%info._unit.second, ORE_InvalidArguments);
-                }
+//                if( _unit.second != info._unit.second ) {
+//                    // if scales are different, cannot proceed
+//                    throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit (%s,%f) does not match one coming from UpdateFromInfo (%s,%f)", GetNameId()%_unit.first%_unit.second%info._unit.first%info._unit.second, ORE_InvalidArguments);
+//                }
             }
 
             // set gravity
