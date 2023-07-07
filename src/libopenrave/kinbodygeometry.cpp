@@ -167,42 +167,44 @@ static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal top
     // once again, cylinder is on z axis
     const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
 
-    const int32_t base = tri.vertices.size();
-    tri.vertices.emplace_back(pos.x, pos.y, pos.z + halfHeight); // top center
-    tri.vertices.emplace_back(pos.x, pos.y, pos.z - halfHeight); // bottom center
+    const int32_t base = tri.vertices.size(), indexBase = tri.indices.size();
+    tri.vertices.resize(base + 2 * numFaces + 2); // top and bottom center vertices
+    tri.indices.resize(indexBase + 3 * 4 * numFaces); // four triangles per face (two on the side, one on top, one on bottom)
+
+    std::vector<Vector>::iterator vertexIt = tri.vertices.begin() + base;
+    std::vector<int32_t>::iterator indexIt = tri.indices.begin() + indexBase;
+
+    *(vertexIt++) = Vector(pos.x, pos.y, pos.z + halfHeight); // top center
+    *(vertexIt++) = Vector(pos.x, pos.y, pos.z - halfHeight); // bottom center
 
     for (uint i = 0; i < numFaces; ++i) {
         const dReal unitX = RaveCos(dTheta * i);
         const dReal unitY = RaveSin(dTheta * i);
-        const int32_t off = tri.vertices.size();
+        const int32_t off = vertexIt - tri.vertices.begin();
 
         // line on the side
-        tri.vertices.emplace_back(pos.x + unitX * topRad, pos.y + unitY * topRad, pos.z + halfHeight); // line top
-        tri.vertices.emplace_back(pos.x + unitX * botRad, pos.y + unitY * botRad, pos.z - halfHeight); // line bottom
+        *(vertexIt++) = Vector(pos.x + unitX * topRad, pos.y + unitY * topRad, pos.z + halfHeight); // line top
+        *(vertexIt++) = Vector(pos.x + unitX * botRad, pos.y + unitY * botRad, pos.z - halfHeight); // line bottom
 
         if (i > 0) {
             // four triangles
-            tri.indices.insert(tri.indices.end(), {
-                // 1. top face triangle, top center, last line top, this line top
-                base, off - 2, off,
-                // 2. bottom face triangle, bottom center, this line bottom, last line bottom
-                base + 1, off + 1, off - 1,
-                // 3. side face triangle 1, last line top, last line bottom, this line top
-                off - 2, off - 1, off,
-                // 4. side face triangle 2, this line top, last line bottom, this line bottom
-                off, off - 1, off + 1,
-            });
+            // 1. top face triangle, top center, last line top, this line top
+            *(indexIt++) = base;     *(indexIt++) = off - 2; *(indexIt++) = off;
+            // 2. bottom face triangle, bottom center, this line bottom, last line bottom
+            *(indexIt++) = base + 1; *(indexIt++) = off + 1; *(indexIt++) = off - 1;
+            // 3. side face triangle 1, last line top, last line bottom, this line top
+            *(indexIt++) = off  - 2; *(indexIt++) = off - 1; *(indexIt++) = off;
+            // 4. side face triangle 2, this line top, last line bottom, this line bottom
+            *(indexIt++) = off;      *(indexIt++) = off - 1; *(indexIt++) = off + 1;
         }
     }
 
     // close the loop
-    const int32_t off = tri.vertices.size();
-    tri.indices.insert(tri.indices.end(), {
-        base, off - 2, base + 2,
-        base + 1, base + 3, off - 1,
-        off - 2, off - 1, base + 2,
-        base + 2, off - 1, base + 3,
-    });
+    const int32_t off = vertexIt - tri.vertices.begin();
+    *(indexIt++) = base;     *(indexIt++) = off  - 2; *(indexIt++) = base + 2;
+    *(indexIt++) = base + 1; *(indexIt++) = base + 3; *(indexIt++) = off  - 1;
+    *(indexIt++) = off  - 2; *(indexIt++) = off  - 1; *(indexIt++) = base + 2;
+    *(indexIt++) = base + 2; *(indexIt++) = off  - 1; *(indexIt++) = base + 3;
 }
 
 static void AppendCylinderTriangulation(const Vector& pos, const dReal rad, const dReal len, const uint numverts, TriMesh& tri)
