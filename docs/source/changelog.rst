@@ -3,10 +3,20 @@
 ChangeLog
 #########
 
-Version 0.122.0
+Version 0.123.0
 ===============
 
 * Add conical frustum geometry support (extending current cylinder).
+
+Version 0.122.1
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
+
+Version 0.122.0
+===============
+
+* Add Reset function in IkParameterization
 
 Version 0.121.2
 ===============
