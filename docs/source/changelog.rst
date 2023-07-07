@@ -8,6 +8,11 @@ Version 0.123.0
 
 * Add "axial" geometry type.
 
+Version 0.122.1
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
+
 Version 0.122.0
 ===============
 
