@@ -2824,7 +2824,7 @@ void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
 
 object PyEnvironmentBase::GetUnit() const {
     UnitInfo unitInfo = _penv->GetUnitInfo();
-    return py::make_tuple(std::string(GetLengthUnitString(unitInfo.lengthUnit)), GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
+    return py::make_tuple(std::string(GetLengthUnitString(unitInfo.lengthUnit)), 1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
 }
 
 void PyEnvironmentBase::SetUnitInfo(const py::dict& unitInfo){

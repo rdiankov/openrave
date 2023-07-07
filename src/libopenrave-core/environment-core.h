@@ -2706,7 +2706,7 @@ public:
 
     virtual std::pair<std::string, dReal> GetUnit() const
     {
-        return std::make_pair(std::string(GetLengthUnitString(_unitInfo.lengthUnit)), GetLengthUnitStandardValue<dReal>(_unitInfo.lengthUnit));
+        return std::make_pair(std::string(GetLengthUnitString(_unitInfo.lengthUnit)), 1.0 / GetLengthUnitStandardValue<dReal>(_unitInfo.lengthUnit));
     }
 
     virtual void SetUnit(std::pair<std::string, dReal> unit)

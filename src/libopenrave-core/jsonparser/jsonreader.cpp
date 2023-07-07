@@ -226,7 +226,7 @@ public:
         }
 
         // set global scale when initalize jsonreader.
-        _fGlobalScale = 1.0 / GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit);
+        _fGlobalScale = GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit);
         _deserializeOptions = 0;
 
 
@@ -807,7 +807,7 @@ protected:
         if (doc.HasMember("unitInfo")) {
             UnitInfo unitInfo;
             orjson::LoadJsonValueByKey(doc, "unitInfo", unitInfo);
-            return GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit) * _fGlobalScale * _fGeomScale;
+            return 1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit) * _fGlobalScale * _fGeomScale;
         }
         std::pair<std::string, dReal> unit = {"", defaultScale};
         orjson::LoadJsonValueByKey(doc, "unit", unit);

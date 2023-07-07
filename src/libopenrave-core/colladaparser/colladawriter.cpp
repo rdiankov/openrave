@@ -429,7 +429,7 @@ private:
 
             domAsset::domUnitRef units = daeSafeCast<domAsset::domUnit>( asset->add( COLLADA_ELEMENT_UNIT ) );
             UnitInfo unitInfo = _penv->GetUnitInfo();
-            units->setMeter(GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
+            units->setMeter(1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
             units->setName(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit));
 
             domAsset::domUp_axisRef zup = daeSafeCast<domAsset::domUp_axis>( asset->add( COLLADA_ELEMENT_UP_AXIS ) );
