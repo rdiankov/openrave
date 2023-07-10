@@ -586,7 +586,7 @@ public:
         /// which are called top and bottom axial slices. 
         ///
         /// If the radius of the top and bottom slices are the same, 
-        /// the resulting space is essentially a cylinder.
+        /// the resulting shape is essentially a cylinder.
         /// 
         /// The axial slices stored in this vector are not sorted by
         /// the z coordinate.

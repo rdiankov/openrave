@@ -529,14 +529,14 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
                 _meshcollision.indices.push_back(numberOfVertices-1);
 
                 // add the upper side triangles
-                for(int index = 0; index < numberOfAxialSlices-1; index++) {
+                for (int index = 0; index < numberOfAxialSlices-1; index++) {
                     _meshcollision.indices.push_back(index+numberOfVertices-numberOfAxialSlices);
                     _meshcollision.indices.push_back(index+numberOfVertices-numberOfAxialSlices+1);
                     _meshcollision.indices.push_back(index+numberOfVertices-2*numberOfAxialSlices);
                 }
 
                 // add the lower side triangles
-                for(int index = 1; index < numberOfAxialSlices; index++) {
+                for (int index = 1; index < numberOfAxialSlices; index++) {
                     _meshcollision.indices.push_back(index+(numberOfVertices-numberOfAxialSlices));
                     _meshcollision.indices.push_back(index+(numberOfVertices-2*numberOfAxialSlices));
                     _meshcollision.indices.push_back(index+(numberOfVertices-2*numberOfAxialSlices)-1);
