@@ -3,6 +3,23 @@
 ChangeLog
 #########
 
+Version 0.124.0
+=============
+
+* Replace unit with UnitInfo object
+
+Version 0.123.1
+===============
+
+* Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
+
+* Add "axial" geometry type.
+    
+Version 0.123.0
+===============
+
+* Add conical frustum geometry support (extending current cylinder).
+
 Version 0.122.1
 ===============
 

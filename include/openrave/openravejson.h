@@ -542,15 +542,48 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOri
     if (!v.IsObject()) {
         throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load RaveOrientedBox of non-object.", OpenRAVE::ORE_InvalidArguments);
     }
-    if (!v.HasMember("extents") || !v["extents"].IsArray() || v["extents"].Size() != 3) {
+
+    const rapidjson::Value* prHalfExtents;
+    {
+        rapidjson::Value::ConstMemberIterator itHalfExtents = v.FindMember("halfExtents");
+        if (itHalfExtents == v.MemberEnd()) {
+            rapidjson::Value::ConstMemberIterator itExtents = v.FindMember("extents"); // backward compatibility
+            if (itExtents == v.MemberEnd()) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"halfExtents\" malformatted", OpenRAVE::ORE_InvalidArguments);
+            }
+            prHalfExtents = &(itExtents->value);
+        }
+        else {
+            prHalfExtents = &(itHalfExtents->value);
+        }
+    }
+    const rapidjson::Value& rHalfExtents = *prHalfExtents;
+
+    if (!rHalfExtents.IsArray() || rHalfExtents.Size() != 3) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"extents\" malformatted", OpenRAVE::ORE_InvalidArguments);
     }
-    if (!v.HasMember("transform") || !v["transform"].IsArray() || v["transform"].Size() != 7) {
+
+    const rapidjson::Value* prTransform;
+    {
+        rapidjson::Value::ConstMemberIterator itTransform = v.FindMember("transform");
+        if (itTransform == v.MemberEnd()) {
+            rapidjson::Value::ConstMemberIterator itPose = v.FindMember("pose"); // backward compatibility
+            if (itPose == v.MemberEnd()) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"transform\" malformatted", OpenRAVE::ORE_InvalidArguments);
+            }
+            prTransform = &(itPose->value);
+        }
+        else {
+            prTransform = &(itTransform->value);
+        }
+    }
+    const rapidjson::Value& rTransform = *prTransform;
+    if (!rTransform.IsArray() || rTransform.Size() != 7) {
         throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveOrientedBox, \"transform\" malformatted", OpenRAVE::ORE_InvalidArguments);
     }
 
-    LoadJsonValue(v["extents"], t.extents);
-    LoadJsonValue(v["transform"], t.transform);
+    LoadJsonValue(rHalfExtents, t.extents);
+    LoadJsonValue(rTransform, t.transform);
 }
 
 ///< \brief skips loading keys that are not present
@@ -985,7 +1018,7 @@ inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveAxi
 template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetObject();
-    SetJsonValueByKey(v, "extents", t.extents, alloc);
+    SetJsonValueByKey(v, "halfExtents", t.extents, alloc);
     SetJsonValueByKey(v, "transform", t.transform, alloc);
 }
 

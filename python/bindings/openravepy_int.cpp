@@ -2817,12 +2817,33 @@ object PyEnvironmentBase::GetUserData() const {
 }
 
 void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
-    _penv->SetUnit(std::make_pair(unitname, unitmult));
+    UnitInfo unitInfo = _penv->GetUnitInfo();
+    unitInfo.lengthUnit = GetLengthUnitFromString(unitname, LU_Meter);
+    _penv->SetUnitInfo(unitInfo);
 }
 
 object PyEnvironmentBase::GetUnit() const {
-    std::pair<std::string, dReal> unit = _penv->GetUnit();
-    return py::make_tuple(unit.first, unit.second);
+    UnitInfo unitInfo = _penv->GetUnitInfo();
+    return py::make_tuple(std::string(GetLengthUnitString(unitInfo.lengthUnit)), 1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
+}
+
+void PyEnvironmentBase::SetUnitInfo(const py::dict& unitInfo){
+    UnitInfo unit;
+    unit.lengthUnit = unitInfo["lengthUnit"].cast<LengthUnit>();
+    unit.massUnit = unitInfo["massUnit"].cast<MassUnit>();
+    unit.timeUnit = unitInfo["timeUnit"].cast<TimeUnit>();
+    unit.angleUnit = unitInfo["angleUnit"].cast<AngleUnit>();
+    _penv->SetUnitInfo(unit);
+}
+
+py::dict PyEnvironmentBase::GetUnitInfo() const {
+    UnitInfo unitInfo = _penv->GetUnitInfo();
+    py::dict unit;
+    unit["lengthUnit"] = unitInfo.lengthUnit;
+    unit["massUnit"] = unitInfo.massUnit;
+    unit["timeUnit"] = unitInfo.timeUnit;
+    unit["angleUnit"] = unitInfo.angleUnit;
+    return unit;
 }
 
 int PyEnvironmentBase::GetId() const
@@ -3799,8 +3820,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("SetUserData",setuserdata2, PY_ARGS("data") DOXY_FN(InterfaceBase,SetUserData))
                      .def("GetUserData",&PyEnvironmentBase::GetUserData, DOXY_FN(InterfaceBase,GetUserData))
                      .def("GetUnit",&PyEnvironmentBase::GetUnit, DOXY_FN(EnvironmentBase,GetUnit))
+                     .def("GetUnitInfo",&PyEnvironmentBase::GetUnitInfo, DOXY_FN(EnvironmentBase,GetUnitInfo))
                      .def("GetId",&PyEnvironmentBase::GetId, DOXY_FN(EnvironmentBase,GetId))
                      .def("SetUnit",&PyEnvironmentBase::SetUnit, PY_ARGS("unitname","unitmult") DOXY_FN(EnvironmentBase,SetUnit))
+                     .def("SetUnitInfo",&PyEnvironmentBase::SetUnitInfo, PY_ARGS("unitInfo") DOXY_FN(EnvironmentBase,SetUnitInfo))
                      .def("GetRevision", &PyEnvironmentBase::GetRevision, DOXY_FN(EnvironmentBase, GetRevision))
                      .def("ExtractInfo",&PyEnvironmentBase::ExtractInfo, DOXY_FN(EnvironmentBase,ExtractInfo))
                      .def("UpdateFromInfo",&PyEnvironmentBase::UpdateFromInfo, PY_ARGS("info", "updateMode") DOXY_FN(EnvironmentBase,UpdateFromInfo))
@@ -3839,6 +3862,222 @@ Because race conditions can pop up when trying to lock the openrave environment 
         ;
         env.attr("TriangulateOptions") = selectionoptions;
     }
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object lengthUnit = enum_<LengthUnit>(m, "LengthUnit" DOXY_ENUM(LengthUnit))
+#else
+    object lengthUnit = enum_<LengthUnit>("LengthUnit" DOXY_ENUM(LengthUnit))
+#endif
+                          .value("Meter", LU_Meter)
+                          .value("Decimeter", LU_Decimeter)
+                          .value("Centimeter", LU_Centimeter)
+                          .value("Millimeter", LU_Millimeter)
+                          .value("100Micrometer", LU_100Micrometer)
+                          .value("Micrometer", LU_Micrometer)
+                          .value("Nanometer", LU_Nanometer)
+                          .value("Inch", LU_Inch)
+                          .value("Foot", LU_Foot)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object massUnit = enum_<MassUnit>(m, "MassUnit" DOXY_ENUM(MassUnit))
+#else
+    object massUnit = enum_<MassUnit>("MassUnit" DOXY_ENUM(MassUnit))
+#endif
+                          .value("Gram", MU_Gram)
+                          .value("Kilogram", MU_Kilogram)
+                          .value("Milligram", MU_Milligram)
+                          .value("Pound", MU_Pound)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object timeUnit = enum_<TimeUnit>(m, "TimeUnit" DOXY_ENUM(TimeUnit))
+#else
+    object timeUnit = enum_<TimeUnit>("TimeUnit" DOXY_ENUM(TimeUnit))
+#endif
+                          .value("Second", TU_Second)
+                          .value("Millisecond", TU_Millisecond)
+                          .value("Microsecond", TU_Microsecond)
+                          .value("Nanosecond", TU_Nanosecond)
+                          .value("Picosecond", TU_Picosecond)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object angleUnit = enum_<AngleUnit>(m, "AngleUnit" DOXY_ENUM(AngleUnit))
+#else
+    object angleUnit = enum_<AngleUnit>("AngleUnit" DOXY_ENUM(AngleUnit))
+#endif
+                          .value("Radian", AU_Radian)
+                          .value("Degree", AU_Degree)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetLengthUnitStandardValue", 
+          [](const LengthUnit unit){ return OpenRAVE::GetLengthUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetLengthUnitStandardValue)
+          );
+#else
+    def("GetLengthUnitStandardValue", 
+         [](const LengthUnit unit){ return OpenRAVE::GetLengthUnitStandardValue<dReal>(unit); },
+         DOXY_FN1(OpenRAVE::GetLengthUnitStandardValue)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMassUnitStandardValue", 
+          [](const MassUnit unit){ return OpenRAVE::GetMassUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetMassUnitStandardValue)
+          );
+#else
+    def("GetMassUnitStandardValue", 
+         [](const MassUnit unit){ return OpenRAVE::GetMassUnitStandardValue<dReal>(unit); },
+         DOXY_FN1(OpenRAVE::GetMassUnitStandardValue)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetTimeUnitStandardValue", 
+          [](const TimeUnit unit){ return OpenRAVE::GetTimeUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetTimeUnitStandardValue)
+          );
+#else
+    def("GetTimeUnitStandardValue", 
+         [](const TimeUnit unit){ return OpenRAVE::GetTimeUnitStandardValue<dReal>(unit); },
+         DOXY_FN1(OpenRAVE::GetTimeUnitStandardValue)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetAngleUnitStandardValue", 
+          [](const AngleUnit unit){ return OpenRAVE::GetAngleUnitStandardValue<dReal>(unit); },
+          DOXY_FN1(OpenRAVE::GetAngleUnitStandardValue)
+          );
+#else
+    def("GetAngleUnitStandardValue", 
+         [](const AngleUnit unit){ return OpenRAVE::GetAngleUnitStandardValue<dReal>(unit); },
+         DOXY_FN1(OpenRAVE::GetAngleUnitStandardValue)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetLengthUnitFromString", 
+          [](const std::string& pLengthUnit, LengthUnit defaultLengthUnit){ return OpenRAVE::GetLengthUnitFromString(pLengthUnit, defaultLengthUnit); },
+          DOXY_FN1(OpenRAVE::GetLengthUnitFromString)
+          );
+#else
+    def("GetLengthUnitFromString", 
+        [](const std::string& pLengthUnit, LengthUnit defaultLengthUnit){ return OpenRAVE::GetLengthUnitFromString(pLengthUnit, defaultLengthUnit); },
+        DOXY_FN1(OpenRAVE::GetLengthUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMassUnitFromString", 
+          [](const std::string& pMassUnit, MassUnit defaultMassUnit){ return OpenRAVE::GetMassUnitFromString(pMassUnit, defaultMassUnit); },
+          DOXY_FN1(OpenRAVE::GetMassUnitFromString)
+          );
+#else
+    def("GetMassUnitFromString", 
+        [](const std::string& pMassUnit, MassUnit defaultMassUnit){ return OpenRAVE::GetMassUnitFromString(pMassUnit, defaultMassUnit); },
+        DOXY_FN1(OpenRAVE::GetMassUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetTimeUnitFromString", 
+          [](const std::string& pTimeUnit, TimeUnit defaultTimeUnit){ return OpenRAVE::GetTimeUnitFromString(pTimeUnit, defaultTimeUnit); },
+          DOXY_FN1(OpenRAVE::GetTimeUnitFromString)
+          );
+#else
+    def("GetTimeUnitFromString", 
+        [](const std::string& pTimeUnit, TimeUnit defaultTimeUnit){ return OpenRAVE::GetTimeUnitFromString(pTimeUnit, defaultTimeUnit); },
+        DOXY_FN1(OpenRAVE::GetTimeUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetAngleUnitFromString", 
+          [](const std::string& pAngleUnit, AngleUnit defaultAngleUnit){ return OpenRAVE::GetAngleUnitFromString(pAngleUnit, defaultAngleUnit); },
+          DOXY_FN1(OpenRAVE::GetAngleUnitFromString)
+          );
+#else
+    def("GetAngleUnitFromString", 
+        [](const std::string& pAngleUnit, AngleUnit defaultAngleUnit){ return OpenRAVE::GetAngleUnitFromString(pAngleUnit, defaultAngleUnit); },
+        DOXY_FN1(OpenRAVE::GetAngleUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetLengthUnitConversionScale", 
+          [](const LengthUnit sourceUnit, const LengthUnit targetUnit){ return OpenRAVE::GetLengthUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+          DOXY_FN1(OpenRAVE::GetLengthUnitConversionScale)
+          );
+#else
+    def("GetLengthUnitConversionScale", 
+         [](const LengthUnit sourceUnit, const LengthUnit targetUnit){ return OpenRAVE::GetLengthUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+         DOXY_FN1(OpenRAVE::GetLengthUnitConversionScale)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMassUnitConversionScale", 
+          [](const MassUnit sourceUnit, const MassUnit targetUnit){ return OpenRAVE::GetMassUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+          DOXY_FN1(OpenRAVE::GetMassUnitConversionScale)
+          );
+#else
+    def("GetMassUnitConversionScale", 
+         [](const MassUnit sourceUnit, const MassUnit targetUnit){ return OpenRAVE::GetMassUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+         DOXY_FN1(OpenRAVE::GetMassUnitConversionScale)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetTimeUnitConversionScale", 
+          [](const TimeUnit sourceUnit, const TimeUnit targetUnit){ return OpenRAVE::GetTimeUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+          DOXY_FN1(OpenRAVE::GetTimeUnitConversionScale)
+          );
+#else
+    def("GetTimeUnitConversionScale", 
+         [](const TimeUnit sourceUnit, const TimeUnit targetUnit){ return OpenRAVE::GetTimeUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+         DOXY_FN1(OpenRAVE::GetTimeUnitConversionScale)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetAngleUnitConversionScale", 
+          [](const AngleUnit sourceUnit, const AngleUnit targetUnit){ return OpenRAVE::GetAngleUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+          DOXY_FN1(OpenRAVE::GetAngleUnitConversionScale)
+          );
+#else
+    def("GetAngleUnitConversionScale", 
+         [](const AngleUnit sourceUnit, const AngleUnit targetUnit){ return OpenRAVE::GetAngleUnitConversionScale<dReal>(sourceUnit, targetUnit); },
+         DOXY_FN1(OpenRAVE::GetAngleUnitConversionScale)
+         );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetLengthUnitString", OpenRAVE::GetLengthUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetLengthUnitString));
+#else
+    def("GetLengthUnitString", OpenRAVE::GetLengthUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetLengthUnitString));
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetMassUnitString", OpenRAVE::GetMassUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetMassUnitString));
+#else
+    def("GetMassUnitString", OpenRAVE::GetMassUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetMassUnitString));
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetTimeUnitString", OpenRAVE::GetTimeUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetTimeUnitString));
+#else
+    def("GetTimeUnitString", OpenRAVE::GetTimeUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetTimeUnitString));
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetAngleUnitString", OpenRAVE::GetAngleUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetAngleUnitString));
+#else
+    def("GetAngleUnitString", OpenRAVE::GetAngleUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetAngleUnitString));
+#endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.attr("__version__") = OPENRAVE_VERSION_STRING;

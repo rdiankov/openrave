@@ -2706,12 +2706,22 @@ public:
 
     virtual std::pair<std::string, dReal> GetUnit() const
     {
-        return _unit;
+        return std::make_pair(std::string(GetLengthUnitString(_unitInfo.lengthUnit)), 1.0 / GetLengthUnitStandardValue<dReal>(_unitInfo.lengthUnit));
     }
 
     virtual void SetUnit(std::pair<std::string, dReal> unit)
     {
-        _unit = unit;
+        _unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
+    }
+
+    virtual UnitInfo GetUnitInfo() const
+    {
+        return _unitInfo;
+    }
+
+    virtual void SetUnitInfo(UnitInfo unitInfo)
+    {
+        _unitInfo = unitInfo;
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
@@ -2748,7 +2758,7 @@ public:
             info._gravity = _pPhysicsEngine->GetGravity();
         }
         info._uInt64Parameters = _mapUInt64Parameters;
-        info._unit = _unit;
+        info._unitInfo = _unitInfo;
     }
 
     /// \brief update EnvironmentBase according to new EnvironmentBaseInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -2770,12 +2780,9 @@ public:
             _keywords = info._keywords;
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
-            if( _unit != info._unit ) {
-                RAVELOG_WARN_FORMAT("env=%s, env unit (%s,%f) does not match one coming from UpdateFromInfo (%s,%f)", GetNameId()%_unit.first%_unit.second%info._unit.first%info._unit.second);
-//                if( _unit.second != info._unit.second ) {
-//                    // if scales are different, cannot proceed
-//                    throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit (%s,%f) does not match one coming from UpdateFromInfo (%s,%f)", GetNameId()%_unit.first%_unit.second%info._unit.first%info._unit.second, ORE_InvalidArguments);
-//                }
+            if( _unitInfo != info._unitInfo ) {
+                RAVELOG_WARN_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString());
+                // throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString(), ORE_InvalidArguments);
             }
 
             // set gravity
@@ -3260,7 +3267,9 @@ protected:
         _bRealTime = true;
         _bInit = false;
         _bEnableSimulation = true;     // need to start by default
-        _unit = std::make_pair("meter",1.0); //default unit settings
+        _unitInfo = UnitInfo();
+        _unitInfo.lengthUnit = LU_Meter; // default unit settings
+        _unitInfo.angleUnit = AU_Radian; // default unit settings
 
         _vRapidJsonLoadBuffer.resize(4000000);
         _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
@@ -4294,6 +4303,7 @@ protected:
     vector<KinBody::BodyState> _vPublishedBodies; ///< protected by _mutexInterfaces
     string _homedirectory;
     std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters
+    UnitInfo _unitInfo; ///< unitInfo that describes length unit, mass unit, time unit and angle unit
 
     UserDataPtr _handlegenericrobot, _handlegenerictrajectory, _handlemulticontroller, _handlegenericphysicsengine, _handlegenericcollisionchecker;
 
