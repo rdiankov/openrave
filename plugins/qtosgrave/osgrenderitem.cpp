@@ -432,17 +432,21 @@ void KinBodyItem::Load()
                 }
                 //  Geometry is defined like a Cylinder
                 case GT_Cylinder: {
-                    // make SoCylinder point towards z, not y
-                    osg::Cylinder* cy = new osg::Cylinder();
-                    cy->setRadius(orgeom->GetCylinderRadius());
-                    cy->setHeight(orgeom->GetCylinderHeight());
-                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(cy);
-                    geode->addDrawable(sd.get());
-                    pgeometrydata->addChild(geode.get());
-                    break;
+                    // if top and bottom are equal, use osg built-in, otherwise fallthrough to mesh case
+                    if (orgeom->GetCylinderTopRadius() == orgeom->GetCylinderBottomRadius()) {
+                        // make SoCylinder point towards z, not y
+                        osg::Cylinder *cy = new osg::Cylinder();
+                        cy->setRadius(orgeom->GetCylinderRadius());
+                        cy->setHeight(orgeom->GetCylinderHeight());
+                        osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                        osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(cy);
+                        geode->addDrawable(sd.get());
+                        pgeometrydata->addChild(geode.get());
+                        break;
+                    }
                 }
                 //  Extract geometry from collision Mesh
+                case GT_Axial:
                 case GT_Cage:
                 case GT_Container:
                 case GT_TriMesh: {
@@ -472,7 +476,7 @@ void KinBodyItem::Load()
                     geode->addDrawable(geom);
                     pgeometrydata->addChild(geode);
 
-                    if(orgeom->GetType() == GT_TriMesh){
+                    if(orgeom->GetType() == GT_TriMesh || orgeom->GetType() == GT_Axial){
                         // CropContainerMargins and CropContainerEmptyMargins only exists in GT_Cage and GT_Container
                         break;
                     }
