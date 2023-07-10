@@ -640,8 +640,11 @@ private:
             odegeom = dCreateSphere(0,info._vGeomData.x);
             break;
         case OpenRAVE::GT_Cylinder:
-            odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
-            break;
+            // if top and bottom are equal, use ode built-in, otherwise fallthrough to mesh case
+            if (info.GetCylinderTopRadius() == info.GetCylinderBottomRadius()) {
+                odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
+                break;
+            }
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_Cage:
         case OpenRAVE::GT_CalibrationBoard: // calibration board is box-shaped but has z-offset. so have to use trimesh.
