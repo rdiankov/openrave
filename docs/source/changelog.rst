@@ -8,6 +8,11 @@ Version 0.124
 
 * Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
 
+Version 0.123.1
+===============
+
+* Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
+
 Version 0.123.0
 ===============
 
