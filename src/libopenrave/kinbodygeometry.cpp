@@ -483,7 +483,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         break;
     }
     case GT_Axial: {
-        if (_vAxialSlices.size() > 1) {
+        if (_vAxialSlices.size() > 2) {
             // there has to be at least two slices: top and bottom
             // sort the axial slices by the Z value
             std::sort(_vAxialSlices.begin(), _vAxialSlices.end());
