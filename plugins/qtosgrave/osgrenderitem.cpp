@@ -432,15 +432,18 @@ void KinBodyItem::Load()
                 }
                 //  Geometry is defined like a Cylinder
                 case GT_Cylinder: {
-                    // make SoCylinder point towards z, not y
-                    osg::Cylinder* cy = new osg::Cylinder();
-                    cy->setRadius(orgeom->GetCylinderRadius());
-                    cy->setHeight(orgeom->GetCylinderHeight());
-                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(cy);
-                    geode->addDrawable(sd.get());
-                    pgeometrydata->addChild(geode.get());
-                    break;
+                    // if top and bottom are equal, use osg built-in, otherwise fallthrough to mesh case
+                    if (orgeom->GetCylinderTopRadius() == orgeom->GetCylinderBottomRadius()) {
+                        // make SoCylinder point towards z, not y
+                        osg::Cylinder *cy = new osg::Cylinder();
+                        cy->setRadius(orgeom->GetCylinderRadius());
+                        cy->setHeight(orgeom->GetCylinderHeight());
+                        osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                        osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(cy);
+                        geode->addDrawable(sd.get());
+                        pgeometrydata->addChild(geode.get());
+                        break;
+                    }
                 }
                 //  Extract geometry from collision Mesh
                 case GT_Cage:

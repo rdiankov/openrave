@@ -3,10 +3,20 @@
 ChangeLog
 #########
 
-Version 0.123
+Version 0.124
 =============
 
 * Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
+
+Version 0.123.0
+===============
+
+* Add conical frustum geometry support (extending current cylinder).
+
+Version 0.122.1
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
 
 Version 0.122.0
 ===============
