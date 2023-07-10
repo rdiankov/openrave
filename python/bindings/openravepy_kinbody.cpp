@@ -1391,6 +1391,12 @@ dReal PyLink::PyGeometry::GetSphereRadius() const {
 dReal PyLink::PyGeometry::GetCylinderRadius() const {
     return _pgeometry->GetCylinderRadius();
 }
+dReal PyLink::PyGeometry::GetCylinderTopRadius() const {
+    return _pgeometry->GetCylinderTopRadius();
+}
+dReal PyLink::PyGeometry::GetCylinderBottomRadius() const {
+    return _pgeometry->GetCylinderBottomRadius();
+}
 dReal PyLink::PyGeometry::GetCylinderHeight() const {
     return _pgeometry->GetCylinderHeight();
 }
@@ -6072,6 +6078,8 @@ void init_openravepy_kinbody()
                                   .def("GetTransformPose",&PyLink::PyGeometry::GetTransformPose, DOXY_FN(KinBody::Link::Geometry,GetTransform))
                                   .def("GetSphereRadius",&PyLink::PyGeometry::GetSphereRadius, DOXY_FN(KinBody::Link::Geometry,GetSphereRadius))
                                   .def("GetCylinderRadius",&PyLink::PyGeometry::GetCylinderRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderRadius))
+                                  .def("GetCylinderTopRadius",&PyLink::PyGeometry::GetCylinderTopRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderTopRadius))
+                                  .def("GetCylinderBottomRadius",&PyLink::PyGeometry::GetCylinderBottomRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderBottomRadius))
                                   .def("GetCylinderHeight",&PyLink::PyGeometry::GetCylinderHeight, DOXY_FN(KinBody::Link::Geometry,GetCylinderHeight))
                                   .def("GetBoxExtents",&PyLink::PyGeometry::GetBoxExtents, DOXY_FN(KinBody::Link::Geometry,GetBoxExtents))
                                   .def("GetContainerOuterExtents",&PyLink::PyGeometry::GetContainerOuterExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerOuterExtents))

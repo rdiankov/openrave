@@ -454,7 +454,10 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
         return std::make_shared<fcl::Sphere>(info._vGeomData.x);
 
     case OpenRAVE::GT_Cylinder:
-        return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
+        // if top and bottom are equal, use fcl built-in, otherwise fallthrough to mesh case
+        if (info.GetCylinderTopRadius() == info.GetCylinderBottomRadius()) {
+            return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
+        }
 
     case OpenRAVE::GT_Axial:
     case OpenRAVE::GT_Container:
