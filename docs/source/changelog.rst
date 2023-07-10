@@ -3,7 +3,11 @@
 ChangeLog
 #########
 
-=======
+Version 0.124.0
+=============
+
+* Replace unit with UnitInfo object
+
 Version 0.123.1
 ===============
 

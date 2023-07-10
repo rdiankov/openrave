@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <cstring>
+#include <sstream>
 
 #include <boost/format.hpp>
 
@@ -34,6 +35,7 @@ enum LengthUnit : int8_t
     LU_Decimeter = -1,
     LU_Centimeter = -2,
     LU_Millimeter = -3,
+    LU_100Micrometer = -4,
     LU_Micrometer = -6,
     LU_Nanometer = -9,
     LU_Inch = 0x10,
@@ -43,6 +45,7 @@ enum LengthUnit : int8_t
 OPENRAVE_API const char* GetLengthUnitString(LengthUnit unit);
 
 OPENRAVE_API LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLengthUnit);
+OPENRAVE_API LengthUnit GetLengthUnitFromString(const std::string& pLengthUnit, LengthUnit defaultLengthUnit);
 
 /// \brief mass unit
 enum MassUnit : int8_t
@@ -56,6 +59,7 @@ enum MassUnit : int8_t
 OPENRAVE_API const char* GetMassUnitString(MassUnit unit);
 
 OPENRAVE_API MassUnit GetMassUnitFromString(const char* pMassUnit, MassUnit defaultMassUnit);
+OPENRAVE_API MassUnit GetMassUnitFromString(const std::string& pMassUnit, MassUnit defaultMassUnit);
 
 /// \brief time unit
 enum TimeUnit : int8_t
@@ -70,6 +74,7 @@ enum TimeUnit : int8_t
 OPENRAVE_API const char* GetTimeUnitString(TimeUnit unit);
 
 OPENRAVE_API TimeUnit GetTimeUnitFromString(const char* pTimeUnit, TimeUnit defaultTimeUnit);
+OPENRAVE_API TimeUnit GetTimeUnitFromString(const std::string& pTimeUnit, TimeUnit defaultTimeUnit);
 
 /// \brief angle unit
 enum AngleUnit : int8_t
@@ -81,6 +86,7 @@ enum AngleUnit : int8_t
 OPENRAVE_API const char* GetAngleUnitString(AngleUnit unit);
 
 OPENRAVE_API AngleUnit GetAngleUnitFromString(const char* pAngleUnit, AngleUnit defaultAngleUnit);
+OPENRAVE_API AngleUnit GetAngleUnitFromString(const std::string& pAngleUnit, AngleUnit defaultAngleUnit);
 
 /// \brief holds a struct of unit of the fundamental types so users know which they are working with.
 class OPENRAVE_API UnitInfo
@@ -91,6 +97,15 @@ public:
     }
     inline bool operator!=(const UnitInfo& rhs) const {
         return lengthUnit != rhs.lengthUnit || massUnit != rhs.massUnit || timeUnit != rhs.timeUnit || angleUnit != rhs.angleUnit;
+    }
+    std::string toString() const { // converts UnitInfo into strings
+        std::stringstream ss;
+        ss << "("
+           << GetLengthUnitString(lengthUnit) << ", "
+           << GetMassUnitString(massUnit) << ", "
+           << GetTimeUnitString(timeUnit) << ", "
+           << GetAngleUnitString(angleUnit) << ")";
+        return ss.str();
     }
 
     LengthUnit lengthUnit = LU_Millimeter; ///< standard in industrial applications
@@ -112,10 +127,10 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "m") == 0 ) {
         return T(1.0);
     }
-    if (strcmp(pUnit, "mm") == 0 ) {
+    if (strcmp(pUnit, "mm") == 0 || strcmp(pUnit, "millimeter") == 0 ) {
         return T(1000.0);
     }
-    if (strcmp(pUnit, "um") == 0 ) {
+    if (strcmp(pUnit, "um") == 0 || strcmp(pUnit, "micrometer") == 0 ) {
         return T(1e6);
     }
     if (strcmp(pUnit, "nm") == 0 ) {
@@ -130,11 +145,17 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "in") == 0 || strcmp(pUnit, "inch") == 0 ) {
         return T(39.370078740157481); // 25.4 mm/in
     }
-    if (strcmp(pUnit, "ft") == 0 || strcmp(pUnit, "foot") == 0 ) {
+    if (strcmp(pUnit, "ft") == 0 || strcmp(pUnit, "foot") == 0 || strcmp(pUnit, "feet") == 0 ) {
         return T(3.2808398950131235); // 304.8 mm/ft
     }
     if (strcmp(pUnit, "meter") == 0 ) {
         return T(1.0);
+    }
+    if (strcmp(pUnit, "100um") == 0 ) {
+        return T(1e4);
+    }
+    if (strcmp(pUnit, "0.1mm") == 0 ) {
+        return T(1e4);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported length unit '%s'", pUnit, ORE_LengthUnitInvalid);
@@ -172,6 +193,9 @@ inline T GetLengthUnitStandardValue(const LengthUnit unit)
     }
     if( unit == OpenRAVE::LU_Foot ) {
         return T(3.2808398950131235); // 304.8 mm/ft
+    }
+    if( unit == OpenRAVE::LU_100Micrometer ) {
+        return T(1e4);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported length unit '%s'", GetLengthUnitString(unit), ORE_LengthUnitInvalid);
@@ -352,7 +376,7 @@ inline T GetAngleUnitStandardValue(const char* pUnit)
         return T(1.0);
     }
     if (strcmp(pUnit, "deg") == 0 ) {
-        return T(0.017453292519943295);
+        return T(57.29577951308232);
     }
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_LengthUnitInvalid);
 }
@@ -370,7 +394,7 @@ inline T GetAngleUnitStandardValue(const AngleUnit unit)
         return T(1.0);
     }
     if( unit == OpenRAVE::AU_Degree ) {
-        return T(0.017453292519943295);
+        return T(57.29577951308232);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_LengthUnitInvalid);

@@ -19,6 +19,8 @@
 EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo()
 {
     _gravity = Vector(0,0,-9.797930195020351);
+    _unitInfo.lengthUnit = LU_Meter;
+    _unitInfo.angleUnit = AU_Radian;
 }
 
 EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseInfo& other)
@@ -63,7 +65,7 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
     }
-    orjson::SetJsonValueByKey(rEnvInfo, "unit", _unit, allocator);
+    orjson::SetJsonValueByKey(rEnvInfo, "unitInfo", _unitInfo, allocator);
     orjson::SetJsonValueByKey(rEnvInfo, "gravity", _gravity, allocator);
     if( !_referenceUri.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri, allocator);
@@ -121,7 +123,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
     }
 
     if (rEnvInfo.HasMember("unit")) {
-        orjson::LoadJsonValueByKey(rEnvInfo, "unit", _unit);
+        std::pair<std::string, dReal> unit;
+        orjson::LoadJsonValueByKey(rEnvInfo, "unit", unit);
+        _unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
+    }
+
+    if (rEnvInfo.HasMember("unitInfo")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "unitInfo", _unitInfo);
     }
 
     if (rEnvInfo.HasMember("keywords")) {
