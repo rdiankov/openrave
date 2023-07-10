@@ -176,8 +176,11 @@ private:
                     break;
                 case GT_Cylinder:
                     // cylinder axis aligned to Y
-                    child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
-                    break;
+                    if (geom->GetCylinderTopRadius() == geom->GetCylinderBottomRadius()) {
+                        child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(), geom->GetCylinderRadius(), geom->GetCylinderHeight() * 0.5f)));
+                        break;
+                    }
+                    // fall through to trimesh otherwise
                 case GT_TriMesh: {
                     if( geom->GetCollisionMesh().indices.size() >= 3 ) {
                         btTriangleMesh* ptrimesh = new btTriangleMesh();
