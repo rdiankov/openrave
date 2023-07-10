@@ -785,12 +785,24 @@ public:
     /// \brief unit - (name, mult factor to meters)
     ///
     /// \return (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual std::pair<std::string, dReal> GetUnit() const = 0;
+    /// \deprecated (23/07/03), use GetUnitInfo instead.
+    virtual std::pair<std::string, dReal> GetUnit() const RAVE_DEPRECATED = 0;
 
     /// \brief set units for the current environment.
     ///
     /// \param unit (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
+    /// \deprecated (23/07/03), use SetUnitInfo instead.
+    virtual void SetUnit(std::pair<std::string, dReal> unit) RAVE_DEPRECATED = 0;
+
+    /// \brief unitInfo
+    ///
+    /// \return UnitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual UnitInfo GetUnitInfo() const = 0;
+
+    /// \brief set unitInfo for the current environment.
+    ///
+    /// \param unitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual void SetUnitInfo(UnitInfo unitInfo) = 0;
 
     //@}
 
@@ -867,7 +879,7 @@ public:
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
-        std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
+        UnitInfo _unitInfo; ///< environment unitInfo
         int64_t _lastModifiedAtUS = 0; ///< us, linux epoch, last modified time of the environment when it was originally loaded from the environment.
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;

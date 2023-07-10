@@ -3,16 +3,23 @@
 ChangeLog
 #########
 
-Version 0.124
-=============
+Version 0.125.0
+===============
 
 * Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
+
+Version 0.124.0
+===============
+
+* Replace unit with UnitInfo object
 
 Version 0.123.1
 ===============
 
 * Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
 
+* Add "axial" geometry type.
+    
 Version 0.123.0
 ===============
 

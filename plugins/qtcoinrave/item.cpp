@@ -263,6 +263,7 @@ void KinBodyItem::Load()
                         break;
                     }
                 }
+                case GT_Axial:
                 case GT_Cage:
                 case GT_Container:
                 case GT_CalibrationBoard:
