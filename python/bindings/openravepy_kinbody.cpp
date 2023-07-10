@@ -271,6 +271,17 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
+PyAxialSlice::PyAxialSlice() {
+}
+PyAxialSlice::PyAxialSlice(const KinBody::GeometryInfo::AxialSlice& axialslice) {
+    zOffset = axialslice.zOffset;
+    radius = axialslice.radius;
+}
+void PyAxialSlice::Get(KinBody::GeometryInfo::AxialSlice& axialslice) {
+    axialslice.zOffset = zOffset;
+    axialslice.radius = radius;
+}
+
 PyGeometryInfo::PyGeometryInfo() {
 }
 
@@ -292,6 +303,11 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vSideWalls = py::list();
     for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
         _vSideWalls.append(PySideWall(info._vSideWalls[i]));
+    }
+
+    _vAxialSlices = py::list();
+    for (size_t i = 0; i < info._vAxialSlices.size(); ++i) {
+        _vAxialSlices.append(PyAxialSlice(info._vAxialSlices[i]));
     }
 
     _vDiffuseColor = toPyVector3(info._vDiffuseColor);
@@ -387,6 +403,13 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
         info._vSideWalls.push_back({});
         OPENRAVE_SHARED_PTR<PySideWall> pysidewall = py::extract<OPENRAVE_SHARED_PTR<PySideWall> >(_vSideWalls[i]);
         pysidewall->Get(info._vSideWalls[i]);
+    }
+
+    info._vAxialSlices.clear();
+    for (size_t i = 0; i < (size_t)len(_vAxialSlices); ++i) {
+        info._vAxialSlices.push_back({});
+        OPENRAVE_SHARED_PTR<PyAxialSlice> pyaxialslice = py::extract<OPENRAVE_SHARED_PTR<PyAxialSlice> >(_vAxialSlices[i]);
+        pyaxialslice->Get(info._vAxialSlices[i]);
     }
 
     info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
@@ -1439,6 +1462,9 @@ object PyLink::PyGeometry::GetCalibrationBoardPatternName() const {
 }
 object PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios() const {
     return py::make_tuple(_pgeometry->GetCalibrationBoardDotDiameterDistanceRatio(), _pgeometry->GetCalibrationBoardBigDotDiameterDistanceRatio());
+}
+int PyLink::PyGeometry::GetNumberOfAxialSlices() const {
+    return _pgeometry->GetNumberOfAxialSlices();
 }
 object PyLink::PyGeometry::ComputeInnerEmptyVolume() const
 {
@@ -4779,6 +4805,7 @@ void init_openravepy_kinbody()
                           .value("Container",GT_Container)
                           .value("Cage",GT_Cage)
                           .value("CalibrationBoard",GT_CalibrationBoard)
+                          .value("Axial",GT_Axial)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
@@ -4919,6 +4946,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
+                          .def_readwrite("_vAxialSlices", &PyGeometryInfo::_vAxialSlices)
                           .def_readwrite("_calibrationBoardParameters", &PyGeometryInfo::_calibrationBoardParameters)
                           .def_readwrite("_vNegativeCropContainerMargins", &PyGeometryInfo::_vNegativeCropContainerMargins)
                           .def_readwrite("_vPositiveCropContainerMargins", &PyGeometryInfo::_vPositiveCropContainerMargins)
@@ -4988,6 +5016,16 @@ void init_openravepy_kinbody()
                       .def_readwrite("transf",&PySideWall::transf)
                       .def_readwrite("vExtents",&PySideWall::vExtents)
                       .def_readwrite("type",&PySideWall::type)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >(m, "AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
+                      .def(init<>())
+#else
+    object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >("AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
+#endif
+                      .def_readwrite("zOffset",&PyAxialSlice::zOffset)
+                      .def_readwrite("radius",&PyAxialSlice::radius)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -6063,6 +6101,7 @@ void init_openravepy_kinbody()
                                   .def("GetCalibrationBoardDotColor",&PyLink::PyGeometry::GetCalibrationBoardDotColor, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotColor))
                                   .def("GetCalibrationBoardPatternName",&PyLink::PyGeometry::GetCalibrationBoardPatternName, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardPatternName))
                                   .def("GetCalibrationBoardDotDiameterDistanceRatios",&PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotDiameterDistanceRatios))
+                                  .def("GetNumberOfAxialSlices",&PyLink::PyGeometry::GetNumberOfAxialSlices, DOXY_FN(KinBody::Link::Geometry,GetNumberOfAxialSlices))
                                   .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                   .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                   .def("__eq__",&PyLink::PyGeometry::__eq__)
