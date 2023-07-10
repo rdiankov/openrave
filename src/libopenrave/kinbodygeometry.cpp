@@ -179,8 +179,8 @@ static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal top
     *(vertexIt++) = Vector(pos.x, pos.y, pos.z - halfHeight); // bottom center
 
     // first line
-    *(vertexIt++) = Vector(topRad, 0, pos.z + halfHeight); // line top
-    *(vertexIt++) = Vector(bottomRad, 0, pos.z - halfHeight); // line bottom
+    *(vertexIt++) = Vector(pos.x + topRad, pos.y, pos.z + halfHeight); // line top
+    *(vertexIt++) = Vector(pos.x + bottomRad, pos.y, pos.z - halfHeight); // line bottom
 
     int32_t off = base + 4;
     for (uint i = 1; i < numFaces; ++i) {
