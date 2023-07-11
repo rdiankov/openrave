@@ -502,6 +502,16 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
     _vGeomData2 = oInnerExtents;
 }
 
+object PyGeometryInfo::GetCylinderHeight()
+{
+    return _vGeomData[1];
+}
+
+object PyGeometryInfo::GetCylinderRadius()
+{
+    return _vGeomData[0];
+}
+
 object PyGeometryInfo::GetCylinderTopRadius()
 {
     return _vGeomData[0];
@@ -4828,8 +4838,8 @@ void init_openravepy_kinbody()
 #else
     object pyExtractInfoOptions = enum_<ExtractInfoOptions>("ExtractInfoOptions" DOXY_ENUM(ExtractInfoOptions))
 #endif
-                          .value("Everything",EIO_Everything)
-                          .value("SkipDOFValues",EIO_SkipDOFValues)
+                                  .value("Everything",EIO_Everything)
+                                  .value("SkipDOFValues",EIO_SkipDOFValues)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4986,6 +4996,8 @@ void init_openravepy_kinbody()
                           .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("GetCylinderHeight",&PyGeometryInfo::GetCylinderHeight, DOXY_FN(GeomeryInfo,GetCylinderHeight))
+                          .def("GetCylinderRadius",&PyGeometryInfo::GetCylinderRadius, DOXY_FN(GeomeryInfo,GetCylinderRadius))
                           .def("GetCylinderTopRadius",&PyGeometryInfo::GetCylinderTopRadius, DOXY_FN(GeomeryInfo,GetCylinderTopRadius))
                           .def("GetCylinderBottomRadius",&PyGeometryInfo::GetCylinderBottomRadius, DOXY_FN(GeomeryInfo,GetCylinderBottomRadius))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -5047,12 +5059,12 @@ void init_openravepy_kinbody()
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >(m, "AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
-                      .def(init<>())
+                        .def(init<>())
 #else
     object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >("AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
 #endif
-                      .def_readwrite("zOffset",&PyAxialSlice::zOffset)
-                      .def_readwrite("radius",&PyAxialSlice::radius)
+                        .def_readwrite("zOffset",&PyAxialSlice::zOffset)
+                        .def_readwrite("radius",&PyAxialSlice::radius)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
