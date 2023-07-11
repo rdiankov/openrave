@@ -8,6 +8,16 @@ Version 0.125.0
 
 * Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
 
+Version 0.124.2
+===============
+
+* Add GetCylinderTopRadius and GetCylinderBottomRadius to GeometryInfo Python binding.
+
+Version 0.124.1
+===============
+
+* Fix condition in GetCylinderRadius warning message.
+
 Version 0.124.0
 ===============
 
