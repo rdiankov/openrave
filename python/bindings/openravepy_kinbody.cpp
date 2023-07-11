@@ -502,6 +502,19 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
     _vGeomData2 = oInnerExtents;
 }
 
+object PyGeometryInfo::GetCylinderTopRadius()
+{
+    return _vGeomData[0];
+}
+
+object PyGeometryInfo::GetCylinderBottomRadius()
+{
+    if (py::extract<dReal>(_vGeomData[2]) == 0.) {
+        return _vGeomData[0];
+    }
+    return _vGeomData[2];
+}
+
 PyLinkInfo::PyLinkInfo() {
 }
 
@@ -4961,6 +4974,8 @@ void init_openravepy_kinbody()
                           .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("GetCylinderTopRadius",&PyGeometryInfo::GetCylinderTopRadius, DOXY_FN(GeomeryInfo,GetCylinderTopRadius))
+                          .def("GetCylinderBottomRadius",&PyGeometryInfo::GetCylinderBottomRadius, DOXY_FN(GeomeryInfo,GetCylinderBottomRadius))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                                "unitScale"_a = 1.0,
