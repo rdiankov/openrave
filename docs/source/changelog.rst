@@ -6,7 +6,7 @@ ChangeLog
 Version 0.124.2
 ===============
 
-* Add GetCylinderTopRadius and GetCylinderBottomRadius to GeometryInfo Python binding.
+* Add GetCylinder[xxx] functions to GeometryInfo Python binding.
 
 Version 0.124.1
 ===============

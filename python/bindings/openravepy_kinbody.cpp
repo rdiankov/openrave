@@ -515,6 +515,11 @@ object PyGeometryInfo::GetCylinderBottomRadius()
     return _vGeomData[2];
 }
 
+object PyGeometryInfo::GetCylinderHeight()
+{
+    return _vGeomData[1];
+}
+
 PyLinkInfo::PyLinkInfo() {
 }
 
