@@ -1491,7 +1491,7 @@ int PyLink::PyGeometry::GetNumberOfAxialSlices() const {
 }
 py::list PyLink::PyGeometry::GetAxial() const {
     py::list axial;
-    const std::vector<dReal> _axial = _pgeometry->GetAxial();
+    const std::vector<dReal>& _axial = _pgeometry->GetAxial();
     FOREACHC(it, _axial) {
         axial.append(*it);
     }
