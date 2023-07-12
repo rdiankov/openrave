@@ -3,8 +3,13 @@
 ChangeLog
 #########
 
+Version 0.124.1
+===============
+
+* Fix condition in GetCylinderRadius warning message.
+
 Version 0.124.0
-=============
+===============
 
 * Replace unit with UnitInfo object
 
