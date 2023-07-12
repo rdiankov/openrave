@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.125.1
+===============
+
+* Add GetAxialSlices method to Geometry and Python binding.
+
 Version 0.125.0
 ===============
 
