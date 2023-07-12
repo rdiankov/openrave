@@ -249,8 +249,8 @@ void KinBodyItem::Load()
                     break;
                 }
                 case GT_Cylinder: {
-                    // if top and bottom are equal, use SoCylinder, otherwise fallthrough to mesh case
-                    if (geom->GetCylinderTopRadius() == geom->GetCylinderBottomRadius()) {
+                    // if normal cylinder, use SoCylinder, otherwise fallthrough to mesh case
+                    if (!geom->IsConicalFrustum()) {
                         // make SoCylinder point towards z, not y
                         SbMatrix m;
                         SbRotation(SbVec3f(1, 0, 0), M_PI / 2).getValue(m);

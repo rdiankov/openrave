@@ -640,8 +640,8 @@ private:
             odegeom = dCreateSphere(0,info._vGeomData.x);
             break;
         case OpenRAVE::GT_Cylinder:
-            // if top and bottom are equal, use ode built-in, otherwise fallthrough to mesh case
-            if (info.GetCylinderTopRadius() == info.GetCylinderBottomRadius()) {
+            // if normal cylinder, use ode built-in, otherwise fallthrough to mesh case
+            if (!info.IsConicalFrustum()) {
                 odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
                 break;
             }

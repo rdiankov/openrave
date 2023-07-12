@@ -7,6 +7,7 @@ Version 0.124.2
 ===============
 
 * Add GetCylinder[xxx] functions to GeometryInfo Python binding.
+* Preserve backward compatibility when user specifies a cone.
 
 Version 0.124.1
 ===============

@@ -69,6 +69,7 @@ public:
     object GetContainerInnerExtents();
     void SetContainerOuterExtents(object oOuterExtents);
     void SetContainerInnerExtents(object oInnerExtents);
+    object GetCylinderRadius();
     object GetCylinderTopRadius();
     object GetCylinderBottomRadius();
     object GetCylinderHeight();

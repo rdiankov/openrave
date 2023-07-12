@@ -432,8 +432,8 @@ void KinBodyItem::Load()
                 }
                 //  Geometry is defined like a Cylinder
                 case GT_Cylinder: {
-                    // if top and bottom are equal, use osg built-in, otherwise fallthrough to mesh case
-                    if (orgeom->GetCylinderTopRadius() == orgeom->GetCylinderBottomRadius()) {
+                    // if normal cylinder, use osg built-in, otherwise fallthrough to mesh case
+                    if (!orgeom->IsConicalFrustum()) {
                         // make SoCylinder point towards z, not y
                         osg::Cylinder *cy = new osg::Cylinder();
                         cy->setRadius(orgeom->GetCylinderRadius());
