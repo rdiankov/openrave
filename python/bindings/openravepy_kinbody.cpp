@@ -1489,6 +1489,13 @@ object PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios() const 
 int PyLink::PyGeometry::GetNumberOfAxialSlices() const {
     return _pgeometry->GetNumberOfAxialSlices();
 }
+py::list PyLink::PyGeometry::GetAxial() const {
+    py::list axial;
+    FOREACHC(it, _pgeometry->GetAxial()) {
+        axial.append(*it);
+    }
+    return axial;
+}
 object PyLink::PyGeometry::ComputeInnerEmptyVolume() const
 {
     Transform tInnerEmptyVolume;
@@ -6142,6 +6149,7 @@ void init_openravepy_kinbody()
                                   .def("GetCalibrationBoardPatternName",&PyLink::PyGeometry::GetCalibrationBoardPatternName, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardPatternName))
                                   .def("GetCalibrationBoardDotDiameterDistanceRatios",&PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotDiameterDistanceRatios))
                                   .def("GetNumberOfAxialSlices",&PyLink::PyGeometry::GetNumberOfAxialSlices, DOXY_FN(KinBody::Link::Geometry,GetNumberOfAxialSlices))
+                                  .def("GetAxial",&PyLink::PyGeometry::GetAxial, DOXY_FN(KinBody::Link::Geometry,GetAxial))
                                   .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                   .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                   .def("__eq__",&PyLink::PyGeometry::__eq__)

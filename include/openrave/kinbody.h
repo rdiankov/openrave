@@ -768,7 +768,17 @@ public:
         inline int GetNumberOfAxialSlices() const {
             return _info._vAxialSlices.size();
         }
-
+        inline const std::vector<dReal> GetAxial() const {
+            size_t axialSlicesSize = _info._vAxialSlices.size();
+            std::vector<dReal> vAxialSlices;
+            vAxialSlices.reserve(axialSlicesSize*2);
+            for (size_t i = 0; i < axialSlicesSize; ++i) {
+                vAxialSlices.push_back(_info._vAxialSlices[i].zOffset);
+                vAxialSlices.push_back(_info._vAxialSlices[i].radius);
+            }
+            return vAxialSlices;
+        }
+ 
         /// \brief returns the local collision mesh
         inline const TriMesh& GetCollisionMesh() const {
             return _info._meshcollision;

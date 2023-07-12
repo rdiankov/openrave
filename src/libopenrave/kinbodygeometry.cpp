@@ -536,7 +536,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 
             // tessellate the surfaces
             dReal dAngle = 2 * PI / (dReal)numberOfSections;
-            for(int sectionIndex = 0; sectionIndex <= numberOfSections; sectionIndex++) {
+            for (int sectionIndex = 0; sectionIndex <= numberOfSections; sectionIndex++) {
                 dReal dTheta = (dReal)sectionIndex * dAngle;
                 dReal sinTheta = RaveSin(dTheta);
                 dReal cosTheta = RaveCos(dTheta);
