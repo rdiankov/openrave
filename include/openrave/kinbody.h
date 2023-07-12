@@ -768,7 +768,7 @@ public:
         inline int GetNumberOfAxialSlices() const {
             return _info._vAxialSlices.size();
         }
-        inline const std::vector<dReal> GetAxial() const {
+        inline std::vector<dReal> GetAxial() const {
             size_t axialSlicesSize = _info._vAxialSlices.size();
             std::vector<dReal> vAxialSlices;
             vAxialSlices.reserve(axialSlicesSize*2);
