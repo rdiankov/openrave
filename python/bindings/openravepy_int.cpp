@@ -2827,23 +2827,30 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(std::string(GetLengthUnitString(unitInfo.lengthUnit)), 1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
 }
 
-void PyEnvironmentBase::SetUnitInfo(const py::dict& unitInfo){
-    UnitInfo unit;
-    unit.lengthUnit = unitInfo["lengthUnit"].cast<LengthUnit>();
-    unit.massUnit = unitInfo["massUnit"].cast<MassUnit>();
-    unit.timeUnit = unitInfo["timeUnit"].cast<TimeUnit>();
-    unit.angleUnit = unitInfo["angleUnit"].cast<AngleUnit>();
-    _penv->SetUnitInfo(unit);
+void PyEnvironmentBase::SetUnitInfo(const py::object& pyUnitInfo)
+{
+    rapidjson::Document rUnitInfo;
+    toRapidJSONValue(pyUnitInfo, rUnitInfo, rUnitInfo.GetAllocator());
+    UnitInfo unitInfo = _penv->GetUnitInfo();
+    orjson::LoadJsonValue(rUnitInfo, unitInfo);
+//    unit.lengthUnit = unitInfo["lengthUnit"].cast<LengthUnit>();
+//    unit.massUnit = unitInfo["massUnit"].cast<MassUnit>();
+//    unit.timeUnit = unitInfo["timeUnit"].cast<TimeUnit>();
+//    unit.angleUnit = unitInfo["angleUnit"].cast<AngleUnit>();
+    _penv->SetUnitInfo(unitInfo);
 }
 
-py::dict PyEnvironmentBase::GetUnitInfo() const {
+py::object PyEnvironmentBase::GetUnitInfo() const {
     UnitInfo unitInfo = _penv->GetUnitInfo();
-    py::dict unit;
-    unit["lengthUnit"] = unitInfo.lengthUnit;
-    unit["massUnit"] = unitInfo.massUnit;
-    unit["timeUnit"] = unitInfo.timeUnit;
-    unit["angleUnit"] = unitInfo.angleUnit;
-    return unit;
+    rapidjson::Document rUnitInfo;
+    orjson::SaveJsonValue(rUnitInfo, unitInfo);
+    return toPyObject(rUnitInfo);
+//    py::dict unit;
+//    unit["lengthUnit"] = unitInfo.lengthUnit;
+//    unit["massUnit"] = unitInfo.massUnit;
+//    unit["timeUnit"] = unitInfo.timeUnit;
+//    unit["angleUnit"] = unitInfo.angleUnit;
+//    return unit;
 }
 
 int PyEnvironmentBase::GetId() const
