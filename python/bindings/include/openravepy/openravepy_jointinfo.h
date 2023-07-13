@@ -314,7 +314,7 @@ public:
         object GetCalibrationBoardPatternName() const;
         object GetCalibrationBoardDotDiameterDistanceRatios() const;
         int GetNumberOfAxialSlices() const;
-        py::list GetAxial() const;
+        py::list GetAxialSlices() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);

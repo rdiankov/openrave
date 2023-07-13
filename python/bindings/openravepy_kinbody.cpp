@@ -1489,13 +1489,15 @@ object PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios() const 
 int PyLink::PyGeometry::GetNumberOfAxialSlices() const {
     return _pgeometry->GetNumberOfAxialSlices();
 }
-py::list PyLink::PyGeometry::GetAxial() const {
-    py::list axial;
-    const std::vector<dReal>& _axial = _pgeometry->GetAxial();
-    FOREACHC(it, _axial) {
-        axial.append(*it);
+py::list PyLink::PyGeometry::GetAxialSlices() const {
+    py::list axialSlices;
+    FOREACHC(it, _pgeometry->GetAxialSlices()) {
+        py::dict axialSlice;
+        axialSlice["zOffset"] = it->zOffset;
+        axialSlice["radius"] = it->radius;
+        axialSlices.append(axialSlice);
     }
-    return axial;
+    return axialSlices;
 }
 object PyLink::PyGeometry::ComputeInnerEmptyVolume() const
 {
@@ -6150,7 +6152,7 @@ void init_openravepy_kinbody()
                                   .def("GetCalibrationBoardPatternName",&PyLink::PyGeometry::GetCalibrationBoardPatternName, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardPatternName))
                                   .def("GetCalibrationBoardDotDiameterDistanceRatios",&PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotDiameterDistanceRatios))
                                   .def("GetNumberOfAxialSlices",&PyLink::PyGeometry::GetNumberOfAxialSlices, DOXY_FN(KinBody::Link::Geometry,GetNumberOfAxialSlices))
-                                  .def("GetAxial",&PyLink::PyGeometry::GetAxial, DOXY_FN(KinBody::Link::Geometry,GetAxial))
+                                  .def("GetAxialSlices",&PyLink::PyGeometry::GetAxialSlices, DOXY_FN(KinBody::Link::Geometry,GetAxialSlices))
                                   .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                   .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                   .def("__eq__",&PyLink::PyGeometry::__eq__)
