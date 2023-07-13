@@ -1100,13 +1100,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
 
     case GT_Cylinder:
-        if (IsConicalFrustum()) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", _vGeomData.z*fUnitScale, allocator);
-            orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", _vGeomData.w*fUnitScale, allocator);
-        } else {
-            orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
-        }
-        orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", GetCylinderTopRadius()*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "height", GetCylinderHeight()*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", GetCylinderBottomRadius()*fUnitScale, allocator);
         break;
 
     case GT_Axial: {
