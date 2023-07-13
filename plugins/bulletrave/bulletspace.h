@@ -176,7 +176,7 @@ private:
                     break;
                 case GT_Cylinder:
                     // cylinder axis aligned to Y
-                    if (geom->GetCylinderTopRadius() == geom->GetCylinderBottomRadius()) {
+                    if (!geom->IsConicalFrustum()) {
                         child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(), geom->GetCylinderRadius(), geom->GetCylinderHeight() * 0.5f)));
                         break;
                     }

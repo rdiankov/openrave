@@ -11,7 +11,8 @@ Version 0.125.0
 Version 0.124.2
 ===============
 
-* Add GetCylinderTopRadius and GetCylinderBottomRadius to GeometryInfo Python binding.
+* Add GetCylinder[xxx] functions to GeometryInfo Python binding.
+* Preserve backward compatibility when user specifies a cone.
 
 Version 0.124.1
 ===============

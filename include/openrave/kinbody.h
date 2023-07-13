@@ -406,16 +406,22 @@ public:
         /// \deprecated use GetCylinderTopRadius and GetCylinderBottomRadius
         dReal GetCylinderRadius() const;
         inline dReal GetCylinderTopRadius() const {
+            if (IsConicalFrustum()) {
+                return _vGeomData.z;
+            }
             return _vGeomData.x;
         }
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
         }
         inline dReal GetCylinderBottomRadius() const {
-            if (_vGeomData.z == 0) {
-                return _vGeomData.x;
+            if (IsConicalFrustum()) {
+                return _vGeomData.w;
             }
-            return _vGeomData.z;
+            return _vGeomData.x;
+        }
+        inline bool IsConicalFrustum() const {
+            return _vGeomData.z != 0 || _vGeomData.w != 0;
         }
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
@@ -460,7 +466,9 @@ public:
         }
 
         ///< for sphere it is radius
-        ///< for cylinder, first 3 values are topRadius, height and bottomRadius
+        ///< for cylinder, first 2 values are radius and height.
+        ///  If the 3rd of 4th value is non-zero, then it is a conical frustum
+        ///  Where the 3rd value is the top radius and the 4th value is the bottom radius
         ///< for trimesh, none
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
@@ -725,6 +733,9 @@ public:
         }
         inline dReal GetCylinderBottomRadius() const {
             return _info.GetCylinderBottomRadius();
+        }
+        inline bool IsConicalFrustum() const {
+            return _info.IsConicalFrustum();
         }
         inline const Vector& GetBoxExtents() const {
             return _info.GetBoxExtents();

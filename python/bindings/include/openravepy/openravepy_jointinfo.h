@@ -69,10 +69,10 @@ public:
     object GetContainerInnerExtents();
     void SetContainerOuterExtents(object oOuterExtents);
     void SetContainerInnerExtents(object oInnerExtents);
-    object GetCylinderHeight();
     object GetCylinderRadius();
     object GetCylinderTopRadius();
     object GetCylinderBottomRadius();
+    object GetCylinderHeight();
 
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());

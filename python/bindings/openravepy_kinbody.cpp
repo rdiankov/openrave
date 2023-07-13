@@ -502,11 +502,6 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
     _vGeomData2 = oInnerExtents;
 }
 
-object PyGeometryInfo::GetCylinderHeight()
-{
-    return _vGeomData[1];
-}
-
 object PyGeometryInfo::GetCylinderRadius()
 {
     return _vGeomData[0];
@@ -514,15 +509,23 @@ object PyGeometryInfo::GetCylinderRadius()
 
 object PyGeometryInfo::GetCylinderTopRadius()
 {
-    return _vGeomData[0];
+    if (py::extract<dReal>(_vGeomData[2]) == 0. && py::extract<dReal>(_vGeomData[3]) == 0.) {
+        return _vGeomData[0];
+    }
+    return _vGeomData[2];
 }
 
 object PyGeometryInfo::GetCylinderBottomRadius()
 {
-    if (py::extract<dReal>(_vGeomData[2]) == 0.) {
+    if (py::extract<dReal>(_vGeomData[2]) == 0. && py::extract<dReal>(_vGeomData[3]) == 0.) {
         return _vGeomData[0];
     }
-    return _vGeomData[2];
+    return _vGeomData[3];
+}
+
+object PyGeometryInfo::GetCylinderHeight()
+{
+    return _vGeomData[1];
 }
 
 PyLinkInfo::PyLinkInfo() {
