@@ -409,7 +409,7 @@ public:
             if (IsConicalFrustum()) {
                 return _vGeomData.z;
             }
-            return _vGeomData.x;
+            return GetCylinderRadius();
         }
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
@@ -418,10 +418,12 @@ public:
             if (IsConicalFrustum()) {
                 return _vGeomData.w;
             }
-            return _vGeomData.x;
+            return GetCylinderRadius();
         }
+
+        /// \brief return true if the cylinder has different top and bottom radii
         inline bool IsConicalFrustum() const {
-            return _vGeomData.z != 0 || _vGeomData.w != 0;
+            return (_vGeomData.z != 0 || _vGeomData.w != 0) && RaveFabs(_vGeomData.z - _vGeomData.w)>g_fEpsilon;
         }
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;

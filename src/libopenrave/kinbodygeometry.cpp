@@ -1686,9 +1686,10 @@ uint8_t KinBody::GeometryInfo::GetSideWallExists() const
 dReal KinBody::GeometryInfo::GetCylinderRadius() const
 {
     if (IsConicalFrustum()) {
-        RAVELOG_WARN("Using deprecated GetCylinderRadius, please use GetCylinderTopRadius and GetCylinderBottomRadius");
+        RAVELOG_WARN_FORMAT("Using deprecated GetCylinderRadius, please use GetCylinderTopRadius and GetCylinderBottomRadius. vGeomData=[%f,%f,%f,%f]", _vGeomData.x%_vGeomData.y%_vGeomData.z%_vGeomData.w);
+        return std::max(_vGeomData[2], _vGeomData[3]);
     }
-    return _vGeomData.x;
+    return _vGeomData[2] != 0 ? _vGeomData[2] : _vGeomData[0]; // for back compat
 }
 
 KinBody::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)

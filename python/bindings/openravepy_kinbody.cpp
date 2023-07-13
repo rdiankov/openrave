@@ -504,7 +504,19 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
 
 object PyGeometryInfo::GetCylinderRadius()
 {
-    return _vGeomData[0];
+    dReal topRadius = py::extract<dReal>(_vGeomData[2]);
+    dReal bottomRadius = py::extract<dReal>(_vGeomData[3]);
+    bool bIsConicalFrustum = (topRadius != 0 || bottomRadius != 0) && RaveFabs(topRadius - bottomRadius)>g_fEpsilon;
+
+    if (bIsConicalFrustum) {
+        if( topRadius > bottomRadius ) {
+            return _vGeomData[2];
+        }
+        else {
+            return _vGeomData[3];
+        }
+    }
+    return topRadius != 0 ? _vGeomData[2] : _vGeomData[0]; // for back compat
 }
 
 object PyGeometryInfo::GetCylinderTopRadius()
