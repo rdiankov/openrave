@@ -308,7 +308,7 @@ void ReadableInterfaceBase::ClearReadableInterface(const std::string& id) {
     __mapReadableInterfaces.erase(id);
 }
 
-bool ReadableInterfaceBase::UpdateReadableInterfaces(const READERSMAP& newReadableInterfaces) {
+bool ReadableInterfaceBase::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     bool bChanged = false;
     bool bNewAllFound = true;

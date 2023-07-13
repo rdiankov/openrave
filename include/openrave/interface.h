@@ -23,7 +23,6 @@
 #define OPENRAVE_INTERFACE_BASE
 
 #include <rapidjson/document.h>
-#include <unordered_map>
 
 namespace OpenRAVE {
 
@@ -79,7 +78,7 @@ public:
 struct OPENRAVE_API ReadableInterfaceBase {
     virtual ~ReadableInterfaceBase() = default;
 
-    typedef std::unordered_map<std::string, ReadablePtr, std::hash<std::string>, CaseInsensitiveCompare> READERSMAP;
+    typedef std::map<std::string, ReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
     /// \brief Returns the raw map reference, this is \b not multithread safe and the GetReadableInterfaceMutex should be locked before using.
     inline const READERSMAP& GetReadableInterfaces() const
@@ -104,7 +103,7 @@ struct OPENRAVE_API ReadableInterfaceBase {
     virtual void ClearReadableInterface(const std::string& id);
 
     /// \brief updates the readable interfaces. returns true if there are any changes
-    virtual bool UpdateReadableInterfaces(const READERSMAP& newReadableInterfaces);
+    virtual bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces);
 
     boost::shared_mutex& GetReadableInterfaceMutex() const
     {
@@ -113,7 +112,6 @@ struct OPENRAVE_API ReadableInterfaceBase {
 
     ReadableInterfaceBase& operator= (const ReadableInterfaceBase& other) {
         if (this != &other) {
-            boost::unique_lock<boost::shared_mutex> lock(other._mutexInterface);
             __mapReadableInterfaces = other.__mapReadableInterfaces;
         }
         return *this;

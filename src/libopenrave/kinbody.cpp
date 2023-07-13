@@ -223,7 +223,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     if (_mReadableInterfaces.size() > 0) {
         rapidjson::Value rReadableInterfaces;
         rReadableInterfaces.SetObject();
-        for(READERSMAP::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+        for(std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
             // skip serializing __collada__ since we won't need it in json
             if (it->first == "__collada__") {
                 continue;
@@ -407,7 +407,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 }
 
 void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
-    READERSMAP::iterator itReadable = _mReadableInterfaces.find(id);
+    std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
         pReadable = itReadable->second;

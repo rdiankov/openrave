@@ -188,13 +188,13 @@ std::vector<std::pair<std::pair<std::string, int>, dReal> > ExtractDOFValuesArra
 }
 
 
-ReadableInterfaceBase::READERSMAP ExtractReadableInterfaces(object pyReadableInterfaces) {
+std::map<std::string, ReadablePtr> ExtractReadableInterfaces(object pyReadableInterfaces) {
     if (IS_PYTHONOBJECT_NONE(pyReadableInterfaces)) {
         return {};
     }
 
     py::dict pyReadableInterfacesDict = (py::dict)pyReadableInterfaces;
-    ReadableInterfaceBase::READERSMAP mReadableInterfaces;
+    std::map<std::string, ReadablePtr> mReadableInterfaces;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::list keys = py::list(pyReadableInterfacesDict);
 #else
@@ -223,7 +223,7 @@ py::object ReturnDOFValues(const std::vector<std::pair<std::pair<std::string, in
     return pyDOFValuesList;
 }
 
-py::object ReturnReadableInterfaces(const ReadableInterfaceBase::READERSMAP& mReadableInterfaces)
+py::object ReturnReadableInterfaces(const std::map<std::string, ReadablePtr>& mReadableInterfaces)
 {
     py::dict pyReadableInterfaces;
     FOREACHC(it, mReadableInterfaces) {

@@ -986,7 +986,7 @@ public:
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
         std::vector<std::string> _vForcedAdjacentLinks; // link names. sorted.
-        READERSMAP _mReadableInterfaces; ///< readable interface mapping
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -2331,7 +2331,7 @@ public:
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
-        READERSMAP _mReadableInterfaces; ///< readable interface mapping
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 
