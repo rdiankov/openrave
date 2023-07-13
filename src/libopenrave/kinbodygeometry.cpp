@@ -1634,7 +1634,7 @@ uint8_t KinBody::GeometryInfo::GetSideWallExists() const
 
 dReal KinBody::GeometryInfo::GetCylinderRadius() const
 {
-    if (_vGeomData.z == 0 || _vGeomData.x != _vGeomData.z) {
+    if (_vGeomData.z != 0 && _vGeomData.x != _vGeomData.z) {
         RAVELOG_WARN("Using deprecated GetCylinderRadius, please use GetCylinderTopRadius and GetCylinderBottomRadius");
     }
     return _vGeomData.x;
