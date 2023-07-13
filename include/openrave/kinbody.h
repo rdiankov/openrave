@@ -1386,6 +1386,8 @@ private:
         std::vector<int> _vRigidlyAttachedLinks;         ///< \see IsRigidlyAttached, GetRigidlyAttachedLinks
         TriMesh _collision; ///< triangles for collision checking, triangles are always the triangulation
                             ///< of the body when it is at the identity transformation
+        InterfaceBase::READERSMAP _mapReaders; ///< \see GetReaders
+
         //@}
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
@@ -2326,7 +2328,7 @@ public:
         std::vector<LinkInfoPtr> _vLinkInfos; ///< list of pointers to LinkInfo
         std::vector<JointInfoPtr> _vJointInfos; ///< list of pointers to JointInfo
 
-        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
+        READERSMAP _mReadableInterfaces; ///< readable interface mapping
 
         boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 

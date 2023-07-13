@@ -619,7 +619,7 @@ OPENRAVEPY_API std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(py::obje
 OPENRAVEPY_API KinBody::GrabbedInfoPtr ExtractGrabbedInfo(py::object pyGrabbedInfo);
 OPENRAVEPY_API std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(py::object pyGrabbedInfoList);
 OPENRAVEPY_API std::vector< std::pair< std::pair<std::string, int>, dReal>> ExtractDOFValuesArray(py::object pyDOFValuesList);
-OPENRAVEPY_API std::map<std::string, ReadablePtr> ExtractReadableInterfaces(py::object pyReadableInterfaces);
+OPENRAVEPY_API ReadableInterfaceBase::READERSMAP ExtractReadableInterfaces(py::object pyReadableInterfaces);
 OPENRAVEPY_API std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(py::object pyAttachedSensorInfoList);
 OPENRAVEPY_API std::vector<RobotBase::GripperInfoPtr> ExtractGripperInfoArray(py::object pyGripperInfoList);
 OPENRAVEPY_API std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(py::object pyManipList);

@@ -958,6 +958,7 @@ object PyInterfaceBase::SendJSONCommand(const string& cmd, object input, bool re
 object PyInterfaceBase::GetReadableInterfaces()
 {
     py::dict ointerfaces;
+    boost::shared_lock< boost::shared_mutex > lock(_pbase->GetReadableInterfaceMutex());
     FOREACHC(it,_pbase->GetReadableInterfaces()) {
         ointerfaces[it->first.c_str()] = toPyReadable(it->second);
     }

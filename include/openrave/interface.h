@@ -23,6 +23,7 @@
 #define OPENRAVE_INTERFACE_BASE
 
 #include <rapidjson/document.h>
+#include <unordered_map>
 
 namespace OpenRAVE {
 
@@ -75,13 +76,60 @@ public:
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) = 0;
 };
 
+struct OPENRAVE_API ReadableInterfaceBase {
+    virtual ~ReadableInterfaceBase() = default;
+
+    typedef std::unordered_map<std::string, ReadablePtr, std::hash<std::string>, CaseInsensitiveCompare> READERSMAP;
+
+    /// \brief Returns the raw map reference, this is \b not multithread safe and the GetReadableInterfaceMutex should be locked before using.
+    inline const READERSMAP& GetReadableInterfaces() const
+    {
+        return __mapReadableInterfaces;
+    }
+
+    /// \brief Returns the readable interface. <b>[multi-thread safe]</b>
+    virtual ReadablePtr GetReadableInterface(const std::string& id) const;
+
+    /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
+    virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
+
+    /// \brief sets a set of readable interfaces all at once. The pointers are copied
+    ///
+    /// \param mapReadables the readable interfaces to ste
+    /// \param bClearAllExisting if true, then clears the existing readables, if false, just updates the readables that are specified in mapReadables
+    virtual void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting);
+
+    /// \brief clears the readable interfaces
+    virtual void ClearReadableInterfaces();
+    virtual void ClearReadableInterface(const std::string& id);
+
+    /// \brief updates the readable interfaces. returns true if there are any changes
+    virtual bool UpdateReadableInterfaces(const READERSMAP& newReadableInterfaces);
+
+    boost::shared_mutex& GetReadableInterfaceMutex() const
+    {
+        return _mutexInterface;
+    }
+
+private:
+    mutable boost::shared_mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
+    READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
+
+#ifdef RAVE_PRIVATE
+#ifdef _MSC_VER
+    friend class OpenRAVEXMLParser::InterfaceXMLReader;
+#else
+    friend class ::OpenRAVEXMLParser::InterfaceXMLReader;
+#endif
+#endif
+};
+
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
     \ingroup interfaces
  */
-class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>
+class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>, public ReadableInterfaceBase
 {
 public:
-    typedef std::map<std::string, ReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
     InterfaceBase(InterfaceType type, EnvironmentBasePtr penv);
     virtual ~InterfaceBase();
@@ -107,30 +155,6 @@ public:
     inline EnvironmentBasePtr GetEnv() const {
         return __penv;
     }
-
-    /// \brief Returns the raw map reference, this is \b not multithread safe and the GetInterfaceMutex should be locked before using.
-    inline const READERSMAP& GetReadableInterfaces() const {
-        return __mapReadableInterfaces;
-    }
-
-    /// \brief Returns the readable interface. <b>[multi-thread safe]</b>
-    virtual ReadablePtr GetReadableInterface(const std::string& id) const;
-
-    /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
-    virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
-
-    /// \brief sets a set of readable interfaces all at once. The pointers are copied
-    ///
-    /// \param mapReadables the readable interfaces to ste
-    /// \param bClearAllExisting if true, then clears the existing readables, if false, just updates the readables that are specified in mapReadables
-    virtual void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting);
-
-    /// \brief clears the readable interfaces
-    virtual void ClearReadableInterfaces();
-    virtual void ClearReadableInterface(const std::string& id);
-
-    /// \brief updates the readable interfaces. returns true if there are any changes
-    virtual bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces);
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>
     virtual const std::string& GetDescription() const {
@@ -330,7 +354,6 @@ private:
     EnvironmentBasePtr __penv; ///< \see GetEnv
     mutable std::map<std::string, UserDataPtr> __mapUserData; ///< \see GetUserData
 
-    READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
     typedef std::map<std::string, boost::shared_ptr<InterfaceCommand>, CaseInsensitiveCompare> CMDMAP;
     CMDMAP __mapCommands; ///< all registered commands
 

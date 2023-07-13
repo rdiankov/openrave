@@ -716,7 +716,7 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
 }
 
 void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
-    std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
+    READERSMAP::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
         pReadable = itReadable->second;
