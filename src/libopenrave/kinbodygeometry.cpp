@@ -1045,9 +1045,14 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
 
     case GT_Cylinder:
-        orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", GetCylinderTopRadius()*fUnitScale, allocator);
+        if( GetCylinderTopRadius() == GetCylinderBottomRadius() ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "radius", GetCylinderRadius()*fUnitScale, allocator);
+        }
+        else {
+            orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", GetCylinderTopRadius()*fUnitScale, allocator);
+            orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", GetCylinderBottomRadius()*fUnitScale, allocator);
+        }
         orjson::SetJsonValueByKey(rGeometryInfo, "height", GetCylinderHeight()*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", GetCylinderBottomRadius()*fUnitScale, allocator);
         break;
 
     case GT_Axial: {
