@@ -539,6 +539,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
     _bIgnoreSelfCollision = info._bIgnoreSelfCollision;
+    _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
 
 py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
@@ -647,6 +648,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     }
 #endif
 
+    info._mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
     info._bStatic = _bStatic;
     info._bIsEnabled = _bIsEnabled;

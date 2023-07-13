@@ -5965,6 +5965,10 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
 
+    FOREACH(it, info._mReadableInterfaces) {
+        plink->SetReadableInterface(it->first, it->second);
+    }
+
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __hashKinematicsGeometryDynamics.resize(0);

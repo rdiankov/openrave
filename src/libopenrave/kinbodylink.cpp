@@ -34,6 +34,7 @@ void KinBody::LinkInfo::Reset()
     _mapIntParameters.clear();
     _mapStringParameters.clear();
     _vForcedAdjacentLinks.clear();
+    _mReadableInterfaces.clear();
     _bStatic = false;
     _bIsEnabled = false;
     _bIgnoreSelfCollision = false;
@@ -200,6 +201,21 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         value.AddMember("geometries", geometriesValue, allocator);
     }
 
+    if (!_mReadableInterfaces.empty()) {
+        rapidjson::Value rReadableInterfaces;
+        rReadableInterfaces.SetObject();
+        for (READERSMAP::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+            // skip serializing __collada__ since we won't need it in json
+            if (it->first == "__collada__") {
+                continue;
+            }
+            rapidjson::Value rReadable;
+            it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
+            orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
+        }
+        value.AddMember("readableInterfaces", std::move(rReadableInterfaces), allocator);
+    }
+
     // if(_mapExtraGeometries.size() > 0 ) {
     //     rapidjson::Value extraGeometriesValue;
     //     extraGeometriesValue.SetObject();
@@ -319,6 +335,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         }
     }
 
+    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
+        for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
+            // skip over __collada__ since it will most likely fail to deserialize
+            if (strcmp(it->name.GetString(), "__collada__") == 0 ) {
+                continue;
+            }
+            _DeserializeReadableInterface(it->name.GetString(), it->value, fUnitScale);
+        }
+    }
+
     _mapExtraGeometries.clear();
     // if (value.HasMember("extraGeometries")) {
     //     for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
@@ -340,6 +366,26 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
+void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
+    READERSMAP::iterator itReadable = _mReadableInterfaces.find(id);
+    ReadablePtr pReadable;
+    if(itReadable != _mReadableInterfaces.end()) {
+        pReadable = itReadable->second;
+    }
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
+    if (!!pReader) {
+        pReader->DeserializeJSON(value, fUnitScale);
+        _mReadableInterfaces[id] = pReader->GetReadable();
+        return;
+    }
+    if (value.IsString()) {
+        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
+        _mReadableInterfaces[id] = pStringReadable;
+        return;
+    }
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
+}
+
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
     return _id == other._id
            && _name == other._name
@@ -354,6 +400,7 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
            && _bStatic == other._bStatic
            && _bIsEnabled == other._bIsEnabled
            && _bIgnoreSelfCollision == other._bIgnoreSelfCollision
+           && _mReadableInterfaces == other._mReadableInterfaces
            && AreVectorsDeepEqual(_vgeometryinfos, other._vgeometryinfos);
 }
 
@@ -1001,6 +1048,16 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
         info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         _vGeometries[i]->ExtractInfo(*info._vgeometryinfos[i]);
     }
+    {
+        boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
+            FOREACHC(it, GetReadableInterfaces()) {
+            if (!!it->second) {
+                // make a copy of the readable interface
+                // caller may modify and call UpdateFromInfo with modified readable interfaces
+                info._mReadableInterfaces[it->first] = it->second->CloneSelf();
+            }
+        }
+    }
 }
 
 UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
@@ -1116,6 +1173,11 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     if (_info._vForcedAdjacentLinks != info._vForcedAdjacentLinks) {
         _info._vForcedAdjacentLinks = info._vForcedAdjacentLinks;
         RAVELOG_VERBOSE_FORMAT("link %s forced adjacent links changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    if ( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
+        RAVELOG_VERBOSE_FORMAT("link %s updated due to readable interface change", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 

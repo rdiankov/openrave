@@ -111,6 +111,14 @@ struct OPENRAVE_API ReadableInterfaceBase {
         return _mutexInterface;
     }
 
+    ReadableInterfaceBase& operator= (const ReadableInterfaceBase& other) {
+        if (this != &other) {
+            boost::unique_lock<boost::shared_mutex> lock(other._mutexInterface);
+            __mapReadableInterfaces = other.__mapReadableInterfaces;
+        }
+        return *this;
+    }
+
 private:
     mutable boost::shared_mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
     READERSMAP __mapReadableInterfaces; ///< pointers to extra interfaces that are included with this object
