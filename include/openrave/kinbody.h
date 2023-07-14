@@ -394,19 +394,11 @@ public:
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
         }
-        /// \deprecated use GetCylinderTopRadius and GetCylinderBottomRadius
-        dReal GetCylinderRadius() const;
-        inline dReal GetCylinderTopRadius() const {
+        inline dReal GetCylinderRadius() const {
             return _vGeomData.x;
         }
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
-        }
-        inline dReal GetCylinderBottomRadius() const {
-            if (_vGeomData.z == 0) {
-                return _vGeomData.x;
-            }
-            return _vGeomData.z;
         }
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
@@ -451,7 +443,7 @@ public:
         }
 
         ///< for sphere it is radius
-        ///< for cylinder, first 3 values are topRadius, height and bottomRadius
+        ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
@@ -701,24 +693,18 @@ public:
         inline bool IsModifiable() const {
             return _info._bModifiable;
         }
+
         inline dReal GetSphereRadius() const {
             return _info._vGeomData.x;
         }
-        /// \deprecated use GetCylinderTopRadius and GetCylinderBottomRadius
         inline dReal GetCylinderRadius() const {
-            return _info.GetCylinderRadius();
-        }
-        inline dReal GetCylinderTopRadius() const {
-            return _info.GetCylinderTopRadius();
+            return _info._vGeomData.x;
         }
         inline dReal GetCylinderHeight() const {
-            return _info.GetCylinderHeight();
-        }
-        inline dReal GetCylinderBottomRadius() const {
-            return _info.GetCylinderBottomRadius();
+            return _info._vGeomData.y;
         }
         inline const Vector& GetBoxExtents() const {
-            return _info.GetBoxExtents();
+            return _info._vGeomData;
         }
         inline const Vector& GetContainerOuterExtents() const {
             return _info.GetContainerOuterExtents();

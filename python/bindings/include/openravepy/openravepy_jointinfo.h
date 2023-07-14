@@ -286,8 +286,6 @@ public:
         object GetTransformPose();
         dReal GetSphereRadius() const;
         dReal GetCylinderRadius() const;
-        dReal GetCylinderTopRadius() const;
-        dReal GetCylinderBottomRadius() const;
         dReal GetCylinderHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;

@@ -16,7 +16,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "libopenrave.h"
-#include "openrave/kinbody.h"
 
 
 namespace OpenRAVE {
@@ -345,7 +344,7 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         break;
 
     case GT_Cylinder:
-        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.y - rhs._vGeomData.y*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.z - rhs._vGeomData.z*fUnitScale) > fEpsilon ) {
+        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon || RaveFabs(_vGeomData.y - rhs._vGeomData.y*fUnitScale) > fEpsilon ) {
             return 8;
         }
         break;
@@ -506,15 +505,9 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
     case GT_Cylinder: {
         // cylinder is on z axis
+        dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         int numverts = (int)(fTessellation*48.0f) + 3;
-        AppendConicalFrustumTriangulation(
-            Vector(0, 0, 0),
-            GetCylinderTopRadius(),
-            GetCylinderBottomRadius(),
-            GetCylinderHeight()*0.5f,
-            numverts,
-            _meshcollision
-        );
+        AppendCylinderTriangulation(Vector(0, 0, 0), rad, len, numverts, _meshcollision);
         break;
     }
     case GT_Axial: {
@@ -578,7 +571,6 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
                 }
             }
         }
-
         break;
     }
     case GT_Cage: {
@@ -909,7 +901,7 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
             itAxialSlice->radius *= fUnitScale;
         }
         break;
-        
+
     case GT_TriMesh:
         FOREACH(itvertex, _meshcollision.vertices) {
             *itvertex *= fUnitScale;
@@ -1045,14 +1037,8 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
 
     case GT_Cylinder:
-        if( GetCylinderTopRadius() == GetCylinderBottomRadius() ) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "radius", GetCylinderRadius()*fUnitScale, allocator);
-        }
-        else {
-            orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", GetCylinderTopRadius()*fUnitScale, allocator);
-            orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", GetCylinderBottomRadius()*fUnitScale, allocator);
-        }
-        orjson::SetJsonValueByKey(rGeometryInfo, "height", GetCylinderHeight()*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
         break;
 
     case GT_Axial: {
@@ -1332,17 +1318,13 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         break;
     case GT_Cylinder:
         vGeomDataTemp = _vGeomData;
-        if (orjson::LoadJsonValueByKey(value, "topRadius", vGeomDataTemp.x) ||
-            orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x)) {
-            // use topRadius, or fallback to radius
+        if (value.HasMember("radius")) {
+            orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
             vGeomDataTemp.x *= fUnitScale;
         }
         if (value.HasMember("height")) {
             orjson::LoadJsonValueByKey(value, "height", vGeomDataTemp.y);
             vGeomDataTemp.y *= fUnitScale;
-        }
-        if (orjson::LoadJsonValueByKey(value, "bottomRadius", vGeomDataTemp.z)) {
-            vGeomDataTemp.z *= fUnitScale;
         }
         if (vGeomDataTemp != _vGeomData) {
             _vGeomData = vGeomDataTemp;
@@ -1502,14 +1484,12 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         ab.extents.x = ab.extents.y = ab.extents.z = _vGeomData[0];
         ab.pos = tglobal.trans;
         break;
-    case GT_Cylinder: {
-        const dReal biggerRadius = max(GetCylinderTopRadius(), GetCylinderBottomRadius());
-        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*biggerRadius;
-        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*biggerRadius;
-        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*biggerRadius;
+    case GT_Cylinder:
+        ab.extents.x = (dReal)0.5*RaveFabs(tglobal.m[2])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[2]*tglobal.m[2]))*_vGeomData.x;
+        ab.extents.y = (dReal)0.5*RaveFabs(tglobal.m[6])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[6]*tglobal.m[6]))*_vGeomData.x;
+        ab.extents.z = (dReal)0.5*RaveFabs(tglobal.m[10])*_vGeomData.y + RaveSqrt(max(dReal(0),1-tglobal.m[10]*tglobal.m[10]))*_vGeomData.x;
         ab.pos = tglobal.trans; //+(dReal)0.5*_vGeomData.y*Vector(tglobal.m[2],tglobal.m[6],tglobal.m[10]);
         break;
-    }
     case GT_Cage: {
         // have to return the entire volume, even the inner region since a lot of code use the bounding box to compute cropping and other functions
         const Vector& vCageBaseExtents = _vGeomData;
@@ -1630,14 +1610,6 @@ uint8_t KinBody::GeometryInfo::GetSideWallExists() const
         mask |= 1 << _vSideWalls[i].type;
     }
     return mask;
-}
-
-dReal KinBody::GeometryInfo::GetCylinderRadius() const
-{
-    if (_vGeomData.z != 0 && _vGeomData.x != _vGeomData.z) {
-        RAVELOG_WARN("Using deprecated GetCylinderRadius, please use GetCylinderTopRadius and GetCylinderBottomRadius");
-    }
-    return _vGeomData.x;
 }
 
 KinBody::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
@@ -1837,17 +1809,15 @@ bool KinBody::Geometry::ValidateContactNormal(const Vector& _position, Vector& _
         break;
     }
     case GT_Cylinder: { // z-axis
-        if (GetCylinderTopRadius() == GetCylinderBottomRadius()) {
-            dReal fInsideCircle = position.x * position.x + position.y * position.y - _info._vGeomData.x * _info._vGeomData.x;
-            dReal fInsideHeight = 2.0f * RaveFabs(position.z) - _info._vGeomData.y;
-            if ((fInsideCircle < -feps) && (fInsideHeight > -feps) && (normal.z * position.z < 0)) {
-                _normal = -_normal;
-                return true;
-            }
-            if ((fInsideCircle > -feps) && (fInsideHeight < -feps) && (normal.x * position.x + normal.y * position.y < 0)) {
-                _normal = -_normal;
-                return true;
-            }
+        dReal fInsideCircle = position.x*position.x+position.y*position.y-_info._vGeomData.x*_info._vGeomData.x;
+        dReal fInsideHeight = 2.0f*RaveFabs(position.z)-_info._vGeomData.y;
+        if((fInsideCircle < -feps)&&(fInsideHeight > -feps)&&(normal.z*position.z<0)) {
+            _normal = -_normal;
+            return true;
+        }
+        if((fInsideCircle > -feps)&&(fInsideHeight < -feps)&&(normal.x*position.x+normal.y*position.y < 0)) {
+            _normal = -_normal;
+            return true;
         }
         break;
     }
