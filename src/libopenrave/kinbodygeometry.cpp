@@ -217,7 +217,6 @@ static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal top
     }
     if (bottomRadius == 0) {
         return AppendConeTriangulation(pos, topRadius, halfHeight, numFaces, tri, true);
->>>>>>> production
     }
     // once again, cylinder is on z axis
     const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
