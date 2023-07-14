@@ -47,6 +47,7 @@ enum GeometryType {
     GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
     GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
     GT_Axial = 8, ///< a geometry defined by many slices along an axis, oriented towards z-axis
+    GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
 };
 
 enum DynamicsConstraintsType {
@@ -400,6 +401,15 @@ public:
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
         }
+        inline dReal GetConicalFrustumTopRadius() const {
+            return _vGeomData.x;
+        }
+        inline dReal GetConicalFrustumBottomRadius() const {
+            return _vGeomData.y;
+        }
+        inline dReal GetConicalFrustumHeight() const {
+            return _vGeomData.z;
+        }
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
@@ -445,6 +455,7 @@ public:
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
+        ///< for conical frustum, first 3 values are top radius, bottom radius, height
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
         Vector _vGeomData;
@@ -702,6 +713,15 @@ public:
         }
         inline dReal GetCylinderHeight() const {
             return _info._vGeomData.y;
+        }
+        inline dReal GetConicalFrustumTopRadius() const {
+            return _info.GetConicalFrustumTopRadius();
+        }
+        inline dReal GetConicalFrustumBottomRadius() const {
+            return _info.GetConicalFrustumBottomRadius();
+        }
+        inline dReal GetConicalFrustumHeight() const {
+            return _info.GetConicalFrustumHeight();
         }
         inline const Vector& GetBoxExtents() const {
             return _info._vGeomData;

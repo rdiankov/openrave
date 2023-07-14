@@ -443,6 +443,7 @@ void KinBodyItem::Load()
                     break;
                 }
                 //  Extract geometry from collision Mesh
+                case GT_ConicalFrustum:
                 case GT_Axial:
                 case GT_Cage:
                 case GT_Container:

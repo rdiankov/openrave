@@ -161,8 +161,63 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
+static void AppendConeTriangulation(const Vector& pos, const dReal rad, dReal halfHeight, const uint numFaces, TriMesh& tri, const bool upsideDown = false)
+{
+    const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
+    const dReal rotateOffset = upsideDown ? M_PI_2 : 0;
+    if (upsideDown) {
+        halfHeight = -halfHeight;
+    }
+
+    const int32_t base = tri.vertices.size();
+    const size_t indexBase = tri.indices.size();
+    tri.vertices.resize(base + numFaces + 2); // top and bottom center vertices
+    tri.indices.resize(indexBase + 3 * 2 * numFaces); // two triangles per face (one on the side, one on bottom)
+
+    std::vector<Vector>::iterator vertexIt = tri.vertices.begin() + base;
+    std::vector<int32_t>::iterator indexIt = tri.indices.begin() + indexBase;
+
+    *(vertexIt++) = Vector(pos.x, pos.y, pos.z + halfHeight); // top center
+    *(vertexIt++) = Vector(pos.x, pos.y, pos.z - halfHeight); // bottom center
+
+    // first line
+    if (upsideDown) {
+        *(vertexIt++) = Vector(pos.x, pos.y + rad, pos.z - halfHeight);
+    } else {
+        *(vertexIt++) = Vector(pos.x + rad, pos.y, pos.z - halfHeight);
+    }
+
+    int32_t off = base + 3;
+    for (uint i = 1; i < numFaces; ++i) {
+        // line on the side
+        *(vertexIt++) = Vector(
+            pos.x + RaveCos(dTheta * i - rotateOffset) * rad,
+            pos.y + RaveSin(dTheta * i + rotateOffset) * rad,
+            pos.z - halfHeight
+        );
+
+        // two triangles
+        // 1. bottom face triangle, bottom center, this line bottom, last line bottom
+        *(indexIt++) = base + 1; *(indexIt++) = off;     *(indexIt++) = off - 1;
+        // 2. side face triangle, top center, last line bottom, this line bottom
+        *(indexIt++) = base;     *(indexIt++) = off - 1; *(indexIt++) = off;
+
+        off += 1;
+    }
+
+    // close the loop
+    *(indexIt++) = base + 1; *(indexIt++) = base + 2; *(indexIt++) = off  - 1;
+    *(indexIt++) = base;     *(indexIt++) = off  - 1; *(indexIt++) = base + 2;
+}
+
 static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal topRad, const dReal bottomRad, const dReal halfHeight, const uint numFaces, TriMesh& tri)
 {
+    if (topRad == 0) {
+        return AppendConeTriangulation(pos, bottomRad, halfHeight, numFaces, tri);
+    }
+    if (bottomRad == 0) {
+        return AppendConeTriangulation(pos, topRad, halfHeight, numFaces, tri, true);
+    }
     // once again, cylinder is on z axis
     const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
 
@@ -406,6 +461,13 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         }
         break;
     }
+    case GT_ConicalFrustum:
+        if( RaveFabs(_vGeomData.x - rhs._vGeomData.x*fUnitScale) > fEpsilon ||
+            RaveFabs(_vGeomData.y - rhs._vGeomData.y*fUnitScale) > fEpsilon ||
+            RaveFabs(_vGeomData.z - rhs._vGeomData.z*fUnitScale) > fEpsilon) {
+            return 31;
+        }
+        break;
 
     case GT_Axial:
         if( _vAxialSlices.size() != rhs._vAxialSlices.size() ) {
@@ -510,6 +572,16 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
         AppendCylinderTriangulation(Vector(0, 0, 0), rad, len, numverts, _meshcollision);
         break;
     }
+    case GT_ConicalFrustum:
+        AppendConicalFrustumTriangulation(
+            Vector(0, 0, 0),
+            GetConicalFrustumTopRadius(),
+            GetConicalFrustumBottomRadius(),
+            GetConicalFrustumHeight() / 2,
+            (int)(fTessellation*48.0f) + 3,
+            _meshcollision
+        );
+        break;
     case GT_Axial: {
         if (_vAxialSlices.size() > 1) {
             // there has to be at least two slices: top and bottom
@@ -887,10 +959,8 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         _vPositiveCropContainerEmptyMargins *= fUnitScale;
         break;
     }
+    case GT_ConicalFrustum:
     case GT_Sphere:
-        _vGeomData *= fUnitScale;
-        break;
-
     case GT_Cylinder:
         _vGeomData *= fUnitScale;
         break;
@@ -972,6 +1042,8 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
         return "trimesh";
     case GT_CalibrationBoard:
         return "calibrationboard";
+    case GT_ConicalFrustum:
+        return "conicalfrustum";
     case GT_None:
         return "";
     }
@@ -1039,6 +1111,12 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     case GT_Cylinder:
         orjson::SetJsonValueByKey(rGeometryInfo, "radius", _vGeomData.x*fUnitScale, allocator);
         orjson::SetJsonValueByKey(rGeometryInfo, "height", _vGeomData.y*fUnitScale, allocator);
+        break;
+
+    case GT_ConicalFrustum:
+        orjson::SetJsonValueByKey(rGeometryInfo, "topRadius", GetConicalFrustumTopRadius()*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "bottomRadius", GetConicalFrustumBottomRadius()*fUnitScale, allocator);
+        orjson::SetJsonValueByKey(rGeometryInfo, "height", GetConicalFrustumHeight()*fUnitScale, allocator);
         break;
 
     case GT_Axial: {
@@ -1138,6 +1216,9 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         else if (typestr == "calibrationboard") {
             type = GT_CalibrationBoard;
+        }
+        else if (typestr == "conicalfrustum") {
+            type = GT_ConicalFrustum;
         }
         else if (typestr.empty()) {
             type = GT_None;
@@ -1331,7 +1412,22 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             _meshcollision.Clear();
         }
         break;
-
+    case GT_ConicalFrustum:
+        vGeomDataTemp = _vGeomData;
+        if (orjson::LoadJsonValueByKey(value, "topRadius", vGeomDataTemp.x)) {
+            vGeomDataTemp.x *= fUnitScale;
+        }
+        if (orjson::LoadJsonValueByKey(value, "bottomRadius", vGeomDataTemp.y)) {
+            vGeomDataTemp.y *= fUnitScale;
+        }
+        if (orjson::LoadJsonValueByKey(value, "height", vGeomDataTemp.z)) {
+            vGeomDataTemp.z *= fUnitScale;
+        }
+        if (vGeomDataTemp != _vGeomData) {
+            _vGeomData = vGeomDataTemp;
+            _meshcollision.Clear();
+        }
+        break;
     case GT_Axial:
         if (value.HasMember("axial") && value["axial"].IsArray()) {
             const rapidjson::Value::ConstArray& rAxial = value["axial"].GetArray();
@@ -1566,6 +1662,7 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         break;
 
     }
+    case GT_ConicalFrustum:
     case GT_Axial:
     case GT_TriMesh: {
         // Cage: init collision mesh?
@@ -1908,6 +2005,14 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     else if (GetType() == GT_Cylinder) {
         if (GetCylinderRadius() != info._vGeomData.x || GetCylinderHeight() != info._vGeomData.y) {
             RAVELOG_VERBOSE_FORMAT("geometry %s cylinder changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
+    }
+    else if (GetType() == GT_ConicalFrustum) {
+        if (GetConicalFrustumTopRadius() != info.GetConicalFrustumTopRadius() ||
+            GetConicalFrustumBottomRadius() != info.GetConicalFrustumBottomRadius() ||
+            GetConicalFrustumHeight() != info.GetConicalFrustumHeight()) {
+            RAVELOG_VERBOSE_FORMAT("geometry %s conical frustum changed", _info._id);
             return UFIR_RequireReinitialize;
         }
     }
