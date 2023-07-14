@@ -372,6 +372,9 @@ void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, con
     if(itReadable != _mReadableInterfaces.end()) {
         pReadable = itReadable->second;
     }
+    // NOTE: we use PT_KinBody (for now) for the following reasons:
+    // 1. Link shares the same set of readable plugins as KinBody
+    // 2. It might be confusing to add PT_Link since it is not an interface type
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
     if (!!pReader) {
         pReader->DeserializeJSON(value, fUnitScale);
