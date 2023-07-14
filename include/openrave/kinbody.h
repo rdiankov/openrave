@@ -706,13 +706,13 @@ public:
         }
 
         inline dReal GetSphereRadius() const {
-            return _info._vGeomData.x;
+            return _info.GetSphereRadius();
         }
         inline dReal GetCylinderRadius() const {
-            return _info._vGeomData.x;
+            return _info.GetCylinderRadius();
         }
         inline dReal GetCylinderHeight() const {
-            return _info._vGeomData.y;
+            return _info.GetCylinderHeight();
         }
         inline dReal GetConicalFrustumTopRadius() const {
             return _info.GetConicalFrustumTopRadius();
@@ -724,7 +724,7 @@ public:
             return _info.GetConicalFrustumHeight();
         }
         inline const Vector& GetBoxExtents() const {
-            return _info._vGeomData;
+            return _info.GetBoxExtents();
         }
         inline const Vector& GetContainerOuterExtents() const {
             return _info.GetContainerOuterExtents();

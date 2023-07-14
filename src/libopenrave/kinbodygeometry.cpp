@@ -161,7 +161,7 @@ void AppendBoxTriangulation(const Vector& pos, const Vector& ex, TriMesh& tri)
     tri.indices.insert(tri.indices.end(), &indices[0], &indices[nindices]);
 }
 
-static void AppendConeTriangulation(const Vector& pos, const dReal rad, dReal halfHeight, const uint numFaces, TriMesh& tri, const bool upsideDown = false)
+static void AppendConeTriangulation(const Vector& pos, const dReal radius, dReal halfHeight, const uint numFaces, TriMesh& tri, const bool upsideDown = false)
 {
     const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
     const dReal rotateOffset = upsideDown ? M_PI_2 : 0;
@@ -182,17 +182,17 @@ static void AppendConeTriangulation(const Vector& pos, const dReal rad, dReal ha
 
     // first line
     if (upsideDown) {
-        *(vertexIt++) = Vector(pos.x, pos.y + rad, pos.z - halfHeight);
+        *(vertexIt++) = Vector(pos.x, pos.y + radius, pos.z - halfHeight);
     } else {
-        *(vertexIt++) = Vector(pos.x + rad, pos.y, pos.z - halfHeight);
+        *(vertexIt++) = Vector(pos.x + radius, pos.y, pos.z - halfHeight);
     }
 
     int32_t off = base + 3;
     for (uint i = 1; i < numFaces; ++i) {
         // line on the side
         *(vertexIt++) = Vector(
-            pos.x + RaveCos(dTheta * i - rotateOffset) * rad,
-            pos.y + RaveSin(dTheta * i + rotateOffset) * rad,
+            pos.x + RaveCos(dTheta * i - rotateOffset) * radius,
+            pos.y + RaveSin(dTheta * i + rotateOffset) * radius,
             pos.z - halfHeight
         );
 
@@ -210,13 +210,13 @@ static void AppendConeTriangulation(const Vector& pos, const dReal rad, dReal ha
     *(indexIt++) = base;     *(indexIt++) = off  - 1; *(indexIt++) = base + 2;
 }
 
-static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal topRad, const dReal bottomRad, const dReal halfHeight, const uint numFaces, TriMesh& tri)
+static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal topRadius, const dReal bottomRadius, const dReal halfHeight, const uint numFaces, TriMesh& tri)
 {
-    if (topRad == 0) {
-        return AppendConeTriangulation(pos, bottomRad, halfHeight, numFaces, tri);
+    if (topRadius == 0) {
+        return AppendConeTriangulation(pos, bottomRadius, halfHeight, numFaces, tri);
     }
-    if (bottomRad == 0) {
-        return AppendConeTriangulation(pos, topRad, halfHeight, numFaces, tri, true);
+    if (bottomRadius == 0) {
+        return AppendConeTriangulation(pos, topRadius, halfHeight, numFaces, tri, true);
     }
     // once again, cylinder is on z axis
     const dReal dTheta = 2 * PI / (dReal)numFaces; // degrees to rotate every time
@@ -233,8 +233,8 @@ static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal top
     *(vertexIt++) = Vector(pos.x, pos.y, pos.z - halfHeight); // bottom center
 
     // first line
-    *(vertexIt++) = Vector(pos.x + topRad, pos.y, pos.z + halfHeight); // line top
-    *(vertexIt++) = Vector(pos.x + bottomRad, pos.y, pos.z - halfHeight); // line bottom
+    *(vertexIt++) = Vector(pos.x + topRadius, pos.y, pos.z + halfHeight); // line top
+    *(vertexIt++) = Vector(pos.x + bottomRadius, pos.y, pos.z - halfHeight); // line bottom
 
     int32_t off = base + 4;
     for (uint i = 1; i < numFaces; ++i) {
@@ -242,8 +242,8 @@ static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal top
         const dReal unitY = RaveSin(dTheta * i);
 
         // line on the side
-        *(vertexIt++) = Vector(pos.x + unitX * topRad, pos.y + unitY * topRad, pos.z + halfHeight); // line top
-        *(vertexIt++) = Vector(pos.x + unitX * bottomRad, pos.y + unitY * bottomRad, pos.z - halfHeight); // line bottom
+        *(vertexIt++) = Vector(pos.x + unitX * topRadius, pos.y + unitY * topRadius, pos.z + halfHeight); // line top
+        *(vertexIt++) = Vector(pos.x + unitX * bottomRadius, pos.y + unitY * bottomRadius, pos.z - halfHeight); // line bottom
 
         // four triangles
         // 1. top face triangle, top center, last line top, this line top
@@ -265,9 +265,9 @@ static void AppendConicalFrustumTriangulation(const Vector& pos, const dReal top
     *(indexIt++) = base + 2; *(indexIt++) = off  - 1; *(indexIt++) = base + 3;
 }
 
-static void AppendCylinderTriangulation(const Vector& pos, const dReal rad, const dReal len, const uint numverts, TriMesh& tri)
+static void AppendCylinderTriangulation(const Vector& pos, const dReal radius, const dReal halfHeight, const uint numverts, TriMesh& tri)
 {
-    return AppendConicalFrustumTriangulation(pos, rad, rad, len, numverts, tri);
+    return AppendConicalFrustumTriangulation(pos, radius, radius, halfHeight, numverts, tri);
 }
 
 void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation) const
@@ -567,9 +567,8 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
     }
     case GT_Cylinder: {
         // cylinder is on z axis
-        dReal rad = GetCylinderRadius(), len = GetCylinderHeight()*0.5f;
         int numverts = (int)(fTessellation*48.0f) + 3;
-        AppendCylinderTriangulation(Vector(0, 0, 0), rad, len, numverts, _meshcollision);
+        AppendCylinderTriangulation(Vector(0, 0, 0), GetCylinderRadius(), GetCylinderHeight()*0.5, numverts, _meshcollision);
         break;
     }
     case GT_ConicalFrustum:
