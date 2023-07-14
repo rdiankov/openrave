@@ -502,6 +502,16 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
     _vGeomData2 = oInnerExtents;
 }
 
+object PyGeometryInfo::GetCylinderRadius()
+{
+    return _vGeomData[0];
+}
+
+object PyGeometryInfo::GetCylinderHeight()
+{
+    return _vGeomData[1];
+}
+
 object PyGeometryInfo::GetConicalFrustumTopRadius() const {
     return _vGeomData[0];
 }
