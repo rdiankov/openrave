@@ -733,9 +733,6 @@ public:
         inline dReal GetConicalFrustumHeight() const {
             return _info.GetConicalFrustumHeight();
         }
-        inline bool IsConicalFrustum() const {
-            return _info.IsConicalFrustum();
-        }
         inline const Vector& GetBoxExtents() const {
             return _info.GetBoxExtents();
         }
