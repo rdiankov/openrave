@@ -69,6 +69,9 @@ public:
     object GetContainerInnerExtents();
     void SetContainerOuterExtents(object oOuterExtents);
     void SetContainerInnerExtents(object oInnerExtents);
+    object GetConicalFrustumTopRadius() const;
+    object GetConicalFrustumBottomRadius() const;
+    object GetConicalFrustumHeight() const;
 
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());
@@ -286,9 +289,10 @@ public:
         object GetTransformPose();
         dReal GetSphereRadius() const;
         dReal GetCylinderRadius() const;
-        dReal GetCylinderTopRadius() const;
-        dReal GetCylinderBottomRadius() const;
         dReal GetCylinderHeight() const;
+        dReal GetConicalFrustumTopRadius() const;
+        dReal GetConicalFrustumBottomRadius() const;
+        dReal GetConicalFrustumHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
         object GetContainerInnerExtents() const;
