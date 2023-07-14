@@ -879,7 +879,7 @@ protected:
 boost::scoped_ptr<ViewerManager> ViewerManager::_singleton(0);
 std::once_flag ViewerManager::_onceInitialize;
 
-PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : _pbase(pbase), _pyenv(pyenv)
+PyInterfaceBase::PyInterfaceBase(InterfaceBasePtr pbase, PyEnvironmentBasePtr pyenv) : PyReadableInterfaceBase(pbase), _pbase(pbase), _pyenv(pyenv)
 {
     CHECK_POINTER(_pbase);
     CHECK_POINTER(_pyenv);
@@ -955,7 +955,7 @@ object PyInterfaceBase::SendJSONCommand(const string& cmd, object input, bool re
     return toPyObject(out);
 }
 
-object PyInterfaceBase::GetReadableInterfaces()
+object PyReadableInterfaceBase::GetReadableInterfaces()
 {
     py::dict ointerfaces;
     boost::shared_lock< boost::shared_mutex > lock(_pbase->GetReadableInterfaceMutex());
@@ -965,12 +965,12 @@ object PyInterfaceBase::GetReadableInterfaces()
     return ointerfaces;
 }
 
-object PyInterfaceBase::GetReadableInterface(const std::string& id)
+object PyReadableInterfaceBase::GetReadableInterface(const std::string& id)
 {
     return toPyReadable(_pbase->GetReadableInterface(id));
 }
 
-void PyInterfaceBase::SetReadableInterface(const std::string& id, object oreadable)
+void PyReadableInterfaceBase::SetReadableInterface(const std::string& id, object oreadable)
 {
     _pbase->SetReadableInterface(id,ExtractReadable(oreadable));
 }
@@ -3309,9 +3309,19 @@ The **releasegil** parameter controls whether the python Global Interpreter Lock
 Because race conditions can pop up when trying to lock the openrave environment without releasing the GIL, if lockenv=True is specified, the system can try to safely lock the openrave environment without causing a deadlock with the python GIL and other threads.\n");
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyInterfaceBase, OPENRAVE_SHARED_PTR<PyInterfaceBase> >(m, "Interface", DOXY_CLASS(InterfaceBase))
+        class_<PyReadableInterfaceBase, OPENRAVE_SHARED_PTR<PyReadableInterfaceBase> >(m, "ReadableInterface", DOXY_CLASS(ReadableInterfaceBase))
 #else
-        class_<PyInterfaceBase, OPENRAVE_SHARED_PTR<PyInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
+        class_<PyReadableInterfaceBase, OPENRAVE_SHARED_PTR<PyReadableInterfaceBase> >("ReadableInterface", DOXY_CLASS(ReadableInterfaceBase), no_init)
+#endif
+        .def("GetReadableInterfaces",&PyReadableInterfaceBase::GetReadableInterfaces, DOXY_FN(ReadableInterfaceBase,GetReadableInterfaces))
+        .def("GetReadableInterface",&PyReadableInterfaceBase::GetReadableInterface, DOXY_FN(ReadableInterfaceBase,GetReadableInterface))
+        .def("SetReadableInterface",&PyReadableInterfaceBase::SetReadableInterface, PY_ARGS("id","readable") DOXY_FN(ReadableInterfaceBase,SetReadableInterface))
+        ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyInterfaceBase, OPENRAVE_SHARED_PTR<PyInterfaceBase>, PyReadableInterfaceBase >(m, "Interface", DOXY_CLASS(InterfaceBase))
+#else
+        class_<PyInterfaceBase, OPENRAVE_SHARED_PTR<PyInterfaceBase>, bases<PyReadableInterfaceBase> >("Interface", DOXY_CLASS(InterfaceBase), no_init)
 #endif
         .def("GetInterfaceType",&PyInterfaceBase::GetInterfaceType, DOXY_FN(InterfaceBase,GetInterfaceType))
         .def("GetXMLId",&PyInterfaceBase::GetXMLId, DOXY_FN(InterfaceBase,GetXMLId))
@@ -3356,9 +3366,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #else
         .def("SendJSONCommand",&PyInterfaceBase::SendJSONCommand, SendJSONCommand_overloads(PY_ARGS("cmd","input","releasegil","lockenv") DOXY_FN(InterfaceBase,SendJSONCommand)))
 #endif
-        .def("GetReadableInterfaces",&PyInterfaceBase::GetReadableInterfaces, DOXY_FN(InterfaceBase,GetReadableInterfaces))
-        .def("GetReadableInterface",&PyInterfaceBase::GetReadableInterface, DOXY_FN(InterfaceBase,GetReadableInterface))
-        .def("SetReadableInterface",&PyInterfaceBase::SetReadableInterface, PY_ARGS("id","readable") DOXY_FN(InterfaceBase,SetReadableInterface))
         .def("__repr__", &PyInterfaceBase::__repr__)
         .def("__str__", &PyInterfaceBase::__str__)
         .def("__unicode__", &PyInterfaceBase::__unicode__)

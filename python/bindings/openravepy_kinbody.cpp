@@ -1487,7 +1487,7 @@ long PyLink::PyGeometry::__hash__() {
     return static_cast<long>(uintptr_t(_pgeometry.get()));
 }
 
-PyLink::PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {
+PyLink::PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : PyReadableInterfaceBase(plink), _plink(plink), _pyenv(pyenv) {
 }
 PyLink::~PyLink() {
 }
@@ -5945,9 +5945,9 @@ void init_openravepy_kinbody()
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             // link belongs to kinbody
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink>, PyReadableInterfaceBase >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
 #else
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink>, bases<PyReadableInterfaceBase> >("Link", DOXY_CLASS(KinBody::Link), no_init)
 #endif
                           .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
                           .def("GetIndex",&PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))

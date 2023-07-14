@@ -626,7 +626,21 @@ OPENRAVEPY_API std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfo
 OPENRAVEPY_API std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(py::object pyConnectedBodyInfoList);
 OPENRAVEPY_API py::object ReturnDOFValues(const std::vector<std::pair<std::pair<std::string, int>, dReal>>& vDOFValues);
 
-class OPENRAVEPY_API PyInterfaceBase
+class OPENRAVEPY_API PyReadableInterfaceBase
+{
+protected:
+    ReadableInterfaceBasePtr _pbase;
+public:
+    explicit PyReadableInterfaceBase(ReadableInterfaceBasePtr pbase) : _pbase(pbase) {}
+    virtual ~PyReadableInterfaceBase() = default;
+
+    virtual py::object GetReadableInterfaces();
+    virtual py::object GetReadableInterface(const std::string& xmltag);
+
+    virtual void SetReadableInterface(const std::string& xmltag, py::object oreadable);
+};
+
+class OPENRAVEPY_API PyInterfaceBase : public PyReadableInterfaceBase
 {
 protected:
     InterfaceBasePtr _pbase;
@@ -680,11 +694,6 @@ public:
 
     bool SupportsJSONCommand(const string& cmd);
     py::object SendJSONCommand(const string& cmd, py::object input, bool releasegil=false, bool lockenv=false);
-
-    virtual py::object GetReadableInterfaces();
-    virtual py::object GetReadableInterface(const std::string& xmltag);
-
-    virtual void SetReadableInterface(const std::string& xmltag, py::object oreadable);
 
     virtual string __repr__() {
         return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
