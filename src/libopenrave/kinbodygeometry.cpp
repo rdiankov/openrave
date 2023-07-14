@@ -194,7 +194,7 @@ static void AppendConeTriangulation(const Vector& pos, const dReal radius, dReal
             pos.x + RaveCos(dTheta * i - rotateOffset) * radius,
             pos.y + RaveSin(dTheta * i + rotateOffset) * radius,
             pos.z - halfHeight
-        );
+            );
 
         // two triangles
         // 1. bottom face triangle, bottom center, this line bottom, last line bottom
@@ -473,7 +473,7 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         if( _vAxialSlices.size() != rhs._vAxialSlices.size() ) {
             return 30;
         }
-        // use collision mesh to make the rest of the comparison
+    // use collision mesh to make the rest of the comparison
     case GT_TriMesh:
         if( _meshcollision.vertices.size() != rhs._meshcollision.vertices.size() ) {
             return 17;
@@ -579,7 +579,7 @@ bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
             GetConicalFrustumHeight() / 2,
             (int)(fTessellation*48.0f) + 3,
             _meshcollision
-        );
+            );
         break;
     case GT_Axial: {
         if (_vAxialSlices.size() > 1) {
@@ -1402,6 +1402,12 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             orjson::LoadJsonValueByKey(value, "radius", vGeomDataTemp.x);
             vGeomDataTemp.x *= fUnitScale;
         }
+        else if( value.HasMember("topRadius") ) { // due to a previous version of openrave
+            RAVELOG_WARN("cylinder geometry uses 'topRadius', should change this.");
+            orjson::LoadJsonValueByKey(value, "topRadius", vGeomDataTemp.x);
+            vGeomDataTemp.x *= fUnitScale;
+        }
+
         if (value.HasMember("height")) {
             orjson::LoadJsonValueByKey(value, "height", vGeomDataTemp.y);
             vGeomDataTemp.y *= fUnitScale;
@@ -1669,7 +1675,7 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         if( _meshcollision.vertices.size() > 0) {
             // no need to check rot(2,2), guaranteed to be 1 if rot(0,0) and rot(1,1) are both 1
             const bool bRotationIsIdentity = RaveFabs(tglobal.rot(0,0) - 1.0) <= g_fEpsilon && RaveFabs(tglobal.rot(1,1) - 1.0) <= g_fEpsilon;
-            Vector vmin, vmax; 
+            Vector vmin, vmax;
             // if no rotation (identity), skip rotation of vertices
             if (bRotationIsIdentity) {
                 vmin = vmax = _meshcollision.vertices.at(0);
@@ -2069,28 +2075,28 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     }
 
     // negativeCropContainerMargins
-    if(GetNegativeCropContainerMargins() != info._vNegativeCropContainerMargins){
+    if(GetNegativeCropContainerMargins() != info._vNegativeCropContainerMargins) {
         SetNegativeCropContainerMargins(info._vNegativeCropContainerMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s negativeCropContainerMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
     // positiveCropContainerMargins
-    if(GetPositiveCropContainerMargins() != info._vPositiveCropContainerMargins){
+    if(GetPositiveCropContainerMargins() != info._vPositiveCropContainerMargins) {
         SetPositiveCropContainerMargins(info._vPositiveCropContainerMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
     // negativeCropContainerEmptyMargins
-    if(GetNegativeCropContainerEmptyMargins() != info._vNegativeCropContainerEmptyMargins){
+    if(GetNegativeCropContainerEmptyMargins() != info._vNegativeCropContainerEmptyMargins) {
         SetNegativeCropContainerEmptyMargins(info._vNegativeCropContainerEmptyMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s negativeCropContainerEmptyMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
     // positiveCropContainerEmptyMargins
-    if(GetPositiveCropContainerEmptyMargins() != info._vPositiveCropContainerEmptyMargins){
+    if(GetPositiveCropContainerEmptyMargins() != info._vPositiveCropContainerEmptyMargins) {
         SetPositiveCropContainerEmptyMargins(info._vPositiveCropContainerEmptyMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerEmptyMargins changed", _info._id);
         updateFromInfoResult = UFIR_Success;
