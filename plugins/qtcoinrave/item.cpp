@@ -249,20 +249,18 @@ void KinBodyItem::Load()
                     break;
                 }
                 case GT_Cylinder: {
-                    // if normal cylinder, use SoCylinder, otherwise fallthrough to mesh case
-                    if (!geom->IsConicalFrustum()) {
-                        // make SoCylinder point towards z, not y
-                        SbMatrix m;
-                        SbRotation(SbVec3f(1, 0, 0), M_PI / 2).getValue(m);
-                        ptrans->multLeft(m);
-                        SoCylinder *cy = new SoCylinder();
-                        cy->radius = geom->GetCylinderRadius();
-                        cy->height = geom->GetCylinderHeight();
-                        cy->parts = SoCylinder::ALL;
-                        psep->addChild(cy);
-                        break;
-                    }
+                    // make SoCylinder point towards z, not y
+                    SbMatrix m;
+                    SbRotation(SbVec3f(1,0,0),M_PI/2).getValue(m);
+                    ptrans->multLeft(m);
+                    SoCylinder* cy = new SoCylinder();
+                    cy->radius = geom->GetCylinderRadius();
+                    cy->height = geom->GetCylinderHeight();
+                    cy->parts = SoCylinder::ALL;
+                    psep->addChild(cy);
+                    break;
                 }
+                case GT_ConicalFrustum:
                 case GT_Axial:
                 case GT_Cage:
                 case GT_Container:

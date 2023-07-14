@@ -176,11 +176,9 @@ private:
                     break;
                 case GT_Cylinder:
                     // cylinder axis aligned to Y
-                    if (!geom->IsConicalFrustum()) {
-                        child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(), geom->GetCylinderRadius(), geom->GetCylinderHeight() * 0.5f)));
-                        break;
-                    }
-                // fall through to trimesh otherwise
+                    child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
+                    break;
+                case GT_ConicalFrustum:
                 case GT_Axial:
                 case GT_TriMesh: {
                     if( geom->GetCollisionMesh().indices.size() >= 3 ) {

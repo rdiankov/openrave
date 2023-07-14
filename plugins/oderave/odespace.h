@@ -640,11 +640,9 @@ private:
             odegeom = dCreateSphere(0,info._vGeomData.x);
             break;
         case OpenRAVE::GT_Cylinder:
-            // if normal cylinder, use ode built-in, otherwise fallthrough to mesh case
-            if (!info.IsConicalFrustum()) {
-                odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
-                break;
-            }
+            odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
+            break;
+        case OpenRAVE::GT_ConicalFrustum:
         case OpenRAVE::GT_Axial:
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_Cage:
@@ -693,9 +691,9 @@ private:
     void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
-            boost::shared_ptr<std::unique_lock<std::mutex> > lockode;
+            boost::shared_ptr<std::unique_lock<std::mutex>> lockode;
             if( block ) {
-                lockode = boost::make_shared<std::unique_lock<std::mutex> >(_ode->_mutex);
+                lockode = boost::make_shared<std::unique_lock<std::mutex>>(_ode->_mutex);
             }
             vector<Transform> vtrans;
             KinBodyPtr pbody = pinfo->GetBody();

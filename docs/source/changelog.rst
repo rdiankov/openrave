@@ -3,16 +3,16 @@
 ChangeLog
 #########
 
-Version 0.125.0
+Version 0.126.0
 ===============
 
 * Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
 
-Version 0.124.2
+Version 0.125.0
 ===============
 
-* Add GetCylinder[xxx] functions to GeometryInfo Python binding.
-* Preserve backward compatibility when user specifies a cone.
+* Revert cylinder changes.
+* Add ConicalFrustum geometry.
 
 Version 0.124.1
 ===============

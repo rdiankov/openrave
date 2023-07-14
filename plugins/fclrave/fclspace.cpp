@@ -454,11 +454,9 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
         return std::make_shared<fcl::Sphere>(info._vGeomData.x);
 
     case OpenRAVE::GT_Cylinder:
-        // if a normal cylinder, use fcl built-in, otherwise fallthrough to mesh case
-        if (!info.IsConicalFrustum()) {
-            return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
-        }
+        return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
+    case OpenRAVE::GT_ConicalFrustum:
     case OpenRAVE::GT_Axial:
     case OpenRAVE::GT_Container:
     case OpenRAVE::GT_TriMesh:
