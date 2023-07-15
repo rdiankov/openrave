@@ -1407,13 +1407,13 @@ dReal PyLink::PyGeometry::GetCylinderHeight() const {
     return _pgeometry->GetCylinderHeight();
 }
 dReal PyLink::PyGeometry::GetConicalFrustumTopRadius() const {
-    return _pgeometry->GetConicalFrustumBottomRadius();
+    return _pgeometry->GetConicalFrustumTopRadius();
 }
 dReal PyLink::PyGeometry::GetConicalFrustumBottomRadius() const {
     return _pgeometry->GetConicalFrustumBottomRadius();
 }
 dReal PyLink::PyGeometry::GetConicalFrustumHeight() const {
-    return _pgeometry->GetCylinderHeight();
+    return _pgeometry->GetConicalFrustumHeight();
 }
 object PyLink::PyGeometry::GetBoxExtents() const {
     return toPyVector3(_pgeometry->GetBoxExtents());
