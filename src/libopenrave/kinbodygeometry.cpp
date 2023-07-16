@@ -1055,8 +1055,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
 
-    // only write the data if it is different from the default values
-    if( _t.rot.x != 1 || _t.rot.y != 0 || _t.rot.z != 0 || _t.rot.w != 0 || _t.trans.x != 0 || _t.trans.y != 0 || _t.trans.z != 0 ) {
+    // unfortunately too much code relies on "transform" being present
+    //if( _t.rot.x != 1 || _t.rot.y != 0 || _t.rot.z != 0 || _t.rot.w != 0 || _t.trans.x != 0 || _t.trans.y != 0 || _t.trans.z != 0 )
+    {
         Transform tscaled = _t;
         tscaled.trans *= fUnitScale;
         orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
