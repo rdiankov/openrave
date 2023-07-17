@@ -3,20 +3,21 @@
 ChangeLog
 #########
 
-Version 0.125.1
+Version 0.127.0
 ===============
 
 * Add GetAxialSlices method to Geometry and Python binding.
 
-Version 0.125.0
+Version 0.126.0
 ===============
 
 * Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
 
-Version 0.124.2
+Version 0.125.0
 ===============
 
-* Add GetCylinderTopRadius and GetCylinderBottomRadius to GeometryInfo Python binding.
+* Revert cylinder changes.
+* Add ConicalFrustum geometry.
 
 Version 0.124.1
 ===============
