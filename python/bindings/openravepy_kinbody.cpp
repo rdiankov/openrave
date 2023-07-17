@@ -502,6 +502,18 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
     _vGeomData2 = oInnerExtents;
 }
 
+object PyGeometryInfo::GetConicalFrustumTopRadius() const {
+    return _vGeomData[0];
+}
+
+object PyGeometryInfo::GetConicalFrustumBottomRadius() const {
+    return _vGeomData[1];
+}
+
+object PyGeometryInfo::GetConicalFrustumHeight() const {
+    return _vGeomData[2];
+}
+
 PyLinkInfo::PyLinkInfo() {
 }
 
@@ -1393,14 +1405,17 @@ dReal PyLink::PyGeometry::GetSphereRadius() const {
 dReal PyLink::PyGeometry::GetCylinderRadius() const {
     return _pgeometry->GetCylinderRadius();
 }
-dReal PyLink::PyGeometry::GetCylinderTopRadius() const {
-    return _pgeometry->GetCylinderTopRadius();
-}
-dReal PyLink::PyGeometry::GetCylinderBottomRadius() const {
-    return _pgeometry->GetCylinderBottomRadius();
-}
 dReal PyLink::PyGeometry::GetCylinderHeight() const {
     return _pgeometry->GetCylinderHeight();
+}
+dReal PyLink::PyGeometry::GetConicalFrustumTopRadius() const {
+    return _pgeometry->GetConicalFrustumTopRadius();
+}
+dReal PyLink::PyGeometry::GetConicalFrustumBottomRadius() const {
+    return _pgeometry->GetConicalFrustumBottomRadius();
+}
+dReal PyLink::PyGeometry::GetConicalFrustumHeight() const {
+    return _pgeometry->GetConicalFrustumHeight();
 }
 object PyLink::PyGeometry::GetBoxExtents() const {
     return toPyVector3(_pgeometry->GetBoxExtents());
@@ -4808,6 +4823,7 @@ void init_openravepy_kinbody()
                           .value("Cage",GT_Cage)
                           .value("CalibrationBoard",GT_CalibrationBoard)
                           .value("Axial",GT_Axial)
+                          .value("ConicalFrustum",GT_ConicalFrustum)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
@@ -4963,6 +4979,9 @@ void init_openravepy_kinbody()
                           .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("GetConicalFrustumTopRadius",&PyGeometryInfo::GetConicalFrustumTopRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumTopRadius))
+                          .def("GetConicalFrustumBottomRadius",&PyGeometryInfo::GetConicalFrustumBottomRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumBottomRadius))
+                          .def("GetConicalFrustumHeight",&PyGeometryInfo::GetConicalFrustumHeight, DOXY_FN(GeomeryInfo,GetConicalFrustumHeight))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                                "unitScale"_a = 1.0,
@@ -6080,9 +6099,10 @@ void init_openravepy_kinbody()
                                   .def("GetTransformPose",&PyLink::PyGeometry::GetTransformPose, DOXY_FN(KinBody::Link::Geometry,GetTransform))
                                   .def("GetSphereRadius",&PyLink::PyGeometry::GetSphereRadius, DOXY_FN(KinBody::Link::Geometry,GetSphereRadius))
                                   .def("GetCylinderRadius",&PyLink::PyGeometry::GetCylinderRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderRadius))
-                                  .def("GetCylinderTopRadius",&PyLink::PyGeometry::GetCylinderTopRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderTopRadius))
-                                  .def("GetCylinderBottomRadius",&PyLink::PyGeometry::GetCylinderBottomRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderBottomRadius))
                                   .def("GetCylinderHeight",&PyLink::PyGeometry::GetCylinderHeight, DOXY_FN(KinBody::Link::Geometry,GetCylinderHeight))
+                                  .def("GetConicalFrustumTopRadius",&PyLink::PyGeometry::GetConicalFrustumTopRadius, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumTopRadius))
+                                  .def("GetConicalFrustumBottomRadius",&PyLink::PyGeometry::GetConicalFrustumBottomRadius, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumBottomRadius))
+                                  .def("GetConicalFrustumHeight",&PyLink::PyGeometry::GetConicalFrustumHeight, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumHeight))
                                   .def("GetBoxExtents",&PyLink::PyGeometry::GetBoxExtents, DOXY_FN(KinBody::Link::Geometry,GetBoxExtents))
                                   .def("GetContainerOuterExtents",&PyLink::PyGeometry::GetContainerOuterExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerOuterExtents))
                                   .def("GetContainerInnerExtents",&PyLink::PyGeometry::GetContainerInnerExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerInnerExtents))
