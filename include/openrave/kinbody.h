@@ -2553,8 +2553,13 @@ private:
     virtual void SetId(const std::string& newid);
 
     /// \brief Unique name of the body.
-    const std::string& GetId() const {
+    inline const std::string& GetId() const {
         return _id;
+    }
+
+    /// \brief Unique name of the body.
+    inline const std::string& GetReferenceURI() const {
+        return _referenceUri;
     }
 
     /// Methods for accessing basic information about joints
