@@ -456,6 +456,8 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
     case OpenRAVE::GT_Cylinder:
         return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
+    case OpenRAVE::GT_ConicalFrustum:
+    case OpenRAVE::GT_Axial:
     case OpenRAVE::GT_Container:
     case OpenRAVE::GT_TriMesh:
     case OpenRAVE::GT_Cage:

@@ -36,6 +36,17 @@ public:
     int type = 0;
 };
 
+class PyAxialSlice
+{
+public:
+    PyAxialSlice();
+    PyAxialSlice(const KinBody::GeometryInfo::AxialSlice& axialslice);
+    void Get(KinBody::GeometryInfo::AxialSlice& axialslice);
+
+    float zOffset = 0.0;
+    float radius = 0.0;
+};
+
 class PyGeometryInfo
 {
 public:
@@ -58,6 +69,9 @@ public:
     object GetContainerInnerExtents();
     void SetContainerOuterExtents(object oOuterExtents);
     void SetContainerInnerExtents(object oInnerExtents);
+    object GetConicalFrustumTopRadius() const;
+    object GetConicalFrustumBottomRadius() const;
+    object GetConicalFrustumHeight() const;
 
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());
@@ -80,6 +94,7 @@ public:
     object _vPositiveCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
 
     py::list _vSideWalls;
+    py::list _vAxialSlices;
     float _containerBaseHeight = 0.0;
     float _fTransparency = 0.0;
     bool _bVisible = true;
@@ -275,6 +290,9 @@ public:
         dReal GetSphereRadius() const;
         dReal GetCylinderRadius() const;
         dReal GetCylinderHeight() const;
+        dReal GetConicalFrustumTopRadius() const;
+        dReal GetConicalFrustumBottomRadius() const;
+        dReal GetConicalFrustumHeight() const;
         object GetBoxExtents() const;
         object GetContainerOuterExtents() const;
         object GetContainerInnerExtents() const;
@@ -295,6 +313,7 @@ public:
         object GetCalibrationBoardDotColor() const;
         object GetCalibrationBoardPatternName() const;
         object GetCalibrationBoardDotDiameterDistanceRatios() const;
+        int GetNumberOfAxialSlices() const;
         object GetInfo();
         object ComputeInnerEmptyVolume() const;
         bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);

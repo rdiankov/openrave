@@ -271,6 +271,17 @@ void PySideWall::Get(KinBody::GeometryInfo::SideWall& sidewall) {
     sidewall.type = static_cast<KinBody::GeometryInfo::SideWallType>(type);
 }
 
+PyAxialSlice::PyAxialSlice() {
+}
+PyAxialSlice::PyAxialSlice(const KinBody::GeometryInfo::AxialSlice& axialslice) {
+    zOffset = axialslice.zOffset;
+    radius = axialslice.radius;
+}
+void PyAxialSlice::Get(KinBody::GeometryInfo::AxialSlice& axialslice) {
+    axialslice.zOffset = zOffset;
+    axialslice.radius = radius;
+}
+
 PyGeometryInfo::PyGeometryInfo() {
 }
 
@@ -292,6 +303,11 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vSideWalls = py::list();
     for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
         _vSideWalls.append(PySideWall(info._vSideWalls[i]));
+    }
+
+    _vAxialSlices = py::list();
+    for (size_t i = 0; i < info._vAxialSlices.size(); ++i) {
+        _vAxialSlices.append(PyAxialSlice(info._vAxialSlices[i]));
     }
 
     _vDiffuseColor = toPyVector3(info._vDiffuseColor);
@@ -389,6 +405,13 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
         pysidewall->Get(info._vSideWalls[i]);
     }
 
+    info._vAxialSlices.clear();
+    for (size_t i = 0; i < (size_t)len(_vAxialSlices); ++i) {
+        info._vAxialSlices.push_back({});
+        OPENRAVE_SHARED_PTR<PyAxialSlice> pyaxialslice = py::extract<OPENRAVE_SHARED_PTR<PyAxialSlice> >(_vAxialSlices[i]);
+        pyaxialslice->Get(info._vAxialSlices[i]);
+    }
+
     info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
     info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
     if( !IS_PYTHONOBJECT_NONE(_meshcollision) ) {
@@ -477,6 +500,18 @@ void PyGeometryInfo::SetContainerOuterExtents(object oOuterExtents)
 void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
 {
     _vGeomData2 = oInnerExtents;
+}
+
+object PyGeometryInfo::GetConicalFrustumTopRadius() const {
+    return _vGeomData[0];
+}
+
+object PyGeometryInfo::GetConicalFrustumBottomRadius() const {
+    return _vGeomData[1];
+}
+
+object PyGeometryInfo::GetConicalFrustumHeight() const {
+    return _vGeomData[2];
 }
 
 PyLinkInfo::PyLinkInfo() {
@@ -1371,6 +1406,15 @@ dReal PyLink::PyGeometry::GetCylinderRadius() const {
 dReal PyLink::PyGeometry::GetCylinderHeight() const {
     return _pgeometry->GetCylinderHeight();
 }
+dReal PyLink::PyGeometry::GetConicalFrustumTopRadius() const {
+    return _pgeometry->GetConicalFrustumTopRadius();
+}
+dReal PyLink::PyGeometry::GetConicalFrustumBottomRadius() const {
+    return _pgeometry->GetConicalFrustumBottomRadius();
+}
+dReal PyLink::PyGeometry::GetConicalFrustumHeight() const {
+    return _pgeometry->GetConicalFrustumHeight();
+}
 object PyLink::PyGeometry::GetBoxExtents() const {
     return toPyVector3(_pgeometry->GetBoxExtents());
 }
@@ -1433,6 +1477,9 @@ object PyLink::PyGeometry::GetCalibrationBoardPatternName() const {
 }
 object PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios() const {
     return py::make_tuple(_pgeometry->GetCalibrationBoardDotDiameterDistanceRatio(), _pgeometry->GetCalibrationBoardBigDotDiameterDistanceRatio());
+}
+int PyLink::PyGeometry::GetNumberOfAxialSlices() const {
+    return _pgeometry->GetNumberOfAxialSlices();
 }
 object PyLink::PyGeometry::ComputeInnerEmptyVolume() const
 {
@@ -4773,6 +4820,8 @@ void init_openravepy_kinbody()
                           .value("Container",GT_Container)
                           .value("Cage",GT_Cage)
                           .value("CalibrationBoard",GT_CalibrationBoard)
+                          .value("Axial",GT_Axial)
+                          .value("ConicalFrustum",GT_ConicalFrustum)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
@@ -4913,6 +4962,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
+                          .def_readwrite("_vAxialSlices", &PyGeometryInfo::_vAxialSlices)
                           .def_readwrite("_calibrationBoardParameters", &PyGeometryInfo::_calibrationBoardParameters)
                           .def_readwrite("_vNegativeCropContainerMargins", &PyGeometryInfo::_vNegativeCropContainerMargins)
                           .def_readwrite("_vPositiveCropContainerMargins", &PyGeometryInfo::_vPositiveCropContainerMargins)
@@ -4927,6 +4977,9 @@ void init_openravepy_kinbody()
                           .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
                           .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("GetConicalFrustumTopRadius",&PyGeometryInfo::GetConicalFrustumTopRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumTopRadius))
+                          .def("GetConicalFrustumBottomRadius",&PyGeometryInfo::GetConicalFrustumBottomRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumBottomRadius))
+                          .def("GetConicalFrustumHeight",&PyGeometryInfo::GetConicalFrustumHeight, DOXY_FN(GeomeryInfo,GetConicalFrustumHeight))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                                "unitScale"_a = 1.0,
@@ -4982,6 +5035,16 @@ void init_openravepy_kinbody()
                       .def_readwrite("transf",&PySideWall::transf)
                       .def_readwrite("vExtents",&PySideWall::vExtents)
                       .def_readwrite("type",&PySideWall::type)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >(m, "AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
+                      .def(init<>())
+#else
+    object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >("AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
+#endif
+                      .def_readwrite("zOffset",&PyAxialSlice::zOffset)
+                      .def_readwrite("radius",&PyAxialSlice::radius)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -6035,6 +6098,9 @@ void init_openravepy_kinbody()
                                   .def("GetSphereRadius",&PyLink::PyGeometry::GetSphereRadius, DOXY_FN(KinBody::Link::Geometry,GetSphereRadius))
                                   .def("GetCylinderRadius",&PyLink::PyGeometry::GetCylinderRadius, DOXY_FN(KinBody::Link::Geometry,GetCylinderRadius))
                                   .def("GetCylinderHeight",&PyLink::PyGeometry::GetCylinderHeight, DOXY_FN(KinBody::Link::Geometry,GetCylinderHeight))
+                                  .def("GetConicalFrustumTopRadius",&PyLink::PyGeometry::GetConicalFrustumTopRadius, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumTopRadius))
+                                  .def("GetConicalFrustumBottomRadius",&PyLink::PyGeometry::GetConicalFrustumBottomRadius, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumBottomRadius))
+                                  .def("GetConicalFrustumHeight",&PyLink::PyGeometry::GetConicalFrustumHeight, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumHeight))
                                   .def("GetBoxExtents",&PyLink::PyGeometry::GetBoxExtents, DOXY_FN(KinBody::Link::Geometry,GetBoxExtents))
                                   .def("GetContainerOuterExtents",&PyLink::PyGeometry::GetContainerOuterExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerOuterExtents))
                                   .def("GetContainerInnerExtents",&PyLink::PyGeometry::GetContainerInnerExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerInnerExtents))
@@ -6055,6 +6121,7 @@ void init_openravepy_kinbody()
                                   .def("GetCalibrationBoardDotColor",&PyLink::PyGeometry::GetCalibrationBoardDotColor, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotColor))
                                   .def("GetCalibrationBoardPatternName",&PyLink::PyGeometry::GetCalibrationBoardPatternName, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardPatternName))
                                   .def("GetCalibrationBoardDotDiameterDistanceRatios",&PyLink::PyGeometry::GetCalibrationBoardDotDiameterDistanceRatios, DOXY_FN(KinBody::Link::Geometry,GetCalibrationBoardDotDiameterDistanceRatios))
+                                  .def("GetNumberOfAxialSlices",&PyLink::PyGeometry::GetNumberOfAxialSlices, DOXY_FN(KinBody::Link::Geometry,GetNumberOfAxialSlices))
                                   .def("ComputeInnerEmptyVolume",&PyLink::PyGeometry::ComputeInnerEmptyVolume,DOXY_FN(KinBody::Link::Geometry,ComputeInnerEmptyVolume))
                                   .def("GetInfo",&PyLink::PyGeometry::GetInfo,DOXY_FN(KinBody::Link::Geometry,GetInfo))
                                   .def("__eq__",&PyLink::PyGeometry::__eq__)

@@ -70,7 +70,7 @@ protected:
         _rEnvironment.SetObject();
         if (listbodies.size() > 0) {
             EnvironmentBaseConstPtr penv = listbodies.front()->GetEnv();
-            OpenRAVE::orjson::SetJsonValueByKey(_rEnvironment, "unit", penv->GetUnit(), _allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(_rEnvironment, "unitInfo", penv->GetUnitInfo(), _allocator);
             dReal fUnitScale = 1.0;
 
             FOREACHC(itbody, listbodies) {

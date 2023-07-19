@@ -46,6 +46,8 @@ enum GeometryType {
     GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z. The origin is at the bottom of the base.
     GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
     GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
+    GT_Axial = 8, ///< a geometry defined by many slices along an axis, oriented towards z-axis
+    GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
 };
 
 enum DynamicsConstraintsType {
@@ -346,6 +348,7 @@ public:
                    && _vGeomData3 == other._vGeomData3
                    && _vGeomData4 == other._vGeomData4
                    && _vSideWalls == other._vSideWalls
+                   && _vAxialSlices == other._vAxialSlices
                    && _vDiffuseColor == other._vDiffuseColor
                    && _vAmbientColor == other._vAmbientColor
                    && _meshcollision == other._meshcollision
@@ -398,6 +401,15 @@ public:
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
         }
+        inline dReal GetConicalFrustumTopRadius() const {
+            return _vGeomData.x;
+        }
+        inline dReal GetConicalFrustumBottomRadius() const {
+            return _vGeomData.y;
+        }
+        inline dReal GetConicalFrustumHeight() const {
+            return _vGeomData.z;
+        }
         inline const Vector& GetBoxExtents() const {
             return _vGeomData;
         }
@@ -443,6 +455,7 @@ public:
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
+        ///< for conical frustum, first 3 values are top radius, bottom radius, height
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
         Vector _vGeomData;
@@ -555,6 +568,51 @@ public:
         /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
         void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1) const;
 
+
+        /// \brief A slice used to construct axial geometry.
+        struct AxialSlice
+        {
+            dReal zOffset; ///< z coordinate of the axial slice
+            dReal radius; ///< radius of the axial slice
+
+            int Compare(const AxialSlice& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
+            bool operator==(const AxialSlice& other) const {
+                return zOffset == other.zOffset && radius == other.radius;
+            }
+            bool operator!=(const AxialSlice& other) const {
+                return !operator==(other);
+            }
+            bool operator<(const AxialSlice& other) const {
+                return zOffset < other.zOffset;
+            }
+        };
+
+        /// \brief An axial geometry representation 
+        /// 
+        /// An axial might look like drawing below. 
+        /// The dotted lines represents the z and y axes. Each row 
+        /// represents an axial slice.
+        ///
+        /// There has to be at least two axial slices in an axial, 
+        /// which are called top and bottom axial slices. 
+        ///
+        /// If the radius of the top and bottom slices are the same, 
+        /// the resulting shape is essentially a cylinder.
+        /// 
+        /// The axial slices stored in this vector are not sorted by
+        /// the z coordinate.
+        ///
+        ///         z
+        ///         :
+        ///      ___:___
+        ///  ...|...:...|... y
+        ///     |   :   |
+        ///      \__:__/
+        ///         : 
+        ///         :
+        ///   
+        std::vector<AxialSlice> _vAxialSlices;
+
         enum GeometryInfoField : uint32_t
         {
             GIF_Transform = (1 << 0), // _t field
@@ -648,16 +706,25 @@ public:
         }
 
         inline dReal GetSphereRadius() const {
-            return _info._vGeomData.x;
+            return _info.GetSphereRadius();
         }
         inline dReal GetCylinderRadius() const {
-            return _info._vGeomData.x;
+            return _info.GetCylinderRadius();
         }
         inline dReal GetCylinderHeight() const {
-            return _info._vGeomData.y;
+            return _info.GetCylinderHeight();
+        }
+        inline dReal GetConicalFrustumTopRadius() const {
+            return _info.GetConicalFrustumTopRadius();
+        }
+        inline dReal GetConicalFrustumBottomRadius() const {
+            return _info.GetConicalFrustumBottomRadius();
+        }
+        inline dReal GetConicalFrustumHeight() const {
+            return _info.GetConicalFrustumHeight();
         }
         inline const Vector& GetBoxExtents() const {
-            return _info._vGeomData;
+            return _info.GetBoxExtents();
         }
         inline const Vector& GetContainerOuterExtents() const {
             return _info.GetContainerOuterExtents();
@@ -694,6 +761,9 @@ public:
         }
         inline const Vector& GetPositiveCropContainerEmptyMargins() const {
             return _info._vPositiveCropContainerEmptyMargins;
+        }
+        inline int GetNumberOfAxialSlices() const {
+            return _info._vAxialSlices.size();
         }
 
         /// \brief returns the local collision mesh

@@ -285,9 +285,9 @@ private:
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
         OpenRAVE::EnvironmentLock lock(pbody->GetEnv()->GetMutex());
-        boost::shared_ptr<std::unique_lock<std::mutex>> lockode;
+        boost::shared_ptr<std::unique_lock<std::mutex> > lockode;
         if( blockode ) {
-            lockode = boost::make_shared<std::unique_lock<std::mutex>>(_ode->_mutex);
+            lockode = boost::make_shared<std::unique_lock<std::mutex> >(_ode->_mutex);
         }
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
@@ -642,6 +642,8 @@ private:
         case OpenRAVE::GT_Cylinder:
             odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
             break;
+        case OpenRAVE::GT_ConicalFrustum:
+        case OpenRAVE::GT_Axial:
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_Cage:
         case OpenRAVE::GT_CalibrationBoard: // calibration board is box-shaped but has z-offset. so have to use trimesh.

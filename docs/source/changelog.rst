@@ -3,6 +3,49 @@
 ChangeLog
 #########
 
+Version 0.125.0
+===============
+
+* Revert cylinder changes.
+* Add ConicalFrustum geometry.
+
+Version 0.124.1
+===============
+
+* Fix condition in GetCylinderRadius warning message.
+
+Version 0.124.0
+===============
+
+* Replace unit with UnitInfo object
+
+Version 0.123.1
+===============
+
+* Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
+
+* Add "axial" geometry type.
+    
+Version 0.123.0
+===============
+
+* Add conical frustum geometry support (extending current cylinder).
+
+Version 0.122.1
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
+
+Version 0.122.0
+===============
+
+* Add Reset function in IkParameterization
+
+Version 0.121.2
+===============
+
+* Remove leftover RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
 Version 0.121.1
 ===============
 
