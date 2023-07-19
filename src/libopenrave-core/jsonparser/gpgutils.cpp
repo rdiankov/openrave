@@ -137,7 +137,7 @@ static GpgME::Error FindGPGKeyByName(std::unique_ptr<GpgME::Context>& gpgCtx, co
             break;
         }
         for (const std::string& keyId : keyIds) {
-            if (StringStartsWith(key.keyID(), keyId)) {
+            if (StringEndsWith(keyId, key.shortKeyID())) {
                 outKeys.push_back(key);
                 RAVELOG_INFO("Using GPG key from %s\n", key.userID(0).name());
                 break;
