@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+Version 0.125.0
+===============
+
+* Revert cylinder changes.
+* Add ConicalFrustum geometry.
+
 Version 0.124.1
 ===============
 
