@@ -640,6 +640,12 @@ public:
                 return true;
             }
         }
+        else if (_IsEncryptedFile(path)) {
+            _ClearRapidJsonBuffer();
+            if( RaveParseEncryptedFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                return true;
+            }
+        }
         else if( _IsXFile(filename) ) {
             RobotBasePtr robot;
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
