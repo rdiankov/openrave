@@ -32,7 +32,7 @@ static void _DecryptDocument(OpenRAVE::JSONDownloadContextPtr pContext)
     std::istringstream iss(pContext->buffer, std::ios::in | std::ios::binary);
     std::ostringstream oss;
     if (GpgDecrypt(iss, oss)) {
-        if (RemoveSuffix(pContext->uri, ".gpg") || RemoveSuffix(pContext->uri, ".pgp")) {
+        if (RemoveSuffix(pContext->uri, ".gpg")) {
             pContext->buffer = oss.str();
             _ParseDocument(pContext);
         }
@@ -52,7 +52,7 @@ static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext)
     else if (StringEndsWith(pContext->uri, ".msgpack")) {
         MsgPack::ParseMsgPack(*(pContext->pDoc), pContext->buffer.data(), pContext->buffer.size());
     }
-    else if (StringEndsWith(pContext->uri, ".gpg") || StringEndsWith(pContext->uri, ".pgp")) {
+    else if (StringEndsWith(pContext->uri, ".gpg")) {
         _DecryptDocument(pContext);
     }
     else {

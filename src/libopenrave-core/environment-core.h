@@ -4193,7 +4193,7 @@ protected:
 
     static bool _IsEncryptedFile(const std::string& filename)
     {
-        return StringEndsWith(filename, ".pgp") || StringEndsWith(filename, ".gpg");
+        return StringEndsWith(filename, ".gpg");
     }
 
     // Encrypted data is also binary, so functionally it is indistinguishable from MsgPack data.

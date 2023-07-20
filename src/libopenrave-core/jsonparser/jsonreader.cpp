@@ -118,10 +118,14 @@ static void OpenEncryptedDocument(const std::string& filename, rapidjson::Docume
     std::ifstream ifs(filename.c_str());
     std::stringstream ss;
     if (GpgDecrypt(ifs, ss)) {
-        rapidjson::IStreamWrapper isw(ss);
-        rapidjson::ParseResult ok = doc.ParseStream<rapidjson::kParseFullPrecisionFlag>(isw);
-        if (!ok) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed to parse json document \"%s\"", filename, ORE_InvalidArguments);
+        try {
+            if (StringEndsWith(filename, ".json.gpg")) {
+                orjson::ParseJson(doc, ss);
+            } else if (StringEndsWith(filename, ".msgpack.gpg")) {
+                MsgPack::ParseMsgPack(doc, ss);
+            }
+        } catch (const std::exception& ex) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Failed to parse encrypted file '%s': %s", filename % ex.what(), ORE_Failed);
         }
     }
 }
@@ -529,7 +533,7 @@ protected:
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenMsgPackDocument(fullFilename, *newDoc);
             }
-            else if (StringEndsWith(fullFilename, ".gpg") || StringEndsWith(fullFilename, ".pgp")) {
+            else if (StringEndsWith(fullFilename, ".gpg")) {
                 newDoc.reset(new rapidjson::Document(&alloc));
                 OpenEncryptedDocument(fullFilename, *newDoc);
             }
