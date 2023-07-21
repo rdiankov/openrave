@@ -67,6 +67,8 @@ public:
     object GetCageBaseHalfExtents();
     object GetContainerOuterExtents();
     object GetContainerInnerExtents();
+    void SetBoxHalfExtents(object oHalfExtents);
+    void SetCageBaseHalfExtents(object oHalfExtents);
     void SetContainerOuterExtents(object oOuterExtents);
     void SetContainerInnerExtents(object oInnerExtents);
     object GetCylinderRadius();

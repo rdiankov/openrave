@@ -34,8 +34,9 @@
 #include <pcrecpp.h>
 
 #define CHECK_INTERFACE(pinterface) { \
-        if( (pinterface)->GetEnv() != shared_from_this() ) \
+        if( (pinterface)->GetEnv() != shared_from_this() ) { \
             throw openrave_exception(str(boost::format(_("env=%s, Interface %s:%s is from a different environment (env=%s) than the current one."))%GetNameId()%RaveGetInterfaceName((pinterface)->GetInterfaceType())%(pinterface)->GetXMLId()%(pinterface)->GetEnv()->GetNameId()),ORE_InvalidArguments); \
+        } \
 } \
 
 #define CHECK_COLLISION_BODY(body) { \
@@ -247,7 +248,7 @@ public:
         Destroy();
     }
 
-    virtual void Init(bool bStartSimulationThread=true)
+    void Init(bool bStartSimulationThread) override
     {
         std::lock_guard<std::mutex> lockinit(_mutexInit);
         if( _bInit ) {
@@ -416,7 +417,7 @@ public:
         RAVELOG_VERBOSE("Environment destroyed\n");
     }
 
-    virtual void Reset() override
+    void Reset() override
     {
         // destruction order is *very* important, don't touch it without consultation
         list<ViewerBasePtr> listViewers;
@@ -985,7 +986,7 @@ public:
         }
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
-        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup&~KinBody::Prop_LinkDynamics);
+        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic& ~KinBody::Prop_LinkStatic& ~KinBody::Prop_BodyRemoved& ~KinBody::Prop_LinkGeometry& ~KinBody::Prop_LinkGeometryGroup& ~KinBody::Prop_LinkDynamics);
         pbody->_PostprocessChangedParameters(maskPotentialyChanged);
         _CallBodyCallbacks(pbody, 1);
     }
@@ -1026,7 +1027,7 @@ public:
         }
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
-        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic&~KinBody::Prop_LinkStatic&~KinBody::Prop_BodyRemoved&~KinBody::Prop_LinkGeometry&~KinBody::Prop_LinkGeometryGroup&~KinBody::Prop_LinkDynamics);
+        const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic& ~KinBody::Prop_LinkStatic& ~KinBody::Prop_BodyRemoved& ~KinBody::Prop_LinkGeometry& ~KinBody::Prop_LinkGeometryGroup& ~KinBody::Prop_LinkDynamics);
         robot->_PostprocessChangedParameters(maskPotentialyChanged);
         _CallBodyCallbacks(robot, 1);
     }
@@ -2732,13 +2733,18 @@ public:
         int numBodies = 0;
         {
             SharedLock lock464(_mutexInterfaces);
-            vBodies = _vecbodies;
             numBodies = _GetNumBodies();
+            if( _vecbodies.size() != numBodies ) {
+                RAVELOG_WARN_FORMAT("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d.", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size());
+                //throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d."), GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size(), ORE_InvalidState);
+            }
+            vBodies = _vecbodies;
         }
         info._vBodyInfos.resize(numBodies);
         int validBodyItr = 0;
         for(KinBodyPtr& pbody : vBodies) {
             if (!pbody) {
+                RAVELOG_WARN_FORMAT("env=%s, got invalid body", GetNameId());
                 continue;
             }
             KinBody::KinBodyInfoPtr& pbodyFromInfo = info._vBodyInfos.at(validBodyItr);
@@ -2752,7 +2758,9 @@ public:
             }
             ++validBodyItr;
         }
-        BOOST_ASSERT(validBodyItr == numBodies);
+        if( validBodyItr != numBodies) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, started out with %d bodies, but could only iterate over %d valid ones."), GetNameId()%numBodies%validBodyItr, ORE_InvalidState);
+        }
         info._keywords = _keywords;
         info._description = _description;
         if (!!_pPhysicsEngine) {

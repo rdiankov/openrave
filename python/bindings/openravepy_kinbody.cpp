@@ -492,6 +492,16 @@ object PyGeometryInfo::GetContainerInnerExtents()
     return toPyVector3(ExtractVector<dReal>(_vGeomData2));
 }
 
+void PyGeometryInfo::SetBoxHalfExtents(object oHalfExtents)
+{
+    _vGeomData = oHalfExtents;
+}
+
+void PyGeometryInfo::SetCageBaseHalfExtents(object oHalfExtents)
+{
+    _vGeomData = oHalfExtents;
+}
+
 void PyGeometryInfo::SetContainerOuterExtents(object oOuterExtents)
 {
     _vGeomData = oOuterExtents;
@@ -2248,6 +2258,11 @@ PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
 PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo)
 {
     return PyGeometryInfoPtr(new PyGeometryInfo(geominfo));
+}
+
+py::object toPyObject(const PyGeometryInfoPtr& pygeom)
+{
+    return py::to_object(pygeom);
 }
 
 PyKinBodyStateSaver::PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
@@ -4850,10 +4865,10 @@ void init_openravepy_kinbody()
 #else
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>("SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
 #endif
-                          .value("SWT_NX",KinBody::GeometryInfo::SideWallType::SWT_NX)
-                          .value("SWT_PX",KinBody::GeometryInfo::SideWallType::SWT_PX)
-                          .value("SWT_NY",KinBody::GeometryInfo::SideWallType::SWT_NY)
-                          .value("SWT_PY",KinBody::GeometryInfo::SideWallType::SWT_PY)
+                          .value("NX",KinBody::GeometryInfo::SideWallType::SWT_NX)
+                          .value("PX",KinBody::GeometryInfo::SideWallType::SWT_PX)
+                          .value("NY",KinBody::GeometryInfo::SideWallType::SWT_NY)
+                          .value("PY",KinBody::GeometryInfo::SideWallType::SWT_PY)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> >(m, "ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
@@ -4997,8 +5012,10 @@ void init_openravepy_kinbody()
                           .def("GetCageBaseHalfExtents",&PyGeometryInfo::GetCageBaseHalfExtents, DOXY_FN(GeomeryInfo,GetCageBaseHalfExtents))
                           .def("GetContainerOuterExtents",&PyGeometryInfo::GetContainerOuterExtents, DOXY_FN(GeomeryInfo,GetContainerOuterExtents))
                           .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
-                          .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
-                          .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("SetBoxHalfExtents",&PyGeometryInfo::SetBoxHalfExtents, PY_ARGS("halfExtents") DOXY_FN(GeomeryInfo,SetBoxHalfExtents))
+                          .def("SetCageBaseHalfExtents",&PyGeometryInfo::SetCageBaseHalfExtents, PY_ARGS("halfExtents") DOXY_FN(GeomeryInfo,SetCageBaseHalfExtents))
+                          .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,SetContainerOuterExtents))
+                          .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,SetContainerInnerExtents))
                           .def("GetCylinderHeight",&PyGeometryInfo::GetCylinderHeight, DOXY_FN(GeomeryInfo,GetCylinderHeight))
                           .def("GetCylinderRadius",&PyGeometryInfo::GetCylinderRadius, DOXY_FN(GeomeryInfo,GetCylinderRadius))
                           .def("GetConicalFrustumTopRadius",&PyGeometryInfo::GetConicalFrustumTopRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumTopRadius))

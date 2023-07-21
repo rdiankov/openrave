@@ -67,6 +67,9 @@ public:
     /// Removing all environment pointer might not be enough to destroy the environment resources.
     virtual void Destroy()=0;
 
+    /// \brief initializes the environment
+    virtual void Init(bool bStartSimulationThread) = 0;
+            
     /// \brief Resets all objects of the scene (preserves all problems, planners). <b>[multi-thread safe]</b>
     ///
     /// Do not call inside a SimulationStep call

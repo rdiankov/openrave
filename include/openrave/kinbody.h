@@ -420,8 +420,11 @@ public:
         inline dReal GetConicalFrustumHeight() const {
             return _vGeomData.z;
         }
-        inline const Vector& GetBoxExtents() const {
+        inline const Vector& GetBoxExtents() const { // deprecated?
             return _vGeomData;
+        }
+        inline void SetBoxHalfExtents(const Vector& halfExtents) {
+            _vGeomData = halfExtents;
         }
         inline const Vector& GetBoxHalfExtents() const {
             return _vGeomData;
@@ -429,6 +432,10 @@ public:
 
         inline const Vector& GetCageBaseHalfExtents() const {
             return _vGeomData;
+        }
+
+        inline void SetCageBaseHalfExtents(const Vector& halfExtents) {
+            _vGeomData = halfExtents;
         }
 
         /// \brief compute the inner empty volume in the geometry coordinate system

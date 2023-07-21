@@ -73,22 +73,6 @@ namespace openravepy {
 OPENRAVEPY_API py::object toPyObject(const rapidjson::Value& value);
 OPENRAVEPY_API void toRapidJSONValue(const py::object &obj, rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator);
 
-/// used externally, don't change definitions
-//@{
-OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
-OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
-OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
-OPENRAVEPY_API py::object toPyArray(const Transform& t);
-OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfo>& infos);
-OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
-OPENRAVEPY_API ReadablePtr ExtractReadable(py::object o);
-OPENRAVEPY_API py::object toPyReadable(ReadablePtr p);
-OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const std::string& serializeddata);
-//@}
-
-
 struct DummyStruct {};
 
 class PyInterfaceBase;
@@ -171,6 +155,21 @@ typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint> PyJointPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
 
+/// used externally, don't change definitions
+//@{
+OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
+OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
+OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
+OPENRAVEPY_API py::object toPyArray(const Transform& t);
+OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfo>& infos);
+OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
+OPENRAVEPY_API ReadablePtr ExtractReadable(py::object o);
+OPENRAVEPY_API py::object toPyReadable(ReadablePtr p);
+OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
+OPENRAVEPY_API py::object toPyIkParameterization(const IkParameterization& ikparam);
+OPENRAVEPY_API py::object toPyIkParameterization(const std::string& serializeddata);
+OPENRAVEPY_API py::object toPyObject(const PyGeometryInfoPtr& pygeom);
+//@}
 
 inline uint64_t GetMicroTime()
 {
