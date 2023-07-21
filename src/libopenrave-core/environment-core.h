@@ -3871,8 +3871,14 @@ protected:
             return true;
         }
 
+        // if _mapBodyNameIndex contained invalid env body indexBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
         const int envBodyIndex = it->second;
-        BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // if _mapBodyNameIndex contained invalid env body indexBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
+        if( envBodyIndex <= 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' is not added to the environment."), GetNameId()%pbody->GetName(), ORE_InvalidState);
+        }
+        if( envBodyIndex >= (int)_vecbodies.size() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' has environmentBodyIndex=%d, which is greater than the number of bodies %d."), GetNameId()%pbody->GetName()%envBodyIndex%_vecbodies.size(), ORE_InvalidState);
+        }
 
         const KinBodyPtr& pExistingBody = _vecbodies.at(envBodyIndex);
         BOOST_ASSERT(!!pExistingBody); // if _mapBodyNameIndex contained env body index of null KinBody, it's a bug that _mapBodyNameIndex and _vecbodies are not in sync
@@ -3882,7 +3888,7 @@ protected:
         }
 
         if( bDoThrow ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body (id=\"%s\", envBodyIndex=%d) has same name \"%s\" as existing body (id=\"%s\", envBodyIndex=%d)"), GetId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%name%pExistingBody->GetId()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyNameConflict);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body (id=\"%s\", envBodyIndex=%d) has same name \"%s\" as existing body (id=\"%s\", envBodyIndex=%d)"), GetNameId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%name%pExistingBody->GetId()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyNameConflict);
         }
         return false;
     }
