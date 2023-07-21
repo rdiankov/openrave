@@ -419,6 +419,7 @@ public:
 
     void Reset() override
     {
+        RAVELOG_DEBUG_FORMAT("env=%s, resetting", GetNameId());
         // destruction order is *very* important, don't touch it without consultation
         list<ViewerBasePtr> listViewers;
         GetViewers(listViewers);
@@ -2734,7 +2735,7 @@ public:
         {
             SharedLock lock464(_mutexInterfaces);
             numBodies = _GetNumBodies();
-            if( _vecbodies.size() != numBodies ) {
+            if( (int)_vecbodies.size() != numBodies ) {
                 RAVELOG_WARN_FORMAT("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d.", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size());
                 //throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d."), GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size(), ORE_InvalidState);
             }
@@ -3877,7 +3878,7 @@ protected:
             throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' is not added to the environment."), GetNameId()%pbody->GetName(), ORE_InvalidState);
         }
         if( envBodyIndex >= (int)_vecbodies.size() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' has environmentBodyIndex=%d, which is greater than the number of bodies %d."), GetNameId()%pbody->GetName()%envBodyIndex%_vecbodies.size(), ORE_InvalidState);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' has environmentBodyIndex=%d, which is greater than the number of bodies %d, _mapBodyNameIndex=%d."), GetNameId()%pbody->GetName()%envBodyIndex%_vecbodies.size()%_mapBodyNameIndex.size(), ORE_InvalidState);
         }
 
         const KinBodyPtr& pExistingBody = _vecbodies.at(envBodyIndex);
