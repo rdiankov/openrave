@@ -534,6 +534,26 @@ object PyGeometryInfo::GetConicalFrustumHeight() const {
     return _vGeomData[2];
 }
 
+std::string PyGeometryInfo::__repr__()
+{
+    rapidjson::Document doc;
+    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+    dReal fUnitScale = 1;
+    int options = 0;
+    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+    return std::string("GeometryInfo('") + orjson::DumpJson(doc) + std::string("')");
+}
+
+std::string PyGeometryInfo::__str__()
+{
+    rapidjson::Document doc;
+    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+    dReal fUnitScale = 1;
+    int options = 0;
+    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+    return orjson::DumpJson(doc);
+}
+
 PyLinkInfo::PyLinkInfo() {
 }
 
@@ -5037,6 +5057,8 @@ void init_openravepy_kinbody()
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON, PyGeometryInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(GeometryInfo,SerializeJSON)))
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PyGeometryInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(GeometryInfo, DeserializeJSON)))
 #endif
+                          .def("__repr__", &PyGeometryInfo::__repr__)
+                          .def("__str__", &PyGeometryInfo::__str__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def(py::pickle(
                                    [](const PyGeometryInfo &pygeom) {

@@ -77,6 +77,9 @@ public:
     object GetConicalFrustumBottomRadius() const;
     object GetConicalFrustumHeight() const;
 
+    std::string __repr__();
+    std::string __str__();
+    
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());
     object _vGeomData2 = toPyVector4(Vector());
