@@ -564,7 +564,7 @@ protected:
                 std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(referenceUri)) {
                     std::set<std::string> circularReference;
-
+                    RAVELOG_VERBOSE_FORMAT("env=%s, processing reference uri '%s' from iInputBodyIndex%d", _penv->GetNameId()%referenceUri%iInputBodyIndex);
                     int insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
                     if( insertIndex < 0 ) {
                         RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
@@ -607,10 +607,10 @@ protected:
     /// \return the index into envInfo._vBodyInfos where the entry was edited. If failed, then return -1
     int _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const std::string& originBodyName, const rapidjson::Value& rEnvInfo, const std::string& referenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc, const std::string& currentFilename) {
         if (circularReference.find(referenceUri) != circularReference.end()) {
-            RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId);
+            RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to uri '%s' found on originBodyId '%s', originBodyName '%s'", referenceUri%originBodyId%originBodyName);
             return -1;
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetId()%referenceUri%circularReference.size()%currentFilename);
+        RAVELOG_DEBUG_FORMAT("env=%s, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetNameId()%referenceUri%circularReference.size()%currentFilename);
         circularReference.insert(referenceUri);
 
         dReal fRefUnitScale = fUnitScale;  // unit scale for rRefKinBodyInfo
@@ -638,12 +638,13 @@ protected:
                 }
             }
             if (!bFoundBody) {
-                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
+                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in originBodyId '%s', originBodyName '%s'", referenceUri%originBodyId%originBodyName);
                 return -1;
             }
 
             std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rRefKinBodyInfo, "referenceUri", "");
             if (_IsExpandableReferenceUri(nextReferenceUri)) {
+                RAVELOG_VERBOSE_FORMAT("env=%s, processing next reference uri '%s'", _penv->GetNameId()%nextReferenceUri);
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
@@ -844,6 +845,7 @@ protected:
 #endif
             }
             std::set<std::string> circularReference; // dummy
+            RAVELOG_VERBOSE_FORMAT("env=%s, processing reference uri '%s'", _penv->GetNameId()%referenceUri);
             insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
                 RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
