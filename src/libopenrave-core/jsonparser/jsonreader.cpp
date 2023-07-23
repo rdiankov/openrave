@@ -879,6 +879,12 @@ protected:
             }
         }
         pKinBodyInfo->DeserializeJSON(rBodyInfo, fUnitScale, _deserializeOptions);
+
+        if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
+            // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
+            pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, _uri, _filename);
+        }
+
         KinBodyPtr pBody;
         if( !!pRobotBaseInfo ) {
             _ProcessURIsInRobotBaseInfo(*pRobotBaseInfo, rEnvInfo, fUnitScale, alloc, mapProcessedConnectedBodyUris);
