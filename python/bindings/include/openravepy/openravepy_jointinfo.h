@@ -95,6 +95,10 @@ public:
     object _filenamecollision = py::none_();
     object _vRenderScale = toPyVector3(Vector(1,1,1));
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
+    float _fTransparency = 0.0;
+    bool _bVisible = true;
+    bool _bModifiable = true;
+    
     object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
@@ -102,10 +106,6 @@ public:
 
     py::list _vSideWalls;
     py::list _vAxialSlices;
-    float _containerBaseHeight = 0.0;
-    float _fTransparency = 0.0;
-    bool _bVisible = true;
-    bool _bModifiable = true;
     py::dict _calibrationBoardParameters;
 };
 

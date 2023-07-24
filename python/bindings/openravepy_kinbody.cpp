@@ -4457,6 +4457,7 @@ public:
             r._meshcollision,
             (int)r._type,
             py::make_tuple(
+                r._id,
                 r._name,
                 r._filenamerender,
                 r._filenamecollision
@@ -4467,10 +4468,16 @@ public:
             r._bVisible,
             r._bModifiable,
             r._calibrationBoardParameters,
-            r._vNegativeCropContainerMargins,
-            r._vPositiveCropContainerMargins,
-            r._vNegativeCropContainerEmptyMargins,
-            r._vPositiveCropContainerEmptyMargins
+            py::make_tuple(
+                r._vNegativeCropContainerMargins,
+                r._vPositiveCropContainerMargins,
+                r._vNegativeCropContainerEmptyMargins,
+                r._vPositiveCropContainerEmptyMargins
+                ),
+            py::make_tuple(
+                r._vSideWalls,
+                r._vAxialSlices
+                )
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4479,48 +4486,27 @@ public:
         r._vGeomData = state[1][py::to_object(0)];
         r._vGeomData2 = state[1][py::to_object(1)];
         r._vGeomData3 = state[1][py::to_object(2)];
-        if( py::len(state[1]) >= 4 ) { // for backward compatibility
-            r._vGeomData4 = state[1][py::to_object(3)];
-        }
+        r._vGeomData4 = state[1][py::to_object(3)];
         r._vDiffuseColor = state[2];
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
-        r._vNegativeCropContainerMargins = state[13];
-        r._vPositiveCropContainerMargins = state[14];
-        r._vNegativeCropContainerEmptyMargins = state[15];
-        r._vPositiveCropContainerEmptyMargins = state[16];
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
-#else
-        bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
-#endif
-        if( bIsState6Str ) {
-            // old format
-            r._filenamerender = state[6];
-            r._filenamecollision = state[7];
-            r._name = py::none_();
-            r._vRenderScale = state[8];
-            r._vCollisionScale = state[9];
-            r._fTransparency = py::extract<float>(state[10]);
-            r._bVisible = py::extract<bool>(state[11]);
-            r._bModifiable = py::extract<bool>(state[12]);
-        }
-        else {
-            // new format
-            r._name = state[6][py::to_object(0)];
-            r._filenamerender = state[6][py::to_object(1)];
-            r._filenamecollision = state[6][py::to_object(2)];
-            r._vRenderScale = state[7];
-            r._vCollisionScale = state[8];
-            r._fTransparency = py::extract<float>(state[9]);
-            r._bVisible = py::extract<bool>(state[10]);
-            r._bModifiable = py::extract<bool>(state[11]);
-        }
-        if (r._type == GT_CalibrationBoard) {
-            r._calibrationBoardParameters = (py::dict) state[12];
-        }
+        r._id = state[6][py::to_object(0)];
+        r._name = state[6][py::to_object(1)];
+        r._filenamerender = state[6][py::to_object(2)];
+        r._filenamecollision = state[6][py::to_object(3)];
+        r._vRenderScale = state[7];
+        r._vCollisionScale = state[8];
+        r._fTransparency = py::extract<float>(state[9]);
+        r._bVisible = py::extract<bool>(state[10]);
+        r._bModifiable = py::extract<bool>(state[11]);
+        r._calibrationBoardParameters = (py::dict) state[12];
+        r._vNegativeCropContainerMargins = state[13][py::to_object(0)];
+        r._vPositiveCropContainerMargins = state[13][py::to_object(1)];
+        r._vNegativeCropContainerEmptyMargins = state[13][py::to_object(2)];
+        r._vPositiveCropContainerEmptyMargins = state[13][py::to_object(3)];
+        r._vSideWalls = state[14][py::to_object(0)];
+        r._vAxialSlices = state[14][py::to_object(1)];
     }
 };
 
