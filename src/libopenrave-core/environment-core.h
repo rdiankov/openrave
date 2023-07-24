@@ -1728,12 +1728,13 @@ public:
             if( !bSuccess || !robot ) {
                 return RobotBasePtr();
             }
-            //robot->__struri = filename;
         }
 
         // have to set the URI to the passed in one rather than the resolved one, otherwise external components won't be able to compare if a URI is equivalent or not
         if( !!robot ) {
-            robot->__struri = filename;
+            if( robot->__struri.empty() ) {
+                robot->__struri = filename;
+            }
         }
 
         return robot;
@@ -1792,15 +1793,8 @@ public:
             if( !bSuccess || !robot ) {
                 return RobotBasePtr();
             }
-            robot->__struri = preader->_filename;
-        }
-
-        if( !!robot ) {
-            // check if have to reset the URI
-            FOREACHC(itatt, atts) {
-                if( itatt->first == "uri" ) {
-                    robot->__struri = itatt->second;
-                }
+            if( robot->__struri.empty() ) {
+                robot->__struri = preader->_filename;
             }
         }
 
@@ -1898,7 +1892,9 @@ public:
                     }
                     listGeometries.front()._filenamerender = fullfilename;
                     if( body->InitFromGeometries(listGeometries) ) {
-                        body->__struri = fullfilename;
+                        if( body->__struri.empty() ) {
+                            body->__struri = fullfilename;
+                        }
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
@@ -1934,12 +1930,13 @@ public:
             if( !bSuccess || !body ) {
                 return KinBodyPtr();
             }
-            //body->__struri = filename;
         }
 
         // have to set the URI to the passed in one rather than the resolved one, otherwise external components won't be able to compare if a URI is equivalent or not
         if( !!body ) {
-            body->__struri = filename;
+            if( body->__struri.empty() ) {
+                body->__struri = filename;
+            }
         }
 
         return body;
@@ -1998,17 +1995,11 @@ public:
             if( !bSuccess || !body ) {
                 return KinBodyPtr();
             }
-            body->__struri = preader->_filename;
-        }
-
-        if( !!body ) {
-            // check if have to reset the URI
-            FOREACHC(itatt, atts) {
-                if( itatt->first == "uri" ) {
-                    body->__struri = itatt->second;
-                }
+            if( body->__struri.empty() ) {
+                body->__struri = preader->_filename;
             }
         }
+
         return body;
     }
 
@@ -2046,7 +2037,9 @@ public:
                 return InterfaceBasePtr();
             }
             preader->endElement(RaveGetInterfaceName(preadable->_pinterface->GetInterfaceType()));     // have to end the tag!
-            preadable->_pinterface->__struri = filename;
+            if(preadable->_pinterface->__struri.empty() ) {
+                preadable->_pinterface->__struri = filename;
+            }
             return preadable->_pinterface;
         }
         catch(const std::exception &ex) {
@@ -2179,7 +2172,9 @@ public:
             else {
                 return InterfaceBasePtr();
             }
-            pinterface->__struri = filename;
+            if( pinterface->__struri.empty() ) {
+                pinterface->__struri = filename;
+            }
         }
         else {
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
@@ -2197,7 +2192,9 @@ public:
                     return InterfaceBasePtr();
                 }
             }
-            pinterface->__struri = filename;
+            if( pinterface->__struri.empty() ) {
+                pinterface->__struri = filename;
+            }
         }
         return pinterface;
     }
@@ -2216,7 +2213,9 @@ public:
         if( !bSuccess ) {
             return InterfaceBasePtr();
         }
-        pinterface->__struri = preader->_filename;
+        if( pinterface->__struri.empty() ) {
+            pinterface->__struri = preader->_filename;
+        }
         return pinterface;
     }
 
