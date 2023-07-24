@@ -333,7 +333,7 @@ public:
                 _ProcessEnvInfoBodies(envInfo, *prReferenceEnvInfo, alloc, pReferenceUri, fullFilename, mapProcessedConnectedBodyUris);
             }
         }
-        else if( !pReferenceUri[0] ) {
+        else if( !!pReferenceUri[0] ) {
             if( _bMustResolveEnvironmentURI ) {
                 throw OPENRAVE_EXCEPTION_FORMAT("Failed to load env referenceUri='%s' from file '%s'", pReferenceUri%_filename, ORE_InvalidURI);
             }
@@ -594,7 +594,7 @@ protected:
                         vInputToBodyInfoMapping.at(iInputBodyIndex) = insertIndex;
                     }
                 }
-                else if( !pReferenceUri[0] ) {
+                else if( !!pReferenceUri[0] ) {
                     if (_bMustResolveURI) {
                         throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%pReferenceUri, ORE_InvalidURI);
                     }
@@ -669,7 +669,7 @@ protected:
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, rEnvInfo, pNextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
-            else if( !pNextReferenceUri[0] ) {
+            else if( !!pNextReferenceUri[0] ) {
                 RAVELOG_ERROR_FORMAT("nextReferenceUri='%s' is not a valid URI. Scope is '%s'", pNextReferenceUri%currentFilename);
             }
         }
@@ -880,7 +880,7 @@ protected:
 
             }
         }
-        else if( !pReferenceUri[0] ) {
+        else if( !!pReferenceUri[0] ) {
             if (_bMustResolveURI) {
                 throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%pReferenceUri, ORE_InvalidURI);
             }
