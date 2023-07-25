@@ -1796,6 +1796,9 @@ public:
             if( robot->__struri.empty() ) {
                 robot->__struri = preader->_filename;
             }
+            if( robot->__struri.empty() ) {
+                robot->__struri = uri;
+            }
         }
 
         return robot;
