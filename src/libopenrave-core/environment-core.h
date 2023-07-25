@@ -1797,6 +1797,14 @@ public:
                 robot->__struri = preader->_filename;
             }
         }
+        if( !!robot ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    robot->__struri = itatt->second;
+                }
+            }
+        }
 
         return robot;
     }
@@ -1997,6 +2005,14 @@ public:
             }
             if( body->__struri.empty() ) {
                 body->__struri = preader->_filename;
+            }
+        }
+        if( !!body ) {
+            // check if have to reset the URI
+            FOREACHC(itatt, atts) {
+                if( itatt->first == "uri" ) {
+                    body->__struri = itatt->second;
+                }
             }
         }
 
