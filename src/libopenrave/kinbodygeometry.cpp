@@ -1022,7 +1022,7 @@ void KinBody::GeometryInfo::Reset()
     _vPositiveCropContainerEmptyMargins = Vector(0,0,0);
 }
 
-inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
+const char* GetGeometryTypeString(GeometryType geometryType)
 {
     switch(geometryType) {
     case GT_Box:
@@ -1046,7 +1046,7 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
     case GT_None:
         return "";
     }
-    return "";
+    return "(unknown)";
 }
 
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
@@ -1063,7 +1063,7 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
     }
 
-    orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
+    orjson::SetJsonValueByKey(rGeometryInfo, "type", GetGeometryTypeString(_type), allocator);
 
     switch(_type) {
     case GT_Box:

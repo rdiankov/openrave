@@ -57,6 +57,8 @@ enum GeometryType : uint8_t
     GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
 };
 
+OPENRAVE_API const char* GetGeometryTypeString(GeometryType geometryType);
+
 enum DynamicsConstraintsType : int8_t
 {
     DC_Unknown = -1, ///< constraints type is not set.
