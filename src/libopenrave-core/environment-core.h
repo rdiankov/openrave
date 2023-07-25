@@ -660,7 +660,7 @@ public:
         return false;
     }
 
-    virtual bool LoadData(const std::string& data, const AttributesList& atts)
+    virtual bool LoadData(const std::string& data, const AttributesList& atts, const std::string& uri)
     {
         EnvironmentLock lockenv(GetMutex());
         if( _IsColladaData(data) ) {
@@ -668,11 +668,11 @@ public:
         }
         if( _IsJSONData(data) ) {
             _ClearRapidJsonBuffer();
-            return RaveParseJSONData(shared_from_this(), data, UFIM_Exact, atts, *_prLoadEnvAlloc);
+            return RaveParseJSONData(shared_from_this(), uri, data, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         if( _IsMsgPackData(data) ) {
             _ClearRapidJsonBuffer();
-            return RaveParseMsgPackData(shared_from_this(), data, UFIM_Exact, atts, *_prLoadEnvAlloc);
+            return RaveParseMsgPackData(shared_from_this(), uri, data, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         return _ParseXMLData(OpenRAVEXMLParser::CreateEnvironmentReader(shared_from_this(),atts),data);
     }
@@ -1740,7 +1740,7 @@ public:
         return robot;
     }
 
-    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts) override
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts, const std::string& uri) override
     {
         EnvironmentLock lockenv(GetMutex());
 
@@ -1760,13 +1760,13 @@ public:
         }
         else if( _IsJSONData(data) ) {
             _ClearRapidJsonBuffer();
-            if( !RaveParseJSONData(shared_from_this(), robot, data, atts, *_prLoadEnvAlloc) ) {
+            if( !RaveParseJSONData(shared_from_this(), robot, uri, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsMsgPackData(data) ) {
             _ClearRapidJsonBuffer();
-            if( !RaveParseMsgPackData(shared_from_this(), robot, data, atts, *_prLoadEnvAlloc) ) {
+            if( !RaveParseMsgPackData(shared_from_this(), robot, uri, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
@@ -1942,7 +1942,7 @@ public:
         return body;
     }
 
-    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts)
+    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts, const std::string& uri)
     {
         EnvironmentLock lockenv(GetMutex());
 
@@ -1962,13 +1962,13 @@ public:
         }
         else if( _IsJSONData(data) ) {
             _ClearRapidJsonBuffer();
-            if( !RaveParseJSONData(shared_from_this(), body, data, atts, *_prLoadEnvAlloc) ) {
+            if( !RaveParseJSONData(shared_from_this(), body, uri, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
         else if( _IsMsgPackData(data) ) {
             _ClearRapidJsonBuffer();
-            if( !RaveParseMsgPackData(shared_from_this(), body, data, atts, *_prLoadEnvAlloc) ) {
+            if( !RaveParseMsgPackData(shared_from_this(), body, uri, data, atts, *_prLoadEnvAlloc) ) {
                 return RobotBasePtr();
             }
         }
@@ -2199,7 +2199,7 @@ public:
         return pinterface;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts)
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts, const std::string& uri)
     {
         EnvironmentLock lockenv(GetMutex());
 
@@ -2215,6 +2215,9 @@ public:
         }
         if( pinterface->__struri.empty() ) {
             pinterface->__struri = preader->_filename;
+        }
+        if( pinterface->__struri.empty() ) {
+            pinterface->__struri = uri;
         }
         return pinterface;
     }

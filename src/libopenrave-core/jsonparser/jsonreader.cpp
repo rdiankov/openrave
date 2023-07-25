@@ -1278,28 +1278,31 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std:
     return false;
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document rEnvInfo(&alloc);
     orjson::ParseJson(rEnvInfo, data);
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     orjson::ParseJson(doc, data);
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     orjson::ParseJson(doc, data);
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     KinBodyPtr pbody;
     if( reader.ExtractFirst(doc, pbody, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
@@ -1421,28 +1424,31 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const s
     return false;
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document rEnvInfo(&alloc);
     MsgPack::ParseMsgPack(rEnvInfo, data);
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     MsgPack::ParseMsgPack(doc, data);
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     MsgPack::ParseMsgPack(doc, data);
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     KinBodyPtr pbody;
     if( reader.ExtractFirst(doc, pbody, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
