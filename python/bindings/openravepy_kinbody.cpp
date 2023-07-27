@@ -4160,6 +4160,11 @@ object PyKinBody::GetURI() const
     return ConvertStringToUnicode(_pbody->GetURI());
 }
 
+object PyKinBody::GetReferenceURI() const
+{
+    return ConvertStringToUnicode(_pbody->GetReferenceURI());
+}
+
 object PyKinBody::GetNonAdjacentLinks() const
 {
     py::list ononadjacent;
@@ -5940,6 +5945,7 @@ void init_openravepy_kinbody()
                          .def("DoesAffect",&PyKinBody::DoesAffect,PY_ARGS("jointindex","linkindex") DOXY_FN(KinBody,DoesAffect))
                          .def("DoesDOFAffectLink",&PyKinBody::DoesDOFAffectLink,PY_ARGS("dofindex","linkindex") DOXY_FN(KinBody,DoesDOFAffectLink))
                          .def("GetURI",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
+                         .def("GetReferenceURI",&PyKinBody::GetReferenceURI, DOXY_FN(InterfaceBase,GetReferenceURI))
                          .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, PY_ARGS("adjacentoptions") DOXY_FN(KinBody,GetNonAdjacentLinks))
