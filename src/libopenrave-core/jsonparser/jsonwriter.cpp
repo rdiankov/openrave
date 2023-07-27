@@ -298,34 +298,34 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     OpenRAVE::MsgPack::DumpMsgPack(doc, output);
 }
 
-void RaveWriteEncryptedFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
+void RaveWriteEncryptedJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofs(filename, std::ios::binary);
-    RaveWriteEncryptedStream(std::move(penv), ofs, atts, alloc, mimeType);
+    RaveWriteEncryptedJSONStream(std::move(penv), ofs, atts, alloc);
 }
 
-void RaveWriteEncryptedFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
+void RaveWriteEncryptedJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofs(filename, std::ios::binary);
-    RaveWriteEncryptedStream(listbodies, ofs, atts, alloc, mimeType);
+    RaveWriteEncryptedJSONStream(listbodies, ofs, atts, alloc);
 }
 
-void RaveWriteEncryptedMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
+void RaveWriteEncryptedJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>> vs(std::ios::binary);
-    RaveWriteEncryptedStream(std::move(penv), vs, atts, alloc, mimeType);
+    RaveWriteEncryptedJSONStream(std::move(penv), vs, atts, alloc);
     vs.swap_vector(output);
 }
 
-void RaveWriteEncryptedMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
+void RaveWriteEncryptedJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     using vectorstream = ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>>;
     vectorstream vs(std::ios::binary);
-    RaveWriteEncryptedStream(listbodies, vs, atts, alloc, mimeType);
+    RaveWriteEncryptedJSONStream(listbodies, vs, atts, alloc);
     vs.swap_vector(output);
 }
 
-void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
+void RaveWriteEncryptedJSONStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::unordered_set<std::string> keyIds;
     for (const std::pair<std::string, std::string>& attribute : atts) {
@@ -336,20 +336,13 @@ void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const A
     }
 
     std::stringstream ss;
-    switch (mimeType) {
-    case MimeType::JSON:
-        RaveWriteJSONStream(penv, ss, atts, alloc);
-        break;
-    case MimeType::MsgPack:
-        RaveWriteMsgPackStream(penv, ss, atts, alloc);
-        break;
-    }
+    RaveWriteJSONStream(penv, ss, atts, alloc);
     if (!GpgEncrypt(ss, os, keyIds)) {
         RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
     }
 }
 
-void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType)
+void RaveWriteEncryptedJSONStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::unordered_set<std::string> keyIds;
     for (const std::pair<std::string, std::string>& attribute : atts) {
@@ -360,16 +353,70 @@ void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostr
     }
 
     std::stringstream ss;
-    switch (mimeType) {
-    case MimeType::JSON:
-        RaveWriteJSONStream(listbodies, ss, atts, alloc);
-        break;
-    case MimeType::MsgPack:
-        RaveWriteMsgPackStream(listbodies, ss, atts, alloc);
-        break;
-    }
+    RaveWriteJSONStream(listbodies, ss, atts, alloc);
     if (!GpgEncrypt(ss, os, keyIds)) {
         RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
+    }
+}
+
+void RaveWriteEncryptedMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::ofstream ofs(filename, std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(std::move(penv), ofs, atts, alloc);
+}
+
+void RaveWriteEncryptedMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::ofstream ofs(filename, std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(listbodies, ofs, atts, alloc);
+}
+
+void RaveWriteEncryptedMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>> vs(std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(std::move(penv), vs, atts, alloc);
+    vs.swap_vector(output);
+}
+
+void RaveWriteEncryptedMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    using vectorstream = ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>>;
+    vectorstream vs(std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(listbodies, vs, atts, alloc);
+    vs.swap_vector(output);
+}
+
+void RaveWriteEncryptedMsgPackStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::unordered_set<std::string> keyIds;
+    for (const std::pair<std::string, std::string>& attribute : atts) {
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
+            break;
+        }
+    }
+
+    std::stringstream ss;
+    RaveWriteMsgPackStream(penv, ss, atts, alloc);
+    if (!GpgEncrypt(ss, os, keyIds)) {
+            RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
+    }
+}
+
+void RaveWriteEncryptedMsgPackStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::unordered_set<std::string> keyIds;
+    for (const std::pair<std::string, std::string>& attribute : atts) {
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
+            break;
+        }
+    }
+
+    std::stringstream ss;
+    RaveWriteMsgPackStream(listbodies, ss, atts, alloc);
+    if (!GpgEncrypt(ss, os, keyIds)) {
+            RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
     }
 }
 

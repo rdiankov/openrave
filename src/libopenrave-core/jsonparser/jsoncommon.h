@@ -28,10 +28,6 @@
 namespace OpenRAVE
 {
 
-enum class MimeType : uint8_t {
-    JSON, MsgPack
-};
-
 bool RaveParseJSON(EnvironmentBasePtr penv, const std::string &uri, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 bool RaveParseJSON(EnvironmentBasePtr penv, const std::string &uri, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 bool RaveParseJSON(EnvironmentBasePtr penv, const std::string &uri, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
@@ -77,12 +73,19 @@ void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, std::ostrea
 void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 
-void RaveWriteEncryptedFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType);
-void RaveWriteEncryptedFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType);
-void RaveWriteEncryptedMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType);
-void RaveWriteEncryptedMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType mimeType);
-void RaveWriteEncryptedStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType);
-void RaveWriteEncryptedStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc, MimeType);
+void RaveWriteEncryptedJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedJSONStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedJSONStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+
+void RaveWriteEncryptedMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedMsgPackStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
+void RaveWriteEncryptedMsgPackStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc);
 
 bool GpgDecrypt(std::istream& inputStream, std::ostream& outputData);
 bool GpgEncrypt(std::istream& inputStream, std::ostream& outputData, const std::unordered_set<string>& keyIds);
