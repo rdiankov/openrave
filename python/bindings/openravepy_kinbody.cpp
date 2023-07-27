@@ -534,6 +534,13 @@ object PyGeometryInfo::GetConicalFrustumHeight() const {
     return _vGeomData[2];
 }
 
+object PyGeometryInfo::GetCollisionMesh()
+{
+    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+    pgeominfo->InitCollisionMesh();
+    return toPyTriMesh(pgeominfo->_meshcollision);
+}
+
 std::string PyGeometryInfo::__repr__()
 {
     rapidjson::Document doc;
@@ -5027,6 +5034,7 @@ void init_openravepy_kinbody()
                           .def("GetConicalFrustumTopRadius",&PyGeometryInfo::GetConicalFrustumTopRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumTopRadius))
                           .def("GetConicalFrustumBottomRadius",&PyGeometryInfo::GetConicalFrustumBottomRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumBottomRadius))
                           .def("GetConicalFrustumHeight",&PyGeometryInfo::GetConicalFrustumHeight, DOXY_FN(GeomeryInfo,GetConicalFrustumHeight))
+                          .def("GetCollisionMesh",&PyGeometryInfo::GetCollisionMesh, DOXY_FN(GeomeryInfo,GetCollisionMesh))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                                "unitScale"_a = 1.0,

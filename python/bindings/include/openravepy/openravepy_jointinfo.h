@@ -76,6 +76,7 @@ public:
     object GetConicalFrustumTopRadius() const;
     object GetConicalFrustumBottomRadius() const;
     object GetConicalFrustumHeight() const;
+    object GetCollisionMesh();
 
     std::string __repr__();
     std::string __str__();
