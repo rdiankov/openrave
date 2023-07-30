@@ -548,7 +548,10 @@ std::string PyGeometryInfo::__repr__()
     dReal fUnitScale = 1;
     int options = 0;
     pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
-    return std::string("GeometryInfo('") + orjson::DumpJson(doc) + std::string("')");
+    std::string repr("GeometryInfo('");
+    repr += orjson::DumpJson(doc);
+    repr += "')";
+    return repr;
 }
 
 std::string PyGeometryInfo::__str__()

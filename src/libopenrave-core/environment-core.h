@@ -2796,7 +2796,11 @@ public:
             _description = info._description;
             _mapUInt64Parameters = info._uInt64Parameters;
             if( _unitInfo != info._unitInfo ) {
-                RAVELOG_WARN_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString());
+                rapidjson::Document rThisUnitInfo;
+                orjson::SaveJsonValue(rThisUnitInfo, _unitInfo);
+                rapidjson::Document rNewUnitInfo;
+                orjson::SaveJsonValue(rNewUnitInfo, info._unitInfo);
+                RAVELOG_WARN_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%orjson::DumpJson(rThisUnitInfo)%orjson::DumpJson(rNewUnitInfo));
                 // throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString(), ORE_InvalidArguments);
             }
 

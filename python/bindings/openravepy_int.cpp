@@ -2809,7 +2809,8 @@ object PyEnvironmentBase::GetUserData() const {
     return openravepy::GetUserData(_penv->GetUserData());
 }
 
-void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult){
+void PyEnvironmentBase::SetUnit(std::string unitname, dReal unitmult)
+{
     UnitInfo unitInfo = _penv->GetUnitInfo();
     unitInfo.lengthUnit = GetLengthUnitFromString(unitname, LU_Meter);
     _penv->SetUnitInfo(unitInfo);
@@ -2820,30 +2821,13 @@ object PyEnvironmentBase::GetUnit() const {
     return py::make_tuple(std::string(GetLengthUnitString(unitInfo.lengthUnit)), 1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
 }
 
-void PyEnvironmentBase::SetUnitInfo(const py::object& pyUnitInfo)
+void PyEnvironmentBase::SetUnitInfo(const UnitInfo& unitInfo)
 {
-    rapidjson::Document rUnitInfo;
-    toRapidJSONValue(pyUnitInfo, rUnitInfo, rUnitInfo.GetAllocator());
-    UnitInfo unitInfo = _penv->GetUnitInfo();
-    orjson::LoadJsonValue(rUnitInfo, unitInfo);
-//    unit.lengthUnit = unitInfo["lengthUnit"].cast<LengthUnit>();
-//    unit.massUnit = unitInfo["massUnit"].cast<MassUnit>();
-//    unit.timeUnit = unitInfo["timeUnit"].cast<TimeUnit>();
-//    unit.angleUnit = unitInfo["angleUnit"].cast<AngleUnit>();
     _penv->SetUnitInfo(unitInfo);
 }
 
-py::object PyEnvironmentBase::GetUnitInfo() const {
-    UnitInfo unitInfo = _penv->GetUnitInfo();
-    rapidjson::Document rUnitInfo;
-    orjson::SaveJsonValue(rUnitInfo, unitInfo);
-    return toPyObject(rUnitInfo);
-//    py::dict unit;
-//    unit["lengthUnit"] = unitInfo.lengthUnit;
-//    unit["massUnit"] = unitInfo.massUnit;
-//    unit["timeUnit"] = unitInfo.timeUnit;
-//    unit["angleUnit"] = unitInfo.angleUnit;
-//    return unit;
+UnitInfo PyEnvironmentBase::GetUnitInfo() const {
+    return _penv->GetUnitInfo();
 }
 
 int PyEnvironmentBase::GetId() const
@@ -3861,54 +3845,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
         ;
         env.attr("TriangulateOptions") = selectionoptions;
     }
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object lengthUnit = enum_<LengthUnit>(m, "LengthUnit" DOXY_ENUM(LengthUnit))
-#else
-    object lengthUnit = enum_<LengthUnit>("LengthUnit" DOXY_ENUM(LengthUnit))
-#endif
-                        .value("Meter", LU_Meter)
-                        .value("Decimeter", LU_Decimeter)
-                        .value("Centimeter", LU_Centimeter)
-                        .value("Millimeter", LU_Millimeter)
-                        .value("100Micrometer", LU_100Micrometer)
-                        .value("Micrometer", LU_Micrometer)
-                        .value("Nanometer", LU_Nanometer)
-                        .value("Inch", LU_Inch)
-                        .value("Foot", LU_Foot)
-    ;
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object massUnit = enum_<MassUnit>(m, "MassUnit" DOXY_ENUM(MassUnit))
-#else
-    object massUnit = enum_<MassUnit>("MassUnit" DOXY_ENUM(MassUnit))
-#endif
-                      .value("Gram", MU_Gram)
-                      .value("Kilogram", MU_Kilogram)
-                      .value("Milligram", MU_Milligram)
-                      .value("Pound", MU_Pound)
-    ;
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object timeUnit = enum_<TimeUnit>(m, "TimeUnit" DOXY_ENUM(TimeUnit))
-#else
-    object timeUnit = enum_<TimeUnit>("TimeUnit" DOXY_ENUM(TimeUnit))
-#endif
-                      .value("Second", TU_Second)
-                      .value("Millisecond", TU_Millisecond)
-                      .value("Microsecond", TU_Microsecond)
-                      .value("Nanosecond", TU_Nanosecond)
-                      .value("Picosecond", TU_Picosecond)
-    ;
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object angleUnit = enum_<AngleUnit>(m, "AngleUnit" DOXY_ENUM(AngleUnit))
-#else
-    object angleUnit = enum_<AngleUnit>("AngleUnit" DOXY_ENUM(AngleUnit))
-#endif
-                       .value("Radian", AU_Radian)
-                       .value("Degree", AU_Degree)
-    ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GetLengthUnitStandardValue",
