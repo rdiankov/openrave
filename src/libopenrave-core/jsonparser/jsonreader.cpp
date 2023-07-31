@@ -1395,6 +1395,67 @@ bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
     return false;
 }
 
+
+bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::istringstream iss(data);
+    std::ostringstream oss;
+    if (!GpgDecrypt(iss, oss)) {
+        return false;
+    }
+    return RaveParseJSONData(std::move(penv), oss.str(), updateMode, atts, alloc);
+}
+
+bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::istringstream iss(data);
+    std::ostringstream oss;
+    if (!GpgDecrypt(iss, oss)) {
+        return false;
+    }
+    return RaveParseJSONData(std::move(penv), ppbody, oss.str(), atts, alloc);
+}
+
+bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::istringstream iss(data);
+    std::ostringstream oss;
+    if (!GpgDecrypt(iss, oss)) {
+        return false;
+    }
+    return RaveParseJSONData(std::move(penv), pprobot, oss.str(), atts, alloc);
+}
+
+bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::istringstream iss(data);
+    std::ostringstream oss;
+    if (!GpgDecrypt(iss, oss)) {
+        return false;
+    }
+    return RaveParseMsgPackData(std::move(penv), oss.str(), updateMode, atts, alloc);
+}
+
+bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::istringstream iss(data);
+    std::ostringstream oss;
+    if (!GpgDecrypt(iss, oss)) {
+        return false;
+    }
+    return RaveParseMsgPackData(std::move(penv), ppbody, oss.str(), atts, alloc);
+}
+
+bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::istringstream iss(data);
+    std::ostringstream oss;
+    if (!GpgDecrypt(iss, oss)) {
+        return false;
+    }
+    return RaveParseMsgPackData(std::move(penv), pprobot, oss.str(), atts, alloc);
+}
+
 ///// Support for PGP-encrypted data
 
 bool RaveParseEncryptedURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
