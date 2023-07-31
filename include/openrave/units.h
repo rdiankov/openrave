@@ -156,7 +156,7 @@ inline T GetLengthUnitStandardValue(const std::string& s) {
 
 // \brief how many units in a meter
 template <typename T>
-inline T GetLengthUnitStandardValue(const LengthUnit unit)
+constexpr inline T GetLengthUnitStandardValue(const LengthUnit unit)
 {
     if( unit == OpenRAVE::LU_Meter ) {
         return T(1.0);
@@ -239,7 +239,7 @@ inline T GetMassUnitStandardValue(const std::string& s) {
 
 // \brief how many units in a gram
 template <typename T>
-inline T GetMassUnitStandardValue(const MassUnit unit)
+constexpr inline T GetMassUnitStandardValue(const MassUnit unit)
 {
     if( unit == OpenRAVE::MU_Gram ) {
         return T(1.0);
@@ -310,7 +310,7 @@ inline T GetTimeUnitStandardValue(const std::string& s) {
 
 // \brief how many units in a second
 template <typename T>
-inline T GetTimeUnitStandardValue(const TimeUnit unit)
+constexpr inline T GetTimeUnitStandardValue(const TimeUnit unit)
 {
     if( unit == OpenRAVE::TU_Second ) {
         return T(1.0);
@@ -376,7 +376,7 @@ inline T GetAngleUnitStandardValue(const std::string& s) {
 
 // \brief how many units in a radian
 template <typename T>
-inline T GetAngleUnitStandardValue(const AngleUnit unit)
+constexpr inline T GetAngleUnitStandardValue(const AngleUnit unit)
 {
     if( unit == OpenRAVE::AU_Radian ) {
         return T(1.0);
