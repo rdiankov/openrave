@@ -25,7 +25,7 @@
 namespace OpenRAVE {
 
 #if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
-#if __cplusplus >= 201703L
+#ifdef OPENRAVE_USE_STDMUTEX
 #include <mutex>
 using EnvironmentMutex = ::std::recursive_mutex;
 using EnvironmentLock  = ::std::unique_lock<std::recursive_mutex>;
@@ -36,7 +36,7 @@ using EnvironmentMutex = ::boost::recursive_try_mutex;
 using EnvironmentLock  = EnvironmentMutex::scoped_lock;
 using defer_lock_t     = ::boost::defer_lock_t;
 using try_to_lock_t    = ::boost::try_to_lock_t;
-#endif // __cplusplus >= 201703L
+#endif // OPENRAVE_USE_STDMUTEX
 #else
 using EnvironmentMutex = ::std::mutex;
 using EnvironmentLock  = ::std::unique_lock<std::mutex>;
