@@ -151,7 +151,10 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
     }
 
     if (rEnvInfo.HasMember("modifiedAt")) {
-        orjson::LoadJsonValueByKey(rEnvInfo, "modifiedAt", _lastModifiedAtUS);
+        const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
+        if ( modifiedAt != nullptr ) {
+            _lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+        }
     }
     if (rEnvInfo.HasMember("revisionId")) {
         orjson::LoadJsonValueByKey(rEnvInfo, "revisionId", _revisionId);
