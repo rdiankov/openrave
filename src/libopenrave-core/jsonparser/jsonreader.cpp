@@ -951,6 +951,14 @@ protected:
                 pBody->SetLastModifiedAtUS(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
             }
         }
+        {
+            rapidjson::Value::ConstMemberIterator itRevisionId = rEnvInfo.FindMember("revisionId");
+            if( itRevisionId != rEnvInfo.MemberEnd() ) {
+                int64_t revisionId = 0;
+                orjson::LoadJsonValue(itRevisionId->value, revisionId);
+                pBody->SetRevisionId(revisionId);
+            }
+        }
         _ExtractTransform(rBodyInfo, pBody, fUnitScale);
         pBodyOut = pBody;
         return true;

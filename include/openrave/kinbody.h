@@ -606,18 +606,18 @@ public:
             }
         };
 
-        /// \brief An axial geometry representation 
-        /// 
-        /// An axial might look like drawing below. 
-        /// The dotted lines represents the z and y axes. Each row 
+        /// \brief An axial geometry representation
+        ///
+        /// An axial might look like drawing below.
+        /// The dotted lines represents the z and y axes. Each row
         /// represents an axial slice.
         ///
-        /// There has to be at least two axial slices in an axial, 
-        /// which are called top and bottom axial slices. 
+        /// There has to be at least two axial slices in an axial,
+        /// which are called top and bottom axial slices.
         ///
-        /// If the radius of the top and bottom slices are the same, 
+        /// If the radius of the top and bottom slices are the same,
         /// the resulting shape is essentially a cylinder.
-        /// 
+        ///
         /// The axial slices stored in this vector are not sorted by
         /// the z coordinate.
         ///
@@ -627,9 +627,9 @@ public:
         ///  ...|...:...|... y
         ///     |   :   |
         ///      \__:__/
-        ///         : 
         ///         :
-        ///   
+        ///         :
+        ///
         std::vector<AxialSlice> _vAxialSlices;
 
         enum GeometryInfoField : uint32_t
@@ -3491,6 +3491,11 @@ private:
     inline int64_t GetRevisionId() {
         return _revisionId;
     }
+
+    inline void SetRevisionId(int64_t revisionId) {
+        _revisionId = revisionId;
+    }
+
     //@}
 
     /// only used for hashes...
