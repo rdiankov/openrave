@@ -35,44 +35,7 @@
 
 namespace OpenRAVE {
 
-static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
-{
-    if (pIsoFormatDateTime == nullptr) {
-        return 0;
-    }
-    // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
-    struct tm datetime = {0};
-    const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
-    if (remain == nullptr) {
-        return 0;
-    }
-
-    int64_t timestamp = std::mktime(&datetime) - timezone;
-    timestamp *= 1000000;
-
-    if (*remain == '.') {
-        int64_t fraction = 0, multiplier = 100000000;
-        while (std::isdigit(*(++remain)) && multiplier > 0) {
-            fraction += (*remain - '0') * multiplier;
-            multiplier /= 10;
-        }
-        timestamp += fraction / 1000; // nanoseconds convert to microseconds
-    }
-
-    if (*remain == '+' || *remain == '-') {
-        const bool positive = (*(remain++) == '+');
-        int64_t tz_hour = 0, tz_min = 0;
-        if (std::sscanf(remain, "%ld:%ld", &tz_hour, &tz_min) == 2) {
-            if (positive) {
-                timestamp -= (tz_hour * 3600 + tz_min * 60) * 1000000;
-            } else {
-                timestamp += (tz_hour * 3600 + tz_min * 60) * 1000000;
-            }
-        }
-    }
-
-    return timestamp;
-}
+int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime); // declared in libopenrave.h
 
 static bool _EndsWith(const std::string& fullString, const std::string& endString) {
     if (fullString.length() >= endString.length()) {
