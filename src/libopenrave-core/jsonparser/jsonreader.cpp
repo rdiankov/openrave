@@ -659,7 +659,7 @@ protected:
                 }
             }
             if (!bFoundBody) {
-                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in originBodyId '%s', originBodyName '%s'", pReferenceUri%originBodyId%originBodyName);
+                RAVELOG_ERROR_FORMAT("env=%s, failed to find body using referenceUri '%s' in originBodyId '%s', originBodyName '%s'", _penv->GetNameId()%pReferenceUri%originBodyId%originBodyName);
                 return -1;
             }
 
@@ -873,7 +873,7 @@ protected:
             RAVELOG_VERBOSE_FORMAT("env=%s, processing reference uri '%s'", _penv->GetNameId()%pReferenceUri);
             insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, pReferenceUri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
-                RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", pReferenceUri%_filename);
+                RAVELOG_WARN_FORMAT("env=%s, failed to load referenced body from uri '%s' inside file '%s'", _penv->GetNameId()%pReferenceUri%_filename);
                 if (_bMustResolveURI) {
                     throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from referenceUri='%s'", pReferenceUri, ORE_InvalidURI);
                 }

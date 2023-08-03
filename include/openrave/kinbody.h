@@ -3488,6 +3488,9 @@ private:
         _lastModifiedAtUS = lastModifiedAtUS;
     }
 
+    inline int64_t GetRevisionId() {
+        return _revisionId;
+    }
     //@}
 
     /// only used for hashes...
@@ -3667,7 +3670,8 @@ protected:
     Transform _baseLinkInBodyTransform; ///< the transform of the base link in the body coordinate frame. The body transform returned is baselink->GetTransform() * _baseLinkInBodyTransform.inverse(). When setting a transform, the base link transform becomes body->GetTransform() * _baseLinkInBodyTransform
     Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
-    int64_t _lastModifiedAtUS; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
+    int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
+    int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
 
 private:
     mutable std::vector<dReal> _vTempJoints;

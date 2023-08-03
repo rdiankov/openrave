@@ -2973,6 +2973,7 @@ public:
                 if (info._lastModifiedAtUS > pMatchExistingBody->_lastModifiedAtUS) {
                     pMatchExistingBody->_lastModifiedAtUS = info._lastModifiedAtUS;
                 }
+                pMatchExistingBody->_revisionId = info._revisionId;
                 vModifiedBodies.push_back(pMatchExistingBody);
                 if (updateFromInfoResult == UFIR_Success) {
                     continue;
@@ -3071,6 +3072,7 @@ public:
                     vBodies.push_back(pNewBody);
                 }
                 pNewBody->_lastModifiedAtUS = info._lastModifiedAtUS;
+                pNewBody->_revisionId = info._revisionId;
                 vCreatedBodies.push_back(pNewBody);
             }
 

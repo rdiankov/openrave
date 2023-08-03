@@ -887,6 +887,7 @@ public:
         int _revision = 0;  ///< environment revision number
         UnitInfo _unitInfo; ///< environment unitInfo
         int64_t _lastModifiedAtUS = 0; ///< us, linux epoch, last modified time of the environment when it was originally loaded from the environment.
+        int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
