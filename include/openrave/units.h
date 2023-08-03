@@ -187,6 +187,7 @@ constexpr inline T GetLengthUnitStandardValue(const LengthUnit unit)
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported length unit '%s'", GetLengthUnitString(unit), ORE_LengthUnitInvalid);
+    return T{};
 }
 
 template <typename T>
@@ -255,6 +256,7 @@ constexpr inline T GetMassUnitStandardValue(const MassUnit unit)
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", GetMassUnitString(unit), ORE_LengthUnitInvalid);
+    return T{};
 }
 
 template <typename T>
@@ -329,6 +331,7 @@ constexpr inline T GetTimeUnitStandardValue(const TimeUnit unit)
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time unit '%s'", GetTimeUnitString(unit), ORE_LengthUnitInvalid);
+    return T{};
 }
 
 template <typename T>
@@ -386,6 +389,7 @@ constexpr inline T GetAngleUnitStandardValue(const AngleUnit unit)
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_LengthUnitInvalid);
+    return T{};
 }
 
 template <typename T>
