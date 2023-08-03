@@ -5765,6 +5765,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // can copy the generator, but not the functions! use SetKinematicsGenerator
     SetKinematicsGenerator(r->_pKinematicsGenerator);
 
+    _lastModifiedAtUS = r->_lastModifiedAtUS;
+    _revisionId = r->_revisionId;
+
     _nUpdateStampId++; // update the stamp instead of copying
 }
 

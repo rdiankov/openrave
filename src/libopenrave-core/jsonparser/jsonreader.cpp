@@ -273,6 +273,14 @@ public:
                 envInfo._lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
             }
         }
+        {
+            rapidjson::Value::ConstMemberIterator itRevisionId = rEnvInfo.FindMember("revisionId");
+            if( itRevisionId != rEnvInfo.MemberEnd() ) {
+                int64_t revisionId = 0;
+                orjson::LoadJsonValue(itRevisionId->value, revisionId);
+                envInfo._revisionId = revisionId;
+            }
+        }
 
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
 

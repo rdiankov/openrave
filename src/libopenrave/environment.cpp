@@ -150,6 +150,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
+    if (rEnvInfo.HasMember("modifiedAt")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "modifiedAt", _lastModifiedAtUS);
+    }
+    if (rEnvInfo.HasMember("revisionId")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "revisionId", _revisionId);
+    }
+
     if (rEnvInfo.HasMember("uint64Parameters") && rEnvInfo["uint64Parameters"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rEnvInfo["uint64Parameters"].Begin(); it != rEnvInfo["uint64Parameters"].End(); ++it) {
             std::string id;
