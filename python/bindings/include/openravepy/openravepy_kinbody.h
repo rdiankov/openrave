@@ -343,6 +343,7 @@ public:
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
     py::object GetAssociatedFileEntries() const;
     int64_t GetLastModifiedAtUS() const;
+    int64_t GetRevisionId() const;
 
     py::object ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
 

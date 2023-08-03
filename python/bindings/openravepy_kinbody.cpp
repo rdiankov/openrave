@@ -4271,6 +4271,11 @@ int64_t PyKinBody::GetLastModifiedAtUS() const
     return _pbody->GetLastModifiedAtUS();
 }
 
+int64_t PyKinBody::GetRevisionId() const
+{
+    return _pbody->GetRevisionId();
+}
+
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
 {
     PyKinBodyStateSaverPtr saver;
@@ -5962,6 +5967,7 @@ void init_openravepy_kinbody()
                          .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
                          .def("GetAssociatedFileEntries",&PyKinBody::GetAssociatedFileEntries, DOXY_FN(KinBody,GetAssociatedFileEntries))
                          .def("GetLastModifiedAtUS",&PyKinBody::GetLastModifiedAtUS, DOXY_FN(KinBody,GetLastModifiedAtUS))
+                         .def("GetRevisionId",&PyKinBody::GetRevisionId, DOXY_FN(KinBody,GetRevisionId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CreateKinBodyStateSaver", &PyKinBody::CreateKinBodyStateSaver,
                               "options"_a = py::none_(),
