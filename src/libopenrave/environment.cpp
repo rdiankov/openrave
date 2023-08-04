@@ -150,10 +150,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
-    if (rEnvInfo.HasMember("modifiedAt")) {
-        const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
-        if ( modifiedAt != nullptr ) {
-            _lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+    {
+        rapidjson::Value::ConstMemberIterator itModifiedAt = rEnvInfo.FindMember("modifiedAt");
+        if( itModifiedAt != rEnvInfo.MemberEnd() && itModifiedAt->value.IsString() ) {
+            const char *const modifiedAt = itModifiedAt->value.GetString();
+            if ( modifiedAt != nullptr ) {
+                _lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+            }
         }
     }
     if (rEnvInfo.HasMember("revisionId")) {
