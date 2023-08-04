@@ -280,6 +280,8 @@ inline void LoadJsonValue(const rapidjson::Value& v, uint8_t& t) {
 inline void LoadJsonValue(const rapidjson::Value& v, unsigned long long& t) {
     if (v.IsUint64()) {
         t = v.GetUint64();
+    } else if (v.IsInt64()) {
+        t = v.GetInt64();
     } else if (v.IsString()) {
         t = boost::lexical_cast<unsigned long long>(v.GetString());
     } else if (v.IsBool()) {
@@ -292,6 +294,8 @@ inline void LoadJsonValue(const rapidjson::Value& v, unsigned long long& t) {
 inline void LoadJsonValue(const rapidjson::Value& v, uint64_t& t) {
     if (v.IsUint64()) {
         t = v.GetUint64();
+    } else if (v.IsInt64()) {
+        t = v.GetInt64();
     } else if (v.IsString()) {
         t = boost::lexical_cast<uint64_t>(v.GetString());
     } else if (v.IsBool()) {
