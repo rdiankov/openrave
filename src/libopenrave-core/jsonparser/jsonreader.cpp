@@ -35,44 +35,7 @@
 
 namespace OpenRAVE {
 
-static int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
-{
-    if (pIsoFormatDateTime == nullptr) {
-        return 0;
-    }
-    // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
-    struct tm datetime = {0};
-    const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
-    if (remain == nullptr) {
-        return 0;
-    }
-
-    int64_t timestamp = std::mktime(&datetime) - timezone;
-    timestamp *= 1000000;
-
-    if (*remain == '.') {
-        int64_t fraction = 0, multiplier = 100000000;
-        while (std::isdigit(*(++remain)) && multiplier > 0) {
-            fraction += (*remain - '0') * multiplier;
-            multiplier /= 10;
-        }
-        timestamp += fraction / 1000; // nanoseconds convert to microseconds
-    }
-
-    if (*remain == '+' || *remain == '-') {
-        const bool positive = (*(remain++) == '+');
-        int64_t tz_hour = 0, tz_min = 0;
-        if (std::sscanf(remain, "%ld:%ld", &tz_hour, &tz_min) == 2) {
-            if (positive) {
-                timestamp -= (tz_hour * 3600 + tz_min * 60) * 1000000;
-            } else {
-                timestamp += (tz_hour * 3600 + tz_min * 60) * 1000000;
-            }
-        }
-    }
-
-    return timestamp;
-}
+int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime); // declared in libopenrave.h
 
 static bool _EndsWith(const std::string& fullString, const std::string& endString) {
     if (fullString.length() >= endString.length()) {
@@ -121,9 +84,9 @@ static void OpenRapidJsonDocument(const std::string& filename, rapidjson::Docume
 }
 
 /// \brief get the scheme of the uri, e.g. file: or openrave:
-static void ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
+static void ParseURI(const char* pUri, std::string& scheme, std::string& path, std::string& fragment)
 {
-    path = uri;
+    path = pUri;
     size_t hashindex = path.find_last_of('#');
     if (hashindex != std::string::npos) {
         fragment = path.substr(hashindex + 1);
@@ -155,22 +118,22 @@ static std::string ResolveURI(const std::string& scheme, const std::string& path
     return std::string();
 }
 /// \brief resolve a uri
-static std::string ResolveURI(const std::string& uri, const std::string& curdir, const std::vector<std::string>& vOpenRAVESchemeAliases)
+static std::string ResolveURI(const char* pUri, const std::string& curdir, const std::vector<std::string>& vOpenRAVESchemeAliases)
 {
     std::string scheme, path, fragment;
-    ParseURI(uri, scheme, path, fragment);
+    ParseURI(pUri, scheme, path, fragment);
     return ResolveURI(scheme, path, curdir, vOpenRAVESchemeAliases);
 }
 
 static std::string CanonicalizeURI(const std::string& suburi, const std::string& parentUri, const std::string& parentFilename)
 {
     std::string scheme, path, fragment;
-    ParseURI(suburi, scheme, path, fragment);
+    ParseURI(suburi.c_str(), scheme, path, fragment);
 
     if (scheme.empty() && path.empty() ) {
         if (!parentUri.empty()) {
             std::string scheme2, path2, fragment2;
-            ParseURI(parentUri, scheme2, path2, fragment2);
+            ParseURI(parentUri.c_str(), scheme2, path2, fragment2);
             return scheme2 + ":" + path2 + "#" + fragment;
         }
         if (!parentFilename.empty()) {
@@ -273,10 +236,18 @@ public:
                 envInfo._lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
             }
         }
+        {
+            rapidjson::Value::ConstMemberIterator itRevisionId = rEnvInfo.FindMember("revisionId");
+            if( itRevisionId != rEnvInfo.MemberEnd() ) {
+                int64_t revisionId = 0;
+                orjson::LoadJsonValue(itRevisionId->value, revisionId);
+                envInfo._revisionId = revisionId;
+            }
+        }
 
         std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
 
-        std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rEnvInfo, "referenceUri", "");
+        const char* pReferenceUri = orjson::GetCStringJsonValueByKey(rEnvInfo, "referenceUri", "");
 
         // If remote URL is provided, start the process to download everything and load it into the json map
         if (IsDownloadingFromRemote()) {
@@ -288,9 +259,9 @@ public:
         }
 
         // Keep going up the line and checking for all referenceUri bodies
-        if (_IsExpandableReferenceUri(referenceUri)) {
+        if (_IsExpandableReferenceUri(pReferenceUri)) {
             std::string scheme, path, fragment;
-            ParseURI(referenceUri, scheme, path, fragment);
+            ParseURI(pReferenceUri, scheme, path, fragment);
 
             std::string fullFilename;
             if (IsDownloadingFromRemote()) {
@@ -310,7 +281,7 @@ public:
                 fullFilename = ResolveURI(scheme, path, boost::filesystem::path(_filename).parent_path().string(), GetOpenRAVESchemeAliases());
 #endif
                 if (fullFilename.empty()) {
-                    RAVELOG_ERROR_FORMAT("env=%d, failed to resolve a filename from env referenceUri='%s'", _penv->GetId()%referenceUri);
+                    RAVELOG_ERROR_FORMAT("env=%d, failed to resolve a filename from env referenceUri='%s'", _penv->GetId()%pReferenceUri);
                     return false;
                 }
             }
@@ -319,7 +290,7 @@ public:
             if (!prReferenceEnvInfo) {
                 RAVELOG_WARN_FORMAT("env=%d, failed to load referenced body from filename '%s'", _penv->GetId()%fullFilename);
                 if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("env=%d, failed to load referenced body from referenceUri='%s'", _penv->GetId()%referenceUri, ORE_InvalidURI);
+                    throw OPENRAVE_EXCEPTION_FORMAT("env=%d, failed to load referenced body from referenceUri='%s'", _penv->GetId()%pReferenceUri, ORE_InvalidURI);
                 }
                 return false;
             }
@@ -330,18 +301,18 @@ public:
             }
 
             if( prReferenceEnvInfo->IsObject() ) {
-                _ProcessEnvInfoBodies(envInfo, *prReferenceEnvInfo, alloc, referenceUri, fullFilename, mapProcessedConnectedBodyUris);
+                _ProcessEnvInfoBodies(envInfo, *prReferenceEnvInfo, alloc, pReferenceUri, fullFilename, mapProcessedConnectedBodyUris);
             }
         }
-        else if( !referenceUri.empty() ) {
+        else if( !!pReferenceUri[0] ) {
             if( _bMustResolveEnvironmentURI ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("Failed to load env referenceUri='%s' from file '%s'", referenceUri%_filename, ORE_InvalidURI);
+                throw OPENRAVE_EXCEPTION_FORMAT("Failed to load env referenceUri='%s' from file '%s'", pReferenceUri%_filename, ORE_InvalidURI);
             }
 
-            RAVELOG_ERROR_FORMAT("Failed to load env referenceUri='%s' from file '%s'", referenceUri%_filename);
+            RAVELOG_ERROR_FORMAT("Failed to load env referenceUri='%s' from file '%s'", pReferenceUri%_filename);
         }
 
-        _ProcessEnvInfoBodies(envInfo, rEnvInfo, alloc, _uri, _filename, mapProcessedConnectedBodyUris);
+        _ProcessEnvInfoBodies(envInfo, rEnvInfo, alloc, _uri.c_str(), _filename, mapProcessedConnectedBodyUris);
 
         std::vector<KinBody::KinBodyInfoPtr>::iterator itBodyInfo = envInfo._vBodyInfos.begin();
         while(itBodyInfo != envInfo._vBodyInfos.end()) {
@@ -415,14 +386,23 @@ public:
         return true;
     }
 
-    bool ExtractFirst(const rapidjson::Value& doc, KinBodyPtr& ppbody, rapidjson::Document::AllocatorType& alloc)
+    bool ExtractFirst(const rapidjson::Value& rEnvInfo, KinBodyPtr& ppbody, rapidjson::Document::AllocatorType& alloc)
     {
+        // If remote URL is provided, start the process to download everything and load it into the json map
+        if (IsDownloadingFromRemote()) {
+#if OPENRAVE_CURL
+            JSONDownloaderScope jsonDownload(*_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
+            jsonDownload.QueueDownloadReferenceURIs(rEnvInfo);
+            jsonDownload.WaitForDownloads(_downloadTimeoutUS);
+#endif
+        }
+
         // extract the first articulated system found.
-        dReal fUnitScale = _GetUnitScale(doc, 1.0);
-        if (doc.HasMember("bodies") && (doc)["bodies"].IsArray()) {
+        dReal fUnitScale = _GetUnitScale(rEnvInfo, 1.0);
+        if (rEnvInfo.HasMember("bodies") && (rEnvInfo)["bodies"].IsArray()) {
             std::map<RobotBase::ConnectedBodyInfoPtr, std::string> mapProcessedConnectedBodyUris;
-            for (rapidjson::Value::ConstValueIterator itr = (doc)["bodies"].Begin(); itr != (doc)["bodies"].End(); ++itr) {
-                return _Extract(*itr, ppbody, doc, fUnitScale, alloc, mapProcessedConnectedBodyUris);
+            for (rapidjson::Value::ConstValueIterator itr = (rEnvInfo)["bodies"].Begin(); itr != (rEnvInfo)["bodies"].End(); ++itr) {
+                return _Extract(*itr, ppbody, rEnvInfo, fUnitScale, alloc, mapProcessedConnectedBodyUris);
             }
         }
         return false;
@@ -431,9 +411,18 @@ public:
     bool ExtractOne(const rapidjson::Value& rEnvInfo, KinBodyPtr& ppbody, const string& uri, rapidjson::Document::AllocatorType& alloc)
     {
         std::string scheme, path, fragment;
-        ParseURI(uri, scheme, path, fragment);
+        ParseURI(uri.c_str(), scheme, path, fragment);
         if (fragment == "") {
             return ExtractFirst(rEnvInfo, ppbody, alloc);
+        }
+
+        // If remote URL is provided, start the process to download everything and load it into the json map
+        if (IsDownloadingFromRemote()) {
+#if OPENRAVE_CURL
+            JSONDownloaderScope jsonDownload(*_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
+            jsonDownload.QueueDownloadReferenceURIs(rEnvInfo);
+            jsonDownload.WaitForDownloads(_downloadTimeoutUS);
+#endif
         }
 
         // find the body by uri fragment
@@ -458,7 +447,7 @@ public:
             return;
         }
         std::string scheme, path, fragment;
-        ParseURI(uri, scheme, path, fragment);
+        ParseURI(uri.c_str(), scheme, path, fragment);
         if (!scheme.empty() && !path.empty()) {
             _uri = uri;
             return;
@@ -496,7 +485,7 @@ public:
 #if OPENRAVE_CURL
         // download only one document, do not recurse
         JSONDownloaderScope jsonDownload(*_pDownloader, doc.GetAllocator(), false);
-        jsonDownload.Download(uri, doc, _downloadTimeoutUS);
+        jsonDownload.Download(uri.c_str(), doc, _downloadTimeoutUS);
 #else
         throw OPENRAVE_EXCEPTION_FORMAT("Do not support downloading remote document '%s'.", uri, ORE_NotImplemented);
 #endif
@@ -505,16 +494,16 @@ public:
 protected:
 
     /// \brief returns true if the referenceUri is a valid URI that can be loaded
-    bool _IsExpandableReferenceUri(const std::string& referenceUri) const
+    bool _IsExpandableReferenceUri(const char* pReferenceUri) const
     {
         if (_deserializeOptions & IDO_IgnoreReferenceUri) {
             return false;
         }
-        if (referenceUri.empty()) {
+        if (!pReferenceUri || !pReferenceUri[0]) {
             return false;
         }
         std::string scheme, path, fragment;
-        ParseURI(referenceUri, scheme, path, fragment);
+        ParseURI(pReferenceUri, scheme, path, fragment);
         if (!fragment.empty()) {
             return true;
         }
@@ -549,7 +538,7 @@ protected:
         return doc;
     }
 
-    void _ProcessEnvInfoBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& alloc, const std::string& currentUri, const std::string& currentFilename, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
+    void _ProcessEnvInfoBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& alloc, const char* pCurrentUri, const std::string& currentFilename, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
     {
         dReal fUnitScale = _GetUnitScale(rEnvInfo, 1.0);
         std::vector<int> vInputToBodyInfoMapping;
@@ -561,27 +550,27 @@ protected:
                 const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
                 std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
                 std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
-                std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
-                if (_IsExpandableReferenceUri(referenceUri)) {
+                const char* pReferenceUri = orjson::GetCStringJsonValueByKey(rBodyInfo, "referenceUri", "");
+                if (_IsExpandableReferenceUri(pReferenceUri)) {
                     std::set<std::string> circularReference;
-
-                    int insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
+                    RAVELOG_VERBOSE_FORMAT("env=%s, processing reference uri '%s' from iInputBodyIndex%d", _penv->GetNameId()%pReferenceUri%iInputBodyIndex);
+                    int insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, pReferenceUri, circularReference, fUnitScale, alloc, _filename);
                     if( insertIndex < 0 ) {
-                        RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
+                        RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", pReferenceUri%_filename);
                         if (_bMustResolveURI) {
-                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from referenceUri='%s'", referenceUri, ORE_InvalidURI);
+                            throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from referenceUri='%s'", pReferenceUri, ORE_InvalidURI);
                         }
                     }
                     else {
                         vInputToBodyInfoMapping.at(iInputBodyIndex) = insertIndex;
                     }
                 }
-                else if( !referenceUri.empty() ) {
+                else if( !!pReferenceUri[0] ) {
                     if (_bMustResolveURI) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%referenceUri, ORE_InvalidURI);
+                        throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%pReferenceUri, ORE_InvalidURI);
                     }
 
-                    RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%referenceUri);
+                    RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%pReferenceUri);
                 }
             }
         }
@@ -592,7 +581,10 @@ protected:
             // ensure uri is set
             if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
                 // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
-                pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, currentUri, currentFilename);
+                pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, pCurrentUri, currentFilename);
+            }
+            if (pKinBodyInfo->_uri.empty() ) {
+                pKinBodyInfo->_uri = _uri;
             }
             RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
             if( !!pRobotBaseInfo ) {
@@ -605,20 +597,20 @@ protected:
     /// \param rEnvInfo[in] used for resolving references pointing to the current environment
     ///
     /// \return the index into envInfo._vBodyInfos where the entry was edited. If failed, then return -1
-    int _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const std::string& originBodyName, const rapidjson::Value& rEnvInfo, const std::string& referenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc, const std::string& currentFilename) {
-        if (circularReference.find(referenceUri) != circularReference.end()) {
-            RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to '%s' found on body %s", referenceUri%originBodyId);
+    int _ExpandRapidJSON(EnvironmentBase::EnvironmentBaseInfo& envInfo, const std::string& originBodyId, const std::string& originBodyName, const rapidjson::Value& rEnvInfo, const char* pReferenceUri, std::set<std::string>& circularReference, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc, const std::string& currentFilename) {
+        if (circularReference.find(pReferenceUri) != circularReference.end()) {
+            RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to uri '%s' found on originBodyId '%s', originBodyName '%s'", pReferenceUri%originBodyId%originBodyName);
             return -1;
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetId()%referenceUri%circularReference.size()%currentFilename);
-        circularReference.insert(referenceUri);
+        RAVELOG_DEBUG_FORMAT("env=%s, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetNameId()%pReferenceUri%circularReference.size()%currentFilename);
+        circularReference.insert(pReferenceUri);
 
         dReal fRefUnitScale = fUnitScale;  // unit scale for rRefKinBodyInfo
-        rapidjson::Value rRefKinBodyInfo; // holds the read data from referenceUri
+        rapidjson::Value rRefKinBodyInfo; // holds the read data from pReferenceUri
 
         // parse the uri
         std::string scheme, path, fragment;
-        ParseURI(referenceUri, scheme, path, fragment);
+        ParseURI(pReferenceUri, scheme, path, fragment);
 
 
         int insertIndex = -1;
@@ -638,17 +630,18 @@ protected:
                 }
             }
             if (!bFoundBody) {
-                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
+                RAVELOG_ERROR_FORMAT("env=%s, failed to find body using referenceUri '%s' in originBodyId '%s', originBodyName '%s'", _penv->GetNameId()%pReferenceUri%originBodyId%originBodyName);
                 return -1;
             }
 
-            std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rRefKinBodyInfo, "referenceUri", "");
-            if (_IsExpandableReferenceUri(nextReferenceUri)) {
-                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, rEnvInfo, nextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
+            const char* pNextReferenceUri = orjson::GetCStringJsonValueByKey(rRefKinBodyInfo, "referenceUri", "");
+            if (_IsExpandableReferenceUri(pNextReferenceUri)) {
+                RAVELOG_VERBOSE_FORMAT("env=%s, processing next reference uri '%s'", _penv->GetNameId()%pNextReferenceUri);
+                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, rEnvInfo, pNextReferenceUri, circularReference, fUnitScale, alloc, currentFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
-            else if( !nextReferenceUri.empty() ) {
-                RAVELOG_ERROR_FORMAT("nextReferenceUri='%s' is not a valid URI. Scope is '%s'", nextReferenceUri%currentFilename);
+            else if( !!pNextReferenceUri[0] ) {
+                RAVELOG_ERROR_FORMAT("nextReferenceUri='%s' is not a valid URI. Scope is '%s'", pNextReferenceUri%currentFilename);
             }
         }
         // deal with uri with scheme:/path#fragment
@@ -676,9 +669,9 @@ protected:
                 fullFilename = ResolveURI(scheme, path, boost::filesystem::path(currentFilename).parent_path().string(), GetOpenRAVESchemeAliases());
 #endif
                 if (fullFilename.empty()) {
-                    RAVELOG_ERROR_FORMAT("env=%d, failed to resolve referenceUri '%s' into a file. Coming from bodyId='%s', bodyName='%s' in file '%s'", _penv->GetId()%referenceUri%originBodyId%originBodyName%currentFilename);
+                    RAVELOG_ERROR_FORMAT("env=%d, failed to resolve referenceUri '%s' into a file. Coming from bodyId='%s', bodyName='%s' in file '%s'", _penv->GetId()%pReferenceUri%originBodyId%originBodyName%currentFilename);
                     if (_bMustResolveURI) {
-                        throw OPENRAVE_EXCEPTION_FORMAT("Failed to resolve referenceUri='%s' in body definition '%s' from file '%s'", referenceUri%originBodyId%currentFilename, ORE_InvalidURI);
+                        throw OPENRAVE_EXCEPTION_FORMAT("Failed to resolve referenceUri='%s' in body definition '%s' from file '%s'", pReferenceUri%originBodyId%currentFilename, ORE_InvalidURI);
                     }
 
                     return -1;
@@ -687,15 +680,19 @@ protected:
 
             uint64_t beforeOpenStampUS = utils::GetMonotonicTime();
 
-            boost::shared_ptr<const rapidjson::Document> referenceDoc = _GetDocumentFromFilename(fullFilename, alloc);
-            if (!referenceDoc || !(*referenceDoc).HasMember("bodies")) {
-                RAVELOG_ERROR_FORMAT("referenced document cannot be loaded, or has no bodies: %s", fullFilename);
+            boost::shared_ptr<const rapidjson::Document> pReferenceScene = _GetDocumentFromFilename(fullFilename, alloc);
+            if (!pReferenceScene ) {
+                RAVELOG_ERROR_FORMAT("referenced document from file '%s' cannot be loaded.", fullFilename);
                 return -1;
             }
-            fRefUnitScale = _GetUnitScale(*referenceDoc, 1.0); // for now default has to be meters... fUnitScale);
+            if (!(*pReferenceScene).HasMember("bodies")) {
+                RAVELOG_ERROR_FORMAT("referenced document from file '%s' has no 'bodies' field: %s", fullFilename%orjson::DumpJson(*pReferenceScene));
+                return -1;
+            }
+            fRefUnitScale = _GetUnitScale(*pReferenceScene, 1.0); // for now default has to be meters... fUnitScale);
 
             bool bFoundBody = false;
-            for(rapidjson::Value::ConstValueIterator it = (*referenceDoc)["bodies"].Begin(); it != (*referenceDoc)["bodies"].End(); it++) {
+            for(rapidjson::Value::ConstValueIterator it = (*pReferenceScene)["bodies"].Begin(); it != (*pReferenceScene)["bodies"].End(); it++) {
                 std::string id = orjson::GetJsonValueByKey<std::string>(*it, "id", "");
                 if (id == fragment || fragment.empty()) {
                     rRefKinBodyInfo.CopyFrom(*it, alloc);
@@ -704,15 +701,15 @@ protected:
                 }
             }
             if (!bFoundBody) {
-                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
+                RAVELOG_ERROR_FORMAT("failed to find body using referenceUri '%s' in body id=%s, name=%s", pReferenceUri%originBodyId%originBodyName);
                 return -1;
             }
 
-            std::string nextReferenceUri = orjson::GetJsonValueByKey<std::string>(rRefKinBodyInfo, "referenceUri", "");
+            const char* pNextReferenceUri = orjson::GetCStringJsonValueByKey(rRefKinBodyInfo, "referenceUri", "");
 
-            if (_IsExpandableReferenceUri(nextReferenceUri)) {
-                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]'", _penv->GetId()%fullFilename%fragment%nextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
-                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, *referenceDoc, nextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
+            if (_IsExpandableReferenceUri(pNextReferenceUri)) {
+                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]'", _penv->GetId()%fullFilename%fragment%pNextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, *pReferenceScene, pNextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
             else {
@@ -720,7 +717,7 @@ protected:
             }
         }
         else {
-            RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body id=%s, name=%s", referenceUri%originBodyId%originBodyName);
+            RAVELOG_WARN_FORMAT("ignoring invalid referenceUri '%s' in body id=%s, name=%s", pReferenceUri%originBodyId%originBodyName);
             return -1;
         }
 
@@ -751,7 +748,7 @@ protected:
 
         KinBody::KinBodyInfoPtr pNewKinBodyInfo;
         if( insertIndex >= 0 ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%referenceUri%currentFilename);
+            RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%pReferenceUri%currentFilename);
             pNewKinBodyInfo = envInfo._vBodyInfos[insertIndex];
 
             const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
@@ -831,34 +828,35 @@ protected:
         bool isRobot = orjson::GetJsonValueByKey<bool>(rBodyInfo, "isRobot");
         std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
         std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
-        std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "referenceUri", "");
+        const char* pReferenceUri = orjson::GetCStringJsonValueByKey(rBodyInfo, "referenceUri", "");
 
         EnvironmentBase::EnvironmentBaseInfo envInfo; // dummy for reference uris
         int insertIndex = -1;
-        if (_IsExpandableReferenceUri(referenceUri)) {
+        if (_IsExpandableReferenceUri(pReferenceUri)) {
             if (IsDownloadingFromRemote()) {
 #if OPENRAVE_CURL
                 JSONDownloaderScope jsonDownload(*_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
-                jsonDownload.QueueDownloadURI(referenceUri);
+                jsonDownload.QueueDownloadURI(pReferenceUri);
                 jsonDownload.WaitForDownloads(_downloadTimeoutUS);
 #endif
             }
             std::set<std::string> circularReference; // dummy
-            insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, referenceUri, circularReference, fUnitScale, alloc, _filename);
+            RAVELOG_VERBOSE_FORMAT("env=%s, processing reference uri '%s'", _penv->GetNameId()%pReferenceUri);
+            insertIndex = _ExpandRapidJSON(envInfo, bodyId, bodyName, rEnvInfo, pReferenceUri, circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
-                RAVELOG_WARN_FORMAT("failed to load referenced body from uri '%s' inside file '%s'", referenceUri%_filename);
+                RAVELOG_WARN_FORMAT("env=%s, failed to load referenced body from uri '%s' inside file '%s'", _penv->GetNameId()%pReferenceUri%_filename);
                 if (_bMustResolveURI) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from referenceUri='%s'", referenceUri, ORE_InvalidURI);
+                    throw OPENRAVE_EXCEPTION_FORMAT("failed to load referenced body from referenceUri='%s'", pReferenceUri, ORE_InvalidURI);
                 }
 
             }
         }
-        else if( !referenceUri.empty() ) {
+        else if( !!pReferenceUri[0] ) {
             if (_bMustResolveURI) {
-                throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%referenceUri, ORE_InvalidURI);
+                throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%pReferenceUri, ORE_InvalidURI);
             }
 
-            RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%referenceUri);
+            RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%pReferenceUri);
         }
 
         KinBody::KinBodyInfoPtr pKinBodyInfo;
@@ -879,6 +877,15 @@ protected:
             }
         }
         pKinBodyInfo->DeserializeJSON(rBodyInfo, fUnitScale, _deserializeOptions);
+
+        if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
+            // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
+            pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, _uri, _filename);
+        }
+        if (pKinBodyInfo->_uri.empty() ) {
+            pKinBodyInfo->_uri = _uri;
+        }
+
         KinBodyPtr pBody;
         if( !!pRobotBaseInfo ) {
             _ProcessURIsInRobotBaseInfo(*pRobotBaseInfo, rEnvInfo, fUnitScale, alloc, mapProcessedConnectedBodyUris);
@@ -915,6 +922,14 @@ protected:
                 pBody->SetLastModifiedAtUS(ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt));
             }
         }
+        {
+            rapidjson::Value::ConstMemberIterator itRevisionId = rEnvInfo.FindMember("revisionId");
+            if( itRevisionId != rEnvInfo.MemberEnd() ) {
+                int64_t revisionId = 0;
+                orjson::LoadJsonValue(itRevisionId->value, revisionId);
+                pBody->SetRevisionId(revisionId);
+            }
+        }
         _ExtractTransform(rBodyInfo, pBody, fUnitScale);
         pBodyOut = pBody;
         return true;
@@ -932,8 +947,8 @@ protected:
             JSONDownloaderScope jsonDownload(*_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             FOREACH(itConnected, robotInfo._vConnectedBodyInfos) {
                 RobotBase::ConnectedBodyInfoPtr& pConnected = *itConnected;
-                if (_IsExpandableReferenceUri(pConnected->_uri)) {
-                    jsonDownload.QueueDownloadURI(pConnected->_uri);
+                if (_IsExpandableReferenceUri(pConnected->_uri.c_str())) {
+                    jsonDownload.QueueDownloadURI(pConnected->_uri.c_str());
                 }
             }
             jsonDownload.WaitForDownloads(_downloadTimeoutUS);
@@ -947,13 +962,13 @@ protected:
                 continue;
             }
 
-            if( !_IsExpandableReferenceUri(pConnected->_uri) ) {
+            if( !_IsExpandableReferenceUri(pConnected->_uri.c_str()) ) {
                 continue;
             }
 
             std::set<std::string> circularReference;
             EnvironmentBase::EnvironmentBaseInfo envInfo;
-            int insertIndex = _ExpandRapidJSON(envInfo, "__connectedBody__", "", rEnvInfo, pConnected->_uri, circularReference, fUnitScale, alloc, _filename);
+            int insertIndex = _ExpandRapidJSON(envInfo, "__connectedBody__", "", rEnvInfo, pConnected->_uri.c_str(), circularReference, fUnitScale, alloc, _filename);
             if( insertIndex < 0 ) {
                 RAVELOG_ERROR_FORMAT("env=%d, failed to load connected body from uri '%s'", _penv->GetId()%pConnected->_uri);
                 if (_bMustResolveURI) {
@@ -1067,12 +1082,12 @@ protected:
                                 KinBody::KinBodyInfoPtr pKinBodyInfo;
                                 if (pbody->IsRobot()) {
                                     RobotBase::RobotBaseInfoPtr pRobotInfo(new RobotBase::RobotBaseInfo());
-                                    RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo);
+                                    RaveInterfaceCast<RobotBase>(pbody)->ExtractInfo(*pRobotInfo, EIO_Everything);
                                     pKinBodyInfo = pRobotInfo;
                                 }
                                 else {
                                     pKinBodyInfo.reset(new KinBody::KinBodyInfo());
-                                    pbody->ExtractInfo(*pKinBodyInfo);
+                                    pbody->ExtractInfo(*pKinBodyInfo, EIO_Everything);
                                 }
                                 envInfo._vBodyInfos.push_back(pKinBodyInfo);
                             }
@@ -1187,7 +1202,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
     } else
 #endif
     {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        std::string fullFilename = ResolveURI(uri.c_str(), std::string(), reader.GetOpenRAVESchemeAliases());
         if (fullFilename.size() == 0 ) {
             return false;
         }
@@ -1208,7 +1223,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::st
     } else
 #endif
     {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        std::string fullFilename = ResolveURI(uri.c_str(), std::string(), reader.GetOpenRAVESchemeAliases());
         if (fullFilename.size() == 0 ) {
             return false;
         }
@@ -1228,7 +1243,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std:
     } else
 #endif
     {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        std::string fullFilename = ResolveURI(uri.c_str(), std::string(), reader.GetOpenRAVESchemeAliases());
         if (fullFilename.size() == 0 ) {
             return false;
         }
@@ -1242,28 +1257,31 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std:
     return false;
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document rEnvInfo(&alloc);
     orjson::ParseJson(rEnvInfo, data);
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     orjson::ParseJson(doc, data);
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     orjson::ParseJson(doc, data);
     JSONReader reader(atts, penv, ".json");
+    reader.SetURI(uri);
     KinBodyPtr pbody;
     if( reader.ExtractFirst(doc, pbody, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
@@ -1328,7 +1346,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, Update
     } else
 #endif
     {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        std::string fullFilename = ResolveURI(uri.c_str(), std::string(), reader.GetOpenRAVESchemeAliases());
         if (fullFilename.size() == 0 ) {
             return false;
         }
@@ -1349,7 +1367,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std:
     } else
 #endif
     {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        std::string fullFilename = ResolveURI(uri.c_str(), std::string(), reader.GetOpenRAVESchemeAliases());
         if (fullFilename.size() == 0 ) {
             RAVELOG_DEBUG_FORMAT("could not resolve uri='%s' into a path", uri);
             return false;
@@ -1370,7 +1388,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const s
     } else
 #endif
     {
-        std::string fullFilename = ResolveURI(uri, std::string(), reader.GetOpenRAVESchemeAliases());
+        std::string fullFilename = ResolveURI(uri.c_str(), std::string(), reader.GetOpenRAVESchemeAliases());
         if (fullFilename.size() == 0 ) {
             RAVELOG_DEBUG_FORMAT("could not resolve uri='%s' into a path", uri);
             return false;
@@ -1385,28 +1403,31 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const s
     return false;
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document rEnvInfo(&alloc);
     MsgPack::ParseMsgPack(rEnvInfo, data);
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     std::vector<KinBodyPtr> vCreatedBodies, vModifiedBodies, vRemovedBodies;
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     MsgPack::ParseMsgPack(doc, data);
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     MsgPack::ParseMsgPack(doc, data);
     JSONReader reader(atts, penv, ".msgpack");
+    reader.SetURI(uri);
     KinBodyPtr pbody;
     if( reader.ExtractFirst(doc, pbody, alloc) ) {
         pprobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);

@@ -47,7 +47,7 @@ public:
 
     QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey,
                      const boost::function<bool(int)> &onKeyDown = boost::function<bool(int)>(),
-                     double metersinunit = 1, QWidget *parent = 0);
+                     QWidget *parent = 0);
 
     virtual ~QOSGViewerWidget();
 
@@ -226,9 +226,9 @@ protected:
     void _GetRAVEEnvironmentUpVector(osg::Vec3d& upVector);
 
     /// \brief Create Open GL Context
-    osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h, double metersinunit);
+    osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h);
 
-    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit);
+    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h);
 
 
     /// \brief Find joint into OpenRAVE core
@@ -266,7 +266,7 @@ protected:
 
     /// \brief performs a a pan translation of both camera and focal point position.
     /// \param camSpacePanDirection is the pan direction in camera space to apply to camera and focal point.
-    /// \param delta is how much to translate in worlds units (see _metersinunit and QOSGViewerWidget() constructor)
+    /// \param delta is how much to translate in worlds units
     void _PanCameraTowardsDirection(double delta, const osg::Vec3d& camSpacePanDirection);
 
     /// \brief Create a dragger with a name given
@@ -337,7 +337,6 @@ protected:
 
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
-    double _metersinunit; //< current meter unit to be used in all transformations and calculations
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)
     bool _bLightOn; ///< whether lights are on or not

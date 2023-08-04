@@ -1658,9 +1658,10 @@ PyManipulatorPtr PyRobotBase::GetManipulator(const string& manipname)
     return PyManipulatorPtr();
 }
 
-object PyRobotBase::ExtractInfo() const {
+object PyRobotBase::ExtractInfo(ExtractInfoOptions options) const
+{
     RobotBase::RobotBaseInfo info;
-    _probot->ExtractInfo(info);
+    _probot->ExtractInfo(info, options);
     return py::to_object(boost::shared_ptr<PyRobotBase::PyRobotBaseInfo>(new PyRobotBase::PyRobotBaseInfo(info)));
 }
 

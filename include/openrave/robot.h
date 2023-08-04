@@ -1359,7 +1359,7 @@ private:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(RobotBaseInfo& info);
+    virtual void ExtractInfo(RobotBaseInfo& info, ExtractInfoOptions options);
 
     /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromRobotInfo(const RobotBaseInfo& info);

@@ -1568,6 +1568,97 @@ void init_openravepy_global()
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object lengthUnit = enum_<LengthUnit>(m, "LengthUnit" DOXY_ENUM(LengthUnit))
+#else
+    object lengthUnit = enum_<LengthUnit>("LengthUnit" DOXY_ENUM(LengthUnit))
+#endif
+                        .value(GetLengthUnitString(LU_Meter), LU_Meter)
+                        .value(GetLengthUnitString(LU_Decimeter), LU_Decimeter)
+                        .value(GetLengthUnitString(LU_Centimeter), LU_Centimeter)
+                        .value(GetLengthUnitString(LU_Millimeter), LU_Millimeter)
+                        .value(GetLengthUnitString(LU_DeciMillimeter), LU_DeciMillimeter)
+                        .value(GetLengthUnitString(LU_Micrometer), LU_Micrometer)
+                        .value(GetLengthUnitString(LU_Nanometer), LU_Nanometer)
+                        .value(GetLengthUnitString(LU_Inch), LU_Inch)
+                        .value(GetLengthUnitString(LU_Foot), LU_Foot)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object massUnit = enum_<MassUnit>(m, "MassUnit" DOXY_ENUM(MassUnit))
+#else
+    object massUnit = enum_<MassUnit>("MassUnit" DOXY_ENUM(MassUnit))
+#endif
+                      .value(GetMassUnitString(MU_Gram), MU_Gram)
+                      .value(GetMassUnitString(MU_Kilogram), MU_Kilogram)
+                      .value(GetMassUnitString(MU_Milligram), MU_Milligram)
+                      .value(GetMassUnitString(MU_Pound), MU_Pound)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object timeUnit = enum_<TimeUnit>(m, "TimeUnit" DOXY_ENUM(TimeUnit))
+#else
+    object timeUnit = enum_<TimeUnit>("TimeUnit" DOXY_ENUM(TimeUnit))
+#endif
+                      .value(GetTimeUnitString(TU_Second), TU_Second)
+                      .value(GetTimeUnitString(TU_Millisecond), TU_Millisecond)
+                      .value(GetTimeUnitString(TU_Microsecond), TU_Microsecond)
+                      .value(GetTimeUnitString(TU_Nanosecond), TU_Nanosecond)
+                      .value(GetTimeUnitString(TU_Picosecond), TU_Picosecond)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object angleUnit = enum_<AngleUnit>(m, "AngleUnit" DOXY_ENUM(AngleUnit))
+#else
+    object angleUnit = enum_<AngleUnit>("AngleUnit" DOXY_ENUM(AngleUnit))
+#endif
+                       .value(GetAngleUnitString(AU_Radian), AU_Radian)
+                       .value(GetAngleUnitString(AU_Degree), AU_Degree)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<UnitInfo, OPENRAVE_SHARED_PTR<UnitInfo> >(m, "UnitInfo", DOXY_CLASS(UnitInfo))
+#else
+    class_<PyUnitInfo, OPENRAVE_SHARED_PTR<UnitInfo> >("UnitInfo", DOXY_CLASS(UnitInfo), no_init)
+#endif
+    .def(py::init<>())
+    .def(py::init([](const py::object pyUnitInfo) {
+            rapidjson::Document rUnitInfo;
+            toRapidJSONValue(pyUnitInfo, rUnitInfo, rUnitInfo.GetAllocator());
+            UnitInfo unitInfo;
+            orjson::LoadJsonValue(rUnitInfo, unitInfo);
+            return unitInfo;
+        }))
+    .def("SerializeJSON",[](const UnitInfo& self) {
+            rapidjson::Document rUnitInfo;
+            orjson::SaveJsonValue(rUnitInfo, self);
+            return toPyObject(rUnitInfo);
+        })
+    .def("DeserializeJSON",[](UnitInfo& self, py::object pyUnitInfo) {
+            rapidjson::Document rUnitInfo;
+            toRapidJSONValue(pyUnitInfo, rUnitInfo, rUnitInfo.GetAllocator());
+            orjson::LoadJsonValue(rUnitInfo, self);
+        })
+    .def("__repr__",[](const UnitInfo& self) {
+            rapidjson::Document rUnitInfo;
+            orjson::SaveJsonValue(rUnitInfo, self);
+            std::string repr("UnitInfo(");
+            repr += orjson::DumpJson(rUnitInfo);
+            repr += ")";
+            return repr;
+        })
+    .def("__eq__",[](const UnitInfo& self, const UnitInfo& rhs) {
+            return self == rhs;
+        })
+    .def("__ne__",[](const UnitInfo& self, const UnitInfo& rhs) {
+            return self != rhs;
+        })
+    .def_readwrite("lengthUnit",&UnitInfo::lengthUnit)
+    .def_readwrite("massUnit",&UnitInfo::massUnit)
+    .def_readwrite("timeUnit",&UnitInfo::timeUnit)
+    .def_readwrite("angleUnit",&UnitInfo::angleUnit)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >(m, "GraphHandle", DOXY_CLASS(GraphHandle))
 #else
     class_<PyGraphHandle, OPENRAVE_SHARED_PTR<PyGraphHandle> >("GraphHandle", DOXY_CLASS(GraphHandle), no_init)

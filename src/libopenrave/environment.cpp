@@ -150,6 +150,19 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
     }
 
+    {
+        rapidjson::Value::ConstMemberIterator itModifiedAt = rEnvInfo.FindMember("modifiedAt");
+        if( itModifiedAt != rEnvInfo.MemberEnd() && itModifiedAt->value.IsString() ) {
+            const char *const modifiedAt = itModifiedAt->value.GetString();
+            if ( modifiedAt != nullptr ) {
+                _lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+            }
+        }
+    }
+    if (rEnvInfo.HasMember("revisionId")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "revisionId", _revisionId);
+    }
+
     if (rEnvInfo.HasMember("uint64Parameters") && rEnvInfo["uint64Parameters"].IsArray()) {
         for (rapidjson::Value::ConstValueIterator it = rEnvInfo["uint64Parameters"].Begin(); it != rEnvInfo["uint64Parameters"].End(); ++it) {
             std::string id;

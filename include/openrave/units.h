@@ -35,7 +35,7 @@ enum LengthUnit : int8_t
     LU_Decimeter = -1,
     LU_Centimeter = -2,
     LU_Millimeter = -3,
-    LU_100Micrometer = -4,
+    LU_DeciMillimeter = -4,
     LU_Micrometer = -6,
     LU_Nanometer = -9,
     LU_Inch = 0x10,
@@ -98,15 +98,6 @@ public:
     inline bool operator!=(const UnitInfo& rhs) const {
         return lengthUnit != rhs.lengthUnit || massUnit != rhs.massUnit || timeUnit != rhs.timeUnit || angleUnit != rhs.angleUnit;
     }
-    std::string toString() const { // converts UnitInfo into strings
-        std::stringstream ss;
-        ss << "("
-           << GetLengthUnitString(lengthUnit) << ", "
-           << GetMassUnitString(massUnit) << ", "
-           << GetTimeUnitString(timeUnit) << ", "
-           << GetAngleUnitString(angleUnit) << ")";
-        return ss.str();
-    }
 
     LengthUnit lengthUnit = LU_Millimeter; ///< standard in industrial applications
     MassUnit massUnit = MU_Kilogram; ///< SI unit
@@ -151,10 +142,7 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "meter") == 0 ) {
         return T(1.0);
     }
-    if (strcmp(pUnit, "100um") == 0 ) {
-        return T(1e4);
-    }
-    if (strcmp(pUnit, "0.1mm") == 0 ) {
+    if (strcmp(pUnit, "dmm") == 0 ) {
         return T(1e4);
     }
 
@@ -194,7 +182,7 @@ inline T GetLengthUnitStandardValue(const LengthUnit unit)
     if( unit == OpenRAVE::LU_Foot ) {
         return T(3.2808398950131235); // 304.8 mm/ft
     }
-    if( unit == OpenRAVE::LU_100Micrometer ) {
+    if( unit == OpenRAVE::LU_DeciMillimeter ) {
         return T(1e4);
     }
 
