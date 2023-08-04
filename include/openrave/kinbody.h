@@ -28,7 +28,7 @@ class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /// \brief Result of UpdateFromInfo() call
-enum UpdateFromInfoResult
+enum UpdateFromInfoResult : uint8_t
 {
     UFIR_NoChange = 0, ///< Nothing changed
     UFIR_Success = 1, ///< Updated successfully
@@ -36,8 +36,15 @@ enum UpdateFromInfoResult
     UFIR_RequireReinitialize = 3, ///< Failed to update, require InitFromInfo() to be called before update can succeed
 };
 
+enum ExtractInfoOptions : uint8_t
+{
+    EIO_Everything = 0, ///< extract everything
+    EIO_SkipDOFValues = 1, ///< extracts everything but dof values, this allows extraction even when body is not added to the environment
+};
+
 /// \brief The type of geometry primitive.
-enum GeometryType {
+enum GeometryType : uint8_t
+{
     GT_None = 0,
     GT_Box = 1,
     GT_Sphere = 2,
@@ -50,7 +57,10 @@ enum GeometryType {
     GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
 };
 
-enum DynamicsConstraintsType {
+OPENRAVE_API const char* GetGeometryTypeString(GeometryType geometryType);
+
+enum DynamicsConstraintsType : int8_t
+{
     DC_Unknown = -1, ///< constraints type is not set.
     DC_IgnoreTorque        = 0, ///< Do no check torque limits
     DC_NominalTorque       = 1, ///< Compute and check torque limits using nominal torque
@@ -59,7 +69,8 @@ enum DynamicsConstraintsType {
 
 OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type);
 
-enum JointControlMode {
+enum JointControlMode : uint8_t
+{
     JCM_None = 0, ///< unspecified
     JCM_RobotController = 1, ///< joint controlled by the robot controller
     JCM_IO = 2,              ///< joint controlled by I/O signals
@@ -395,6 +406,7 @@ public:
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
         }
+
         inline dReal GetCylinderRadius() const {
             return _vGeomData.x;
         }
@@ -410,8 +422,11 @@ public:
         inline dReal GetConicalFrustumHeight() const {
             return _vGeomData.z;
         }
-        inline const Vector& GetBoxExtents() const {
+        inline const Vector& GetBoxExtents() const { // deprecated?
             return _vGeomData;
+        }
+        inline void SetBoxHalfExtents(const Vector& halfExtents) {
+            _vGeomData = halfExtents;
         }
         inline const Vector& GetBoxHalfExtents() const {
             return _vGeomData;
@@ -419,6 +434,10 @@ public:
 
         inline const Vector& GetCageBaseHalfExtents() const {
             return _vGeomData;
+        }
+
+        inline void SetCageBaseHalfExtents(const Vector& halfExtents) {
+            _vGeomData = halfExtents;
         }
 
         /// \brief compute the inner empty volume in the geometry coordinate system
@@ -587,18 +606,18 @@ public:
             }
         };
 
-        /// \brief An axial geometry representation 
-        /// 
-        /// An axial might look like drawing below. 
-        /// The dotted lines represents the z and y axes. Each row 
+        /// \brief An axial geometry representation
+        ///
+        /// An axial might look like drawing below.
+        /// The dotted lines represents the z and y axes. Each row
         /// represents an axial slice.
         ///
-        /// There has to be at least two axial slices in an axial, 
-        /// which are called top and bottom axial slices. 
+        /// There has to be at least two axial slices in an axial,
+        /// which are called top and bottom axial slices.
         ///
-        /// If the radius of the top and bottom slices are the same, 
+        /// If the radius of the top and bottom slices are the same,
         /// the resulting shape is essentially a cylinder.
-        /// 
+        ///
         /// The axial slices stored in this vector are not sorted by
         /// the z coordinate.
         ///
@@ -608,9 +627,9 @@ public:
         ///  ...|...:...|... y
         ///     |   :   |
         ///      \__:__/
-        ///         : 
         ///         :
-        ///   
+        ///         :
+        ///
         std::vector<AxialSlice> _vAxialSlices;
 
         enum GeometryInfoField : uint32_t
@@ -2548,8 +2567,13 @@ private:
     virtual void SetId(const std::string& newid);
 
     /// \brief Unique name of the body.
-    const std::string& GetId() const {
+    inline const std::string& GetId() const {
         return _id;
+    }
+
+    /// \brief Unique name of the body.
+    inline const std::string& GetReferenceURI() const {
+        return _referenceUri;
     }
 
     /// Methods for accessing basic information about joints
@@ -3469,6 +3493,14 @@ private:
         _lastModifiedAtUS = lastModifiedAtUS;
     }
 
+    inline int64_t GetRevisionId() {
+        return _revisionId;
+    }
+
+    inline void SetRevisionId(int64_t revisionId) {
+        _revisionId = revisionId;
+    }
+
     //@}
 
     /// only used for hashes...
@@ -3482,7 +3514,10 @@ private:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(KinBodyInfo& info);
+    ///
+    /// if bSkipDOFValues is false, body needs to be added to the environment in order to work.
+    /// \param bSkipDOFValues if true, then will skip extracting the DOF values of the kinbody and initializing _dofValues. This allows the fucntion to be called even if the body is not added to the environment.
+    virtual void ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
@@ -3645,7 +3680,8 @@ protected:
     Transform _baseLinkInBodyTransform; ///< the transform of the base link in the body coordinate frame. The body transform returned is baselink->GetTransform() * _baseLinkInBodyTransform.inverse(). When setting a transform, the base link transform becomes body->GetTransform() * _baseLinkInBodyTransform
     Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
-    int64_t _lastModifiedAtUS; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
+    int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
+    int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
 
 private:
     mutable std::vector<dReal> _vTempJoints;

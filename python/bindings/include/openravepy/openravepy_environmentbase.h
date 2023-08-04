@@ -139,14 +139,13 @@ public:
     //@{
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
-    object ReadRobotData(const std::string &data);
-    object ReadRobotData(const std::string &data, object odictatts);
-    object ReadRobotJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = "");
+    object ReadRobotData(const std::string &data, object odictatts=py::none_(), const std::string&uri=std::string());
+    object ReadRobotJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
     object ReadKinBodyURI(const std::string &filename);
     object ReadKinBodyURI(const std::string &filename, object odictatts);
     object ReadKinBodyData(const std::string &data);
     object ReadKinBodyData(const std::string &data, object odictatts);
-    object ReadKinBodyJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = "");
+    object ReadKinBodyJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
     //@}
@@ -157,7 +156,7 @@ public:
     object ReadTrimeshData(const std::string& data, const std::string& formathint);
     object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts);
 
-    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs="");
+    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs=std::string());
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);
@@ -295,10 +294,10 @@ public:
     object GetUserData() const;
 
     void SetUnit(std::string unitname, dReal unitmult);
-    void SetUnitInfo(const py::dict& unitInfo);
+    void SetUnitInfo(const UnitInfo& unitInfo);
 
     object GetUnit() const;
-    py::dict GetUnitInfo() const;
+    UnitInfo GetUnitInfo() const;
     int GetId() const;
 
     object ExtractInfo() const;

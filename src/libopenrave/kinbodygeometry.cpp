@@ -1022,7 +1022,7 @@ void KinBody::GeometryInfo::Reset()
     _vPositiveCropContainerEmptyMargins = Vector(0,0,0);
 }
 
-inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
+const char* GetGeometryTypeString(GeometryType geometryType)
 {
     switch(geometryType) {
     case GT_Box:
@@ -1046,7 +1046,7 @@ inline std::string _GetGeometryTypeString(const GeometryType& geometryType)
     case GT_None:
         return "";
     }
-    return "";
+    return "(unknown)";
 }
 
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
@@ -1055,13 +1055,15 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
 
+    // unfortunately too much code relies on "transform" being present
+    //if( _t.rot.x != 1 || _t.rot.y != 0 || _t.rot.z != 0 || _t.rot.w != 0 || _t.trans.x != 0 || _t.trans.y != 0 || _t.trans.z != 0 )
     {
         Transform tscaled = _t;
         tscaled.trans *= fUnitScale;
         orjson::SetJsonValueByKey(rGeometryInfo, "transform", tscaled, allocator);
     }
 
-    orjson::SetJsonValueByKey(rGeometryInfo, "type", _GetGeometryTypeString(_type), allocator);
+    orjson::SetJsonValueByKey(rGeometryInfo, "type", GetGeometryTypeString(_type), allocator);
 
     switch(_type) {
     case GT_Box:
@@ -1069,24 +1071,40 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
 
     case GT_Container:
-        orjson::SetJsonValueByKey(rGeometryInfo, "outerExtents", _vGeomData*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
+        //if( _vGeomData[0] != 0 || _vGeomData[1] != 0 || _vGeomData[2] != 0 )
+        {
+            orjson::SetJsonValueByKey(rGeometryInfo, "outerExtents", _vGeomData*fUnitScale, allocator);
+        }
+        //if( _vGeomData2[0] != 0 || _vGeomData2[1] != 0 || _vGeomData2[2] != 0 )
+        {
+            orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
+        }
+        if( _vGeomData3[0] != 0 || _vGeomData3[1] != 0 || _vGeomData3[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "bottomCross", _vGeomData3*fUnitScale, allocator);
+        }
+        if( _vGeomData4[0] != 0 || _vGeomData4[1] != 0 || _vGeomData4[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "bottom", _vGeomData4*fUnitScale, allocator);
+        }
+        if( _vNegativeCropContainerMargins[0] != 0 || _vNegativeCropContainerMargins[1] != 0 || _vNegativeCropContainerMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
+        }
+        if( _vPositiveCropContainerMargins[0] != 0 || _vPositiveCropContainerMargins[1] != 0 || _vPositiveCropContainerMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
+        }
+        if( _vNegativeCropContainerEmptyMargins[0] != 0 || _vNegativeCropContainerEmptyMargins[1] != 0 || _vNegativeCropContainerEmptyMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
+        }
+        if( _vPositiveCropContainerEmptyMargins[0] != 0 || _vPositiveCropContainerEmptyMargins[1] != 0 || _vPositiveCropContainerEmptyMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
+        }
         break;
 
     case GT_Cage: {
-        orjson::SetJsonValueByKey(rGeometryInfo, "baseExtents", _vGeomData*fUnitScale, allocator);
-
-        std::vector<SideWall> vScaledSideWalls = _vSideWalls;
-        FOREACH(itwall, vScaledSideWalls) {
-            itwall->transf.trans *= fUnitScale;
-            itwall->vExtents *= fUnitScale;
+        //if( _vGeomData[0] != 0 || _vGeomData[1] != 0 || _vGeomData[2] != 0 )
+        {
+            orjson::SetJsonValueByKey(rGeometryInfo, "baseExtents", _vGeomData*fUnitScale, allocator);
         }
+
         if( _vGeomData2.x > g_fEpsilon ) {
             orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeX", _vGeomData2.x*fUnitScale, allocator);
         }
@@ -1096,11 +1114,26 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         if( _vGeomData2.z > g_fEpsilon ) {
             orjson::SetJsonValueByKey(rGeometryInfo, "innerSizeZ", _vGeomData2.z*fUnitScale, allocator);
         }
-        orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
-        orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
+        if( !_vSideWalls.empty() ) {
+            std::vector<SideWall> vScaledSideWalls = _vSideWalls;
+            FOREACH(itwall, vScaledSideWalls) {
+                itwall->transf.trans *= fUnitScale;
+                itwall->vExtents *= fUnitScale;
+            }
+            orjson::SetJsonValueByKey(rGeometryInfo, "sideWalls", vScaledSideWalls, allocator);
+        }
+        if( _vNegativeCropContainerMargins[0] != 0 || _vNegativeCropContainerMargins[1] != 0 || _vNegativeCropContainerMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
+        }
+        if( _vPositiveCropContainerMargins[0] != 0 || _vPositiveCropContainerMargins[1] != 0 || _vPositiveCropContainerMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
+        }
+        if( _vNegativeCropContainerEmptyMargins[0] != 0 || _vNegativeCropContainerEmptyMargins[1] != 0 || _vNegativeCropContainerEmptyMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
+        }
+        if( _vPositiveCropContainerEmptyMargins[0] != 0 || _vPositiveCropContainerEmptyMargins[1] != 0 || _vPositiveCropContainerEmptyMargins[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
+        }
         break;
     }
     case GT_Sphere:
@@ -1147,7 +1180,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
     }
     case GT_CalibrationBoard: {
-        orjson::SetJsonValueByKey(rGeometryInfo, "halfExtents", _vGeomData*fUnitScale, allocator);
+        if( _vGeomData[0] != 0 || _vGeomData[1] != 0 || _vGeomData[2] != 0 ) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "halfExtents", _vGeomData*fUnitScale, allocator);
+        }
         rapidjson::Value rCalibrationBoardParameters;
         rCalibrationBoardParameters.SetObject();
         CalibrationBoardParameters params = _calibrationBoardParameters.size() > 0 ? _calibrationBoardParameters[0] : CalibrationBoardParameters();
@@ -1166,11 +1201,21 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         break;
     }
 
-    orjson::SetJsonValueByKey(rGeometryInfo, "transparency", _fTransparency, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "visible", _bVisible, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "diffuseColor", _vDiffuseColor, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "ambientColor", _vAmbientColor, allocator);
-    orjson::SetJsonValueByKey(rGeometryInfo, "modifiable", _bModifiable, allocator);
+    if( _fTransparency != 0 ) {
+        orjson::SetJsonValueByKey(rGeometryInfo, "transparency", _fTransparency, allocator);
+    }
+    if( !_bVisible ) { // default is true
+        orjson::SetJsonValueByKey(rGeometryInfo, "visible", _bVisible, allocator);
+    }
+    if( _vDiffuseColor[0] != 1 || _vDiffuseColor[1] != 1 || _vDiffuseColor[2] != 1 ) {
+        orjson::SetJsonValueByKey(rGeometryInfo, "diffuseColor", _vDiffuseColor, allocator);
+    }
+    if( _vAmbientColor[0] != 0 || _vAmbientColor[1] != 0 || _vAmbientColor[2] != 0 ) {
+        orjson::SetJsonValueByKey(rGeometryInfo, "ambientColor", _vAmbientColor, allocator);
+    }
+    if( !_bModifiable ) { // default is true
+        orjson::SetJsonValueByKey(rGeometryInfo, "modifiable", _bModifiable, allocator);
+    }
 }
 
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)

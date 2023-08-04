@@ -2542,9 +2542,9 @@ const std::string& RobotBase::GetRobotStructureHash() const
     return __hashrobotstructure;
 }
 
-void RobotBase::ExtractInfo(RobotBaseInfo& info)
+void RobotBase::ExtractInfo(RobotBaseInfo& info, ExtractInfoOptions options)
 {
-    KinBody::ExtractInfo(info);
+    KinBody::ExtractInfo(info, options);
     info._isRobot = true;
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);

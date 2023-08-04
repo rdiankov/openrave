@@ -423,7 +423,7 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed for body '%s' (uri '%s'), perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id%_name%(_uri.empty() ? _referenceUri : _uri));
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -436,6 +436,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _nUpdateStampId = 0;
     _bAreAllJoints1DOFAndNonCircular = false;
     _lastModifiedAtUS = 0;
+    _revisionId = 0;
 }
 
 KinBody::~KinBody()
@@ -5764,6 +5765,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // can copy the generator, but not the functions! use SetKinematicsGenerator
     SetKinematicsGenerator(r->_pKinematicsGenerator);
 
+    _lastModifiedAtUS = r->_lastModifiedAtUS;
+    _revisionId = r->_revisionId;
+
     _nUpdateStampId++; // update the stamp instead of copying
 }
 
@@ -6024,7 +6028,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     __hashKinematicsGeometryDynamics.resize(0);
 }
 
-void KinBody::ExtractInfo(KinBodyInfo& info)
+void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 {
     info._modifiedFields = 0;
     info._id = _id;
@@ -6034,16 +6038,20 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._interfaceType = GetXMLId();
     info._isPartial = false; // extracting everything
 
-    info._dofValues.resize(0);
-    std::vector<dReal> vDOFValues;
-    GetDOFValues(vDOFValues);
-    for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
-        const Joint& joint = _GetJointFromDOFIndex(idof);
-        int jointAxis = idof - joint.GetDOFIndex();
-        info._dofValues.emplace_back(std::make_pair(joint.GetName(), jointAxis), vDOFValues[idof]);
+    info._dofValues.clear();
+
+    if( !(options & EIO_SkipDOFValues) ) {
+        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized    
+        std::vector<dReal> vDOFValues;
+        GetDOFValues(vDOFValues);
+        for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
+            const Joint& joint = _GetJointFromDOFIndex(idof);
+            int jointAxis = idof - joint.GetDOFIndex();
+            info._dofValues.emplace_back(std::make_pair(joint.GetName(), jointAxis), vDOFValues[idof]);
+        }
     }
 
-    info._vGrabbedInfos.resize(0);
+    info._vGrabbedInfos.clear();
     GetGrabbedInfo(info._vGrabbedInfos);
 
     info._transform = GetTransform();

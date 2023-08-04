@@ -30,7 +30,7 @@ const char* GetLengthUnitString(LengthUnit unit)
     case LU_Decimeter: return "dm";
     case LU_Inch: return "in";
     case LU_Foot: return "ft";
-    case LU_100Micrometer: return "0.1mm";
+    case LU_DeciMillimeter: return "dmm";
     }
     return "(unknown)";
 }
@@ -67,11 +67,8 @@ LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLe
     if( strcmp(pLengthUnit, "ft") == 0 || strcmp(pLengthUnit, "foot") == 0 || strcmp(pLengthUnit, "feet") == 0 ) {
         return LU_Foot;
     }
-    if( strcmp(pLengthUnit, "0.1mm") == 0 ) {
-        return LU_100Micrometer;
-    }
-    if( strcmp(pLengthUnit, "100um") == 0 ) {
-        return LU_100Micrometer;
+    if( strcmp(pLengthUnit, "dmm") == 0 ) {
+        return LU_DeciMillimeter;
     }
     if( strcmp(pLengthUnit, "millimeter") == 0 ) {
         return LU_Millimeter;
