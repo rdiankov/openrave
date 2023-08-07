@@ -2740,16 +2740,17 @@ public:
         {
             SharedLock lock464(_mutexInterfaces);
             numBodies = _GetNumBodies();
-            // if( (int)_vecbodies.size() != numBodies ) {
-            //     RAVELOG_WARN_FORMAT("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d.", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size());
-            // }
             vBodies = _vecbodies;
+            if( (int)vBodies.size() != numBodies + (int)_environmentIndexRecyclePool.size() + 1 ) {
+                // There is a +1 because the first element of _vecbodies is a null pointer.
+                RAVELOG_WARN_FORMAT("env=%s, _vecbodies has %d bodies. _mapBodyNameIndex has %d bodies. pool has %d indices.",
+                                    GetNameId() % _vecbodies.size() % _mapBodyNameIndex.size() % _environmentIndexRecyclePool.size());
+            }
         }
         info._vBodyInfos.resize(numBodies);
         int validBodyItr = 0;
         for(KinBodyPtr& pbody : vBodies) {
             if (!pbody) {
-                RAVELOG_WARN_FORMAT("env=%s, got invalid body", GetNameId());
                 continue;
             }
             KinBody::KinBodyInfoPtr& pbodyFromInfo = info._vBodyInfos.at(validBodyItr);
