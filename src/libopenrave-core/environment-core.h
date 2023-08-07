@@ -2740,10 +2740,9 @@ public:
         {
             SharedLock lock464(_mutexInterfaces);
             numBodies = _GetNumBodies();
-            if( (int)_vecbodies.size() != numBodies ) {
-                RAVELOG_WARN_FORMAT("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d.", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size());
-                //throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d."), GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size(), ORE_InvalidState);
-            }
+            // if( (int)_vecbodies.size() != numBodies ) {
+            //     RAVELOG_WARN_FORMAT("env=%s, _vecbodies has %d bodies, but _mapBodyNameIndex has %d.", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size());
+            // }
             vBodies = _vecbodies;
         }
         info._vBodyInfos.resize(numBodies);
