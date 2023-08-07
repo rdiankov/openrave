@@ -1448,7 +1448,6 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
             vGeomDataTemp.x *= fUnitScale;
         }
         else if( value.HasMember("topRadius") ) { // due to a previous version of openrave
-            RAVELOG_WARN("cylinder geometry uses 'topRadius', should change this.");
             orjson::LoadJsonValueByKey(value, "topRadius", vGeomDataTemp.x);
             vGeomDataTemp.x *= fUnitScale;
         }
