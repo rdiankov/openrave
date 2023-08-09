@@ -901,6 +901,7 @@ void KinBodyItem::SetCropContainerMarginsVisible(const std::string& linkName, co
             _visibleCropContainerMargins.insert(linkGeometryNames);
         } else {
             _visibleCropContainerMargins.erase(linkGeometryNames);
+            _cropContainerMarginsLabel = nullptr;
         }
         Load();
     }
@@ -909,6 +910,7 @@ void KinBodyItem::SetCropContainerMarginsVisible(const std::string& linkName, co
             _visibleCropContainerEmptyMargins.insert(linkGeometryNames);
         } else {
             _visibleCropContainerEmptyMargins.erase(linkGeometryNames);
+            _cropContainerEmptyMarginsLabel = nullptr;
         }
         Load();
     }
