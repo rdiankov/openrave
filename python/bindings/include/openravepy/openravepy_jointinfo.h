@@ -134,6 +134,7 @@ public:
     py::dict _mapStringParameters;
     py::dict _mapExtraGeometries;
     object _vForcedAdjacentLinks = py::list();
+    py::object _readableInterfaces = py::none_();
     bool _bStatic = false;
     bool _bIsEnabled = true;
     bool _bIgnoreSelfCollision = false;
@@ -260,7 +261,7 @@ private:
     void _Update(const KinBody::JointInfo& info);
 };
 
-class PyLink
+class PyLink : public PyReadablesContainer
 {
     KinBody::LinkPtr _plink;
     PyEnvironmentBasePtr _pyenv;

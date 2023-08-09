@@ -406,7 +406,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
+void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale)
+{
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
@@ -414,12 +415,12 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
     }
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value, fUnitScale);
+        pReader->DeserializeJSON(rReadable, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
-    if (value.IsString()) {
-        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
+    if (rReadable.IsString()) {
+        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString()));
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }
@@ -5969,6 +5970,10 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
 
+    FOREACH(it, info._mReadableInterfaces) {
+        plink->SetReadableInterface(it->first, it->second);
+    }
+
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __hashKinematicsGeometryDynamics.resize(0);
@@ -6122,11 +6127,14 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     }
 
 
-    FOREACHC(it, GetReadableInterfaces()) {
-        if (!!it->second) {
-            // make a copy of the readable interface
-            // caller may modify and call UpdateFromInfo with modified readable interfaces
-            info._mReadableInterfaces[it->first] = it->second->CloneSelf();
+    {
+        boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
+        FOREACHC(it, GetReadableInterfaces()) {
+            if (!!it->second) {
+                // make a copy of the readable interface
+                // caller may modify and call UpdateFromInfo with modified readable interfaces
+                info._mReadableInterfaces[it->first] = it->second->CloneSelf();
+            }
         }
     }
 

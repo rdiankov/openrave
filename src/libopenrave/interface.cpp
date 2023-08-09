@@ -33,7 +33,6 @@ InterfaceBase::~InterfaceBase()
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapCommands.clear();
     __mapUserData.clear();
-    __mapReadableInterfaces.clear();
     __penv.reset();
     __mapJSONCommands.clear();
 }
@@ -90,7 +89,7 @@ void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // cannot clone the user data since it can be environment dependent!
     //__mapUserData = preference->__mapUserData;
     __struri = preference->__struri;
-    __mapReadableInterfaces = preference->__mapReadableInterfaces;
+    SetReadableInterfaces(preference->GetReadableInterfaces(), true);
     __description = preference->__description;
 }
 
@@ -125,7 +124,8 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
-    FOREACHC(it, __mapReadableInterfaces) {
+    boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
+    FOREACHC(it, GetReadableInterfaces()) {
         if( !!it->second ) {
             it->second->SerializeXML(writer,options);
         }
@@ -259,14 +259,14 @@ void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson
     }
 }
 
-ReadablePtr InterfaceBase::GetReadableInterface(const std::string& id) const
+ReadablePtr ReadablesContainer::GetReadableInterface(const std::string& id) const
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
     READERSMAP::const_iterator it = __mapReadableInterfaces.find(id);
     return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
-ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadablePtr readable)
+ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     READERSMAP::iterator it = __mapReadableInterfaces.find(id);
@@ -286,7 +286,7 @@ ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadableP
     return pprev;
 }
 
-void InterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
+void ReadablesContainer::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     if( bClearAllExisting ) {
@@ -297,18 +297,18 @@ void InterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapRe
     }
 }
 
-void InterfaceBase::ClearReadableInterfaces()
+void ReadablesContainer::ClearReadableInterfaces()
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapReadableInterfaces.clear();
 }
 
-void InterfaceBase::ClearReadableInterface(const std::string& id) {
+void ReadablesContainer::ClearReadableInterface(const std::string& id) {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapReadableInterfaces.erase(id);
 }
 
-bool InterfaceBase::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
+bool ReadablesContainer::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     bool bChanged = false;
     bool bNewAllFound = true;
