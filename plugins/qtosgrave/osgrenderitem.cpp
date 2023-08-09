@@ -483,6 +483,7 @@ void KinBodyItem::Load()
                     if (_visibleCropContainerMargins.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
                             pgeometrydata,
+                            orgeom->GetContainerOuterExtents(),
                             orgeom->GetContainerInnerExtents(),
                             orgeom->GetNegativeCropContainerMargins(),
                             orgeom->GetPositiveCropContainerMargins(),
@@ -507,6 +508,7 @@ void KinBodyItem::Load()
                     if (_visibleCropContainerEmptyMargins.count(linkGeometryNames) != 0) {
                         DrawCropContainerMargins(
                             pgeometrydata,
+                            orgeom->GetContainerOuterExtents(),
                             orgeom->GetContainerInnerExtents(),
                             orgeom->GetNegativeCropContainerEmptyMargins(),
                             orgeom->GetPositiveCropContainerEmptyMargins(),
@@ -1147,7 +1149,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     return true;
 }
 
-void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency){
+void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& outerExtents, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency){
     if(negativeCropContainerMargins == Vector(0, 0, 0) && positiveCropContainerMargins == Vector(0, 0, 0)){
         // do nothing if CropContainerMargins are all zeros
         return;
@@ -1157,12 +1159,16 @@ void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, 
     box->setCenter(osg::Vec3f(
         (negativeCropContainerMargins.x - positiveCropContainerMargins.x) * 0.5,
         (negativeCropContainerMargins.y - positiveCropContainerMargins.y) * 0.5,
-        (extents.z + negativeCropContainerMargins.z - positiveCropContainerMargins.z) * 0.5
+        // The z = 0 plane sits at the bottom of the outer extent.
+        // First, move up by (outerExtents.z - innerExtents.z) to reach the bottom of inner extent.
+        // Then move up by (innerExtents.z / 2) to reach the center of the box.
+        // Thus the center of the inner extent box is (0, 0, (outerExtents.z - innerExtents.z / 2))
+        (negativeCropContainerMargins.z - positiveCropContainerMargins.z) * 0.5 + (outerExtents.z - innerExtents.z * 0.5)
     ));
     box->setHalfLengths(osg::Vec3f(
-        (extents.x - negativeCropContainerMargins.x - positiveCropContainerMargins.x) * 0.5,
-        (extents.y - negativeCropContainerMargins.y - positiveCropContainerMargins.y) * 0.5,
-        (extents.z - negativeCropContainerMargins.z - positiveCropContainerMargins.z) * 0.5
+        (innerExtents.x - negativeCropContainerMargins.x - positiveCropContainerMargins.x) * 0.5,
+        (innerExtents.y - negativeCropContainerMargins.y - positiveCropContainerMargins.y) * 0.5,
+        (innerExtents.z - negativeCropContainerMargins.z - positiveCropContainerMargins.z) * 0.5
     ));
 
     osg::Geode *boxGeode = new osg::Geode;
