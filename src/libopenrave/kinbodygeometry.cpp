@@ -1781,7 +1781,7 @@ AABB KinBody::Geometry::ComputeAABB(const Transform& t) const
 void KinBody::Geometry::serialize(std::ostream& o, int options) const
 {
     SerializeRound(o,_info._t);
-    o << _info._type << " ";
+    o << (int)_info._type << " ";
     SerializeRound3(o,_info._vRenderScale);
     if( _info._type == GT_TriMesh ) {
         _info._meshcollision.serialize(o,options);
