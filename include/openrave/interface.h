@@ -75,8 +75,8 @@ public:
     virtual void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) = 0;
 };
 
-struct OPENRAVE_API ReadableInterfaceBase {
-    virtual ~ReadableInterfaceBase() = default;
+struct OPENRAVE_API ReadablesContainer {
+    virtual ~ReadablesContainer() = default;
 
     typedef std::map<std::string, ReadablePtr, CaseInsensitiveCompare> READERSMAP;
 
@@ -110,7 +110,7 @@ struct OPENRAVE_API ReadableInterfaceBase {
         return _mutexInterface;
     }
 
-    ReadableInterfaceBase& operator= (const ReadableInterfaceBase& other) {
+    ReadablesContainer& operator= (const ReadablesContainer& other) {
         if (this != &other) {
             __mapReadableInterfaces = other.__mapReadableInterfaces;
         }
@@ -133,7 +133,7 @@ private:
 /** \brief <b>[interface]</b> Base class for all interfaces that OpenRAVE provides. See \ref interface_concepts.
     \ingroup interfaces
  */
-class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>, public ReadableInterfaceBase
+class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<InterfaceBase>, public ReadablesContainer
 {
 public:
 

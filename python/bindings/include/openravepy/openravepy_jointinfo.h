@@ -261,7 +261,7 @@ private:
     void _Update(const KinBody::JointInfo& info);
 };
 
-class PyLink : public PyReadableInterfaceBase
+class PyLink : public PyReadablesContainer
 {
     KinBody::LinkPtr _plink;
     PyEnvironmentBasePtr _pyenv;

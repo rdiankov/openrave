@@ -259,14 +259,14 @@ void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson
     }
 }
 
-ReadablePtr ReadableInterfaceBase::GetReadableInterface(const std::string& id) const
+ReadablePtr ReadablesContainer::GetReadableInterface(const std::string& id) const
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
     READERSMAP::const_iterator it = __mapReadableInterfaces.find(id);
     return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
-ReadablePtr ReadableInterfaceBase::SetReadableInterface(const std::string& id, ReadablePtr readable)
+ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     READERSMAP::iterator it = __mapReadableInterfaces.find(id);
@@ -286,7 +286,7 @@ ReadablePtr ReadableInterfaceBase::SetReadableInterface(const std::string& id, R
     return pprev;
 }
 
-void ReadableInterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
+void ReadablesContainer::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     if( bClearAllExisting ) {
@@ -297,18 +297,18 @@ void ReadableInterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMA
     }
 }
 
-void ReadableInterfaceBase::ClearReadableInterfaces()
+void ReadablesContainer::ClearReadableInterfaces()
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapReadableInterfaces.clear();
 }
 
-void ReadableInterfaceBase::ClearReadableInterface(const std::string& id) {
+void ReadablesContainer::ClearReadableInterface(const std::string& id) {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapReadableInterfaces.erase(id);
 }
 
-bool ReadableInterfaceBase::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
+bool ReadablesContainer::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     bool bChanged = false;
     bool bNewAllFound = true;

@@ -625,13 +625,13 @@ OPENRAVEPY_API std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfo
 OPENRAVEPY_API std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(py::object pyConnectedBodyInfoList);
 OPENRAVEPY_API py::object ReturnDOFValues(const std::vector<std::pair<std::pair<std::string, int>, dReal> >& vDOFValues);
 
-class OPENRAVEPY_API PyReadableInterfaceBase
+class OPENRAVEPY_API PyReadablesContainer
 {
 protected:
-    ReadableInterfaceBasePtr _pbase;
+    ReadablesContainerPtr _pbase;
 public:
-    explicit PyReadableInterfaceBase(ReadableInterfaceBasePtr pbase) : _pbase(pbase) {}
-    virtual ~PyReadableInterfaceBase() = default;
+    explicit PyReadablesContainer(ReadablesContainerPtr pbase) : _pbase(pbase) {}
+    virtual ~PyReadablesContainer() = default;
 
     virtual py::object GetReadableInterfaces();
     virtual py::object GetReadableInterface(const std::string& xmltag);
@@ -639,7 +639,7 @@ public:
     virtual void SetReadableInterface(const std::string& xmltag, py::object oreadable);
 };
 
-class OPENRAVEPY_API PyInterfaceBase : public PyReadableInterfaceBase
+class OPENRAVEPY_API PyInterfaceBase : public PyReadablesContainer
 {
 protected:
     InterfaceBasePtr _pbase;
