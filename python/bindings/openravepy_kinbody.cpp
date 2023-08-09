@@ -4530,6 +4530,23 @@ public:
     }
 };
 
+class SideWall_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PySideWall& r)
+    {
+        return py::make_tuple(r.transf, r.vExtents, r.type);
+    }
+    static void setstate(PySideWall& r, py::tuple state) {
+        r.transf = state[0];
+        r.vExtents = py::list(state[1]);
+        r.type = py::extract<int>(state[2]);
+    }
+};
+
 class LinkInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -5105,6 +5122,30 @@ void init_openravepy_kinbody()
                       .def_readwrite("transf",&PySideWall::transf)
                       .def_readwrite("vExtents",&PySideWall::vExtents)
                       .def_readwrite("type",&PySideWall::type)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                      .def(py::pickle(
+                               [](const PySideWall &pyinfo) {
+            // __getstate__
+            return SideWall_pickle_suite::getstate(pyinfo);
+        },
+                               [](py::tuple state) {
+            PySideWall pyinfo;
+            SideWall_pickle_suite::setstate(pyinfo, state);
+            return pyinfo;
+        }))
+                      .def("__copy__", [](const PySideWall& self) {
+            return self;
+        })
+                      .def("__deepcopy__",
+                           [](const PySideWall &pyinfo, const py::dict& memo) {
+            auto state = SideWall_pickle_suite::getstate(pyinfo);
+            PySideWall pyinfo_new;
+            SideWall_pickle_suite::setstate(pyinfo_new, state);
+            return pyinfo_new;
+        })
+#else
+                      .def_pickle(SideWall_pickle_suite())
+#endif
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
