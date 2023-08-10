@@ -4542,8 +4542,8 @@ public:
     }
     static void setstate(PySideWall& r, py::tuple state) {
         r.transf = state[0];
-        r.vExtents = py::list(state[1]);
-        r.type = py::extract<int>(state[2]);
+        r.vExtents = state[1];
+        r.type = (KinBody::GeometryInfo::SideWallType)(int)py::extract<int>(state[2]);
     }
 };
 
