@@ -406,7 +406,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
+void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale)
+{
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
@@ -414,16 +415,16 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
     }
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value, fUnitScale);
+        pReader->DeserializeJSON(rReadable, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
-    if (value.IsString()) {
-        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
+    if (rReadable.IsString()) {
+        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString()));
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed for body '%s' (uri '%s'), perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id%_name%(_uri.empty() ? _referenceUri : _uri));
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
@@ -436,6 +437,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _nUpdateStampId = 0;
     _bAreAllJoints1DOFAndNonCircular = false;
     _lastModifiedAtUS = 0;
+    _revisionId = 0;
 }
 
 KinBody::~KinBody()
@@ -5764,6 +5766,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // can copy the generator, but not the functions! use SetKinematicsGenerator
     SetKinematicsGenerator(r->_pKinematicsGenerator);
 
+    _lastModifiedAtUS = r->_lastModifiedAtUS;
+    _revisionId = r->_revisionId;
+
     _nUpdateStampId++; // update the stamp instead of copying
 }
 
@@ -5965,6 +5970,10 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
 
+    FOREACH(it, info._mReadableInterfaces) {
+        plink->SetReadableInterface(it->first, it->second);
+    }
+
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __hashKinematicsGeometryDynamics.resize(0);
@@ -6020,7 +6029,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     __hashKinematicsGeometryDynamics.resize(0);
 }
 
-void KinBody::ExtractInfo(KinBodyInfo& info)
+void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 {
     info._modifiedFields = 0;
     info._id = _id;
@@ -6030,16 +6039,20 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     info._interfaceType = GetXMLId();
     info._isPartial = false; // extracting everything
 
-    info._dofValues.resize(0);
-    std::vector<dReal> vDOFValues;
-    GetDOFValues(vDOFValues);
-    for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
-        const Joint& joint = _GetJointFromDOFIndex(idof);
-        int jointAxis = idof - joint.GetDOFIndex();
-        info._dofValues.emplace_back(std::make_pair(joint.GetName(), jointAxis), vDOFValues[idof]);
+    info._dofValues.clear();
+
+    if( !(options & EIO_SkipDOFValues) ) {
+        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized    
+        std::vector<dReal> vDOFValues;
+        GetDOFValues(vDOFValues);
+        for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
+            const Joint& joint = _GetJointFromDOFIndex(idof);
+            int jointAxis = idof - joint.GetDOFIndex();
+            info._dofValues.emplace_back(std::make_pair(joint.GetName(), jointAxis), vDOFValues[idof]);
+        }
     }
 
-    info._vGrabbedInfos.resize(0);
+    info._vGrabbedInfos.clear();
     GetGrabbedInfo(info._vGrabbedInfos);
 
     info._transform = GetTransform();
@@ -6114,11 +6127,14 @@ void KinBody::ExtractInfo(KinBodyInfo& info)
     }
 
 
-    FOREACHC(it, GetReadableInterfaces()) {
-        if (!!it->second) {
-            // make a copy of the readable interface
-            // caller may modify and call UpdateFromInfo with modified readable interfaces
-            info._mReadableInterfaces[it->first] = it->second->CloneSelf();
+    {
+        boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
+        FOREACHC(it, GetReadableInterfaces()) {
+            if (!!it->second) {
+                // make a copy of the readable interface
+                // caller may modify and call UpdateFromInfo with modified readable interfaces
+                info._mReadableInterfaces[it->first] = it->second->CloneSelf();
+            }
         }
     }
 

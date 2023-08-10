@@ -101,9 +101,9 @@ OPENRAVE_NODISCARD inline std::string RemoveSuffix(string_view input, string_vie
 }
 
 /// \brief get the scheme of the uri, e.g. file: or openrave:
-inline void ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
+inline void ParseURI(const char* pUri, std::string& scheme, std::string& path, std::string& fragment)
 {
-    path = uri;
+    path = pUri;
     size_t hashindex = path.find_last_of('#');
     if (hashindex != std::string::npos) {
         fragment = path.substr(hashindex + 1);

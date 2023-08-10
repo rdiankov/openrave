@@ -67,12 +67,20 @@ public:
     object GetCageBaseHalfExtents();
     object GetContainerOuterExtents();
     object GetContainerInnerExtents();
+    void SetBoxHalfExtents(object oHalfExtents);
+    void SetCageBaseHalfExtents(object oHalfExtents);
     void SetContainerOuterExtents(object oOuterExtents);
     void SetContainerInnerExtents(object oInnerExtents);
+    object GetCylinderRadius();
+    object GetCylinderHeight();
     object GetConicalFrustumTopRadius() const;
     object GetConicalFrustumBottomRadius() const;
     object GetConicalFrustumHeight() const;
+    object GetCollisionMesh();
 
+    std::string __repr__();
+    std::string __str__();
+    
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());
     object _vGeomData2 = toPyVector4(Vector());
@@ -88,6 +96,10 @@ public:
     object _filenamecollision = py::none_();
     object _vRenderScale = toPyVector3(Vector(1,1,1));
     object _vCollisionScale = toPyVector3(Vector(1,1,1));
+    float _fTransparency = 0.0;
+    bool _bVisible = true;
+    bool _bModifiable = true;
+    
     object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
@@ -95,10 +107,6 @@ public:
 
     py::list _vSideWalls;
     py::list _vAxialSlices;
-    float _containerBaseHeight = 0.0;
-    float _fTransparency = 0.0;
-    bool _bVisible = true;
-    bool _bModifiable = true;
     py::dict _calibrationBoardParameters;
 };
 
@@ -126,6 +134,7 @@ public:
     py::dict _mapStringParameters;
     py::dict _mapExtraGeometries;
     object _vForcedAdjacentLinks = py::list();
+    py::object _readableInterfaces = py::none_();
     bool _bStatic = false;
     bool _bIsEnabled = true;
     bool _bIgnoreSelfCollision = false;
@@ -252,7 +261,7 @@ private:
     void _Update(const KinBody::JointInfo& info);
 };
 
-class PyLink
+class PyLink : public PyReadablesContainer
 {
     KinBody::LinkPtr _plink;
     PyEnvironmentBasePtr _pyenv;

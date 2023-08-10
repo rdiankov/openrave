@@ -329,6 +329,7 @@ public:
     int DoesAffect(int jointindex, int linkindex ) const;
     int DoesDOFAffectLink(int dofindex, int linkindex ) const;
     py::object GetURI() const;
+    py::object GetReferenceURI() const;
     py::object GetNonAdjacentLinks() const;
     py::object GetNonAdjacentLinks(int adjacentoptions) const;
     void SetAdjacentLinks(int linkindex0, int linkindex1);
@@ -342,8 +343,9 @@ public:
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
     py::object GetAssociatedFileEntries() const;
     int64_t GetLastModifiedAtUS() const;
+    int64_t GetRevisionId() const;
 
-    py::object ExtractInfo() const;
+    py::object ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
 
     PyInterfaceBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);

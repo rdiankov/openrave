@@ -715,7 +715,7 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 }
 
-void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
+void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale) {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
@@ -723,12 +723,12 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
     }
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value, fUnitScale);
+        pReader->DeserializeJSON(rReadable, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
-    if (value.IsString()) {
-        StringReadablePtr pReadableString(new StringReadable(id, value.GetString()));
+    if (rReadable.IsString()) {
+        StringReadablePtr pReadableString(new StringReadable(id, rReadable.GetString()));
         _mReadableInterfaces[id] = pReadableString;
         return;
     }
@@ -2542,9 +2542,9 @@ const std::string& RobotBase::GetRobotStructureHash() const
     return __hashrobotstructure;
 }
 
-void RobotBase::ExtractInfo(RobotBaseInfo& info)
+void RobotBase::ExtractInfo(RobotBaseInfo& info, ExtractInfoOptions options)
 {
-    KinBody::ExtractInfo(info);
+    KinBody::ExtractInfo(info, options);
     info._isRobot = true;
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);

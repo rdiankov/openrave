@@ -492,6 +492,16 @@ object PyGeometryInfo::GetContainerInnerExtents()
     return toPyVector3(ExtractVector<dReal>(_vGeomData2));
 }
 
+void PyGeometryInfo::SetBoxHalfExtents(object oHalfExtents)
+{
+    _vGeomData = oHalfExtents;
+}
+
+void PyGeometryInfo::SetCageBaseHalfExtents(object oHalfExtents)
+{
+    _vGeomData = oHalfExtents;
+}
+
 void PyGeometryInfo::SetContainerOuterExtents(object oOuterExtents)
 {
     _vGeomData = oOuterExtents;
@@ -500,6 +510,16 @@ void PyGeometryInfo::SetContainerOuterExtents(object oOuterExtents)
 void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
 {
     _vGeomData2 = oInnerExtents;
+}
+
+object PyGeometryInfo::GetCylinderRadius()
+{
+    return _vGeomData[0];
+}
+
+object PyGeometryInfo::GetCylinderHeight()
+{
+    return _vGeomData[1];
 }
 
 object PyGeometryInfo::GetConicalFrustumTopRadius() const {
@@ -512,6 +532,36 @@ object PyGeometryInfo::GetConicalFrustumBottomRadius() const {
 
 object PyGeometryInfo::GetConicalFrustumHeight() const {
     return _vGeomData[2];
+}
+
+object PyGeometryInfo::GetCollisionMesh()
+{
+    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+    pgeominfo->InitCollisionMesh();
+    return toPyTriMesh(pgeominfo->_meshcollision);
+}
+
+std::string PyGeometryInfo::__repr__()
+{
+    rapidjson::Document doc;
+    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+    dReal fUnitScale = 1;
+    int options = 0;
+    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+    std::string repr("GeometryInfo('");
+    repr += orjson::DumpJson(doc);
+    repr += "')";
+    return repr;
+}
+
+std::string PyGeometryInfo::__str__()
+{
+    rapidjson::Document doc;
+    KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
+    dReal fUnitScale = 1;
+    int options = 0;
+    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+    return orjson::DumpJson(doc);
 }
 
 PyLinkInfo::PyLinkInfo() {
@@ -551,6 +601,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
     _bIgnoreSelfCollision = info._bIgnoreSelfCollision;
+    _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
 
 py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
@@ -659,6 +710,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     }
 #endif
 
+    info._mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
     info._bStatic = _bStatic;
     info._bIsEnabled = _bIsEnabled;
@@ -1500,7 +1552,7 @@ long PyLink::PyGeometry::__hash__() {
     return static_cast<long>(uintptr_t(_pgeometry.get()));
 }
 
-PyLink::PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {
+PyLink::PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : PyReadablesContainer(plink), _plink(plink), _pyenv(pyenv) {
 }
 PyLink::~PyLink() {
 }
@@ -2238,6 +2290,11 @@ PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
 PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo)
 {
     return PyGeometryInfoPtr(new PyGeometryInfo(geominfo));
+}
+
+py::object toPyObject(const PyGeometryInfoPtr& pygeom)
+{
+    return py::to_object(pygeom);
 }
 
 PyKinBodyStateSaver::PyKinBodyStateSaver(PyKinBodyPtr pybody) : _pyenv(pybody->GetEnv()), _state(pybody->GetBody()) {
@@ -4108,6 +4165,11 @@ object PyKinBody::GetURI() const
     return ConvertStringToUnicode(_pbody->GetURI());
 }
 
+object PyKinBody::GetReferenceURI() const
+{
+    return ConvertStringToUnicode(_pbody->GetReferenceURI());
+}
+
 object PyKinBody::GetNonAdjacentLinks() const
 {
     py::list ononadjacent;
@@ -4189,9 +4251,10 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
-object PyKinBody::ExtractInfo() const {
+object PyKinBody::ExtractInfo(ExtractInfoOptions options) const
+{
     KinBody::KinBodyInfo info;
-    _pbody->ExtractInfo(info);
+    _pbody->ExtractInfo(info, options);
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
@@ -4208,6 +4271,11 @@ py::object PyKinBody::GetAssociatedFileEntries() const
 int64_t PyKinBody::GetLastModifiedAtUS() const
 {
     return _pbody->GetLastModifiedAtUS();
+}
+
+int64_t PyKinBody::GetRevisionId() const
+{
+    return _pbody->GetRevisionId();
 }
 
 PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
@@ -4411,6 +4479,7 @@ public:
             r._meshcollision,
             (int)r._type,
             py::make_tuple(
+                r._id,
                 r._name,
                 r._filenamerender,
                 r._filenamecollision
@@ -4421,10 +4490,16 @@ public:
             r._bVisible,
             r._bModifiable,
             r._calibrationBoardParameters,
-            r._vNegativeCropContainerMargins,
-            r._vPositiveCropContainerMargins,
-            r._vNegativeCropContainerEmptyMargins,
-            r._vPositiveCropContainerEmptyMargins
+            py::make_tuple(
+                r._vNegativeCropContainerMargins,
+                r._vPositiveCropContainerMargins,
+                r._vNegativeCropContainerEmptyMargins,
+                r._vPositiveCropContainerEmptyMargins
+                ),
+            py::make_tuple(
+                r._vSideWalls,
+                r._vAxialSlices
+                )
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4433,48 +4508,44 @@ public:
         r._vGeomData = state[1][py::to_object(0)];
         r._vGeomData2 = state[1][py::to_object(1)];
         r._vGeomData3 = state[1][py::to_object(2)];
-        if( py::len(state[1]) >= 4 ) { // for backward compatibility
-            r._vGeomData4 = state[1][py::to_object(3)];
-        }
+        r._vGeomData4 = state[1][py::to_object(3)];
         r._vDiffuseColor = state[2];
         r._vAmbientColor = state[3];
         r._meshcollision = state[4];
         r._type = (GeometryType)(int)py::extract<int>(state[5]);
-        r._vNegativeCropContainerMargins = state[13];
-        r._vPositiveCropContainerMargins = state[14];
-        r._vNegativeCropContainerEmptyMargins = state[15];
-        r._vPositiveCropContainerEmptyMargins = state[16];
+        r._id = state[6][py::to_object(0)];
+        r._name = state[6][py::to_object(1)];
+        r._filenamerender = state[6][py::to_object(2)];
+        r._filenamecollision = state[6][py::to_object(3)];
+        r._vRenderScale = state[7];
+        r._vCollisionScale = state[8];
+        r._fTransparency = py::extract<float>(state[9]);
+        r._bVisible = py::extract<bool>(state[10]);
+        r._bModifiable = py::extract<bool>(state[11]);
+        r._calibrationBoardParameters = (py::dict) state[12];
+        r._vNegativeCropContainerMargins = state[13][py::to_object(0)];
+        r._vPositiveCropContainerMargins = state[13][py::to_object(1)];
+        r._vNegativeCropContainerEmptyMargins = state[13][py::to_object(2)];
+        r._vPositiveCropContainerEmptyMargins = state[13][py::to_object(3)];
+        r._vSideWalls = state[14][py::to_object(0)];
+        r._vAxialSlices = state[14][py::to_object(1)];
+    }
+};
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        bool bIsState6Str = IS_PYTHONOBJECT_STRING(state[6]);
-#else
-        bool bIsState6Str = IS_PYTHONOBJECT_STRING(py::object(state[6]));
+class SideWall_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
 #endif
-        if( bIsState6Str ) {
-            // old format
-            r._filenamerender = state[6];
-            r._filenamecollision = state[7];
-            r._name = py::none_();
-            r._vRenderScale = state[8];
-            r._vCollisionScale = state[9];
-            r._fTransparency = py::extract<float>(state[10]);
-            r._bVisible = py::extract<bool>(state[11]);
-            r._bModifiable = py::extract<bool>(state[12]);
-        }
-        else {
-            // new format
-            r._name = state[6][py::to_object(0)];
-            r._filenamerender = state[6][py::to_object(1)];
-            r._filenamecollision = state[6][py::to_object(2)];
-            r._vRenderScale = state[7];
-            r._vCollisionScale = state[8];
-            r._fTransparency = py::extract<float>(state[9]);
-            r._bVisible = py::extract<bool>(state[10]);
-            r._bModifiable = py::extract<bool>(state[11]);
-        }
-        if (r._type == GT_CalibrationBoard) {
-            r._calibrationBoardParameters = (py::dict) state[12];
-        }
+{
+public:
+    static py::tuple getstate(const PySideWall& r)
+    {
+        return py::make_tuple(r.transf, r.vExtents, r.type);
+    }
+    static void setstate(PySideWall& r, py::tuple state) {
+        r.transf = state[0];
+        r.vExtents = state[1];
+        r.type = (KinBody::GeometryInfo::SideWallType)(int)py::extract<int>(state[2]);
     }
 };
 
@@ -4730,6 +4801,7 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianTranslation_overloads, Comp
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeHessianAxisAngle_overloads, ComputeHessianAxisAngle, 1, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeInverseDynamics_overloads, ComputeInverseDynamics, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Restore_overloads, Restore, 0,1)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ExtractInfo_overloads, ExtractInfo, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CreateKinBodyStateSaver_overloads, CreateKinBodyStateSaver, 0,1)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetConfigurationValues_overloads, SetConfigurationValues, 1,2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetFloatParameters_overloads, GetFloatParameters, 0, 2)
@@ -4823,15 +4895,25 @@ void init_openravepy_kinbody()
                           .value("Axial",GT_Axial)
                           .value("ConicalFrustum",GT_ConicalFrustum)
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object pyExtractInfoOptions = enum_<ExtractInfoOptions>(m, "ExtractInfoOptions" DOXY_ENUM(ExtractInfoOptions))
+#else
+    object pyExtractInfoOptions = enum_<ExtractInfoOptions>("ExtractInfoOptions" DOXY_ENUM(ExtractInfoOptions))
+#endif
+                                  .value("Everything",EIO_Everything)
+                                  .value("SkipDOFValues",EIO_SkipDOFValues)
+    ;
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
 #else
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>("SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
 #endif
-                          .value("SWT_NX",KinBody::GeometryInfo::SideWallType::SWT_NX)
-                          .value("SWT_PX",KinBody::GeometryInfo::SideWallType::SWT_PX)
-                          .value("SWT_NY",KinBody::GeometryInfo::SideWallType::SWT_NY)
-                          .value("SWT_PY",KinBody::GeometryInfo::SideWallType::SWT_PY)
+                          .value("NX",KinBody::GeometryInfo::SideWallType::SWT_NX)
+                          .value("PX",KinBody::GeometryInfo::SideWallType::SWT_PX)
+                          .value("NY",KinBody::GeometryInfo::SideWallType::SWT_NY)
+                          .value("PY",KinBody::GeometryInfo::SideWallType::SWT_PY)
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object electricmotoractuatorinfo = class_<PyElectricMotorActuatorInfo, OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> >(m, "ElectricMotorActuatorInfo", DOXY_CLASS(KinBody::ElectricMotorActuatorInfo))
@@ -4896,7 +4978,7 @@ void init_openravepy_kinbody()
         })
                                        .def("__deepcopy__",
                                             [](const PyElectricMotorActuatorInfo& pyinfo, const py::dict& memo) {
-            auto state = ElectricMotorActuatorInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = ElectricMotorActuatorInfo_pickle_suite::getstate(pyinfo);
             PyElectricMotorActuatorInfo pyinfo_new;
             ElectricMotorActuatorInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -4975,11 +5057,16 @@ void init_openravepy_kinbody()
                           .def("GetCageBaseHalfExtents",&PyGeometryInfo::GetCageBaseHalfExtents, DOXY_FN(GeomeryInfo,GetCageBaseHalfExtents))
                           .def("GetContainerOuterExtents",&PyGeometryInfo::GetContainerOuterExtents, DOXY_FN(GeomeryInfo,GetContainerOuterExtents))
                           .def("GetContainerInnerExtents",&PyGeometryInfo::GetContainerInnerExtents, DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
-                          .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
-                          .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,GetContainerInnerExtents))
+                          .def("SetBoxHalfExtents",&PyGeometryInfo::SetBoxHalfExtents, PY_ARGS("halfExtents") DOXY_FN(GeomeryInfo,SetBoxHalfExtents))
+                          .def("SetCageBaseHalfExtents",&PyGeometryInfo::SetCageBaseHalfExtents, PY_ARGS("halfExtents") DOXY_FN(GeomeryInfo,SetCageBaseHalfExtents))
+                          .def("SetContainerOuterExtents",&PyGeometryInfo::SetContainerOuterExtents, PY_ARGS("outerExtents") DOXY_FN(GeomeryInfo,SetContainerOuterExtents))
+                          .def("SetContainerInnerExtents",&PyGeometryInfo::SetContainerInnerExtents, PY_ARGS("innerExtents") DOXY_FN(GeomeryInfo,SetContainerInnerExtents))
+                          .def("GetCylinderHeight",&PyGeometryInfo::GetCylinderHeight, DOXY_FN(GeomeryInfo,GetCylinderHeight))
+                          .def("GetCylinderRadius",&PyGeometryInfo::GetCylinderRadius, DOXY_FN(GeomeryInfo,GetCylinderRadius))
                           .def("GetConicalFrustumTopRadius",&PyGeometryInfo::GetConicalFrustumTopRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumTopRadius))
                           .def("GetConicalFrustumBottomRadius",&PyGeometryInfo::GetConicalFrustumBottomRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumBottomRadius))
                           .def("GetConicalFrustumHeight",&PyGeometryInfo::GetConicalFrustumHeight, DOXY_FN(GeomeryInfo,GetConicalFrustumHeight))
+                          .def("GetCollisionMesh",&PyGeometryInfo::GetCollisionMesh, DOXY_FN(GeomeryInfo,GetCollisionMesh))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
                                "unitScale"_a = 1.0,
@@ -4996,6 +5083,8 @@ void init_openravepy_kinbody()
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON, PyGeometryInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(GeometryInfo,SerializeJSON)))
                           .def("DeserializeJSON", &PyGeometryInfo::DeserializeJSON, PyGeometryInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(GeometryInfo, DeserializeJSON)))
 #endif
+                          .def("__repr__", &PyGeometryInfo::__repr__)
+                          .def("__str__", &PyGeometryInfo::__str__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def(py::pickle(
                                    [](const PyGeometryInfo &pygeom) {
@@ -5015,7 +5104,7 @@ void init_openravepy_kinbody()
         })
                           .def("__deepcopy__",
                                [](const PyGeometryInfo &pygeom, const py::dict& memo) {
-            auto state = GeometryInfo_pickle_suite::getstate(pygeom);
+            py::tuple state = GeometryInfo_pickle_suite::getstate(pygeom);
             PyGeometryInfo pygeom_new;
             GeometryInfo_pickle_suite::setstate(pygeom_new, state);
             return pygeom_new;
@@ -5035,16 +5124,40 @@ void init_openravepy_kinbody()
                       .def_readwrite("transf",&PySideWall::transf)
                       .def_readwrite("vExtents",&PySideWall::vExtents)
                       .def_readwrite("type",&PySideWall::type)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                      .def(py::pickle(
+                               [](const PySideWall &pyinfo) {
+            // __getstate__
+            return SideWall_pickle_suite::getstate(pyinfo);
+        },
+                               [](py::tuple state) {
+            PySideWall pyinfo;
+            SideWall_pickle_suite::setstate(pyinfo, state);
+            return pyinfo;
+        }))
+                      .def("__copy__", [](const PySideWall& self) {
+            return self;
+        })
+                      .def("__deepcopy__",
+                           [](const PySideWall &pyinfo, const py::dict& memo) {
+            py::tuple state = SideWall_pickle_suite::getstate(pyinfo);
+            PySideWall pyinfo_new;
+            SideWall_pickle_suite::setstate(pyinfo_new, state);
+            return pyinfo_new;
+        })
+#else
+                      .def_pickle(SideWall_pickle_suite())
+#endif
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >(m, "AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
-                      .def(init<>())
+                        .def(init<>())
 #else
     object axialslice = class_<PyAxialSlice, OPENRAVE_SHARED_PTR<PyAxialSlice> >("AxialSlice", DOXY_CLASS(KinBody::GeometryInfo::AxialSlice))
 #endif
-                      .def_readwrite("zOffset",&PyAxialSlice::zOffset)
-                      .def_readwrite("radius",&PyAxialSlice::radius)
+                        .def_readwrite("zOffset",&PyAxialSlice::zOffset)
+                        .def_readwrite("radius",&PyAxialSlice::radius)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -5101,7 +5214,7 @@ void init_openravepy_kinbody()
         })
                       .def("__deepcopy__",
                            [](const PyLinkInfo &pyinfo, const py::dict& memo) {
-            auto state = LinkInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = LinkInfo_pickle_suite::getstate(pyinfo);
             PyLinkInfo pyinfo_new;
             LinkInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5142,7 +5255,7 @@ void init_openravepy_kinbody()
         })
         .def("__deepcopy__",
              [](const PyJointControlInfo_RobotController &pyinfo, const py::dict& memo) {
-            auto state = JointControlInfo_RobotController_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointControlInfo_RobotController_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_RobotController pyinfo_new;
             JointControlInfo_RobotController_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5185,7 +5298,7 @@ void init_openravepy_kinbody()
         })
         .def("__deepcopy__",
              [](const PyJointControlInfo_IO &pyinfo, const py::dict& memo) {
-            auto state = JointControlInfo_IO_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointControlInfo_IO_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_IO pyinfo_new;
             JointControlInfo_IO_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5223,7 +5336,7 @@ void init_openravepy_kinbody()
         })
         .def("__deepcopy__",
              [](const PyJointControlInfo_ExternalDevice &pyinfo, const py::dict& memo) {
-            auto state = JointControlInfo_ExternalDevice_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointControlInfo_ExternalDevice_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_ExternalDevice pyinfo_new;
             JointControlInfo_ExternalDevice_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5307,7 +5420,7 @@ void init_openravepy_kinbody()
         })
                        .def("__deepcopy__",
                             [](const PyJointInfo &pyinfo, const py::dict& memo) {
-            auto state = JointInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointInfo_pickle_suite::getstate(pyinfo);
             PyJointInfo pyinfo_new;
             JointInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5371,7 +5484,7 @@ void init_openravepy_kinbody()
         })
                          .def("__deepcopy__",
                               [](const PyKinBody::PyGrabbedInfo &pyinfo, const py::dict& memo) {
-            auto state = GrabbedInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = GrabbedInfo_pickle_suite::getstate(pyinfo);
             PyKinBody::PyGrabbedInfo pyinfo_new;
             GrabbedInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5883,6 +5996,7 @@ void init_openravepy_kinbody()
                          .def("DoesAffect",&PyKinBody::DoesAffect,PY_ARGS("jointindex","linkindex") DOXY_FN(KinBody,DoesAffect))
                          .def("DoesDOFAffectLink",&PyKinBody::DoesDOFAffectLink,PY_ARGS("dofindex","linkindex") DOXY_FN(KinBody,DoesDOFAffectLink))
                          .def("GetURI",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
+                         .def("GetReferenceURI",&PyKinBody::GetReferenceURI, DOXY_FN(InterfaceBase,GetReferenceURI))
                          .def("GetXMLFilename",&PyKinBody::GetURI, DOXY_FN(InterfaceBase,GetURI))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks1, DOXY_FN(KinBody,GetNonAdjacentLinks))
                          .def("GetNonAdjacentLinks",GetNonAdjacentLinks2, PY_ARGS("adjacentoptions") DOXY_FN(KinBody,GetNonAdjacentLinks))
@@ -5896,15 +6010,17 @@ void init_openravepy_kinbody()
                          .def("GetKinematicsGeometryHash",&PyKinBody::GetKinematicsGeometryHash, DOXY_FN(KinBody,GetKinematicsGeometryHash))
                          .def("GetAssociatedFileEntries",&PyKinBody::GetAssociatedFileEntries, DOXY_FN(KinBody,GetAssociatedFileEntries))
                          .def("GetLastModifiedAtUS",&PyKinBody::GetLastModifiedAtUS, DOXY_FN(KinBody,GetLastModifiedAtUS))
+                         .def("GetRevisionId",&PyKinBody::GetRevisionId, DOXY_FN(KinBody,GetRevisionId))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CreateKinBodyStateSaver", &PyKinBody::CreateKinBodyStateSaver,
                               "options"_a = py::none_(),
                               "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver"
                               )
+                         .def("ExtractInfo", &PyKinBody::ExtractInfo, "options"_a=EIO_Everything, DOXY_FN(KinBody, ExtractInfo))
 #else
                          .def("CreateKinBodyStateSaver",&PyKinBody::CreateKinBodyStateSaver, CreateKinBodyStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a KinBodyStateSaver")[return_value_policy<manage_new_object>()])
+                         .def("ExtractInfo", &PyKinBody::ExtractInfo, ExtractInfo_overloads(PY_ARGS("options") DOXY_FN(KinBody, ExtractInfo))
 #endif
-                         .def("ExtractInfo", &PyKinBody::ExtractInfo, DOXY_FN(KinBody, ExtractInfo))
                          .def("__enter__",&PyKinBody::__enter__)
                          .def("__exit__",&PyKinBody::__exit__)
                          .def("__repr__",&PyKinBody::__repr__)
@@ -5962,9 +6078,9 @@ void init_openravepy_kinbody()
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             // link belongs to kinbody
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink>, PyReadablesContainer >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
 #else
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink>, bases<PyReadablesContainer> >("Link", DOXY_CLASS(KinBody::Link), no_init)
 #endif
                           .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
                           .def("GetIndex",&PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))

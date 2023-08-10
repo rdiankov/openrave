@@ -67,6 +67,9 @@ public:
     /// Removing all environment pointer might not be enough to destroy the environment resources.
     virtual void Destroy()=0;
 
+    /// \brief initializes the environment
+    virtual void Init(bool bStartSimulationThread) = 0;
+            
     /// \brief Resets all objects of the scene (preserves all problems, planners). <b>[multi-thread safe]</b>
     ///
     /// Do not call inside a SimulationStep call
@@ -271,7 +274,7 @@ public:
     virtual bool LoadURI(const std::string& uri, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
-    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
 
     /// \brief loads a scene from rapidjson document
     ///
@@ -281,7 +284,7 @@ public:
     /// \param vRemovedBodies the bodies removed from the environment in this operation
     /// \param atts attributes that is passed to JSONReader for further options.
     /// \param uri the URI of the scene. Used to inject the URI into the environment.
-    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
+    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
@@ -352,8 +355,9 @@ public:
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot.
+\param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadRobotData(robot,data,atts);
     }
@@ -367,7 +371,7 @@ public:
         \param uri the URI of the scene. Used to inject the URI into the environment.
         \returns the robot that is created.
      */
-    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
+    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
@@ -393,8 +397,9 @@ public:
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId. More info in \ref arch_kinbody.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadKinBodyData(body,data,atts);
     }
@@ -408,7 +413,7 @@ public:
         \param uri the URI of the scene. Used to inject the URI into the environment.
         \returns the body that is created.
      */
-    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = "") = 0;
+    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 
@@ -431,8 +436,9 @@ public:
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param data string containing data
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadInterfaceData(pinterface,type,data,atts);
     }
@@ -881,6 +887,7 @@ public:
         int _revision = 0;  ///< environment revision number
         UnitInfo _unitInfo; ///< environment unitInfo
         int64_t _lastModifiedAtUS = 0; ///< us, linux epoch, last modified time of the environment when it was originally loaded from the environment.
+        int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;

@@ -93,13 +93,13 @@ protected:
 
                     if (!pBody->IsRobot()) {
                         KinBody::KinBodyInfo info;
-                        pBody->ExtractInfo(info);
+                        pBody->ExtractInfo(info, EIO_Everything);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         info.SerializeJSON(bodyValue, _allocator, fUnitScale);
                     } else {
                         RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                         RobotBase::RobotBaseInfo info;
-                        pRobot->ExtractInfo(info);
+                        pRobot->ExtractInfo(info, EIO_Everything);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         FOREACH(itConnectedBodyInfo, info._vConnectedBodyInfos) {
                             (*itConnectedBodyInfo)->_uri = _CanonicalizeURI((*itConnectedBodyInfo)->_uri);
@@ -161,7 +161,7 @@ protected:
             return uri;
         }
         std::string scheme, path, fragment;
-        ParseURI(uri, scheme, path, fragment);
+        ParseURI(uri.c_str(), scheme, path, fragment);
 
         if (_vForceResolveOpenRAVEScheme.size() > 0 && scheme == "file") {
             // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"

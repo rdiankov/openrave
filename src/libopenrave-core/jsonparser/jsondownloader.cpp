@@ -109,9 +109,9 @@ JSONDownloaderScope::~JSONDownloaderScope()
 {
 }
 
-void JSONDownloaderScope::Download(const std::string& uri, rapidjson::Document& doc, uint64_t timeoutUS)
+void JSONDownloaderScope::Download(const char* pUri, rapidjson::Document& doc, uint64_t timeoutUS)
 {
-    _QueueDownloadURI(uri, &doc);
+    _QueueDownloadURI(pUri, &doc);
     WaitForDownloads(timeoutUS);
 }
 
@@ -221,21 +221,25 @@ static size_t _WriteBackDataFromCurl(const char *data, size_t size, size_t dataS
     return numBytes;
 }
 
-void JSONDownloaderScope::_QueueDownloadURI(const std::string& uri, rapidjson::Document* pDoc)
+void JSONDownloaderScope::_QueueDownloadURI(const char* pUri, rapidjson::Document* pDoc)
 {
+    if( !pUri[0] ) {
+        return;
+    }
     std::string scheme, path, fragment;
-    ParseURI(uri, scheme, path, fragment);
+    ParseURI(pUri, scheme, path, fragment);
 
     if (scheme.empty() && path.empty()) {
-        RAVELOG_WARN_FORMAT("unknown uri \"%s\"", uri);
+        RAVELOG_VERBOSE_FORMAT("skipping uri '%s' due to empty path/scheme.", pUri);
         return; // unknown uri
     }
+    RAVELOG_VERBOSE_FORMAT("downloading uri '%s'.", pUri);
     std::string canonicalUri;
     std::string url;
     if (scheme == "file") {
         std::string fullFilename = RaveFindLocalFile(path);
         if (fullFilename.empty()) {
-            RAVELOG_WARN_FORMAT("failed to resolve uri \"%s\" to local file", uri);
+            RAVELOG_WARN_FORMAT("failed to resolve uri \"%s\" to local file", pUri);
             return; // no such file to download
         }
         url = "file://" + fullFilename;
@@ -246,7 +250,7 @@ void JSONDownloaderScope::_QueueDownloadURI(const std::string& uri, rapidjson::D
         canonicalUri = scheme + ":" + path;
     }
     else {
-        RAVELOG_WARN_FORMAT("unable to handle uri \"%s\"", uri);
+        RAVELOG_WARN_FORMAT("unable to handle uri \"%s\"", pUri);
         return; // do not understand this uri
     }
 
@@ -340,25 +344,26 @@ void JSONDownloaderScope::QueueDownloadReferenceURIs(const rapidjson::Value& rEn
         if (!rBody.IsObject()) {
             continue;
         }
-        const std::string referenceUri = orjson::GetJsonValueByKey<std::string>(rBody, "referenceUri", "");
-        if (referenceUri.empty()) {
+        const char* pReferenceUri = orjson::GetCStringJsonValueByKey(rBody, "referenceUri", "");
+        if (!pReferenceUri[0]) {
             continue;
         }
-        if (!_IsExpandableReferenceUri(referenceUri)) {
-            throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", orjson::GetJsonValueByKey<std::string>(rBody, "id", "")%referenceUri, ORE_InvalidURI);
+        if (!_IsExpandableReferenceUri(pReferenceUri)) {
+            const char* pId = orjson::GetCStringJsonValueByKey(rBody, "id","");
+            throw OPENRAVE_EXCEPTION_FORMAT("bodyId '%s' has invalid referenceUri='%s", pId%pReferenceUri, ORE_InvalidURI);
         }
-        QueueDownloadURI(referenceUri);
+        QueueDownloadURI(pReferenceUri);
     }
 }
 
 /// \brief returns true if the referenceUri is a valid URI that can be loaded
-bool JSONDownloaderScope::_IsExpandableReferenceUri(const std::string& referenceUri) const
+bool JSONDownloaderScope::_IsExpandableReferenceUri(const char* pReferenceUri) const
 {
-    if (referenceUri.empty()) {
+    if (!pReferenceUri || !pReferenceUri[0]) {
         return false;
     }
     std::string scheme, path, fragment;
-    ParseURI(referenceUri, scheme, path, fragment);
+    ParseURI(pReferenceUri, scheme, path, fragment);
     if (!fragment.empty()) {
         return true;
     }
