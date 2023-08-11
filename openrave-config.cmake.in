@@ -46,7 +46,6 @@ set_and_check(OpenRAVE_INCLUDE_DIR "@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUD
 set_and_check(OpenRAVE_RAPIDJSON_INCLUDE_DIR "@RAPIDJSON_INCLUDES@")
 
 set( OpenRAVE_INCLUDE_DIRS ${OpenRAVE_INCLUDE_DIR} ${OpenRAVE_RAPIDJSON_INCLUDE_DIR} )
-set( OpenRAVE_LIBRARIES libopenrave )
 set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@" )
 set( OpenRAVE_BLA_VENDOR "@BLA_VENDOR@" )
 set( OpenRAVE_CXX_FLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL" )
@@ -90,15 +89,12 @@ if (OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS OR OpenRAVE_USE_PYBIND11_PYTHON3_BINDI
 else()
   find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS python)
 endif()
-set_and_check(OpenRAVE_PYTHON_DIR "${OpenRAVE_PYTHON_DIR}")
 
 # Backward compatibility only.
 get_target_property(libopenrave_LOCATION OpenRAVE::libopenrave LOCATION)
 get_target_property(libopenrave-core_LOCATION OpenRAVE::libopenrave-core LOCATION)
+set(OpenRAVE_LIBRARIES "${libopenrave_LOCATION}")
 set(OpenRAVE_CORE_LIBRARIES "${libopenrave_LOCATION};${libopenrave-core_LOCATION}")
-
-add_library(libopenrave ALIAS OpenRAVE::libopenrave)
-add_library(libopenrave-core ALIAS OpenRAVE::libopenrave-core)
 
 find_package(Eigen3 3.3.7 REQUIRED)
 
