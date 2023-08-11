@@ -358,7 +358,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
-void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
+void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale) {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
@@ -369,12 +369,12 @@ void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, con
     // 2. It might be confusing to add PT_Link since it is not an interface type
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value, fUnitScale);
+        pReader->DeserializeJSON(rReadable, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
-    if (value.IsString()) {
-        StringReadablePtr pStringReadable(new StringReadable(id, value.GetString()));
+    if (rReadable.IsString()) {
+        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString()));
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }

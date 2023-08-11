@@ -3,10 +3,16 @@
 ChangeLog
 #########
 
+Version 0.129.0
+===============
+
+* Support readable interfaces for joints.
+
 Version 0.128.0
 ===============
 
 * Extract the readable interface management into `ReadablesContainer`, and have both KinBody and Link derive from it.
+
 Version 0.126.0
 ===============
 

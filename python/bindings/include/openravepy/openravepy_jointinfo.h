@@ -256,6 +256,7 @@ public:
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;
     PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
+    py::object _readableInterfaces = py::none_();
 
 private:
     void _Update(const KinBody::JointInfo& info);
@@ -431,7 +432,7 @@ public:
     long __hash__();
 };
 
-class PyJoint
+class PyJoint : public PyReadablesContainer
 {
     KinBody::JointPtr _pjoint;
     PyEnvironmentBasePtr _pyenv;
