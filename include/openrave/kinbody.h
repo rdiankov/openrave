@@ -1060,7 +1060,7 @@ private:
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
         /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
-        void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
+        void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
 
         friend class Link;
         friend class KinBody;
