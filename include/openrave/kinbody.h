@@ -1599,6 +1599,7 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
 
@@ -1617,13 +1618,15 @@ public:
         JointControlInfo_RobotControllerPtr _jci_robotcontroller; ///< valid if controlMode==JCM_RobotController
         JointControlInfo_IOPtr _jci_io; ///< valid if controlMode==JCM_IO
         JointControlInfo_ExternalDevicePtr _jci_externaldevice; ///< valid if controlMode==JCM_ExternalDevice
+        /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
+        void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
     };
 
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
 
     /// \brief Information about a joint that controls the relationship between two links.
-    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
+    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>, public ReadablesContainer
     {
 public:
         /// \deprecated 12/10/19

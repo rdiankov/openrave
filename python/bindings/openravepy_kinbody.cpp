@@ -1132,6 +1132,7 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info) {
             _jci_externaldevice = PyJointControlInfo_ExternalDevicePtr(new PyJointControlInfo_ExternalDevice(*info._jci_externaldevice));
         }
     }
+    _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
 
 object PyJointInfo::GetDOF() {
@@ -1345,6 +1346,7 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
         info._jci_externaldevice = _jci_externaldevice->GetJointControlInfo();
     }
 
+    info._mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     return pinfo;
 }
 
@@ -1925,7 +1927,7 @@ PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
     return PyLinkPtr(new PyLink(plink, pyenv));
 }
 
-PyJoint::PyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv) : _pjoint(pjoint), _pyenv(pyenv) {
+PyJoint::PyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv) : PyReadablesContainer(pjoint), _pjoint(pjoint), _pyenv(pyenv) {
 }
 PyJoint::~PyJoint() {
 }
@@ -6252,9 +6254,9 @@ void init_openravepy_kinbody()
         }
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >(kinbody, "Joint", DOXY_CLASS(KinBody::Joint))
+            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint>, PyReadablesContainer >(kinbody, "Joint", DOXY_CLASS(KinBody::Joint))
 #else
-            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
+            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint>, bases<PyReadablesContainer> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
 #endif
                            .def("GetName", &PyJoint::GetName, DOXY_FN(KinBody::Joint,GetName))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
