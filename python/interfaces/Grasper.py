@@ -116,7 +116,7 @@ class Grasper:
             for i in range(7):
                 pose.insert(0,float64(resvalues.pop()))
             finalconfig = (array(jointvalues),matrixFromPose(pose))
-        contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)/6,6))
+        contacts = reshape(array([float64(s) for s in resvalues],float64),(len(resvalues)//6,6))
         return contacts,finalconfig,mindist,volume
 
     def GraspThreaded(self,approachrays,standoffs,preshapes,rolls,manipulatordirections=None,target=None,transformrobot=True,onlycontacttarget=True,tightgrasp=False,graspingnoise=None,forceclosurethreshold=None,collisionchecker=None,translationstepmult=None,numthreads=None,startindex=None,maxgrasps=None,finestep=None):
