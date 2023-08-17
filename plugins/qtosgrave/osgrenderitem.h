@@ -272,7 +272,7 @@ private:
     RobotBasePtr _probot;
 };
 
-void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const Vector& extents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency);
+void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const float zOffset, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency);
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

@@ -1011,6 +1011,7 @@ public:
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
         std::vector<std::string> _vForcedAdjacentLinks; // link names. sorted.
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -1025,7 +1026,7 @@ public:
 
         enum LinkInfoField : uint32_t
         {
-            LIF_Transform = (1 << 0), // _t field
+            LIF_Transform = 0x1, // _t field
         };
 
         inline const Transform& GetTransform() const {
@@ -1058,6 +1059,9 @@ private:
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
+        /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
+        void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
+
         friend class Link;
         friend class KinBody;
         friend class RobtBase;
@@ -1066,7 +1070,7 @@ private:
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
 
     /// \brief A rigid body holding all its collision and rendering data.
-    class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
+    class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>, public ReadablesContainer
     {
 public:
         Link(KinBodyPtr parent);         ///< pass in a ODE world
@@ -1595,6 +1599,7 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
 
@@ -1613,13 +1618,15 @@ public:
         JointControlInfo_RobotControllerPtr _jci_robotcontroller; ///< valid if controlMode==JCM_RobotController
         JointControlInfo_IOPtr _jci_io; ///< valid if controlMode==JCM_IO
         JointControlInfo_ExternalDevicePtr _jci_externaldevice; ///< valid if controlMode==JCM_ExternalDevice
+        /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
+        void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
     };
 
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
 
     /// \brief Information about a joint that controls the relationship between two links.
-    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
+    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>, public ReadablesContainer
     {
 public:
         /// \deprecated 12/10/19
@@ -2376,7 +2383,8 @@ private:
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
+        /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
 
         friend class KinBody; ///< for changing _modifiedFields
 

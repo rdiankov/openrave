@@ -601,6 +601,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
     _bIgnoreSelfCollision = info._bIgnoreSelfCollision;
+    _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
 
 py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
@@ -709,6 +710,7 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     }
 #endif
 
+    info._mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
     info._bStatic = _bStatic;
     info._bIsEnabled = _bIsEnabled;
@@ -1130,6 +1132,7 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info) {
             _jci_externaldevice = PyJointControlInfo_ExternalDevicePtr(new PyJointControlInfo_ExternalDevice(*info._jci_externaldevice));
         }
     }
+    _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
 }
 
 object PyJointInfo::GetDOF() {
@@ -1343,6 +1346,7 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
         info._jci_externaldevice = _jci_externaldevice->GetJointControlInfo();
     }
 
+    info._mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     return pinfo;
 }
 
@@ -1550,7 +1554,7 @@ long PyLink::PyGeometry::__hash__() {
     return static_cast<long>(uintptr_t(_pgeometry.get()));
 }
 
-PyLink::PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : _plink(plink), _pyenv(pyenv) {
+PyLink::PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv) : PyReadablesContainer(plink), _plink(plink), _pyenv(pyenv) {
 }
 PyLink::~PyLink() {
 }
@@ -1923,7 +1927,7 @@ PyLinkPtr toPyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
     return PyLinkPtr(new PyLink(plink, pyenv));
 }
 
-PyJoint::PyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv) : _pjoint(pjoint), _pyenv(pyenv) {
+PyJoint::PyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv) : PyReadablesContainer(pjoint), _pjoint(pjoint), _pyenv(pyenv) {
 }
 PyJoint::~PyJoint() {
 }
@@ -4530,6 +4534,23 @@ public:
     }
 };
 
+class SideWall_pickle_suite
+#ifndef USE_PYBIND11_PYTHON_BINDINGS
+    : public pickle_suite
+#endif
+{
+public:
+    static py::tuple getstate(const PySideWall& r)
+    {
+        return py::make_tuple(r.transf, r.vExtents, r.type);
+    }
+    static void setstate(PySideWall& r, py::tuple state) {
+        r.transf = state[0];
+        r.vExtents = state[1];
+        r.type = (KinBody::GeometryInfo::SideWallType)(int)py::extract<int>(state[2]);
+    }
+};
+
 class LinkInfo_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
     : public pickle_suite
@@ -4959,7 +4980,7 @@ void init_openravepy_kinbody()
         })
                                        .def("__deepcopy__",
                                             [](const PyElectricMotorActuatorInfo& pyinfo, const py::dict& memo) {
-            auto state = ElectricMotorActuatorInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = ElectricMotorActuatorInfo_pickle_suite::getstate(pyinfo);
             PyElectricMotorActuatorInfo pyinfo_new;
             ElectricMotorActuatorInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5085,7 +5106,7 @@ void init_openravepy_kinbody()
         })
                           .def("__deepcopy__",
                                [](const PyGeometryInfo &pygeom, const py::dict& memo) {
-            auto state = GeometryInfo_pickle_suite::getstate(pygeom);
+            py::tuple state = GeometryInfo_pickle_suite::getstate(pygeom);
             PyGeometryInfo pygeom_new;
             GeometryInfo_pickle_suite::setstate(pygeom_new, state);
             return pygeom_new;
@@ -5105,6 +5126,30 @@ void init_openravepy_kinbody()
                       .def_readwrite("transf",&PySideWall::transf)
                       .def_readwrite("vExtents",&PySideWall::vExtents)
                       .def_readwrite("type",&PySideWall::type)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                      .def(py::pickle(
+                               [](const PySideWall &pyinfo) {
+            // __getstate__
+            return SideWall_pickle_suite::getstate(pyinfo);
+        },
+                               [](py::tuple state) {
+            PySideWall pyinfo;
+            SideWall_pickle_suite::setstate(pyinfo, state);
+            return pyinfo;
+        }))
+                      .def("__copy__", [](const PySideWall& self) {
+            return self;
+        })
+                      .def("__deepcopy__",
+                           [](const PySideWall &pyinfo, const py::dict& memo) {
+            py::tuple state = SideWall_pickle_suite::getstate(pyinfo);
+            PySideWall pyinfo_new;
+            SideWall_pickle_suite::setstate(pyinfo_new, state);
+            return pyinfo_new;
+        })
+#else
+                      .def_pickle(SideWall_pickle_suite())
+#endif
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -5171,7 +5216,7 @@ void init_openravepy_kinbody()
         })
                       .def("__deepcopy__",
                            [](const PyLinkInfo &pyinfo, const py::dict& memo) {
-            auto state = LinkInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = LinkInfo_pickle_suite::getstate(pyinfo);
             PyLinkInfo pyinfo_new;
             LinkInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5212,7 +5257,7 @@ void init_openravepy_kinbody()
         })
         .def("__deepcopy__",
              [](const PyJointControlInfo_RobotController &pyinfo, const py::dict& memo) {
-            auto state = JointControlInfo_RobotController_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointControlInfo_RobotController_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_RobotController pyinfo_new;
             JointControlInfo_RobotController_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5255,7 +5300,7 @@ void init_openravepy_kinbody()
         })
         .def("__deepcopy__",
              [](const PyJointControlInfo_IO &pyinfo, const py::dict& memo) {
-            auto state = JointControlInfo_IO_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointControlInfo_IO_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_IO pyinfo_new;
             JointControlInfo_IO_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5293,7 +5338,7 @@ void init_openravepy_kinbody()
         })
         .def("__deepcopy__",
              [](const PyJointControlInfo_ExternalDevice &pyinfo, const py::dict& memo) {
-            auto state = JointControlInfo_ExternalDevice_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointControlInfo_ExternalDevice_pickle_suite::getstate(pyinfo);
             PyJointControlInfo_ExternalDevice pyinfo_new;
             JointControlInfo_ExternalDevice_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5377,7 +5422,7 @@ void init_openravepy_kinbody()
         })
                        .def("__deepcopy__",
                             [](const PyJointInfo &pyinfo, const py::dict& memo) {
-            auto state = JointInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = JointInfo_pickle_suite::getstate(pyinfo);
             PyJointInfo pyinfo_new;
             JointInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -5441,7 +5486,7 @@ void init_openravepy_kinbody()
         })
                          .def("__deepcopy__",
                               [](const PyKinBody::PyGrabbedInfo &pyinfo, const py::dict& memo) {
-            auto state = GrabbedInfo_pickle_suite::getstate(pyinfo);
+            py::tuple state = GrabbedInfo_pickle_suite::getstate(pyinfo);
             PyKinBody::PyGrabbedInfo pyinfo_new;
             GrabbedInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
@@ -6035,9 +6080,9 @@ void init_openravepy_kinbody()
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
             // link belongs to kinbody
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink>, PyReadablesContainer >(kinbody, "Link", DOXY_CLASS(KinBody::Link))
 #else
-            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink> >("Link", DOXY_CLASS(KinBody::Link), no_init)
+            scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink>, bases<PyReadablesContainer> >("Link", DOXY_CLASS(KinBody::Link), no_init)
 #endif
                           .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
                           .def("GetIndex",&PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))
@@ -6209,9 +6254,9 @@ void init_openravepy_kinbody()
         }
         {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >(kinbody, "Joint", DOXY_CLASS(KinBody::Joint))
+            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint>, PyReadablesContainer >(kinbody, "Joint", DOXY_CLASS(KinBody::Joint))
 #else
-            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
+            scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint>, bases<PyReadablesContainer> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
 #endif
                            .def("GetName", &PyJoint::GetName, DOXY_FN(KinBody::Joint,GetName))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

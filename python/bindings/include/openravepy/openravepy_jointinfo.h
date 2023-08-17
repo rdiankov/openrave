@@ -134,6 +134,7 @@ public:
     py::dict _mapStringParameters;
     py::dict _mapExtraGeometries;
     object _vForcedAdjacentLinks = py::list();
+    py::object _readableInterfaces = py::none_();
     bool _bStatic = false;
     bool _bIsEnabled = true;
     bool _bIgnoreSelfCollision = false;
@@ -255,12 +256,13 @@ public:
     PyJointControlInfo_RobotControllerPtr _jci_robotcontroller;
     PyJointControlInfo_IOPtr _jci_io;
     PyJointControlInfo_ExternalDevicePtr _jci_externaldevice;
+    py::object _readableInterfaces = py::none_();
 
 private:
     void _Update(const KinBody::JointInfo& info);
 };
 
-class PyLink
+class PyLink : public PyReadablesContainer
 {
     KinBody::LinkPtr _plink;
     PyEnvironmentBasePtr _pyenv;
@@ -430,7 +432,7 @@ public:
     long __hash__();
 };
 
-class PyJoint
+class PyJoint : public PyReadablesContainer
 {
     KinBody::JointPtr _pjoint;
     PyEnvironmentBasePtr _pyenv;
