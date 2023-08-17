@@ -94,7 +94,7 @@ endif()
 get_target_property(libopenrave_LOCATION OpenRAVE::libopenrave LOCATION)
 get_target_property(libopenrave-core_LOCATION OpenRAVE::libopenrave-core LOCATION)
 set(OpenRAVE_LIBRARIES OpenRAVE::libopenrave)
-set(OpenRAVE_CORE_LIBRARIES "${libopenrave_LOCATION};${libopenrave-core_LOCATION}")
+set(OpenRAVE_CORE_LIBRARIES OpenRAVE::libopenrave;OpenRAVE::libopenrave-core)
 
 find_package(Eigen3 3.3.7 REQUIRED)
 
