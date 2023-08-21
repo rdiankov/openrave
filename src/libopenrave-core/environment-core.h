@@ -601,9 +601,13 @@ public:
             _ClearRapidJsonBuffer();
             return RaveParseMsgPackURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
-        else if (_IsEncryptedFile(path)) {
+        else if (StringEndsWith(path, ".json.gpg")) {
             _ClearRapidJsonBuffer();
-            return RaveParseEncryptedURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
+            return RaveParseEncryptedJSONURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
+        }
+        else if (StringEndsWith(path, ".msgpack.gpg")) {
+            _ClearRapidJsonBuffer();
+            return RaveParseEncryptedMsgPackURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         else {
             RAVELOG_WARN_FORMAT("load failed on uri '%s' since could not determine the file type", uri);
@@ -642,9 +646,15 @@ public:
                 return true;
             }
         }
-        else if (_IsEncryptedFile(path)) {
+        else if (StringEndsWith(filename, ".json.gpg")) {
             _ClearRapidJsonBuffer();
-            if( RaveParseEncryptedFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+            if( RaveParseEncryptedJSONFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                return true;
+            }
+        }
+        else if (StringEndsWith(filename, ".msgpack.gpg")) {
+            _ClearRapidJsonBuffer();
+            if( RaveParseEncryptedMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
                 return true;
             }
         }
@@ -1665,9 +1675,15 @@ public:
                     return RobotBasePtr();
                 }
             }
-            else if (_IsEncryptedFile(path)) {
+            else if (StringEndsWith(path, ".json.gpg")) {
                 _ClearRapidJsonBuffer();
-                if( !RaveParseEncryptedURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                if( !RaveParseEncryptedJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
+            }
+            else if (StringEndsWith(path, ".msgpack.gpg")) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
                     return RobotBasePtr();
                 }
             }
@@ -1877,9 +1893,15 @@ public:
                     return KinBodyPtr();
                 }
             }
-            else if (_IsEncryptedFile(path)) {
+            else if (StringEndsWith(path, ".json.gpg")) {
                 _ClearRapidJsonBuffer();
-                if( !RaveParseEncryptedURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                if( !RaveParseEncryptedJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
+            }
+            else if (StringEndsWith(path, ".msgpack.gpg")) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
                     return KinBodyPtr();
                 }
             }
@@ -2088,7 +2110,8 @@ public:
         bool bIsCollada = false;
         bool bIsJSON = false;
         bool bIsMsgPack = false;
-        bool bIsEncrypted = false;
+        bool bIsEncryptedJSON = false;
+        bool bIsEncryptedMsgPack = false;
         bool bIsX = false;
 
         std::string path;
@@ -2105,8 +2128,11 @@ public:
         else if (_IsMsgPackFile(path)) {
             bIsMsgPack = true;
         }
-        else if (_IsEncryptedFile(path)) {
-            bIsEncrypted = true;
+        else if (StringEndsWith(path, ".json.gpg")) {
+            bIsEncryptedJSON = true;
+        }
+        else if (StringEndsWith(path, ".msgpack.gpg")) {
+            bIsEncryptedMsgPack = true;
         }
         else if (_IsXFile(path)) {
             bIsX = true;
@@ -2147,16 +2173,27 @@ public:
                         return InterfaceBasePtr();
                     }
                 }
-            } else if (bIsEncrypted) {
+            } else if (bIsEncryptedJSON) {
                 _ClearRapidJsonBuffer();
                 if (bIsURI) {
-                    if ( !RaveParseEncryptedURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                    if ( !RaveParseEncryptedJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 } else {
-                    // Direct PGP file not supported for now, must be fetched through URI.
-                    // TODO
-                    return InterfaceBasePtr();
+                    if (!RaveParseEncryptedJSONFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc)) {
+                        return InterfaceBasePtr();
+                    }
+                }
+            } else if (bIsEncryptedMsgPack) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if ( !RaveParseEncryptedMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
+                    if (!RaveParseEncryptedMsgPackFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc)) {
+                        return InterfaceBasePtr();
+                    }
                 }
             } else if (bIsX) {
                 if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
@@ -4216,11 +4253,6 @@ protected:
     static bool _IsMsgPackData(const std::string& data)
     {
         return data.size() > 0 && !std::isprint(data[0]);
-    }
-
-    static bool _IsEncryptedFile(const std::string& filename)
-    {
-        return StringEndsWith(filename, ".gpg");
     }
 
     // Encrypted data is also binary, so functionally it is indistinguishable from MsgPack data.
