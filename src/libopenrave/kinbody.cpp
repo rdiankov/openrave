@@ -6017,6 +6017,9 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
         }
     }
     OPENRAVE_ASSERT_FORMAT(!!plink0&&!!plink1, "cannot find links '%s' and '%s' of body '%s' joint %s ", info._linkname0%info._linkname1%GetName()%info._name, ORE_Failed);
+    FOREACH(it, info._mReadableInterfaces) {
+        pjoint->SetReadableInterface(it->first, it->second);
+    }
     std::vector<Vector> vaxes(pjoint->GetDOF());
     std::copy(info._vaxes.begin(),info._vaxes.begin()+vaxes.size(), vaxes.begin());
     pjoint->_ComputeJointInternalInformation(plink0, plink1, info._vanchor, vaxes, info._vcurrentvalues);
