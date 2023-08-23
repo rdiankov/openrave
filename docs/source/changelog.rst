@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.130.0
+===============
+
+* Add KinBody::GetMass
+
 Version 0.129.0
 ===============
 
