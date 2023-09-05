@@ -519,11 +519,11 @@ object PyGeometryInfo::GetCylinderRadius() const
 
 object PyGeometryInfo::GetCylinderHeight() const
 {
-    return _vGeomData[1];
+    return _vGeomData[py::to_object(1)];
 }
 
 object PyGeometryInfo::GetConicalFrustumTopRadius() const {
-    return _vGeomData["0"];
+    return _vGeomData[py::to_object(0)];
 }
 
 object PyGeometryInfo::GetConicalFrustumBottomRadius() const {
@@ -531,7 +531,7 @@ object PyGeometryInfo::GetConicalFrustumBottomRadius() const {
 }
 
 object PyGeometryInfo::GetConicalFrustumHeight() const {
-    return _vGeomData["2"];
+    return _vGeomData[py::to_object(2)];
 }
 
 object PyGeometryInfo::GetCollisionMesh()
