@@ -71,8 +71,8 @@ public:
     void SetCageBaseHalfExtents(object oHalfExtents);
     void SetContainerOuterExtents(object oOuterExtents);
     void SetContainerInnerExtents(object oInnerExtents);
-    object GetCylinderRadius();
-    object GetCylinderHeight();
+    object GetCylinderRadius() const;
+    object GetCylinderHeight() const;
     object GetConicalFrustumTopRadius() const;
     object GetConicalFrustumBottomRadius() const;
     object GetConicalFrustumHeight() const;
