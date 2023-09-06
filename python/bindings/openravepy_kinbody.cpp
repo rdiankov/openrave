@@ -512,26 +512,26 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
     _vGeomData2 = oInnerExtents;
 }
 
-object PyGeometryInfo::GetCylinderRadius()
+object PyGeometryInfo::GetCylinderRadius() const
 {
-    return _vGeomData[0];
+    return _vGeomData[py::to_object(0)];
 }
 
-object PyGeometryInfo::GetCylinderHeight()
+object PyGeometryInfo::GetCylinderHeight() const
 {
-    return _vGeomData[1];
+    return _vGeomData[py::to_object(1)];
 }
 
 object PyGeometryInfo::GetConicalFrustumTopRadius() const {
-    return _vGeomData[0];
+    return _vGeomData[py::to_object(0)];
 }
 
 object PyGeometryInfo::GetConicalFrustumBottomRadius() const {
-    return _vGeomData[1];
+    return _vGeomData[py::to_object(1)];
 }
 
 object PyGeometryInfo::GetConicalFrustumHeight() const {
-    return _vGeomData[2];
+    return _vGeomData[py::to_object(2)];
 }
 
 object PyGeometryInfo::GetCollisionMesh()
