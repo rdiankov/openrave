@@ -2028,6 +2028,15 @@ AABB KinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname,
     return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform(), bEnabledOnlyLinks);
 }
 
+dReal KinBody::GetMass() const
+{
+    dReal fTotalMass = 0;
+    for(const LinkPtr& plink : _veclinks) {
+        fTotalMass += plink->GetMass();
+    }
+    return fTotalMass;
+}
+
 Vector KinBody::GetCenterOfMass() const
 {
     // find center of mass and set the outer transform to it
