@@ -3560,6 +3560,11 @@ object PyKinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupn
     return toPyAABB(_pbody->ComputeLocalAABBForGeometryGroup(geomgroupname, bEnabledOnlyLinks));
 }
 
+dReal PyKinBody::GetMass() const
+{
+    return _pbody->GetMass();
+}
+
 object PyKinBody::GetCenterOfMass() const
 {
     return toPyVector3(_pbody->GetCenterOfMass());
@@ -5850,6 +5855,7 @@ void init_openravepy_kinbody()
 #else
                          .def("ComputeLocalAABBForGeometryGroup",&PyKinBody::ComputeLocalAABBForGeometryGroup, ComputeLocalAABBForGeometryGroup_overloads(PY_ARGS("geomgroupname", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeLocalAABBForGeometryGroup_overloads)))
 #endif
+                         .def("GetMass", &PyKinBody::GetMass, DOXY_FN(KinBody,GetMass))
                          .def("GetCenterOfMass", &PyKinBody::GetCenterOfMass, DOXY_FN(KinBody,GetCenterOfMass))
                          .def("Enable",&PyKinBody::Enable,PY_ARGS("enable") DOXY_FN(KinBody,Enable))
                          .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
