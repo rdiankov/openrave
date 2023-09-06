@@ -244,7 +244,14 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
 #endif
     else if (PyLong_Check(obj.ptr()))
     {
-        value.SetInt64(PyLong_AsLong(obj.ptr()));
+        int overflow;
+        PyLong_AsLongAndOverflow(obj.ptr(), &overflow);
+        if (overflow) {
+            value.SetUint64(PyLong_AsUnsignedLong(obj.ptr()));
+        }
+        else {
+            value.SetInt64(PyLong_AsLong(obj.ptr()));
+        }
     }
 #if PY_MAJOR_VERSION >= 3
     else if (PyUnicode_Check(obj.ptr()))

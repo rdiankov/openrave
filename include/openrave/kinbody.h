@@ -2915,7 +2915,10 @@ private:
     AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
     AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
-    /// \brief Return the center of mass of entire robot in the world coordinate system.
+    /// \brief Returns the total mass of entire body.
+    dReal GetMass() const;
+
+    /// \brief Return the center of mass of entire body in the world coordinate system.
     Vector GetCenterOfMass() const;
 
     /// \brief Enables or disables all the links.
