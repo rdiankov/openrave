@@ -583,7 +583,7 @@ class SpaceSamplerExtra:
             mult = 1
             for i in range(maxiter):
                 oddbits += (indices&1)*mult
-                evenbits += mult*((indices&2)/2)
+                evenbits += mult*((indices&2)//2)
                 indices >>= 2
                 mult *= 2
             self.faceindices = [oddbits+evenbits,oddbits-evenbits]
