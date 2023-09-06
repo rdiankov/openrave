@@ -8,6 +8,11 @@ Version 0.130.0
 
 * Add KinBody::GetMass
 
+Version 0.129.1
+===============
+
+* Support 2**64-1 python integer to rapidjson.
+
 Version 0.129.0
 ===============
 
