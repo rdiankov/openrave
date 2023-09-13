@@ -21,7 +21,7 @@
 #include <openrave/utils.h>
 
 namespace openravepy {
-class PyStateRestoreContextBase
+class OPENRAVEPY_API PyStateRestoreContextBase
 {
 public:
     PyStateRestoreContextBase() {
@@ -40,7 +40,7 @@ public:
 
 /// \brief simple wrapper around a save state that manages  enter/exit scope
 template <typename T, typename U>
-class PyStateRestoreContext : public PyStateRestoreContextBase
+class OPENRAVEPY_API PyStateRestoreContext : public PyStateRestoreContextBase
 {
     T _state;
 public:
@@ -85,10 +85,10 @@ public:
     }
 };
 
-class PyKinBody : public PyInterfaceBase
+class OPENRAVEPY_API PyKinBody : public PyInterfaceBase
 {
 public:
-    class PyGrabbedInfo
+    class OPENRAVEPY_API PyGrabbedInfo
     {
 public:
         PyGrabbedInfo();
