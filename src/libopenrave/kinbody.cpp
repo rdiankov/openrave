@@ -2160,7 +2160,9 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
             // and then overwrite with the user set values
             GetDOFValues(_vTempJoints);
             for(size_t i = 0; i < dofindices.size(); ++i) {
-                _vTempJoints.at(dofindices[i]) = pJointValues[i];
+                if( dofindices[i] >= 0 ) {
+                    _vTempJoints.at(dofindices[i]) = pJointValues[i];
+                }
             }
             pJointValues = &_vTempJoints[0];
         }
