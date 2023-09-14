@@ -26,10 +26,10 @@
 namespace openravepy {
 using py::object;
 
-class PyRobotBase : public PyKinBody
+class OPENRAVEPY_API PyRobotBase : public PyKinBody
 {
 public:
-    class PyRobotBaseInfo : public PyKinBodyInfo
+    class OPENRAVEPY_API PyRobotBaseInfo : public PyKinBodyInfo
     {
 public:
         PyRobotBaseInfo();
@@ -55,7 +55,7 @@ protected:
     RobotBasePtr _probot;
 public:
     RobotBasePtr GetRobot();
-    class PyManipulator
+    class OPENRAVEPY_API PyManipulator
     {
         RobotBase::ManipulatorPtr _pmanip;
         PyEnvironmentBasePtr _pyenv;
