@@ -2542,7 +2542,7 @@ public:
         if( _processingtag.size() > 0 ) {
             return PE_Ignore;
         }
-        if (( xmlname == "effector") ||( xmlname == "gripperjoints") ||( xmlname == "joints") ||( xmlname == "armjoints") ||( xmlname == "base") ||( xmlname == "iksolver") ||( xmlname == "closingdir") ||( xmlname == "palmdirection") ||( xmlname=="direction") ||( xmlname == "closingdirection") ||( xmlname == "translation") ||( xmlname == "quat") ||( xmlname == "rotationaxis") ||( xmlname == "rotationmat") || xmlname == "chuckingdirection") {
+        if (( xmlname == "effector") ||( xmlname == "gripperjoints") ||( xmlname == "joints") ||( xmlname == "armjoints") ||( xmlname == "base") ||( xmlname == "iksolver") ||( xmlname == "closingdir") ||( xmlname == "palmdirection") ||( xmlname=="direction") ||( xmlname == "closingdirection") ||( xmlname == "translation") ||( xmlname == "quat") ||( xmlname == "rotationaxis") ||( xmlname == "rotationmat") || xmlname == "chuckingdirection" || (xmlname == "grippername") ) {
             _processingtag = xmlname;
             return PE_Support;
         }
@@ -2582,6 +2582,9 @@ public:
         }
         else if((xmlname == "joints")||(xmlname == "gripperjoints")) {
             _manipinfo._vGripperJointNames = vector<string>((istream_iterator<string>(_ss)), istream_iterator<string>());
+        }
+        else if( xmlname == "grippername" ) {
+            _ss >> _manipinfo._grippername;
         }
         else if( xmlname == "armjoints" ) {
             RAVELOG_WARN("<armjoints> for <manipulator> tag is not used anymore\n");
@@ -3504,7 +3507,7 @@ public:
             _ss >> pluginname;
             RaveLoadPlugin(pluginname);
         }
-        else if(xmlname == "unit"){
+        else if(xmlname == "unit") {
             std::pair<std::string, dReal> unit;
             _ss >> unit.first >> unit.second;
             UnitInfo unitInfo = _penv->GetUnitInfo();
