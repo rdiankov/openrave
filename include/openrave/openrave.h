@@ -1613,7 +1613,10 @@ public:
     /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
     /// Does not support custom data
     /// Don't normalize quaternions since it could hold velocity data.
-    inline void GetValues(std::vector<dReal>::iterator itvalues) const
+    ///
+    /// About I, something that behaves like std::vector<dReal>::iterator is expected.
+    template<typename I>
+    inline void GetValues(I itvalues) const
     {
         switch(_type & ~IKP_VelocityDataBit) {
         case IKP_Transform6D:
@@ -1698,7 +1701,10 @@ public:
     /// \brief sets a serialized set of values for the IkParameterization
     ///
     /// Function does not handle custom data. Don't normalize quaternions since it could hold velocity data.
-    inline void SetValues(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
+    ///
+    /// About I, something that behaves like std::vector<dReal>::const_iterator is expected.
+    template<typename I>
+    inline void SetValues(I itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
         const bool isVelocity = _type & IKP_VelocityDataBit;
@@ -1794,7 +1800,8 @@ public:
         }
     }
 
-    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype) {
+    template<typename I>
+    inline void Set(I itvalues, IkParameterizationType iktype) {
         SetValues(itvalues,iktype);
     }
 
