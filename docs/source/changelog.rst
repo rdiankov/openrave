@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.130.2
+===============
+
+* Support reading of `grippername` under `manipulator` from XML files.
+
+Version 0.130.1
+===============
+
+* Export some of major openravepy symbols so that user can call python from c++ with openrave major classes.
+
 Version 0.130.0
 ===============
 
