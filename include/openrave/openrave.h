@@ -2480,6 +2480,9 @@ public:
     void Append(const TriMesh& mesh);
     void Append(const TriMesh& mesh, const Transform& trans);
 
+    // Reserve space in the backing vectors for the given number of vertices/indices
+    void Reserve(unsigned vertexCount, unsigned indexCount);
+
     /// clear vertices and indices vector
     void Clear();
 

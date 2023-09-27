@@ -2288,13 +2288,15 @@ void TriMesh::ApplyTransform(const TransformMatrix& t)
     }
 }
 
+void TriMesh::Reserve(unsigned vertexCount, unsigned indexCount) {
+    vertices.reserve(vertexCount);
+    indices.reserve(indexCount);
+}
+
 void TriMesh::Append(const TriMesh& mesh)
 {
     int offset = (int)vertices.size();
     vertices.insert(vertices.end(), mesh.vertices.begin(), mesh.vertices.end());
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
-    }
     FOREACHC(it, mesh.indices) {
         indices.push_back(*it+offset);
     }
@@ -2306,9 +2308,6 @@ void TriMesh::Append(const TriMesh& mesh, const Transform& trans)
     vertices.resize(vertices.size() + mesh.vertices.size());
     for(size_t i = 0; i < mesh.vertices.size(); ++i) {
         vertices[i+offset] = trans * mesh.vertices[i];
-    }
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
     }
     FOREACHC(it, mesh.indices) {
         indices.push_back(*it+offset);
