@@ -2526,6 +2526,17 @@ private:
     virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
     virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
 
+private:
+    /// \brief Initialize a kinbody with one link composed of a list of geometries
+    ///
+    /// This is an internal function to provide a common implementation to the set of exposed InitFromGeometries APIs
+    /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
+    /// \param visible if true, will be rendered in the scene
+    /// \param uri the new URI to set for the interface
+    template <typename GeometryIterableT>
+    bool InitFromGeometriesInternal(const GeometryIterableT& geometries, const std::string& uri);
+
+public:
     /// \brief initializes an complex kinematics body with links and joints
     ///
     /// \param linkinfos information for all the links. Links will be created in this order
