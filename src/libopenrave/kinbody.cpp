@@ -646,12 +646,24 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     plink->_info._name = "base";
     plink->_vGeometries.reserve(geometries.size());
     plink->_info._bStatic = true;
-    FOREACHC(itinfo,geometries) {
-        Link::GeometryPtr geom(new Link::Geometry(plink,**itinfo));
+
+    // Initialize each of our geometries and track the total vertex/index count
+    unsigned totalVertices = 0, totalIndices = 0;
+    FOREACHC(itinfo, geometries) {
+        Link::GeometryPtr geom(new Link::Geometry(plink, **itinfo));
         geom->_info.InitCollisionMesh();
+        const TriMesh& mesh = geom->GetCollisionMesh();
+        totalVertices += mesh.vertices.size();
+        totalIndices += mesh.indices.size();
         plink->_vGeometries.push_back(geom);
-        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
+
+    // Once we have all of the geometries initialized and know their total size, reserve space in our unified collision mesh and append them all at once to reduce reallocs
+    plink->_collision.Reserve(totalVertices, totalIndices);
+    for (const KinBody::GeometryConstPtr& geom : plink->_vGeometries) {
+        plink->_collision.Append(geom->GetCollisionMesh(), geom->GetTransform());
+    }
+
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
