@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
+#include <unordered_set>
 
 // used for functions that are also used internally
 #define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
@@ -4311,50 +4312,120 @@ void KinBody::_ComputeInternalInformation()
 
     // compute the all-pairs shortest paths
     {
-        _vAllPairsShortestPaths.resize(_veclinks.size()*_veclinks.size());
-        FOREACH(it,_vAllPairsShortestPaths) {
+        // Preallocate to fit our NxN joint map
+        _vAllPairsShortestPaths.resize(_veclinks.size() * _veclinks.size());
+
+        // Default each entry to a pair of invalid joint indices
+        FOREACH(it, _vAllPairsShortestPaths) {
             it->first = -1;
             it->second = -1;
         }
-        vector<uint32_t> vcosts(_veclinks.size()*_veclinks.size(),0x3fffffff); // initialize to 2^30-1 since we'll be adding
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            vcosts[i*_veclinks.size()+i] = 0;
+
+        // All of our arrays are essentially 2d look up tables, so create a wrapper to generate an array index from a 2d point
+        const size_t linksSize = _veclinks.size();
+        auto MakeIndex = [&](size_t x, size_t y) -> size_t { return x * linksSize + y; };
+
+        // Create an NxN array of costs, where vcosts[MakeIndex(i, j)] is the cost of joint i -> joint j
+        // Initialize the costs to 2^30-1 rather than uint32_t max as a default 'infinite' value because we will later be adding costs together and need to make sure that value doesn't overflow
+        vector<uint32_t> vcosts(_veclinks.size() * _veclinks.size(), 0x3fffffff);
+
+        // Set the diagonal values (all paths from a link to itself) to zero
+        for (size_t i = 0; i < _veclinks.size(); ++i) {
+            vcosts[MakeIndex(i, i)] = 0;
         }
+
+        // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
+        // Otherwise, scenes that contain a large number of non-jointed links will incur significant overhead.
+        std::unordered_set<int> usedLinkIndices;
+
         FOREACHC(itjoint,_vecjoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+            // If this joint doesn't have two links to calculate a cost between, skip it
+            if (!(*itjoint)->GetFirstAttached() || !(*itjoint)->GetSecondAttached()) {
+                continue;
+            }
+
+            // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
+            const int jointIndex = (*itjoint)->GetJointIndex();
+            const int firstLinkIndex = (*itjoint)->GetFirstAttached()->GetIndex();
+            const int secondLinkIndex = (*itjoint)->GetSecondAttached()->GetIndex();
+
+            // Mark these links as used
+            usedLinkIndices.emplace(firstLinkIndex);
+            usedLinkIndices.emplace(secondLinkIndex);
+
+            // First link
+            {
+                int index = MakeIndex(firstLinkIndex, secondLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointIndex);
                 vcosts[index] = 1;
-                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+            }
+
+            // Second link
+            {
+                int index = MakeIndex(secondLinkIndex, firstLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointIndex);
                 vcosts[index] = 1;
             }
         }
+
+        // Since we are splaying across two different vectors here, we need to add the size of the base joint vector to our joint index for the passive joints
         int jointindex = (int)_vecjoints.size();
         FOREACHC(passive,_vPassiveJoints) {
-            if( !!(*passive)->GetFirstAttached() && !!(*passive)->GetSecondAttached() ) {
-                int index = (*passive)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*passive)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*passive)->GetFirstAttached()->GetIndex(),jointindex);
-                vcosts[index] = 1;
-                index = (*passive)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*passive)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*passive)->GetSecondAttached()->GetIndex(),jointindex);
+            // If this joint doesn't have two links, ignore it
+            if (!(*passive)->GetFirstAttached() || !(*passive)->GetSecondAttached()) {
+                continue;
+            }
+
+            // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
+            const int firstLinkIndex = (*passive)->GetFirstAttached()->GetIndex();
+            const int secondLinkIndex = (*passive)->GetSecondAttached()->GetIndex();
+
+            // Mark these links as used
+            usedLinkIndices.emplace(firstLinkIndex);
+            usedLinkIndices.emplace(secondLinkIndex);
+
+            // First link
+            {
+                int index = MakeIndex(firstLinkIndex, secondLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointindex);
                 vcosts[index] = 1;
             }
+
+            // Second link
+            {
+                int index = MakeIndex(secondLinkIndex, firstLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointindex);
+                vcosts[index] = 1;
+            }
+
+            // Manually track joint index
             ++jointindex;
         }
-        for(size_t k = 0; k < _veclinks.size(); ++k) {
-            for(size_t i = 0; i < _veclinks.size(); ++i) {
-                if( i == k ) {
+
+        // Now that we have the base costs set for all joints, iterate the links we know to be jointed and calculate the total cost between each pair
+        for (size_t k : usedLinkIndices) {
+            for (size_t i : usedLinkIndices) {
+                // Skip comparisons of a link with itself
+                if (i == k) {
                     continue;
                 }
-                for(size_t j = 0; j < _veclinks.size(); ++j) {
-                    if((j == i)||(j == k)) {
+
+                for (size_t j : usedLinkIndices) {
+                    // Skip comparisons of a link with itself
+                    if ((j == i) || (j == k)) {
                         continue;
                     }
-                    uint32_t kcost = vcosts[k*_veclinks.size()+i] + vcosts[j*_veclinks.size()+k];
-                    if( vcosts[j*_veclinks.size()+i] > kcost ) {
-                        vcosts[j*_veclinks.size()+i] = kcost;
-                        _vAllPairsShortestPaths[j*_veclinks.size()+i] = _vAllPairsShortestPaths[k*_veclinks.size()+i];
+
+                    // Calculate the total cost of going from j -> i via k (aka the cost of j -> k + cost k -> i)
+                    uint32_t kcost = vcosts[MakeIndex(j, k)] + vcosts[MakeIndex(k, i)];
+
+                    // If that's cheaper than the current cost of going from j -> i, pick it as the new shortest path
+                    if (vcosts[MakeIndex(j, i)] > kcost) {
+                        // Floor the cost for this movement
+                        vcosts[MakeIndex(j, i)] = kcost;
+
+                        // Update the path with the new route
+                        _vAllPairsShortestPaths[MakeIndex(j, i)] = _vAllPairsShortestPaths[MakeIndex(k, i)];
                     }
                 }
             }
