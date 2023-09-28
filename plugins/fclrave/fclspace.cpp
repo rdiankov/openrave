@@ -16,6 +16,7 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
 
 FCLSpace::FCLKinBodyInfo::FCLKinBodyInfo()
     : nLastStamp(0)
+    , nLastLinkReloadStamp(0)
     , nLinkUpdateStamp(0)
     , nGeometryUpdateStamp(0)
     , nAttachedBodiesUpdateStamp(0)
@@ -80,6 +81,12 @@ void FCLSpace::DestroyEnvironment()
 }
 
 void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo) {
+    // If the body hasn't changed, don't reload the links.
+    if (pbody->GetUpdateStamp() == pinfo->nLastLinkReloadStamp) {
+        return;
+    }
+    pinfo->nLastLinkReloadStamp = pbody->GetUpdateStamp();
+
     pinfo->vlinks.clear();
     pinfo->vlinks.reserve(pbody->GetLinks().size());
     FOREACHC(itlink, pbody->GetLinks()) {
@@ -185,6 +192,7 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
     pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
     // make sure that synchronization do occur !
     pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
+    pinfo->nLastLinkReloadStamp = pbody->GetUpdateStamp() - 1;
 
     ReloadKinBodyLinks(pbody, pinfo);
 

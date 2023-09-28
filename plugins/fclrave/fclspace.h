@@ -152,6 +152,7 @@ public:
 
         KinBodyWeakPtr _pbody;
         int nLastStamp;  ///< KinBody::GetUpdateStamp() when last synchronized ("is transform up to date")
+        int nLastLinkReloadStamp; ///< KinBody::GetUpdateStamp() when we last ran ReloadKinBodyLinks
         int nLinkUpdateStamp; ///< update stamp for link enable state (increases every time link enables change)
         int nGeometryUpdateStamp; ///< update stamp for geometry update state (increases every time geometry enables change)
         int nAttachedBodiesUpdateStamp; ///< update stamp for when attached bodies change of this body
