@@ -2534,7 +2534,7 @@ private:
     /// \param visible if true, will be rendered in the scene
     /// \param uri the new URI to set for the interface
     template <typename GeometryIterableT>
-    bool InitFromGeometriesInternal(const GeometryIterableT& geometries, const std::string& uri);
+    bool _InitFromGeometriesInternal(const GeometryIterableT& geometries, const std::string& uri);
 
 public:
     /// \brief initializes an complex kinematics body with links and joints

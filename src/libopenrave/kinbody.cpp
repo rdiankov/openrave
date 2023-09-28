@@ -647,7 +647,7 @@ static inline KinBody::Link::GeometryPtr CreateGeometry(KinBody::LinkPtr plink, 
 }
 
 template <typename GeometryIterableT>
-bool KinBody::InitFromGeometriesInternal(const GeometryIterableT& geometries, const std::string& uri)
+bool KinBody::_InitFromGeometriesInternal(const GeometryIterableT& geometries, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex() == 0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP_FORMAT(geometries.size(), >, 0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
@@ -685,17 +685,17 @@ bool KinBody::InitFromGeometriesInternal(const GeometryIterableT& geometries, co
 
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
 {
-    return InitFromGeometriesInternal(geometries, uri);
+    return _InitFromGeometriesInternal(geometries, uri);
 }
 
 bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri)
 {
-    return InitFromGeometriesInternal(geometries, uri);
+    return _InitFromGeometriesInternal(geometries, uri);
 }
 
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri)
 {
-    return InitFromGeometriesInternal(geometries, uri);
+    return _InitFromGeometriesInternal(geometries, uri);
 }
 
 void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
