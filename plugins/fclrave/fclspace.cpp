@@ -79,19 +79,8 @@ void FCLSpace::DestroyEnvironment()
     _vecInitializedBodies.clear();
 }
 
-FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo, bool bSetToCurrentPInfo)
-{
-    if( !pinfo ) {
-        pinfo.reset(new FCLKinBodyInfo());
-        pinfo->_geometrygroup = _geometrygroup;
-    }
-
-    RAVELOG_VERBOSE_FORMAT("env=%s, self=%d, init body %s (%d)", _penv->GetNameId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
-    pinfo->Reset();
-    pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
-    // make sure that synchronization do occur !
-    pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
-
+void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo) {
+    pinfo->vlinks.clear();
     pinfo->vlinks.reserve(pbody->GetLinks().size());
     FOREACHC(itlink, pbody->GetLinks()) {
         const KinBody::LinkPtr& plink = *itlink;
@@ -181,6 +170,23 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
         RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", linkinfo->linkBV.second.get()%linkinfo->bodylinkname);
 #endif
     }
+
+}
+
+FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo, bool bSetToCurrentPInfo)
+{
+    if( !pinfo ) {
+        pinfo.reset(new FCLKinBodyInfo());
+        pinfo->_geometrygroup = _geometrygroup;
+    }
+
+    RAVELOG_VERBOSE_FORMAT("env=%s, self=%d, init body %s (%d)", _penv->GetNameId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
+    pinfo->Reset();
+    pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
+    // make sure that synchronization do occur !
+    pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
+
+    ReloadKinBodyLinks(pbody, pinfo);
 
     pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
     pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
@@ -552,7 +558,7 @@ void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pi
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
             FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo, false);
+            ReloadKinBodyLinks(pbody, pinfo);
             remover.ResetRemove(); // succeeded
         }
         //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
@@ -570,7 +576,7 @@ void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pin
         //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
         pinfo->nGeometryUpdateStamp++;
         FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-        InitKinBody(pbody, pinfo, false);
+        ReloadKinBodyLinks(pbody, pinfo);
         remover.ResetRemove(); // succeeded
     }
 //   FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];

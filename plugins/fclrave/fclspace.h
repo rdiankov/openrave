@@ -187,6 +187,7 @@ public:
     void DestroyEnvironment();
 
     FCLKinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo = FCLKinBodyInfoPtr(), bool bSetToCurrentPInfo=true);
+    void ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo);
 
     bool HasNamedGeometry(const KinBody &body, const std::string& groupname);
 
