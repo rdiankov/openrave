@@ -670,7 +670,8 @@ bool KinBody::_InitFromGeometriesInternal(const GeometryIterableT& geometries, c
     }
 
     // Once we have all of the geometries initialized and know their total size, reserve space in our unified collision mesh and append them all at once to reduce reallocs
-    plink->_collision.Reserve(totalVertices, totalIndices);
+    plink->_collision.vertices.reserve(totalVertices);
+    plink->_collision.indices.reserve(totalIndices);
     for (const KinBody::GeometryConstPtr& geom : plink->_vGeometries) {
         plink->_collision.Append(geom->GetCollisionMesh(), geom->GetTransform());
     }

@@ -2288,11 +2288,6 @@ void TriMesh::ApplyTransform(const TransformMatrix& t)
     }
 }
 
-void TriMesh::Reserve(unsigned vertexCount, unsigned indexCount) {
-    vertices.reserve(vertexCount);
-    indices.reserve(indexCount);
-}
-
 void TriMesh::Append(const TriMesh& mesh)
 {
     int offset = (int)vertices.size();
