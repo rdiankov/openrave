@@ -1310,7 +1310,8 @@ public:
         ///
         /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
         /// any be careful not to modify the geometries afterwards
-        void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+        /// \param deferPostprocessChangedParameters If true, this function will not post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
+        void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries, bool deferPostprocessChangedParameters = false);
 
         /// \brief returns the number of geometries stored from a particular key
         ///
