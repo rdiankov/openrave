@@ -744,7 +744,7 @@ static inline KinBody::Link::Geometry* CreateGeometry(KinBody::LinkPtr plink, co
 }
 
 template <typename GeometryIterableT>
-void KinBody::Link::_InitGeometriesInternal(GeometryIterableT geometries, bool bForceRecomputeMeshCollision) {
+void KinBody::Link::_InitGeometriesInternal(const GeometryIterableT& geometries, bool bForceRecomputeMeshCollision) {
     _vGeometries.resize(geometries.size());
     size_t i = 0;
     FOREACH(itGeometry, geometries) {
