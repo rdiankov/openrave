@@ -565,9 +565,14 @@ void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pi
             // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
-            FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            ReloadKinBodyLinks(pbody, pinfo);
-            remover.ResetRemove(); // succeeded
+            try {
+                ReloadKinBodyLinks(pbody, pinfo);
+            }
+            catch (...) {
+                // If something goes wrong processing this body, remove it from the FCL space.
+                RemoveUserData(pbody);
+                throw;
+            }
         }
         //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
     }
@@ -583,9 +588,14 @@ void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pin
     if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
         //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
         pinfo->nGeometryUpdateStamp++;
-        FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-        ReloadKinBodyLinks(pbody, pinfo);
-        remover.ResetRemove(); // succeeded
+        try {
+            ReloadKinBodyLinks(pbody, pinfo);
+        }
+        catch (...) {
+            // If something goes wrong processing this body, remove it from the FCL space.
+            RemoveUserData(pbody);
+            throw;
+        }
     }
 //   FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
 //   _cachedpinfo.erase(pbody->GetEnvironmentBodyIndex());
