@@ -1187,8 +1187,22 @@ void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChan
         _collision = _vGeometries.at(0)->GetCollisionMesh();
     }
     else {
+        // Clear the existing collision volume data
         _collision.vertices.resize(0);
         _collision.indices.resize(0);
+
+        // Do a quick precalculation of the new collision volume total size so we can reduce allocs in Append
+        unsigned totalVertices = 0, totalIndices = 0;
+        FOREACH(itgeom,_vGeometries) {
+            totalVertices += (*itgeom)->GetCollisionMesh().vertices.size();
+            totalIndices += (*itgeom)->GetCollisionMesh().indices.size();
+        }
+
+        // Pre-size the vertex/index vectors for the final volume size
+        _collision.vertices.reserve(totalVertices);
+        _collision.indices.reserve(totalIndices);
+
+        // Actually go through and transform/insert our collision geometries
         FOREACH(itgeom,_vGeometries) {
             _collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
         }
