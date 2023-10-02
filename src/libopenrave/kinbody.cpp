@@ -824,9 +824,7 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
     }
 
-    FOREACH(it, info._mReadableInterfaces) {
-        SetReadableInterface(it->first, it->second);
-    }
+    UpdateReadableInterfaces(info._mReadableInterfaces);
 
     if( GetXMLId() != info._interfaceType ) {
         RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
