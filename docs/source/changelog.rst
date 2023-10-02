@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.130.1
+===============
+
+* Initialize __mapReadableInterfaces on InitFromKinBodyInfo
+
 Version 0.130.0
 ===============
 
