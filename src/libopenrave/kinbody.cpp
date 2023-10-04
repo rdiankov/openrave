@@ -491,6 +491,7 @@ void KinBody::Destroy()
     _selfcollisionchecker.reset();
 
     __hashKinematicsGeometryDynamics.resize(0);
+    ClearReadableInterfaces();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -824,7 +825,9 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
     }
 
-    UpdateReadableInterfaces(info._mReadableInterfaces);
+    FOREACH(it, info._mReadableInterfaces) {
+        SetReadableInterface(it->first, it->second);
+    }
 
     if( GetXMLId() != info._interfaceType ) {
         RAVELOG_WARN_FORMAT("body '%s' interfaceType does not match %s != %s", GetName()%GetXMLId()%info._interfaceType);
