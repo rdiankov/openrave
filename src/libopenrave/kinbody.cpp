@@ -492,6 +492,7 @@ void KinBody::Destroy()
     _selfcollisionchecker.reset();
 
     __hashKinematicsGeometryDynamics.resize(0);
+    ClearReadableInterfaces();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)

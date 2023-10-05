@@ -3,7 +3,7 @@
 ChangeLog
 #########
 
-Version 0.130.2
+Version 0.130.4
 ===============
 
 * Initialization of internal costs in KinBodies now only considers links that are part of a joint
@@ -12,6 +12,21 @@ Version 0.130.2
 * Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
 * FCLRave geometry callbacks now only update when the link has actually changed
 * Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with exceptions
+
+Version 0.130.3
+===============
+
+* Initialize __mapReadableInterfaces on InitFromXXX functions such as InitFromKinBodyInfo
+
+Version 0.130.2
+===============
+
+* Initialize __mapReadableInterfaces on InitFromKinBodyInfo
+
+Version 0.130.1
+===============
+
+* Export some of major openravepy symbols so that user can call python from c++ with openrave major classes
 
 Version 0.130.0
 ===============
