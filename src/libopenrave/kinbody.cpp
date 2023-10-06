@@ -491,6 +491,7 @@ void KinBody::Destroy()
     _selfcollisionchecker.reset();
 
     __hashKinematicsGeometryDynamics.resize(0);
+    ClearReadableInterfaces();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -2026,6 +2027,15 @@ AABB KinBody::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgr
 AABB KinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
 {
     return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform(), bEnabledOnlyLinks);
+}
+
+dReal KinBody::GetMass() const
+{
+    dReal fTotalMass = 0;
+    for(const LinkPtr& plink : _veclinks) {
+        fTotalMass += plink->GetMass();
+    }
+    return fTotalMass;
 }
 
 Vector KinBody::GetCenterOfMass() const

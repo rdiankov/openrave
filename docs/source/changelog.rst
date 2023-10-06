@@ -3,6 +3,31 @@
 ChangeLog
 #########
 
+Version 0.130.3
+===============
+
+* Initialize __mapReadableInterfaces on InitFromXXX functions such as InitFromKinBodyInfo
+
+Version 0.130.2
+===============
+
+* Initialize __mapReadableInterfaces on InitFromKinBodyInfo
+
+Version 0.130.1
+===============
+
+* Export some of major openravepy symbols so that user can call python from c++ with openrave major classes
+
+Version 0.130.0
+===============
+
+* Add KinBody::GetMass
+
+Version 0.129.1
+===============
+
+* Support 2**64-1 python integer to rapidjson.
+
 Version 0.129.0
 ===============
 

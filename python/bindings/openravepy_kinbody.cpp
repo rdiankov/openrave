@@ -512,26 +512,26 @@ void PyGeometryInfo::SetContainerInnerExtents(object oInnerExtents)
     _vGeomData2 = oInnerExtents;
 }
 
-object PyGeometryInfo::GetCylinderRadius()
+object PyGeometryInfo::GetCylinderRadius() const
 {
-    return _vGeomData[0];
+    return _vGeomData[py::to_object(0)];
 }
 
-object PyGeometryInfo::GetCylinderHeight()
+object PyGeometryInfo::GetCylinderHeight() const
 {
-    return _vGeomData[1];
+    return _vGeomData[py::to_object(1)];
 }
 
 object PyGeometryInfo::GetConicalFrustumTopRadius() const {
-    return _vGeomData[0];
+    return _vGeomData[py::to_object(0)];
 }
 
 object PyGeometryInfo::GetConicalFrustumBottomRadius() const {
-    return _vGeomData[1];
+    return _vGeomData[py::to_object(1)];
 }
 
 object PyGeometryInfo::GetConicalFrustumHeight() const {
-    return _vGeomData[2];
+    return _vGeomData[py::to_object(2)];
 }
 
 object PyGeometryInfo::GetCollisionMesh()
@@ -3560,6 +3560,11 @@ object PyKinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupn
     return toPyAABB(_pbody->ComputeLocalAABBForGeometryGroup(geomgroupname, bEnabledOnlyLinks));
 }
 
+dReal PyKinBody::GetMass() const
+{
+    return _pbody->GetMass();
+}
+
 object PyKinBody::GetCenterOfMass() const
 {
     return toPyVector3(_pbody->GetCenterOfMass());
@@ -5850,6 +5855,7 @@ void init_openravepy_kinbody()
 #else
                          .def("ComputeLocalAABBForGeometryGroup",&PyKinBody::ComputeLocalAABBForGeometryGroup, ComputeLocalAABBForGeometryGroup_overloads(PY_ARGS("geomgroupname", "enabledOnlyLinks") DOXY_FN(KinBody,ComputeLocalAABBForGeometryGroup_overloads)))
 #endif
+                         .def("GetMass", &PyKinBody::GetMass, DOXY_FN(KinBody,GetMass))
                          .def("GetCenterOfMass", &PyKinBody::GetCenterOfMass, DOXY_FN(KinBody,GetCenterOfMass))
                          .def("Enable",&PyKinBody::Enable,PY_ARGS("enable") DOXY_FN(KinBody,Enable))
                          .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))

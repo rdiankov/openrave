@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyCollisionReport
+class OPENRAVEPY_API PyCollisionReport
 {
 public:
     PyCollisionReport();
