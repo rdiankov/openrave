@@ -76,38 +76,16 @@ public:
     {
     }
 
-    inline void Init(const IkFailureInfo& ikFailureInfo)
-    {
-        _action = ikFailureInfo._action;
-        _vconfig = ikFailureInfo._vconfig;
-        _description = ikFailureInfo._description;
-        _mapdata = ikFailureInfo._mapdata;
-        if( !!ikFailureInfo._pReportInfo ) {
-            _pReportInfo.reset(new CollisionReportInfo());
-            *_pReportInfo = *ikFailureInfo._pReportInfo;
-        }
-        else {
-            _pReportInfo.reset();
-        }
-        if( ikFailureInfo.HasValidIkParam() ) {
-            SetIkParam(ikFailureInfo.GetIkParam());
-        }
-        else {
-            _bIkParamValid = false;
-        }
-    }
+    //IkFailureInfo& operator=(const IkFailureInfo& rhs);
+
+    //void Init(const IkFailureInfo& ikFailureInfo);
+
+    void SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const override;
+    void LoadFromJson(const rapidjson::Value& rIkFailureInfo) override;
 
     /// \brief clears the data. _action is left unchanged.
     void Clear();
-
-    /// \brief initializes _pReportInfo from the passed in report.
-    void InitCollisionReportInfo(const CollisionReportPtr& preport);
-
     void SetDescription(const std::string& description);
-
-    void SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const override;
-
-    void LoadFromJson(const rapidjson::Value& rReport) override;
 
     inline void SetIkParam(const IkParameterization& ikparam) {
         if( ikparam.GetType() != IKP_None ) {
@@ -131,10 +109,11 @@ public:
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
     IkReturnAction _action = IKRA_Reject; ///< the IkReturnAction corresponding to this failure
-    std::vector< dReal > _vconfig; ///< the robot configuration that does not pass the checks.
-    CollisionReportInfoPtr _pReportInfo; ///< the collision report info from when some collisions were detected.
+    std::vector<dReal> _vconfig; ///< the robot configuration that does not pass the checks. full dof?
+    CollisionReport _report; ///< the collision report info from when some collisions were detected.
     std::string _description;      ///< a string describing the failure
-    CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
+    //CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
+
     int _index; // for debugging
 
 private:

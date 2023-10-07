@@ -22,23 +22,25 @@ void IkFailureInfo::Clear()
 {
     _action = IKRA_Reject;
     _vconfig.resize(0);
-    _pReportInfo.reset();
+    _report.Reset();
     _description.clear();
     _mapdata.clear();
     _index = -1;
     _bIkParamValid = false;
 }
 
-void IkFailureInfo::InitCollisionReportInfo(const CollisionReportPtr& pnewreport)
+    void IkFailureInfo::Init(const IkFailureInfo& ikFailureInfo)
 {
-    if( !!pnewreport ) {
-        if( !_pReportInfo ) {
-            _pReportInfo.reset(new CollisionReportInfo());
-        }
-        _pReportInfo->InitInfoFromReport(*pnewreport);
+    _action = ikFailureInfo._action;
+    _vconfig = ikFailureInfo._vconfig;
+    _description = ikFailureInfo._description;
+    _mapdata = ikFailureInfo._mapdata;
+    _report = ikFailureInfo._report;
+    if( ikFailureInfo.HasValidIkParam() ) {
+        SetIkParam(ikFailureInfo.GetIkParam());
     }
     else {
-        _pReportInfo.reset();
+        _bIkParamValid = false;
     }
 }
 
@@ -407,4 +409,4 @@ void IkSolverBase::_CallFinishCallbacks(IkReturnPtr ikreturn, RobotBase::Manipul
     }
 }
 
-}
+} // end namespace OpenRAVE

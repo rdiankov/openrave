@@ -60,96 +60,64 @@ public:
     class OPENRAVE_API CONTACT
     {
 public:
-        CONTACT() : depth(0) {
+        CONTACT() {
         }
-        CONTACT(const Vector &p, const Vector &n, dReal d) : pos(p), norm(n) {
-            depth = d;
+        CONTACT(const Vector &p, const Vector &n, dReal d) : pos(p), norm(n), depth(d) {
         }
 
         Vector pos;  ///< where the contact occured
         Vector norm; ///< the normals of the faces
-        dReal depth; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
+        dReal depth = 0; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
 
         void SaveToJson(rapidjson::Value& rContact, rapidjson::Document::AllocatorType& alloc) const;
     };
 
-    CollisionReport() {
-        nKeepPrevious = 0;
-        Reset();
-    }
-
-    /// \brief resets the report structure for the next collision call
-    ///
-    /// depending on nKeepPrevious will keep previous data.
-    virtual void Reset(int coloptions = 0);
-    virtual std::string __str__() const;
-
-    virtual void FillBodyNames();
-
-    void SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::Document::AllocatorType& alloc) const;
-
-    // report just the first collision
-    //@{
-    KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
-    KinBody::GeometryConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
-    //@}
-
-    std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> > vLinkColliding; ///< all link collision pairs. Set when CO_AllLinkCollisions is enabled.
-    std::vector<std::pair<KinBody::GeometryConstPtr, KinBody::GeometryConstPtr> > vGeomColliding; ///< all colliding geometry pairs. Each pair corresponds to a colliding link pair in vLinkColliding so vGeomColliding.size() == vLinkColliding.size() should always evaluate to true. Set when CO_AllCollisions is enabled.
-    std::vector<std::pair<std::string, std::string> > vBodyColliding; ///< vBodyColliding[index] is a pair of kinbody names to which the links in vLinkColliding[index] belong. Not automatically generated. Can be initialized by CollisionReport::FillBodyNames.
-
-    struct GeometryPairContact
+    struct CollisionPairInfo
     {
-        KinBody::GeometryConstPtr pgeom1, pgeom2;
+        inline void Reset() {
+            bodyLinkGeom1Name.clear();
+            bodyLinkGeom2Name.clear();
+            contacts.clear();
+        }
+
+        void SaveToJson(rapidjson::Value& rCollisionPair, rapidjson::Document::AllocatorType& alloc) const;
+
+        void SetFirstCollision(const std::string& bodyname, const std::string& linkname, const std::string& geomname);
+        void SetSecondCollision(const std::string& bodyname, const std::string& linkname, const std::string& geomname);
+
+        // to save on dynamic allocation, only have one string per body/link/geom. Given that names cannot have spaces, can separate with spaces
+        std::string bodyLinkGeom1Name; ///< "bodyname linkname geomname" for first collision
+        std::string bodyLinkGeom2Name; ///< "bodyname linkname geomname" for second collision
+
         std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of pgeom1's surface. Filled if CO_UseContacts option is set.
     };
 
-    std::vector<GeometryPairContact> vGeometryContacts; ///< all geometry collision pairs. Set when CO_AllGeometryContacts or CO_AllGeometryContacts is enabled. Takes reporting precedence over vLinkColliding or
+    CollisionReport();
 
-    std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
+    // should be careful not to copy all of vCollisionInfos
+    CollisionReport& operator=(const CollisionReport& rhs);
+    
+    /// \brief resets the report structure for the next collision call
+    ///
+    /// depending on nKeepPrevious will keep previous data.
+    void Reset(int coloptions = 0);
+    std::string __str__() const;
 
-    int options; ///< the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
-
-    dReal minDistance; ///< minimum distance from last query, filled if CO_Distance option is set
-    int numWithinTol; ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
-
-    uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
-
-    std::string bodyName1, bodyName2; /// the names of the bodies plink1 and plink2 belong to. Directly store the names here since if the parent has been destroyed, the parent's name cannot be obtained from plink.
-};
-
-/// \brief Holds information about collision report without storing openrave environment data structure such as KinBody or Geometry
-class OPENRAVE_API CollisionReportInfo : public orjson::JsonSerializable
-{
-public:
-    /// \brief resets internal data to initial state
-    virtual void Reset();
-
-    /// \brief initializes internal data from input
-    /// \param report from which to initialize this data structure
-    void InitInfoFromReport(const CollisionReport& report);
-
-    /// \brief check equality of two objects
-    bool operator==(const CollisionReportInfo& other) const;
-
-    /// \brief check inequality of two objects
-    bool operator!=(const CollisionReportInfo& other) const
-    {
-        return !(*this == other);
+    inline bool IsValid() const {
+        return nNumValidCollisions > 0;
     }
 
-    /// \brief loads internal data from rapidjson value
-    virtual void LoadFromJson(const rapidjson::Value& rReport) override;
+    void FillBodyNamesFromLinks();
+    void SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::Document::AllocatorType& alloc) const;
 
-    /// \brief serializes internal data to rapidjson value
-    virtual void SaveToJson(rapidjson::Value& rReport, rapidjson::Document::AllocatorType& alloc) const override;
+    std::vector<CollisionPairInfo> vCollisionInfos; ///< all geometry collision pairs. Set when CO_AllGeometryCollisions or CO_AllLinkCollisions or CO_AllGeometryContacts is enabled. The size of the array is not indicative of how many valid collisions there are! See nNumValidCollisions instead. Due to caching and memory constraints, should not resize this vector, instead change nNumValidCollisions
+    int nNumValidCollisions = 0; ///< how many infos are valid in vCollisionInfos
+    int options = 0; ///< the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
 
-    std::string body1Name, body2Name; ///< names of colliding bodies
-    std::string body1LinkName, body2LinkName; ///< names of colliding body links
-    std::string body1GeomName, body2GeomName; ///< names of colliding body geometries
-    std::vector<OpenRAVE::Vector> contacts; ///< contact points
+    dReal minDistance = 1e20; ///< minimum distance from last query, filled if CO_Distance option is set
+    int numWithinTol = 0; ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
+    uint8_t nKeepPrevious = 0; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
 };
-typedef boost::shared_ptr<CollisionReportInfo> CollisionReportInfoPtr;
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
 
