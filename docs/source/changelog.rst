@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.131.0
+===============
+
+* Add GPG capability to decrypt scenes when loading.
+
 Version 0.130.3
 ===============
 
