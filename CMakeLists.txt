@@ -61,6 +61,7 @@ option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model da
 option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
 option(OPT_STATIC_PLUGINS "Statically compile in plugins" OFF)
 option(OPT_PIC "Build position independent code" ON)
+option(OPT_ENCRYPTION "Robot and KinBody encryption backed by GPG." ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ${OPT_PIC})
 
@@ -413,6 +414,13 @@ else()
 endif()
 
 find_package(LibXml2 REQUIRED)
+
+add_library(openrave_gpgme IMPORTED INTERFACE)
+if (OPT_ENCRYPTION)
+  find_package(Gpgmepp 1.14 REQUIRED)
+  target_link_libraries(openrave_gpgme INTERFACE Gpgmepp)
+  target_compile_definitions(openrave_gpgme INTERFACE "OPENRAVE_ENCRYPTION=1")
+endif()
 
 # for qtcoin plugin.
 # it is necessary to check here since we would like the qt version stored in the openrave-config file
