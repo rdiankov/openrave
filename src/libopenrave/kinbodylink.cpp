@@ -728,9 +728,21 @@ std::pair<Vector,Vector> KinBody::Link::GetVelocity() const
     return velocities;
 }
 
-KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
+KinBody::GeometryPtr KinBody::Link::GetGeometry(int index) const
 {
     return _vGeometries.at(index);
+}
+
+KinBody::GeometryPtr KinBody::Link::GetGeometry(const string_view geomname) const
+{
+    if( !geomname.empty() ) {
+        for(const KinBody::GeometryPtr& pgeom : _vGeometries) {
+            if( pgeom->GetName() == geomname ) {
+                return pgeom;
+            }
+        }
+    }
+    return KinBody::GeometryPtr();
 }
 
 void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
@@ -1022,6 +1034,11 @@ bool KinBody::Link::IsRigidlyAttached(const Link &link) const
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),link.GetIndex()) != _vRigidlyAttachedLinks.end();
 }
 
+bool KinBody::Link::IsRigidlyAttached(const int linkIndex) const
+{
+    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),linkIndex) != _vRigidlyAttachedLinks.end();
+}
+
 void KinBody::Link::UpdateInfo()
 {
     // always have to recompute the geometries
@@ -1045,7 +1062,7 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
     }
     {
         boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
-            FOREACHC(it, GetReadableInterfaces()) {
+        FOREACHC(it, GetReadableInterfaces()) {
             if (!!it->second) {
                 // make a copy of the readable interface
                 // caller may modify and call UpdateFromInfo with modified readable interfaces

@@ -18,31 +18,47 @@
 
 namespace OpenRAVE {
 
-void IkFailureInfo::Clear()
+IkFailureInfo::IkFailureInfo(const IkFailureInfo& rhs)
 {
-    _action = IKRA_Reject;
-    _vconfig.resize(0);
-    _report.Reset();
-    _description.clear();
-    _mapdata.clear();
-    _index = -1;
-    _bIkParamValid = false;
+    _action = rhs._action;
+    _vconfig = rhs._vconfig;
+    _report = rhs._report;
+    _description = rhs._description;
+    _rCustomData.CopyFrom(rhs._rCustomData, _rCustomData.GetAllocator());
+    _bIkParamValid = rhs._bIkParamValid;
+    if( _bIkParamValid ) {
+        _ikparam = rhs._ikparam;
+    }
+    // don't copy _memoryPoolIndex
 }
 
-    void IkFailureInfo::Init(const IkFailureInfo& ikFailureInfo)
+void IkFailureInfo::Reset()
 {
-    _action = ikFailureInfo._action;
-    _vconfig = ikFailureInfo._vconfig;
-    _description = ikFailureInfo._description;
-    _mapdata = ikFailureInfo._mapdata;
-    _report = ikFailureInfo._report;
-    if( ikFailureInfo.HasValidIkParam() ) {
-        SetIkParam(ikFailureInfo.GetIkParam());
-    }
-    else {
-        _bIkParamValid = false;
-    }
+    _action = IKRA_Reject;
+    _vconfig.clear();
+    _report.Reset();
+    _description.clear();
+    _rCustomData = rapidjson::Document(); // start a new document to prevent memory leaks
+    _rCustomData.SetObject();
+    //_mapdata.clear();
+    _bIkParamValid = false;
+    // don't reset _memoryPoolIndex
 }
+
+//void IkFailureInfo::Init(const IkFailureInfo& ikFailureInfo)
+//{
+//    _action = ikFailureInfo._action;
+//    _vconfig = ikFailureInfo._vconfig;
+//    _description = ikFailureInfo._description;
+//    _mapdata = ikFailureInfo._mapdata;
+//    _report = ikFailureInfo._report;
+//    if( ikFailureInfo.HasValidIkParam() ) {
+//        SetIkParam(ikFailureInfo.GetIkParam());
+//    }
+//    else {
+//        _bIkParamValid = false;
+//    }
+//}
 
 void IkFailureInfo::SetDescription(const std::string& description)
 {
@@ -59,24 +75,31 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     if( _bIkParamValid ) {
         orjson::SetJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam, alloc);
     }
-    if( !!_pReportInfo ) {
+    if( _report.IsValid() ) {
         rapidjson::Value rCollisionReportInfo;
-        _pReportInfo->SaveToJson(rCollisionReportInfo, alloc);
+        _report.SaveToJson(rCollisionReportInfo, alloc);
         orjson::SetJsonValueByKey(rIkFailureInfo, "collisionReportInfo", rCollisionReportInfo, alloc);
     }
-    orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
-    if( _mapdata.size() > 0 ) {
-        rapidjson::Value mapdatajson(rapidjson::kObjectType);
-        FOREACHC(itKeyValue, _mapdata) {
-            orjson::SetJsonValueByKey(mapdatajson, itKeyValue->first.c_str(), itKeyValue->second, alloc);
-        }
-        orjson::SetJsonValueByKey(rIkFailureInfo, "mapdata", mapdatajson, alloc);
+    if( !_description.empty() ) {
+        orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
     }
+    if( !_rCustomData.IsNull() && _rCustomData.MemberCount() > 0 ) {
+        rapidjson::Value rCustomDataCopy;
+        rCustomDataCopy.CopyFrom(_rCustomData, alloc);
+        rIkFailureInfo.AddMember("mapdata", rCustomDataCopy, alloc);
+    }
+//    if( _mapdata.size() > 0 ) {
+//        rapidjson::Value mapdatajson(rapidjson::kObjectType);
+//        FOREACHC(itKeyValue, _mapdata) {
+//            orjson::SetJsonValueByKey(mapdatajson, itKeyValue->first.c_str(), itKeyValue->second, alloc);
+//        }
+//        orjson::SetJsonValueByKey(rIkFailureInfo, "mapdata", mapdatajson, alloc);
+//    }
 }
 
 void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
 {
-    Clear();
+    Reset();
     {
         uint64_t actionInt = (uint64_t) _action;
         orjson::LoadJsonValueByKey(rIkFailureInfo, "action", actionInt);
@@ -85,14 +108,11 @@ void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
     orjson::LoadJsonValueByKey(rIkFailureInfo, "config", _vconfig);
     _bIkParamValid = orjson::LoadJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam);
     if( rIkFailureInfo.HasMember("collisionReportInfo") ) {
-        if (!_pReportInfo) {
-            _pReportInfo.reset(new CollisionReportInfo());
-        }
-        _pReportInfo->LoadFromJson(rIkFailureInfo["collisionReportInfo"]);
+        _report.LoadFromJson(rIkFailureInfo["collisionReportInfo"]);
     }
     orjson::LoadJsonValueByKey(rIkFailureInfo, "description", _description);
     if( rIkFailureInfo.HasMember("mapdata") ) {
-        orjson::LoadJsonValue(rIkFailureInfo["mapdata"], _mapdata);
+        _rCustomData.CopyFrom(rIkFailureInfo["mapdata"], _rCustomData.GetAllocator());
     }
 }
 
@@ -100,21 +120,17 @@ IkFailureAccumulator::IkFailureAccumulator()
 {
 }
 
-IkFailureInfoPtr IkFailureAccumulator::GetNextAvailableIkFailureInfoPtr()
+IkFailureInfo& IkFailureAccumulator::GetNextAvailableIkFailureInfo()
 {
-    if( _nextIndex >= _vIkFailureInfos.size() ) {
-        _vIkFailureInfos.resize(_vIkFailureInfos.size() + 100);
+    while( _nextIndex >= (int)_vIkFailureInfoBatches.size()*_nBatchSize ) {
+        _vIkFailureInfoBatches.push_back(boost::make_shared<IkFailureInfoBatch>());
     }
-    IkFailureInfoPtr& pIkFailureInfo = _vIkFailureInfos[_nextIndex];
-    if( !pIkFailureInfo ) {
-        pIkFailureInfo = boost::make_shared<IkFailureInfo>();
-    }
-    else {
-        pIkFailureInfo->Clear();
-    }
-    pIkFailureInfo->_index = _nextIndex;
+    int nBatchIndex = _nextIndex/_nBatchSize;
+    IkFailureInfo& ikFailureInfo = (*_vIkFailureInfoBatches[nBatchIndex])[_nextIndex - nBatchIndex*_nBatchSize];
+    ikFailureInfo.Reset();
+    ikFailureInfo._memoryPoolIndex = _nextIndex;
     _nextIndex++;
-    return pIkFailureInfo;
+    return ikFailureInfo;
 }
 
 bool IkReturn::Append(const IkReturn& r)
@@ -146,8 +162,9 @@ bool IkReturn::Append(const IkReturn& r)
         }
         _vsolution = r._vsolution;
     }
-    _vIkFailureInfos.reserve(_vIkFailureInfos.size() + r._vIkFailureInfos.size());
-    _vIkFailureInfos.insert(_vIkFailureInfos.end(), r._vIkFailureInfos.begin(), r._vIkFailureInfos.end());
+    _vIkFailureInfoIndices = r._vIkFailureInfoIndices;
+    //_vIkFailureInfos.reserve(_vIkFailureInfos.size() + r._vIkFailureInfos.size());
+    //_vIkFailureInfos.insert(_vIkFailureInfos.end(), r._vIkFailureInfos.begin(), r._vIkFailureInfos.end());
     return bclashing;
 }
 
@@ -156,7 +173,7 @@ void IkReturn::Clear()
     _mapdata.clear();
     _userdata.reset();
     _vsolution.resize(0);
-    _vIkFailureInfos.clear();
+    _vIkFailureInfoIndices.clear();
 }
 
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData

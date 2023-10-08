@@ -55,6 +55,12 @@
 #include <set>
 #include <string>
 
+#if  __cplusplus >= 201703L
+#include <string_view>
+#else
+#include <boost/utility/string_view.hpp>
+#endif
+
 #include <iomanip>
 #include <fstream>
 #include <sstream>
@@ -104,6 +110,12 @@ namespace OpenRAVE {
 #include <openrave/logging.h>
 
 namespace OpenRAVE {
+
+#if  __cplusplus >= 201703L
+using string_view = std::string_view;
+#else
+using string_view = ::boost::string_view;
+#endif
 
 #if OPENRAVE_PRECISION // 1 if double precision
 typedef double dReal;

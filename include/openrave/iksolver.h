@@ -71,20 +71,20 @@ typedef IkReturnAction IkFilterReturn RAVE_DEPRECATED;
 
 class OPENRAVE_API IkFailureInfo : public orjson::JsonSerializable
 {
+    friend class IkFailureAccumulator;
 public:
-    IkFailureInfo()
-    {
-    }
+    IkFailureInfo() = default;
+    IkFailureInfo(const IkFailureInfo& rhs);
 
     //IkFailureInfo& operator=(const IkFailureInfo& rhs);
-
     //void Init(const IkFailureInfo& ikFailureInfo);
 
     void SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const override;
     void LoadFromJson(const rapidjson::Value& rIkFailureInfo) override;
 
-    /// \brief clears the data. _action is left unchanged.
-    void Clear();
+    /// \brief resets for use
+    void Reset();
+
     void SetDescription(const std::string& description);
 
     inline void SetIkParam(const IkParameterization& ikparam) {
@@ -103,8 +103,8 @@ public:
         return _ikparam;
     }
 
-    int GetIndex() const {
-        return _index;
+    int GetMemoryPoolIndex() const {
+        return _memoryPoolIndex;
     }
 
     typedef std::map<std::string, std::vector<dReal> > CustomData;
@@ -113,14 +113,16 @@ public:
     CollisionReport _report; ///< the collision report info from when some collisions were detected.
     std::string _description;      ///< a string describing the failure
     //CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
-
-    int _index; // for debugging
+    rapidjson::Document _rCustomData; ///< stored additional information that does not fit elsewhere
 
 private:
     IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
     bool _bIkParamValid=false;     ///< a flag determining whether _ikparam is valid.
+
+    int _memoryPoolIndex = -1; // index into the memory pool, managed by IkFailureAccumulator
 };
 
+/// \brief maints a pool of ikFailureInfo.
 class OPENRAVE_API IkFailureAccumulator
 {
 public:
@@ -131,23 +133,27 @@ public:
         return _nextIndex;
     }
 
-    inline void ResetIndex(const size_t nextIndex=0)
+    inline void ResetIndex(const int nextIndex=0)
     {
         _nextIndex = nextIndex;
     }
 
     /// \brief Retrieve ikFailureInfo from the specified index. Assume the input index is valid.
-    inline const IkFailureInfo& GetIkFailureInfo(size_t index) const
+    inline IkFailureInfo& GetIkFailureInfo(int index) const
     {
-        return *_vIkFailureInfos[index];
+        int nBatchIndex = _nextIndex/_nBatchSize;
+        OPENRAVE_ASSERT_OP(nBatchIndex,<,(int)_vIkFailureInfoBatches.size());
+        return (*_vIkFailureInfoBatches[nBatchIndex])[index - nBatchIndex*_nBatchSize];
     }
 
     /// \brief Get the next available IkFailureInfo to fill in failure information.
-    IkFailureInfoPtr GetNextAvailableIkFailureInfoPtr();
+    IkFailureInfo& GetNextAvailableIkFailureInfo();
 
 private:
-    std::vector<IkFailureInfoPtr> _vIkFailureInfos;
-    size_t _nextIndex = 0;
+    static const int _nBatchSize = 256;
+    typedef boost::array<IkFailureInfo, _nBatchSize> IkFailureInfoBatch;
+    std::vector< boost::shared_ptr<IkFailureInfoBatch> > _vIkFailureInfoBatches;
+    int _nextIndex = 0; // unique index into _vIkFailureInfoBatches taking into account the batch size
 };
 
 class OPENRAVE_API IkReturn
@@ -177,7 +183,7 @@ public:
     std::vector< dReal > _vsolution; ///< the solution
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
-    std::vector<IkFailureInfoPtr> _vIkFailureInfos;
+    std::vector<int> _vIkFailureInfoIndices; ///< index into the accumulator
 };
 
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_iksolver.

@@ -30,7 +30,7 @@ public:
     IkReturnAction GetAction();
     object GetConfiguration();
     object GetIkParam();
-    object GetCollisionReportInfo();
+    object GetCollisionReport();
     std::string GetDescription();
     object GetMapData(const std::string& key);
     object GetMapDataDict();
@@ -65,7 +65,7 @@ public:
     object GetUserData();
     object GetMapData(const std::string& key);
     object GetMapDataDict();
-    object GetIkFailureInfos();
+    object GetIkFailureInfoIndices();
 
     void SetUserData(PyUserData pdata);
     void SetSolution(object osolution);

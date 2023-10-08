@@ -80,7 +80,6 @@ class PyKinBody;
 class PyRobotBase;
 class PyEnvironmentBase;
 class PyCollisionReport;
-class PyCollisionReportInfo;
 class PyPhysicsEngineBase;
 class PyCollisionCheckerBase;
 class PyIkSolverBase;
@@ -105,6 +104,7 @@ class PyManipulatorInfo;
 class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
 class PyLink;
+class PyGeometry;
 class PyJoint;
 
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase> PyInterfaceBasePtr;
@@ -124,7 +124,6 @@ typedef OPENRAVE_SHARED_PTR<PyPhysicsEngineBase const> PyPhysicsEngineBaseConstP
 typedef OPENRAVE_SHARED_PTR<PyCollisionCheckerBase> PyCollisionCheckerBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyCollisionCheckerBase const> PyCollisionCheckerBaseConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyCollisionReport> PyCollisionReportPtr;
-typedef OPENRAVE_SHARED_PTR<PyCollisionReportInfo> PyCollisionReportInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyCollisionReport const> PyCollisionReportConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyPlannerBase> PyPlannerBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyPlannerBase const> PyPlannerBaseConstPtr;
@@ -155,6 +154,7 @@ typedef OPENRAVE_SHARED_PTR<PyManipulatorInfo> PyManipulatorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink> PyLinkPtr;
+typedef OPENRAVE_SHARED_PTR<PyGeometry> PyGeometryPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint> PyJointPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
@@ -634,7 +634,8 @@ class OPENRAVEPY_API PyReadablesContainer
 protected:
     ReadablesContainerPtr _pbase;
 public:
-    explicit PyReadablesContainer(ReadablesContainerPtr pbase) : _pbase(pbase) {}
+    explicit PyReadablesContainer(ReadablesContainerPtr pbase) : _pbase(pbase) {
+    }
     virtual ~PyReadablesContainer() = default;
 
     virtual py::object GetReadableInterfaces();
@@ -756,12 +757,10 @@ void init_openravepy_collisionchecker();
 #endif
 OPENRAVEPY_API CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API CollisionReportPtr GetCollisionReport(py::object);
-OPENRAVEPY_API CollisionReportPtr GetCollisionReport(PyCollisionReportPtr);
-OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(CollisionReportPtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API PyCollisionReportInfoPtr toPyCollisionReportInfo(CollisionReportInfoPtr);
-OPENRAVEPY_API void UpdateCollisionReport(PyCollisionReportPtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API void UpdateCollisionReport(py::object, PyEnvironmentBasePtr);
+OPENRAVEPY_API bool IsCollisionReport(py::object);
+OPENRAVEPY_API bool UpdateCollisionReport(py::object, const CollisionReport&);
+OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(const CollisionReportPtr& p);
+OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(const CollisionReport&);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_controller(py::module& m);
 #else

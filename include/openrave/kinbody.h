@@ -1267,7 +1267,9 @@ public:
         inline const std::vector<GeometryPtr>& GetGeometries() const {
             return _vGeometries;
         }
-        GeometryPtr GetGeometry(int index);
+        GeometryPtr GetGeometry(int index) const;
+
+        GeometryPtr GetGeometry(const string_view geomame) const;
 
         /// \brief inits the current geometries with the new geometry info.
         ///
@@ -1326,11 +1328,17 @@ public:
         /// \return true if the normal is changed to face outside of the shape
         bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
-        /// \brief returns true if plink is rigidily attahced to this link.
         bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
             return IsRigidlyAttached(*plink);
         }
+
+        /// \brief returns true if link is rigidily attahced to this link.
+        ///
+        /// \param link Assumes link shares the same parent as this link.
         bool IsRigidlyAttached(const Link &link) const;
+
+        /// \brief returns true if linkIndex (index into the parent's _veclinks) is rigidily attahced to this link.
+        bool IsRigidlyAttached(const int linkIndex) const;
 
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
         ///
@@ -2400,7 +2408,7 @@ protected:
 public:
         KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
         virtual ~KinBodyStateSaver();
-        inline KinBodyPtr GetBody() const {
+        inline const KinBodyPtr& GetBody() const {
             return _pbody;
         }
 
@@ -2795,8 +2803,15 @@ private:
     /// \param dofindex the degree of freedom index
     bool IsDOFPrismatic(int dofindex) const;
 
-    /// return a pointer to the link with the given name
-    LinkPtr GetLink(const std::string& name) const;
+    /// \brief return a pointer to the link with the given name
+    LinkPtr GetLink(const std::string& linkname) const;
+
+    LinkPtr GetLink(const string_view linkname) const;
+
+    LinkPtr GetLink(const char* plinkname) const;
+
+    /// \brief return the link index that matches the name. -1 if did not find
+    int GetLinkIndex(const string_view name) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);

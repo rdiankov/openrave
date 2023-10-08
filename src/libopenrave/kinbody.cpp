@@ -2523,12 +2523,44 @@ bool KinBody::IsDOFPrismatic(int dofindex) const
 
 KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
 {
-    for(std::vector<LinkPtr>::const_iterator it = _veclinks.begin(); it != _veclinks.end(); ++it) {
-        if ( (*it)->GetName() == linkname ) {
-            return *it;
+    for(const LinkPtr& plink : _veclinks) {
+        if ( plink->GetName() == linkname ) {
+            return plink;
         }
     }
     return LinkPtr();
+}
+
+KinBody::LinkPtr KinBody::GetLink(const string_view linkname) const
+{
+    for(const LinkPtr& plink : _veclinks) {
+        if ( plink->GetName() == linkname ) {
+            return plink;
+        }
+    }
+    return LinkPtr();
+}
+
+KinBody::LinkPtr KinBody::GetLink(const char* plinkname) const
+{
+    if( !!plinkname ) {
+        for(const LinkPtr& plink : _veclinks) {
+            if ( plink->GetName().compare(plinkname) == 0 ) {
+                return plink;
+            }
+        }
+    }
+    return LinkPtr();
+}
+
+int KinBody::GetLinkIndex(const string_view linkname) const
+{
+    for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
+        if ( _veclinks[ilink]->GetName() == linkname ) {
+            return ilink;
+        }
+    }
+    return -1;
 }
 
 const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() const

@@ -928,8 +928,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
                 _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toLatin1().data());
-            link  = kinbody->GetLink(item->text(0).toLatin1().data());
+            const char* pbodyname = item->parent()->parent()->text(0).toLatin1().data();
+            kinbody = GetEnv()->GetKinBody(string_view(pbodyname));
+            link  = kinbody->GetLink(string_view(item->text(0).toLatin1().data()));
 
             //  Clears output string
             strs.clear();
@@ -952,7 +953,7 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         if (!!_qdetailsTree) {
             _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
         }
-        kinbody = GetEnv()->GetKinBody(item->text(0).toLatin1().data());
+        kinbody = GetEnv()->GetKinBody(string_view(item->text(0).toLatin1().data()));
         for (size_t i=0; i<kinbody->GetLinks().size(); i++) {
             std::ostringstream strs;
             link = kinbody->GetLinks()[i];

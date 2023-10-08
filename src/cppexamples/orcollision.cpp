@@ -136,7 +136,7 @@ int main(int argc, char ** argv)
                << (!!report->plink2 ? report->plink2->GetName() : "") << " at "
                << contactpoints << "contacts" << endl;
             for(int i = 0; i < contactpoints; ++i) {
-                CollisionReport::CONTACT& c = report->contacts[i];
+                CONTACT& c = report->contacts[i];
                 ss << "contact" << i << ": pos=("
                    << c.pos.x << ", " << c.pos.y << ", " << c.pos.z << "), norm=("
                    << c.norm.x << ", " << c.norm.y << ", " << c.norm.z << ")" << endl;

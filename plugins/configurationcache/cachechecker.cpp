@@ -231,8 +231,7 @@ public:
             ++_cachedcollisionhits;
             // in collision, create collision report
             if( !!report ) {
-                report->plink1 = robotlink;
-                report->plink2 = collidinglink;
+                report->AddLinkCollision(*robotlink, *collidinglink);
             }
             return true;
         } // (free configuration)
@@ -355,8 +354,7 @@ public:
             ++_selfcachedcollisionhits;
             // in collision
             if( !!report ) {
-                report->plink1 = robotlink;
-                report->plink2 = collidinglink;
+                report->AddLinkCollision(*robotlink, *collidinglink);
             }
             return true;
         }

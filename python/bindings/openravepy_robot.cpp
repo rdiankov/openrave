@@ -1205,47 +1205,74 @@ object PyRobotBase::PyManipulator::GetIkConfigurationSpecification(IkParameteriz
 
 bool PyRobotBase::PyManipulator::CheckEndEffectorCollision(PyCollisionReportPtr pyreport) const
 {
-    bool bcollision = _pmanip->CheckEndEffectorCollision(openravepy::GetCollisionReport(pyreport));
-    openravepy::UpdateCollisionReport(pyreport,_pyenv);
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bcollision = _pmanip->CheckEndEffectorCollision(preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bcollision;
 }
 
 bool PyRobotBase::PyManipulator::CheckEndEffectorCollision(object otrans, PyCollisionReportPtr pyreport, int numredundantsamples) const
 {
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
     bool bCollision;
     IkParameterization ikparam;
     if( ExtractIkParameterization(otrans,ikparam) ) {
-        bCollision = _pmanip->CheckEndEffectorCollision(ikparam, !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples);
+        bCollision = _pmanip->CheckEndEffectorCollision(ikparam, preport, numredundantsamples);
     }
     else {
-        bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),!pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples);
+        bCollision = _pmanip->CheckEndEffectorCollision(ExtractTransform(otrans),preport, numredundantsamples);
     }
     if( !!pyreport ) {
-        openravepy::UpdateCollisionReport(pyreport,_pyenv);
+        pyreport->Init(report);
     }
     return bCollision;
 }
 
 bool PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision(PyCollisionReportPtr pyreport) const
 {
-    BOOST_ASSERT(0);
-    bool bcollision = true;//_pmanip->CheckEndEffectorSelfCollision(openravepy::GetCollisionReport(pyreport));
-    openravepy::UpdateCollisionReport(pyreport,_pyenv);
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bcollision = _pmanip->CheckEndEffectorSelfCollision(preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bcollision;
 }
 
 bool PyRobotBase::PyManipulator::CheckEndEffectorSelfCollision(object otrans, PyCollisionReportPtr pyreport, int numredundantsamples, bool ignoreManipulatorLinks) const
 {
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
     bool bCollision;
     IkParameterization ikparam;
     if( ExtractIkParameterization(otrans,ikparam) ) {
-        bCollision = _pmanip->CheckEndEffectorSelfCollision(ikparam, !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, ignoreManipulatorLinks);
+        bCollision = _pmanip->CheckEndEffectorSelfCollision(ikparam, preport, numredundantsamples, ignoreManipulatorLinks);
     }
     else {
-        bCollision = _pmanip->CheckEndEffectorSelfCollision(ExtractTransform(otrans),!pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport), numredundantsamples, ignoreManipulatorLinks);
+        bCollision = _pmanip->CheckEndEffectorSelfCollision(ExtractTransform(otrans), preport, numredundantsamples, ignoreManipulatorLinks);
     }
     if( !!pyreport ) {
-        openravepy::UpdateCollisionReport(pyreport,_pyenv);
+        pyreport->Init(report);
     }
     return bCollision;
 }
@@ -1254,10 +1281,18 @@ bool PyRobotBase::PyManipulator::CheckIndependentCollision() const
 {
     return _pmanip->CheckIndependentCollision();
 }
-bool PyRobotBase::PyManipulator::CheckIndependentCollision(PyCollisionReportPtr pReport) const
+bool PyRobotBase::PyManipulator::CheckIndependentCollision(PyCollisionReportPtr pyreport) const
 {
-    bool bCollision = _pmanip->CheckIndependentCollision(openravepy::GetCollisionReport(pReport));
-    openravepy::UpdateCollisionReport(pReport,_pyenv);
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bCollision = _pmanip->CheckIndependentCollision(preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -2172,7 +2207,17 @@ bool PyRobotBase::Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, 
 
 bool PyRobotBase::CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport)
 {
-    return _probot->CheckLinkSelfCollision(ilinkindex, ExtractTransform(olinktrans), !pyreport ? CollisionReportPtr() : openravepy::GetCollisionReport(pyreport));
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bCollision = _probot->CheckLinkSelfCollision(ilinkindex, ExtractTransform(olinktrans), preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
+    return bCollision;
 }
 
 bool PyRobotBase::WaitForController(float ftimeout)

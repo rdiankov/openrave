@@ -44,6 +44,10 @@
         CHECK_INTERFACE(body); \
 }
 
+// can be used with string_view. unfortunately unordered_map::find cannot be used with heterogeneous types yet (potentially in c++20 standard)
+template <typename Value>
+using string_map = std::map<std::string, Value, std::less<> >;
+
 inline dReal TransformDistanceFast(const Transform& t1, const Transform& t2, dReal frotweight=1, dReal ftransweight=1)
 {
     dReal e1 = (t1.rot-t2.rot).lengthsqr4();
@@ -1143,7 +1147,7 @@ public:
         KinBodyPtr pbody;
         {
             ExclusiveLock lock101(_mutexInterfaces);
-            const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
+            const string_map<int>::const_iterator it = _mapBodyNameIndex.find(name);
             if (it == _mapBodyNameIndex.end()) {
                 return false;
             }
@@ -1167,9 +1171,39 @@ public:
         return pdata;
     }
 
-    KinBodyPtr GetKinBody(const std::string& pname) const override
+    KinBodyPtr GetKinBody(const std::string& name) const override
     {
-        if (pname.empty()) {
+        if (name.empty()) {
+            //RAVELOG_VERBOSE_FORMAT("env=%d, empty name is used to find body. Maybe caller has to be fixed.", GetId());
+            return KinBodyPtr();
+        }
+        SharedLock lock585(_mutexInterfaces);
+        if (!_vecbodies.empty()) {
+            const int envBodyIndex = _FindBodyIndexByName(name);
+            //RAVELOG_VERBOSE_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%name%envBodyIndex);
+            return _vecbodies.at(envBodyIndex);
+        }
+        return KinBodyPtr();
+    }
+
+    KinBodyPtr GetKinBody(const string_view name) const override
+    {
+        if (name.empty() ) {
+            //RAVELOG_VERBOSE_FORMAT("env=%d, empty name is used to find body. Maybe caller has to be fixed.", GetId());
+            return KinBodyPtr();
+        }
+        SharedLock lock585(_mutexInterfaces);
+        if (!_vecbodies.empty()) {
+            const int envBodyIndex = _FindBodyIndexByName(name);
+            //RAVELOG_VERBOSE_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
+            return _vecbodies.at(envBodyIndex);
+        }
+        return KinBodyPtr();
+    }
+
+    KinBodyPtr GetKinBody(const char* pname) const override
+    {
+        if (!pname || pname[0] == 0 ) {
             //RAVELOG_VERBOSE_FORMAT("env=%d, empty name is used to find body. Maybe caller has to be fixed.", GetId());
             return KinBodyPtr();
         }
@@ -1189,7 +1223,34 @@ public:
         }
 
         SharedLock lock942(_mutexInterfaces);
-        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(id);
+        const string_map<int>::const_iterator it = _mapBodyIdIndex.find(id);
+        if (it == _mapBodyIdIndex.end()) {
+            RAVELOG_WARN_FORMAT("env=%s, id %s is not found", GetNameId()%id);
+            return 0;
+        }
+        const int envBodyIndex = it->second;
+        const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
+        if (!!pbody ) {
+            if( pbody->GetId()==id) {
+                return pbody;
+            }
+            else {
+                //RAVELOG_WARN_FORMAT("env=%d, body '%s' has id '%s', but environment stored its id as '%s'", GetId()%pbody->GetName()%pbody->GetId()%id);
+                throw OPENRAVE_EXCEPTION_FORMAT("env=%s, body '%s' has id '%s', but environment stored its id as '%s'", GetNameId()%pbody->GetId()%GetId()%pbody->GetName()%pbody->GetName()%id, ORE_BodyIdConflict);
+            }
+        }
+        return KinBodyPtr();
+    }
+
+    KinBodyPtr GetKinBodyById(const string_view id) const
+    {
+        if( id.empty() ) {
+            return KinBodyPtr();
+        }
+
+        SharedLock lock942(_mutexInterfaces);
+        string_view testid = id;
+        const string_map<int>::const_iterator it = _mapBodyIdIndex.find(testid);
         if (it == _mapBodyIdIndex.end()) {
             RAVELOG_WARN_FORMAT("env=%s, id %s is not found", GetNameId()%id);
             return 0;
@@ -1277,7 +1338,38 @@ public:
         if (name.empty()) {
             return 0;
         }
-        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
+        const string_map<int>::const_iterator it = _mapBodyNameIndex.find(name);
+        if (it == _mapBodyNameIndex.end()) {
+            //RAVELOG_WARN_FORMAT("env=%d, name %s is not found", GetId()%name);
+            return 0;
+        }
+        const int envBodyIndex = it->second;
+        //BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // too many asserts
+        return envBodyIndex;
+    }
+
+    /// assumes _mutexInterfaces is locked
+    inline int _FindBodyIndexByName(const string_view name) const
+    {
+        if (name.empty() ) {
+            return 0;
+        }
+        const string_map<int>::const_iterator it = _mapBodyNameIndex.find(name); // TODO
+        if (it == _mapBodyNameIndex.end()) {
+            //RAVELOG_WARN_FORMAT("env=%d, name %s is not found", GetId()%name);
+            return 0;
+        }
+        const int envBodyIndex = it->second;
+        //BOOST_ASSERT(0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()); // too many asserts
+        return envBodyIndex;
+    }
+
+    inline int _FindBodyIndexByName(const char* pname) const
+    {
+        if (!pname || pname[0] == 0 ) {
+            return 0;
+        }
+        const string_map<int>::const_iterator it = _mapBodyNameIndex.find(pname); // TODO
         if (it == _mapBodyNameIndex.end()) {
             //RAVELOG_WARN_FORMAT("env=%d, name %s is not found", GetId()%name);
             return 0;
@@ -3251,8 +3343,8 @@ public:
     bool NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) override
     {
         ExclusiveLock lock114(_mutexInterfaces);
-        const std::unordered_map<std::string, int>::const_iterator itOld = _mapBodyNameIndex.find(oldName);
-        const std::unordered_map<std::string, int>::const_iterator itNew = _mapBodyNameIndex.find(newName);
+        const string_map<int>::const_iterator itOld = _mapBodyNameIndex.find(oldName);
+        const string_map<int>::const_iterator itNew = _mapBodyNameIndex.find(newName);
         if (itOld == _mapBodyNameIndex.end()) {
             return itNew == _mapBodyNameIndex.end(); // new should be empty
         }
@@ -3277,8 +3369,8 @@ public:
     bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) override
     {
         ExclusiveLock lock891(_mutexInterfaces);
-        const std::unordered_map<std::string, int>::const_iterator itOld = _mapBodyIdIndex.find(oldId);
-        const std::unordered_map<std::string, int>::const_iterator itNew = _mapBodyIdIndex.find(newId);
+        const string_map<int>::const_iterator itOld = _mapBodyIdIndex.find(oldId);
+        const string_map<int>::const_iterator itNew = _mapBodyIdIndex.find(newId);
         if (itOld == _mapBodyIdIndex.end()) {
             return itNew == _mapBodyIdIndex.end(); // new should be empty
         }
@@ -3525,7 +3617,7 @@ protected:
 
             std::vector<std::pair<Vector,Vector> > linkvelocities;
             std::vector<KinBodyPtr> vecbodies;
-            std::unordered_map<std::string, int> mapBodyNameIndex, mapBodyIdIndex;
+            string_map<int> mapBodyNameIndex, mapBodyIdIndex;
 
             if( bCheckSharedResources ) {
                 // delete any bodies/robots from mapBodies that are not in r->_vecbodies
@@ -3590,7 +3682,7 @@ protected:
                     KinBodyPtr pnewbody;
                     if( bCheckSharedResources ) {
                         const std::string& name = body.GetName();
-                        const std::unordered_map<std::string, int>::const_iterator it = mapBodyNameIndex.find(name);
+                        const string_map<int>::const_iterator it = mapBodyNameIndex.find(name);
                         if (it != mapBodyNameIndex.end()) {
                             const int envBodyIdx = it->second;
                             BOOST_ASSERT(0 < envBodyIdx && envBodyIdx < (int) vecbodies.size());
@@ -3907,7 +3999,7 @@ protected:
         const std::string& name = pbody->GetName();
 
         SharedLock lock086(_mutexInterfaces);
-        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
+        const string_map<int>::const_iterator it = _mapBodyNameIndex.find(name);
         if (it == _mapBodyNameIndex.end()) {
             return true;
         }
@@ -3940,7 +4032,7 @@ protected:
     virtual bool _CheckUniqueName(const std::string& name, bool bDoThrow=false) const
     {
         SharedLock lock797(_mutexInterfaces);
-        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyNameIndex.find(name);
+        const string_map<int>::const_iterator it = _mapBodyNameIndex.find(name);
         if (it == _mapBodyNameIndex.end()) {
             return true;
         }
@@ -3965,7 +4057,7 @@ protected:
         }
 
         SharedLock lock646(_mutexInterfaces);
-        const std::unordered_map<std::string, int>::const_iterator it = _mapBodyIdIndex.find(inputBodyId);
+        const string_map<int>::const_iterator it = _mapBodyIdIndex.find(inputBodyId);
         if (it == _mapBodyIdIndex.end()) {
             return true;
         }
@@ -4268,8 +4360,9 @@ protected:
     }
 
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be nullptr, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces. [0] should always be kept null since 0 means no assignment.
-    std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
-    std::unordered_map<std::string, int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
+
+    string_map<int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces.
+    string_map<int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
 
     std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. protected by _mutexInterfaces
 

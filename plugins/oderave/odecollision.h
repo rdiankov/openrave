@@ -379,12 +379,11 @@ public:
 
                     if(( N > 0) && !!preport ) {
                         _report.Reset(_options);
-                        _report.plink1 = plink1;
-                        _report.plink2 = plink2;
-
+                        int icollision = _report.AddLinkCollision(*plink1, *plink2);
+                        OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
                         if( _options & OpenRAVE::CO_Contacts ) {
-                            if( _report.contacts.size()+N < _report.contacts.capacity() ) {
-                                _report.contacts.reserve(_report.contacts.capacity()+N);
+                            if( cpinfo.contacts.size()+N < cpinfo.contacts.capacity() ) {
+                                cpinfo.contacts.reserve(cpinfo.contacts.capacity()+N);
                             }
                             dGeomID checkgeom1 = dGeomGetClass(geom1) == dGeomTransformClass ? dGeomTransformGetGeom(geom1) : geom1;
                             for(int i = 0; i < N; ++i) {
@@ -397,15 +396,15 @@ public:
                                 }
                                 BOOST_ASSERT( checkgeom1 == vcontacts[i].geom.g1 || checkgeom1 == vcontacts[i].geom.g2 );
                                 
-                                if( !!_report.plink2 ) {
-                                    Transform tlinkinv = _report.plink2->GetTransform().inverse();
+                                if( !!plink2 ) {
+                                    Transform tlinkinv = plink2->GetTransform().inverse();
                                     Vector vlinknorm = tlinkinv.rotate(vnorm);
-                                    if( _report.plink2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm)) {
+                                    if( plink2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm)) {
                                         distance = -distance;
                                         vnorm = -vnorm;
                                     }
                                 }
-                                _report.contacts.push_back(CollisionReport::CONTACT(vcontacts[i].geom.pos, vnorm, distance));
+                                cpinfo.contacts.push_back(OpenRAVE::CONTACT(vcontacts[i].geom.pos, vnorm, distance));
                             }
                         }
 
@@ -422,9 +421,10 @@ public:
                             }
                         }
 
-                        preport->plink1 = _report.plink1;
-                        preport->plink2 = _report.plink2;
-                        preport->contacts.swap(_report.contacts);
+                        {
+                            int inewcollision = preport->AddLinkCollision(*plink1, *plink2);
+                            preport->vCollisionInfos[inewcollision].contacts = cpinfo.contacts;
+                        }
                     }
 
                     bCollision = true;
@@ -585,7 +585,7 @@ public:
                 }
 
                 if( !!report ) {
-                    if( !!report->plink1 ) {
+                    if( report->IsValid() ) {
                         // collided already, see if this point is closer
                         if( report->minDistance < vcontacts[index].geom.depth ) {
                             geom1 = dBodyGetNextGeom(geom1);
@@ -595,7 +595,8 @@ public:
 
                     _report.Reset(_options);
                     _report.minDistance = vcontacts[index].geom.depth;
-                    _report.plink1 = plink;
+                    int icollision = _report.AddLinkCollision(*plink);
+                    OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
 
                     // always return contacts since it isn't that much computation (openravepy expects this!)
                     //if( _report.options & OpenRAVE::CO_Contacts) {
@@ -605,19 +606,19 @@ public:
                         vnorm = -vnorm;
                         distance = -distance;
                     }
-                    if( !!_report.plink1 ) {
-                        Transform tlinkinv = _report.plink1->GetTransform().inverse();
+                    {
+                        Transform tlinkinv = plink->GetTransform().inverse();
                         Vector vlinknorm = tlinkinv.rotate(vnorm);
-                        if( _report.plink1->ValidateContactNormal(tlinkinv*vcontacts[index].geom.pos,vlinknorm) ) {
+                        if( plink->ValidateContactNormal(tlinkinv*vcontacts[index].geom.pos,vlinknorm) ) {
                             vnorm = -vnorm;
                             distance = -distance;
                         }
                     }
-                    if( _report.contacts.size() == 0 ) {
-                        _report.contacts.push_back(CollisionReport::CONTACT(vcontacts[index].geom.pos, vnorm, distance));
+                    if( cpinfo.contacts.size() == 0 ) {
+                        cpinfo.contacts.push_back(OpenRAVE::CONTACT(vcontacts[index].geom.pos, vnorm, distance));
                     }
                     else {
-                        _report.contacts.front() = CollisionReport::CONTACT(vcontacts[index].geom.pos, vnorm, distance);
+                        cpinfo.contacts.front() = OpenRAVE::CONTACT(vcontacts[index].geom.pos, vnorm, distance);
                     }
                     if( listcallbacks.size() == 0 ) {
                         GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
@@ -631,9 +632,11 @@ public:
                         }
                     }
 
-                    report->plink1 = _report.plink1;
-                    report->minDistance = _report.minDistance;
-                    report->contacts.swap(_report.contacts);
+                    {
+                        int inewcollision = report->AddLinkCollision(*plink);
+                        report->minDistance = _report.minDistance;
+                        report->vCollisionInfos[inewcollision].contacts = cpinfo.contacts;
+                    }
                     if( report->options&OpenRAVE::CO_RayAnyHit ) {
                         bCollision = true;
                         break;
@@ -949,17 +952,25 @@ private:
             if( !!pcb->_report || pcb->GetCallbacks().size() > 0 ) {
                 _report.Reset(_options);
                 _report.minDistance = vcontacts[0].geom.depth;
-                _report.plink1 = pkb1;
-                _report.plink2 = pkb2;
-                if( !!pkb1 && !!pkb2 ) {
-                    _report.vLinkColliding.emplace_back(pkb1,  pkb2);
-                }
+
                 if( !pkb1 || !pkb2 ) {
                     RAVELOG_WARN("one of the links is not specified\n");
                 }
 
-                if( _options & OpenRAVE::CO_Contacts ) {
-                    _report.contacts.reserve(N);
+                int icollision = -1;
+                if( !!pkb1 && !!pkb2 ) {
+                    icollision = _report.AddLinkCollision(*pkb1, *pkb2);
+                }
+                else if( !!pkb1 ) {
+                    icollision = _report.AddLinkCollision(*pkb1);
+                }
+                else if( !!pkb2 ) {
+                    icollision = _report.AddLinkCollision(*pkb2);
+                }
+
+                if( icollision >= 0 && (_options & OpenRAVE::CO_Contacts) ) {
+                    OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
+                    cpinfo.contacts.reserve(N);
                     dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
                     for(int i = 0; i < N; ++i) {
                         dReal distance = vcontacts[i].geom.depth;
@@ -968,15 +979,15 @@ private:
                             vnorm = -vnorm;
                             distance = -distance;
                         }
-                        if( !!_report.plink2 ) {
-                            Transform tlinkinv = _report.plink2->GetTransform().inverse();
+                        if( !!pkb2 ) {
+                            Transform tlinkinv = pkb2->GetTransform().inverse();
                             Vector vlinknorm = tlinkinv.rotate(vnorm);
-                            if( _report.plink2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm) ) {
+                            if( pkb2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm) ) {
                                 vnorm = -vnorm;
                                 distance = -distance;
                             }
                         }
-                        _report.contacts.push_back(CollisionReport::CONTACT(vcontacts[i].geom.pos, vnorm, distance));
+                        cpinfo.contacts.push_back(OpenRAVE::CONTACT(vcontacts[i].geom.pos, vnorm, distance));
                     }
                 }
 
@@ -989,20 +1000,16 @@ private:
                 }
 
                 if( !!pcb->_report ) {
-                    pcb->_report->plink1 = _report.plink1;
-                    pcb->_report->plink2 = _report.plink2;
                     if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                        FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
-                            if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
-                                
-                                pcb->_report->vLinkColliding.push_back(*itlinkpair);
-                            }
+                        int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, OpenRAVE::KinBody::GeometryConstPtr(), pkb2, OpenRAVE::KinBody::GeometryConstPtr());
+                        OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
+                        if( icollision >= 0 ) {
+                            OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
+                            newcpinfo.contacts.insert(newcpinfo.contacts.end(), cpinfo.contacts.begin(), cpinfo.contacts.end());
                         }
-                        pcb->_report->contacts.insert(pcb->_report->contacts.end(), _report.contacts.begin(), _report.contacts.end());
                     }
                     else {
-                        pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
-                        pcb->_report->contacts.swap(_report.contacts);
+                        *pcb->_report = _report;
                     }
                 }
             }
@@ -1066,14 +1073,20 @@ private:
 
             if( !!pcb->_report || pcb->GetCallbacks().size() > 0 ) {
                 _report.Reset(_options);
-                _report.plink1 = pkb1;
-                _report.plink2 = pkb2;
+                int icollision = -1;
                 if( !!pkb1 && !!pkb2 ) {
-                    _report.vLinkColliding.emplace_back(pkb1,  pkb2);
+                    icollision = _report.AddLinkCollision(*pkb1, *pkb2);
+                }
+                else if( !!pkb1 ) {
+                    icollision = _report.AddLinkCollision(*pkb1);
+                }
+                else if( !!pkb2 ) {
+                    icollision = _report.AddLinkCollision(*pkb2);
                 }
 
-                if( _options & OpenRAVE::CO_Contacts ) {
-                    _report.contacts.reserve(N);
+                if( icollision >= 0 && (_options & OpenRAVE::CO_Contacts) ) {
+                    OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
+                    cpinfo.contacts.reserve(N);
                     dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
                     for(int i = 0; i < N; ++i) {
                         dReal distance = vcontacts[i].geom.depth;
@@ -1082,15 +1095,15 @@ private:
                             vnorm = -vnorm;
                             distance = -distance;
                         }
-                        if( !!_report.plink2 ) {
-                            Transform tlinkinv = _report.plink2->GetTransform().inverse();
+                        if( !!pkb2 ) {
+                            Transform tlinkinv = pkb2->GetTransform().inverse();
                             Vector vlinknorm = tlinkinv.rotate(vnorm);
-                            if( _report.plink2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm) ) {
+                            if( pkb2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm) ) {
                                 vnorm = -vnorm;
                                 distance = -distance;
                             }
                         }
-                        _report.contacts.push_back(CollisionReport::CONTACT(vcontacts[i].geom.pos,vnorm,distance));
+                        cpinfo.contacts.push_back(OpenRAVE::CONTACT(vcontacts[i].geom.pos,vnorm,distance));
                     }
                 }
 
@@ -1103,20 +1116,16 @@ private:
                 }
 
                 if( !!pcb->_report ) {
-                    pcb->_report->plink1 = _report.plink1;
-                    pcb->_report->plink2 = _report.plink2;
                     if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                        FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
-                            if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
-                                
-                                pcb->_report->vLinkColliding.push_back(*itlinkpair);
-                            }
+                        int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, OpenRAVE::KinBody::GeometryConstPtr(), pkb2, OpenRAVE::KinBody::GeometryConstPtr());
+                        OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
+                        if( icollision >= 0 ) {
+                            OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
+                            newcpinfo.contacts.insert(newcpinfo.contacts.end(), cpinfo.contacts.begin(), cpinfo.contacts.end());
                         }
-                        pcb->_report->contacts.insert(pcb->_report->contacts.end(), _report.contacts.begin(), _report.contacts.end());
                     }
                     else {
-                        pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
-                        pcb->_report->contacts.swap(_report.contacts);
+                        *pcb->_report = _report;
                     }
                 }
             }
@@ -1200,16 +1209,26 @@ private:
             if (N) {
                 if(!!pcb->_report || pcb->GetCallbacks().size() > 0 ) {
                     _report.Reset(_options);
-                    _report.plink1 = pcb->_plink;
-                    _report.plink2 = pkb1 != pcb->_plink ? pkb1 : pkb2;
-                    if( !!_report.plink1 && !!_report.plink2 ) {
-                        _report.vLinkColliding.emplace_back(_report.plink1,  _report.plink2);
+                    OpenRAVE::KinBody::LinkConstPtr& plink1 = pcb->_plink;
+                    OpenRAVE::KinBody::LinkPtr& plink2 = pkb1 != pcb->_plink ? pkb1 : pkb2;
+                    
+                    int icollision = -1;
+                    if( !!plink1 && !!plink2 ) {
+                        icollision = _report.AddLinkCollision(*plink1, *plink2);
                     }
+                    else if( !!plink1 ) {
+                        icollision = _report.AddLinkCollision(*plink1);
+                    }
+                    else if( !!plink2 ) {
+                        icollision = _report.AddLinkCollision(*plink2);
+                    }
+
                     dGeomID checkgeom1 = pkb1 == pcb->_plink ? o1 : o2;
                     checkgeom1 = dGeomGetClass(checkgeom1) == dGeomTransformClass ? dGeomTransformGetGeom(checkgeom1) : checkgeom1;
 
                     if( _options & OpenRAVE::CO_Contacts ) {
-                        _report.contacts.reserve(N);
+                        OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
+                        cpinfo.contacts.reserve(N);
                         for(int i = 0; i < N; ++i) {
                             BOOST_ASSERT( checkgeom1 == vcontacts[i].geom.g1 || checkgeom1 == vcontacts[i].geom.g2 );
                             Vector vnorm(vcontacts[i].geom.normal);
@@ -1218,16 +1237,16 @@ private:
                                 vnorm = -vnorm;
                                 distance = -distance;
                             }
-                            if( !!_report.plink2 ) {
-                                Transform tlinkinv = _report.plink2->GetTransform().inverse();
+                            if( !!plink2 ) {
+                                Transform tlinkinv = plink2->GetTransform().inverse();
                                 Vector vlinknorm = tlinkinv.rotate(vnorm);
-                                if( _report.plink2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm) ) {
+                                if( plink2->ValidateContactNormal(tlinkinv*vcontacts[i].geom.pos,vlinknorm) ) {
                                     vnorm = -vnorm;
                                     distance = -distance;
                                 }
                             }
                             _report.minDistance = distance;
-                            _report.contacts.push_back(CollisionReport::CONTACT(vcontacts[i].geom.pos,vnorm,distance));
+                            cpinfo.contacts.push_back(OpenRAVE::CONTACT(vcontacts[i].geom.pos,vnorm,distance));
                         }
                     }
 
@@ -1240,20 +1259,16 @@ private:
                     }
 
                     if( !!pcb->_report ) {
-                        pcb->_report->plink1 = _report.plink1;
-                        pcb->_report->plink2 = _report.plink2;
                         if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                            FOREACHC(itlinkpair, _report.vLinkColliding) { // could have duplicate entries
-                                if( find(pcb->_report->vLinkColliding.begin(), pcb->_report->vLinkColliding.end(), *itlinkpair) == pcb->_report->vLinkColliding.end() ) {
-                                    
-                                pcb->_report->vLinkColliding.push_back(*itlinkpair);
-                                }
+                            int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, OpenRAVE::KinBody::GeometryConstPtr(), pkb2, OpenRAVE::KinBody::GeometryConstPtr());
+                            OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
+                            if( icollision >= 0 ) {
+                                OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
+                                newcpinfo.contacts.insert(newcpinfo.contacts.end(), cpinfo.contacts.begin(), cpinfo.contacts.end());
                             }
-                            pcb->_report->contacts.insert(pcb->_report->contacts.end(), _report.contacts.begin(), _report.contacts.end());
                         }
                         else {
-                            pcb->_report->vLinkColliding.swap(_report.vLinkColliding);
-                            pcb->_report->contacts.swap(_report.contacts);
+                            *pcb->_report = _report;
                         }
                     }
                 }
@@ -1333,8 +1348,9 @@ private:
                 // have to set locally first?
                 _report.Reset(_options);
                 _report.minDistance = contact[index].geom.depth;
+                OpenRAVE::KinBody::LinkPtr plink1;
                 if( dBodyGetData(b) ) {
-                    _report.plink1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b))->GetLink();
+                    plink1 = ((ODESpace::KinBodyInfo::LINK*)dBodyGetData(b))->GetLink();
                 }
                 else {
                     RAVELOG_WARN("ode body does not have a link attached\n");
@@ -1347,19 +1363,28 @@ private:
                     vnorm = -vnorm;
                     distance = -distance;
                 }
-                if( !!_report.plink1 ) {
-                    Transform tlinkinv = _report.plink1->GetTransform().inverse();
+
+                int icollision;
+                if( !!plink1 ) {
+                    Transform tlinkinv = plink1->GetTransform().inverse();
                     Vector vlinknorm = tlinkinv.rotate(vnorm);
-                    if( _report.plink1->ValidateContactNormal(tlinkinv*contact[index].geom.pos,vlinknorm) ) {
+                    if( plink1->ValidateContactNormal(tlinkinv*contact[index].geom.pos,vlinknorm) ) {
                         vnorm = -vnorm;
                         distance = -distance;
                     }
-                }
-                if( _report.contacts.size() == 0 ) {
-                    _report.contacts.push_back(CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance));
+
+                    icollision = _report.AddLinkCollision(*plink1);
                 }
                 else {
-                    _report.contacts.front() = CollisionReport::CONTACT(contact[index].geom.pos, vnorm, distance);
+                    icollision = _report.AddCollision();
+                }
+
+                OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
+                if( cpinfo.contacts.size() == 0 ) {
+                    cpinfo.contacts.push_back(OpenRAVE::CONTACT(contact[index].geom.pos, vnorm, distance));
+                }
+                else {
+                    cpinfo.contacts.front() = OpenRAVE::CONTACT(contact[index].geom.pos, vnorm, distance);
                 }
 
                 CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
@@ -1371,9 +1396,22 @@ private:
                 }
 
                 // transfer the data to pcb->_report
-                pcb->_report->plink1 = _report.plink1;
-                pcb->_report->minDistance = _report.minDistance;
-                pcb->_report->contacts.swap(_report.contacts);
+                if( !!pcb->_report ) {
+                    if( _options & OpenRAVE::CO_AllLinkCollisions ) {
+                        int inewcollision;
+                        if( !!plink1 ) {
+                            inewcollision = pcb->_report->AddLinkCollision(*plink1);
+                        }
+                        else {
+                            inewcollision = pcb->_report->AddCollision();
+                        }
+                        OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
+                        newcpinfo.contacts.insert(newcpinfo.contacts.end(), cpinfo.contacts.begin(), cpinfo.contacts.end());
+                    }
+                    else {
+                        *pcb->_report = _report;
+                    }
+                }
                 if( _options&OpenRAVE::CO_RayAnyHit ) {
                     pcb->_bStopChecking = true;
                 }

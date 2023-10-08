@@ -155,7 +155,7 @@ int ORCEnvironmentLoad(void* env, const char* filename)
 
 void* ORCEnvironmentGetKinBody(void* env, const char* name)
 {
-    KinBodyPtr pbody = GetEnvironment(env)->GetKinBody(name);
+    KinBodyPtr pbody = GetEnvironment(env)->GetKinBody(string_view(name, strlen(name)));
     if( !pbody ) {
         return NULL;
     }

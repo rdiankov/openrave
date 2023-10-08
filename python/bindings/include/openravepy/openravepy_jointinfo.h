@@ -80,7 +80,7 @@ public:
 
     std::string __repr__();
     std::string __str__();
-    
+
     object _t = ReturnTransform(Transform());
     object _vGeomData = toPyVector4(Vector());
     object _vGeomData2 = toPyVector4(Vector());
@@ -99,7 +99,7 @@ public:
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
-    
+
     object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
@@ -262,75 +262,75 @@ private:
     void _Update(const KinBody::JointInfo& info);
 };
 
+class PyGeometry
+{
+    KinBody::GeometryPtr _pgeometry;
+public:
+    PyGeometry(KinBody::GeometryPtr pgeometry);
+
+    virtual void SetCollisionMesh(object pytrimesh);
+
+    bool InitCollisionMesh(float fTessellation=1.0);
+    uint8_t GetSideWallExists() const;
+
+    object GetCollisionMesh();
+    object ComputeAABB(object otransform) const;
+    void SetDraw(bool bDraw);
+    bool SetVisible(bool visible);
+    void SetTransparency(float f);
+    void SetAmbientColor(object ocolor);
+    void SetDiffuseColor(object ocolor);
+    void SetNegativeCropContainerMargins(object negativeCropContainerMargins);
+    void SetPositiveCropContainerMargins(object positiveCropContainerMargins);
+    void SetNegativeCropContainerEmptyMargins(object negativeCropContainerEmptyMargins);
+    void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
+    void SetRenderFilename(const string& filename);
+    void SetName(const std::string& name);
+    bool IsDraw();
+    bool IsVisible();
+    bool IsModifiable();
+    GeometryType GetType();
+    object GetTransform();
+    object GetTransformPose();
+    dReal GetSphereRadius() const;
+    dReal GetCylinderRadius() const;
+    dReal GetCylinderHeight() const;
+    dReal GetConicalFrustumTopRadius() const;
+    dReal GetConicalFrustumBottomRadius() const;
+    dReal GetConicalFrustumHeight() const;
+    object GetBoxExtents() const;
+    object GetContainerOuterExtents() const;
+    object GetContainerInnerExtents() const;
+    object GetContainerBottomCross() const;
+    object GetContainerBottom() const;
+    object GetRenderScale() const;
+    object GetRenderFilename() const;
+    object GetName() const;
+    float GetTransparency() const;
+    object GetDiffuseColor() const;
+    object GetAmbientColor() const;
+    object GetNegativeCropContainerMargins() const;
+    object GetPositiveCropContainerMargins() const;
+    object GetNegativeCropContainerEmptyMargins() const;
+    object GetPositiveCropContainerEmptyMargins() const;
+    object GetCalibrationBoardNumDots() const;
+    object GetCalibrationBoardDotsDistances() const;
+    object GetCalibrationBoardDotColor() const;
+    object GetCalibrationBoardPatternName() const;
+    object GetCalibrationBoardDotDiameterDistanceRatios() const;
+    int GetNumberOfAxialSlices() const;
+    object GetInfo();
+    object ComputeInnerEmptyVolume() const;
+    bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
+    bool __ne__(OPENRAVE_SHARED_PTR<PyGeometry> p);
+    long __hash__();
+};
+
 class PyLink : public PyReadablesContainer
 {
     KinBody::LinkPtr _plink;
     PyEnvironmentBasePtr _pyenv;
 public:
-    class PyGeometry
-    {
-        KinBody::Link::GeometryPtr _pgeometry;
-public:
-        PyGeometry(KinBody::Link::GeometryPtr pgeometry);
-
-        virtual void SetCollisionMesh(object pytrimesh);
-
-        bool InitCollisionMesh(float fTessellation=1.0);
-        uint8_t GetSideWallExists() const;
-
-        object GetCollisionMesh();
-        object ComputeAABB(object otransform) const;
-        void SetDraw(bool bDraw);
-        bool SetVisible(bool visible);
-        void SetTransparency(float f);
-        void SetAmbientColor(object ocolor);
-        void SetDiffuseColor(object ocolor);
-        void SetNegativeCropContainerMargins(object negativeCropContainerMargins);
-        void SetPositiveCropContainerMargins(object positiveCropContainerMargins);
-        void SetNegativeCropContainerEmptyMargins(object negativeCropContainerEmptyMargins);
-        void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
-        void SetRenderFilename(const string& filename);
-        void SetName(const std::string& name);
-        bool IsDraw();
-        bool IsVisible();
-        bool IsModifiable();
-        GeometryType GetType();
-        object GetTransform();
-        object GetTransformPose();
-        dReal GetSphereRadius() const;
-        dReal GetCylinderRadius() const;
-        dReal GetCylinderHeight() const;
-        dReal GetConicalFrustumTopRadius() const;
-        dReal GetConicalFrustumBottomRadius() const;
-        dReal GetConicalFrustumHeight() const;
-        object GetBoxExtents() const;
-        object GetContainerOuterExtents() const;
-        object GetContainerInnerExtents() const;
-        object GetContainerBottomCross() const;
-        object GetContainerBottom() const;
-        object GetRenderScale() const;
-        object GetRenderFilename() const;
-        object GetName() const;
-        float GetTransparency() const;
-        object GetDiffuseColor() const;
-        object GetAmbientColor() const;
-        object GetNegativeCropContainerMargins() const;
-        object GetPositiveCropContainerMargins() const;
-        object GetNegativeCropContainerEmptyMargins() const;
-        object GetPositiveCropContainerEmptyMargins() const;
-        object GetCalibrationBoardNumDots() const;
-        object GetCalibrationBoardDotsDistances() const;
-        object GetCalibrationBoardDotColor() const;
-        object GetCalibrationBoardPatternName() const;
-        object GetCalibrationBoardDotDiameterDistanceRatios() const;
-        int GetNumberOfAxialSlices() const;
-        object GetInfo();
-        object ComputeInnerEmptyVolume() const;
-        bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
-        bool __ne__(OPENRAVE_SHARED_PTR<PyGeometry> p);
-        long __hash__();
-    };
-
     PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv);
     virtual ~PyLink();
 
@@ -384,7 +384,8 @@ public:
     void SetForce(object oforce, object opos, bool bAdd);
     void SetTorque(object otorque, bool bAdd);
 
-    object GetGeometries();
+    object GetGeometries() const;
+    object GetGeometry(const std::string& geomname) const;
 
     void InitGeometries(object ogeometryinfos);
 

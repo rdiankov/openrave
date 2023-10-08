@@ -3,6 +3,13 @@
 ChangeLog
 #########
 
+Version 0.132.0
+===============
+
+- Cleanup CollisionReport to be more memory efficient and unify single collision vs all collisions.
+
+- Add IkFilterInfo and IkFailureAccumulator to allow for fast accumulation of IK failures.
+
 Version 0.131.0
 ===============
 
