@@ -3,7 +3,7 @@
 ChangeLog
 #########
 
-Version 0.130.4
+Version 0.132.0
 ===============
 
 * Initialization of internal costs in KinBodies now only considers links that are part of a joint
@@ -12,6 +12,11 @@ Version 0.130.4
 * Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
 * FCLRave geometry callbacks now only update when the link has actually changed
 * Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with exceptions
+
+Version 0.131.0
+===============
+
+* Add GPG capability to decrypt scenes when loading.
 
 Version 0.130.3
 ===============
