@@ -6104,6 +6104,12 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 
     // in order for link transform comparision to make sense
     KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    boost::shared_ptr<void> restoreTransformEvenWhenBodyIsNotAddedToEnv = nullptr;
+    if( (options & EIO_SkipDOFValues) && GetEnvironmentBodyIndex() == 0 ) {
+        RAVELOG_WARN("resetting DOF to zeros");
+        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*) 0, std::bind(&KinBody::SetTransform, this, std::cref(info._transform)));
+    }
+
     SetTransform(Transform()); // so that base link is at exactly _baseLinkInBodyTransform
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
