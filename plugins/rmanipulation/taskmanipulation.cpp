@@ -1336,16 +1336,17 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
-
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner init", GetEnv()->GetNameId());
         if( !graspplanner->InitPlan(_robot, graspparams) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
-
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner start to plan", GetEnv()->GetNameId());
         if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner plan finished", GetEnv()->GetNameId());
 
         if( ptraj->GetNumWaypoints() == 0 ) {
             return false;

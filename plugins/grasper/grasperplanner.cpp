@@ -564,12 +564,15 @@ public:
             bcollision = GetEnv()->CheckCollision(plink,_report);
         }
         if( bcollision ) {
-            const std::string& targetname = _parameters->targetbody->GetName();
             for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision ) {
                 const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
 
-                bool bTargetCollision1 = cpinfo.CompareFirstBodyName(targetname) == 0;
-                bool bTargetCollision2 = cpinfo.CompareSecondBodyName(targetname) == 0;
+                bool bTargetCollision1 = false, bTargetCollision2 = false;
+                if( !!_parameters->targetbody ) {
+                    const std::string& targetname = _parameters->targetbody->GetName();
+                    bTargetCollision1 = cpinfo.CompareFirstBodyName(targetname) == 0;
+                    bTargetCollision2 = cpinfo.CompareSecondBodyName(targetname) == 0;
+                }
                 if( bTargetCollision1 || bTargetCollision2 ) {
                     ct |= CT_TargetCollision;
                 }
