@@ -56,7 +56,7 @@ CacheTreeNode::CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres)
     _hitcount = 0;
 }
 
-void CacheTreeNode::SetCollisionInfo(EnvironmentBase& env, RobotBase& robot, CollisionReportPtr& report)
+void CacheTreeNode::SetCollisionInfo(RobotBase& robot, CollisionReportPtr& report)
 {
     if( !!report && report->nNumValidCollisions > 0 ) {
         //_collidinglinktrans = report->plink1->GetTransform();
@@ -68,7 +68,7 @@ void CacheTreeNode::SetCollisionInfo(EnvironmentBase& env, RobotBase& robot, Col
 
             cpinfo.ExtractSecondBodyName(bodyname);
             cpinfo.ExtractSecondLinkName(linkname);
-            _collidinglink = env.GetKinBody(bodyname)->GetLink(linkname);
+            _collidinglink = robot.GetEnv()->GetKinBody(bodyname)->GetLink(linkname);
         }
         else if( cpinfo.CompareSecondBodyName(robot.GetName()) == 0 ) {
             cpinfo.ExtractSecondLinkName(linkname);
@@ -76,7 +76,7 @@ void CacheTreeNode::SetCollisionInfo(EnvironmentBase& env, RobotBase& robot, Col
 
             cpinfo.ExtractFirstBodyName(bodyname);
             cpinfo.ExtractFirstLinkName(linkname);
-            _collidinglink = env.GetKinBody(bodyname)->GetLink(linkname);
+            _collidinglink = robot.GetEnv()->GetKinBody(bodyname)->GetLink(linkname);
         }
         else {
             BOOST_ASSERT(0);
@@ -123,7 +123,7 @@ void CacheTreeNode::SetCollisionInfo(int robotlinkindex, int type)
 //    }
 //}
 
-CacheTree::CacheTree(int statedof)
+CacheTree::CacheTree(RobotBasePtr& pstaterobot, int statedof)
 {
     _poolNodes.reset(new boost::pool<>(sizeof(CacheTreeNode)+sizeof(dReal)*statedof));
     _vnodes.resize(0);
@@ -135,9 +135,8 @@ CacheTree::CacheTree(int statedof)
     _statedof=statedof;
     _weights.resize(_statedof, 1.0);
 
-    EnvironmentBasePtr penv;
-    RobotBasePtr probot;
-    Init(penv, probot, _weights, 1);
+    _pstaterobot = pstaterobot;
+    Init(_weights, 1);
 }
 
 CacheTree::~CacheTree()
@@ -146,12 +145,9 @@ CacheTree::~CacheTree()
     _weights.clear();
 }
 
-void CacheTree::Init(EnvironmentBasePtr& penv, RobotBasePtr& pstaterobot, const std::vector<dReal>& weights, dReal maxdistance)
+void CacheTree::Init(const std::vector<dReal>& weights, dReal maxdistance)
 {
     Reset();
-    _penv=penv;
-    _pstaterobot=pstaterobot;
-
     _weights = weights;
     _statedof = (int)_weights.size();
     _numnodes = 0;
@@ -171,8 +167,6 @@ void CacheTree::Init(EnvironmentBasePtr& penv, RobotBasePtr& pstaterobot, const 
 
 void CacheTree::Reset()
 {
-    _penv.reset();
-    _pstaterobot.reset();
     _vnodes.resize(0);
     _dummycs.resize(0);
     _fulldirname.resize(0);
@@ -215,7 +209,7 @@ CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, C
 #ifdef _DEBUG
     newnode->id = s_CacheTreeId++;
 #endif
-    newnode->SetCollisionInfo(*_penv, *_pstaterobot, report);
+    newnode->SetCollisionInfo(*_pstaterobot, report);
     return newnode;
 }
 
@@ -1148,7 +1142,7 @@ bool CacheTree::Validate()
     return true;
 }
 
-ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates) : _cachetree(pstaterobot->GetDOF())
+ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates) : _cachetree(pstaterobot, pstaterobot->GetDOF())
 {
     _userdatakey = std::string("configurationcache") + boost::lexical_cast<std::string>(this);
     _pstaterobot = pstaterobot;
@@ -1222,7 +1216,7 @@ ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates
         maxdistance += f*f;
     }
 
-    _cachetree.Init(_penv, _pstaterobot, _vweights, RaveSqrt(maxdistance));
+    _cachetree.Init(_vweights, RaveSqrt(maxdistance));
 
     if (IS_DEBUGLEVEL(Level_Verbose)) {
         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);

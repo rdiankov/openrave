@@ -41,7 +41,7 @@ public:
     }
 
     /// \param report assumes in the report, plink1 is the robot and plink2 is the colliding link
-    void SetCollisionInfo(EnvironmentBase& env, RobotBase& robot, CollisionReportPtr& report);
+    void SetCollisionInfo(RobotBase& robot, CollisionReportPtr& report);
 
     /// \brief sets the collision info with int values (used by the load/save)
     void SetCollisionInfo(int index, int type);
@@ -165,12 +165,12 @@ class CacheTree
 {
 public:
 
-    CacheTree(int statedof);
+    CacheTree(RobotBasePtr& pstaterobot, int statedof);
 
     virtual ~CacheTree();
 
     /// \brief initializes the cache tree with specific weights and max distance
-    void Init(EnvironmentBasePtr& penv, RobotBasePtr& pstaterobot, const std::vector<dReal>& weights, dReal maxdistance);
+    void Init(const std::vector<dReal>& weights, dReal maxdistance);
 
     /// \brief resets the nodes for the cache tree to 0
     void Reset();
@@ -314,7 +314,6 @@ private:
         }
     }
 
-    EnvironmentBasePtr _penv; ///< environment
     RobotBasePtr _pstaterobot;
 
     std::vector<dReal> _weights; ///< weights used by the distance function
