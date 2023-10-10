@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.130.4
+Version 0.131.1
 ===============
 
 * Support reading of `grippername` under `manipulator` from XML files.
+
+Version 0.131.0
+===============
+
+* Add GPG capability to decrypt scenes when loading.
 
 Version 0.130.3
 ===============
