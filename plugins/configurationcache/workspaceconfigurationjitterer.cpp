@@ -64,19 +64,25 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 #ifndef OPENRAVE_HAS_LAPACK
         throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot use WorkspaceConfigurationJitterer since lapack is not supported"), ORE_CommandNotSupported);
 #else
-        _environmentid = penv->GetId();
         bool bUseCache = false;
         std::string robotname, manipname, samplername = "MT19937";
         is >> robotname >> manipname >> samplername >> bUseCache;
         _probot = GetEnv()->GetRobot(robotname);
-        OPENRAVE_ASSERT_FORMAT(!!_probot, "env=%d, could not find robot %s", _environmentid%robotname, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT(!!_probot, "env=%s, could not find robot %s", GetEnv()->GetNameId()%robotname, ORE_InvalidArguments);
         _pmanip = _probot->GetManipulator(manipname);
-        OPENRAVE_ASSERT_FORMAT(!!_pmanip, "env=%d, could not find manip %s in robot %s", _environmentid%manipname%robotname, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT(!!_pmanip, "env=%s, could not find manip %s in robot %s", GetEnv()->GetNameId()%manipname%robotname, ORE_InvalidArguments);
 
         _vActiveIndices = _probot->GetActiveDOFIndices();
         _nActiveAffineDOFs = _probot->GetAffineDOF();
         _vActiveAffineAxis = _probot->GetAffineRotationAxis();
-        _vLinks = _probot->GetLinks();
+        for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+            for(int dofindex : _vActiveIndices ) {
+                if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                    _vLinks.push_back(_probot->GetLinks()[ilink]);
+                    break;
+                }
+            }
+        }
         _vLinkAABBs.resize(_vLinks.size());
         for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
@@ -108,7 +114,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             samplername = "mt19937";
         }
         _ssampler = RaveCreateSpaceSampler(penv, samplername);
-        OPENRAVE_ASSERT_FORMAT(!!_ssampler, "env=%d, sampler %s not found", _environmentid%samplername, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT(!!_ssampler, "env=%s, sampler %s not found", GetEnv()->GetNameId()%samplername, ORE_InvalidArguments);
         _ssampler->SetSpaceDOF(1);
 
         size_t dof = _probot->GetActiveDOF();
@@ -263,17 +269,17 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return true;
         }
         if( manipname != _pmanip->GetName() ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, the given manipname=\"%s\" is different from the currently set name \"%s\"", _environmentid%manipname%_pmanip->GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, the given manipname=\"%s\" is different from the currently set name \"%s\"", GetEnv()->GetNameId()%manipname%_pmanip->GetName());
             RobotBase::ManipulatorConstPtr pmanip = _probot->GetManipulator(manipname);
             if( !pmanip ) {
-                RAVELOG_WARN_FORMAT("env=%d, cannot find manip %s in robot %s", _environmentid%manipname%_probot->GetName());
+                RAVELOG_WARN_FORMAT("env=%s, cannot find manip %s in robot %s", GetEnv()->GetNameId()%manipname%_probot->GetName());
                 return false;
             }
             _pmanip = pmanip;
         }
         sinput >> thresh->vManipDir.x >> thresh->vManipDir.y >> thresh->vManipDir.z >> thresh->vGlobalDir.x >> thresh->vGlobalDir.y >> thresh->vGlobalDir.z >> thresh->fCosAngleThresh;
         if( !sinput ) {
-            RAVELOG_WARN_FORMAT("env=%d, bad command input", _environmentid);
+            RAVELOG_WARN_FORMAT("env=%s, bad command input", GetEnv()->GetNameId());
             return false;
         }
 
@@ -299,10 +305,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             return true;
         }
         if( manipname != _pmanip->GetName() ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, the given manipname=\"%s\" is different from the currently set name \"%s\"", _environmentid%manipname%_pmanip->GetName());
+            RAVELOG_DEBUG_FORMAT("env=%s, the given manipname=\"%s\" is different from the currently set name \"%s\"", GetEnv()->GetNameId()%manipname%_pmanip->GetName());
             RobotBase::ManipulatorConstPtr pmanip = _probot->GetManipulator(manipname);
             if( !pmanip ) {
-                RAVELOG_WARN_FORMAT("env=%d, cannot find manip %s in robot %s", _environmentid%manipname%_probot->GetName());
+                RAVELOG_WARN_FORMAT("env=%s, cannot find manip %s in robot %s", GetEnv()->GetNameId()%manipname%_probot->GetName());
                 return false;
             }
             _pmanip = pmanip;
@@ -313,7 +319,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         >> constraint->obb.pos.x >> constraint->obb.pos.y >> constraint->obb.pos.z
         >> constraint->obb.extents.x >> constraint->obb.extents.y >> constraint->obb.extents.z;
         if( !sinput ) {
-            RAVELOG_WARN_FORMAT("env=%d, bad command input", _environmentid);
+            RAVELOG_WARN_FORMAT("env=%s, bad command input", GetEnv()->GetNameId());
             return false;
         }
 
@@ -373,7 +379,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         dReal nullsampleprob = 0.60;
         sinput >> nullsampleprob;
         if( !sinput ) {
-            RAVELOG_WARN_FORMAT("env=%d, bad command input", _environmentid);
+            RAVELOG_WARN_FORMAT("env=%s, bad command input", GetEnv()->GetNameId());
             return false;
         }
         _nullsampleprob = nullsampleprob;
@@ -470,7 +476,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( GetEnv()->CheckCollision(_probot, _report) ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "env=" << _environmentid << ", original env collision failed colvalues=[";
+                        ss << "env=" << GetEnv()->GetNameId() << ", original env collision failed colvalues=[";
                         for( size_t idof = 0; idof < vnewdof.size(); ++idof ) {
                             ss << vnewdof[idof] << ",";
                         }
@@ -485,7 +491,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( _probot->CheckSelfCollision(_report) ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "env=" << _environmentid << ", original self collision failed colvalues=[";
+                        ss << "env=" << GetEnv()->GetNameId() << ", original self collision failed colvalues=[";
                         for( size_t idof = 0; idof < vnewdof.size(); ++idof ) {
                             ss << vnewdof[idof] << ",";
                         }
@@ -500,7 +506,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
                 if( nNeighStateFailure > 0 ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, initial point configuration is good, but neigh state failed %d times", GetEnv()->GetId()%nNeighStateFailure);
+                    RAVELOG_DEBUG_FORMAT("env=%s, initial point configuration is good, but neigh state failed %d times", GetEnv()->GetId()%nNeighStateFailure);
                 }
                 return -1;
             }
@@ -508,8 +514,8 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             _nNumIterations++;
         }
         else {
-            //RAVELOG_VERBOSE_FORMAT("env=%d, skipping checks of the original configuration", _environmentid);
-            RAVELOG_DEBUG_FORMAT("env=%d, skipping checks of the original configuration", _environmentid);
+            //RAVELOG_VERBOSE_FORMAT("env=%s, skipping checks of the original configuration", GetEnv()->GetNameId());
+            RAVELOG_DEBUG_FORMAT("env=%s, skipping checks of the original configuration", GetEnv()->GetNameId());
         }
 
         if( !!_cache ) {
@@ -662,6 +668,21 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             break;
                         }
                     } // end for ix
+                    if( !bSuccess ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "dofvalues=[";
+                            for(size_t i = 0; i < vnewdof.size(); ++i ) {
+                                ss << vnewdof[i];
+                                if( i < vnewdof.size() - 1 ) {
+                                    ss << ", ";
+                                }
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE_FORMAT("env=%s, link %s exceeded linkdisthresh. ellipdist[%e] > rhs[%e], %s", GetEnv()->GetNameId()%_vLinks[ilink]->GetName()%ellipdist%rhs%ss.str());
+                        }
+                        break;
+                    }
                 }
 
                 if (!bSuccess) {
@@ -694,7 +715,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         nConstraintToolDirFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "env=" << _environmentid << ", direction constraints failed colvalues=[";
+                            ss << "env=" << GetEnv()->GetNameId() << ", direction constraints failed colvalues=[";
                             for( size_t idof = 0; idof < _newdof2.size(); ++idof ) {
                                 ss << _newdof2[idof] << ",";
                             }
@@ -711,7 +732,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         nConstraintToolPositionFailure++;
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                            ss << "env=" << _environmentid << ", position constraints failed colvalues=[";
+                            ss << "env=" << GetEnv()->GetNameId() << ", position constraints failed colvalues=[";
                             for( size_t idof = 0; idof < _newdof2.size(); ++idof ) {
                                 ss << _newdof2[idof] << ",";
                             }
@@ -734,7 +755,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( bCollision ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "env=" << _environmentid << ", collision failed colvalues=[";
+                        ss << "env=" << GetEnv()->GetNameId() << ", collision failed colvalues=[";
                         for( size_t idof = 0; idof < _newdof2.size(); ++idof ) {
                             ss << _newdof2[idof] << ",";
                         }
@@ -750,7 +771,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     _probot->GetActiveDOFValues(vnewdof);
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                    ss << "env=" << _environmentid << ", jitter iter=" << iter;
+                    ss << "env=" << GetEnv()->GetNameId() << ", jitter iter=" << iter;
 #ifdef _DEBUG
                     ss << "; maxtrans=" << fmaxtransdist;
 #endif
@@ -767,13 +788,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_DEBUG_FORMAT("env=%d, succeeded iterations=%d, computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, nLinkDistThreshRejections=%d", _environmentid%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nLinkDistThreshRejections);
+                RAVELOG_DEBUG_FORMAT("env=%s, succeeded iterations=%d, computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, nLinkDistThreshRejections=%d", GetEnv()->GetNameId()%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nCacheHitSamples%nLinkDistThreshRejections);
                 return 1;
             } // end if( !bCollision && !bConstraintFailed )
 
         } // end for iter
 
-        RAVELOG_INFO_FORMAT("env=%d, failed iterations=%d (max=%d), computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d", _environmentid%_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nCacheHitSamples%nSampleSamples%nLinkDistThreshRejections);
+        RAVELOG_INFO_FORMAT("env=%s, failed iterations=%d (max=%d), computation=%fs, bHasNeighStateFn=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d", GetEnv()->GetNameId()%_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bHasNeighStateFn%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nCacheHitSamples%nSampleSamples%nLinkDistThreshRejections);
         return 0;
     }
 
@@ -815,7 +836,7 @@ protected:
         // compute single value decomposition: Jacobian = U*diag(S)*transpose(V)
         int ret = boost::numeric::bindings::lapack::gesdd('O', 'A', J, S, U, V);
         if( ret != 0 ) {
-            RAVELOG_WARN_FORMAT("env=%d, failed to compute SVD for jacobian, disabling bias", _environmentid);
+            RAVELOG_WARN_FORMAT("env=%s, failed to compute SVD for jacobian, disabling bias", GetEnv()->GetNameId());
             return false;
         }
         bool bNullSpace = false;
@@ -912,7 +933,16 @@ protected:
     {
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
-        _vLinks = _probot->GetLinks(); // robot itself might have changed?
+        // robot itself might have changed?
+        _vLinks.clear();
+        for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+            for(int dofindex : _vActiveIndices ) {
+                if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                    _vLinks.push_back(_probot->GetLinks()[ilink]);
+                    break;
+                }
+            }
+        }
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
                 _vLinks.push_back(*itlink2);
@@ -1010,7 +1040,6 @@ protected:
     bool _bSetResultOnRobot; ///< if true, will set the final result on the robot DOF values
     bool _bResetIterationsOnSample; ///< if true, when Sample or SampleSequence is called, will reset the _nNumIterations to 0. O
 
-    int _environmentid;
     std::array<dReal, 3> _mults;
 };
 

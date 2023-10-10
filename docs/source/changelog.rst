@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.131.1
+===============
+
+* Optimization on Jitterers
+
 Version 0.131.0
 ===============
 
