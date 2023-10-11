@@ -75,6 +75,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _vActiveIndices = _probot->GetActiveDOFIndices();
         _nActiveAffineDOFs = _probot->GetAffineDOF();
         _vActiveAffineAxis = _probot->GetAffineRotationAxis();
+        if( _nActiveAffineDOFs == 0 ) {
         for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
             for(int dofindex : _vActiveIndices ) {
                 if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
@@ -82,6 +83,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     break;
                 }
             }
+        }
+        }
+        else {
+            _vLinks = _probot->GetLinks();
         }
         _vLinkAABBs.resize(_vLinks.size());
         for(size_t i = 0; i < _vLinks.size(); ++i) {
@@ -934,6 +939,7 @@ protected:
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
         // robot itself might have changed?
+        if( _nActiveAffineDOFs == 0 ) {
         _vLinks.clear();
         for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
             for(int dofindex : _vActiveIndices ) {
@@ -942,6 +948,10 @@ protected:
                     break;
                 }
             }
+            }
+        }
+        else {
+            _vLinks = _probot->GetLinks();
         }
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
