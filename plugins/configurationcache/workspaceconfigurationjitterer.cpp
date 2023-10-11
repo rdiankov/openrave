@@ -76,14 +76,14 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _nActiveAffineDOFs = _probot->GetAffineDOF();
         _vActiveAffineAxis = _probot->GetAffineRotationAxis();
         if( _nActiveAffineDOFs == 0 ) {
-        for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
-            for(int dofindex : _vActiveIndices ) {
-                if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
-                    _vLinks.push_back(_probot->GetLinks()[ilink]);
-                    break;
+            for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                for (int dofindex : _vActiveIndices) {
+                    if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                        _vLinks.push_back(_probot->GetLinks()[ilink]);
+                        break;
+                    }
                 }
             }
-        }
         }
         else {
             _vLinks = _probot->GetLinks();
@@ -940,14 +940,14 @@ protected:
         _probot->GetGrabbed(vgrabbedbodies);
         // robot itself might have changed?
         if( _nActiveAffineDOFs == 0 ) {
-        _vLinks.clear();
-        for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
-            for(int dofindex : _vActiveIndices ) {
-                if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
-                    _vLinks.push_back(_probot->GetLinks()[ilink]);
-                    break;
+            _vLinks.clear();
+            for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                for(int dofindex : _vActiveIndices) {
+                    if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                        _vLinks.push_back(_probot->GetLinks()[ilink]);
+                        break;
+                    }
                 }
-            }
             }
         }
         else {
