@@ -141,7 +141,7 @@ public:
     /// \brief Retrieve ikFailureInfo from the specified index. Assume the input index is valid.
     inline IkFailureInfo& GetIkFailureInfo(int index) const
     {
-        int nBatchIndex = _nextIndex/_nBatchSize;
+        int nBatchIndex = index/_nBatchSize;
         OPENRAVE_ASSERT_OP(nBatchIndex,<,(int)_vIkFailureInfoBatches.size());
         return (*_vIkFailureInfoBatches[nBatchIndex])[index - nBatchIndex*_nBatchSize];
     }

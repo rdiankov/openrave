@@ -311,7 +311,7 @@ public:
         }
 
         if( !!localchecker ) {
-            RAVELOG_DEBUG("using %s collision checker\n", localchecker->GetXMLId().c_str());
+            RAVELOG_DEBUG("using '%s' collision checker\n", localchecker->GetXMLId().c_str());
             SetCollisionChecker(localchecker);
         }
         else {
@@ -363,7 +363,7 @@ public:
         FOREACH(itviewer, listViewers) {
             // don't reset the viewer since it can already be dead
             // todo: this call could lead into a deadlock if a SIGINT got called from the viewer thread
-            RAVELOG_DEBUG_FORMAT("quitting viewer %s", (*itviewer)->GetXMLId());
+            RAVELOG_DEBUG_FORMAT("quitting viewer '%s'", (*itviewer)->GetXMLId());
             (*itviewer)->quitmainloop();
         }
         listViewers.clear();
@@ -564,7 +564,7 @@ public:
         CHECK_INTERFACE(module);
         int ret = module->main(cmdargs);
         if( ret != 0 ) {
-            RAVELOG_WARN_FORMAT("Error %d with executing module %s", ret%module->GetXMLId());
+            RAVELOG_WARN_FORMAT("Error %d with executing module '%s'", ret%module->GetXMLId());
         }
         else {
             EnvironmentLock lockenv(GetMutex());
@@ -591,7 +591,7 @@ public:
     {
         std::string path;
         if (!_IsURI(uri, path)) {
-            RAVELOG_WARN("Failed to load URI: %s is not a URI.", uri.c_str());
+            RAVELOG_WARN("Failed to load URI: '%s' is not a URI.", uri.c_str());
             return false;
         }
         if (_IsColladaFile(path)) {
@@ -687,7 +687,7 @@ public:
             }
         }
 
-        RAVELOG_WARN("load failed on file %s\n", filename.c_str());
+        RAVELOG_WARN("load failed on file '%s'\n", filename.c_str());
         return false;
     }
 
@@ -748,7 +748,7 @@ public:
                 if( itatt->first == "target" ) {
                     KinBodyPtr pbody = GetKinBody(itatt->second);
                     if( !pbody ) {
-                        RAVELOG_WARN_FORMAT("failed to get body %s", itatt->second);
+                        RAVELOG_WARN_FORMAT("failed to get body '%s'", itatt->second);
                     }
                     else {
                         listbodies.push_back(pbody);
@@ -823,7 +823,7 @@ public:
                 if( itatt->first == "target" ) {
                     KinBodyPtr pbody = GetKinBody(itatt->second);
                     if( !pbody ) {
-                        RAVELOG_WARN_FORMAT("failed to get body %s", itatt->second);
+                        RAVELOG_WARN_FORMAT("failed to get body '%s'", itatt->second);
                     }
                     else {
                         listbodies.push_back(pbody);
@@ -868,7 +868,7 @@ public:
     virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) override
     {
         if (filetype != "collada" && filetype != "json" && filetype != "msgpack") {
-            throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype %s, only support collada and json", filetype, ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("got invalid filetype '%s', only support collada and json", filetype, ORE_InvalidArguments);
         }
 
         EnvironmentLock lockenv(GetMutex());
@@ -902,7 +902,7 @@ public:
                 if( itatt->first == "target" ) {
                     KinBodyPtr pbody = GetKinBody(itatt->second);
                     if( !pbody ) {
-                        RAVELOG_WARN_FORMAT("failed to get body %s", itatt->second);
+                        RAVELOG_WARN_FORMAT("failed to get body '%s'", itatt->second);
                     }
                     else {
                         listbodies.push_back(pbody);
@@ -970,7 +970,7 @@ public:
         case PT_KinBody: _AddKinBody(RaveInterfaceCast<KinBody>(pinterface),addMode); break;
         case PT_Module: {
             int ret = AddModule(RaveInterfaceCast<ModuleBase>(pinterface),cmdargs);
-            OPENRAVE_ASSERT_OP_FORMAT(ret,==,0,"module %s failed with args: %s",pinterface->GetXMLId()%cmdargs,ORE_InvalidArguments);
+            OPENRAVE_ASSERT_OP_FORMAT(ret,==,0,"module '%s' failed with args: '%s'",pinterface->GetXMLId()%cmdargs,ORE_InvalidArguments);
             break;
         }
         case PT_Viewer: _AddViewer(RaveInterfaceCast<ViewerBase>(pinterface)); break;
@@ -986,7 +986,7 @@ public:
         CHECK_INTERFACE(pbody);
         if( !utils::IsValidName(pbody->GetName()) ) {
             if( addMode & IAM_StrictNameChecking ) {
-                throw openrave_exception(str(boost::format(_("Body name: \"%s\" is not valid"))%pbody->GetName()));
+                throw openrave_exception(str(boost::format(_("Body name: '%s' is not valid"))%pbody->GetName()));
             }
             else {
                 pbody->SetName(utils::ConvertToOpenRAVEName(pbody->GetName()));
@@ -1023,11 +1023,11 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
         if( !robot->IsRobot() ) {
-            throw openrave_exception(str(boost::format(_("kinbody \"%s\" is not a robot"))%robot->GetName()));
+            throw openrave_exception(str(boost::format(_("kinbody '%s' is not a robot"))%robot->GetName()));
         }
         if( !utils::IsValidName(robot->GetName()) ) {
             if( addMode & IAM_StrictNameChecking ) {
-                throw openrave_exception(str(boost::format(_("Robot name: \"%s\" is not valid"))%robot->GetName()));
+                throw openrave_exception(str(boost::format(_("Robot name: '%s' is not valid"))%robot->GetName()));
             }
             else {
                 robot->SetName(utils::ConvertToOpenRAVEName(robot->GetName()));
@@ -1065,7 +1065,7 @@ public:
         CHECK_INTERFACE(psensor);
         if( !utils::IsValidName(psensor->GetName()) ) {
             if( addMode & IAM_StrictNameChecking ) {
-                throw openrave_exception(str(boost::format(_("Sensor name: \"%s\" is not valid"))%psensor->GetName()));
+                throw openrave_exception(str(boost::format(_("Sensor name: '%s' is not valid"))%psensor->GetName()));
             }
             else {
                 psensor->SetName(utils::ConvertToOpenRAVEName(psensor->GetName()));
@@ -1135,7 +1135,7 @@ public:
             break;
         }
         default:
-            RAVELOG_WARN_FORMAT("unmanaged interfaces of type %s cannot be removed", RaveGetInterfaceName(pinterface->GetInterfaceType()));
+            RAVELOG_WARN_FORMAT("unmanaged interfaces of type '%s' cannot be removed", RaveGetInterfaceName(pinterface->GetInterfaceType()));
             break;
         }
         return false;
@@ -1180,7 +1180,7 @@ public:
         SharedLock lock585(_mutexInterfaces);
         if (!_vecbodies.empty()) {
             const int envBodyIndex = _FindBodyIndexByName(name);
-            //RAVELOG_VERBOSE_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%name%envBodyIndex);
+            //RAVELOG_VERBOSE_FORMAT("env=%d, name '%s' (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%name%envBodyIndex);
             return _vecbodies.at(envBodyIndex);
         }
         return KinBodyPtr();
@@ -1195,7 +1195,7 @@ public:
         SharedLock lock585(_mutexInterfaces);
         if (!_vecbodies.empty()) {
             const int envBodyIndex = _FindBodyIndexByName(name);
-            //RAVELOG_VERBOSE_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
+            //RAVELOG_VERBOSE_FORMAT("env=%d, name '%s' (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
             return _vecbodies.at(envBodyIndex);
         }
         return KinBodyPtr();
@@ -1210,7 +1210,7 @@ public:
         SharedLock lock585(_mutexInterfaces);
         if (!_vecbodies.empty()) {
             const int envBodyIndex = _FindBodyIndexByName(pname);
-            //RAVELOG_VERBOSE_FORMAT("env=%d, name %s (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
+            //RAVELOG_VERBOSE_FORMAT("env=%d, name '%s' (envBodyIndex=%d) is nullptr, maybe already removed from env?", GetId()%pname%envBodyIndex);
             return _vecbodies.at(envBodyIndex);
         }
         return KinBodyPtr();
@@ -1225,7 +1225,7 @@ public:
         SharedLock lock942(_mutexInterfaces);
         const string_map<int>::const_iterator it = _mapBodyIdIndex.find(id);
         if (it == _mapBodyIdIndex.end()) {
-            RAVELOG_WARN_FORMAT("env=%s, id %s is not found", GetNameId()%id);
+            RAVELOG_WARN_FORMAT("env=%s, id '%s' is not found", GetNameId()%id);
             return 0;
         }
         const int envBodyIndex = it->second;
@@ -1252,7 +1252,7 @@ public:
         string_view testid = id;
         const string_map<int>::const_iterator it = _mapBodyIdIndex.find(testid);
         if (it == _mapBodyIdIndex.end()) {
-            RAVELOG_WARN_FORMAT("env=%s, id %s is not found", GetNameId()%id);
+            RAVELOG_WARN_FORMAT("env=%s, id '%s' is not found", GetNameId()%id);
             return 0;
         }
         const int envBodyIndex = it->second;
@@ -1340,7 +1340,7 @@ public:
         }
         const string_map<int>::const_iterator it = _mapBodyNameIndex.find(name);
         if (it == _mapBodyNameIndex.end()) {
-            //RAVELOG_WARN_FORMAT("env=%d, name %s is not found", GetId()%name);
+            //RAVELOG_WARN_FORMAT("env=%d, name '%s' is not found", GetId()%name);
             return 0;
         }
         const int envBodyIndex = it->second;
@@ -1356,7 +1356,7 @@ public:
         }
         const string_map<int>::const_iterator it = _mapBodyNameIndex.find(name); // TODO
         if (it == _mapBodyNameIndex.end()) {
-            //RAVELOG_WARN_FORMAT("env=%d, name %s is not found", GetId()%name);
+            //RAVELOG_WARN_FORMAT("env=%d, name '%s' is not found", GetId()%name);
             return 0;
         }
         const int envBodyIndex = it->second;
@@ -1371,7 +1371,7 @@ public:
         }
         const string_map<int>::const_iterator it = _mapBodyNameIndex.find(pname); // TODO
         if (it == _mapBodyNameIndex.end()) {
-            //RAVELOG_WARN_FORMAT("env=%d, name %s is not found", GetId()%name);
+            //RAVELOG_WARN_FORMAT("env=%d, name '%s' is not found", GetId()%name);
             return 0;
         }
         const int envBodyIndex = it->second;
@@ -1414,7 +1414,7 @@ public:
             _SetDefaultGravity();
         }
         else {
-            RAVELOG_DEBUG_FORMAT("setting %s physics engine", _pPhysicsEngine->GetXMLId());
+            RAVELOG_DEBUG_FORMAT("setting '%s' physics engine", _pPhysicsEngine->GetXMLId());
         }
         _pPhysicsEngine->InitEnvironment();
         return true;
@@ -1462,7 +1462,7 @@ public:
             _pCurrentChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
         }
         else {
-            RAVELOG_DEBUG_FORMAT("setting %s collision checker", _pCurrentChecker->GetXMLId());
+            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker", _pCurrentChecker->GetXMLId());
             SharedLock lock132(_mutexInterfaces);
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
@@ -1744,7 +1744,7 @@ public:
 
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
-                throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
+                throw openrave_exception(str(boost::format(_("KinRobot::Init for '%s', cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
             }
         }
 
@@ -1878,7 +1878,7 @@ public:
 
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
-                throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
+                throw openrave_exception(str(boost::format(_("KinRobot::Init for '%s', cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
             }
         }
 
@@ -1942,7 +1942,7 @@ public:
 
             int bodyIndex = robot->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
-                throw openrave_exception(str(boost::format(_("KinRobot::Init for %s, cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
+                throw openrave_exception(str(boost::format(_("KinRobot::Init for '%s', cannot Init a robot while it is added to the environment\n"))%robot->GetName()));
             }
         }
 
@@ -1962,7 +1962,7 @@ public:
 
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
-                throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
+                throw openrave_exception(str(boost::format(_("KinBody::Init for '%s', cannot Init a body while it is added to the environment\n"))%body->GetName()));
             }
         }
 
@@ -2099,7 +2099,7 @@ public:
 
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
-                throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
+                throw openrave_exception(str(boost::format(_("KinBody::Init for '%s', cannot Init a body while it is added to the environment\n"))%body->GetName()));
             }
         }
 
@@ -2160,7 +2160,7 @@ public:
 
             int bodyIndex = body->GetEnvironmentBodyIndex();
             if( bodyIndex > 0 && bodyIndex < (int)_vecbodies.size() && !!_vecbodies.at(bodyIndex) ) {
-                throw openrave_exception(str(boost::format(_("KinBody::Init for %s, cannot Init a body while it is added to the environment\n"))%body->GetName()));
+                throw openrave_exception(str(boost::format(_("KinBody::Init for '%s', cannot Init a body while it is added to the environment\n"))%body->GetName()));
             }
         }
 
@@ -2921,8 +2921,8 @@ public:
                 orjson::SaveJsonValue(rThisUnitInfo, _unitInfo);
                 rapidjson::Document rNewUnitInfo;
                 orjson::SaveJsonValue(rNewUnitInfo, info._unitInfo);
-                RAVELOG_WARN_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%orjson::DumpJson(rThisUnitInfo)%orjson::DumpJson(rNewUnitInfo));
-                // throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit %s does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString(), ORE_InvalidArguments);
+                RAVELOG_WARN_FORMAT("env=%s, env unit '%s' does not match one coming from UpdateFromInfo %s", GetNameId()%orjson::DumpJson(rThisUnitInfo)%orjson::DumpJson(rNewUnitInfo));
+                // throw OPENRAVE_EXCEPTION_FORMAT("env=%s, env unit '%s' does not match one coming from UpdateFromInfo %s", GetNameId()%_unitInfo.toString()%info._unitInfo.toString(), ORE_InvalidArguments);
             }
 
             // set gravity
@@ -2958,7 +2958,7 @@ public:
         for(int inputBodyIndex = 0; inputBodyIndex < (int)info._vBodyInfos.size(); ++inputBodyIndex) {
             const KinBody::KinBodyInfoConstPtr& pKinBodyInfo = info._vBodyInfos[inputBodyIndex];
             const KinBody::KinBodyInfo& kinBodyInfo = *pKinBodyInfo;
-            RAVELOG_VERBOSE_FORMAT("==== body: env = %d, id = %s, name = %s ===", GetId()%pKinBodyInfo->_id%pKinBodyInfo->_name);
+            RAVELOG_VERBOSE_FORMAT("env=%s, id '%s', name '%s'", GetNameId()%pKinBodyInfo->_id%pKinBodyInfo->_name);
             RobotBase::RobotBaseInfoConstPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<const RobotBase::RobotBaseInfo>(pKinBodyInfo);
             KinBodyPtr pMatchExistingBody; // matches to pKinBodyInfo
             int bodyIndex = -1; // index to vBodies to use. -1 if not used
@@ -3033,7 +3033,7 @@ public:
                     KinBodyPtr pBody = *itExisting;
                     bool bInterfaceMatches = pBody->GetXMLId() == pKinBodyInfo->_interfaceType;
                     if( !bInterfaceMatches || pBody->IsRobot() != pKinBodyInfo->_isRobot ) {
-                        RAVELOG_VERBOSE_FORMAT("env=%s, body %s interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", GetNameId()%pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
+                        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' interface is changed, remove old body from environment. xmlid=%s, _interfaceType=%s, isRobot %d != %d", GetNameId()%pBody->_id%pBody->GetXMLId()%pKinBodyInfo->_interfaceType%pBody->IsRobot()%pKinBodyInfo->_isRobot);
                         itExisting = vBodies.end();
                         vRemovedBodies.push_back(pBody);
 
@@ -3072,7 +3072,7 @@ public:
             if( !!pMatchExistingBody ) {
                 listBodiesTemporarilyRenamed.remove(pMatchExistingBody); // if targreted, then do not need to remove anymore
 
-                RAVELOG_VERBOSE_FORMAT("env=%s, update existing body %s", GetNameId()%pMatchExistingBody->_id);
+                RAVELOG_VERBOSE_FORMAT("env=%s, update existing body id '%s'", GetNameId()%pMatchExistingBody->_id);
                 // interface should match at this point
                 // update existing body or robot
                 UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
@@ -3087,7 +3087,7 @@ public:
                 } else {
                     updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%s, update body %s from info result %d", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
+                RAVELOG_VERBOSE_FORMAT("env=%s, update body '%s' from info result %d", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }
@@ -3153,7 +3153,7 @@ public:
                 // for new body or robot
                 KinBodyPtr pNewBody;
                 if (pKinBodyInfo->_isRobot) {
-                    RAVELOG_VERBOSE_FORMAT("add new robot %s", pKinBodyInfo->_id);
+                    RAVELOG_VERBOSE_FORMAT("add new robot id '%s'", pKinBodyInfo->_id);
                     RobotBasePtr pRobot = RaveCreateRobot(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pRobot ) {
                         pRobot = RaveCreateRobot(shared_from_this(), "");
@@ -3170,7 +3170,7 @@ public:
                     pNewBody = RaveInterfaceCast<KinBody>(pRobot);
                 }
                 else {
-                    RAVELOG_VERBOSE_FORMAT("add new kinbody %s", pKinBodyInfo->_id);
+                    RAVELOG_VERBOSE_FORMAT("add new kinbody id '%s'", pKinBodyInfo->_id);
                     pNewBody = RaveCreateKinBody(shared_from_this(), pKinBodyInfo->_interfaceType);
                     if( !pNewBody ) {
                         pNewBody = RaveCreateKinBody(shared_from_this(), "");
@@ -3281,7 +3281,7 @@ public:
                         vGrabbedInfos.push_back(*itGrabbedInfo);
                     }
                     else {
-                        RAVELOG_WARN_FORMAT("env=%s, body %s grabbed by %s is gone, ignoring grabbed info %s", GetNameId()%(*itGrabbedInfo)->_grabbedname%pKinBodyInfo->_name%(*itGrabbedInfo)->_id);
+                        RAVELOG_WARN_FORMAT("env=%s, body '%s' grabbed by '%s' is gone, ignoring grabbed info id '%s'", GetNameId()%(*itGrabbedInfo)->_grabbedname%pKinBodyInfo->_name%(*itGrabbedInfo)->_id);
                     }
                 }
                 (*itExistingBody)->ResetGrabbed(vGrabbedInfos);
@@ -3362,7 +3362,7 @@ public:
         const int envBodyIndex = itOld->second;
         _mapBodyNameIndex.erase(itOld);
         _mapBodyNameIndex[newName] = envBodyIndex;
-        RAVELOG_VERBOSE_FORMAT("env=%s, body \"%s\" is renamed to \"%s\"", GetNameId()%oldName%newName);
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' is renamed to '%s'", GetNameId()%oldName%newName);
         return true;
     }
 
@@ -3388,7 +3388,7 @@ public:
         const int envBodyIndex = itOld->second;
         _mapBodyIdIndex.erase(itOld);
         _mapBodyIdIndex[newId] = envBodyIndex;
-        RAVELOG_VERBOSE_FORMAT("env=%s, body id changed from \"%s\" to \"%s\"", GetNameId()%oldId%newId);
+        RAVELOG_VERBOSE_FORMAT("env=%s, body id changed from '%s' to '%s'", GetNameId()%oldId%newId);
         return true;
     }
 
@@ -3397,7 +3397,7 @@ protected:
     void _Init()
     {
         _homedirectory = RaveGetHomeDirectory();
-        RAVELOG_DEBUG_FORMAT("env=%s, setting openrave home directory to %s", GetNameId()%_homedirectory);
+        RAVELOG_DEBUG_FORMAT("env=%s, setting openrave home directory to '%s'", GetNameId()%_homedirectory);
 
         _nBodiesModifiedStamp = 0;
 
@@ -3437,7 +3437,7 @@ protected:
         // before deleting, make sure no robots are grabbing it!!
         for (KinBodyPtr& probot : _vecbodies) {
             if( !!probot && probot->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by robot %s!", GetNameId()%body.GetName()%probot->GetName());
+                RAVELOG_WARN_FORMAT("env=%s, remove '%s' already grabbed by robot '%s'!", GetNameId()%body.GetName()%probot->GetName());
                 probot->Release(body);
             }
         }
@@ -3459,11 +3459,11 @@ protected:
 
         // invalidate cache
         if (_mapBodyNameIndex.erase(name) == 0) {
-            RAVELOG_WARN_FORMAT("env=%s, pbody of name %s not found in _mapBodyNameIndex of size %d, this should not happen!", GetNameId()%name%_mapBodyNameIndex.size());
+            RAVELOG_WARN_FORMAT("env=%s, pbody of name '%s' not found in _mapBodyNameIndex of size %d, this should not happen!", GetNameId()%name%_mapBodyNameIndex.size());
         }
         const std::string& id = body.GetId();
         if (_mapBodyIdIndex.erase(id) == 0) {
-            RAVELOG_WARN_FORMAT("env=%s, pbody of id %s not found in _mapBodyIdIndex of size %d, this should not happen!", GetNameId()%id%_mapBodyIdIndex.size());
+            RAVELOG_WARN_FORMAT("env=%s, pbody of id '%s' not found in _mapBodyIdIndex of size %d, this should not happen!", GetNameId()%id%_mapBodyIdIndex.size());
         }
         _UnassignEnvironmentBodyIndex(body);
 
@@ -3585,7 +3585,7 @@ protected:
                     bCollisionCheckerChanged = true;
                 }
                 catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone collision checker %s: %s"), r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone collision checker '%s': %s"), r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                 }
             }
         }
@@ -3603,7 +3603,7 @@ protected:
                     bPhysicsEngineChanged = true;
                 }
                 catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone physics engine %s: %s"), r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone physics engine '%s': %s"), r->GetPhysicsEngine()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                 }
             }
         }
@@ -3669,7 +3669,7 @@ protected:
                     }
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone robot %s: %s", robotInOtherEnv.GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("failed to clone robot '%s': %s", robotInOtherEnv.GetName()%ex.what());
                 }
             }
             for (const KinBodyPtr& pbody : r->_vecbodies) {
@@ -3713,7 +3713,7 @@ protected:
                     }
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("env=%s, failed to clone body %s: %s", GetNameId()%body.GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("env=%s, failed to clone body '%s': %s", GetNameId()%body.GetName()%ex.what());
                 }
             }
 
@@ -3757,7 +3757,7 @@ protected:
                     }
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("env=%s, failed to clone body %s: %s", GetNameId()%body.GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("env=%s, failed to clone body '%s': %s", GetNameId()%body.GetName()%ex.what());
                 }
             }
 
@@ -3815,7 +3815,7 @@ protected:
                     _listSensors.push_back(pnewsensor);
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone sensor %: %s", (*itsensor)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("failed to clone sensor '%s': %s", (*itsensor)->GetName()%ex.what());
                 }
             }
         }
@@ -3859,7 +3859,7 @@ protected:
                     pmodule->Clone(itmodule2->first, options);
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone module %s: %s", itmodule2->first->GetXMLId()%ex.what());
+                    RAVELOG_ERROR_FORMAT("failed to clone module '%s': %s", itmodule2->first->GetXMLId()%ex.what());
                 }
             }
         }
@@ -3888,7 +3888,7 @@ protected:
                     Add(pviewer, IAM_AllowRenaming, std::string());
                 }
                 catch(const std::exception &ex) {
-                    RAVELOG_ERROR_FORMAT("failed to clone viewer %s: %s", (*itviewer2)->GetName()%ex.what());
+                    RAVELOG_ERROR_FORMAT("failed to clone viewer '%s': %s", (*itviewer2)->GetName()%ex.what());
                 }
             }
         }
@@ -3942,11 +3942,11 @@ protected:
             // most likely unique, but have to double check
             if( utils::IsValidName(newId) && _CheckUniqueId(pbody, false) ) {
                 if( !baseId.empty() ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, setting body id from %s -> %s due to conflict", GetId()%baseId%newId);
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting body id from '%s' -> '%s' due to conflict", GetId()%baseId%newId);
                 }
                 break;
             }
-            RAVELOG_INFO_FORMAT("env=%d, tried renaming body from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseId%newId);
+            RAVELOG_INFO_FORMAT("env=%d, tried renaming body from '%s' -> '%s' due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseId%newId);
         }
     }
 
@@ -3968,11 +3968,11 @@ protected:
             // most likely unique, but have to double check
             if( utils::IsValidName(newName) && _CheckUniqueName(pObject, false) ) {
                 if( !baseName.empty() ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, setting body name from %s -> %s due to conflict", GetId()%baseName%newName);
+                    RAVELOG_DEBUG_FORMAT("env=%d, setting body name from '%s' -> '%s' due to conflict", GetId()%baseName%newName);
                 }
                 break;
             }
-            RAVELOG_INFO_FORMAT("env=%d, tried renaming object (body or sensor) from %s -> %s due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseName%newName);
+            RAVELOG_INFO_FORMAT("env=%d, tried renaming object (body or sensor) from '%s' -> '%s' due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseName%newName);
         }
     }
 
@@ -4021,7 +4021,7 @@ protected:
         }
 
         if( bDoThrow ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body (id=\"%s\", envBodyIndex=%d) has same name \"%s\" as existing body (id=\"%s\", envBodyIndex=%d)"), GetNameId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%name%pExistingBody->GetId()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyNameConflict);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body (id='%s', envBodyIndex=%d) has same name '%s' as existing body (id='%s', envBodyIndex=%d)"), GetNameId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%name%pExistingBody->GetId()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyNameConflict);
         }
         return false;
     }
@@ -4073,7 +4073,7 @@ protected:
         }
 
         if( bDoThrow ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body (name=\"%s\", envBodyIndex=%d) has same id \"%s\" as existing body (name=\"%s\", envBodyIndex=%d)"), GetId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%inputBodyId%pExistingBody->GetName()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyIdConflict);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, body (name='%s', envBodyIndex=%d) has same id '%s' as existing body (name='%s', envBodyIndex=%d)"), GetId()%pbody->GetId()%pbody->GetEnvironmentBodyIndex()%inputBodyId%pExistingBody->GetName()%pExistingBody->GetEnvironmentBodyIndex(), ORE_BodyIdConflict);
         }
         return false;
     }
@@ -4083,7 +4083,7 @@ protected:
         FOREACHC(itsensor,_listSensors) {
             if(( *itsensor != psensor) &&( (*itsensor)->GetName() == psensor->GetName()) ) {
                 if( bDoThrow ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, sensor %s does not have unique name"), GetId()%psensor->GetName(), ORE_SensorNameConflict);
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, sensor '%s' does not have unique name"), GetId()%psensor->GetName(), ORE_SensorNameConflict);
                 }
                 return false;
             }
@@ -4112,12 +4112,12 @@ protected:
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
             envBodyIndex = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
-            RAVELOG_DEBUG_FORMAT("env=%s, recycled body envBodyIndex=%d for %s. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+            RAVELOG_DEBUG_FORMAT("env=%s, recycled body envBodyIndex=%d for '%s'. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
         }
         else {
             envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
             if( envBodyIndex > 200 ) { // give some number sufficiently big so that leaking of objects can be detected rather than spamming the log
-                RAVELOG_DEBUG_FORMAT("env=%s, assigned new body envBodyIndex=%d for \"%s\", this should not happen unless total number of bodies in env keeps increasing", GetNameId()%envBodyIndex%pbody->GetName());
+                RAVELOG_DEBUG_FORMAT("env=%s, assigned new body envBodyIndex=%d for '%s', this should not happen unless total number of bodies in env keeps increasing", GetNameId()%envBodyIndex%pbody->GetName());
             }
         }
         pbody->_environmentBodyIndex = envBodyIndex;
@@ -4130,10 +4130,10 @@ protected:
         const int envBodyIndex = body._environmentBodyIndex;
         if (0 < envBodyIndex && envBodyIndex < (int) _vecbodies.size()) {
             _environmentIndexRecyclePool.insert(envBodyIndex); // for recycle later
-            RAVELOG_VERBOSE_FORMAT("env=%s, removed body name=\"%s\" (environmentBodyIndex=%d), recycle body index later", GetNameId()%body.GetName()%body._environmentBodyIndex);
+            RAVELOG_VERBOSE_FORMAT("env=%s, removed body name '%s' (environmentBodyIndex=%d), recycle body index later", GetNameId()%body.GetName()%body._environmentBodyIndex);
         }
         else {
-            RAVELOG_WARN_FORMAT("env=%s, removed body name=\"%s\" (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetNameId()%body.GetName()%body._environmentBodyIndex%_vecbodies.size());
+            RAVELOG_WARN_FORMAT("env=%s, removed body name '%s' (environmentBodyIndex=%d, _vecbodies size=%d) is not valid. ", GetNameId()%body.GetName()%body._environmentBodyIndex%_vecbodies.size());
         }
 
         body._environmentBodyIndex = 0;

@@ -1337,13 +1337,19 @@ KinBody::JointInfoPtr PyJointInfo::GetJointInfo() {
     // joint control
     info._controlMode = _controlMode;
     if( _controlMode == JCM_RobotController ) {
-        info._jci_robotcontroller = _jci_robotcontroller->GetJointControlInfo();
+        if( !!_jci_robotcontroller ) {
+            info._jci_robotcontroller = _jci_robotcontroller->GetJointControlInfo();
+        }
     }
     else if( _controlMode == JCM_IO ) {
-        info._jci_io = _jci_io->GetJointControlInfo();
+        if( !!_jci_io ) {
+            info._jci_io = _jci_io->GetJointControlInfo();
+        }
     }
     else if( _controlMode == JCM_ExternalDevice ) {
-        info._jci_externaldevice = _jci_externaldevice->GetJointControlInfo();
+        if( !!_jci_externaldevice ) {
+            info._jci_externaldevice = _jci_externaldevice->GetJointControlInfo();
+        }
     }
 
     info._mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
