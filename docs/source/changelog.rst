@@ -10,6 +10,11 @@ Version 0.132.0
 
 - Add IkFilterInfo and IkFailureAccumulator to allow for fast accumulation of IK failures.
 
+Version 0.131.1
+===============
+
+* Optimization on Jitterers
+
 Version 0.131.0
 ===============
 
