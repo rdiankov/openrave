@@ -75,7 +75,19 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _vActiveIndices = _probot->GetActiveDOFIndices();
         _nActiveAffineDOFs = _probot->GetAffineDOF();
         _vActiveAffineAxis = _probot->GetAffineRotationAxis();
-        _vLinks = _probot->GetLinks();
+        if( _nActiveAffineDOFs == 0 ) {
+            for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                for (int dofindex : _vActiveIndices) {
+                    if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                        _vLinks.push_back(_probot->GetLinks()[ilink]);
+                        break;
+                    }
+                }
+            }
+        }
+        else {
+            _vLinks = _probot->GetLinks();
+        }
         _vLinkAABBs.resize(_vLinks.size());
         for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
@@ -705,6 +717,21 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             break;
                         }
                     }
+                    if( !bSuccess ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "dofvalues=[";
+                            for(size_t i = 0; i < vnewdof.size(); ++i ) {
+                                ss << vnewdof[i];
+                                if( i < vnewdof.size() - 1 ) {
+                                    ss << ", ";
+                                }
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE_FORMAT("env=%s, link %s exceeded linkdisthresh. ellipdist[%e] > rhs[%e], %s", GetEnv()->GetNameId()%_vLinks[ilink]->GetName()%ellipdist%rhs%ss.str());
+                        }
+                        break;
+                    }
                 }
 
                 if (!bSuccess) {
@@ -828,7 +855,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_DEBUG_FORMAT("env=%s, succeed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d",GetEnv()->GetNameId()%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure);
+                RAVELOG_DEBUG_FORMAT("env=%s, succeed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, nLinkDistThreshRejections=%d",GetEnv()->GetNameId()%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%nNeighStateFailure%nConstraintToolDirFailure%nConstraintToolPositionFailure%nEnvCollisionFailure%nSelfCollisionFailure%nCacheHitSamples%nLinkDistThreshRejections);
                 //RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 return 1;
             }
@@ -940,7 +967,21 @@ protected:
     {
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
-        _vLinks = _probot->GetLinks(); // robot itself might have changed?
+        // robot itself might have changed?
+        if( _nActiveAffineDOFs == 0 ) {
+            _vLinks.clear();
+            for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                for (int dofindex : _vActiveIndices) {
+                    if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                        _vLinks.push_back(_probot->GetLinks()[ilink]);
+                        break;
+                    }
+                }
+            }
+        }
+        else {
+            _vLinks = _probot->GetLinks();
+        }
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
                 _vLinks.push_back(*itlink2);
