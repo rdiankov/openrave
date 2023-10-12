@@ -511,7 +511,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
             if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
                 if( nNeighStateFailure > 0 ) {
-                    RAVELOG_DEBUG_FORMAT("env=%s, initial point configuration is good, but neigh state failed %d times", GetEnv()->GetId()%nNeighStateFailure);
+                    RAVELOG_DEBUG_FORMAT("env=%s, initial point configuration is good, but neigh state failed %d times", GetEnv()->GetNameId()%nNeighStateFailure);
                 }
                 return -1;
             }
