@@ -800,7 +800,12 @@ public:
             RaveWriteEncryptedMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
         }
         else {
-            RaveWriteColladaFile(listbodies,filename,atts);
+            if( listbodies.size() == 1 ) {
+                RaveWriteColladaFile(listbodies.front(),filename,atts);
+            }
+            else {
+                RaveWriteColladaFile(listbodies,filename,atts);
+            }
         }
     }
 
@@ -938,7 +943,12 @@ public:
         }
 
         if (filetype == "collada") {
-            RaveWriteColladaMemory(listbodies, output, atts);
+            if( listbodies.size() == 1 ) {
+                RaveWriteColladaMemory(listbodies.front(), output, atts);
+            }
+            else {
+                RaveWriteColladaMemory(listbodies, output, atts);
+            }
         }
         else if (filetype == "json") {
             _ClearRapidJsonBuffer();
