@@ -116,23 +116,6 @@ void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
     }
 }
 
-IkFailureAccumulator::IkFailureAccumulator()
-{
-}
-
-IkFailureInfo& IkFailureAccumulator::GetNextAvailableIkFailureInfo()
-{
-    while( _nextIndex >= (int)_vIkFailureInfoBatches.size()*_nBatchSize ) {
-        _vIkFailureInfoBatches.push_back(boost::make_shared<IkFailureInfoBatch>());
-    }
-    int nBatchIndex = _nextIndex/_nBatchSize;
-    IkFailureInfo& ikFailureInfo = (*_vIkFailureInfoBatches[nBatchIndex])[_nextIndex - nBatchIndex*_nBatchSize];
-    ikFailureInfo.Reset();
-    ikFailureInfo._memoryPoolIndex = _nextIndex;
-    _nextIndex++;
-    return ikFailureInfo;
-}
-
 bool IkReturn::Append(const IkReturn& r)
 {
     bool bclashing = false;
@@ -235,7 +218,7 @@ bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dRea
     return true;
 }
 
-bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn)
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn)
 {
     return Solve(param, q0, filteroptions, ikreturn);
 }
@@ -256,7 +239,7 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, 
     return vsolutions.size() > 0;
 }
 
-bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
+bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
 {
     return SolveAll(param, filteroptions, ikreturns);
 }
@@ -276,7 +259,7 @@ bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dRea
     return true;
 }
 
-bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn)
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn)
 {
     return Solve(param, q0, vFreeParameters, filteroptions, ikreturn);
 }
@@ -297,7 +280,7 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<d
     return vsolutions.size() > 0;
 }
 
-bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
+bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
 {
     return SolveAll(param, vFreeParameters, filteroptions, ikreturns);
 }

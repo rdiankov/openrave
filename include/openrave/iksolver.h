@@ -69,9 +69,11 @@ static const IkReturnAction IKFR_Reject RAVE_DEPRECATED = IKRA_Reject;
 static const IkReturnAction IKFR_Quit RAVE_DEPRECATED = IKRA_Quit;
 typedef IkReturnAction IkFilterReturn RAVE_DEPRECATED;
 
+typedef int64_t AccumulatorIndex;
+
 class OPENRAVE_API IkFailureInfo : public orjson::JsonSerializable
 {
-    friend class IkFailureAccumulator;
+    friend class IkFailureAccumulatorBase;
 public:
     IkFailureInfo() = default;
     IkFailureInfo(const IkFailureInfo& rhs);
@@ -103,7 +105,8 @@ public:
         return _ikparam;
     }
 
-    int GetMemoryPoolIndex() const {
+    /// \brief memory pool index initialized by the IkFailureAccumulatorBase
+    inline AccumulatorIndex GetMemoryPoolIndex() const {
         return _memoryPoolIndex;
     }
 
@@ -117,44 +120,22 @@ public:
 
 private:
     IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
-    bool _bIkParamValid=false;     ///< a flag determining whether _ikparam is valid.
+    AccumulatorIndex _memoryPoolIndex = -1; // index into the memory pool, managed by IkFailureAccumulatorBase
 
-    int _memoryPoolIndex = -1; // index into the memory pool, managed by IkFailureAccumulator
+    bool _bIkParamValid=false;     ///< a flag determining whether _ikparam is valid.
 };
 
-/// \brief maints a pool of ikFailureInfo.
-class OPENRAVE_API IkFailureAccumulator
+/// \brief maints a pool of ikFailureInfos that
+class OPENRAVE_API IkFailureAccumulatorBase
 {
 public:
-    IkFailureAccumulator();
-
-    inline const size_t GetCurrentSize() const
-    {
-        return _nextIndex;
-    }
-
-    inline void ResetIndex(const int nextIndex=0)
-    {
-        _nextIndex = nextIndex;
-    }
-
-    /// \brief Retrieve ikFailureInfo from the specified index. Assume the input index is valid.
-    inline IkFailureInfo& GetIkFailureInfo(int index) const
-    {
-        int nBatchIndex = index/_nBatchSize;
-        OPENRAVE_ASSERT_OP(nBatchIndex,<,(int)_vIkFailureInfoBatches.size());
-        return (*_vIkFailureInfoBatches[nBatchIndex])[index - nBatchIndex*_nBatchSize];
-    }
+    virtual ~IkFailureAccumulatorBase() = default;
 
     /// \brief Get the next available IkFailureInfo to fill in failure information.
-    IkFailureInfo& GetNextAvailableIkFailureInfo();
-
-private:
-    static const int _nBatchSize = 256;
-    typedef boost::array<IkFailureInfo, _nBatchSize> IkFailureInfoBatch;
-    std::vector< boost::shared_ptr<IkFailureInfoBatch> > _vIkFailureInfoBatches;
-    int _nextIndex = 0; // unique index into _vIkFailureInfoBatches taking into account the batch size
+    virtual IkFailureInfo& GetNextAvailableIkFailureInfo() = 0;
 };
+
+typedef boost::shared_ptr<IkFailureAccumulatorBase> IkFailureAccumulatorBasePtr;
 
 class OPENRAVE_API IkReturn
 {
@@ -183,7 +164,7 @@ public:
     std::vector< dReal > _vsolution; ///< the solution
     CustomData _mapdata; ///< name/value pairs for custom data computed in the filters. Cascading filters using the same name will overwrite this until the last executed filter (with lowest priority).
     UserDataPtr _userdata; ///< if the name/value pairs are not enough, can further use a pointer to custom data. Cascading filters with valid _userdata pointers will overwrite this until the last executed filter (with lowest priority).
-    std::vector<int> _vIkFailureInfoIndices; ///< index into the accumulator
+    std::vector<AccumulatorIndex> _vIkFailureInfoIndices; ///< index into the accumulator
 };
 
 /** \brief <b>[interface]</b> Base class for all Inverse Kinematic solvers. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_iksolver.
@@ -291,7 +272,7 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn);
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -315,7 +296,7 @@ public:
         \return true if at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
-    virtual bool SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -340,7 +321,7 @@ public:
         \return true if solution is found
      */
     virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn);
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -368,7 +349,7 @@ public:
         \return true at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
-    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorPtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;

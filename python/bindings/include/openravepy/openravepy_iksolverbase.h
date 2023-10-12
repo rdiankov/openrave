@@ -42,16 +42,12 @@ public:
 
 typedef OPENRAVE_SHARED_PTR<PyIkFailureInfo> PyIkFailureInfoPtr;
 
-class PyIkFailureAccumulator
+class PyIkFailureAccumulatorBase
 {
 public:
-    PyIkFailureAccumulator();
-    inline int GetCurrentSize() const {
-        return _ikFailureAccumulator.GetCurrentSize();
-    }
-    object GetIkFailureInfo(size_t index) const;
+    PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator);
 
-    IkFailureAccumulator _ikFailureAccumulator;
+    IkFailureAccumulatorBasePtr _pIkFailureAccumulator;
 };
 
 class PyIkReturn

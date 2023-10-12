@@ -94,16 +94,8 @@ object PyIkFailureInfo::SerializeJSON() {
     return toPyObject(rIkFailureInfo);
 }
 
-PyIkFailureAccumulator::PyIkFailureAccumulator() {
-    _ikFailureAccumulator = IkFailureAccumulator();
-}
-object PyIkFailureAccumulator::GetIkFailureInfo(size_t index) const {
-    if( index >= _ikFailureAccumulator.GetCurrentSize() ) {
-        return py::none_();
-    }
-    else {
-        return py::to_object(PyIkFailureInfoPtr(new PyIkFailureInfo(_ikFailureAccumulator.GetIkFailureInfo(index))));
-    }
+PyIkFailureAccumulatorBase::PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator) {
+    _pIkFailureAccumulator = pIkFailureAccumulator;
 }
 
 PyIkReturn::PyIkReturn(const IkReturn& ret) : _ret(ret) {
@@ -427,18 +419,16 @@ void init_openravepy_iksolver()
     .def("SerializeJSON", &PyIkFailureInfo::SerializeJSON, "Returns a JSON struct for this IkFailureInfo")
     ;
 
-    // PyIkFailureAccumulator
+    // PyIkFailureAccumulatorBase
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ ikfailureaccumulator = class_<PyIkFailureAccumulator, PyIkFailureAccumulatorPtr>(m, "IkFailureAccumulator", DOXY_CLASS(IkFailureAccumulator))
-                                      .def(init<>())
+        scope_ ikfailureaccumulator = class_<PyIkFailureAccumulatorBase, PyIkFailureAccumulatorBasePtr>(m, "IkFailureAccumulatorBase", DOXY_CLASS(IkFailureAccumulatorBase))
+            //.def(init<>())
 #else
-        scope_ ikfailureaccumulator = class_<PyIkFailureAccumulator, PyIkFailureAccumulatorPtr>("IkFailureAccumulator", DOXY_CLASS(IkFailureAccumulator))
+            scope_ ikfailureaccumulator = class_<PyIkFailureAccumulatorBase, PyIkFailureAccumulatorBasePtr>("IkFailureAccumulatorBase", DOXY_CLASS(IkFailureAccumulatorBase), no_init)
 #endif
-                                      .def("GetCurrentSize", &PyIkFailureAccumulator::GetCurrentSize, "Return the current active size of the accumulator")
-                                      .def("GetIkFailureInfo", &PyIkFailureAccumulator::GetIkFailureInfo, PY_ARGS("index") DOXY_FN(IkFailureAccumulator, GetIkFailureInfo "Get ikFailureInfo at the specified index"))
         ;
-    } // end PyIkFailureAccumulator
+    } // end PyIkFailureAccumulatorBase
 
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

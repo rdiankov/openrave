@@ -874,7 +874,7 @@ bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikpar
     }
     return _pmanip->FindIKSolution(ikparam,vFreeParameters, solution,filteroptions);
 }
-bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, int filteroptions, IkReturn& ikreturn, bool releasegil, IkFailureAccumulatorPtr paccumulator) const
+bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, int filteroptions, IkReturn& ikreturn, bool releasegil, IkFailureAccumulatorBasePtr paccumulator) const
 {
     openravepy::PythonThreadSaverPtr statesaver;
     if( releasegil ) {
@@ -882,7 +882,7 @@ bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikpar
     }
     return _pmanip->FindIKSolution(ikparam,filteroptions,IkReturnPtr(&ikreturn,utils::null_deleter()),paccumulator);
 }
-bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturn& ikreturn, bool releasegil, IkFailureAccumulatorPtr paccumulator) const
+bool PyRobotBase::PyManipulator::_FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturn& ikreturn, bool releasegil, IkFailureAccumulatorBasePtr paccumulator) const
 {
     openravepy::PythonThreadSaverPtr statesaver;
     if( releasegil ) {
@@ -907,7 +907,7 @@ bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikpa
     }
     return _pmanip->FindIKSolutions(ikparam,vFreeParameters,solutions,filteroptions);
 }
-bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorPtr paccumulator) const
+bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorBasePtr paccumulator) const
 {
     openravepy::PythonThreadSaverPtr statesaver;
     if( releasegil ) {
@@ -915,7 +915,7 @@ bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikpa
     }
     return _pmanip->FindIKSolutions(ikparam,filteroptions,vikreturns,paccumulator);
 }
-bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorPtr paccumulator) const
+bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorBasePtr paccumulator) const
 {
     openravepy::PythonThreadSaverPtr statesaver;
     if( releasegil ) {
@@ -924,16 +924,16 @@ bool PyRobotBase::PyManipulator::_FindIKSolutions(const IkParameterization& ikpa
     return _pmanip->FindIKSolutions(ikparam,vFreeParameters,filteroptions,vikreturns,paccumulator);
 }
 
-object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorPtr pyaccumulator) const
+object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorBasePtr pyaccumulator) const
 {
     IkParameterization ikparam;
     EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
             IkReturn ikreject(IKRA_Reject);
-            IkFailureAccumulatorPtr paccumulator;
+            IkFailureAccumulatorBasePtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
+                paccumulator = pyaccumulator->_pIkFailureAccumulator;
             }
             _FindIKSolution(ikparam,filteroptions,ikreject,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreject);
@@ -950,9 +950,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
     else {
         if( ikreturn ) {
             IkReturn ikreject(IKRA_Reject);
-            IkFailureAccumulatorPtr paccumulator;
+            IkFailureAccumulatorBasePtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
+                paccumulator = pyaccumulator->_pIkFailureAccumulator;
             }
             _FindIKSolution(ExtractTransform(oparam),filteroptions,ikreject,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreject);
@@ -967,7 +967,7 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, int filteroptio
     }
 }
 
-object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorPtr pyaccumulator) const
+object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorBasePtr pyaccumulator) const
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
@@ -975,9 +975,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     if( ExtractIkParameterization(oparam,ikparam) ) {
         if( ikreturn ) {
             IkReturn ikreject(IKRA_Reject);
-            IkFailureAccumulatorPtr paccumulator;
+            IkFailureAccumulatorBasePtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
+                paccumulator = pyaccumulator->_pIkFailureAccumulator;
             }
             _FindIKSolution(ikparam,vfreeparams,filteroptions,ikreject,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreject);
@@ -994,9 +994,9 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     else {
         if( ikreturn ) {
             IkReturn ikreject(IKRA_Reject);
-            IkFailureAccumulatorPtr paccumulator;
+            IkFailureAccumulatorBasePtr paccumulator;
             if( !!pyaccumulator ) {
-                paccumulator = boost::make_shared<IkFailureAccumulator>(pyaccumulator->_ikFailureAccumulator);
+                paccumulator = pyaccumulator->_pIkFailureAccumulator;
             }
             _FindIKSolution(ExtractTransform(oparam),vfreeparams,filteroptions,ikreject,releasegil,paccumulator);
             return openravepy::toPyIkReturn(ikreject);
@@ -1011,15 +1011,15 @@ object PyRobotBase::PyManipulator::FindIKSolution(object oparam, object freepara
     }
 }
 
-object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorPtr pyaccumulator) const
+object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorBasePtr pyaccumulator) const
 {
     IkParameterization ikparam;
     EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
-        IkFailureAccumulatorPtr paccumulator;
+        IkFailureAccumulatorBasePtr paccumulator;
         if( !!pyaccumulator ) {
-            paccumulator = IkFailureAccumulatorPtr(&pyaccumulator->_ikFailureAccumulator, utils::null_deleter());
+            paccumulator = pyaccumulator->_pIkFailureAccumulator;
         }
         if( ExtractIkParameterization(oparam,ikparam) ) {
             _FindIKSolutions(ikparam, filteroptions, vikreturns, releasegil, paccumulator);
@@ -1075,16 +1075,16 @@ object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, int filteropti
     }
 }
 
-object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorPtr pyaccumulator) const
+object PyRobotBase::PyManipulator::FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn, bool releasegil, PyIkFailureAccumulatorBasePtr pyaccumulator) const
 {
     std::vector<dReal> vfreeparams = ExtractArray<dReal>(freeparams);
     IkParameterization ikparam;
     EnvironmentLock lock(openravepy::GetEnvironment(_pyenv)->GetMutex()); // lock just in case since many users call this without locking...
     if( ikreturn ) {
         std::vector<IkReturnPtr> vikreturns;
-        IkFailureAccumulatorPtr paccumulator;
+        IkFailureAccumulatorBasePtr paccumulator;
         if( !!pyaccumulator ) {
-            paccumulator = IkFailureAccumulatorPtr(&pyaccumulator->_ikFailureAccumulator, utils::null_deleter());
+            paccumulator = pyaccumulator->_pIkFailureAccumulator;
         }
         if( ExtractIkParameterization(oparam,ikparam) ) {
             _FindIKSolutions(ikparam, vfreeparams, filteroptions, vikreturns, releasegil, paccumulator);
@@ -2826,10 +2826,10 @@ void init_openravepy_robot()
         robot.attr("ManipulatorInfo") = manipulatorinfo;
         robot.attr("AttachedSensorInfo") = attachedsensorinfo;
 
-        object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool, bool, PyIkFailureAccumulatorPtr) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool, bool, PyIkFailureAccumulatorPtr) const = &PyRobotBase::PyManipulator::FindIKSolution;
-        object (PyRobotBase::PyManipulator::*pmanipiks)(object, int, bool, bool, PyIkFailureAccumulatorPtr) const = &PyRobotBase::PyManipulator::FindIKSolutions;
-        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int, bool, bool, PyIkFailureAccumulatorPtr) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool, bool, PyIkFailureAccumulatorBasePtr) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool, bool, PyIkFailureAccumulatorBasePtr) const = &PyRobotBase::PyManipulator::FindIKSolution;
+        object (PyRobotBase::PyManipulator::*pmanipiks)(object, int, bool, bool, PyIkFailureAccumulatorBasePtr) const = &PyRobotBase::PyManipulator::FindIKSolutions;
+        object (PyRobotBase::PyManipulator::*pmanipiksf)(object, object, int, bool, bool, PyIkFailureAccumulatorBasePtr) const = &PyRobotBase::PyManipulator::FindIKSolutions;
 
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision0)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
         bool (PyRobotBase::PyManipulator::*pCheckEndEffectorCollision1)(object,PyCollisionReportPtr,int) const = &PyRobotBase::PyManipulator::CheckEndEffectorCollision;
@@ -2866,10 +2866,10 @@ void init_openravepy_robot()
              "ikreturn"_a = false,
              "releasegil"_a = false,
              "ikFailureAccumulator"_a = nullptr,
-             DOXY_FN(RobotBase::Manipulator, FindIKSolution "const IkParameterization; std::vector; int; IkFailureAccumulator")
+             DOXY_FN(RobotBase::Manipulator, FindIKSolution "const IkParameterization; std::vector; int; IkFailureAccumulatorBase")
              )
 #else
-        .def("FindIKSolution",pmanipik,FindIKSolution_overloads(PY_ARGS("param","filteroptions","ikreturn","releasegil","IkFailureAccumulator") DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; int; IkFailureAccumulator")))
+        .def("FindIKSolution",pmanipik,FindIKSolution_overloads(PY_ARGS("param","filteroptions","ikreturn","releasegil","IkFailureAccumulatorBase") DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; std::vector; int; IkFailureAccumulatorBase")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("FindIKSolution", pmanipikf,
@@ -2879,10 +2879,10 @@ void init_openravepy_robot()
              "ikreturn"_a = false,
              "releasegil"_a = false,
              "ikFailureAccumulator"_a = nullptr,
-             DOXY_FN(RobotBase::Manipulator, FindIKSolution "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulator")
+             DOXY_FN(RobotBase::Manipulator, FindIKSolution "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulatorBase")
              )
 #else
-        .def("FindIKSolution",pmanipikf,FindIKSolutionFree_overloads(PY_ARGS("param","freevalues","filteroptions","ikreturn","releasegil","IkFailureAccumulator") DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulator")))
+        .def("FindIKSolution",pmanipikf,FindIKSolutionFree_overloads(PY_ARGS("param","freevalues","filteroptions","ikreturn","releasegil","IkFailureAccumulatorBase") DOXY_FN(RobotBase::Manipulator,FindIKSolution "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulatorBase")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("FindIKSolutions", pmanipiks,
@@ -2891,10 +2891,10 @@ void init_openravepy_robot()
              "ikreturn"_a = false,
              "releasegil"_a = false,
              "ikFailureAccumulator"_a = nullptr,
-             DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int; IkFailureAccumulator")
+             DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int; IkFailureAccumulatorBase")
              )
 #else
-        .def("FindIKSolutions",pmanipiks,FindIKSolutions_overloads(PY_ARGS("param","filteroptions","ikreturn","releasegil","ikFailureAccumulator") DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int; IkFailureAccumulator")))
+        .def("FindIKSolutions",pmanipiks,FindIKSolutions_overloads(PY_ARGS("param","filteroptions","ikreturn","releasegil","ikFailureAccumulator") DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; std::vector; int; IkFailureAccumulatorBase")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("FindIKSolutions", pmanipiksf,
@@ -2904,10 +2904,10 @@ void init_openravepy_robot()
              "ikreturn"_a = false,
              "releasegil"_a = false,
              "ikFailureAccumulator"_a = nullptr,
-             DOXY_FN(RobotBase::Manipulator, FindIKSolutions "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulator")
+             DOXY_FN(RobotBase::Manipulator, FindIKSolutions "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulatorBase")
              )
 #else
-        .def("FindIKSolutions",pmanipiksf,FindIKSolutionsFree_overloads(PY_ARGS("param","freevalues","filteroptions","ikreturn","releasegil","ikFailureAccumulator") DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulator")))
+        .def("FindIKSolutions",pmanipiksf,FindIKSolutionsFree_overloads(PY_ARGS("param","freevalues","filteroptions","ikreturn","releasegil","ikFailureAccumulator") DOXY_FN(RobotBase::Manipulator,FindIKSolutions "const IkParameterization; const std::vector; std::vector; int; IkFailureAccumulatorBase")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def("GetIkParameterization", &PyRobotBase::PyManipulator::GetIkParameterization,

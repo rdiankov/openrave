@@ -94,7 +94,7 @@ class PyViewerBase;
 class PySpaceSamplerBase;
 class PyConfigurationSpecification;
 class PyIkParameterization;
-class PyIkFailureAccumulator;
+class PyIkFailureAccumulatorBase;
 class PyReadable;
 class PyCameraIntrinsics;
 class PyLinkInfo;
@@ -144,7 +144,7 @@ typedef OPENRAVE_SHARED_PTR<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr
 typedef OPENRAVE_SHARED_PTR<PyConfigurationSpecification> PyConfigurationSpecificationPtr;
 typedef OPENRAVE_SHARED_PTR<PyConfigurationSpecification const> PyConfigurationSpecificationConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyIkParameterization> PyIkParameterizationPtr;
-typedef OPENRAVE_SHARED_PTR<PyIkFailureAccumulator> PyIkFailureAccumulatorPtr;
+typedef OPENRAVE_SHARED_PTR<PyIkFailureAccumulatorBase> PyIkFailureAccumulatorBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyReadable> PyReadablePtr;
 typedef OPENRAVE_SHARED_PTR<PyCameraIntrinsics> PyCameraIntrinsicsPtr;
 typedef OPENRAVE_SHARED_PTR<PyLinkInfo> PyLinkInfoPtr;

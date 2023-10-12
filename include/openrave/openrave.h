@@ -258,7 +258,7 @@ class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
 class IkFailureInfo;
-class IkFailureAccumulator;
+class IkFailureAccumulatorBase;
 class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
@@ -317,7 +317,7 @@ typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
 typedef boost::shared_ptr<IkFailureInfo> IkFailureInfoPtr;
-typedef boost::shared_ptr<IkFailureAccumulator> IkFailureAccumulatorPtr;
+typedef boost::shared_ptr<IkFailureAccumulatorBase> IkFailureAccumulatorBasePtr;
 
 class BaseXMLReader;
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
