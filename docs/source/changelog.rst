@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.131.1
+Version 0.131.2
 ===============
 
 * Support reading of `grippername` under `manipulator` from XML files.
+
+Version 0.131.1
+===============
+
+* Optimization on Jitterers
 
 Version 0.131.0
 ===============
