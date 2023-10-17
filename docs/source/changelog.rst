@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.131.2
+Version 0.131.3
 ===============
 
 * Support reading of `grippername` under `manipulator` from XML files.
+
+Version 0.131.2
+===============
+
+* Python binding of CheckCollisionRays takes checkPreemptFn to allow for early canceling.
 
 Version 0.131.1
 ===============
