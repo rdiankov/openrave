@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.131.2
+===============
+
+* Python binding of CheckCollisionRays takes checkPreemptFn to allow for early canceling.
+
 Version 0.131.1
 ===============
 

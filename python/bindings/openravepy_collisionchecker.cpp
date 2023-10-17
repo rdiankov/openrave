@@ -547,7 +547,7 @@ bool PyCollisionCheckerBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, Py
     return bCollision;
 }
 
-object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbody, bool bFrontFacingOnly)
+object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbody, bool bFrontFacingOnly, object oCheckPreemptFn)
 {
     object shape = rays.attr("shape");
     const int num = extract<int>(shape[0]);
@@ -559,7 +559,7 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     }
     CollisionReport report;
     CollisionReportPtr preport(&report,null_deleter());
-
+    bool bHasPreempt = !IS_PYTHONOBJECT_NONE(oCheckPreemptFn);
     RAY r;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pypos({num, 6});
@@ -577,6 +577,9 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     bool* pcollision = (bool*)PyArray_DATA(pycollision);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     for(int i = 0; i < num; ++i, ppos += 6) {
+        if( bHasPreempt && (i&0x3ff) == 0x3ff ) { // should be around 10ms
+            oCheckPreemptFn();
+        }
         std::vector<dReal> ray = ExtractArray<dReal>(rays[py::to_object(i)]);
         r.pos.x = ray[0];
         r.pos.y = ray[1];
@@ -755,7 +758,7 @@ PyCollisionCheckerBasePtr RaveCreateCollisionChecker(PyEnvironmentBasePtr pyenv,
 }
 
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(CheckCollisionRays_overloads, CheckCollisionRays, 2, 4)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 #endif
 
@@ -905,11 +908,12 @@ void init_openravepy_collisionchecker()
          "rays"_a,
          "body"_a,
          "front_facing_only"_a = false,
+         "checkPreemptFn"_a=py::none_(),
          "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columns are position, last 3 are direction*range. The return value is: (N array of hit points, Nx6 array of hit position and surface normals."
          )
 #else
     .def("CheckCollisionRays",&PyCollisionCheckerBase::CheckCollisionRays,
-         CheckCollisionRays_overloads(PY_ARGS("rays","body","front_facing_only")
+         CheckCollisionRays_overloads(PY_ARGS("rays","body","front_facing_only", "checkPreemptFn")
                                       "Check if any rays hit the body and returns their contact points along with a vector specifying if a collision occured or not. Rays is a Nx6 array, first 3 columns are position, last 3 are direction*range. The return value is: (N array of hit points, Nx6 array of hit position and surface normals."))
 #endif
     ;
