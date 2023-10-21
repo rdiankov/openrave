@@ -10,7 +10,8 @@ Version 0.132.0
 
 - Add IkFilterInfo and IkFailureAccumulator to allow for fast accumulation of IK failures.
 
-=======
+* When loading connected body, also have to prefix "grippername" and "grippernames"
+
 Version 0.131.2
 ===============
 
