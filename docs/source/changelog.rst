@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Unreleased
+==========
+
+* When loading connected body, also have to prefix "grippername" and "grippernames"
+
 Version 0.131.3
 ===============
 
