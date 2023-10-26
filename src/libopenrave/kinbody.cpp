@@ -5739,7 +5739,12 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 CopyRapidJsonDoc(pgrabbedref->_rGrabbedUserData, pgrabbed->_rGrabbedUserData);
                 if( pgrabbedref->IsListNonCollidingLinksValid() ) {
                     FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
-                        pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                        if( (*itLinkRef)->GetParent() == r ) {
+                            pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                        }
+                        else {
+                            pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(*itLinkRef);
+                        }
                     }
                     pgrabbed->_SetLinkNonCollidingIsValid(true);
                 }
