@@ -1241,6 +1241,11 @@ FCLCollisionManagerInstance& FCLCollisionChecker::_GetBodyManager(KinBodyConstPt
 {
     _bParentlessCollisionObject = false;
     BODYMANAGERSMAP::iterator it = _bodymanagers.find(std::make_pair(pbody.get(), (int)bactiveDOFs));
+    if( it != _bodymanagers.end() && !it->second->IsValid() ) {
+        RAVELOG_DEBUG_FORMAT("env=%s, body manager cache is invalid. Perhaps, corresponding body has been removed. (self=%d)", GetEnv()->GetNameId()%_bIsSelfCollisionChecker);
+        _bodymanagers.erase(it);
+        it = _bodymanagers.end();
+    }
     if( it == _bodymanagers.end() ) {
         FCLCollisionManagerInstancePtr p(new FCLCollisionManagerInstance(*_fclspace, _CreateManager()));
         p->InitBodyManager(pbody, bactiveDOFs);
