@@ -155,6 +155,10 @@ void Grabbed::ComputeListNonCollidingLinks()
                 RAVELOG_WARN_FORMAT("env=%s, other grabbed body on %s has already been released. So ignoring it.", penv->GetNameId()%pGrabber->GetName());
                 continue;
             }
+            if( pOtherGrabbedBody->GetEnvironmentBodyIndex() == 0 ) {
+                RAVELOG_WARN_FORMAT("env=%s, other grabbed body on %s has invalid environment body index. Perhaps already removed from the environmnet. So ignoring it.", penv->GetNameId()%pGrabber->GetName());
+                continue;
+            }
             if( pOtherGrabbedBody->GetLinks().empty() ) {
                 RAVELOG_WARN_FORMAT("env=%s, other grabbed body %s on %s has no links. Perhaps not initialized. So ignoring it.", penv->GetNameId()%pOtherGrabbedBody->GetName()%pGrabber->GetName());
                 continue;
@@ -277,7 +281,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         }
         // Detach pGrabbedBody first before re-adding it.
         _RemoveAttachedBody(*pGrabbedBody);
-        _vGrabbedBodies.erase(itPreviouslyGrabbed);
+        _RemoveGrabbedBody(itPreviouslyGrabbed);
     }
 
     GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink));
@@ -330,7 +334,7 @@ void KinBody::Release(KinBody &body)
                 RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%GetName()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentBodyIndex()%body.GetName()%body.GetEnvironmentBodyIndex());
             }
             if( bpointermatch ) {
-                _vGrabbedBodies.erase(itgrabbed);
+                _RemoveGrabbedBody(itgrabbed);
                 _RemoveAttachedBody(body);
                 _PostprocessChangedParameters(Prop_RobotGrabbed);
                 return;
@@ -379,7 +383,7 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
                 if( !!pbody ) {
                     _RemoveAttachedBody(*pbody);
                 }
-                _vGrabbedBodies.erase(_vGrabbedBodies.begin()+nCheckIndex);
+                _RemoveGrabbedBody(_vGrabbedBodies.begin()+nCheckIndex);
                 bReleased = true;
             }
             --nCheckIndex;
@@ -850,9 +854,28 @@ void KinBody::_UpdateGrabbedBodies()
         }
         else {
             RAVELOG_DEBUG_FORMAT("env=%s, erasing invalid grabbed body from grabbing body '%s'", GetEnv()->GetNameId()%GetName());
-            itgrabbed = _vGrabbedBodies.erase(itgrabbed);
+            itgrabbed = _RemoveGrabbedBody(itgrabbed);
         }
     }
+}
+
+std::vector<GrabbedPtr>::iterator KinBody::_RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed)
+{
+    KinBodyConstPtr pgrabbedbody = (*itGrabbed)->_pGrabbedBody.lock();
+    itGrabbed = _vGrabbedBodies.erase(itGrabbed);
+    for( const GrabbedPtr& pOtherGrabbed : _vGrabbedBodies) {
+        // _listNonCollidingLinksWhenGrabbed in other grabbed bodies might contain the body
+        std::list<LinkConstPtr>& listNonCollidingLinksWhenGrabbed = pOtherGrabbed->_listNonCollidingLinksWhenGrabbed;
+        for (std::list<LinkConstPtr>::iterator itlink = listNonCollidingLinksWhenGrabbed.begin(); itlink != listNonCollidingLinksWhenGrabbed.end();) {
+            if( (*itlink)->GetParent() == pgrabbedbody ) {
+                itlink = listNonCollidingLinksWhenGrabbed.erase(itlink);
+            }
+            else {
+                ++itlink;
+            }
+        }
+    }
+    return itGrabbed;
 }
 
 } // end namespace OpenRAVE

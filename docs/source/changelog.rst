@@ -3,6 +3,13 @@
 ChangeLog
 #########
 
+Version 0.132.0
+===============
+
+* Fix bugs around multiple grabbed bodies
+  1. Self-collision between grabbed bodies were checked even after the grabbed body was released under the certain condition.
+  2. When cloning a kinbody with multiple grabbed bodies, `Grabbed::_listNonCollidingLinksWhenGrabbed` was not copied properly. caused `std::vector` range error.
+
 Unreleased
 ==========
 
