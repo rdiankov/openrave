@@ -10,6 +10,16 @@ Version 0.132.0
   1. Self-collision between grabbed bodies were checked even after the grabbed body was released under the certain condition.
   2. When cloning a kinbody with multiple grabbed bodies, `Grabbed::_listNonCollidingLinksWhenGrabbed` was not copied properly. caused `std::vector` range error.
 
+Unreleased
+==========
+
+* When loading connected body, also have to prefix "grippername" and "grippernames"
+
+Version 0.131.2
+===============
+
+* Python binding of CheckCollisionRays takes checkPreemptFn to allow for early canceling.
+
 Version 0.131.1
 ===============
 
