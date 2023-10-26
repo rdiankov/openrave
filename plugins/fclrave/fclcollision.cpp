@@ -1039,7 +1039,7 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
                 }
             }
 
-            if( pcb->_bHasCallbacks ) {
+            if( !(_options & OpenRAVE::CO_IgnoreCallbacks) && pcb->_bHasCallbacks ) {
                 OpenRAVE::CollisionAction action = OpenRAVE::CA_DefaultAction;
                 CollisionReportPtr preport(&_reportcache, OpenRAVE::utils::null_deleter());
                 FOREACH(callback, pcb->GetCallbacks()) {
