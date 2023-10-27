@@ -25,8 +25,8 @@ Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
     _pGrabbingLink->GetRigidlyAttachedLinks(_vAttachedToGrabbingLink);
     _listNonCollidingIsValid = false;
     // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
-    int defaultGrabbedSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies;
-    int defaultGrabberSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities;
+    int defaultGrabbedSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits;
+    int defaultGrabberSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_LinkVelocities;
     if( pGrabbedBody->IsRobot() ) {
         RobotBasePtr pGrabbedRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabbedBody);
         _pGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultGrabbedSaveOptions|KinBody::Save_ConnectedBodies));
@@ -70,7 +70,7 @@ void Grabbed::ComputeListNonCollidingLinks()
     KinBodyPtr pGrabbedBody(_pGrabbedBody);
     KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
     KinBody::KinBodyStateSaverPtr pCurrentGrabbedSaver, pCurrentGrabberSaver;
-    int defaultSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_LinkVelocities|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies;
+    int defaultSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_LinkVelocities|KinBody::Save_JointLimits;
     if( pGrabbedBody->IsRobot() ) {
         RobotBasePtr pGrabbedRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabbedBody);
         pCurrentGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
@@ -80,17 +80,18 @@ void Grabbed::ComputeListNonCollidingLinks()
     }
     if( pGrabber->IsRobot() ) {
         RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabber);
-        pCurrentGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
+        pCurrentGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies|KinBody::Save_GrabbedBodies));
     }
     else {
-        pCurrentGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultSaveOptions));
+        pCurrentGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultSaveOptions|KinBody::Save_GrabbedBodies));
     }
     // RAVELOG_INFO_FORMAT("env=%s, computing _listNonCollidingLinksWhenGrabbed for body %s", pGrabbedBody->GetEnv()->GetNameId()%pGrabbedBody->GetName());
 
     // Now that the current state is saved, set the state to the original (when Grab was called)
-    pGrabber->ReleaseAllGrabbed();
+    // Note that the computation here is based on what is currently grabbed by the grabber, this is unavoidable since the grabbed bodies by the grabber could be different from when the Grabbed instance was created.
     _pGrabbedSaver->Restore();
     _pGrabberSaver->Restore();
+    pGrabber->Release(*pGrabbedBody); // release temporarily for collision checking
 
     // Actual computation of _listNonCollidingLinksWhenGrabbed
     _listNonCollidingLinksWhenGrabbed.clear();

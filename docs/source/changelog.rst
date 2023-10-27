@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.133.0
+===============
+
+* Fix initializing _listNonCollidingLinksWhenGrabbed based on incorrect grabbed bodies when grabbed bodies are shuffled between creation of Grabbed and Grabbed::ComputeListNonCollidingLinks.
+
 Version 0.132.0
 ===============
 
