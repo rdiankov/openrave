@@ -10,6 +10,7 @@ Version 0.133.1
 ===============
 
 * Fix initializing _listNonCollidingLinksWhenGrabbed based on incorrect grabbed bodies when grabbed bodies are shuffled between creation of Grabbed and Grabbed::ComputeListNonCollidingLinks.
+* Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
 
 Version 0.133.0
 ===============

@@ -141,6 +141,11 @@ public:
         return _lastSyncTimeStamp;
     }
 
+    inline bool IsValid() const
+    {
+        return !_ptrackingbody.expired(); // expired is slightly faster than lock
+    }
+
     void PrintStatus(uint32_t debuglevel)
     {
         if( IS_DEBUGLEVEL(debuglevel) ) {
