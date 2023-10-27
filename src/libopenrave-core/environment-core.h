@@ -3352,11 +3352,11 @@ protected:
         }
         KinBody& body = *pbodyref;
         const std::string& name = body.GetName();
-        // before deleting, make sure no robots are grabbing it!!
-        for (KinBodyPtr& probot : _vecbodies) {
-            if( !!probot && probot->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by robot %s!", GetNameId()%body.GetName()%probot->GetName());
-                probot->Release(body);
+        // before deleting, make sure no other bodies are grabbing it!!
+        for (KinBodyPtr& potherbody : _vecbodies) {
+            if( !!potherbody && potherbody->IsGrabbing(body) ) {
+                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%potherbody->GetName());
+                potherbody->Release(body);
             }
         }
 
@@ -3368,6 +3368,15 @@ protected:
             CollisionCheckerBasePtr pSelfColChecker = body.GetSelfCollisionChecker();
             if (!!pSelfColChecker && pSelfColChecker != _pCurrentChecker) {
                 pSelfColChecker->RemoveKinBody(pbodyref);
+            }
+        }
+        // remove from self collision checker of other bodies since it may have been grabbed.
+        for (KinBodyPtr& potherbody : _vecbodies) {
+            if( !!potherbody && pbodyref != potherbody ) {
+                CollisionCheckerBasePtr pOtherSelfColChecker = potherbody->GetSelfCollisionChecker();
+                if( !!pOtherSelfColChecker && pOtherSelfColChecker != _pCurrentChecker ) {
+                    pOtherSelfColChecker->RemoveKinBody(pbodyref); // should be okay to call RemoveKinBody even when the pbodyref has not been aeed to the pOtherSelfColChecker
+                }
             }
         }
         if( !!_pPhysicsEngine ) {
