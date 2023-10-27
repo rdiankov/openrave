@@ -3375,7 +3375,7 @@ protected:
             if( !!potherbody && pbodyref != potherbody ) {
                 CollisionCheckerBasePtr pOtherSelfColChecker = potherbody->GetSelfCollisionChecker();
                 if( !!pOtherSelfColChecker && pOtherSelfColChecker != _pCurrentChecker ) {
-                    pOtherSelfColChecker->RemoveKinBody(pbodyref);
+                    pOtherSelfColChecker->RemoveKinBody(pbodyref); // should be okay to call RemoveKinBody even when the pbodyref has not been aeed to the pOtherSelfColChecker
                 }
             }
         }

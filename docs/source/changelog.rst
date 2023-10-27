@@ -6,10 +6,15 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.133.0
+Version 0.133.1
 ===============
 
 * Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
+
+Version 0.133.0
+===============
+
+* Fix nonAdjacentLinks and _listNonCollidingLinksWhenGrabbed were affected by collision callbacks.
 
 Version 0.132.0
 ===============
