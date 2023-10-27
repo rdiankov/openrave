@@ -3,16 +3,20 @@
 ChangeLog
 #########
 
+Unreleased
+==========
+
+Version 0.133.0
+===============
+
+* Fix nonAdjacentLinks and _listNonCollidingLinksWhenGrabbed were affected by collision callbacks.
+
 Version 0.132.0
 ===============
 
 * Fix bugs around multiple grabbed bodies
   1. Self-collision between grabbed bodies were checked even after the grabbed body was released under the certain condition.
   2. When cloning a kinbody with multiple grabbed bodies, `Grabbed::_listNonCollidingLinksWhenGrabbed` was not copied properly. caused `std::vector` range error.
-
-Unreleased
-==========
-
 * When loading connected body, also have to prefix "grippername" and "grippernames"
 
 Version 0.131.3
