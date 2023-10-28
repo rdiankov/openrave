@@ -6,6 +6,12 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.133.2
+===============
+
+* Fix not initializing grabbed bodies to self-collision checker when cloning KinBody, restoring grabbed state from the state saver.
+* Fix cloning _listNonCollidingLinksWhenGrabbed to different env
+
 Version 0.133.1
 ===============
 

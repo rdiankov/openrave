@@ -5743,7 +5743,13 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                             pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
                         }
                         else {
-                            pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(*itLinkRef);
+                            KinBodyPtr pOtherGrabbedBody = GetEnv()->GetKinBody((*itLinkRef)->GetParent()->GetName());
+                            if( !!pOtherGrabbedBody ) {
+                                KinBody::LinkPtr plink = pOtherGrabbedBody->GetLink((*itLinkRef)->GetName());
+                                if( !!plink ) {
+                                    pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(plink);
+                                }
+                            }
                         }
                     }
                     pgrabbed->_SetLinkNonCollidingIsValid(true);
@@ -5775,6 +5781,11 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
         else {
             // InitKinBody will be called when the body is added to the environment.
+        }
+        // have to also call InitKinBody to grabbed bodies.
+        for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
+            KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+            _selfcollisionchecker->InitKinBody(pGrabbedBody);
         }
     }
 
