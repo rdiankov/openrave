@@ -5749,6 +5749,12 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                                 if( !!plink ) {
                                     pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(plink);
                                 }
+                                else {
+                                    RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find non-colliding link %s in body %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetParent()->GetName());
+                                }
+                            }
+                            else {
+                                RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find body %s for non-colliding link %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetParent()->GetName()%(*itLinkRef)->GetName());
                             }
                         }
                     }
