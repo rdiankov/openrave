@@ -5743,7 +5743,19 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                             pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
                         }
                         else {
-                            pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(*itLinkRef);
+                            KinBodyPtr pOtherGrabbedBody = GetEnv()->GetKinBody((*itLinkRef)->GetParent()->GetName());
+                            if( !!pOtherGrabbedBody ) {
+                                KinBody::LinkPtr plink = pOtherGrabbedBody->GetLink((*itLinkRef)->GetName());
+                                if( !!plink ) {
+                                    pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(plink);
+                                }
+                                else {
+                                    RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find non-colliding link %s in body %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetParent()->GetName());
+                                }
+                            }
+                            else {
+                                RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find body %s for non-colliding link %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetParent()->GetName()%(*itLinkRef)->GetName());
+                            }
                         }
                     }
                     pgrabbed->_SetLinkNonCollidingIsValid(true);
@@ -5775,6 +5787,11 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
         else {
             // InitKinBody will be called when the body is added to the environment.
+        }
+        // have to also call InitKinBody to grabbed bodies.
+        for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
+            KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+            _selfcollisionchecker->InitKinBody(pGrabbedBody);
         }
     }
 
