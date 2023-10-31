@@ -6,8 +6,21 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.133.3
+===============
+
+* Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
+
+Version 0.133.2
+===============
+
+* Fix not initializing grabbed bodies to self-collision checker when cloning KinBody, restoring grabbed state from the state saver.
+* Fix cloning _listNonCollidingLinksWhenGrabbed to different env
+
 Version 0.133.1
 ===============
+
+* Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
 
 * Fix initializing _listNonCollidingLinksWhenGrabbed based on incorrect grabbed bodies when grabbed bodies are shuffled between creation of Grabbed and Grabbed::ComputeListNonCollidingLinks.
 * Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
