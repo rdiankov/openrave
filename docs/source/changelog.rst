@@ -6,6 +6,8 @@ ChangeLog
 Unreleased
 ==========
 
+- Fix changing bias for the configuration jitterer and support more dofs than the arm joints.
+
 Version 0.133.2
 ===============
 
