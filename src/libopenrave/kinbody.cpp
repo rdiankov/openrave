@@ -5743,17 +5743,6 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                             pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
                         }
                         else {
-<<<<<<< HEAD
-                            KinBodyPtr pOtherGrabbedBody = GetEnv()->GetKinBody((*itLinkRef)->GetParent()->GetName());
-                            if( !!pOtherGrabbedBody ) {
-                                KinBody::LinkPtr plink = pOtherGrabbedBody->GetLink((*itLinkRef)->GetName());
-                                if( !!plink ) {
-                                    pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(plink);
-                                }
-                            }
-||||||| merged common ancestors
-                            pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(*itLinkRef);
-=======
                             KinBodyPtr pOtherGrabbedBody = GetEnv()->GetKinBody((*itLinkRef)->GetParent()->GetName());
                             if( !!pOtherGrabbedBody ) {
                                 KinBody::LinkPtr plink = pOtherGrabbedBody->GetLink((*itLinkRef)->GetName());
@@ -5767,7 +5756,6 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                             else {
                                 RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find body %s for non-colliding link %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetParent()->GetName()%(*itLinkRef)->GetName());
                             }
->>>>>>> ed79515f9878772f6a292babee6aa7724d04ddd2
                         }
                     }
                     pgrabbed->_SetLinkNonCollidingIsValid(true);
