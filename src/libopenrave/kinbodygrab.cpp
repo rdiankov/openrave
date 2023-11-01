@@ -426,7 +426,7 @@ void KinBody::RegrabAll()
 
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-        pNewGrabbed->_setGrabberLinkIndicesToIgnore.swap(pGrabbed->_setGrabberLinkIndicesToIgnore);
+        pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
         CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
         std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
