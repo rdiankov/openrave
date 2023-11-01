@@ -6,7 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
-- Fix changing bias for the configuration jitterer and support more dofs than the arm joints.
+Version 0.133.3
+===============
+
+* Fix changing bias for the configuration jitterer and support more dofs than the arm joints.
+* Fix `KinBody::RegrabAll` to not accidentally invalidate `Grabbed::_setGrabberLinkIndicesToIgnore`.
 
 Version 0.133.2
 ===============
