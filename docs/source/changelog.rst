@@ -3,7 +3,10 @@
 ChangeLog
 #########
 
-Version 0.132.0
+Unreleased
+==========
+
+Version 0.133.4
 ===============
 
 * Initialization of internal costs in KinBodies now only considers links that are part of a joint
@@ -12,6 +15,48 @@ Version 0.132.0
 * Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
 * FCLRave geometry callbacks now only update when the link has actually changed
 * Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with exceptions
+
+Version 0.133.3
+===============
+
+* Fix changing bias for the configuration jitterer and support more dofs than the arm joints.
+* Fix `KinBody::RegrabAll` to not accidentally invalidate `Grabbed::_setGrabberLinkIndicesToIgnore`.
+
+Version 0.133.2
+===============
+
+* Fix not initializing grabbed bodies to self-collision checker when cloning KinBody, restoring grabbed state from the state saver.
+* Fix cloning _listNonCollidingLinksWhenGrabbed to different env
+
+Version 0.133.1
+===============
+
+* Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
+
+* Fix initializing _listNonCollidingLinksWhenGrabbed based on incorrect grabbed bodies when grabbed bodies are shuffled between creation of Grabbed and Grabbed::ComputeListNonCollidingLinks.
+
+Version 0.133.0
+===============
+
+* Fix nonAdjacentLinks and _listNonCollidingLinksWhenGrabbed were affected by collision callbacks.
+
+Version 0.132.0
+===============
+
+* Fix bugs around multiple grabbed bodies
+  1. Self-collision between grabbed bodies were checked even after the grabbed body was released under the certain condition.
+  2. When cloning a kinbody with multiple grabbed bodies, `Grabbed::_listNonCollidingLinksWhenGrabbed` was not copied properly. caused `std::vector` range error.
+* When loading connected body, also have to prefix "grippername" and "grippernames"
+
+Version 0.131.2
+===============
+
+* Python binding of CheckCollisionRays takes checkPreemptFn to allow for early canceling.
+
+Version 0.131.1
+===============
+
+* Optimization on Jitterers
 
 Version 0.131.0
 ===============
