@@ -120,7 +120,7 @@ void Grabbed::ComputeListNonCollidingLinks()
     if( !pchecker ) {
         pchecker = penv->GetCollisionChecker();
     }
-    CollisionOptionsStateSaver colOptionsSaver(pchecker, /*newcollisionoptions*/ CO_IgnoreCallbacks); // reset collision options before proceeding
+    CollisionOptionsStateSaver colOptionsSaver(pchecker, /*newcollisionoptions*/ 0); // reset collision options before proceeding
     {
         KinBody::KinBodyStateSaver grabbedEnableSaver(pGrabbedBody, KinBody::Save_LinkEnable);
         pGrabbedBody->Enable(true);

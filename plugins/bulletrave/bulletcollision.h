@@ -301,7 +301,7 @@ public:
         if( !!report ) {
             report->Reset(_options);
         }
-        const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
+        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         SetFilterScope filter(_dispatcher, _world->getPairCache(), poverlapfilt);
@@ -326,7 +326,7 @@ public:
                 continue;
             }
 
-            if( bUseCallbacks && !report ) {
+            if( bHasCallbacks && !report ) {
                 report.reset(new CollisionReport());
                 report->Reset(_options);
             }
@@ -355,7 +355,7 @@ public:
 
             contactManifold->clearManifold();
 
-            if( bUseCallbacks ) {
+            if( bHasCallbacks ) {
                 if( listcallbacks.size() == 0 ) {
                     GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
                 }
@@ -603,8 +603,7 @@ public:
 
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
-            const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
-            if( bUseCallbacks && !report ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
                 report.reset(new CollisionReport());
                 report->Reset(_options);
             }
@@ -619,7 +618,7 @@ public:
                 report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
             }
 
-            if( bUseCallbacks ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
                 std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
                 GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
 
@@ -673,8 +672,7 @@ public:
 
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
-            const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
-            if( bUseCallbacks && !report ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
                 report.reset(new CollisionReport());
                 report->Reset(_options);
             }
@@ -689,7 +687,7 @@ public:
                 report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
             }
 
-            if( bUseCallbacks ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
                 std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
                 GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
 
@@ -738,8 +736,7 @@ public:
 
         bool bCollision = rayCallback.hasHit();
         if( bCollision ) {
-            const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
-            if( bUseCallbacks && !report ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
                 report.reset(new CollisionReport());
                 report->Reset(_options);
             }
@@ -754,7 +751,7 @@ public:
                 report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
             }
 
-            if( bUseCallbacks ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
                 std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
                 GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
 

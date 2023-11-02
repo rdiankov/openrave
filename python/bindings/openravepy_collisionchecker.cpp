@@ -782,7 +782,6 @@ void init_openravepy_collisionchecker()
     .value("AllLinkCollisions", CO_AllLinkCollisions)
     .value("AllGeometryCollisions", CO_AllGeometryCollisions)
     .value("AllGeometryContacts", CO_AllGeometryContacts)
-    .value("IgnoreCallbacks", CO_IgnoreCallbacks)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .export_values()
 #endif

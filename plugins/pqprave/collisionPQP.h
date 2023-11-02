@@ -566,8 +566,7 @@ private:
         }
         // collision
         if(_benablecol) {
-            const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
-            if( bUseCallbacks && !report ) {
+            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
                 report.reset(new CollisionReport());
                 report->Reset(_options);
             }
@@ -603,7 +602,7 @@ private:
                     }
                 }
 
-                if( bUseCallbacks ) {
+                if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
                     std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
                     GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
 
