@@ -1554,10 +1554,6 @@ void QtOSGViewer::_Draw(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array> vertic
     geometry->addPrimitiveSet(new osg::DrawArrays(mode, 0, vertices->size()));
     geometry->getOrCreateStateSet()->setAttribute(attribute, osg::StateAttribute::ON);
 
-    // don't do transparent bin since that is too slow for big point clouds...
-    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    geometry->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
-
     geode->addDrawable(geometry.get());
 
     trans->addChild(geode);
@@ -1700,10 +1696,6 @@ void QtOSGViewer::_DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vextent
     sd->setColor(osg::Vec4f(color.x, color.y, color.z, alpha));
     geode->addDrawable(sd);
 
-    // don't do transparent bin since that is too slow for big point clouds...
-    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    handle->getOrCreateStateSet()->setRenderingHint(alpha < 1.0f ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
-
     trans->addChild(geode);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
@@ -1734,10 +1726,6 @@ void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVecto
         sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
         geode->addDrawable(sd);
     }
-
-    // don't do transparent bin since that is too slow for big point clouds...
-    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    handle->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
 
     trans->addChild(geode);
     handle->addChild(trans);
@@ -1833,10 +1821,6 @@ void QtOSGViewer::_DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tp
         geode->setStateSet(stateOne);
     }
 
-    // don't do transparent bin since that is too slow for big point clouds...
-    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    geometry->getOrCreateStateSet()->setRenderingHint(bhasalpha ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
-
     trans->addChild(geode);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
@@ -1861,10 +1845,6 @@ void QtOSGViewer::_DrawTriMesh(OSGSwitchPtr handle, osg::ref_ptr<osg::Vec3Array>
 
     geometry->setColorArray(colors.get());
     geometry->setColorBinding(colors->size() == vertices->size() ? osg::Geometry::BIND_PER_VERTEX : osg::Geometry::BIND_OVERALL);
-
-    // don't do transparent bin since that is too slow for big point clouds...
-    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
-    geometry->getOrCreateStateSet()->setRenderingHint(bUsingTransparency ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
 
     geode->addDrawable(geometry.get());
 

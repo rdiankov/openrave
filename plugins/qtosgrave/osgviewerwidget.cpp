@@ -11,8 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include "transparencygroup.h"
 #include "osgviewerwidget.h"
-#include "osgcartoon.h"
 #include "osgskybox.h"
 
 #include <osg/ShadeModel>
@@ -560,27 +560,6 @@ private:
     boost::function<bool(const osgGA::GUIEventAdapter&, osgGA::GUIActionAdapter&)> _onKeyDown; ///< called when key is pressed
 };
 
-//void QOSGViewerWidget::_ShowSceneGraph(const std::string& currLevel,OSGNodePtr currNode)
-//{
-//    std::string level;
-//    OSGGroupPtr currGroup;
-//
-//    level = currLevel;
-//
-//    // check to see if we have a valid (non-NULL) node.
-//    // if we do have a null node, return NULL.
-//    if ( !!currNode) {
-//        RAVELOG_WARN_FORMAT("|%sNode class:%s (%s)",currLevel%currNode->className()%currNode->getName());
-//        level = level + "-";
-//        currGroup = currNode->asGroup(); // returns NULL if not a group.
-//        if ( currGroup ) {
-//            for (unsigned int i = 0; i < currGroup->getNumChildren(); i++) {
-//                _ShowSceneGraph(level,currGroup->getChild(i));
-//            }
-//        }
-//    }
-//}
-
 osg::ref_ptr<osgText::Font> QOSGViewerWidget::OSG_FONT;
 
 void QOSGViewerWidget::SetFont(osgText::Font* font) {
@@ -620,16 +599,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     // initialize the environment
     _osgSceneRoot = new osg::Group();
-    {
-        _osgFigureRoot = new osg::Group();
-        osg::ref_ptr<osg::StateSet> stateset = _osgFigureRoot->getOrCreateStateSet();
-        stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE ); // need to do this, otherwise will be using the light sources
-        stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
-        stateset->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
-
-        _osgFigureRoot->setStateSet(stateset);
-
-    }
+    _osgFigureRoot = new osg::Group();
 
     {
         _osgSkybox = new Skybox;
@@ -686,13 +656,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     }
 
     _InitializeLights(2);
-
-    {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
-        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
-        _osgLightsGroup->addChild(toon);
-        toon->addChild(_osgSceneRoot);
-    }
 
     connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
     _timer.start( 10 );
@@ -798,22 +761,20 @@ void QOSGViewerWidget::SelectItemFromName(const std::string& name)
 
 void QOSGViewerWidget::SetSceneData()
 {
-    OSGGroupPtr rootscene(new osg::Group());
+    osgtt::TransparencyGroup *group = new osgtt::TransparencyGroup();
+    group->setTransparencyMode(osgtt::TransparencyGroup::DELAYED_BLEND);
+    OSGGroupPtr rootscene(group);
     //  Normalize object normals
     rootscene->getOrCreateStateSet()->setMode(GL_NORMALIZE,osg::StateAttribute::ON);
-    rootscene->getOrCreateStateSet()->setMode(GL_DEPTH_TEST,osg::StateAttribute::ON);
 
     if (_bLightOn) {
-        rootscene->addChild(_osgLightsGroup);
+        group->addChild(_osgLightsGroup, true, true);
     }
     else {
-        osg::ref_ptr<qtosgrave::OpenRAVECartoon> toon = new qtosgrave::OpenRAVECartoon();
-        //toon->setOutlineColor(osg::Vec4(0,1,0,1));
-        rootscene->addChild(toon);
-        toon->addChild(_osgSceneRoot);
+        group->addChild(_osgSceneRoot, true, true);
     }
 
-    rootscene->addChild(_osgFigureRoot);
+    group->addChild(_osgFigureRoot, true, true);
     _osgview->setSceneData(rootscene.get());
 }
 
