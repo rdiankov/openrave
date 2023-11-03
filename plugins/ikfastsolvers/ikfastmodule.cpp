@@ -521,6 +521,7 @@ public:
 
     bool LoadIKFastSolver(ostream& sout, istream& sinput)
     {
+        RAVELOG_WARN("MODIFIED\n");
         EnvironmentMutex::scoped_lock envlock(GetEnv()->GetMutex());
         string robotname;
         string striktype;
@@ -535,6 +536,35 @@ public:
         if( !probot || !probot->GetActiveManipulator() ) {
             return false;
         }
+        std::string restOfCommand="", word;
+        std::vector<std::string> freeJoints;
+        bool start_joints = false;
+        while(sinput >> word) {
+            RAVELOG_WARN(str(boost::format("word: %s\n")%word));
+            if(word == "--freejoint")
+            {
+                start_joints = true;
+            }
+            else if(word[0] == '-')
+            {
+                start_joints = false;
+            }
+            restOfCommand += " " + word;
+            if(start_joints)
+            {
+                freeJoints.push_back(word);
+            }
+        }
+        std::vector<int> freeJointsIndices;
+        for(int i = 1; i < freeJoints.size(); i++)
+        {
+            int idx = probot->GetJointIndex(freeJoints[i]);
+            if(idx >= 0)
+            {
+                freeJointsIndices.push_back(idx);
+            }
+        }
+        RAVELOG_WARN(str(boost::format("restOfCommand: %s\n")%restOfCommand));
         RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
         IkParameterizationType iktype = IKP_None;
         try {
@@ -595,6 +625,32 @@ public:
                         break;
                     }
                 } while (next_combination(&vindices[0], &vindices[ikdof], &vindices[vindices.size()]));
+            } else if (freeJointsIndices.size() > 0) {
+                std::vector<int> vindices = pmanip->GetArmIndices();
+                std::vector<int> vfreeindices = freeJointsIndices, vsolveindices;
+                for(size_t idx=0; idx<vindices.size(); idx++)
+                {
+                    if(std::find(vfreeindices.begin(), vfreeindices.end(), vindices[idx]) == vfreeindices.end())
+                    {
+                        vsolveindices.push_back(vindices[idx]);
+                    }
+                }
+                sort(vsolveindices.begin(),vsolveindices.end());
+                sort(vfreeindices.begin(),vfreeindices.end());
+                ikfilename=ikfilenameprefix;
+                for(size_t i = 0; i < vsolveindices.size(); ++i) {
+                    ikfilename += boost::lexical_cast<std::string>(vsolveindices[i]);
+                    ikfilename += '_';
+                }
+                ikfilename += "f";
+                for(size_t i = 0; i < vfreeindices.size(); ++i) {
+                    if( i > 0 ) {
+                        ikfilename += '_';
+                    }
+                    ikfilename += boost::lexical_cast<std::string>(vfreeindices[i]);
+                }
+                ikfilename += PLUGIN_EXT;
+                ikfilenamefound = RaveFindDatabaseFile(ikfilename);
             }
             else {
                 ikfilename=ikfilenameprefix;
@@ -622,7 +678,8 @@ public:
                 // file not found, so create
                 RAVELOG_INFO(str(boost::format("Generating inverse kinematics %s for manip %s:%s, hash=%s, saving intermediate data to %s, will take several minutes...\n")%striktype%probot->GetName()%pmanip->GetName()%pmanip->GetInverseKinematicsStructureHash(iktype)%tempfilename));
                 GetEnv()->Save(tempfilename,EnvironmentBase::SO_Body,atts);
-                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s --filepermissions=%i")%tempfilename%pmanip->GetName()%striktype%0777);
+                string cmdgen = str(boost::format("openrave.py --database inversekinematics --usecached --robot=\"%s\" --manipname=%s --iktype=%s --filepermissions=%i %s")%tempfilename%pmanip->GetName()%striktype%0777%restOfCommand);
+                RAVELOG_INFO(cmdgen);
                 // use raw system call, popen causes weird crash in the inversekinematics compiler
                 int generateexit = system(cmdgen.c_str());
                 //FILE* pipe = MYPOPEN(cmdgen.c_str(), "r");
