@@ -44,6 +44,8 @@ enum CollisionOptions
     CO_AllLinkCollisions = 0x20, ///< if set then all the link collisions will be returned inside CollisionReport::vLinkColliding. Collision is slower because more pairs have to be checked.
     CO_AllGeometryCollisions = 0x40, ///< if set, then will return the collisions of all the colliding geometries. Do not need to explore all pairs of links once the first pair is found. This option can be slow.
     CO_AllGeometryContacts = 0x80, ///< if set, then will return the contact points of all the colliding geometries. Do not need to explore all pairs of links once the first pair is found. This option can be slow.
+
+    CO_IgnoreCallbacks = 0x100 ///< if set, then will not use the registered collision callbacks.
 };
 
 /// \brief action to perform whenever a collision is detected between objects

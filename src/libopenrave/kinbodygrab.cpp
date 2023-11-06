@@ -25,8 +25,8 @@ Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
     _pGrabbingLink->GetRigidlyAttachedLinks(_vAttachedToGrabbingLink);
     _listNonCollidingIsValid = false;
     // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
-    int defaultGrabbedSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies;
-    int defaultGrabberSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities;
+    int defaultGrabbedSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits;
+    int defaultGrabberSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_LinkVelocities;
     if( pGrabbedBody->IsRobot() ) {
         RobotBasePtr pGrabbedRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabbedBody);
         _pGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultGrabbedSaveOptions|KinBody::Save_ConnectedBodies));
@@ -70,7 +70,7 @@ void Grabbed::ComputeListNonCollidingLinks()
     KinBodyPtr pGrabbedBody(_pGrabbedBody);
     KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
     KinBody::KinBodyStateSaverPtr pCurrentGrabbedSaver, pCurrentGrabberSaver;
-    int defaultSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_LinkVelocities|KinBody::Save_JointLimits|KinBody::Save_GrabbedBodies;
+    int defaultSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_LinkVelocities|KinBody::Save_JointLimits;
     if( pGrabbedBody->IsRobot() ) {
         RobotBasePtr pGrabbedRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabbedBody);
         pCurrentGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
@@ -80,17 +80,18 @@ void Grabbed::ComputeListNonCollidingLinks()
     }
     if( pGrabber->IsRobot() ) {
         RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabber);
-        pCurrentGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
+        pCurrentGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies|KinBody::Save_GrabbedBodies));
     }
     else {
-        pCurrentGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultSaveOptions));
+        pCurrentGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultSaveOptions|KinBody::Save_GrabbedBodies));
     }
     // RAVELOG_INFO_FORMAT("env=%s, computing _listNonCollidingLinksWhenGrabbed for body %s", pGrabbedBody->GetEnv()->GetNameId()%pGrabbedBody->GetName());
 
     // Now that the current state is saved, set the state to the original (when Grab was called)
-    pGrabber->ReleaseAllGrabbed();
+    // Note that the computation here is based on what is currently grabbed by the grabber, this is unavoidable since the grabbed bodies by the grabber could be different from when the Grabbed instance was created.
     _pGrabbedSaver->Restore();
     _pGrabberSaver->Restore();
+    pGrabber->Release(*pGrabbedBody); // release temporarily for collision checking
 
     // Actual computation of _listNonCollidingLinksWhenGrabbed
     _listNonCollidingLinksWhenGrabbed.clear();
@@ -119,7 +120,7 @@ void Grabbed::ComputeListNonCollidingLinks()
     if( !pchecker ) {
         pchecker = penv->GetCollisionChecker();
     }
-    CollisionOptionsStateSaver colOptionsSaver(pchecker, /*newcollisionoptions*/ 0); // reset collision options before proceeding
+    CollisionOptionsStateSaver colOptionsSaver(pchecker, /*newcollisionoptions*/ CO_IgnoreCallbacks); // reset collision options before proceeding
     {
         KinBody::KinBodyStateSaver grabbedEnableSaver(pGrabbedBody, KinBody::Save_LinkEnable);
         pGrabbedBody->Enable(true);
@@ -153,6 +154,10 @@ void Grabbed::ComputeListNonCollidingLinks()
             KinBodyPtr pOtherGrabbedBody = pOtherGrabbed->_pGrabbedBody.lock();
             if( !pOtherGrabbedBody ) {
                 RAVELOG_WARN_FORMAT("env=%s, other grabbed body on %s has already been released. So ignoring it.", penv->GetNameId()%pGrabber->GetName());
+                continue;
+            }
+            if( pOtherGrabbedBody->GetEnvironmentBodyIndex() == 0 ) {
+                RAVELOG_WARN_FORMAT("env=%s, other grabbed body on %s has invalid environment body index. Perhaps already removed from the environmnet. So ignoring it.", penv->GetNameId()%pGrabber->GetName());
                 continue;
             }
             if( pOtherGrabbedBody->GetLinks().empty() ) {
@@ -277,7 +282,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         }
         // Detach pGrabbedBody first before re-adding it.
         _RemoveAttachedBody(*pGrabbedBody);
-        _vGrabbedBodies.erase(itPreviouslyGrabbed);
+        _RemoveGrabbedBody(itPreviouslyGrabbed);
     }
 
     GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink));
@@ -330,7 +335,7 @@ void KinBody::Release(KinBody &body)
                 RAVELOG_WARN_FORMAT("env=%d, body %s has grabbed body %s (%d), but it does not match with %s (%d) ", GetEnv()->GetId()%GetName()%pgrabbedbody->GetName()%pgrabbedbody->GetEnvironmentBodyIndex()%body.GetName()%body.GetEnvironmentBodyIndex());
             }
             if( bpointermatch ) {
-                _vGrabbedBodies.erase(itgrabbed);
+                _RemoveGrabbedBody(itgrabbed);
                 _RemoveAttachedBody(body);
                 _PostprocessChangedParameters(Prop_RobotGrabbed);
                 return;
@@ -379,7 +384,7 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
                 if( !!pbody ) {
                     _RemoveAttachedBody(*pbody);
                 }
-                _vGrabbedBodies.erase(_vGrabbedBodies.begin()+nCheckIndex);
+                _RemoveGrabbedBody(_vGrabbedBodies.begin()+nCheckIndex);
                 bReleased = true;
             }
             --nCheckIndex;
@@ -421,7 +426,7 @@ void KinBody::RegrabAll()
 
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-        pNewGrabbed->_setGrabberLinkIndicesToIgnore.swap(pGrabbed->_setGrabberLinkIndicesToIgnore);
+        pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
         CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
         std::pair<Vector, Vector> velocity = pNewGrabbed->_pGrabbingLink->GetVelocity();
@@ -850,9 +855,28 @@ void KinBody::_UpdateGrabbedBodies()
         }
         else {
             RAVELOG_DEBUG_FORMAT("env=%s, erasing invalid grabbed body from grabbing body '%s'", GetEnv()->GetNameId()%GetName());
-            itgrabbed = _vGrabbedBodies.erase(itgrabbed);
+            itgrabbed = _RemoveGrabbedBody(itgrabbed);
         }
     }
+}
+
+std::vector<GrabbedPtr>::iterator KinBody::_RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed)
+{
+    KinBodyConstPtr pgrabbedbody = (*itGrabbed)->_pGrabbedBody.lock();
+    itGrabbed = _vGrabbedBodies.erase(itGrabbed);
+    for( const GrabbedPtr& pOtherGrabbed : _vGrabbedBodies) {
+        // _listNonCollidingLinksWhenGrabbed in other grabbed bodies might contain the body
+        std::list<LinkConstPtr>& listNonCollidingLinksWhenGrabbed = pOtherGrabbed->_listNonCollidingLinksWhenGrabbed;
+        for (std::list<LinkConstPtr>::iterator itlink = listNonCollidingLinksWhenGrabbed.begin(); itlink != listNonCollidingLinksWhenGrabbed.end();) {
+            if( (*itlink)->GetParent() == pgrabbedbody ) {
+                itlink = listNonCollidingLinksWhenGrabbed.erase(itlink);
+            }
+            else {
+                ++itlink;
+            }
+        }
+    }
+    return itGrabbed;
 }
 
 } // end namespace OpenRAVE
