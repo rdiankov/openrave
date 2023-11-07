@@ -768,7 +768,7 @@ void KinBody::Link::_InitGeometriesInternal(const GeometryIterableT& geometries,
 
     // SetGroupGeometries calls PostprocessChangedParameters on the parent, which would increment the body update stamp, and then we would invoke PostprocessChangedParameters _again_ in _Update here, resulting in duplicated work in callbacks.
     // Coalesce these update calls into one by calling the NoPostprocess version and adding the Prop_LinkGeometryGroup flag to our main _Update call instead.
-    SetGroupGeometriesNoPostprocess("self", vgeometryinfos);
+    _SetGroupGeometriesNoPostprocess("self", vgeometryinfos);
     _Update(/* parametersChanged */ true, /* extraParametersChanged */ Prop_LinkGeometryGroup);
 }
 
@@ -815,7 +815,7 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
     return it->second;
 }
 
-void KinBody::Link::SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
     FOREACH(itgeominfo, geometries) {
         if (!(*itgeominfo)) {
@@ -830,7 +830,7 @@ void KinBody::Link::SetGroupGeometriesNoPostprocess(const std::string& groupname
 
 void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    SetGroupGeometriesNoPostprocess(groupname, geometries);
+    _SetGroupGeometriesNoPostprocess(groupname, geometries);
     GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 

@@ -1323,7 +1323,7 @@ private:
         /// \brief stores geometries for later retrieval
         ///
         /// This call is identical to SetGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
-        void SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+        void _SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
 public:
         /// \brief returns the number of geometries stored from a particular key
