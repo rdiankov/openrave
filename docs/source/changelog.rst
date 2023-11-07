@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.134.0
+===============
+
+* Add AABBFromOrientedBox
+
 Version 0.133.3
 ===============
 
