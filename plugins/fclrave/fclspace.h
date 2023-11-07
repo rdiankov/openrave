@@ -137,7 +137,7 @@ public:
             bool bFromKinBodyLink; ///< if true, then from kinbodylink. Otherwise from standalone object that does not have any KinBody associations
         };
 
-        FCLKinBodyInfo();
+        FCLKinBodyInfo() {}
 
         virtual ~FCLKinBodyInfo() {
             Reset();
@@ -151,12 +151,12 @@ public:
         }
 
         KinBodyWeakPtr _pbody;
-        int nLastStamp;  ///< KinBody::GetUpdateStamp() when last synchronized ("is transform up to date")
-        int nLastLinkReloadStamp; ///< KinBody::GetUpdateStamp() when we last ran ReloadKinBodyLinks
-        int nLinkUpdateStamp; ///< update stamp for link enable state (increases every time link enables change)
-        int nGeometryUpdateStamp; ///< update stamp for geometry update state (increases every time geometry enables change)
-        int nAttachedBodiesUpdateStamp; ///< update stamp for when attached bodies change of this body
-        int nActiveDOFUpdateStamp; ///< update stamp for when active dofs change of this body
+        int nLastStamp = 0; ///< KinBody::GetUpdateStamp() when last synchronized ("is transform up to date")
+        int nLastLinkReloadStamp = 0; ///< KinBody::GetUpdateStamp() when we last ran ReloadKinBodyLinks
+        int nLinkUpdateStamp = 0; ///< update stamp for link enable state (increases every time link enables change)
+        int nGeometryUpdateStamp = 0; ///< update stamp for geometry update state (increases every time geometry enables change)
+        int nAttachedBodiesUpdateStamp = 0; ///< update stamp for when attached bodies change of this body
+        int nActiveDOFUpdateStamp = 0; ///< update stamp for when active dofs change of this body
 
         vector< boost::shared_ptr<LinkInfo> > vlinks; ///< info for every link of the kinbody
 

@@ -14,16 +14,6 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
     return model;
 }
 
-FCLSpace::FCLKinBodyInfo::FCLKinBodyInfo()
-    : nLastStamp(0)
-    , nLastLinkReloadStamp(0)
-    , nLinkUpdateStamp(0)
-    , nGeometryUpdateStamp(0)
-    , nAttachedBodiesUpdateStamp(0)
-    , nActiveDOFUpdateStamp(0)
-{
-}
-
 void FCLSpace::FCLKinBodyInfo::Reset()
 {
     FOREACH(itlink, vlinks) {
