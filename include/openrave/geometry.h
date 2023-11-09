@@ -1932,12 +1932,11 @@ inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, c
     return OrientedBoxFromAABB(ab,RaveTransform<T>(t));
 }
 
-/// \brief Transform an axis aligned bounding box to an oriented bounding box expressed in transform.
+/// \brief projects an obb along the world axes
 ///
 /// \ingroup geometric_primitives
-/// \param[in] t transformation used to set the coordinate system of ab.
 template <typename T>
-inline RaveAxisAlignedBox<T> AABBFromOrientedBox(RaveOrientedBox<T> obb)
+inline RaveAxisAlignedBox<T> AABBFromOrientedBox(const RaveOrientedBox<T>& obb)
 {
     const RaveTransformMatrix<T> rotationMatrix = matrixFromQuat(obb.transform.rot);
     RaveVector<T> newExtents(0, 0, 0);
