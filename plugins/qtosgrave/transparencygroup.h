@@ -10,7 +10,7 @@
 
 namespace osgtt {
 
-class RenderingTechnique: public osgFX::Technique {
+class RenderingTechnique : public osgFX::Technique {
 protected:
     osg::ref_ptr<osg::StateSet> _state;
 public:
@@ -30,9 +30,9 @@ public:
     const char* effectAuthor() const;
     const char* effectDescription() const;
 
-    protected:
-        osg::ref_ptr<osg::StateSet> _state;
-        bool define_techniques();
+protected:
+    osg::ref_ptr<osg::StateSet> _state;
+    bool define_techniques();
 
 };
 
@@ -41,7 +41,7 @@ public:
 // for transparency on its child subgraph. Any children you add to this particular
 // Group will be managed internally so that whatever technique is currently in effect
 // can function properly.
-class TransparencyGroup: public osg::Group {
+class TransparencyGroup : public osg::Group {
 public:
     // These are the supported "kinds" of transparency we can apply to our subgraph.
     enum TransparencyMode {
@@ -69,14 +69,14 @@ public:
     void setStateForNode(osg::Node* child, bool transparent, bool twoSided);
 
     TransparencyMode getTransparencyMode() const
-	{
+    {
         return _mode;
     }
 
     void setTransparencyMode(TransparencyMode mode);
 
 protected:
-    TransparencyMode             _mode;
+    TransparencyMode _mode;
     osg::ref_ptr<osg::BlendFunc> _blendFunc;
 
 private:

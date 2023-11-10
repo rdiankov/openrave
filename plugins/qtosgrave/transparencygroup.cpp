@@ -164,8 +164,8 @@ const char* osgtt::OutlineEffect::effectDescription() const
 
 namespace osgtt {
 
-TransparencyGroup::TransparencyGroup():
-_mode(NO_TRANSPARENCY) {
+TransparencyGroup::TransparencyGroup() :
+    _mode(NO_TRANSPARENCY) {
     _program          = getMainPassProgram();
     _scene            = new osg::Group();
     _blendFunc        = new osg::BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -180,10 +180,10 @@ _mode(NO_TRANSPARENCY) {
     _opaqueStateDoubleSided->setMode( GL_CULL_FACE, osg::StateAttribute::OFF ); // opaque doublesided should not cull
 }
 
-TransparencyGroup::TransparencyGroup(const TransparencyGroup& tg, const osg::CopyOp& co):
-osg::Group    (tg, co),
-_mode         (tg._mode),
-_scene        (tg._scene)
+TransparencyGroup::TransparencyGroup(const TransparencyGroup& tg, const osg::CopyOp& co) :
+    osg::Group    (tg, co),
+    _mode         (tg._mode),
+    _scene        (tg._scene)
 {
 }
 
@@ -296,7 +296,7 @@ void TransparencyGroup::setTransparencyMode(TransparencyMode mode)
         _transparentState->setAttributeAndModes(_blendFunc.get(), osg::StateAttribute::ON);
 
         _transparentStateDoubleSided->setAttributeAndModes(depth.get(), osg::StateAttribute::ON);
-        
+
         _transparentStateDoubleSided->setRenderingHint(osg::StateSet::DEFAULT_BIN);
         _transparentStateDoubleSided->setRenderBinDetails(12, "RenderBin");
         _transparentStateDoubleSided->setAttributeAndModes(_blendFunc.get(), osg::StateAttribute::ON);
