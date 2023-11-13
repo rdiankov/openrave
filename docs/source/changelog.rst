@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
 Version 0.134.1
 ===============
 
