@@ -896,6 +896,11 @@ public:
     RaveTransform<T> transform;
     RaveVector<T> extents;
 
+    RaveOrientedBox() {
+    }
+    RaveOrientedBox(const RaveTransform<T>& vtransform, const RaveVector<T>& vextents) : transform(vtransform), extents(vextents) {
+    }
+
     template<typename U> 
     inline bool operator==(const RaveOrientedBox<U>& other) const {
         return transform == other.transform && extents == other.extents;
@@ -2000,6 +2005,172 @@ inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAligne
 {
     RaveVector<T> v = ab1.pos-ab2.pos;
     return MATH_FABS(v.x) <= ab1.extents.x+ab2.extents.x && MATH_FABS(v.y) <= ab1.extents.y+ab2.extents.y && MATH_FABS(v.z) <= ab1.extents.z+ab2.extents.z;
+}
+
+/// \brief Test collision between two oriented bounding boxes.
+template <typename T>
+inline bool OBBCollision(const RaveOrientedBox<T>& obb1, const RaveOrientedBox<T>& obb2)
+{
+    const RaveTransform<T> relativeTransform = obb1.transform.inverse() * obb2.transform;
+    return BoxAtOriginOBBCollision(obb1.extents, RaveOrientedBox<T>(relativeTransform, obb2.extents));
+}
+
+/// \brief Test collision between an axis-aligned bounding box and an oriented bounding box.
+template <typename T>
+inline bool AABBOBBCollision(const RaveAxisAlignedBox<T>& ab, const RaveOrientedBox<T>& obb)
+{
+    const RaveTransform<T> relativeTransform(obb.transform.rot, obb.transform.trans - ab.pos);
+    return BoxAtOriginOBBCollision(ab.extents, RaveOrientedBox<T>(relativeTransform, obb.extents));
+}
+
+/// \brief Test collision between an axis-aligned bounding box located at world origin and an oriented bounding box.
+/// using Separating Axis Theorem.
+/// S. Gottschalk, M.C. Lin, D. Manocha. OBBTree: A Hierarchical Structure for Rapid Interference Detection. In Proceedings of SIGGRAPH '96.
+template <typename T>
+inline bool BoxAtOriginOBBCollision(const RaveVector<T>& extents, const RaveOrientedBox<T>& obb)
+{
+    const RaveVector<T>& relativeCenter = obb.transform.trans;
+    const RaveTransformMatrix<T> relativeRotationMatrix = matrixFromQuat(obb.transform.rot);
+    // rotation matrix
+    // 0 1 2
+    // 4 5 6
+    // 8 9 10
+    const std::array<RaveVector<T>, 3> relativeCoordinateAxes = {
+        RaveVector<T>(relativeRotationMatrix.m[0], relativeRotationMatrix.m[4], relativeRotationMatrix.m[8]),
+        RaveVector<T>(relativeRotationMatrix.m[1], relativeRotationMatrix.m[5], relativeRotationMatrix.m[9]),
+        RaveVector<T>(relativeRotationMatrix.m[2], relativeRotationMatrix.m[6], relativeRotationMatrix.m[10])
+    };
+    const std::array<RaveVector<T>, 3> absRelativeCoordinateAxes = {
+        RaveVector<T>(MATH_FABS(relativeCoordinateAxes[0].x), MATH_FABS(relativeCoordinateAxes[0].y), MATH_FABS(relativeCoordinateAxes[0].z)),
+        RaveVector<T>(MATH_FABS(relativeCoordinateAxes[1].x), MATH_FABS(relativeCoordinateAxes[1].y), MATH_FABS(relativeCoordinateAxes[1].z)),
+        RaveVector<T>(MATH_FABS(relativeCoordinateAxes[2].x), MATH_FABS(relativeCoordinateAxes[2].y), MATH_FABS(relativeCoordinateAxes[2].z))
+    };
+
+    // centerDistanceInSeparatingAxis = |dot(separatingAxis, relativeCenter)|
+    // box1ExtentsInSeparatingAxis = dot(|separatingAxis|, extents)
+    // box2ExtentsInSeparatingAxis = dot(|separatingAxis in box2 frame|, obb.extents) = dot(|relativeRotationMatrix^T separatingAxis|, obb.extents)
+
+    // 3 separating axes from box1 represented by extents: [1, 0, 0]^T, [0, 1, 0]^T, [0, 0, 1]^T
+    for (size_t iAxis = 0; iAxis < 3; ++iAxis) {
+        const T centerDistanceInSeparatingAxis = MATH_FABS(relativeCenter[iAxis]);
+        const T box1ExtentsInSeparatingAxis = extents[iAxis]; // always positive
+        T box2ExtentsInSeparatingAxis = 0;
+        for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
+            box2ExtentsInSeparatingAxis += absRelativeCoordinateAxes[iXYZ][iAxis] * obb.extents[iXYZ];
+        }
+        if (centerDistanceInSeparatingAxis > box1ExtentsInSeparatingAxis + box2ExtentsInSeparatingAxis) {
+            return false;
+        }
+    }
+    // 3 separating axes from box2 represented by obb
+    for (size_t iAxis = 0; iAxis < 3; ++iAxis) {
+        const T centerDistanceInSeparatingAxis = MATH_FABS(relativeCoordinateAxes[iAxis].dot3(relativeCenter));
+        T box1ExtentsInSeparatingAxis = 0;
+        for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
+            box1ExtentsInSeparatingAxis += absRelativeCoordinateAxes[iAxis][iXYZ] * extents[iXYZ];
+        }
+        const T box2ExtentsInSeparatingAxis = obb.extents[iAxis];
+        if (centerDistanceInSeparatingAxis > box1ExtentsInSeparatingAxis + box2ExtentsInSeparatingAxis) {
+            return false;
+        }
+    }
+
+    // 9 separating axes
+    // relativeRotationMatrix^T separatingAxis can be simplified even for these 9 separating axes
+    for (size_t iAxisForBox1 = 0; iAxisForBox1 < 3; ++iAxisForBox1) {
+        for (size_t iAxisForBox2 = 0; iAxisForBox2 < 3; ++iAxisForBox2) {
+            const RaveVector<T>& checkDirectionForBox2 = relativeCoordinateAxes[iAxisForBox2];
+            const RaveVector<T>& absCheckDirectionForBox2 = absRelativeCoordinateAxes[iAxisForBox2];
+            T centerDistanceInSeparatingAxis = 0;
+            T box1ExtentsInSeparatingAxis = 0;
+            T box2ExtentsInSeparatingAxis = 0;
+            for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
+                bool needComputation = true;
+                bool needComputationForBox2 = true;
+                T coeffForCenter = 0;
+                T coeffForBox1 = 0;
+                T coeffForBox2 = 0;
+                if (iXYZ == 0) {
+                    if (iAxisForBox1 == 0) {
+                        needComputation = false;
+                    }
+                    else if (iAxisForBox1 == 1) {
+                        coeffForCenter = checkDirectionForBox2[2];
+                        coeffForBox1 = absCheckDirectionForBox2[2];
+                    }
+                    else {
+                        coeffForCenter = -checkDirectionForBox2[1];
+                        coeffForBox1 = absCheckDirectionForBox2[1];
+                    }
+                    if (iAxisForBox2 == 0) {
+                        needComputationForBox2 = false;
+                    }
+                    else if (iAxisForBox2 == 1) {
+                        coeffForBox2 = absRelativeCoordinateAxes[2][iAxisForBox1];
+                    }
+                    else {
+                        coeffForBox2 = absRelativeCoordinateAxes[1][iAxisForBox1];
+                    }
+                }
+                else if (iXYZ == 1) {
+                    if (iAxisForBox1 == 0) {
+                        coeffForCenter = -checkDirectionForBox2[2];
+                        coeffForBox1 = absCheckDirectionForBox2[2];
+                    }
+                    else if (iAxisForBox1 == 1) {
+                        needComputation = false;
+                    }
+                    else {
+                        coeffForCenter = checkDirectionForBox2[0];
+                        coeffForBox1 = absCheckDirectionForBox2[0];
+                    }
+                    if (iAxisForBox2 == 0) {
+                        coeffForBox2 = absRelativeCoordinateAxes[2][iAxisForBox1];
+                    }
+                    else if (iAxisForBox2 == 1) {
+                        needComputationForBox2 = false;
+                    }
+                    else {
+                        coeffForBox2 = absRelativeCoordinateAxes[0][iAxisForBox1];
+                    }
+                }
+                else if (iXYZ == 2) {
+                    if (iAxisForBox1 == 0) {
+                        coeffForCenter = checkDirectionForBox2[1];
+                        coeffForBox1 = absCheckDirectionForBox2[1];
+                    }
+                    else if (iAxisForBox1 == 1) {
+                        coeffForCenter = -checkDirectionForBox2[0];
+                        coeffForBox1 = absCheckDirectionForBox2[0];
+                    }
+                    else {
+                        needComputation = false;
+                    }
+                    if (iAxisForBox2 == 0) {
+                        coeffForBox2 = absRelativeCoordinateAxes[1][iAxisForBox1];
+                    }
+                    else if (iAxisForBox2 == 1) {
+                        coeffForBox2 = absRelativeCoordinateAxes[0][iAxisForBox1];
+                    }
+                    else {
+                        needComputationForBox2 = false;
+                    }
+                }
+                if (needComputation) { // when needComputation is false, coeffForCenter / coeffForBox1 is 0
+                    centerDistanceInSeparatingAxis += coeffForCenter * relativeCenter[iXYZ];
+                    box1ExtentsInSeparatingAxis += coeffForBox1 * extents[iXYZ];
+                }
+                if (needComputationForBox2) {
+                    box2ExtentsInSeparatingAxis += coeffForBox2 * obb.extents[iXYZ];
+                }
+            }
+            centerDistanceInSeparatingAxis = MATH_FABS(centerDistanceInSeparatingAxis);
+            if (centerDistanceInSeparatingAxis > box1ExtentsInSeparatingAxis + box2ExtentsInSeparatingAxis) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 //bool AABBOBBTest(const AABB& a, const OBB& o)
