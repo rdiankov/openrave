@@ -107,6 +107,11 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
                     pbody->_AttachBody(pGrabbedBody);
                     pbody->_vGrabbedBodies.push_back(pGrabbed);
+                    // grabbed bodies could have been removed from env and self collision checker.
+                    CollisionCheckerBasePtr collisionchecker = pbody->GetSelfCollisionChecker();
+                    if (!!collisionchecker) {
+                        collisionchecker->InitKinBody(pGrabbedBody);
+                    }
                 }
                 else {
                     // The body that the state was saved from is from a different environment from pbody. This case can
@@ -315,7 +320,11 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
 
                             body._AttachBody(pNewGrabbedBody);
                             body._vGrabbedBodies.push_back(pNewGrabbed);
-                        }
+                            CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
+                            if (!!collisionchecker) {
+                                collisionchecker->InitKinBody(pNewGrabbedBody);
+                            }
+                       }
                     }
                     else {
                         RAVELOG_WARN_FORMAT("env=%s, could not find body with id %d (body '%s' from env=%s)", body.GetEnv()->GetNameId()%pGrabbedBody->GetEnvironmentBodyIndex()%pGrabbedBody->GetName()%_body.GetEnv()->GetNameId());

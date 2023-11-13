@@ -390,6 +390,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _nullbiassampleprob = nullbiassampleprob;
         _deltasampleprob = deltasampleprob;
         _busebiasing = true;
+        _InitRobotState(); // for recomputing biasing
         RAVELOG_VERBOSE_FORMAT("env=%s, set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", GetEnv()->GetNameId()%_nullsampleprob%_nullbiassampleprob%_deltasampleprob);
 #else
         throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot set manipulator bias since lapack is not supported"), ORE_CommandNotSupported);
@@ -776,7 +777,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                                 }
                             }
                             ss << "]";
-                            RAVELOG_VERBOSE_FORMAT("env=%s, link %s exceeded linkdisthresh. ellipdist[%e] > rhs[%e], %s", GetEnv()->GetNameId()%_vLinks[ilink]->GetName()%ellipdist%rhs%ss.str());
+                            RAVELOG_VERBOSE_FORMAT("env=%s, link '%s' exceeded linkdisthresh=%e. ellipdist[%e] > rhs[%e], %s", GetEnv()->GetNameId()%_linkdistthresh%_vLinks[ilink]->GetName()%ellipdist%rhs%ss.str());
                         }
                         break;
                     }
@@ -933,7 +934,7 @@ protected:
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
 #ifdef OPENRAVE_HAS_LAPACK
-        if( _busebiasing ) {
+        if( !!_pmanip ) { // have to always compute since _busebiasing might switch true/false without calling this function
             using namespace boost::numeric::ublas;
             _pmanip->CalculateJacobian(_mjacobian);
             boost::numeric::ublas::matrix<double, boost::numeric::ublas::column_major> J(3,_pmanip->GetArmIndices().size());
@@ -975,7 +976,8 @@ protected:
             }
             // dofvelocities = P3
             P3 = prod(trans(V),P3);
-            _vbiasdofdirection.resize(numdof);
+            _vbiasdofdirection.resize(_probot->GetActiveDOF());
+            std::fill(_vbiasdofdirection.begin(), _vbiasdofdirection.end(), 0);
             for(size_t i = 0; i < numdof; ++i) {
                 _vbiasdofdirection[i] = P3(i);
             }

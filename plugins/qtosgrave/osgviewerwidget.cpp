@@ -1063,7 +1063,7 @@ void QOSGViewerWidget::_UpdateHUDText()
         if( s.size() > 0 ) {
             s += "\n";
         }
-        s += _strRayInfoText;
+        s += _strUserText;
     }
     if( _strSelectedItemText.size() > 0 ) {
         if( s.size() > 0 ) {
