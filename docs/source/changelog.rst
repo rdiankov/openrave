@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.134.1
+===============
+
+* Fixed QtCoinViewer SetUserText, fixing compilation
+
 Version 0.134.0
 ===============
 
