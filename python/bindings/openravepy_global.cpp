@@ -1331,6 +1331,36 @@ object TransformLookat(object olookat, object ocamerapos, object ocameraup)
     return toPyArray(transformLookat(ExtractVector3(olookat),ExtractVector3(ocamerapos),ExtractVector3(ocameraup)));
 }
 
+object OrientedBoxFromAABB(object oab, object otransform)
+{
+    return toPyOrientedBox(OrientedBoxFromAABB(ExtractAABB(oab), ExtractTransform(otransform)));
+}
+
+object AABBFromOrientedBox(object oobb)
+{
+    return toPyAABB(AABBFromOrientedBox(ExtractOrientedBox(oobb)));
+}
+
+bool AABBCollision(object oab1, object oab2)
+{
+    return AABBCollision(ExtractAABB(oab1), ExtractAABB(oab2));
+}
+
+bool OBBCollision(object obb1, object oobb2)
+{
+    return OBBCollision(ExtractOrientedBox(obb1), ExtractOrientedBox(oobb2));
+}
+
+bool AABBOBBCollision(object oab, object oobb)
+{
+    return AABBOBBCollision(ExtractAABB(oab), ExtractOrientedBox(oobb));
+}
+
+bool BoxAtOriginOBBCollision(object oextents, object oobb)
+{
+    return BoxAtOriginOBBCollision(ExtractVector3(oextents), ExtractOrientedBox(oobb));
+}
+
 dReal ComputePoseDistSqr(object opose0, object opose1, dReal quatweight=1.0)
 {
     Transform t0 = ExtractTransformType<dReal>(opose0);
@@ -2451,6 +2481,12 @@ void init_openravepy_global()
 #else
     def("transformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
 #endif
+    m.def("OrientedBoxFromAABB",openravepy::OrientedBoxFromAABB,PY_ARGS("aabb","transform") "Transforms an axis aligned bounding box to an oriented bounding box expressed in transform.");
+    m.def("AABBFromOrientedBox",openravepy::AABBFromOrientedBox,PY_ARGS("obb") "Projects an obb along the world axes.");
+    m.def("AABBCollision",openravepy::AABBCollision,PY_ARGS("aabb1","aabb2") "Tests collision between two axis-aligned bounding boxes.");
+    m.def("OBBCollision",openravepy::OBBCollision,PY_ARGS("obb1","obb2") "Tests collision between two oriented bounding boxes.");
+    m.def("AABBOBBCollision",openravepy::AABBOBBCollision,PY_ARGS("aabb","obb") "Tests collision between an axis-aligned bounding box and an oriented bounding box.");
+    m.def("BoxAtOriginOBBCollision",openravepy::BoxAtOriginOBBCollision,PY_ARGS("extents","obb") "Tests collision between an axis-aligned bounding box located at world origin and an oriented bounding box.");
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("matrixSerialization",openravepy::matrixSerialization,PY_ARGS("transform") "Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
 #else
