@@ -2076,31 +2076,31 @@ inline bool BoxAtOriginOBBCollision(const RaveVector<T>& extents, const RaveOrie
     }
 
     // 9 separating axes
-    // relativeRotationMatrix^T separatingAxis can be simplified even for these 9 separating axes
+    // relativeRotationMatrix^T separatingAxis can be simplified even for these 9 separating axes using that the rotation matrix of box1 is an identity matrix. It requires to read the original paper to understand this optimization.
     for (size_t iAxisForBox1 = 0; iAxisForBox1 < 3; ++iAxisForBox1) {
         for (size_t iAxisForBox2 = 0; iAxisForBox2 < 3; ++iAxisForBox2) {
-            const RaveVector<T>& checkDirectionForBox2 = relativeCoordinateAxes[iAxisForBox2];
-            const RaveVector<T>& absCheckDirectionForBox2 = absRelativeCoordinateAxes[iAxisForBox2];
+            const RaveVector<T>& checkAxisForBox2 = relativeCoordinateAxes[iAxisForBox2];
+            const RaveVector<T>& absCheckAxisForBox2 = absRelativeCoordinateAxes[iAxisForBox2];
             T centerDistanceInSeparatingAxis = 0;
             T box1ExtentsInSeparatingAxis = 0;
             T box2ExtentsInSeparatingAxis = 0;
             for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
                 bool needComputation = true;
                 bool needComputationForBox2 = true;
-                T coeffForCenter = 0;
-                T coeffForBox1 = 0;
-                T coeffForBox2 = 0;
+                T coeffForCenter = 0; // == separatingAxis[iXYZ]
+                T coeffForBox1 = 0;   // == |separatingAxis|[iXYZ]
+                T coeffForBox2 = 0;   // == |relativeRotationMatrix^T separatingAxis|[iXYZ]
                 if (iXYZ == 0) {
                     if (iAxisForBox1 == 0) {
                         needComputation = false;
                     }
                     else if (iAxisForBox1 == 1) {
-                        coeffForCenter = checkDirectionForBox2[2];
-                        coeffForBox1 = absCheckDirectionForBox2[2];
+                        coeffForCenter = checkAxisForBox2[2];
+                        coeffForBox1 = absCheckAxisForBox2[2];
                     }
                     else {
-                        coeffForCenter = -checkDirectionForBox2[1];
-                        coeffForBox1 = absCheckDirectionForBox2[1];
+                        coeffForCenter = -checkAxisForBox2[1];
+                        coeffForBox1 = absCheckAxisForBox2[1];
                     }
                     if (iAxisForBox2 == 0) {
                         needComputationForBox2 = false;
@@ -2114,15 +2114,15 @@ inline bool BoxAtOriginOBBCollision(const RaveVector<T>& extents, const RaveOrie
                 }
                 else if (iXYZ == 1) {
                     if (iAxisForBox1 == 0) {
-                        coeffForCenter = -checkDirectionForBox2[2];
-                        coeffForBox1 = absCheckDirectionForBox2[2];
+                        coeffForCenter = -checkAxisForBox2[2];
+                        coeffForBox1 = absCheckAxisForBox2[2];
                     }
                     else if (iAxisForBox1 == 1) {
                         needComputation = false;
                     }
                     else {
-                        coeffForCenter = checkDirectionForBox2[0];
-                        coeffForBox1 = absCheckDirectionForBox2[0];
+                        coeffForCenter = checkAxisForBox2[0];
+                        coeffForBox1 = absCheckAxisForBox2[0];
                     }
                     if (iAxisForBox2 == 0) {
                         coeffForBox2 = absRelativeCoordinateAxes[2][iAxisForBox1];
@@ -2136,12 +2136,12 @@ inline bool BoxAtOriginOBBCollision(const RaveVector<T>& extents, const RaveOrie
                 }
                 else if (iXYZ == 2) {
                     if (iAxisForBox1 == 0) {
-                        coeffForCenter = checkDirectionForBox2[1];
-                        coeffForBox1 = absCheckDirectionForBox2[1];
+                        coeffForCenter = checkAxisForBox2[1];
+                        coeffForBox1 = absCheckAxisForBox2[1];
                     }
                     else if (iAxisForBox1 == 1) {
-                        coeffForCenter = -checkDirectionForBox2[0];
-                        coeffForBox1 = absCheckDirectionForBox2[0];
+                        coeffForCenter = -checkAxisForBox2[0];
+                        coeffForBox1 = absCheckAxisForBox2[0];
                     }
                     else {
                         needComputation = false;
