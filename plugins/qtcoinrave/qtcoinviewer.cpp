@@ -635,7 +635,7 @@ void QtCoinViewer::_SetName(const string& ptitle)
     setWindowTitle(ptitle.c_str());
 }
 
-void QtCoinViewer::SetUserText(const string& )
+void QtCoinViewer::SetUserText(const string& userText)
 {
     _userText = userText;
 }
