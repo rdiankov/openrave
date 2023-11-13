@@ -2079,92 +2079,32 @@ inline bool BoxAtOriginOBBCollision(const RaveVector<T>& extents, const RaveOrie
     // relativeRotationMatrix^T separatingAxis can be simplified even for these 9 separating axes using that the rotation matrix of box1 is an identity matrix. It requires to read the original paper to understand this optimization.
     for (size_t iAxisForBox1 = 0; iAxisForBox1 < 3; ++iAxisForBox1) {
         for (size_t iAxisForBox2 = 0; iAxisForBox2 < 3; ++iAxisForBox2) {
-            const RaveVector<T>& checkAxisForBox2 = relativeCoordinateAxes[iAxisForBox2];
-            const RaveVector<T>& absCheckAxisForBox2 = absRelativeCoordinateAxes[iAxisForBox2];
             T centerDistanceInSeparatingAxis = 0;
             T box1ExtentsInSeparatingAxis = 0;
-            T box2ExtentsInSeparatingAxis = 0;
-            for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
-                bool needComputation = true;
-                bool needComputationForBox2 = true;
-                T coeffForCenter = 0; // == separatingAxis[iXYZ]
-                T coeffForBox1 = 0;   // == |separatingAxis|[iXYZ]
-                T coeffForBox2 = 0;   // == |relativeRotationMatrix^T separatingAxis|[iXYZ]
-                if (iXYZ == 0) {
-                    if (iAxisForBox1 == 0) {
-                        needComputation = false;
-                    }
-                    else if (iAxisForBox1 == 1) {
-                        coeffForCenter = checkAxisForBox2[2];
-                        coeffForBox1 = absCheckAxisForBox2[2];
-                    }
-                    else {
-                        coeffForCenter = -checkAxisForBox2[1];
-                        coeffForBox1 = absCheckAxisForBox2[1];
-                    }
-                    if (iAxisForBox2 == 0) {
-                        needComputationForBox2 = false;
-                    }
-                    else if (iAxisForBox2 == 1) {
-                        coeffForBox2 = absRelativeCoordinateAxes[2][iAxisForBox1];
-                    }
-                    else {
-                        coeffForBox2 = absRelativeCoordinateAxes[1][iAxisForBox1];
-                    }
-                }
-                else if (iXYZ == 1) {
-                    if (iAxisForBox1 == 0) {
-                        coeffForCenter = -checkAxisForBox2[2];
-                        coeffForBox1 = absCheckAxisForBox2[2];
-                    }
-                    else if (iAxisForBox1 == 1) {
-                        needComputation = false;
-                    }
-                    else {
-                        coeffForCenter = checkAxisForBox2[0];
-                        coeffForBox1 = absCheckAxisForBox2[0];
-                    }
-                    if (iAxisForBox2 == 0) {
-                        coeffForBox2 = absRelativeCoordinateAxes[2][iAxisForBox1];
-                    }
-                    else if (iAxisForBox2 == 1) {
-                        needComputationForBox2 = false;
-                    }
-                    else {
-                        coeffForBox2 = absRelativeCoordinateAxes[0][iAxisForBox1];
-                    }
-                }
-                else if (iXYZ == 2) {
-                    if (iAxisForBox1 == 0) {
-                        coeffForCenter = checkAxisForBox2[1];
-                        coeffForBox1 = absCheckAxisForBox2[1];
-                    }
-                    else if (iAxisForBox1 == 1) {
-                        coeffForCenter = -checkAxisForBox2[0];
-                        coeffForBox1 = absCheckAxisForBox2[0];
-                    }
-                    else {
-                        needComputation = false;
-                    }
-                    if (iAxisForBox2 == 0) {
-                        coeffForBox2 = absRelativeCoordinateAxes[1][iAxisForBox1];
-                    }
-                    else if (iAxisForBox2 == 1) {
-                        coeffForBox2 = absRelativeCoordinateAxes[0][iAxisForBox1];
-                    }
-                    else {
-                        needComputationForBox2 = false;
-                    }
-                }
-                if (needComputation) { // when needComputation is false, coeffForCenter / coeffForBox1 is 0
-                    centerDistanceInSeparatingAxis += coeffForCenter * relativeCenter[iXYZ];
-                    box1ExtentsInSeparatingAxis += coeffForBox1 * extents[iXYZ];
-                }
-                if (needComputationForBox2) {
-                    box2ExtentsInSeparatingAxis += coeffForBox2 * obb.extents[iXYZ];
-                }
+            if (iAxisForBox1 == 0) { // 1st element of separatingAxis is 0 when iAxisForBox1 is 0
+                centerDistanceInSeparatingAxis =    -relativeCoordinateAxes[iAxisForBox2].z *    relativeCenter.y +    relativeCoordinateAxes[iAxisForBox2].y * relativeCenter.z;
+                box1ExtentsInSeparatingAxis    =  absRelativeCoordinateAxes[iAxisForBox2].z *           extents.y + absRelativeCoordinateAxes[iAxisForBox2].y *        extents.z;
+            }
+            else if (iAxisForBox1 == 1) { // 2nd element of separatingAxis is 0 when iAxisForBox1 is 1
+                centerDistanceInSeparatingAxis =    -relativeCoordinateAxes[iAxisForBox2].x *    relativeCenter.z +    relativeCoordinateAxes[iAxisForBox2].z * relativeCenter.x;
+                box1ExtentsInSeparatingAxis    =  absRelativeCoordinateAxes[iAxisForBox2].x *           extents.z + absRelativeCoordinateAxes[iAxisForBox2].z *        extents.x;
+            }
+            else if (iAxisForBox1 == 2) { // 3rd element of separatingAxis is 0 when iAxisForBox1 is 2
+                centerDistanceInSeparatingAxis =    -relativeCoordinateAxes[iAxisForBox2].y *    relativeCenter.x +    relativeCoordinateAxes[iAxisForBox2].x * relativeCenter.y;
+                box1ExtentsInSeparatingAxis    =  absRelativeCoordinateAxes[iAxisForBox2].y *           extents.x + absRelativeCoordinateAxes[iAxisForBox2].x *        extents.y;
             }
             centerDistanceInSeparatingAxis = MATH_FABS(centerDistanceInSeparatingAxis);
+
+            T box2ExtentsInSeparatingAxis = 0;
+            if (iAxisForBox2 == 0) { // 1st element of relativeRotationMatrix^T separatingAxis is 0 when iAxisForBox2 is 0
+                box2ExtentsInSeparatingAxis =       absRelativeCoordinateAxes[2][iAxisForBox1] *    obb.extents.y + absRelativeCoordinateAxes[1][iAxisForBox1] *   obb.extents.z;
+            }
+            else if (iAxisForBox2 == 1) { // 2nd element of relativeRotationMatrix^T separatingAxis is 0 when iAxisForBox2 is 1
+                box2ExtentsInSeparatingAxis =       absRelativeCoordinateAxes[0][iAxisForBox1] *    obb.extents.z + absRelativeCoordinateAxes[2][iAxisForBox1] *   obb.extents.x;
+            }
+            else if (iAxisForBox2 == 2) { // 3rd element of relativeRotationMatrix^T separatingAxis is 0 when iAxisForBox2 is 2
+                box2ExtentsInSeparatingAxis =       absRelativeCoordinateAxes[1][iAxisForBox1] *    obb.extents.x + absRelativeCoordinateAxes[0][iAxisForBox1] *   obb.extents.y;
+            }
             if (centerDistanceInSeparatingAxis > box1ExtentsInSeparatingAxis + box2ExtentsInSeparatingAxis) {
                 return false;
             }
