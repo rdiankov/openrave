@@ -635,6 +635,11 @@ void QtCoinViewer::_SetName(const string& ptitle)
     setWindowTitle(ptitle.c_str());
 }
 
+void QtCoinViewer::SetUserText(const string& userText)
+{
+    _userText = userText;
+}
+
 bool QtCoinViewer::LoadModel(const string& pfilename)
 {
     SoInput mySceneInput;
@@ -2789,6 +2794,10 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
 
         if( !!_pdragger ) {
             _pdragger->GetMessage(ss);
+        }
+
+        if (_userText.size() > 0 ) {
+            ss << _userText << endl;
         }
 
         // adjust the shadow text

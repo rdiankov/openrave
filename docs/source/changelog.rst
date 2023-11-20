@@ -6,6 +6,18 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.134.1
+===============
+
+* Fixed QtCoinViewer SetUserText, fixing compilation
+
+Version 0.134.0
+===============
+
+* Add AABBFromOrientedBox
+
+* Add ViewerBase::SetUserText
+
 Version 0.133.3
 ===============
 
