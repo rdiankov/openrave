@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.135.0
+===============
+
+* Hold active gometry group name in KinBody so that fclspace can correctly set the group name per body
+
 Version 0.134.1
 ===============
 
