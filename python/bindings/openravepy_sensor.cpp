@@ -682,10 +682,12 @@ PySensorGeometryPtr toPySensorGeometry(const std::string& sensorname, const rapi
     SensorBase::SensorGeometryPtr pgeom;
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Sensor, sensorname, ReadablePtr(), AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(docSensorGeometry);
-        ReadablePtr pReadable = pReader->GetReadable();
-        if (!!pReadable) {
-            pgeom = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+        if( docSensorGeometry.IsObject() ) {
+            pReader->DeserializeJSON(docSensorGeometry);
+            ReadablePtr pReadable = pReader->GetReadable();
+            if (!!pReadable) {
+                pgeom = OPENRAVE_DYNAMIC_POINTER_CAST<SensorBase::SensorGeometry>(pReadable);
+            }
         }
     } else {
         RAVELOG_WARN_FORMAT("failed to get json reader for sensor type \"%s\"", sensorname);

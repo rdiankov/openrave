@@ -2539,7 +2539,9 @@ bool SensorBase::SensorGeometry::SerializeJSON(rapidjson::Value& value, rapidjso
 
 bool SensorBase::SensorGeometry::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    orjson::LoadJsonValueByKey(value, "hardwareId", hardware_id);
+    if( value.HasMember("hardwareId") ) {
+        orjson::LoadJsonValueByKey(value, "hardwareId", hardware_id);
+    }
     return true;
 }
 
