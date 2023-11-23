@@ -266,6 +266,7 @@ public:
     py::object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
     dReal GetMass() const;
     py::object GetCenterOfMass() const;
+    py::object GetActiveGeometryGroup() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
     bool SetVisible(bool visible);

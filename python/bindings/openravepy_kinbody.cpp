@@ -3570,6 +3570,11 @@ object PyKinBody::GetCenterOfMass() const
     return toPyVector3(_pbody->GetCenterOfMass());
 }
 
+object PyKinBody::GetActiveGeometryGroup() const
+{
+    return ConvertStringToUnicode(_pbody->GetActiveGeometryGroup());
+}
+
 void PyKinBody::Enable(bool bEnable)
 {
     _pbody->Enable(bEnable);
@@ -5857,6 +5862,7 @@ void init_openravepy_kinbody()
 #endif
                          .def("GetMass", &PyKinBody::GetMass, DOXY_FN(KinBody,GetMass))
                          .def("GetCenterOfMass", &PyKinBody::GetCenterOfMass, DOXY_FN(KinBody,GetCenterOfMass))
+                         .def("GetActiveGeometryGroup", &PyKinBody::GetActiveGeometryGroup, DOXY_FN(KinBody,GetActiveGeometryGroup))
                          .def("Enable",&PyKinBody::Enable,PY_ARGS("enable") DOXY_FN(KinBody,Enable))
                          .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
                          .def("SetVisible",&PyKinBody::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody,SetVisible))

@@ -713,31 +713,35 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geome
 void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
 {
     // need to call _PostprocessChangedParameters at the very end, even if exception occurs
-    CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
-    _activeGeometryGroup = geomname;
-    FOREACHC(itlink, _veclinks) {
-        std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
-        if( geomname.size() == 0 ) {
-            pvinfos = &(*itlink)->_info._vgeometryinfos;
-        }
-        else {
-            std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
-            if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
+    {
+        CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
+        FOREACHC(itlink, _veclinks) {
+            std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
+            if( geomname.size() == 0 ) {
+                pvinfos = &(*itlink)->_info._vgeometryinfos;
             }
-            pvinfos = &it->second;
-        }
-        (*itlink)->_vGeometries.resize(pvinfos->size());
-        for(size_t i = 0; i < pvinfos->size(); ++i) {
-            (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
-            if( (*itlink)->_vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) { // try to avoid recomputing
-                (*itlink)->_vGeometries[i]->InitCollisionMesh();
+            else {
+                std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
+                if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
+                }
+                pvinfos = &it->second;
             }
+            (*itlink)->_vGeometries.resize(pvinfos->size());
+            for(size_t i = 0; i < pvinfos->size(); ++i) {
+                (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
+                if( (*itlink)->_vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) { // try to avoid recomputing
+                    (*itlink)->_vGeometries[i]->InitCollisionMesh();
+                }
+            }
+            (*itlink)->_Update(false);
         }
-        (*itlink)->_Update(false);
+        // have to reset the adjacency cache
+        _ResetInternalCollisionCache();
     }
-    // have to reset the adjacency cache
-    _ResetInternalCollisionCache();
+    _activeGeometryGroup = geomname;
+    CollisionCheckerBasePtr collisionchecker = GetEnv()->GetCollisionChecker(); // Do not update self collision checker's geometry group. update only for env collision checker.
+    collisionchecker->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
 }
 
 void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
