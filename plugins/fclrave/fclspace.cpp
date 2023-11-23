@@ -91,6 +91,7 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
     pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
     // make sure that synchronization do occur !
     pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
+    pinfo->_geometrygroup = pbody->GetActiveGeometryGroup();
 
     pinfo->vlinks.reserve(pbody->GetLinks().size());
     FOREACHC(itlink, pbody->GetLinks()) {

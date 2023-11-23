@@ -2921,6 +2921,8 @@ private:
     /// \brief Return the center of mass of entire body in the world coordinate system.
     Vector GetCenterOfMass() const;
 
+    const std::string& GetActiveGeometryGroup() const;
+
     /// \brief Enables or disables all the links.
     void Enable(bool enable);
 
@@ -3685,6 +3687,7 @@ protected:
 
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
+    std::string _activeGeometryGroup;
     boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
     Transform _baseLinkInBodyTransform; ///< the transform of the base link in the body coordinate frame. The body transform returned is baselink->GetTransform() * _baseLinkInBodyTransform.inverse(). When setting a transform, the base link transform becomes body->GetTransform() * _baseLinkInBodyTransform
     Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup

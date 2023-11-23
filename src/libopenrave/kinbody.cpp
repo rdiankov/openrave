@@ -438,6 +438,7 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _bAreAllJoints1DOFAndNonCircular = false;
     _lastModifiedAtUS = 0;
     _revisionId = 0;
+    _activeGeometryGroup.clear();
 }
 
 KinBody::~KinBody()
@@ -492,6 +493,7 @@ void KinBody::Destroy()
 
     __hashKinematicsGeometryDynamics.resize(0);
     ClearReadableInterfaces();
+    _activeGeometryGroup.clear();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -712,6 +714,7 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
 {
     // need to call _PostprocessChangedParameters at the very end, even if exception occurs
     CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
+    _activeGeometryGroup = geomname;
     FOREACHC(itlink, _veclinks) {
         std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
         if( geomname.size() == 0 ) {
@@ -2053,6 +2056,11 @@ Vector KinBody::GetCenterOfMass() const
         center /= fTotalMass;
     }
     return center;
+}
+
+const std::string& KinBody::GetActiveGeometryGroup() const
+{
+    return _activeGeometryGroup;
 }
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
