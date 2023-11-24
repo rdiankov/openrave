@@ -1998,25 +1998,25 @@ inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAligne
 
 /// \brief Test collision between two oriented bounding boxes.
 template <typename T>
-inline bool OBBCollision(const RaveOrientedBox<T>& obb1, const RaveOrientedBox<T>& obb2)
+inline bool CheckOBBCollision(const RaveOrientedBox<T>& obb1, const RaveOrientedBox<T>& obb2)
 {
     const RaveTransform<T> relativeTransform = obb1.transform.inverse() * obb2.transform;
-    return BoxAtOriginOBBCollision(obb1.extents, RaveOrientedBox<T>(relativeTransform, obb2.extents));
+    return CheckBoxAtOriginAndOBBCollision(obb1.extents, RaveOrientedBox<T>(relativeTransform, obb2.extents));
 }
 
 /// \brief Test collision between an axis-aligned bounding box and an oriented bounding box.
 template <typename T>
-inline bool AABBOBBCollision(const RaveAxisAlignedBox<T>& ab, const RaveOrientedBox<T>& obb)
+inline bool CheckAABBAndOBBCollision(const RaveAxisAlignedBox<T>& ab, const RaveOrientedBox<T>& obb)
 {
     const RaveTransform<T> relativeTransform(obb.transform.rot, obb.transform.trans - ab.pos);
-    return BoxAtOriginOBBCollision(ab.extents, RaveOrientedBox<T>(relativeTransform, obb.extents));
+    return CheckBoxAtOriginAndOBBCollision(ab.extents, RaveOrientedBox<T>(relativeTransform, obb.extents));
 }
 
 /// \brief Test collision between an axis-aligned bounding box located at world origin and an oriented bounding box.
 /// using Separating Axis Theorem.
 /// S. Gottschalk, M.C. Lin, D. Manocha. OBBTree: A Hierarchical Structure for Rapid Interference Detection. In Proceedings of SIGGRAPH '96.
 template <typename T>
-inline bool BoxAtOriginOBBCollision(const RaveVector<T>& extents, const RaveOrientedBox<T>& obb)
+inline bool CheckBoxAtOriginAndOBBCollision(const RaveVector<T>& extents, const RaveOrientedBox<T>& obb)
 {
     const RaveVector<T>& relativeCenter = obb.transform.trans;
     const RaveTransformMatrix<T> relativeRotationMatrix = matrixFromQuat(obb.transform.rot);

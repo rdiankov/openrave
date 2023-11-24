@@ -1346,19 +1346,19 @@ bool AABBCollision(object oab1, object oab2)
     return AABBCollision(ExtractAABB(oab1), ExtractAABB(oab2));
 }
 
-bool OBBCollision(object obb1, object oobb2)
+bool CheckOBBCollision(object obb1, object oobb2)
 {
-    return OBBCollision(ExtractOrientedBox(obb1), ExtractOrientedBox(oobb2));
+    return CheckOBBCollision(ExtractOrientedBox(obb1), ExtractOrientedBox(oobb2));
 }
 
-bool AABBOBBCollision(object oab, object oobb)
+bool CheckAABBAndOBBCollision(object oab, object oobb)
 {
-    return AABBOBBCollision(ExtractAABB(oab), ExtractOrientedBox(oobb));
+    return CheckAABBAndOBBCollision(ExtractAABB(oab), ExtractOrientedBox(oobb));
 }
 
-bool BoxAtOriginOBBCollision(object oextents, object oobb)
+bool CheckBoxAtOriginAndOBBCollision(object oextents, object oobb)
 {
-    return BoxAtOriginOBBCollision(ExtractVector3(oextents), ExtractOrientedBox(oobb));
+    return CheckBoxAtOriginAndOBBCollision(ExtractVector3(oextents), ExtractOrientedBox(oobb));
 }
 
 dReal ComputePoseDistSqr(object opose0, object opose1, dReal quatweight=1.0)
@@ -2575,9 +2575,9 @@ void init_openravepy_global()
     m.def("OrientedBoxFromAABB",openravepy::OrientedBoxFromAABB,PY_ARGS("aabb","transform") "Transforms an axis aligned bounding box to an oriented bounding box expressed in transform.");
     m.def("AABBFromOrientedBox",openravepy::AABBFromOrientedBox,PY_ARGS("obb") "Projects an obb along the world axes.");
     m.def("AABBCollision",openravepy::AABBCollision,PY_ARGS("aabb1","aabb2") "Tests collision between two axis-aligned bounding boxes.");
-    m.def("OBBCollision",openravepy::OBBCollision,PY_ARGS("obb1","obb2") "Tests collision between two oriented bounding boxes.");
-    m.def("AABBOBBCollision",openravepy::AABBOBBCollision,PY_ARGS("aabb","obb") "Tests collision between an axis-aligned bounding box and an oriented bounding box.");
-    m.def("BoxAtOriginOBBCollision",openravepy::BoxAtOriginOBBCollision,PY_ARGS("extents","obb") "Tests collision between an axis-aligned bounding box located at world origin and an oriented bounding box.");
+    m.def("CheckOBBCollision",openravepy::CheckOBBCollision,PY_ARGS("obb1","obb2") "Tests collision between two oriented bounding boxes.");
+    m.def("CheckAABBAndOBBCollision",openravepy::CheckAABBAndOBBCollision,PY_ARGS("aabb","obb") "Tests collision between an axis-aligned bounding box and an oriented bounding box.");
+    m.def("CheckBoxAtOriginAndOBBCollision",openravepy::CheckBoxAtOriginAndOBBCollision,PY_ARGS("extents","obb") "Tests collision between an axis-aligned bounding box located at world origin and an oriented bounding box.");
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("matrixSerialization",openravepy::matrixSerialization,PY_ARGS("transform") "Serializes a transformation into a string representing a 3x4 matrix.\n\n:param transform: 3x4 or 4x4 array\n");
 #else
