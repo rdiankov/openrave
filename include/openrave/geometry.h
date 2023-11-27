@@ -1989,8 +1989,16 @@ inline obb<T> TransformOBB(const RaveTransformMatrix<T>& t, const obb<T>& o)
 /// \brief Test collision between two axis-aligned bounding boxes.
 ///
 /// \ingroup geometric_primitives
+template <typename T> RAVE_DEPRECATED
+inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2) {
+    return CheckAABBCollision(ab1, ab2);
+}
+
+/// \brief Test collision between two axis-aligned bounding boxes.
+///
+/// \ingroup geometric_primitives
 template <typename T>
-inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2)
+inline bool CheckAABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2)
 {
     RaveVector<T> v = ab1.pos-ab2.pos;
     return MATH_FABS(v.x) <= ab1.extents.x+ab2.extents.x && MATH_FABS(v.y) <= ab1.extents.y+ab2.extents.y && MATH_FABS(v.z) <= ab1.extents.z+ab2.extents.z;

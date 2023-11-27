@@ -1341,9 +1341,15 @@ object AABBFromOrientedBox(object oobb)
     return toPyAABB(AABBFromOrientedBox(ExtractOrientedBox(oobb)));
 }
 
+bool CheckAABBCollision(object oab1, object oab2)
+{
+    return CheckAABBCollision(ExtractAABB(oab1), ExtractAABB(oab2));
+}
+
+// DEPRECATED. Please use CheckAABBCollision instead.
 bool AABBCollision(object oab1, object oab2)
 {
-    return AABBCollision(ExtractAABB(oab1), ExtractAABB(oab2));
+    return CheckAABBCollision(oab1, oab2);
 }
 
 bool CheckOBBCollision(object obb1, object oobb2)
@@ -2574,7 +2580,8 @@ void init_openravepy_global()
 #endif
     m.def("OrientedBoxFromAABB",openravepy::OrientedBoxFromAABB,PY_ARGS("aabb","transform") "Transforms an axis aligned bounding box to an oriented bounding box expressed in transform.");
     m.def("AABBFromOrientedBox",openravepy::AABBFromOrientedBox,PY_ARGS("obb") "Projects an obb along the world axes.");
-    m.def("AABBCollision",openravepy::AABBCollision,PY_ARGS("aabb1","aabb2") "Tests collision between two axis-aligned bounding boxes.");
+    m.def("AABBCollision",openravepy::AABBCollision,PY_ARGS("aabb1","aabb2") "deprecated. Please use CheckAABBCollision instead.");
+    m.def("CheckAABBCollision",openravepy::CheckAABBCollision,PY_ARGS("aabb1","aabb2") "Tests collision between two axis-aligned bounding boxes.");
     m.def("CheckOBBCollision",openravepy::CheckOBBCollision,PY_ARGS("obb1","obb2") "Tests collision between two oriented bounding boxes.");
     m.def("CheckAABBAndOBBCollision",openravepy::CheckAABBAndOBBCollision,PY_ARGS("aabb","obb") "Tests collision between an axis-aligned bounding box and an oriented bounding box.");
     m.def("CheckBoxAtOriginAndOBBCollision",openravepy::CheckBoxAtOriginAndOBBCollision,PY_ARGS("extents","obb") "Tests collision between an axis-aligned bounding box located at world origin and an oriented bounding box.");
