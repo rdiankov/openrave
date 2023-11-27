@@ -433,6 +433,31 @@ def DrawCircle(env, center, normal, radius, linewidth=1, colors=None):
     up = R[0:3,1]*radius
     return env.drawlinestrip(numpy.c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
 
+def DrawPlane(env, normal, origin, extents=None, colors=None):
+    """Draws a plane whose normal is given by `normal` and that passes through the given `origin`. Both `normal` and
+    `origin` are expected to be in the global coordinate.
+
+    """
+    if extents is None:
+        extents = [1, 1, 0]
+    if colors is None:
+        colors = [1, 1, 1]
+    epsilon = 1e-6
+    crossProd = numpy.cross(normal, numpy.array([0, 0, 1], float))
+    if numpy.linalg.norm(crossProd) <= epsilon:
+        crossProd = numpy.cross(normal, numpy.array([1, 0, 0], float))
+        if numpy.linalg.norm(crossProd) <= epsilon:
+            crossProd = numpy.cross(normal, numpy.array([0, 1, 0], float))
+            assert numpy.linalg.norm(crossProd) > epsilon
+    crossProd = crossProd/numpy.linalg.norm(crossProd) # unit vector
+    perpVector = numpy.cross(normal, crossProd)
+    # Put normal in the third column -> z-axis
+    R = numpy.vstack([crossProd, perpVector, normal]).transpose()
+    T = numpy.eye(4)
+    T[0:3, 0:3] = R
+    T[0:3, 3] = origin
+    return env.drawplane(T, extents, [[colors]])
+
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
     indices = numpy.reshape([0, 1, 2, 1, 2, 3, 4, 5, 6, 5, 6, 7, 0, 1, 4, 1, 4, 5, 2, 3, 6, 3, 6, 7, 0, 2, 4, 2, 4, 6, 1, 3, 5,3, 5, 7],(12,3))
