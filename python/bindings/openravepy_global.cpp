@@ -1346,12 +1346,6 @@ bool CheckAABBCollision(object oab1, object oab2)
     return CheckAABBCollision(ExtractAABB(oab1), ExtractAABB(oab2));
 }
 
-// DEPRECATED. Please use CheckAABBCollision instead.
-bool AABBCollision(object oab1, object oab2)
-{
-    return CheckAABBCollision(oab1, oab2);
-}
-
 bool CheckOBBCollision(object obb1, object oobb2)
 {
     return CheckOBBCollision(ExtractOrientedBox(obb1), ExtractOrientedBox(oobb2));
