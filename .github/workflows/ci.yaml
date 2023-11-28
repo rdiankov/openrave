@@ -96,9 +96,8 @@ jobs:
         cmake .. -GNinja -DUSE_PYBIND11_PYTHON_BINDINGS=ON -DOPT_PYTHON=OFF
         ninja -j4 && sudo ninja install
         cd ..
-
-        # no need to symlink /usr/local/lib/python3/dist-packages/openravepy as we use python from actions/setup-python
     - name: Basic Test
+      # setup-python does not look at /usr/local/lib
       # todo: check other tests
       run: |
-        OPENRAVE_DATA=$PWD/src python3 -m nose test/test_controller.py
+        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/src python3 -m nose test/test_controller.py
