@@ -97,13 +97,7 @@ jobs:
         ninja -j4 && sudo ninja install
         cd ..
 
-        # https://bugs.launchpad.net/ubuntu/+source/python3-stdlib-extensions/+bug/1832215
-        for ver in 3.8 3.9 3.10 3.11 3.12 3.13; do
-          if [ -d /usr/local/lib/python${ver} ] && [ ! -d /usr/local/lib/python${ver}/dist-packages/openravepy ]; then
-            sudo ln -s /usr/local/lib/python3/dist-packages/openravepy /usr/local/lib/python${ver}/dist-packages/openravepy
-            sudo ln -s /usr/local/lib/python3/dist-packages/sympy /usr/local/lib/python${ver}/dist-packages/sympy
-          fi
-        done
+        # no need to symlink /usr/local/lib/python3/dist-packages/openravepy as we use python from actions/setup-python
     - name: Basic Test
       # todo: check other tests
       run: |
