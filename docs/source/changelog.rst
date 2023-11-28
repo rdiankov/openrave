@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
+
 Version 0.134.1
 ===============
 

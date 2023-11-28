@@ -321,14 +321,18 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 continue;
             }
 
-            if (isDeleted) {
-                // ignore
+            if( itMatchingName != _vGrabbedInfos.end() ) {
+                if (isDeleted) {
+                    _vGrabbedInfos.erase(itMatchingId);
+                    continue;
+                }
+                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
+                (*itMatchingName)->_id = id;
                 continue;
             }
 
-            if( itMatchingName != _vGrabbedInfos.end() ) {
-                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
-                (*itMatchingName)->_id = id;
+            if (isDeleted) {
+                // ignore
                 continue;
             }
 
