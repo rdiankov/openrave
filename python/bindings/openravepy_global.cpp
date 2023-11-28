@@ -2574,7 +2574,6 @@ void init_openravepy_global()
 #endif
     m.def("OrientedBoxFromAABB",openravepy::OrientedBoxFromAABB,PY_ARGS("aabb","transform") "Transforms an axis aligned bounding box to an oriented bounding box expressed in transform.");
     m.def("AABBFromOrientedBox",openravepy::AABBFromOrientedBox,PY_ARGS("obb") "Projects an obb along the world axes.");
-    m.def("AABBCollision",openravepy::AABBCollision,PY_ARGS("aabb1","aabb2") "deprecated. Please use CheckAABBCollision instead.");
     m.def("CheckAABBCollision",openravepy::CheckAABBCollision,PY_ARGS("aabb1","aabb2") "Tests collision between two axis-aligned bounding boxes.");
     m.def("CheckOBBCollision",openravepy::CheckOBBCollision,PY_ARGS("obb1","obb2") "Tests collision between two oriented bounding boxes.");
     m.def("CheckAABBAndOBBCollision",openravepy::CheckAABBAndOBBCollision,PY_ARGS("aabb","obb") "Tests collision between an axis-aligned bounding box and an oriented bounding box.");
