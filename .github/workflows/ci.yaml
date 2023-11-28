@@ -13,6 +13,7 @@ jobs:
         architecture: ["x64"]
 
     steps:
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       if: ${{ matrix.python-version != 'pyston' }}
       uses: actions/setup-python@v4
