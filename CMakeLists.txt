@@ -417,7 +417,7 @@ find_package(LibXml2 REQUIRED)
 
 add_library(openrave_gpgme IMPORTED INTERFACE)
 if (OPT_ENCRYPTION)
-  find_package(Gpgmepp 1.14 REQUIRED)
+  find_package(Gpgmepp 1.13 REQUIRED)
   target_link_libraries(openrave_gpgme INTERFACE Gpgmepp)
   target_compile_definitions(openrave_gpgme INTERFACE "OPENRAVE_ENCRYPTION=1")
 endif()
