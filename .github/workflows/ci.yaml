@@ -32,15 +32,6 @@ jobs:
         python3 -m pip install numpy==1.24.3 IPython==8.14.0
         python3 -m pip install https://github.com/cielavenir/sympy/releases/download/0.7.1-py3/sympy-0.7.1-py3.tar.gz
         python3 -m pip install scipy==1.10.1
-    - name: Set up RapidJSON
-      run: |
-        set -e
-        git clone https://github.com/Tencent/rapidjson.git && mkdir rapidjson/build
-        cd rapidjson/build
-        # there are no stable version available
-        cmake .. -GNinja -DRAPIDJSON_HAS_STDSTRING=ON -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
-        ninja -j4 && sudo ninja install
-        cd ../..
     - name: Install RapidJSON
       run: |
         set -e
