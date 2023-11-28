@@ -91,6 +91,7 @@ jobs:
         cd ../..
     - name: Install
       run: |
+        set -e
         mkdir -p build
         cd build
         cmake .. -GNinja -DUSE_PYBIND11_PYTHON_BINDINGS=ON -DOPT_PYTHON=OFF
