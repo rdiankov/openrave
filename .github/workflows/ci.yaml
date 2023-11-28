@@ -21,16 +21,16 @@ jobs:
         architecture: ${{ matrix.architecture }}
     - name: Set up APT
       run: |
-        apt-get update -y
-        apt-get -y install dirmngr gnupg apt-transport-https liblog4cxx-dev libopenscenegraph-dev python3-dev python3-setuptools python3-pip python3-nose libcoin-dev libsoqt520-dev
-        apt-get -y install g++ gfortran git pkg-config debhelper gettext zlib1g-dev libminizip-dev libxml2-dev liburiparser-dev libpcre3-dev libgmp-dev libmpfr-dev qtbase5-dev libqt5opengl5-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libqhull-dev libann-dev libhdf5-serial-dev liblapack-dev libboost-iostreams-dev libboost-regex-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libboost-date-time-dev libboost-test-dev libmpfi-dev ffmpeg libtinyxml-dev libflann-dev sqlite3 libccd-dev libeigen3-dev libgpgme-dev libgpgmepp-dev
-        apt-get update -y
-        apt-get -y install cmake-data cmake cmake-curses-gui python3-coverage python3-opengl python3-six ninja-build
+        sudo apt-get update -y
+        sudo apt-get -y install dirmngr gnupg apt-transport-https liblog4cxx-dev libopenscenegraph-dev python3-dev python3-setuptools python3-pip python3-nose libcoin-dev libsoqt520-dev
+        sudo apt-get -y install g++ gfortran git pkg-config debhelper gettext zlib1g-dev libminizip-dev libxml2-dev liburiparser-dev libpcre3-dev libgmp-dev libmpfr-dev qtbase5-dev libqt5opengl5-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libqhull-dev libann-dev libhdf5-serial-dev liblapack-dev libboost-iostreams-dev libboost-regex-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libboost-date-time-dev libboost-test-dev libmpfi-dev ffmpeg libtinyxml-dev libflann-dev sqlite3 libccd-dev libeigen3-dev libgpgme-dev libgpgmepp-dev
+        sudo apt-get update -y
+        sudo apt-get -y install cmake-data cmake cmake-curses-gui python3-coverage python3-opengl python3-six ninja-build
     - name: Set up Python modules
       run: |
-        python3 -m pip install numpy==1.24.3 IPython==8.14.0
-        python3 -m pip install https://github.com/cielavenir/sympy/releases/download/0.7.1-py3/sympy-0.7.1-py3.tar.gz
-        python3 -m pip install scipy==1.10.1
+        sudo python3 -m pip install numpy==1.24.3 IPython==8.14.0
+        sudo python3 -m pip install https://github.com/cielavenir/sympy/releases/download/0.7.1-py3/sympy-0.7.1-py3.tar.gz
+        sudo python3 -m pip install scipy==1.10.1
     - name: Set up RapidJSON
       run: |
         set -e
@@ -38,7 +38,7 @@ jobs:
         cd rapidjson/build
         # there are no stable version available
         cmake .. -GNinja -DRAPIDJSON_HAS_STDSTRING=ON -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
-        ninja -j4 && ninja install
+        ninja -j4 && sudo ninja install
         cd ../..
     - name: Install RapidJSON
       run: |
@@ -47,7 +47,7 @@ jobs:
         cd rapidjson/build
         # there are no stable version available
         cmake .. -GNinja -DRAPIDJSON_HAS_STDSTRING=ON -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
-        ninja -j4 && ninja install
+        ninja -j4 && sudo ninja install
         cd ../..
     - name: Install ASSIMP
       run: |
@@ -56,7 +56,7 @@ jobs:
         cd assimp/build
         git checkout v5.2.5
         cmake .. -GNinja
-        ninja -j4 && ninja install
+        ninja -j4 && sudo ninja install
         cd ../..
     - name: Install Fcl
       run: |
@@ -65,7 +65,7 @@ jobs:
         cd fcl/build
         git checkout origin/trimeshContactPoints20200813
         cmake .. -GNinja -DFCL_BUILD_TESTS=OFF
-        ninja -j4 && ninja install
+        ninja -j4 && sudo ninja install
         cd ../..
     - name: Install Pybind11
       # Need patched version of pybind11:
@@ -84,7 +84,7 @@ jobs:
         git checkout ciel/v2.9_ty
 
         cmake .. -GNinja -DPYBIND11_TEST=OFF -DPythonLibsNew_FIND_VERSION=3
-        ninja -j4 && ninja install
+        ninja -j4 && sudo ninja install
         cd ../..
     - name: Install msgpack-c
       run: |
@@ -94,24 +94,24 @@ jobs:
         git checkout cpp-6.0.0
 
         cmake .. -GNinja -DMSGPACK_BUILD_EXAMPLES=OFF -DMSGPACK_BUILD_TESTS=OFF
-        ninja -j4 && ninja install
+        ninja -j4 && sudo ninja install
         cd ../..
     - name: Install
       run: |
         mkdir -p build
         cd build
         cmake .. -GNinja -DUSE_PYBIND11_PYTHON_BINDINGS=ON -DOPT_PYTHON=OFF
-        ninja -j4 && ninja install
-        cd ../..
+        ninja -j4 && sudo ninja install
+        cd ..
 
         # https://bugs.launchpad.net/ubuntu/+source/python3-stdlib-extensions/+bug/1832215
         for ver in 3.8 3.9 3.10 3.11 3.12 3.13; do
           if [ -d /usr/local/lib/python${ver} ] && [ ! -d /usr/local/lib/python${ver}/dist-packages/openravepy ]; then
-            ln -s /usr/local/lib/python3/dist-packages/openravepy /usr/local/lib/python${ver}/dist-packages/openravepy
-            ln -s /usr/local/lib/python3/dist-packages/sympy /usr/local/lib/python${ver}/dist-packages/sympy
+            sudo ln -s /usr/local/lib/python3/dist-packages/openravepy /usr/local/lib/python${ver}/dist-packages/openravepy
+            sudo ln -s /usr/local/lib/python3/dist-packages/sympy /usr/local/lib/python${ver}/dist-packages/sympy
           fi
         done
     - name: Basic Test
       # todo: check other tests
       run: |
-        python3 -m nose test/test_controller.py
+        OPENRAVE_DATA=$PWD/src python3 -m nose test/test_controller.py
