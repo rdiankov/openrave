@@ -442,7 +442,6 @@ KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(ty
     _bAreAllJoints1DOFAndNonCircular = false;
     _lastModifiedAtUS = 0;
     _revisionId = 0;
-    _activeGeometryGroup.clear();
 }
 
 KinBody::~KinBody()
@@ -497,7 +496,6 @@ void KinBody::Destroy()
 
     __hashKinematicsGeometryDynamics.resize(0);
     ClearReadableInterfaces();
-    _activeGeometryGroup.clear();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -714,38 +712,38 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geome
     return true;
 }
 
-void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
+void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker)
 {
     // need to call _PostprocessChangedParameters at the very end, even if exception occurs
-    {
-        CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
-        FOREACHC(itlink, _veclinks) {
-            std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
-            if( geomname.size() == 0 ) {
-                pvinfos = &(*itlink)->_info._vgeometryinfos;
-            }
-            else {
-                std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
-                if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
-                }
-                pvinfos = &it->second;
-            }
-            (*itlink)->_vGeometries.resize(pvinfos->size());
-            for(size_t i = 0; i < pvinfos->size(); ++i) {
-                (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
-                if( (*itlink)->_vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) { // try to avoid recomputing
-                    (*itlink)->_vGeometries[i]->InitCollisionMesh();
-                }
-            }
-            (*itlink)->_Update(false);
+    CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
+    FOREACHC(itlink, _veclinks) {
+        std::vector<KinBody::GeometryInfoPtr>* pvinfos = NULL;
+        if( geomname.size() == 0 ) {
+            pvinfos = &(*itlink)->_info._vgeometryinfos;
         }
-        // have to reset the adjacency cache
-        _ResetInternalCollisionCache();
+        else {
+            std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
+            if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
+            }
+            pvinfos = &it->second;
+        }
+        (*itlink)->_vGeometries.resize(pvinfos->size());
+        for(size_t i = 0; i < pvinfos->size(); ++i) {
+            (*itlink)->_vGeometries[i].reset(new Link::Geometry(*itlink,*pvinfos->at(i)));
+            if( (*itlink)->_vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) { // try to avoid recomputing
+                (*itlink)->_vGeometries[i]->InitCollisionMesh();
+            }
+        }
+        (*itlink)->_Update(false);
     }
-    _activeGeometryGroup = geomname;
-    CollisionCheckerBasePtr collisionchecker = GetEnv()->GetCollisionChecker(); // Do not update self collision checker's geometry group. update only for env collision checker.
-    collisionchecker->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
+    // have to reset the adjacency cache
+    _ResetInternalCollisionCache();
+
+    GetEnv()->GetCollisionChecker()->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() && propagateGroupNameToSelfCollisionChecker ) {
+        _selfcollisionchecker->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
+    }
 }
 
 void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
@@ -2064,11 +2062,6 @@ Vector KinBody::GetCenterOfMass() const
         center /= fTotalMass;
     }
     return center;
-}
-
-const std::string& KinBody::GetActiveGeometryGroup() const
-{
-    return _activeGeometryGroup;
 }
 
 void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)

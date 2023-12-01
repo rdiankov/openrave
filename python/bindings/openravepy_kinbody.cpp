@@ -2788,9 +2788,9 @@ bool PyKinBody::Init(object olinkinfos, object ojointinfos, const std::string& u
     return _pbody->Init(vlinkinfos, vjointinfos, uri);
 }
 
-void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
+void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker)
 {
-    _pbody->SetLinkGeometriesFromGroup(geomname);
+    _pbody->SetLinkGeometriesFromGroup(geomname, propagateGroupNameToSelfCollisionChecker);
 }
 
 void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olinkgeometryinfos)
@@ -3568,11 +3568,6 @@ dReal PyKinBody::GetMass() const
 object PyKinBody::GetCenterOfMass() const
 {
     return toPyVector3(_pbody->GetCenterOfMass());
-}
-
-object PyKinBody::GetActiveGeometryGroup() const
-{
-    return ConvertStringToUnicode(_pbody->GetActiveGeometryGroup());
 }
 
 void PyKinBody::Enable(bool bEnable)
@@ -5673,7 +5668,7 @@ void init_openravepy_kinbody()
 #else
                          .def("Init",&PyKinBody::Init,Init_overloads(PY_ARGS("linkinfos","jointinfos","uri") DOXY_FN(KinBody,Init)))
 #endif
-                         .def("SetLinkGeometriesFromGroup",&PyKinBody::SetLinkGeometriesFromGroup, PY_ARGS("name") DOXY_FN(KinBody,SetLinkGeometriesFromGroup))
+                         .def("SetLinkGeometriesFromGroup",&PyKinBody::SetLinkGeometriesFromGroup, PY_ARGS("name", "propagateGroupNameToSelfCollisionChecker") DOXY_FN(KinBody,SetLinkGeometriesFromGroup))
                          .def("SetLinkGroupGeometries", &PyKinBody::SetLinkGroupGeometries, PY_ARGS("name", "linkgeometries") DOXY_FN(KinBody, SetLinkGroupGeometries))
                          .def("SetName", &PyKinBody::SetName,PY_ARGS("name") DOXY_FN(KinBody,SetName))
                          .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
@@ -5862,7 +5857,6 @@ void init_openravepy_kinbody()
 #endif
                          .def("GetMass", &PyKinBody::GetMass, DOXY_FN(KinBody,GetMass))
                          .def("GetCenterOfMass", &PyKinBody::GetCenterOfMass, DOXY_FN(KinBody,GetCenterOfMass))
-                         .def("GetActiveGeometryGroup", &PyKinBody::GetActiveGeometryGroup, DOXY_FN(KinBody,GetActiveGeometryGroup))
                          .def("Enable",&PyKinBody::Enable,PY_ARGS("enable") DOXY_FN(KinBody,Enable))
                          .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
                          .def("SetVisible",&PyKinBody::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody,SetVisible))
