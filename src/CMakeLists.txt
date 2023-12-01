@@ -16,7 +16,7 @@ else()
 endif()
   
 if( TARGET crlibm-native )
-  set(openrave_libraries ${openrave_libraries} ${CRLIBM_LIBRARY})
+  set(openrave_static_libraries ${openrave_static_libraries} crlibm)
   if( CRLIBM_INCLUDE_DIR )
     include_directories(${CRLIBM_INCLUDE_DIR})
   endif()

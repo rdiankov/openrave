@@ -6,10 +6,20 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.135.0
+Version 0.136.0
 ===============
 
 * Set correct geometry group name for fclspace
+
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
 
 Version 0.134.1
 ===============
