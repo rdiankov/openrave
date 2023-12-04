@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.135.1
+===============
+
+* Fixed gripperInfo/customParameters be wiped out after modification. 
+
 Version 0.135.0
 ===============
 
