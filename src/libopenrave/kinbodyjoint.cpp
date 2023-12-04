@@ -307,21 +307,19 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
     // TODO: orjson::SetJsonValueByKey(value, allocator, "trajfollow", _trajfollow);
 
     if (_vmimic.size() > 0) {
+        rapidjson::Value mimics;
+        mimics.SetArray();
         bool bfound = false;
         for (size_t i = 0; i < _vmimic.size() && i < (size_t)dof; ++i) {
-            if (!!_vmimic[i]) {
-                bfound = true;
+            if (_vmimic[i] == nullptr) {
                 break;
             }
+            bfound = true;
+            rapidjson::Value mimicValue;
+            _vmimic[i]->SerializeJSON(mimicValue, allocator, fUnitScale, options);
+            mimics.PushBack(mimicValue, allocator);
         }
         if (bfound) {
-            rapidjson::Value mimics;
-            mimics.SetArray();
-            for (size_t i = 0; i < _vmimic.size() && i < (size_t)dof; ++i) {
-                rapidjson::Value mimicValue;
-                _vmimic[i]->SerializeJSON(mimicValue, allocator, fUnitScale, options);
-                mimics.PushBack(mimicValue, allocator);
-            }
             value.AddMember("mimics", mimics, allocator);
         }
     }
