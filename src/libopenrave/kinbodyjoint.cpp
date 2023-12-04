@@ -441,7 +441,7 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
                 _type = JointType::JointHinge2;
             }
             else if( strcmp(itType->value.GetString(), "spherical") == 0 ) {
-                _type = JointType::JointSpecialBit;
+                _type = JointType::JointSpherical;
             }
             else if( strcmp(itType->value.GetString(), "trajectory") == 0 ) {
                 _type = JointType::JointTrajectory;
