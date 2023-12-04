@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <functional>
 
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "robot %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetName()%_nHierarchyComputed, ORE_NotInitialized);
 
@@ -77,7 +78,20 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
         if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames") {
             continue;
         }
-        orjson::SetJsonValueByKey(docGripperInfo, memberName, it->value);
+
+        // update objects recursively 
+        std::function<void(rapidjson::Value&, const std::string&, const rapidjson::Value&, rapidjson::Document::AllocatorType&)> partialUpdate;
+        partialUpdate = [&partialUpdate](rapidjson::Value& v, const std::string& key, const rapidjson::Value& t, rapidjson::Document::AllocatorType& alloc) {
+            if (t.IsObject() && v.HasMember(key.c_str())) {
+                for (rapidjson::Value::ConstMemberIterator srcIt = t.MemberBegin(); srcIt != t.MemberEnd(); ++srcIt) {
+                    partialUpdate(v[key.c_str()], srcIt->name.GetString(), srcIt->value, alloc);
+                }
+            } else {
+                orjson::SetJsonValueByKey(v, key.c_str(), t, alloc);
+            }
+        };
+        partialUpdate(docGripperInfo, memberName, it->value, docGripperInfo.GetAllocator());
+
     }
     _docGripperInfo.Swap(docGripperInfo);
 }
