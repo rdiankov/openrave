@@ -9,7 +9,7 @@ Unreleased
 Version 0.135.1
 ===============
 
-* Fixed gripperInfo/customParameters be wiped out after modification. 
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
 
 Version 0.135.0
 ===============
