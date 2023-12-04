@@ -2915,7 +2915,10 @@ private:
     AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
     AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
-    /// \brief Return the center of mass of entire robot in the world coordinate system.
+    /// \brief Returns the total mass of entire body.
+    dReal GetMass() const;
+
+    /// \brief Return the center of mass of entire body in the world coordinate system.
     Vector GetCenterOfMass() const;
 
     /// \brief Enables or disables all the links.
@@ -3604,6 +3607,9 @@ protected:
 
     /// \brief Update transforms and velocities of the grabbed bodies
     void _UpdateGrabbedBodies();
+
+    /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
+    std::vector<GrabbedPtr>::iterator _RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed);
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();

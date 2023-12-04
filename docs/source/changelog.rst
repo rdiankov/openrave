@@ -3,6 +3,103 @@
 ChangeLog
 #########
 
+Unreleased
+==========
+
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
+
+Version 0.134.1
+===============
+
+* Fixed QtCoinViewer SetUserText, fixing compilation
+
+Version 0.134.0
+===============
+
+* Add AABBFromOrientedBox
+
+* Add ViewerBase::SetUserText
+
+Version 0.133.3
+===============
+
+* Fix changing bias for the configuration jitterer and support more dofs than the arm joints.
+* Fix `KinBody::RegrabAll` to not accidentally invalidate `Grabbed::_setGrabberLinkIndicesToIgnore`.
+
+Version 0.133.2
+===============
+
+* Fix not initializing grabbed bodies to self-collision checker when cloning KinBody, restoring grabbed state from the state saver.
+* Fix cloning _listNonCollidingLinksWhenGrabbed to different env
+
+Version 0.133.1
+===============
+
+* Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
+
+* Fix initializing _listNonCollidingLinksWhenGrabbed based on incorrect grabbed bodies when grabbed bodies are shuffled between creation of Grabbed and Grabbed::ComputeListNonCollidingLinks.
+
+Version 0.133.0
+===============
+
+* Fix nonAdjacentLinks and _listNonCollidingLinksWhenGrabbed were affected by collision callbacks.
+
+Version 0.132.0
+===============
+
+* Fix bugs around multiple grabbed bodies
+  1. Self-collision between grabbed bodies were checked even after the grabbed body was released under the certain condition.
+  2. When cloning a kinbody with multiple grabbed bodies, `Grabbed::_listNonCollidingLinksWhenGrabbed` was not copied properly. caused `std::vector` range error.
+* When loading connected body, also have to prefix "grippername" and "grippernames"
+
+Version 0.131.2
+===============
+
+* Python binding of CheckCollisionRays takes checkPreemptFn to allow for early canceling.
+
+Version 0.131.1
+===============
+
+* Optimization on Jitterers
+
+Version 0.131.0
+===============
+
+* Add GPG capability to decrypt scenes when loading.
+
+Version 0.130.3
+===============
+
+* Initialize __mapReadableInterfaces on InitFromXXX functions such as InitFromKinBodyInfo
+
+Version 0.130.2
+===============
+
+* Initialize __mapReadableInterfaces on InitFromKinBodyInfo
+
+Version 0.130.1
+===============
+
+* Export some of major openravepy symbols so that user can call python from c++ with openrave major classes
+
+Version 0.130.0
+===============
+
+* Add KinBody::GetMass
+
+Version 0.129.1
+===============
+
+* Support 2**64-1 python integer to rapidjson.
+
 Version 0.129.0
 ===============
 

@@ -314,6 +314,6 @@ class BaseManipulation:
             raise PlanningError('FindIKWithFilters')
         resvalues = res.split()
         num = int(resvalues[0])
-        dim = (len(resvalues)-1)/num
+        dim = (len(resvalues)-1)//num
         solutions = numpy.reshape([numpy.float64(s) for s in resvalues[1:]],(num,dim))
         return solutions

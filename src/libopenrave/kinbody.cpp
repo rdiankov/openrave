@@ -321,14 +321,18 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                 continue;
             }
 
-            if (isDeleted) {
-                // ignore
+            if( itMatchingName != _vGrabbedInfos.end() ) {
+                if (isDeleted) {
+                    _vGrabbedInfos.erase(itMatchingId);
+                    continue;
+                }
+                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
+                (*itMatchingName)->_id = id;
                 continue;
             }
 
-            if( itMatchingName != _vGrabbedInfos.end() ) {
-                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
-                (*itMatchingName)->_id = id;
+            if (isDeleted) {
+                // ignore
                 continue;
             }
 
@@ -491,6 +495,7 @@ void KinBody::Destroy()
     _selfcollisionchecker.reset();
 
     __hashKinematicsGeometryDynamics.resize(0);
+    ClearReadableInterfaces();
 }
 
 bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const std::string& uri)
@@ -2026,6 +2031,15 @@ AABB KinBody::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgr
 AABB KinBody::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks) const
 {
     return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform(), bEnabledOnlyLinks);
+}
+
+dReal KinBody::GetMass() const
+{
+    dReal fTotalMass = 0;
+    for(const LinkPtr& plink : _veclinks) {
+        fTotalMass += plink->GetMass();
+    }
+    return fTotalMass;
 }
 
 Vector KinBody::GetCenterOfMass() const
@@ -5469,7 +5483,7 @@ private:
         // this is actually weird, we need to call the individual link collisions on a const body. in order to pull this off, we need to be very careful with the body state.
         TransformsSaver saver(shared_kinbody_const());
         CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
+        CollisionOptionsStateSaver colsaver(collisionchecker, CO_IgnoreCallbacks); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
         }
@@ -5729,7 +5743,24 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 CopyRapidJsonDoc(pgrabbedref->_rGrabbedUserData, pgrabbed->_rGrabbedUserData);
                 if( pgrabbedref->IsListNonCollidingLinksValid() ) {
                     FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
-                        pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                        if( (*itLinkRef)->GetParent() == r ) {
+                            pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                        }
+                        else {
+                            KinBodyPtr pOtherGrabbedBody = GetEnv()->GetKinBody((*itLinkRef)->GetParent()->GetName());
+                            if( !!pOtherGrabbedBody ) {
+                                KinBody::LinkPtr plink = pOtherGrabbedBody->GetLink((*itLinkRef)->GetName());
+                                if( !!plink ) {
+                                    pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(plink);
+                                }
+                                else {
+                                    RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find non-colliding link %s in body %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetParent()->GetName());
+                                }
+                            }
+                            else {
+                                RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find body %s for non-colliding link %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetParent()->GetName()%(*itLinkRef)->GetName());
+                            }
+                        }
                     }
                     pgrabbed->_SetLinkNonCollidingIsValid(true);
                 }
@@ -5760,6 +5791,11 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
         else {
             // InitKinBody will be called when the body is added to the environment.
+        }
+        // have to also call InitKinBody to grabbed bodies.
+        for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
+            KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+            _selfcollisionchecker->InitKinBody(pGrabbedBody);
         }
     }
 
@@ -6062,6 +6098,12 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 
     // in order for link transform comparision to make sense
     KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    boost::shared_ptr<void> restoreTransformEvenWhenBodyIsNotAddedToEnv = nullptr;
+    if( (options & EIO_SkipDOFValues) && GetEnvironmentBodyIndex() == 0 ) {
+        RAVELOG_WARN("resetting DOF to zeros");
+        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*) 0, std::bind(&KinBody::SetTransform, this, std::cref(info._transform)));
+    }
+
     SetTransform(Transform()); // so that base link is at exactly _baseLinkInBodyTransform
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);

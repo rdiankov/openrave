@@ -20,6 +20,7 @@
 #include "ravep.h"
 #include "colladaparser/colladacommon.h"
 #include "jsonparser/jsoncommon.h"
+#include "stringutils.h"
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -60,8 +61,6 @@ inline void EnsureVectorSize(std::vector<T>& vec, size_t size)
         vec.resize(size);
     }
 }
-
-
 
 class TimedUniqueLock : public std::unique_lock<std::timed_mutex> {
 public:
@@ -586,16 +585,29 @@ public:
 
     bool LoadURI(const std::string& uri, const AttributesList& atts) override
     {
-        if ( _IsColladaURI(uri) ) {
+        std::string path;
+        if (!_IsURI(uri, path)) {
+            RAVELOG_WARN("Failed to load URI: %s is not a URI.", uri.c_str());
+            return false;
+        }
+        if (_IsColladaFile(path)) {
             return RaveParseColladaURI(shared_from_this(), uri, atts);
         }
-        else if ( _IsJSONURI(uri) ) {
+        else if (_IsJSONFile(path)) {
             _ClearRapidJsonBuffer();
             return RaveParseJSONURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
-        else if ( _IsMsgPackURI(uri) ) {
+        else if (_IsMsgPackFile(path)) {
             _ClearRapidJsonBuffer();
             return RaveParseMsgPackURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
+        }
+        else if (StringEndsWith(path, ".json.gpg")) {
+            _ClearRapidJsonBuffer();
+            return RaveParseEncryptedJSONURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
+        }
+        else if (StringEndsWith(path, ".msgpack.gpg")) {
+            _ClearRapidJsonBuffer();
+            return RaveParseEncryptedMsgPackURI(shared_from_this(), uri, UFIM_Exact, atts, *_prLoadEnvAlloc);
         }
         else {
             RAVELOG_WARN_FORMAT("load failed on uri '%s' since could not determine the file type", uri);
@@ -607,10 +619,13 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         OpenRAVEXMLParser::GetXMLErrorCount() = 0;
-        if( _IsColladaURI(filename) ) {
-            if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
-                UpdatePublishedBodies();
-                return true;
+        std::string path;
+        if (_IsURI(filename, path)) {
+            if (_IsColladaFile(path)) {
+                if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
+                    UpdatePublishedBodies();
+                    return true;
+                }
             }
         }
         else if( _IsColladaFile(filename) ) {
@@ -628,6 +643,18 @@ public:
         else if( _IsMsgPackFile(filename) ) {
             _ClearRapidJsonBuffer();
             if( RaveParseMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                return true;
+            }
+        }
+        else if (StringEndsWith(filename, ".json.gpg")) {
+            _ClearRapidJsonBuffer();
+            if( RaveParseEncryptedJSONFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                return true;
+            }
+        }
+        else if (StringEndsWith(filename, ".msgpack.gpg")) {
+            _ClearRapidJsonBuffer();
+            if( RaveParseEncryptedMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
                 return true;
             }
         }
@@ -698,6 +725,14 @@ public:
                 _ClearRapidJsonBuffer();
                 RaveWriteMsgPackFile(shared_from_this(),filename,atts,*_prLoadEnvAlloc);
             }
+            else if (StringEndsWith(filename, ".json.gpg")) {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedJSONFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc);
+            }
+            else if (StringEndsWith(filename, ".msgpack.gpg")) {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedMsgPackFile(shared_from_this(), filename, atts, *_prLoadEnvAlloc);
+            }
             else {
                 RaveWriteColladaFile(shared_from_this(),filename,atts);
             }
@@ -749,24 +784,20 @@ public:
         }
 
         if( _IsJSONFile(filename) ) {
-            if( listbodies.size() == 1 ) {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
-            }
-            else {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONFile(listbodies,filename,atts,*_prLoadEnvAlloc);
-            }
+            _ClearRapidJsonBuffer();
+            RaveWriteJSONFile(listbodies,filename,atts,*_prLoadEnvAlloc);
         }
         else if( _IsMsgPackFile(filename) ) {
-            if( listbodies.size() == 1 ) {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackFile(listbodies.front(),filename,atts,*_prLoadEnvAlloc);
-            }
-            else {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
-            }
+            _ClearRapidJsonBuffer();
+            RaveWriteMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
+        }
+        else if( StringEndsWith(filename, ".json.gpg") ) {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedJSONFile(listbodies,filename,atts,*_prLoadEnvAlloc);
+        }
+        else if( StringEndsWith(filename, ".msgpack.gpg") ) {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedMsgPackFile(listbodies,filename,atts,*_prLoadEnvAlloc);
         }
         else {
             if( listbodies.size() == 1 ) {
@@ -832,12 +863,7 @@ public:
         }
         }
 
-        if( listbodies.size() == 1 ) {
-            RaveWriteJSON(listbodies.front(), rEnvironment, allocator, atts);
-        }
-        else {
-            RaveWriteJSON(listbodies, rEnvironment, allocator, atts);
-        }
+        RaveWriteJSON(listbodies, rEnvironment, allocator, atts);
     }
 
     virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) override
@@ -860,6 +886,14 @@ public:
             else if (filetype == "msgpack") {
                 _ClearRapidJsonBuffer();
                 RaveWriteMsgPackMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
+            }
+            else if (filetype == "json.gpg") {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedJSONMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
+            }
+            else if (filetype == "msgpack.gpg") {
+                _ClearRapidJsonBuffer();
+                RaveWriteEncryptedMsgPackMemory(shared_from_this(), output, atts,*_prLoadEnvAlloc);
             }
             return;
 
@@ -908,31 +942,29 @@ public:
         }
         }
 
-        if( listbodies.size() == 1 ) {
-            if (filetype == "collada") {
+        if (filetype == "collada") {
+            if( listbodies.size() == 1 ) {
                 RaveWriteColladaMemory(listbodies.front(), output, atts);
             }
-            else if (filetype == "json") {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
-            }
-            else if (filetype == "msgpack") {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackMemory(listbodies.front(), output, atts,*_prLoadEnvAlloc);
-            }
-        }
-        else {
-            if (filetype == "collada") {
+            else {
                 RaveWriteColladaMemory(listbodies, output, atts);
             }
-            else if (filetype == "json") {
-                _ClearRapidJsonBuffer();
-                RaveWriteJSONMemory(listbodies, output, atts,*_prLoadEnvAlloc);
-            }
-            else if (filetype == "msgpack") {
-                _ClearRapidJsonBuffer();
-                RaveWriteMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
-            }
+        }
+        else if (filetype == "json") {
+            _ClearRapidJsonBuffer();
+            RaveWriteJSONMemory(listbodies, output, atts,*_prLoadEnvAlloc);
+        }
+        else if (filetype == "msgpack") {
+            _ClearRapidJsonBuffer();
+            RaveWriteMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
+        }
+        else if (filetype == "json.gpg") {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedJSONMemory(listbodies, output, atts,*_prLoadEnvAlloc);
+        }
+        else if (filetype == "msgpack.gpg") {
+            _ClearRapidJsonBuffer();
+            RaveWriteEncryptedMsgPackMemory(listbodies, output, atts,*_prLoadEnvAlloc);
         }
     }
 
@@ -1634,21 +1666,36 @@ public:
             }
         }
 
-        if( _IsColladaURI(filename) ) {
-            if( !RaveParseColladaURI(shared_from_this(), robot, filename, atts) ) {
-                return RobotBasePtr();
+        std::string path;
+        if (_IsURI(filename, path)) {
+            if (_IsColladaFile(path)) {
+                if( !RaveParseColladaURI(shared_from_this(), robot, filename, atts) ) {
+                    return RobotBasePtr();
+                }
             }
-        }
-        else if( _IsJSONURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
-                return RobotBasePtr();
+            else if (_IsJSONFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
             }
-        }
-        else if( _IsMsgPackURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
-                return RobotBasePtr();
+            else if (_IsMsgPackFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
+            }
+            else if (StringEndsWith(path, ".json.gpg")) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedJSONURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
+            }
+            else if (StringEndsWith(path, ".msgpack.gpg")) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedMsgPackURI(shared_from_this(), robot, filename, atts, *_prLoadEnvAlloc) ) {
+                    return RobotBasePtr();
+                }
             }
         }
         else if( _IsColladaFile(filename) ) {
@@ -1837,23 +1884,39 @@ public:
             }
         }
 
-        if( _IsColladaURI(filename) ) {
-            if( !RaveParseColladaURI(shared_from_this(), body, filename, atts) ) {
-                return KinBodyPtr();
+        std::string path;
+        if (_IsURI(filename, path)) {
+            if (_IsColladaFile(path)) {
+                if( !RaveParseColladaURI(shared_from_this(), body, filename, atts) ) {
+                    return KinBodyPtr();
+                }
+            }
+            else if (_IsJSONFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
+            }
+            else if (_IsMsgPackFile(path)) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
+            }
+            else if (StringEndsWith(path, ".json.gpg")) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
+            }
+            else if (StringEndsWith(path, ".msgpack.gpg")) {
+                _ClearRapidJsonBuffer();
+                if( !RaveParseEncryptedMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
+                    return KinBodyPtr();
+                }
             }
         }
-        else if( _IsJSONURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseJSONURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
-                return KinBodyPtr();
-            }
-        }
-        else if( _IsMsgPackURI(filename) ) {
-            _ClearRapidJsonBuffer();
-            if( !RaveParseMsgPackURI(shared_from_this(), body, filename, atts, *_prLoadEnvAlloc) ) {
-                return KinBodyPtr();
-            }
-        }
+
         else if( _IsColladaFile(filename) ) {
             if( !RaveParseColladaFile(shared_from_this(), body, filename, atts) ) {
                 return KinBodyPtr();
@@ -2054,131 +2117,107 @@ public:
     virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentLock lockenv(GetMutex());
-        bool bIsColladaURI = false;
-        bool bIsColladaFile = false;
-        bool bIsJSONURI = false;
-        bool bIsJSONFile = false;
-        bool bIsMsgPackURI = false;
-        bool bIsMsgPackFile = false;
-        bool bIsXFile = false;
-        if( _IsColladaURI(filename) ) {
-            bIsColladaURI = true;
+        bool bIsCollada = false;
+        bool bIsJSON = false;
+        bool bIsMsgPack = false;
+        bool bIsEncryptedJSON = false;
+        bool bIsEncryptedMsgPack = false;
+        bool bIsX = false;
+
+        std::string path;
+        bool bIsURI = _IsURI(filename, path);
+        if (bIsURI) {
+            path = filename;
         }
-        else if( _IsJSONURI(filename) ) {
-            bIsJSONURI = true;
+        if (_IsColladaFile(path)) {
+            bIsCollada = true;
         }
-        else if( _IsMsgPackURI(filename) ) {
-            bIsMsgPackURI = true;
+        else if (_IsJSONFile(path)) {
+            bIsJSON = true;
         }
-        else if( _IsColladaFile(filename) ) {
-            bIsColladaFile = true;
+        else if (_IsMsgPackFile(path)) {
+            bIsMsgPack = true;
         }
-        else if( _IsJSONFile(filename) ) {
-            bIsJSONFile = true;
+        else if (StringEndsWith(path, ".json.gpg")) {
+            bIsEncryptedJSON = true;
         }
-        else if( _IsMsgPackFile(filename) ) {
-            bIsMsgPackFile = true;
+        else if (StringEndsWith(path, ".msgpack.gpg")) {
+            bIsEncryptedMsgPack = true;
         }
-        else if( _IsXFile(filename) ) {
-            bIsXFile = true;
+        else if (_IsXFile(path)) {
+            bIsX = true;
         }
 
-        if( (type == PT_KinBody ||type == PT_Robot ) && (bIsColladaURI||bIsJSONURI||bIsMsgPackURI||bIsColladaFile||bIsJSONFile||bIsMsgPackFile||bIsXFile) ) {
-            if( type == PT_KinBody ) {
-                BOOST_ASSERT(!pinterface|| (pinterface->GetInterfaceType()==PT_KinBody||pinterface->GetInterfaceType()==PT_Robot));
-                KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
-                if( bIsColladaURI ) {
+        if (type == PT_KinBody || type == PT_Robot) {
+            BOOST_ASSERT(!pinterface || (pinterface->GetInterfaceType() == PT_KinBody || pinterface->GetInterfaceType() == PT_Robot));
+            KinBodyPtr pbody = RaveInterfaceCast<KinBody>(pinterface);
+            if (bIsCollada) {
+                if (bIsURI) {
                     if( !RaveParseColladaURI(shared_from_this(), pbody, filename, atts) ) {
                         return InterfaceBasePtr();
                     }
-                }
-                else if( bIsJSONURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsMsgPackURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsColladaFile ) {
+                } else {
                     if( !RaveParseColladaFile(shared_from_this(), pbody, filename, atts) ) {
                         return InterfaceBasePtr();
                     }
                 }
-                else if( bIsJSONFile ) {
-                    _ClearRapidJsonBuffer();
+            } else if (bIsJSON) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if( !RaveParseJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
                     if( !RaveParseJSONFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
-                else if( bIsMsgPackFile ) {
-                    _ClearRapidJsonBuffer();
+            } else if (bIsMsgPack) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if( !RaveParseMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
                     if( !RaveParseMsgPackFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
                         return InterfaceBasePtr();
                     }
                 }
-                else if( bIsXFile ) {
-                    if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
+            } else if (bIsEncryptedJSON) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if ( !RaveParseEncryptedJSONURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
+                    if (!RaveParseEncryptedJSONFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc)) {
                         return InterfaceBasePtr();
                     }
                 }
-                pinterface = pbody;
-            }
-            else if( type == PT_Robot ) {
-                BOOST_ASSERT(!pinterface||pinterface->GetInterfaceType()==PT_Robot);
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pinterface);
-                if( bIsColladaURI ) {
-                    if( !RaveParseColladaURI(shared_from_this(), probot, filename, atts) ) {
+            } else if (bIsEncryptedMsgPack) {
+                _ClearRapidJsonBuffer();
+                if (bIsURI) {
+                    if ( !RaveParseEncryptedMsgPackURI(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc) ) {
+                        return InterfaceBasePtr();
+                    }
+                } else {
+                    if (!RaveParseEncryptedMsgPackFile(shared_from_this(), pbody, filename, atts, *_prLoadEnvAlloc)) {
                         return InterfaceBasePtr();
                     }
                 }
-                else if( bIsJSONURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseJSONURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
+            } else if (bIsX) {
+                if( !RaveParseXFile(shared_from_this(), pbody, filename, atts) ) {
+                    return InterfaceBasePtr();
                 }
-                else if( bIsMsgPackURI ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseMsgPackURI(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsColladaFile ) {
-                    if( !RaveParseColladaFile(shared_from_this(), probot, filename, atts) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsJSONFile ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseJSONFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsMsgPackFile ) {
-                    _ClearRapidJsonBuffer();
-                    if( !RaveParseMsgPackFile(shared_from_this(), probot, filename, atts, *_prLoadEnvAlloc) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                else if( bIsXFile ) {
-                    if( !RaveParseXFile(shared_from_this(), probot, filename, atts) ) {
-                        return InterfaceBasePtr();
-                    }
-                }
-                pinterface = probot;
-            }
-            else {
+            } else {
                 return InterfaceBasePtr();
             }
+            pinterface = (type == PT_Robot) ? OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody) : pbody;
             if( pinterface->__struri.empty() ) {
                 pinterface->__struri = filename;
             }
         }
+
         else {
             BaseXMLReaderPtr preader = OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(), type, pinterface, RaveGetInterfaceName(type), atts);
             boost::shared_ptr<OpenRAVEXMLParser::InterfaceXMLReadable> preadable = boost::dynamic_pointer_cast<OpenRAVEXMLParser::InterfaceXMLReadable>(preader->GetReadable());
@@ -3153,6 +3192,13 @@ public:
 
             if (itExistingBody != vBodies.end()) {
                 // grabbed infos
+                if (pKinBodyInfo->_vGrabbedInfos.size() != (*itExistingBody)->GetNumGrabbed()) {
+                    RAVELOG_DEBUG_FORMAT("env=%s, body name='%s' updating grab from %d -> %d", GetNameId()%bodyName%(*itExistingBody)->GetNumGrabbed()%pKinBodyInfo->_vGrabbedInfos.size());
+                    // when grab info changes, have to report to caller
+                    if (std::find(vModifiedBodies.begin(), vModifiedBodies.end(), *itExistingBody) == vModifiedBodies.end() && std::find(vCreatedBodies.begin(), vCreatedBodies.end(), *itExistingBody) == vCreatedBodies.end()) {
+                        vModifiedBodies.push_back(*itExistingBody);
+                    }
+                }
                 vGrabbedInfos.clear();
                 vGrabbedInfos.reserve(pKinBodyInfo->_vGrabbedInfos.size());
                 FOREACHC(itGrabbedInfo, pKinBodyInfo->_vGrabbedInfos) {
@@ -3313,11 +3359,11 @@ protected:
         }
         KinBody& body = *pbodyref;
         const std::string& name = body.GetName();
-        // before deleting, make sure no robots are grabbing it!!
-        for (KinBodyPtr& probot : _vecbodies) {
-            if( !!probot && probot->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by robot %s!", GetNameId()%body.GetName()%probot->GetName());
-                probot->Release(body);
+        // before deleting, make sure no other bodies are grabbing it!!
+        for (KinBodyPtr& potherbody : _vecbodies) {
+            if( !!potherbody && potherbody->IsGrabbing(body) ) {
+                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%potherbody->GetName());
+                potherbody->Release(body);
             }
         }
 
@@ -3329,6 +3375,15 @@ protected:
             CollisionCheckerBasePtr pSelfColChecker = body.GetSelfCollisionChecker();
             if (!!pSelfColChecker && pSelfColChecker != _pCurrentChecker) {
                 pSelfColChecker->RemoveKinBody(pbodyref);
+            }
+        }
+        // remove from self collision checker of other bodies since it may have been grabbed.
+        for (KinBodyPtr& potherbody : _vecbodies) {
+            if( !!potherbody && pbodyref != potherbody ) {
+                CollisionCheckerBasePtr pOtherSelfColChecker = potherbody->GetSelfCollisionChecker();
+                if( !!pOtherSelfColChecker && pOtherSelfColChecker != _pCurrentChecker ) {
+                    pOtherSelfColChecker->RemoveKinBody(pbodyref); // should be okay to call RemoveKinBody even when the pbodyref has not been aeed to the pOtherSelfColChecker
+                }
             }
         }
         if( !!_pPhysicsEngine ) {
@@ -4152,28 +4207,18 @@ protected:
         return lockenv;
     }
 
-    static bool _IsColladaURI(const std::string& uri)
+    static bool _IsURI(const std::string& uri, std::string& path)
     {
-        string scheme, authority, path, query, fragment;
+        string scheme, authority, query, fragment;
         string s1, s3, s6, s8;
         static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
         bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && scheme.size() > 0 && _IsColladaFile(path); //scheme.size() > 0;
+        return bmatch && !scheme.empty();
     }
 
     static bool _IsColladaFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 4 ) {
-            return false;
-        }
-        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'd' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
-            return true;
-        }
-        if( filename[len-4] == '.' && ::tolower(filename[len-3]) == 'z' && ::tolower(filename[len-2]) == 'a' && ::tolower(filename[len-1]) == 'e' ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".dae") || StringEndsWith(filename, ".zae");
     }
     static bool _IsColladaData(const std::string& data)
     {
@@ -4182,11 +4227,7 @@ protected:
 
     static bool _IsXFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 2 ) {
-            return false;
-        }
-        return filename[len-2] == '.' && ::tolower(filename[len-1]) == 'x';
+        return StringEndsWith(filename, ".x");
     }
 
     static bool _IsXData(const std::string& data)
@@ -4206,57 +4247,22 @@ protected:
 
     static bool _IsOpenRAVEFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 4 ) {
-            return false;
-        }
-        if(( filename[len-4] == '.') &&( ::tolower(filename[len-3]) == 'x') &&( ::tolower(filename[len-2]) == 'm') &&( ::tolower(filename[len-1]) == 'l') ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".xml");
     }
     static bool _IsRigidModelFile(const std::string& filename)
     {
         static boost::array<std::string,21> s_geometryextentsions = { { "iv","vrml","wrl","stl","blend","3ds","ase","obj","ply","dxf","lwo","lxo","ac","ms3d","x","mesh.xml","irrmesh","irr","nff","off","raw"}};
-        FOREACH(it, s_geometryextentsions) {
-            if( filename.size() > it->size()+1 ) {
-                size_t len = filename.size();
-                if( filename.at(len-it->size()-1) == '.' ) {
-                    bool bsuccess = true;
-                    for(size_t i = 0; i < it->size(); ++i) {
-                        if( ::tolower(filename[len-i-1]) != (*it)[it->size()-i-1] ) {
-                            bsuccess = false;
-                            break;
-                        }
-                    }
-                    if( bsuccess ) {
-                        return true;
-                    }
-                }
+        for (const std::string& ext : s_geometryextentsions) {
+            if (StringEndsWith(filename, ext)) {
+                return true;
             }
         }
         return false;
     }
 
-    static bool _IsJSONURI(const std::string& uri)
-    {
-        string scheme, authority, path, query, fragment;
-        string s1, s3, s6, s8;
-        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
-        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && scheme.size() > 0 && _IsJSONFile(path); //scheme.size() > 0;
-    }
-
     static bool _IsJSONFile(const std::string& filename)
     {
-        size_t len = filename.size();
-        if( len < 5 ) {
-            return false;
-        }
-        if( filename[len-5] == '.' && ::tolower(filename[len-4]) == 'j' && ::tolower(filename[len-3]) == 's' && ::tolower(filename[len-2]) == 'o' && ::tolower(filename[len-1]) == 'n' ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".json");
     }
 
     static bool _IsJSONData(const std::string& data)
@@ -4264,29 +4270,19 @@ protected:
         return data.size() >= 2 && data[0] == '{';
     }
 
-    static bool _IsMsgPackURI(const std::string& uri)
-    {
-        string scheme, authority, path, query, fragment;
-        string s1, s3, s6, s8;
-        static pcrecpp::RE re("^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?");
-        bool bmatch = re.FullMatch(uri, &s1, &scheme, &s3, &authority, &path, &s6, &query, &s8, &fragment);
-        return bmatch && scheme.size() > 0 && _IsMsgPackFile(path); //scheme.size() > 0;
-    }
-
     static bool _IsMsgPackFile(const std::string& filename)
     {
         // .msgpack
-        size_t len = filename.size();
-        if( len < 8 ) {
-            return false;
-        }
-        if( filename[len-8] == '.' && ::tolower(filename[len-7]) == 'm' && ::tolower(filename[len-6]) == 's' && ::tolower(filename[len-5]) == 'g' && ::tolower(filename[len-4]) == 'p' && ::tolower(filename[len-3]) == 'a' && ::tolower(filename[len-2]) == 'c' && ::tolower(filename[len-1]) == 'k' ) {
-            return true;
-        }
-        return false;
+        return StringEndsWith(filename, ".msgpack");
     }
 
     static bool _IsMsgPackData(const std::string& data)
+    {
+        return data.size() > 0 && !std::isprint(data[0]);
+    }
+
+    // Encrypted data is also binary, so functionally it is indistinguishable from MsgPack data.
+    static bool _IsEncryptedData(const std::string& data)
     {
         return data.size() > 0 && !std::isprint(data[0]);
     }
