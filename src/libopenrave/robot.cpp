@@ -55,12 +55,14 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
     orjson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
 }
 
-void _PartialUpdate(rapidjson::Value& v, const char* key, const rapidjson::Value& t, rapidjson::Document::AllocatorType& alloc) {
+static void _PartialUpdate(rapidjson::Value& v, const char* key, const rapidjson::Value& t, rapidjson::Document::AllocatorType& alloc)
+{
     if (t.IsObject() && v.HasMember(key)) {
         for (rapidjson::Value::ConstMemberIterator srcIt = t.MemberBegin(); srcIt != t.MemberEnd(); ++srcIt) {
             _PartialUpdate(v[key], srcIt->name.GetString(), srcIt->value, alloc);
         }
-    } else {
+    }
+    else {
         orjson::SetJsonValueByKey(v, key, t, alloc);
     }
 }
