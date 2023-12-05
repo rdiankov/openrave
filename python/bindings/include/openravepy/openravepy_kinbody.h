@@ -194,7 +194,7 @@ public:
     bool InitFromGeometries(py::object ogeometries, const std::string& uri=std::string());
     void InitFromLinkInfos(py::object olinkinfos, const std::string& uri=std::string());
     bool Init(py::object olinkinfos, py::object ojointinfos, const std::string& uri=std::string());
-    void SetLinkGeometriesFromGroup(const std::string& geomname);
+    void SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker);
     void SetLinkGroupGeometries(const std::string& geomname, py::object olinkgeometryinfos);
     void SetName(const std::string& name);
     py::object GetName() const;
