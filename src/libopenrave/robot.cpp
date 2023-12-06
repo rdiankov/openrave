@@ -55,18 +55,6 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
     orjson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
 }
 
-static void _PartialUpdate(rapidjson::Value& v, const char* key, const rapidjson::Value& t, rapidjson::Document::AllocatorType& alloc)
-{
-    if (t.IsObject() && v.HasMember(key)) {
-        for (rapidjson::Value::ConstMemberIterator srcIt = t.MemberBegin(); srcIt != t.MemberEnd(); ++srcIt) {
-            _PartialUpdate(v[key], srcIt->name.GetString(), srcIt->value, alloc);
-        }
-    }
-    else {
-        orjson::SetJsonValueByKey(v, key, t, alloc);
-    }
-}
-
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
     orjson::LoadJsonValueByKey(value, "name", name);
@@ -91,7 +79,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
         }
 
         // update objects recursively 
-        _PartialUpdate(docGripperInfo, memberName.c_str(), it->value, docGripperInfo.GetAllocator());
+        orjson::UpdateJsonByKey(docGripperInfo, memberName.c_str(), it->value, docGripperInfo.GetAllocator());
 
     }
     _docGripperInfo.Swap(docGripperInfo);

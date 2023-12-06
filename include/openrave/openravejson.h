@@ -1090,6 +1090,23 @@ inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {
     }
 }
 
+/** update a json object by key with another one, new key-value pair will be added, existing ones will be updated recursively
+ */
+inline void UpdateJsonByKey(rapidjson::Value& a, const char* key, const rapidjson::Value& b, rapidjson::Document::AllocatorType& alloc)
+{
+    if (!a.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT("json object should be a dict to be updated: %s", GetJsonString(a), OpenRAVE::ORE_InvalidArguments);
+    }
+    if (b.IsObject() && a.HasMember(key) && a[key].IsObject()) {
+        for (rapidjson::Value::ConstMemberIterator it = b.MemberBegin(); it != b.MemberEnd(); ++it) {
+            UpdateJsonByKey(a[key], it->name.GetString(), it->value, alloc);
+        }
+    }
+    else {
+        SetJsonValueByKey(a, key, b, alloc);
+    }
+}
+
 } // namespace orjson
 
 } // namespace OpenRAVE
