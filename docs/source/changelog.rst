@@ -6,6 +6,28 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
+
+Version 0.134.1
+===============
+
+* Fixed QtCoinViewer SetUserText, fixing compilation
+
+Version 0.134.0
+===============
+
+* Add AABBFromOrientedBox
+
+* Add ViewerBase::SetUserText
+
 Version 0.133.3
 ===============
 
