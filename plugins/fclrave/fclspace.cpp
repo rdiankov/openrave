@@ -447,6 +447,14 @@ void _AppendFclBoxCollsionObject(const OpenRAVE::Vector& fullExtents, const Open
     contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fcl::Transform3f(fcl::Vec3f(pos.x, pos.y, pos.z))));
 }
 
+/// \brief helper function to initialize fcl::Container
+void _AppendFclBoxCollsionObject(const OpenRAVE::Vector& fullExtents, const OpenRAVE::Transform& trans, std::vector<std::shared_ptr<fcl::CollisionObject>>& contents)
+{
+    std::shared_ptr<fcl::CollisionGeometry> fclGeom = std::make_shared<fcl::Box>(fullExtents.x, fullExtents.y, fullExtents.z);
+    const fcl::Transform3f fclTrans(ConvertQuaternionToFCL(trans.rot), ConvertVectorToFCL(trans.trans));
+    contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fclTrans));
+}
+
 CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::GeometryInfo &info)
 {
     switch(info._type) {
@@ -511,7 +519,10 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
         const Vector& vCageBaseExtents = info._vGeomData;
         std::vector<std::shared_ptr<fcl::CollisionObject>> contents;
         for( const KinBody::GeometryInfo::SideWall& sideWall : info._vSideWalls ) {
-            _AppendFclBoxCollsionObject(2.0*sideWall.vExtents, Vector(0, 0, sideWall.vExtents.z), contents);
+            Transform sideWallBoxPose;
+            sideWallBoxPose.rot = sideWall.transf.rot;
+            sideWallBoxPose.trans = sideWall.transf * Vector(0, 0, sideWall.vExtents.z);
+            _AppendFclBoxCollsionObject(2.0*sideWall.vExtents, sideWallBoxPose, contents);
         }
         // finally add the base
         _AppendFclBoxCollsionObject(2.0*vCageBaseExtents, Vector(0, 0, vCageBaseExtents.z), contents);
