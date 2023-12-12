@@ -1222,7 +1222,15 @@ protected:
             // expected derivative offset, interpolation can be wrong for circular joints
             dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
             for(int i = 0; i < g.dof; ++i) {
-                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i]*(1-f) + f*_vtrajdata[_spec.GetDOF()+offset+g.offset+i];
+                if( f == 0.0 ) { // for inf value
+                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
+                }
+                else if( f == 1.0 ) { // for inf value
+                    *(itdata + g.offset+i) = _vtrajdata[_spec.GetDOF()+offset+g.offset+i];
+                }
+                else {
+                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i]*(1-f) + f*_vtrajdata[_spec.GetDOF()+offset+g.offset+i];
+                }
             }
         }
         else {
