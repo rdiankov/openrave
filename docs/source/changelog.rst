@@ -11,6 +11,11 @@ Version 0.136.0
 
 * Set correct geometry group name for fclspace
 
+Version 0.135.1
+===============
+
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
+
 Version 0.135.0
 ===============
 
