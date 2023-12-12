@@ -3192,6 +3192,13 @@ public:
 
             if (itExistingBody != vBodies.end()) {
                 // grabbed infos
+                if (pKinBodyInfo->_vGrabbedInfos.size() != (*itExistingBody)->GetNumGrabbed()) {
+                    RAVELOG_DEBUG_FORMAT("env=%s, body name='%s' updating grab from %d -> %d", GetNameId()%bodyName%(*itExistingBody)->GetNumGrabbed()%pKinBodyInfo->_vGrabbedInfos.size());
+                    // when grab info changes, have to report to caller
+                    if (std::find(vModifiedBodies.begin(), vModifiedBodies.end(), *itExistingBody) == vModifiedBodies.end() && std::find(vCreatedBodies.begin(), vCreatedBodies.end(), *itExistingBody) == vCreatedBodies.end()) {
+                        vModifiedBodies.push_back(*itExistingBody);
+                    }
+                }
                 vGrabbedInfos.clear();
                 vGrabbedInfos.reserve(pKinBodyInfo->_vGrabbedInfos.size());
                 FOREACHC(itGrabbedInfo, pKinBodyInfo->_vGrabbedInfos) {
