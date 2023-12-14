@@ -912,9 +912,11 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
 
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if( !(*itlink)->IsEnabled() ) {
-            continue;
-        }
+        // Do not skip the iteration even if the link is not enabled since the link can be grabbing stuff that is
+        // enabled. CheckLinkCollision will take care if the fact that this link is not enabled.
+        // if( !(*itlink)->IsEnabled() ) {
+        //     continue;
+        // }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
         FOREACHC(itarmdof,__varmdofindices) {
@@ -972,9 +974,11 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
 
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if( !(*itlink)->IsEnabled() ) {
-            continue;
-        }
+        // Do not skip the iteration even if the link is not enabled since the link can be grabbing stuff that is
+        // enabled. CheckLinkCollision will take care if the fact that this link is not enabled.
+        // if( !(*itlink)->IsEnabled() ) {
+        //     continue;
+        // }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
         FOREACHC(itarmdof,__varmdofindices) {
