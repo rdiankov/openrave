@@ -913,7 +913,7 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
         // Do not skip the iteration even if the link is not enabled since the link can be grabbing stuff that is
-        // enabled. CheckLinkCollision will take care if the fact that this link is not enabled.
+        // enabled. CheckLinkCollision will take care of the fact that this link is not enabled.
         // if( !(*itlink)->IsEnabled() ) {
         //     continue;
         // }
@@ -975,7 +975,7 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
         // Do not skip the iteration even if the link is not enabled since the link can be grabbing stuff that is
-        // enabled. CheckLinkCollision will take care if the fact that this link is not enabled.
+        // enabled. CheckLinkCollision will take care of the fact that this link is not enabled.
         // if( !(*itlink)->IsEnabled() ) {
         //     continue;
         // }
