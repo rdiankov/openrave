@@ -1,6 +1,7 @@
 #include "plugindefs.h"
 
 #include "fclspace.h"
+#include <fcl/container.h>
 
 namespace fclrave {
 
@@ -439,6 +440,21 @@ void FCLSpace::RemoveUserData(KinBodyConstPtr pbody) {
     }
 }
 
+/// \brief helper function to initialize fcl::Container
+void _AppendFclBoxCollsionObject(const OpenRAVE::Vector& fullExtents, const OpenRAVE::Vector& pos, std::vector<std::shared_ptr<fcl::CollisionObject>>& contents)
+{
+    std::shared_ptr<fcl::CollisionGeometry> fclGeom = std::make_shared<fcl::Box>(fullExtents.x, fullExtents.y, fullExtents.z);
+    contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fcl::Transform3f(fcl::Vec3f(pos.x, pos.y, pos.z))));
+}
+
+/// \brief helper function to initialize fcl::Container
+void _AppendFclBoxCollsionObject(const OpenRAVE::Vector& fullExtents, const OpenRAVE::Transform& trans, std::vector<std::shared_ptr<fcl::CollisionObject>>& contents)
+{
+    std::shared_ptr<fcl::CollisionGeometry> fclGeom = std::make_shared<fcl::Box>(fullExtents.x, fullExtents.y, fullExtents.z);
+    const fcl::Transform3f fclTrans(ConvertQuaternionToFCL(trans.rot), ConvertVectorToFCL(trans.trans));
+    contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fclTrans));
+}
+
 CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::GeometryInfo &info)
 {
     switch(info._type) {
@@ -456,11 +472,65 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
     case OpenRAVE::GT_Cylinder:
         return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
 
+    case OpenRAVE::GT_Container:
+    {
+        const Vector& outerextents = info._vGeomData;
+        const Vector& innerextents = info._vGeomData2;
+        const Vector& bottomcross = info._vGeomData3;
+        const Vector& bottom = info._vGeomData4;
+        OpenRAVE::dReal zoffset = 0;
+        if( bottom[2] > 0 ) {
+            if( bottom[0] > 0 && bottom[1] > 0 ) {
+                zoffset = bottom[2];
+            }
+        }
+        std::vector<std::shared_ptr<fcl::CollisionObject>> contents;
+        // +x wall
+        _AppendFclBoxCollsionObject(Vector((outerextents[0] - innerextents[0]) / 2.0, outerextents[1], outerextents[2]), Vector(+(outerextents[0] + innerextents[0]) / 4.0, 0.0, outerextents[2] / 2.0 + zoffset), contents);
+        // -x wall
+        _AppendFclBoxCollsionObject(Vector((outerextents[0] - innerextents[0]) / 2.0, outerextents[1], outerextents[2]), Vector(-(outerextents[0] + innerextents[0]) / 4.0, 0.0, outerextents[2] / 2.0 + zoffset), contents);
+        // +y wall
+        _AppendFclBoxCollsionObject(Vector(outerextents[0], (outerextents[1] - innerextents[1]) / 2.0, outerextents[2]), Vector(0.0, +(outerextents[1] + innerextents[1]) / 4.0, outerextents[2] / 2.0 + zoffset), contents);
+        // -y wall
+        _AppendFclBoxCollsionObject(Vector(outerextents[0], (outerextents[1] - innerextents[1]) / 2.0, outerextents[2]), Vector(0.0, -(outerextents[1] + innerextents[1]) / 4.0, outerextents[2] / 2.0 + zoffset), contents);
+        // bottom
+        if( outerextents[2] - innerextents[2] >= 1e-6 ) { // small epsilon error can make thin triangles appear, so test with a reasonable threshold
+            _AppendFclBoxCollsionObject(Vector(outerextents[0], outerextents[1], outerextents[2]-innerextents[2]), Vector(0.0, 0.0, (outerextents[2] - innerextents[2]) / 2.0 + zoffset), contents);
+        }
+        // cross
+        if( bottomcross[2] > 0 ) {
+            if( bottomcross[0] > 0 ) {
+                _AppendFclBoxCollsionObject(Vector(bottomcross[0], innerextents[1], bottomcross[2]), Vector(0.0, 0.0, bottomcross[2] / 2.0 + outerextents[2] - innerextents[2] + zoffset), contents);
+            }
+            if( bottomcross[1] > 0 ) {
+                _AppendFclBoxCollsionObject(Vector(innerextents[0], bottomcross[1], bottomcross[2]), Vector(0.0, 0.0, bottomcross[2] / 2.0 + outerextents[2] - innerextents[2] + zoffset), contents);
+            }
+        }
+        // bottom
+        if( bottom[2] > 0 ) {
+            if( bottom[0] > 0 && bottom[1] > 0 ) {
+                _AppendFclBoxCollsionObject(bottom, Vector(0.0, 0.0, bottom[2] / 2.0), contents);
+            }
+        }
+        return std::make_shared<fcl::Container>(contents);
+    }
+    case OpenRAVE::GT_Cage:
+    {
+        const Vector& vCageBaseExtents = info._vGeomData;
+        std::vector<std::shared_ptr<fcl::CollisionObject>> contents;
+        for( const KinBody::GeometryInfo::SideWall& sideWall : info._vSideWalls ) {
+            Transform sideWallBoxPose;
+            sideWallBoxPose.rot = sideWall.transf.rot;
+            sideWallBoxPose.trans = sideWall.transf * Vector(0, 0, sideWall.vExtents.z);
+            _AppendFclBoxCollsionObject(2.0*sideWall.vExtents, sideWallBoxPose, contents);
+        }
+        // finally add the base
+        _AppendFclBoxCollsionObject(2.0*vCageBaseExtents, Vector(0, 0, vCageBaseExtents.z), contents);
+        return std::make_shared<fcl::Container>(contents);
+    }
     case OpenRAVE::GT_ConicalFrustum:
     case OpenRAVE::GT_Axial:
-    case OpenRAVE::GT_Container:
     case OpenRAVE::GT_TriMesh:
-    case OpenRAVE::GT_Cage:
     {
         const OpenRAVE::TriMesh& mesh = info._meshcollision;
         if (mesh.vertices.empty() || mesh.indices.empty()) {

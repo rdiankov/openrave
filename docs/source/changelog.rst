@@ -6,6 +6,21 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.135.1
+===============
+
+* Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
+
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
+
 Version 0.134.1
 ===============
 

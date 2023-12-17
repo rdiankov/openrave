@@ -224,9 +224,10 @@ public:
             throw OPENRAVE_EXCEPTION_FORMAT("The environment data needs to be a valid dictionary. Currently it is '%s'", orjson::DumpJson(rEnvInfo), ORE_InvalidArguments);
         }
 
+        std::vector<KinBodyPtr> vRemovedBodiesExtra; // cannot use vRemovedBodies because UpdateFromInfo later clears it
         EnvironmentBase::EnvironmentBaseInfo envInfo;
         if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-            _ExtractSpecifiedBodies(envInfo, rEnvInfo);
+            _ExtractSpecifiedBodies(envInfo, rEnvInfo, vRemovedBodiesExtra);
         }
         else {
             // extract everything
@@ -300,7 +301,7 @@ public:
             RAVELOG_VERBOSE_FORMAT("resolved fullFilename=%s", fullFilename);
 
             if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-                _ExtractSpecifiedBodies(envInfo, *prReferenceEnvInfo);
+                _ExtractSpecifiedBodies(envInfo, *prReferenceEnvInfo, vRemovedBodiesExtra);
             }
 
             if( prReferenceEnvInfo->IsObject() ) {
@@ -385,6 +386,7 @@ public:
         }
 
         _penv->UpdateFromInfo(envInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies, updateMode);
+        vRemovedBodies.insert(vRemovedBodies.end(), vRemovedBodiesExtra.begin(), vRemovedBodiesExtra.end());
         RAVELOG_DEBUG_FORMAT("env=%d, loaded %d bodies in %u[us]", _penv->GetId()%envInfo._vBodyInfos.size()%(utils::GetMonotonicTime()-starttimeus));
         return true;
     }
@@ -1015,7 +1017,7 @@ protected:
     /// \brief extracts the specified bodies of rEnvInfo into envInfo.
     ///
     /// If envInfo already holds bodies, tries to extract ones that do not conflict
-    void _ExtractSpecifiedBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo)
+    void _ExtractSpecifiedBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo, std::vector<KinBodyPtr>& vRemovedBodies)
     {
         int numOriginalBodyInfos = (int)envInfo._vBodyInfos.size();
 
@@ -1085,6 +1087,7 @@ protected:
                         if( isDeleted ) {
                             RAVELOG_DEBUG_FORMAT("env=%d, removing body '%s' since got __deleted__", _penv->GetId()%pbody->GetName());
                             _penv->Remove(pbody);
+                            vRemovedBodies.push_back(pbody);
                         }
                         else {
                             // no need to add an entry if partial is false since all the data will be in rBodyInfo
