@@ -101,14 +101,14 @@ inline int ExtractContiguousArrayToPointer(py::object oContiguousArray,
     }
 
     if (!py::isinstance<py::array_t<T>>(oContiguousArray)) {
-        RAVELOG_WARN("Input data is not contigous or element type is different from expected, so have to use slow generic conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+        RAVELOG_WARN("Element type is different from expected, so have to use slow generic conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return -1;
     }
 
     PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
     AutoPyArrayObjectDereferencer psaver(arrPtr);
     if( !arrPtr || !arrPtr->data) {
-        RAVELOG_WARN("Input data is not contigous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+        RAVELOG_WARN("Input data is not contiguous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return -1;
     }
 
