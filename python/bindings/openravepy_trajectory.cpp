@@ -112,6 +112,12 @@ inline int ExtractContiguousArrayToPointer(py::object oContiguousArray,
         return -1;
     }
 
+    if( Py_REFCNT(arrPtr) == 1 ) {
+        // ExtractArray does not support multidimensional array, so throw exception.
+        // return -1;
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("Input data is not contiguous and cannot convert the input. Please flatten the input to make memory contiguous."),ORE_InvalidArguments);
+    }
+
     int pointsnum = PyArray_SIZE(arrPtr);
     *ppdata = (T*) PyArray_DATA(arrPtr);
     return pointsnum;
