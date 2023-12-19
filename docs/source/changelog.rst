@@ -6,11 +6,6 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.135.2
-===============
-
-* Fix to throw exception if input is non-contiguous numpy array for ExtractContiguousArrayToPointer
-
 Version 0.135.1
 ===============
 
