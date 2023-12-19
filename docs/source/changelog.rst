@@ -11,6 +11,11 @@ Version 0.136.0
 
 * Set correct geometry group name for fclspace
 
+Version 0.135.1
+===============
+
+* Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
+
 Version 0.135.0
 ===============
 
