@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.135.2
+===============
+
+* Fix the issue that grabbed bodies are not checked for collision when their grabbing links are not collision-enabled.
+
 Version 0.135.1
 ===============
 
