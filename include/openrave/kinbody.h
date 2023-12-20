@@ -2545,10 +2545,11 @@ private:
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
     /// \param name The name of the extra geometries group stored in each link.
+    /// \param propagateGroupNameToSelfCollisionChecker It true, propagate this geometry group change to self collision checker. It is always propagated to env collision checker.
     /// The geometries can be set while the body is added to the environment. No other information will be touched.
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     /// \throw If any links do not have the particular geometry, an exception will be raised.
-    virtual void SetLinkGeometriesFromGroup(const std::string& name);
+    virtual void SetLinkGeometriesFromGroup(const std::string& name, const bool propagateGroupNameToSelfCollisionChecker);
 
     /// \brief Stores geometries for later retrieval for all the links at the same time.
     ///

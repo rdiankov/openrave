@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.136.0
+===============
+
+* Set correct geometry group name for fclspace
+
 Version 0.135.2
 ===============
 
