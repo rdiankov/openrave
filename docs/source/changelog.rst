@@ -9,6 +9,7 @@ Unreleased
 Version 0.135.1
 ===============
 
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
 * Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
 
 Version 0.135.0
