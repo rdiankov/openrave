@@ -11,9 +11,15 @@ Version 0.136.0
 
 * Set correct geometry group name for fclspace
 
+Version 0.135.2
+===============
+
+* Fix the issue that grabbed bodies are not checked for collision when their grabbing links are not collision-enabled.
+
 Version 0.135.1
 ===============
 
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
 * Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
 
 Version 0.135.0
