@@ -54,7 +54,18 @@ link_directories(${OPENRAVE_LINK_DIRS} ${FPARSER_LIBRARY_DIRS})
 include(StaticPlugins) # Supplies the static_plugins interface library.
 
 include_directories(${FPARSER_INCLUDE_DIRS})
-add_library(libopenrave SHARED ${openrave_lib_SOURCES})
+
+add_custom_command(
+  DEPENDS ${MUJIN_CLIENT_GENERATORS_EXECUTABLE}
+          ${MUJIN_CLIENT_GENERATORS_BASEDIR}/*
+          ${MUJIN_SENSORBRIDGE_API_SPEC_BASEDIR}/*
+  OUTPUT geometry_test.cpp
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/../../python/mujinapis/generateInfoStruct.py > geometry_test.cpp
+  VERBATIM
+)
+
+add_library(libopenrave SHARED ${openrave_lib_SOURCES} geometry_test.cpp)
+
 add_dependencies(libopenrave interfacehashes_target openrave-md5)
 if( TARGET crlibm-native )
   add_dependencies(libopenrave check_libm_accuracy-native) # forces check to be run before libopenrave is compile
