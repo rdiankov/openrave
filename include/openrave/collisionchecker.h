@@ -87,7 +87,7 @@ public:
     // report just the first collision
     //@{
     KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
-    KinBody::GeometryConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
+    KinBody::GeometryConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links. can be nullptr if Collision comes from geometry info.
     std::string body1GeomName, body2GeomName; ///< the specifined geometries' names hit for the given links
     //@}
     
