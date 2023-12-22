@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.137.0
+===============
+
+* Store geometry name in FCLGeometryInfo in case when geometry group is used.
+
 Version 0.136.0
 ===============
 
