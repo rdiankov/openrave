@@ -1219,15 +1219,15 @@ std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> FCLCollisionChecker
 void FCLCollisionChecker::GetCollisionGeometryAndName(const fcl::CollisionObject &collObj, GeometryConstPtr& pgeom, std::string& geometryName)
 {
     const std::shared_ptr<const fcl::CollisionGeometry>& collgeom = collObj.collisionGeometry();
-    FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* geom_raw = static_cast<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo *>(collgeom->getUserData());
-    if( !!geom_raw ) {
-        pgeom = geom_raw->GetGeometry();
+    FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* geomRaw = static_cast<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo *>(collgeom->getUserData());
+    if( !!geomRaw ) {
+        pgeom = geomRaw->GetGeometry();
         if( !pgeom ) {
-            if( geom_raw->bFromKinBodyGeometry ) {
-                RAVELOG_WARN_FORMAT("env=%s, The geom %s/%s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%geom_raw->bodylinkname%geom_raw->geomname%_userdatakey);
+            if( geomRaw->bFromKinBodyGeometry ) {
+                RAVELOG_WARN_FORMAT("env=%s, The geom %s/%s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%geomRaw->bodylinkname%geomRaw->geomname%_userdatakey);
             }
         }
-        geometryName = geom_raw->geomname;
+        geometryName = geomRaw->geomname;
         return;
     }
     pgeom.reset();
