@@ -29,6 +29,9 @@ void DeleteItemCallbackSafe(QtOSGViewerWeakPtr wpt, Item* pItem)
     QtOSGViewerPtr pviewer = wpt.lock();
     if( !!pviewer ) {
         pviewer->_DeleteItemCallback(pItem);
+    } else {
+        RAVELOG_INFO("Viewer has been destroyed, deallocating item %p directly");
+        delete pItem;
     }
 }
 
