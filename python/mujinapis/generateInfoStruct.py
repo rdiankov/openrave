@@ -202,8 +202,17 @@ class _CppParamInfo:
             return ''
         return self.RenderName + 'Null'
 
-def OutputSchema(schema):
-    structString = f"""\
+def OutputOneClass(schema):
+    structString = f"class OPENRAVE_API {schema['typeName']}Gen : public InfoBase\n{{"
+    for fieldName, fieldSchema in schema.get('properties', dict()).items():
+        param = _CppParamInfo(fieldSchema, fieldName)
+        structString += '\n    ' + param.RenderFields()[0] + ';'
+    return structString + "\n};"
+
+
+def OutputFile(schemas):
+    classDelimiter = '\n\n'
+    return f"""\
 #include <string>
 #include <vector>
 
@@ -211,16 +220,10 @@ def OutputSchema(schema):
 
 namespace openrave {{
 
-class OPENRAVE_API {schema['typeName']} : public InfoBase
-{{"""
-    for fieldName, fieldSchema in schema.get('properties', dict()).items():
-        param = _CppParamInfo(fieldSchema, fieldName)
-        structString += '\n    ' + param.RenderFields()[0] + ';'
-    return structString + "\n};}"
+{classDelimiter.join(map(OutputOneClass, schemas))}
 
-
-def OutputSomething():
-    print(OutputSchema(geometryInfoSchema))
+}}
+"""
 
 if __name__ == "__main__":
-    OutputSomething()
+    print(OutputFile([geometryInfoSchema]))
