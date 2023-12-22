@@ -88,6 +88,7 @@ public:
     //@{
     KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
     KinBody::GeometryConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
+    std::string body1GeomName, body2GeomName; ///< the specifined geometries' names hit for the given links
     //@}
     
     std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> > vLinkColliding; ///< all link collision pairs. Set when CO_AllLinkCollisions is enabled. should be deprecated

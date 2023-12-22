@@ -227,7 +227,7 @@ private:
 
     std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> GetCollisionLink(const fcl::CollisionObject &collObj);
 
-    std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> GetCollisionGeometry(const fcl::CollisionObject &collObj);
+    void GetCollisionGeometryAndName(const fcl::CollisionObject &collObj, GeometryConstPtr& pgeom, std::string& geometryName);
 
     inline BroadPhaseCollisionManagerPtr _CreateManager();
 

@@ -87,7 +87,8 @@ public:
             }
 
             GeometryWeakPtr _pgeom;
-            std::string bodylinkgeomname; // for debugging purposes
+            std::string bodylinkname; // for debugging purposes
+            std::string geomname; // name of the geometry. valid even for standalone object that does not have any KinBody associations
             bool bFromKinBodyGeometry; ///< if true, then from kinbodygeometry. Otherwise from standalone object that does not have any KinBody associations
         };
 

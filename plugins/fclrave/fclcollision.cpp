@@ -968,12 +968,9 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
     if( numContacts > 0 ) {
         if( !!pcb->_report ) {
             std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = GetCollisionLink(*o1), o2info = GetCollisionLink(*o2);
-            std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> o1geominfo = GetCollisionGeometry(*o1), o2geominfo = GetCollisionGeometry(*o2);
 
             LinkConstPtr& plink1 = o1info.second;
             LinkConstPtr& plink2 = o2info.second;
-            GeometryConstPtr& pgeom1 = o1geominfo.second;
-            GeometryConstPtr& pgeom2 = o2geominfo.second;
 
             // plink1 or plink2 can be None if object is standalone (ie coming from trimesh)
 
@@ -989,8 +986,8 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
             _reportcache.Reset(_options);
             _reportcache.plink1 = plink1;
             _reportcache.plink2 = plink2;
-            _reportcache.pgeom1 = pgeom1;
-            _reportcache.pgeom2 = pgeom2;
+            GetCollisionGeometryAndName(*o1, _reportcache.pgeom1, _reportcache.body1GeomName);
+            GetCollisionGeometryAndName(*o2, _reportcache.pgeom2, _reportcache.body2GeomName);
 
             // TODO : eliminate the contacts points (insertion sort (std::lower) + binary_search ?) duplicated
             // How comes that there are duplicated contacts points ?
@@ -1006,13 +1003,13 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
             if( _options & (OpenRAVE::CO_AllGeometryContacts | OpenRAVE::CO_AllGeometryCollisions) ) {
                 // We maintain vGeometryContacts ordered
                 CollisionReport::GeometryPairContact pairContact;
-                if( pgeom1.get() < pgeom2.get() ) {
-                    pairContact.pgeom1 = pgeom1;
-                    pairContact.pgeom2 = pgeom2;
+                if( _reportcache.pgeom1.get() < _reportcache.pgeom2.get() ) {
+                    pairContact.pgeom1 = _reportcache.pgeom1;
+                    pairContact.pgeom2 = _reportcache.pgeom2;
                 }
                 else {
-                    pairContact.pgeom1 = pgeom2;
-                    pairContact.pgeom2 = pgeom1;
+                    pairContact.pgeom1 = _reportcache.pgeom2;
+                    pairContact.pgeom2 = _reportcache.pgeom1;
                 }
                 typedef std::vector<CollisionReport::GeometryPairContact>::iterator PairIterator;
                 PairIterator end = pcb->_report->vGeometryContacts.end(), first = std::lower_bound(pcb->_report->vGeometryContacts.begin(), end, pairContact, CompareGeometryPairContact);
@@ -1054,6 +1051,8 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
             pcb->_report->plink2 = _reportcache.plink2;
             pcb->_report->pgeom1 = _reportcache.pgeom1;
             pcb->_report->pgeom2 = _reportcache.pgeom2;
+            pcb->_report->body1GeomName = _reportcache.body1GeomName;
+            pcb->_report->body2GeomName = _reportcache.body2GeomName;
             if( pcb->_report->contacts.size() == 0) {
                 pcb->_report->contacts.swap(_reportcache.contacts);
             } else {
@@ -1217,20 +1216,23 @@ std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> FCLCollisionChecker
     return std::make_pair(link_raw, LinkConstPtr());
 }
 
-std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> FCLCollisionChecker::GetCollisionGeometry(const fcl::CollisionObject &collObj)
+void FCLCollisionChecker::GetCollisionGeometryAndName(const fcl::CollisionObject &collObj, GeometryConstPtr& pgeom, std::string& geometryName)
 {
     const std::shared_ptr<const fcl::CollisionGeometry>& collgeom = collObj.collisionGeometry();
     FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* geom_raw = static_cast<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo *>(collgeom->getUserData());
     if( !!geom_raw ) {
-        const GeometryConstPtr pgeom = geom_raw->GetGeometry();
+        pgeom = geom_raw->GetGeometry();
         if( !pgeom ) {
             if( geom_raw->bFromKinBodyGeometry ) {
-                RAVELOG_WARN_FORMAT("env=%s, The geom %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%geom_raw->bodylinkgeomname%_userdatakey);
+                RAVELOG_WARN_FORMAT("env=%s, The geom %s/%s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%geom_raw->bodylinkname%geom_raw->geomname%_userdatakey);
             }
         }
-        return std::make_pair(geom_raw, pgeom);
+        geometryName = geom_raw->geomname;
+        return;
     }
-    return std::make_pair(geom_raw, GeometryConstPtr());
+    pgeom.reset();
+    geometryName.clear();
+    return;
 }
 
 BroadPhaseCollisionManagerPtr FCLCollisionChecker::_CreateManager() {

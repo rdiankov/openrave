@@ -115,7 +115,12 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
                 if( !pfclgeom ) {
                     continue;
                 }
-                pfclgeom->setUserData(nullptr);
+                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo = boost::make_shared<FCLKinBodyInfo::FCLGeometryInfo>();
+                pfclgeominfo->bodylinkname = pbody->GetName() + "/" + plink->GetName();
+                pfclgeominfo->geomname = geominfo.GetName();
+                pfclgeom->setUserData(pfclgeominfo.get());
+                // save the pointers
+                linkinfo->vgeominfos.push_back(pfclgeominfo);
 
                 // We do not set the transformation here and leave it to _Synchronize
                 CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
@@ -141,8 +146,9 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
                 if( !pfclgeom ) {
                     continue;
                 }
-                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo(pgeom));
-                pfclgeominfo->bodylinkgeomname = pbody->GetName() + "/" + plink->GetName() + "/" + pgeom->GetName();
+                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo = boost::make_shared<FCLKinBodyInfo::FCLGeometryInfo>(pgeom);
+                pfclgeominfo->bodylinkname = pbody->GetName() + "/" + plink->GetName();
+                pfclgeominfo->geomname = pgeom->GetName();
                 pfclgeom->setUserData(pfclgeominfo.get());
                 // save the pointers
                 linkinfo->vgeominfos.push_back(pfclgeominfo);

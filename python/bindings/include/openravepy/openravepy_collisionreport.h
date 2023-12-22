@@ -53,6 +53,8 @@ public:
     object plink2 = py::none_();
     object pgeom1 = py::none_();
     object pgeom2 = py::none_();
+    std::string body1GeomName;
+    std::string body2GeomName;
     py::list vLinkColliding;
     py::list vGeometryContacts;
     dReal minDistance;
