@@ -204,12 +204,15 @@ class _CppParamInfo:
 
 def OutputSchema(schema):
     structString = f"""\
+#include <string>
+#include <vector>
+
 class {schema['typeName']} : public InfoBase
 {{"""
     for fieldName, fieldSchema in schema.get('properties', dict()).items():
         param = _CppParamInfo(fieldSchema, fieldName)
         structString += '\n    ' + param.RenderFields()[0] + ';'
-    return structString + "\n}"
+    return structString + "\n};"
 
 
 def OutputSomething():
