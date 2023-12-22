@@ -105,8 +105,8 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
             const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = plink->GetGeometriesFromGroup(pinfo->_geometrygroup);
             FOREACH(itgeominfo, vgeometryinfos) {
                 const KinBody::GeometryInfoPtr& pgeominfo = *itgeominfo;
-                const int igeominfo = itgeominfo - vgeometryinfos.begin();
                 if( !pgeominfo ) {
+                    int igeominfo = itgeominfo - vgeometryinfos.begin();
                     throw OpenRAVE::OpenRAVEException(str(boost::format("Failed to access geometry info %d for link %s:%s with geometrygroup %s")%igeominfo%plink->GetParent()->GetName()%plink->GetName()%pinfo->_geometrygroup), OpenRAVE::ORE_InvalidState);
                 }
                 const KinBody::GeometryInfo& geominfo = *pgeominfo;
@@ -115,18 +115,7 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
                 if( !pfclgeom ) {
                     continue;
                 }
-
-                if( plink->GetGeometries().size() > igeominfo && plink->GetGeometries()[igeominfo]->GetName() == geominfo.GetName() ) { // assuming that geometries from group has padded geometries of the geometries of the link in the same order.
-                    const KinBody::GeometryPtr& pgeomFromLink = plink->GetGeometries()[igeominfo];
-                    boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo(pgeomFromLink));
-                    pfclgeominfo->bodylinkgeomname = pbody->GetName() + "/" + plink->GetName() + "/" + pgeomFromLink->GetName() + "/" + pinfo->_geometrygroup;
-                    pfclgeom->setUserData(pfclgeominfo.get());
-                    // save the pointers
-                    linkinfo->vgeominfos.push_back(pfclgeominfo);
-                }
-                else {
-                    pfclgeom->setUserData(nullptr);
-                }
+                pfclgeom->setUserData(nullptr);
 
                 // We do not set the transformation here and leave it to _Synchronize
                 CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
