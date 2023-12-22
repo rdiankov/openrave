@@ -100,18 +100,6 @@ geometryInfosSchema = {
     "items": geometryInfoSchema,
 }
 
-from typing import Tuple, Any, Iterable
-
-def _EnableNullification(cppType):
-    raise ValueError("fix the schema, fool!")
-    if cppType.startswith('std::string'):
-        return 'const char*', False
-    if cppType.endswith('*'):
-        return cppType, False
-    if cppType.endswith('&'):
-        return cppType[:-1] + '*', False
-    return cppType, True
-
 def _JsonSchemaTypeToCppType(schema):
     jsonType = schema.get('type', '')
     if isinstance(jsonType, list):
@@ -120,6 +108,9 @@ def _JsonSchemaTypeToCppType(schema):
         copied['type'] = jsonType[0]
         return _JsonSchemaTypeToCppType(copied)
     if jsonType == 'object':
+        if 'typeName' in schema:
+            # TODO(heman.gandhi): remove suffix
+            return schema['typeName'] + 'Gen'
         return 'rapidjson::Value'
     if jsonType == 'number':
         return 'double'
@@ -168,7 +159,7 @@ class _CppParamInfo:
             # TODO(heman.gandhi): raise a ValueError here?
             return
         if isinstance(schema.get('type', ''), list) and len(schema['type']) > 1 and schema['type'][1] == 'null':
-            self.cppType, self.needsExtraParamForNull = _EnableNullification(self.cppType)
+            raise ValueError("While a list of types is valid JSON schema, generation does not support it.")
         self.hasDefault = 'default' in schema
         if self.hasDefault:
             self.defaultValue = schema['default']
@@ -216,9 +207,13 @@ def OutputFile(schemas):
 #include <string>
 #include <vector>
 
+#include <openrave/config.h>
+#include <openrave/openraveexception.h>
+#include <openrave/openrave.h>
+#include <openrave/units.h>
 #include <openrave/interface.h>
 
-namespace openrave {{
+namespace OpenRAVE {{
 
 {classDelimiter.join(map(OutputOneClass, schemas))}
 
