@@ -42,7 +42,7 @@ geometryInfosColorTriple = {
 
 geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
     "type": "object",
-    "typeName": "Geometry",
+    "typeName": "GeometryInfoGen",
     "properties": {
         "id": {"type": "string"},
         "name": {"type": "string"},
@@ -258,6 +258,17 @@ class _CppParamInfo:
             indent += 4
         code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {self.RenderName(True)});'
         return code + suffix
+    def RenderDiffing(self):
+        code = ""
+        indent = 8
+        suffix = ""
+        paramName = self.RenderName(True)
+        code += f'{" "*indent}if ({paramName} != other.{paramName})'
+        code += '\n' + ' '*indent + "{" + '\n'
+        suffix = "\n" + ' '*indent + "}"
+        indent += 4
+        code += f'{" "*indent}diffResult.{paramName} = {paramName};'
+        return code + suffix
 
 def OutputInClassSerialization(schema):
     fieldInfos = [
@@ -277,21 +288,35 @@ def OutputInClassSerialization(schema):
     }}
 """
 
-def OutputDiffFunction(schema):
-    diffFunction = '\n    rapidjson::Value Diff(const rapidjson::Value& other)\n    {\n'
-    diffFunction += '        return rapidjson::Value();\n'
+def OutputDiffing(schema):
+    fieldInfos = [
+        _CppParamInfo(fieldSchema, fieldName)\
+            for fieldName, fieldSchema in schema.get('properties', dict()).items()
+    ]
+    newLine = '\n'  # Format string interpolation forbids backslashes inside substitutions.
+    return f"""
+    {schema["typeName"]} Diff(const {schema["typeName"]}& other)
+    {{
+        {schema["typeName"]} diffResult;
+{newLine.join(info.RenderDiffing() for info in fieldInfos)}
+        return diffResult;
+    }}
+"""
+
+def OutputResetFunction(schema):
+    diffFunction = f'\n    void Reset()\n    {{\n'
     diffFunction += '    }\n'
     return diffFunction
 
 def OutputOneClass(schema):
-    structString = f"class OPENRAVE_API {schema['typeName']}Gen : public InfoBase\n{{"
+    structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
     for fieldName, fieldSchema in schema.get('properties', dict()).items():
         param = _CppParamInfo(fieldSchema, fieldName)
         structString += '\n    ' + param.RenderFields()[0] + ';\n'
     structString += OutputInClassSerialization(schema)
-    structString += OutputDiffFunction(schema)
+    structString += OutputDiffing(schema)
+    structString += OutputResetFunction(schema)
     return structString + "\n};"
-
 
 def OutputFile(schemas):
     classDelimiter = '\n\n'
