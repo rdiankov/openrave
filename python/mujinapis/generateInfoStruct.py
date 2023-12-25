@@ -193,11 +193,18 @@ class _CppParamInfo:
             return ''
         return self.RenderName + 'Null'
 
+def OutputDiffFunction(schema):
+    diffFunction = '    rapidjson::Value Diff(const rapidjson::Value& other)\n    {\n'
+    diffFunction += '        return rapidjson::Value();\n'
+    diffFunction += '    }\n'
+    return diffFunction
+
 def OutputOneClass(schema):
     structString = f"class OPENRAVE_API {schema['typeName']}Gen : public InfoBase\n{{"
     for fieldName, fieldSchema in schema.get('properties', dict()).items():
         param = _CppParamInfo(fieldSchema, fieldName)
-        structString += '\n    ' + param.RenderFields()[0] + ';'
+        structString += '\n    ' + param.RenderFields()[0] + ';\n\n'
+    structString += OutputDiffFunction(schema)
     return structString + "\n};"
 
 
@@ -207,11 +214,9 @@ def OutputFile(schemas):
 #include <string>
 #include <vector>
 
-#include <openrave/config.h>
-#include <openrave/openraveexception.h>
 #include <openrave/openrave.h>
-#include <openrave/units.h>
-#include <openrave/interface.h>
+
+#include "rapidjson/rapidjson.h"
 
 namespace OpenRAVE {{
 
