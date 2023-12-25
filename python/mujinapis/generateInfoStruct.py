@@ -21,7 +21,8 @@ poseSchema = {
     "maxItems": 7,
     "additionalItems": False,
     "semanticType": "Pose",
-    "typeName": "Transform"
+    "typeName": "Transform",
+    "scaleInSerialization": True
 }
 
 def MakePoseSchema(title, description):
@@ -79,7 +80,8 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "items": {
                 "type": "number"
             },
-            "typeName": "Vector"
+            "typeName": "Vector",
+            "scaleInSerialization": True
         },
         "innerExtents": {
             "type": "array",
@@ -88,7 +90,9 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "items": {
                 "type": "number"
             },
-            "typeName": "Vector"
+            "typeName": "Vector",
+            "scaleInSerialization": True
+
         },
         "halfExtents": {
             "type": "array",
@@ -97,7 +101,9 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "items": {
                 "type": "number"
             },
-            "typeName": "Vector"
+            "typeName": "Vector",
+            "scaleInSerialization": True
+
         },
         "transparency": {
             "type": "number"
@@ -109,7 +115,9 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "items": {
                 "type": "number"
             },
-            "typeName": "Vector"
+            "typeName": "Vector",
+            "scaleInSerialization": True
+
         },
         "negativeCropContainerEmptyMargins": {
             "type": "array",
@@ -118,7 +126,9 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "items": {
                 "type": "number"
             },
-            "typeName": "Vector"
+            "typeName": "Vector",
+            "scaleInSerialization": True
+
         },
         "positiveCropContainerMargins": {
             "type": "array",
@@ -127,7 +137,9 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "items": {
                 "type": "number"
             },
-            "typeName": "Vector"
+            "typeName": "Vector",
+            "scaleInSerialization": True
+
         },
         "positiveCropContainerEmptyMargins": {
             "type": "array",
@@ -136,7 +148,9 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "items": {
                 "type": "number"
             },
-            "typeName": "Vector"
+            "typeName": "Vector",
+            "scaleInSerialization": True
+
         },
         "transform": MakePoseSchema(title=_("transform"), description=_("transform")),
         "visible": {
@@ -200,7 +214,7 @@ class _CppParamInfo:
     fieldNamePrefix = '_' # type: str
     defaultValue = None # type: Any
     hasDefault = False # type: bool
-    needsJsonAlloc = False # type: bool
+    shouldScaleInJson = False # type: bool
     def __init__(self, schema, paramName='', fieldNamePrefix='_', isRequired=False):
         self.cppParamName = paramName
         self.cppType = _JsonSchemaTypeToCppType(schema)
@@ -214,6 +228,7 @@ class _CppParamInfo:
             self.defaultValue = schema['default']
         self.fieldNamePrefix = fieldNamePrefix
         self.isRequired = isRequired
+        self.shouldScaleInJson = schema.get('scaleInSerialization', False)
     def RenderFields(self, prefixOverride=None):
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
         paramString = self.cppType + ' ' + prefix + self.cppParamName
@@ -232,10 +247,6 @@ class _CppParamInfo:
         if self.hasDefault:
             return str(self.defaultValue)
         return self.cppType + "{}"
-    def ShouldScaleInJson(self):
-        if self.cppType.startswith('RaveVector'):
-            return True
-        return self.cppType in ['Vector', 'Transform']
 
     def RenderSerialization(self, cppJsonVariable="rSerializedOutput", cppJsonAllocVariable="allocator"):
         serCode = ""
@@ -247,7 +258,7 @@ class _CppParamInfo:
             suffix = "\n" + ' '*indent + "}"
             indent += 4
         serName = self.RenderName(True)
-        if self.ShouldScaleInJson():
+        if self.shouldScaleInJson:
             if self.cppType == 'Transform':
                 serCode += ' '*indent + '{\n'
                 suffix += "\n" + ' '*indent + "}"
@@ -270,7 +281,7 @@ class _CppParamInfo:
             suffix = "\n" + ' '*indent + "}"
             indent += 4
         code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {self.RenderName(True)});'
-        if self.ShouldScaleInJson():
+        if self.shouldScaleInJson:
             scaleField = self.RenderName(True)
             if self.cppType == 'Transform':
                 scaleField = scaleField + '.trans'
