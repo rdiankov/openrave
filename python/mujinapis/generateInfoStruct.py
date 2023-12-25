@@ -30,16 +30,6 @@ def MakePoseSchema(title, description):
     customPoseSchema["description"] = description
     return customPoseSchema
 
-geometryInfosColorTriple = {
-    'type': 'array',
-    'minItems': 3,
-    'maxItems': 3,
-    'items': {
-        'type': 'number'
-    },
-    "typeName": "RaveVector<float>"
-}
-
 geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
     "type": "object",
     "typeName": "GeometryInfoGen",
@@ -61,8 +51,27 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
                 "conicalfrustum",
                 ""]
         },
-        "diffuseColor": geometryInfosColorTriple,
-        "ambientColor": geometryInfosColorTriple,
+        "diffuseColor": {
+            'type': 'array',
+            'minItems': 3,
+            'maxItems': 3,
+            'items': {
+                'type': 'number'
+            },
+            "typeName": "RaveVector<float>",
+            "default": "RaveVector<float>{1, 1, 1}",
+
+        },
+        "ambientColor": {
+            'type': 'array',
+            'minItems': 3,
+            'maxItems': 3,
+            'items': {
+                'type': 'number'
+            },
+            "typeName": "RaveVector<float>",
+            "default": "RaveVector<float>{}",
+        },
         "outerExtents": {
             "type": "array",
             "minItems": 3,
@@ -262,12 +271,17 @@ class _CppParamInfo:
         code = ""
         indent = 8
         suffix = ""
-        paramName = self.RenderName(True)
-        code += f'{" "*indent}if ({paramName} != other.{paramName})'
+        code += f'{" "*indent}if ({self.RenderName(True)} != other.{self.RenderName(True)})'
         code += '\n' + ' '*indent + "{" + '\n'
         suffix = "\n" + ' '*indent + "}"
         indent += 4
-        code += f'{" "*indent}diffResult.{paramName} = {paramName};'
+        code += f'{" "*indent}diffResult.{self.RenderName(True)} = {self.RenderName(True)};'
+        return code + suffix
+    def RenderReset(self):
+        code = ""
+        indent = 8
+        suffix = ""
+        code += f'{" "*indent}{self.RenderName(True)} = {self.RenderDefaultValue()};'
         return code + suffix
 
 def OutputInClassSerialization(schema):
@@ -303,10 +317,18 @@ def OutputDiffing(schema):
     }}
 """
 
-def OutputResetFunction(schema):
-    diffFunction = f'\n    void Reset()\n    {{\n'
-    diffFunction += '    }\n'
-    return diffFunction
+def OutputReset(schema):
+    fieldInfos = [
+        _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
+            for fieldName, fieldSchema in schema.get('properties', dict()).items()
+    ]
+    newLine = '\n'  # Format string interpolation forbids backslashes inside substitutions.
+    return f"""
+    void Reset()
+    {{
+{newLine.join(info.RenderReset() for info in fieldInfos)}
+    }}
+"""
 
 def OutputOneClass(schema):
     structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
@@ -315,7 +337,7 @@ def OutputOneClass(schema):
         structString += '\n    ' + param.RenderFields()[0] + ';\n'
     structString += OutputInClassSerialization(schema)
     structString += OutputDiffing(schema)
-    structString += OutputResetFunction(schema)
+    structString += OutputReset(schema)
     return structString + "\n};"
 
 def OutputFile(schemas):
