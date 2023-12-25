@@ -1387,7 +1387,12 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
     OPENRAVE_ASSERT_OP(q1.size(), ==, q2.size() );
     if (_bAreAllJoints1DOFAndNonCircular) {
         for(size_t i = 0; i < q1.size(); ++i) {
-            q1[i] -= q2[i];
+            if( std::isinf(q1[i]) || std::isinf(q2[i]) ) {
+                q1[i] = 0.0;
+            }
+            else {
+                q1[i] -= q2[i];
+            }
         }
         return;
     }
@@ -1397,7 +1402,10 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
         FOREACHC(itjoint,_vecjoints) {
             int dof = (*itjoint)->GetDOFIndex();
             for(int i = 0; i < (*itjoint)->GetDOF(); ++i) {
-                if( (*itjoint)->IsCircular(i) ) {
+                if( std::isinf(q1[dof+i]) || std::isinf(q2[dof+i]) ) {
+                    q1[dof+i] = 0.0;
+                }
+                else if( (*itjoint)->IsCircular(i) ) {
                     q1[dof+i] = utils::NormalizeCircularAngle(q1[dof+i]-q2[dof+i],(*itjoint)->_vcircularlowerlimit.at(i), (*itjoint)->_vcircularupperlimit.at(i));
                 }
                 else {
@@ -1410,6 +1418,9 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
         OPENRAVE_ASSERT_OP(q1.size(), ==, dofindices.size() );
         for(size_t i = 0; i < dofindices.size(); ++i) {
             const Joint& joint = _GetJointFromDOFIndex(dofindices[i]);
+            if( std::isinf(q1[i]) || std::isinf(q2[i]) ) {
+                q1[i] = 0.0;
+            }
             if( joint.IsCircular(dofindices[i]-joint.GetDOFIndex()) ) {
                 int iaxis = dofindices[i]-joint.GetDOFIndex();
                 q1[i] = utils::NormalizeCircularAngle(q1[i]-q2[i], joint._vcircularlowerlimit.at(iaxis), joint._vcircularupperlimit.at(iaxis));

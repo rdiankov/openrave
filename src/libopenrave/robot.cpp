@@ -1587,7 +1587,12 @@ void RobotBase::SubtractActiveDOFValues(std::vector<dReal>& q1, const std::vecto
     size_t index = 0;
     if (_bAreAllJoints1DOFAndNonCircular) {
         for (size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
-            q1[i] -= q2[i];
+            if( std::isinf(q1[i]) || std::isinf(q2[i]) ) {
+                q1[i] = 0.0;
+            }
+            else {
+                q1[i] -= q2[i];
+            }
         }
         index = _vActiveDOFIndices.size();
     }

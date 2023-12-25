@@ -197,6 +197,9 @@ bool ParabolicInterpolator::ComputeArbitraryVelNDTrajectory(const std::vector<dR
 
     // Check inputs
     for (size_t idof = 0; idof < _ndof; ++idof) {
+        if( std::isinf(x0Vect[idof]) || std::isinf(x1Vect[idof]) ) {
+            continue;
+        }
         if( x0Vect[idof] > xmaxVect[idof] + epsilon || x0Vect[idof] < xminVect[idof] - epsilon ) {
             RAVELOG_WARN_FORMAT("env=%d, x0Vect[%d] = %.15e exceeds the bounds; xmin = %.15e; xmax = %.15e", _envid%idof%x0Vect[idof]%xminVect[idof]%xmaxVect[idof]);
             return false;
@@ -452,7 +455,7 @@ bool ParabolicInterpolator::Compute1DTrajectory(dReal x0, dReal x1, dReal v0, dR
     OPENRAVE_ASSERT_OP(Abs(v0), <=, vm + epsilon);
     OPENRAVE_ASSERT_OP(Abs(v1), <=, vm + epsilon);
 
-    dReal d = x1 - x0;
+    dReal d = (std::isinf(x1) || std::isinf(x0)) ? 0.0 : x1 - x0;
     dReal dv = v1 - v0;
     dReal v0Sqr = v0*v0;
     dReal v1Sqr = v1*v1;
