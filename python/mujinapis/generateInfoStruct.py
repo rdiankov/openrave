@@ -1,4 +1,34 @@
+import copy
+
 _ = lambda x: x
+
+poseSchema = {
+    "title": _("Cartesian pose"),
+    "description": _(
+        "A 7-element vector representing a 6D cartesian pose. Consists of a wxyz quaternion and an xyz position. The quaternion defines the orientation."
+    ),
+    "type": "array",
+    "items": [
+        {"title": _("w (quaternion)"), "type": "number", "default": 1.0},
+        {"title": _("x (quaternion)"), "type": "number", "default": 0.0},
+        {"title": _("y (quaternion)"), "type": "number", "default": 0.0},
+        {"title": _("z (quaternion)"), "type": "number", "default": 0.0},
+        {"title": _("x (position)"), "type": "number", "default": 0.0, "semanticType": "Length"},
+        {"title": _("y (position)"), "type": "number", "default": 0.0, "semanticType": "Length"},
+        {"title": _("z (position)"), "type": "number", "default": 0.0, "semanticType": "Length"},
+    ],
+    "minItems": 7,
+    "maxItems": 7,
+    "additionalItems": False,
+    "semanticType": "Pose",
+    "typeName": "Transform"
+}
+
+def MakePoseSchema(title, description):
+    customPoseSchema = copy.deepcopy(poseSchema)
+    customPoseSchema["title"] = title
+    customPoseSchema["description"] = description
+    return customPoseSchema
 
 geometryInfosColorTriple = {
     'type': 'array',
@@ -6,7 +36,8 @@ geometryInfosColorTriple = {
     'maxItems': 3,
     'items': {
         'type': 'number'
-    }
+    },
+    "typeName": "RaveVector<float>"
 }
 
 geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
@@ -31,6 +62,7 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
                 ""]
         },
         "diffuseColor": geometryInfosColorTriple,
+        "ambientColor": geometryInfosColorTriple,
         "outerExtents": {
             "type": "array",
             "minItems": 3,
@@ -64,7 +96,8 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "maxItems": 3,
             "items": {
                 "type": "number"
-            }
+            },
+            "typeName": "Vector"
         },
         "negativeCropContainerEmptyMargins": {
             "type": "array",
@@ -72,7 +105,8 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "maxItems": 3,
             "items": {
                 "type": "number"
-            }
+            },
+            "typeName": "Vector"
         },
         "positiveCropContainerMargins": {
             "type": "array",
@@ -80,7 +114,8 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "maxItems": 3,
             "items": {
                 "type": "number"
-            }
+            },
+            "typeName": "Vector"
         },
         "positiveCropContainerEmptyMargins": {
             "type": "array",
@@ -88,9 +123,10 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "maxItems": 3,
             "items": {
                 "type": "number"
-            }
+            },
+            "typeName": "Vector"
         },
-        "transform": {'type': 'string'}#MakePoseSchema(title=_("transform"), description=_("transform")),
+        "transform": MakePoseSchema(title=_("transform"), description=_("transform")),
     }
 }
 
@@ -101,6 +137,8 @@ geometryInfosSchema = {
 }
 
 def _JsonSchemaTypeToCppType(schema):
+    if schema.get('typeName'):
+        return schema.get('typeName')
     jsonType = schema.get('type', '')
     if isinstance(jsonType, list):
         assert len(jsonType) == 2 and jsonType[1] == 'null', 'Only support nullable types'
@@ -194,7 +232,7 @@ class _CppParamInfo:
         return self.RenderName + 'Null'
 
 def OutputDiffFunction(schema):
-    diffFunction = '    rapidjson::Value Diff(const rapidjson::Value& other)\n    {\n'
+    diffFunction = '\n    rapidjson::Value Diff(const rapidjson::Value& other)\n    {\n'
     diffFunction += '        return rapidjson::Value();\n'
     diffFunction += '    }\n'
     return diffFunction
@@ -203,7 +241,7 @@ def OutputOneClass(schema):
     structString = f"class OPENRAVE_API {schema['typeName']}Gen : public InfoBase\n{{"
     for fieldName, fieldSchema in schema.get('properties', dict()).items():
         param = _CppParamInfo(fieldSchema, fieldName)
-        structString += '\n    ' + param.RenderFields()[0] + ';\n\n'
+        structString += '\n    ' + param.RenderFields()[0] + ';\n'
     structString += OutputDiffFunction(schema)
     return structString + "\n};"
 
