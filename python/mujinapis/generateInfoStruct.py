@@ -1,12 +1,43 @@
+import copy
+
 _ = lambda x: x
+
+poseSchema = {
+    "title": _("Cartesian pose"),
+    "description": _(
+        "A 7-element vector representing a 6D cartesian pose. Consists of a wxyz quaternion and an xyz position. The quaternion defines the orientation."
+    ),
+    "type": "array",
+    "items": [
+        {"title": _("w (quaternion)"), "type": "number", "default": 1.0},
+        {"title": _("x (quaternion)"), "type": "number", "default": 0.0},
+        {"title": _("y (quaternion)"), "type": "number", "default": 0.0},
+        {"title": _("z (quaternion)"), "type": "number", "default": 0.0},
+        {"title": _("x (position)"), "type": "number", "default": 0.0, "semanticType": "Length"},
+        {"title": _("y (position)"), "type": "number", "default": 0.0, "semanticType": "Length"},
+        {"title": _("z (position)"), "type": "number", "default": 0.0, "semanticType": "Length"},
+    ],
+    "minItems": 7,
+    "maxItems": 7,
+    "additionalItems": False,
+    "semanticType": "Pose",
+}
+
+def MakePoseSchema(title, description):
+    customPoseSchema = copy.deepcopy(poseSchema)
+    customPoseSchema["title"] = title
+    customPoseSchema["description"] = description
+    return customPoseSchema
 
 geometryInfosColorTriple = {
     'type': 'array',
     'minItems': 3,
     'maxItems': 3,
-    'items': {
-        'type': 'number'
-    }
+    "items": [
+        {"type": "number"},
+        {"type": "number"},
+        {"type": "number"},
+    ]
 }
 
 geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
@@ -35,25 +66,31 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": {
-                "type": "number"
-            }
+            "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"},
+            ]
         },
         "innerExtents": {
             "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": {
-                "type": "number"
-            }
+            "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"},
+            ]
         },
         "halfExtents": {
             "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": {
-                "type": "number"
-            }
+            "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"},
+            ]
         },
         "transparency": {
             "type": "number"
@@ -62,35 +99,43 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": {
-                "type": "number"
-            }
+            "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"},
+            ]
         },
         "negativeCropContainerEmptyMargins": {
             "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": {
-                "type": "number"
-            }
+            "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"},
+            ]
         },
         "positiveCropContainerMargins": {
             "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": {
-                "type": "number"
-            }
+            "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"},
+            ]
         },
         "positiveCropContainerEmptyMargins": {
             "type": "array",
             "minItems": 3,
             "maxItems": 3,
-            "items": {
-                "type": "number"
-            }
+            "items": [
+                {"type": "number"},
+                {"type": "number"},
+                {"type": "number"},
+            ]
         },
-        "transform": {'type': 'string'}#MakePoseSchema(title=_("transform"), description=_("transform")),
+        "transform": MakePoseSchema(title=_("transform"), description=_("transform")),
     }
 }
 
@@ -101,6 +146,7 @@ geometryInfosSchema = {
 }
 
 def _JsonSchemaTypeToCppType(schema):
+    print("raliao", schema)
     jsonType = schema.get('type', '')
     if isinstance(jsonType, list):
         assert len(jsonType) == 2 and jsonType[1] == 'null', 'Only support nullable types'
@@ -125,7 +171,7 @@ def _JsonSchemaTypeToCppType(schema):
         if schema.get('prefixItems'):
             return 'std::tuple<' + ', '.join(_JsonSchemaTypeToCppType(item) for item in schema['prefixItems']) + '>'
         elif schema.get('items'):
-            return 'std::vector<' + _JsonSchemaTypeToCppType(schema['items']) + '>'
+            return 'std::vector<' + ', '.join(_JsonSchemaTypeToCppType(item) for item in schema['items']) + '>'
         else:
             # TODO(heman.gandhi): raise a ValueError here?
             return 'void *'
@@ -192,12 +238,19 @@ class _CppParamInfo:
         if not self.needsExtraParamForNull:
             return ''
         return self.RenderName + 'Null'
+    
+def OutputDiffFunction(schema):
+    diffFunction = '    rapidjson::Value Diff(const rapidjson::Value& other)\n    {\n'
+    diffFunction += '        return rapidjson::Value();\n'
+    diffFunction += '    }\n'
+    return diffFunction
 
 def OutputOneClass(schema):
     structString = f"class OPENRAVE_API {schema['typeName']}Gen : public InfoBase\n{{"
     for fieldName, fieldSchema in schema.get('properties', dict()).items():
         param = _CppParamInfo(fieldSchema, fieldName)
-        structString += '\n    ' + param.RenderFields()[0] + ';'
+        structString += '\n    ' + param.RenderFields()[0] + ';\n\n'
+    structString += OutputDiffFunction(schema)
     return structString + "\n};"
 
 
@@ -212,6 +265,8 @@ def OutputFile(schemas):
 #include <openrave/openrave.h>
 #include <openrave/units.h>
 #include <openrave/interface.h>
+
+#include "rapidjson/rapidjson.h"
 
 namespace OpenRAVE {{
 
