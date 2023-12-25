@@ -139,6 +139,15 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "typeName": "Vector"
         },
         "transform": MakePoseSchema(title=_("transform"), description=_("transform")),
+        "visible": {
+            "type": "boolean",
+            "default": True
+        },
+        "transparency": {
+            "type": "number",
+            "typeName": "float",
+            "default": 0
+        }
     },
     "required": ["id", "name"]
 }
@@ -184,17 +193,6 @@ def _JsonSchemaTypeToCppType(schema):
         return 'uint32_t'
     return jsonType
 
-def _CppDefaultValueString(defaultValue):
-    if defaultValue is None:
-        return 'nullptr'
-    if isinstance(defaultValue, list) and defaultValue == []:
-        return '{}'
-    if isinstance(defaultValue, dict) and defaultValue == {}:
-        return '{}'
-    if isinstance(defaultValue, bool):
-        return 'true' if defaultValue else 'false'
-    return str(defaultValue)
-
 class _CppParamInfo:
     cppType = '' #type: str 
     needsExtraParamForNull = False # type: bool
@@ -219,7 +217,7 @@ class _CppParamInfo:
     def RenderFields(self, prefixOverride=None):
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
         paramString = self.cppType + ' ' + prefix + self.cppParamName
-        default = '' if not self.hasDefault else ' = ' + _CppDefaultValueString(self.defaultValue)
+        default = '' if not self.hasDefault else ' = ' + self.RenderDefaultValue()
         return paramString + default
     def RenderName(self, needsPrefix):
         if needsPrefix:
@@ -227,9 +225,17 @@ class _CppParamInfo:
         else:
             return self.cppParamName
     def RenderDefaultValue(self):
+        if isinstance(self.defaultValue, bool):
+            return 'true' if self.defaultValue else 'false'
+        if self.cppType == "std::string":
+            return '"' + (self.defaultValue if self.hasDefault else '') + '"'
         if self.hasDefault:
             return str(self.defaultValue)
         return self.cppType + "{}"
+    def ShouldScaleInJson(self):
+        if self.cppType.startswith('RaveVector'):
+            return True
+        return self.cppType in ['Vector', 'Transform']
 
     def RenderSerialization(self, cppJsonVariable="rSerializedOutput", cppJsonAllocVariable="allocator"):
         serCode = ""
@@ -240,7 +246,18 @@ class _CppParamInfo:
             serCode += '\n' + ' '*indent + "{" + '\n'
             suffix = "\n" + ' '*indent + "}"
             indent += 4
-        serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {self.RenderName(True)}, {cppJsonAllocVariable});"
+        serName = self.RenderName(True)
+        if self.ShouldScaleInJson():
+            if self.cppType == 'Transform':
+                serCode += ' '*indent + '{\n'
+                suffix += "\n" + ' '*indent + "}"
+                indent += 4
+                serName = "scaled" + serName
+                serCode += f"Transform {serName} = {self.RenderName(True)};\n"
+                serCode += f"{serName}.trans *= fUnitScale;\n"
+            else:
+                serName = f"{self.RenderName(True)}*fUnitScale"
+        serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});"
         return serCode + suffix
 
     def RenderDeserialization(self):
@@ -253,6 +270,11 @@ class _CppParamInfo:
             suffix = "\n" + ' '*indent + "}"
             indent += 4
         code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {self.RenderName(True)});'
+        if self.ShouldScaleInJson():
+            scaleField = self.RenderName(True)
+            if self.cppType == 'Transform':
+                scaleField = scaleField + '.trans'
+            code += f"{' '*indent}{scaleField} *= fUnitScale;"
         return code + suffix
 
     def RenderDiffing(self):
