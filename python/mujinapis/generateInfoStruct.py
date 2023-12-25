@@ -100,9 +100,9 @@ class _CppParamInfo:
                 serCode += ' '*indent + '{\n'
                 closeBraceStack += [' '*indent + "}"]
                 indent += 4
-                serCode += f"Transform scaled{serName} = {serName};\n"
+                serCode += f"{' ' * indent}Transform scaled{serName} = {serName};\n"
                 serName = "scaled" + serName
-                serCode += f"{serName}.trans *= fUnitScale;\n"
+                serCode += f"{' ' * indent}{serName}.trans *= fUnitScale;\n"
             else:
                 serName = f"{serName}*fUnitScale"
         serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});"
