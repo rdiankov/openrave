@@ -1,5 +1,14 @@
-import mujincommon.i18n
-ugettext, ungettext = mujincommon.i18n.GetDomain('mujinapis').GetTranslationFunctions()
+from ... import _
 
-_ = ugettext
-
+def RaveCustomDataMapOf(valueType):
+    return {
+        "description": _("Custom key-value pairs that could not be fit in the current model."),
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "string"},
+                "values": {"type": "array", "items": {"type": valueType}},
+            },
+        },
+    }
