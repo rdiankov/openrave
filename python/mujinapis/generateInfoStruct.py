@@ -126,8 +126,9 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             },
             "typeName": "Vector"
         },
-        "transform": MakePoseSchema(title=_("transform"), description=_("transform")),
-    }
+        "transform": {'type': 'string'},#MakePoseSchema(title=_("transform"), description=_("transform")),
+    },
+    "required": ["id", "name"]
 }
 
 geometryInfosSchema = {
@@ -190,7 +191,7 @@ class _CppParamInfo:
     defaultValue = None # type: Any
     hasDefault = False # type: bool
     needsJsonAlloc = False # type: bool
-    def __init__(self, schema, paramName='', fieldNamePrefix='_'):
+    def __init__(self, schema, paramName='', fieldNamePrefix='_', isRequired=False):
         self.cppParamName = paramName
         self.cppType = _JsonSchemaTypeToCppType(schema)
         if not self.cppType:
@@ -202,6 +203,7 @@ class _CppParamInfo:
         if self.hasDefault:
             self.defaultValue = schema['default']
         self.fieldNamePrefix = fieldNamePrefix
+        self.isRequired = isRequired
     def RenderFields(self, prefixOverride=None):
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
         paramString = self.cppType + ' ' + prefix + self.cppParamName
@@ -230,6 +232,50 @@ class _CppParamInfo:
         if not self.needsExtraParamForNull:
             return ''
         return self.RenderName + 'Null'
+    def RenderDefaultValue(self):
+        if self.hasDefault:
+            return str(self.defaultValue)
+        return self.cppType + "{}"
+    def RenderSerialization(self, cppJsonVariable="rSerializedOutput", cppJsonAllocVariable="allocator"):
+        serCode = ""
+        indent = 8
+        suffix = ""
+        if not self.isRequired:
+            serCode = f"{' '*indent}if ({self.RenderName(True)} != {self.RenderDefaultValue()})"
+            serCode += '\n' + ' '*indent + "{" + '\n'
+            suffix = "\n" + ' '*indent + "}"
+            indent += 4
+        serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {self.RenderName(True)}, {cppJsonAllocVariable});"
+        return serCode + suffix
+    def RenderDeserialization(self):
+        code = ""
+        indent = 8
+        suffix = ""
+        if not self.isRequired:
+            code += f'{" "*indent}if (value.HasMember("{self.cppParamName}"))'
+            code += '\n' + ' '*indent + "{" + '\n'
+            suffix = "\n" + ' '*indent + "}"
+            indent += 4
+        code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {self.RenderName(True)});'
+        return code + suffix
+
+def OutputInClassSerialization(schema):
+    fieldInfos = [
+        _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
+            for fieldName, fieldSchema in schema.get('properties', dict()).items()
+    ]
+    newLine = '\n'  # Format string interpolation forbids backslashes inside substitutions.
+    return f"""
+    void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)
+    {{
+{newLine.join(info.RenderDeserialization() for info in fieldInfos)}
+    }}
+
+    void SerializeJSON(rapidjson::Value& rSerializedOutput, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
+    {{
+{newLine.join(info.RenderSerialization() for info in fieldInfos)}
+    }}
+"""
 
 def OutputDiffFunction(schema):
     diffFunction = '\n    rapidjson::Value Diff(const rapidjson::Value& other)\n    {\n'
@@ -242,6 +288,7 @@ def OutputOneClass(schema):
     for fieldName, fieldSchema in schema.get('properties', dict()).items():
         param = _CppParamInfo(fieldSchema, fieldName)
         structString += '\n    ' + param.RenderFields()[0] + ';\n'
+    structString += OutputInClassSerialization(schema)
     structString += OutputDiffFunction(schema)
     return structString + "\n};"
 
