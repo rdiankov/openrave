@@ -1,4 +1,5 @@
 from geometryInfo import geometryInfoSchema
+import re
 
 def _JsonSchemaTypeToCppType(schema):
     if 'typeName' in schema:
@@ -57,6 +58,7 @@ class _CppParamInfo:
         self.fieldNamePrefix = fieldNamePrefix
         self.isRequired = isRequired
         self.shouldScaleInJson = schema.get('scaleInSerialization', False)
+        self.isEnum = ('enum' in schema and 'typeName' in schema)
     def RenderFields(self, prefixOverride=None):
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
         paramString = self.cppType + ' ' + prefix + self.cppParamName
@@ -79,42 +81,57 @@ class _CppParamInfo:
     def RenderSerialization(self, cppJsonVariable="rSerializedOutput", cppJsonAllocVariable="allocator"):
         serCode = ""
         indent = 8
-        suffix = ""
-        if not self.isRequired:
-            serCode = f"{' '*indent}if ({self.RenderName(True)} != {self.RenderDefaultValue()})"
-            serCode += '\n' + ' '*indent + "{" + '\n'
-            suffix = "\n" + ' '*indent + "}"
-            indent += 4
+        closeBraceStack = []
         serName = self.RenderName(True)
+        if self.isEnum:
+            serCode = f"""{' '*indent}{{
+{' ' * (indent + 4)}std::string {serName}String = Get{self.cppType}String({serName});
+"""
+            serName += "String"
+            closeBraceStack = [' '*indent + "}"]
+            indent += 4
+        if not self.isRequired:
+            serCode += f"{' '*indent}if ({self.RenderName(True)} != {self.RenderDefaultValue()})"
+            serCode += '\n' + ' '*indent + "{" + '\n'
+            closeBraceStack += [' '*indent + "}"]
+            indent += 4
         if self.shouldScaleInJson:
             if self.cppType == 'Transform':
                 serCode += ' '*indent + '{\n'
-                suffix += "\n" + ' '*indent + "}"
+                closeBraceStack += [' '*indent + "}"]
                 indent += 4
+                serCode += f"Transform scaled{serName} = {serName};\n"
                 serName = "scaled" + serName
-                serCode += f"Transform {serName} = {self.RenderName(True)};\n"
                 serCode += f"{serName}.trans *= fUnitScale;\n"
             else:
-                serName = f"{self.RenderName(True)}*fUnitScale"
+                serName = f"{serName}*fUnitScale"
         serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});"
-        return serCode + suffix
+        return serCode + '\n' + '\n'.join(reversed(closeBraceStack))
 
     def RenderDeserialization(self):
         code = ""
         indent = 8
-        suffix = ""
+        closeBraceStack = []
         if not self.isRequired:
             code += f'{" "*indent}if (value.HasMember("{self.cppParamName}"))'
             code += '\n' + ' '*indent + "{" + '\n'
-            suffix = "\n" + ' '*indent + "}"
+            closeBraceStack.append("\n" + ' '*indent + "}")
             indent += 4
-        code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {self.RenderName(True)});'
+        deserName = self.RenderName(True)
+        if self.isEnum:
+            code += f"{{\nstd::string {deserName}String;"
+            deserName += "String"
+            closeBraceStack.append("\n" + ' '*indent + "}")
+            indent += 4
+        code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});\n'
+        if self.isEnum:
+            code += f"{' '*indent}{self.RenderName(True)} = Get{self.cppType}FromString({deserName}.c_str());\n"
         if self.shouldScaleInJson:
             scaleField = self.RenderName(True)
             if self.cppType == 'Transform':
                 scaleField = scaleField + '.trans'
-            code += f"{' '*indent}{scaleField} *= fUnitScale;"
-        return code + suffix
+            code += f"{' '*indent}{scaleField} *= fUnitScale;\n"
+        return code  + '\n'.join(reversed(closeBraceStack))
 
     def RenderDiffing(self):
         code = ""
@@ -179,21 +196,69 @@ def OutputReset(schema):
     }}
 """
 
-def OutputOneClass(schema):
-    structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
-    for fieldName, fieldSchema in schema.get('properties', dict()).items():
-        param = _CppParamInfo(fieldSchema, fieldName)
-        if 'description' in fieldSchema:
-            structString += '\n   /// ' + fieldSchema['description'] + '\n'
-        structString += '\n    ' + param.RenderFields() + ';\n'
-    structString += OutputInClassSerialization(schema)
-    structString += OutputDiffing(schema)
-    structString += OutputReset(schema)
-    return structString + "\n};"
+def OutputEnumDefinition(schema):
+    enumDefinition = f"enum {schema['typeName']} : uint8_t\n{{\n    "
+    enumInitials = ''.join(re.findall(r'([A-Z])+', schema['typeName']))
+    enumDefinition += '\n    '.join(f"{enumInitials}_{value.title()} = {index}," for index, value in enumerate(schema['enum']))
+    enumDefinition += "};"
 
-def OutputFile(schemas):
-    classDelimiter = '\n\n'
-    return f"""\
+    enumInstanceName = schema['typeName'][0].lower() + schema['typeName'][1:]
+    enumInstancesList = f'static const char * {enumInstanceName}Strings[{len(schema["enum"])}] = {{"' + '", "'.join(schema['enum']) + '"};'
+    enumToStringFunction = f"""OPENRAVE_API const char * Get{schema['typeName']}String({schema['typeName']} {enumInstanceName})
+{{
+    {enumInstancesList}
+    BOOST_ASSERT({enumInstanceName} < {len(schema['enum'])});
+    return {enumInstanceName}Strings[{enumInstanceName}];
+}}
+    """
+
+    enumInstanceName += "String"
+    stringToEnumFunction = f'''OPENRAVE_API {schema["typeName"]} Get{schema["typeName"]}FromString(const char* {enumInstanceName})
+{{
+    // TODO(heman.gandhi): consider generating a std::unordered_map instead?
+    {enumInstancesList}
+    const char ** foundValue = std::find_if(
+        {enumInstanceName}s,
+        {enumInstanceName}s + {len(schema['enum'])},
+        [{enumInstanceName}](const char * enumStr) {{
+            return strcmp(enumStr, {enumInstanceName}) == 0;
+        }});
+    if (foundValue - {enumInstanceName}s >= {len(schema['enum'])})
+    {{
+        return static_cast<{schema['typeName']}>(0);
+    }}
+    return static_cast<{schema['typeName']}>(foundValue - {enumInstanceName}s);
+}}
+'''
+
+    return '\n\n'.join([enumDefinition, enumToStringFunction, stringToEnumFunction])
+
+
+
+class CppFileGenerator:
+    _enums = []  # type: List[str] # A list of enums to output before class definitions.
+    def __init__(self):
+        self._enums = []
+    def OutputOneClass(self, schema):
+        structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
+        for fieldName, fieldSchema in schema.get('properties', dict()).items():
+            param = _CppParamInfo(fieldSchema, fieldName)
+            if param.isEnum:
+                self._enums.append(OutputEnumDefinition(fieldSchema))
+            if 'description' in fieldSchema:
+                structString += '\n   /// ' + fieldSchema['description'] + '\n'
+            structString += '\n    ' + param.RenderFields() + ';\n'
+        structString += OutputInClassSerialization(schema)
+        structString += OutputDiffing(schema)
+        structString += OutputReset(schema)
+        return structString + "\n};"
+
+    def OutputFile(self, schemas):
+        classDelimiter = '\n\n'
+        classes = [self.OutputOneClass(schema) for schema in schemas]
+        return f"""\
+#include <algorithm>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -203,10 +268,16 @@ def OutputFile(schemas):
 
 namespace OpenRAVE {{
 
-{classDelimiter.join(map(OutputOneClass, schemas))}
+namespace generated {{
+
+{classDelimiter.join(self._enums)}
+
+{classDelimiter.join(classes)}
+
+}}
 
 }}
 """
 
 if __name__ == "__main__":
-    print(OutputFile([geometryInfoSchema]))
+    print(CppFileGenerator().OutputFile([geometryInfoSchema]))
