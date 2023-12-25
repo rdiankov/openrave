@@ -101,15 +101,21 @@ inline int ExtractContiguousArrayToPointer(py::object oContiguousArray,
     }
 
     if (!py::isinstance<py::array_t<T>>(oContiguousArray)) {
-        RAVELOG_WARN("Input data is not contigous or element type is different from expected, so have to use slow generic conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+        RAVELOG_WARN("Element type is different from expected, so have to use slow generic conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return -1;
     }
 
     PyArrayObject* arrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)oContiguousArray.ptr());
     AutoPyArrayObjectDereferencer psaver(arrPtr);
     if( !arrPtr || !arrPtr->data) {
-        RAVELOG_WARN("Input data is not contigous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+        RAVELOG_WARN("Input data is not contiguous so have to use slow conversion. Please use numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
         return -1;
+    }
+
+    if( Py_REFCNT(arrPtr) == 1 ) {
+        // ExtractArray does not support multidimensional array, so throw exception.
+        // return -1;
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("Input data is not contiguous and cannot convert the input. Please flatten the input to make memory contiguous."),ORE_InvalidArguments);
     }
 
     int pointsnum = PyArray_SIZE(arrPtr);

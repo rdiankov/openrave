@@ -77,7 +77,10 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
         if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames") {
             continue;
         }
-        orjson::SetJsonValueByKey(docGripperInfo, memberName, it->value);
+
+        // update objects recursively 
+        orjson::UpdateJsonByKey(docGripperInfo, memberName.c_str(), it->value, docGripperInfo.GetAllocator());
+
     }
     _docGripperInfo.Swap(docGripperInfo);
 }
