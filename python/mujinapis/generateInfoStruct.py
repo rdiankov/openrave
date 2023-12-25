@@ -78,7 +78,8 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "maxItems": 3,
             "items": {
                 "type": "number"
-            }
+            },
+            "typeName": "Vector"
         },
         "innerExtents": {
             "type": "array",
@@ -86,7 +87,8 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "maxItems": 3,
             "items": {
                 "type": "number"
-            }
+            },
+            "typeName": "Vector"
         },
         "halfExtents": {
             "type": "array",
@@ -94,7 +96,8 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             "maxItems": 3,
             "items": {
                 "type": "number"
-            }
+            },
+            "typeName": "Vector"
         },
         "transparency": {
             "type": "number"
@@ -135,7 +138,7 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             },
             "typeName": "Vector"
         },
-        "transform": {'type': 'string'},#MakePoseSchema(title=_("transform"), description=_("transform")),
+        "transform": MakePoseSchema(title=_("transform"), description=_("transform")),
     },
     "required": ["id", "name"]
 }
@@ -147,8 +150,8 @@ geometryInfosSchema = {
 }
 
 def _JsonSchemaTypeToCppType(schema):
-    if schema.get('typeName'):
-        return schema.get('typeName')
+    if 'typeName' in schema:
+        return schema['typeName']
     jsonType = schema.get('type', '')
     if isinstance(jsonType, list):
         assert len(jsonType) == 2 and jsonType[1] == 'null', 'Only support nullable types'
@@ -205,7 +208,7 @@ class _CppParamInfo:
         self.cppType = _JsonSchemaTypeToCppType(schema)
         if not self.cppType:
             # TODO(heman.gandhi): raise a ValueError here?
-            return
+            raise ValueError(f"Got bad type {self.cppType} for schema {schema}")
         if isinstance(schema.get('type', ''), list) and len(schema['type']) > 1 and schema['type'][1] == 'null':
             raise ValueError("While a list of types is valid JSON schema, generation does not support it.")
         self.hasDefault = 'default' in schema
@@ -217,34 +220,17 @@ class _CppParamInfo:
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
         paramString = self.cppType + ' ' + prefix + self.cppParamName
         default = '' if not self.hasDefault else ' = ' + _CppDefaultValueString(self.defaultValue)
-        if not self.needsExtraParamForNull:
-            return [paramString + default]
-        extraParam = 'bool ' + prefix + self.cppParamName + 'Null'
-        if self.defaultValue is None:
-            return [paramString, extraParam + ' = true']
-        return [paramString + default, extraParam + ' = false']
-    def RenderArgs(self, renderDefault, constAllowed=True):
-        constIfy = lambda x: 'const ' + x if x.split(' ')[0][-1] in ['*', '&'] else x
-        removeDefault = lambda x: x if renderDefault else x.split('=')[0].rstrip()
-        return [removeDefault(constIfy(field) if constAllowed else field) for field in self.RenderFields(prefixOverride='')]
-    def RenderInitializerList(self):
-        initializers = [self.fieldNamePrefix + self.cppParamName + '(' + self.cppParamName + ')']
-        if self.needsExtraParamForNull:
-            initializers += [self.RenderNullParam(True) + '(' + self.RenderNullParam(False) + ')']
-        return initializers
+        return paramString + default
     def RenderName(self, needsPrefix):
         if needsPrefix:
             return self.fieldNamePrefix + self.cppParamName
         else:
             return self.cppParamName
-    def RenderNullParam(self, needsPrefix):
-        if not self.needsExtraParamForNull:
-            return ''
-        return self.RenderName + 'Null'
     def RenderDefaultValue(self):
         if self.hasDefault:
             return str(self.defaultValue)
         return self.cppType + "{}"
+
     def RenderSerialization(self, cppJsonVariable="rSerializedOutput", cppJsonAllocVariable="allocator"):
         serCode = ""
         indent = 8
@@ -256,6 +242,7 @@ class _CppParamInfo:
             indent += 4
         serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {self.RenderName(True)}, {cppJsonAllocVariable});"
         return serCode + suffix
+
     def RenderDeserialization(self):
         code = ""
         indent = 8
@@ -267,6 +254,7 @@ class _CppParamInfo:
             indent += 4
         code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {self.RenderName(True)});'
         return code + suffix
+
     def RenderDiffing(self):
         code = ""
         indent = 8
@@ -277,12 +265,12 @@ class _CppParamInfo:
         indent += 4
         code += f'{" "*indent}diffResult.{self.RenderName(True)} = {self.RenderName(True)};'
         return code + suffix
+
     def RenderReset(self):
         code = ""
         indent = 8
-        suffix = ""
         code += f'{" "*indent}{self.RenderName(True)} = {self.RenderDefaultValue()};'
-        return code + suffix
+        return code
 
 def OutputInClassSerialization(schema):
     fieldInfos = [
@@ -334,7 +322,9 @@ def OutputOneClass(schema):
     structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
     for fieldName, fieldSchema in schema.get('properties', dict()).items():
         param = _CppParamInfo(fieldSchema, fieldName)
-        structString += '\n    ' + param.RenderFields()[0] + ';\n'
+        if 'description' in fieldSchema:
+            structString += '\n   /// ' + fieldSchema['description'] + '\n'
+        structString += '\n    ' + param.RenderFields() + ';\n'
     structString += OutputInClassSerialization(schema)
     structString += OutputDiffing(schema)
     structString += OutputReset(schema)
