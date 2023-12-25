@@ -704,7 +704,7 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geome
     return _InitFromGeometriesInternal(geometries, uri);
 }
 
-void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
+void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker)
 {
     // need to call _PostprocessChangedParameters at the very end, even if exception occurs
     CallFunctionAtDestructor callfn(boost::bind(&KinBody::_PostprocessChangedParameters, this, Prop_LinkGeometry));
@@ -731,6 +731,11 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname)
     }
     // have to reset the adjacency cache
     _ResetInternalCollisionCache();
+
+    GetEnv()->GetCollisionChecker()->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() && propagateGroupNameToSelfCollisionChecker ) {
+        _selfcollisionchecker->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
+    }
 }
 
 void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
