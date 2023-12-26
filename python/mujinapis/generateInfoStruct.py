@@ -2,6 +2,27 @@ from geometryInfo import geometryInfoSchema
 from linkInfo import linkInfoSchema
 import re
 
+class CppCodeWriter:
+    indent = 0
+    code = ''
+
+    def __init__(self, indent):
+        self.indent = indent
+
+    def WriteLine(self, line):
+        self.code += f"{' ' * self.indent}{line}\n"
+    
+    def StartBlock(self):
+        self.WriteLine("{")
+        self.indent += 4
+    
+    def EndBlock(self):
+        self.indent -= 4
+        self.WriteLine("}")
+
+    def GetCode(self):
+        return self.code
+
 def _JsonSchemaTypeToCppType(schema):
     if 'typeName' in schema:
         return schema['typeName']
@@ -87,150 +108,141 @@ class _CppParamInfo:
             return str(self.defaultValue)
         return self.cppType + "{}"
 
-    def RenderSerialization(self, cppJsonVariable="rSerializedOutput", cppJsonAllocVariable="allocator"):
-        serCode = ""
-        indent = 8
-        closeBraceStack = []
+    def RenderSerialization(self, writer, cppJsonVariable="rSerializedOutput", cppJsonAllocVariable="allocator"):
         serName = self.RenderName(True)
+
         if self.isEnum:
-            serCode = f"""{' '*indent}{{
-{' ' * (indent + 4)}std::string {serName}String = Get{self.cppType}String({serName});
-"""
+            writer.WriteLine(f'std::string {serName}String = Get{self.cppType}String({serName});')
             serName += "String"
-            closeBraceStack = [' '*indent + "}"]
-            indent += 4
+        
         if not self.isRequired:
-            serCode += f"{' '*indent}if ({self.RenderName(True)} != {self.RenderDefaultValue()})"
-            serCode += '\n' + ' '*indent + "{" + '\n'
-            closeBraceStack += [' '*indent + "}"]
-            indent += 4
+            writer.WriteLine(f'if ({self.RenderName(True)} != {self.RenderDefaultValue()})')
+            writer.StartBlock()
+            
         if self.shouldScaleInJson:
             if self.cppType == 'Transform':
-                serCode += ' '*indent + '{\n'
-                closeBraceStack += [' '*indent + "}"]
-                indent += 4
-                serCode += f"{' ' * indent}Transform scaled{serName} = {serName};\n"
+                writer.WriteLine(f"Transform scaled{serName} = {serName};")
                 serName = "scaled" + serName
-                serCode += f"{' ' * indent}{serName}.trans *= fUnitScale;\n"
+                writer.WriteLine(f"{serName}.trans *= fUnitScale;")
             else:
-                serName = f"{serName}*fUnitScale"
-        if self.diffById:
-            serCode += f'{" "*indent}for(int i=0; i<{serName}.size(); i++) {{\n'
-            indent += 4
-            if self.sharedPointerType:
-                serCode += f'{" "*indent}rapidjson::Value value;\n'
-                serCode += f'{" "*indent}{serName}[i]->SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n'
-                serCode += f'{" "*indent}{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});\n'
-            else:
-                serCode += f'{" "*indent}rapidjson::Value value;\n'
-                serCode += f'{" "*indent}{serName}[i].SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n'
-                serCode += f'{" "*indent}{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});\n'
-            indent -= 4
-            serCode += f'{" "*indent}}}\n'
-        else:
-            serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});"
-        return serCode + '\n' + '\n'.join(reversed(closeBraceStack))
+                writer.WriteLine(f"{serName}*fUnitScale;")
 
-    def RenderDeserialization(self):
-        code = ""
-        indent = 8
-        closeBraceStack = []
-        if not self.isRequired:
-            code += f'{" "*indent}if (value.HasMember("{self.cppParamName}"))'
-            code += '\n' + ' '*indent + "{" + '\n'
-            closeBraceStack.append("\n" + ' '*indent + "}")
-            indent += 4
-        deserName = self.RenderName(True)
-        if self.isEnum:
-            code += f"{{\nstd::string {deserName}String;"
-            deserName += "String"
-            closeBraceStack.append("\n" + ' '*indent + "}")
-            indent += 4
         if self.diffById:
-            code += f'{" "*indent}{deserName}.clear();\n'
-            code += f'{" "*indent}for (rapidjson::Value::ConstValueIterator it = value["{self.cppParamName}"].Begin(); it != value["{self.cppParamName}"].End(); ++it) {{\n'
-            indent += 4
+            writer.WriteLine(f'for(int i=0; i<{serName}.size(); i++)')
+            writer.StartBlock()
             if self.sharedPointerType:
-                code += f'{" "*indent}{deserName}.push_back(boost::make_shared<{self.itemTypeName}>());\n'
-                code += f'{" "*indent}{deserName}[{deserName}.size()-1]->DeserializeJSON(*it, fUnitScale, options);\n'
+                writer.WriteLine(f'rapidjson::Value value;')
+                writer.WriteLine(f'{serName}[i]->SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n')
+                writer.WriteLine(f'{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});')
             else:
-                code += f'{" "*indent}{deserName}.push_back({self.itemTypeName}());\n'
-                code += f'{" "*indent}{deserName}[{deserName}.size()-1].DeserializeJSON(*it, fUnitScale, options);\n'
-            indent -= 4
-            code += f'{" "*indent}}}\n'
+                writer.WriteLine(f'rapidjson::Value value;')
+                writer.WriteLine(f'{serName}[i].SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);')
+                writer.WriteLine(f'{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});')
+            writer.EndBlock()
         else:
-            code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});\n'
+            writer.WriteLine(f"orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});")
+        
+        if not self.isRequired:
+            writer.EndBlock()
+
+    def RenderDeserialization(self, writer):
+        if not self.isRequired:
+            writer.WriteLine(f'if (value.HasMember("{self.cppParamName}"))')
+            writer.StartBlock()
+
+        deserName = self.RenderName(True)
+
         if self.isEnum:
-            code += f"{' '*indent}{self.RenderName(True)} = Get{self.cppType}FromString({deserName}.c_str());\n"
+            writer.WriteLine(f"std::string {deserName}String;")
+            deserName += "String"
+
+        if self.diffById:
+            writer.WriteLine(f'{deserName}.clear();')
+            writer.WriteLine(f'for (rapidjson::Value::ConstValueIterator it = value["{self.cppParamName}"].Begin(); it != value["{self.cppParamName}"].End(); ++it)')
+            writer.StartBlock()
+            if self.sharedPointerType:
+                writer.WriteLine(f'{deserName}.push_back(boost::make_shared<{self.itemTypeName}>());')
+                writer.WriteLine(f'{deserName}[{deserName}.size()-1]->DeserializeJSON(*it, fUnitScale, options);')
+            else:
+                writer.WriteLine(f'{deserName}.push_back({self.itemTypeName}());')
+                writer.WriteLine(f'{deserName}[{deserName}.size()-1].DeserializeJSON(*it, fUnitScale, options);')
+            writer.EndBlock()
+        else:
+            writer.WriteLine(f'orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});')
+        
+        if self.isEnum:
+            writer.WriteLine(f"{self.RenderName(True)} = Get{self.cppType}FromString({deserName}.c_str());")
+
         if self.shouldScaleInJson:
             scaleField = self.RenderName(True)
             if self.cppType == 'Transform':
                 scaleField = scaleField + '.trans'
-            code += f"{' '*indent}{scaleField} *= fUnitScale;\n"
-        return code  + '\n'.join(reversed(closeBraceStack))
+            writer.WriteLine(f"{scaleField} *= fUnitScale;")
 
-    def RenderDiffing(self):
-        code = ""
-        indent = 8
-        suffix = ""
-        code += f'{" "*indent}if ({self.RenderName(True)} != other.{self.RenderName(True)})'
-        code += '\n' + ' '*indent + "{" + '\n'
-        suffix = "\n" + ' '*indent + "}"
-        indent += 4
-        code += f'{" "*indent}diffResult.{self.RenderName(True)} = {self.RenderName(True)};'
-        return code + suffix
+        if not self.isRequired:
+            writer.EndBlock()
 
-    def RenderReset(self):
-        code = ""
-        indent = 8
-        code += f'{" "*indent}{self.RenderName(True)} = {self.RenderDefaultValue()};'
-        return code
+    def RenderDiffing(self, writer):
+        writer.WriteLine(f'if ({self.RenderName(True)} != other.{self.RenderName(True)})')
+        writer.StartBlock()
+        writer.WriteLine(f'diffResult.{self.RenderName(True)} = {self.RenderName(True)};')
+        writer.EndBlock()
+
+    def RenderReset(self, writer):
+        writer.WriteLine(f'{self.RenderName(True)} = {self.RenderDefaultValue()};')
 
 def OutputInClassSerialization(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
             for fieldName, fieldSchema in schema.get('properties', dict()).items()
     ]
-    newLine = '\n'  # Format string interpolation forbids backslashes inside substitutions.
-    return f"""
-    void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)
-    {{
-{newLine.join(info.RenderDeserialization() for info in fieldInfos)}
-    }}
 
-    void SerializeJSON(rapidjson::Value& rSerializedOutput, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
-    {{
-{newLine.join(info.RenderSerialization() for info in fieldInfos)}
-    }}
-"""
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine(f"void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)")
+    writer.StartBlock()
+    for info in fieldInfos:
+        info.RenderDeserialization(writer)
+    writer.EndBlock()
+
+    writer.WriteLine(f"void SerializeJSON(rapidjson::Value& rSerializedOutput, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const")
+    writer.StartBlock()
+    for info in fieldInfos:
+        info.RenderSerialization(writer)
+    writer.EndBlock()
+
+    return writer.GetCode()
 
 def OutputDiffing(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName)\
             for fieldName, fieldSchema in schema.get('properties', dict()).items()
     ]
-    newLine = '\n'  # Format string interpolation forbids backslashes inside substitutions.
-    return f"""
-    {schema["typeName"]} Diff(const {schema["typeName"]}& other)
-    {{
-        {schema["typeName"]} diffResult;
-{newLine.join(info.RenderDiffing() for info in fieldInfos)}
-        return diffResult;
-    }}
-"""
+
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine(f"{schema['typeName']} Diff(const {schema['typeName']}& other)")
+    writer.StartBlock()
+    writer.WriteLine(f"{schema['typeName']} diffResult;")
+    for info in fieldInfos:
+        info.RenderDiffing(writer)
+    writer.WriteLine(f"return diffResult;")
+    writer.EndBlock()
+
+    return writer.GetCode()
 
 def OutputReset(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
             for fieldName, fieldSchema in schema.get('properties', dict()).items()
     ]
-    newLine = '\n'  # Format string interpolation forbids backslashes inside substitutions.
-    return f"""
-    void Reset()
-    {{
-{newLine.join(info.RenderReset() for info in fieldInfos)}
-    }}
-"""
+
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine("void Reset()")
+    writer.StartBlock()
+    for info in fieldInfos:
+        info.RenderReset(writer)
+    writer.EndBlock()
+
+    return writer.GetCode()
 
 def OutputEnumDefinition(schema):
     enumDefinition = f"enum {schema['typeName']} : uint8_t\n{{\n    "
@@ -269,8 +281,6 @@ def OutputEnumDefinition(schema):
 
     return '\n\n'.join([enumDefinition, enumToStringFunction, stringToEnumFunction])
 
-
-
 class CppFileGenerator:
     _enums = []  # type: List[str] # A list of enums to output before class definitions.
     def __init__(self):
@@ -284,7 +294,7 @@ class CppFileGenerator:
             if 'description' in fieldSchema:
                 structString += '\n   /// ' + fieldSchema['description'] + '\n'
             structString += '\n    ' + param.RenderFields() + ';\n'
-        structString += "\npublic:"
+        structString += "\npublic:\n"
         structString += OutputInClassSerialization(schema)
         structString += OutputDiffing(schema)
         structString += OutputReset(schema)
