@@ -219,7 +219,7 @@ def OutputDiffing(schema):
     ]
 
     writer = CppCodeWriter(indent=4)
-    writer.WriteLine(f"{schema['typeName']} Diff(const {schema['typeName']}& other)")
+    writer.WriteLine(f"{schema['typeName']} Diff(const {schema['typeName']}& other) const")
     writer.StartBlock()
     writer.WriteLine(f"{schema['typeName']} diffResult;")
     for info in fieldInfos:
