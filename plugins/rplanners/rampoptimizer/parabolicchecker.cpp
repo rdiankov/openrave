@@ -102,6 +102,10 @@ ParabolicCheckReturn CheckRamp(const Ramp& ramp, dReal xmin, dReal xmax, dReal v
 
 ParabolicCheckReturn CheckRamps(const std::vector<Ramp>& ramps, dReal xmin, dReal xmax, dReal vm, dReal am, dReal x0, dReal x1, dReal v0, dReal v1)
 {
+    if( std::isinf(x0) || std::isinf(x1) ) {
+        return PCR_Normal;
+    }
+    
     // Check the first ramp
     if( !FuzzyEquals(ramps[0].x0, x0, g_fRampEpsilon) ) {
         RAVELOG_WARN_FORMAT("PCR_XDiscrepancy: ramps[0].x0 = %.15e; x0 = %.15e; diff = %.15e", ramps[0].x0%x0%(ramps[0].x0 - x0));

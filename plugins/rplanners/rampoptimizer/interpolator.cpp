@@ -759,6 +759,20 @@ bool ParabolicInterpolator::Compute1DTrajectoryFixedDuration(dReal x0, dReal x1,
     // Cache vector
     std::vector<Ramp>& ramps = _cacheRampsVect2;
 
+    if( std::isinf(x0) || std::isinf(x1) ) {
+        ramps.resize(1);
+        ramps[0].Initialize(v0, 0, duration, x0);
+        curveOut.Initialize(ramps);
+        {// Check curveOut before returing
+            ParabolicCheckReturn ret = CheckRamps(curveOut.GetRamps(), -g_fRampInf, g_fRampInf, vm, am, x0, x1, v0, v1);
+            if( ret != PCR_Normal ) {
+                RAVELOG_VERBOSE_FORMAT("env=%d, Info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; duration = %.15e", _envid%x0%x1%v0%v1%vm%am%duration);
+                return false;
+            }
+        }
+        return true;
+    }
+
     if( duration <= epsilon ) {
         // Check if this is a stationary trajectory
         if( FuzzyEquals(x0, x1, epsilon) && FuzzyEquals(v0, v1, epsilon) ) {
