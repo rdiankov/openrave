@@ -252,10 +252,14 @@ class CppFileGenerator:
         structString += OutputDiffing(schema)
         structString += OutputReset(schema)
         return structString + "\n};"
+    
+    def OutputPointerDeclaration(self, schema):
+        return f"typedef boost::shared_ptr<{schema['typeName']}> {schema['typeName']}Ptr;\n"
 
     def OutputFile(self, schemas):
         classDelimiter = '\n\n'
         classes = [self.OutputOneClass(schema) for schema in schemas]
+        pointerDeclarations = [self.OutputPointerDeclaration(schema) for schema in schemas]
         return f"""\
 #include <algorithm>
 #include <cstring>
@@ -273,6 +277,8 @@ namespace generated {{
 {classDelimiter.join(self._enums)}
 
 {classDelimiter.join(classes)}
+
+{classDelimiter.join(pointerDeclarations)}
 
 }}
 
