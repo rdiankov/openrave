@@ -33,7 +33,7 @@ def MakePoseSchema(title, description):
 
 geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
     "type": "object",
-    "typeName": "GeometryInfoGen",
+    "typeName": "GeometryInfo",
     "properties": {
         "id": {"type": "string"},
         "name": {"type": "string"},

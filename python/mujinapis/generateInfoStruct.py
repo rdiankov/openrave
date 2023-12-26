@@ -1,4 +1,5 @@
 from geometryInfo import geometryInfoSchema
+from linkInfo import linkInfoSchema
 import re
 
 def _JsonSchemaTypeToCppType(schema):
@@ -25,10 +26,11 @@ def _JsonSchemaTypeToCppType(schema):
     if jsonType == 'boolean':
         return 'bool'
     if jsonType == 'array':
+        typeSuffix = 'Ptr' if schema.get('sharedPointerType', False) else ''
         if schema.get('prefixItems'):
-            return 'std::tuple<' + ', '.join(_JsonSchemaTypeToCppType(item) for item in schema['prefixItems']) + '>'
+            return 'std::tuple<' + ', '.join(f'{_JsonSchemaTypeToCppType(item)}{typeSuffix}' for item in schema['prefixItems']) + '>'
         elif schema.get('items'):
-            return 'std::vector<' + _JsonSchemaTypeToCppType(schema['items']) + '>'
+            return 'std::vector<' + f'{_JsonSchemaTypeToCppType(schema["items"])}{typeSuffix}' + '>'
         else:
             # TODO(heman.gandhi): raise a ValueError here?
             return 'void *'
@@ -44,6 +46,9 @@ class _CppParamInfo:
     defaultValue = None # type: Any
     hasDefault = False # type: bool
     shouldScaleInJson = False # type: bool
+    diffById = False # type: bool
+    itemTypeName = '' # type: str
+    sharedPointerType = False # type: bool
     def __init__(self, schema, paramName='', fieldNamePrefix='_', isRequired=False):
         self.cppParamName = paramName
         self.cppType = _JsonSchemaTypeToCppType(schema)
@@ -59,6 +64,10 @@ class _CppParamInfo:
         self.isRequired = isRequired
         self.shouldScaleInJson = schema.get('scaleInSerialization', False)
         self.isEnum = ('enum' in schema and 'typeName' in schema)
+        self.sharedPointerType = schema.get('sharedPointerType', False)
+        self.diffById = schema.get('diffById', False)
+        if self.diffById:
+            self.itemTypeName = _JsonSchemaTypeToCppType(schema['items'])
     def RenderFields(self, prefixOverride=None):
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
         paramString = self.cppType + ' ' + prefix + self.cppParamName
@@ -105,7 +114,21 @@ class _CppParamInfo:
                 serCode += f"{' ' * indent}{serName}.trans *= fUnitScale;\n"
             else:
                 serName = f"{serName}*fUnitScale"
-        serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});"
+        if self.diffById:
+            serCode += f'{" "*indent}for(int i=0; i<{serName}.size(); i++) {{\n'
+            indent += 4
+            if self.sharedPointerType:
+                serCode += f'{" "*indent}rapidjson::Value value;\n'
+                serCode += f'{" "*indent}{serName}[i]->SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n'
+                serCode += f'{" "*indent}{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});\n'
+            else:
+                serCode += f'{" "*indent}rapidjson::Value value;\n'
+                serCode += f'{" "*indent}{serName}[i].SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n'
+                serCode += f'{" "*indent}{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});\n'
+            indent -= 4
+            serCode += f'{" "*indent}}}\n'
+        else:
+            serCode += f"{' '*indent}orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});"
         return serCode + '\n' + '\n'.join(reversed(closeBraceStack))
 
     def RenderDeserialization(self):
@@ -123,7 +146,20 @@ class _CppParamInfo:
             deserName += "String"
             closeBraceStack.append("\n" + ' '*indent + "}")
             indent += 4
-        code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});\n'
+        if self.diffById:
+            code += f'{" "*indent}{deserName}.clear();\n'
+            code += f'{" "*indent}for (rapidjson::Value::ConstValueIterator it = value["{self.cppParamName}"].Begin(); it != value["{self.cppParamName}"].End(); ++it) {{\n'
+            indent += 4
+            if self.sharedPointerType:
+                code += f'{" "*indent}{deserName}.push_back(boost::make_shared<{self.itemTypeName}>());\n'
+                code += f'{" "*indent}{deserName}[{deserName}.size()-1]->DeserializeJSON(*it, fUnitScale, options);\n'
+            else:
+                code += f'{" "*indent}{deserName}.push_back({self.itemTypeName}());\n'
+                code += f'{" "*indent}{deserName}[{deserName}.size()-1].DeserializeJSON(*it, fUnitScale, options);\n'
+            indent -= 4
+            code += f'{" "*indent}}}\n'
+        else:
+            code += f'{" "*indent}orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});\n'
         if self.isEnum:
             code += f"{' '*indent}{self.RenderName(True)} = Get{self.cppType}FromString({deserName}.c_str());\n"
         if self.shouldScaleInJson:
@@ -252,15 +288,13 @@ class CppFileGenerator:
         structString += OutputInClassSerialization(schema)
         structString += OutputDiffing(schema)
         structString += OutputReset(schema)
-        return structString + "\n};"
+        structString += "\n};\n"
+        structString += f"typedef boost::shared_ptr<{schema['typeName']}> {schema['typeName']}Ptr;\n"
+        return structString
     
-    def OutputPointerDeclaration(self, schema):
-        return f"typedef boost::shared_ptr<{schema['typeName']}> {schema['typeName']}Ptr;\n"
-
     def OutputFile(self, schemas):
         classDelimiter = '\n\n'
         classes = [self.OutputOneClass(schema) for schema in schemas]
-        pointerDeclarations = [self.OutputPointerDeclaration(schema) for schema in schemas]
         return f"""\
 #include <algorithm>
 #include <cstring>
@@ -279,12 +313,10 @@ namespace generated {{
 
 {classDelimiter.join(classes)}
 
-{classDelimiter.join(pointerDeclarations)}
-
 }}
 
 }}
 """
 
 if __name__ == "__main__":
-    print(CppFileGenerator().OutputFile([geometryInfoSchema]))
+    print(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema]))
