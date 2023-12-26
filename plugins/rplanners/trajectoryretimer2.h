@@ -140,9 +140,6 @@ public:
         // check values close to the limits and clamp them, this hopefully helps the retimers that just do simpler <= and >= checks
         for(size_t i = 0; i < _vdiffdata.size(); i += _parameters->GetDOF()) {
             for(int j = 0; j < _parameters->GetDOF(); ++j) {
-                if( std::isinf(_vdiffdata.at(i+j)) ) {
-                    continue;
-                }
                 dReal lower = _parameters->_vConfigLowerLimit.at(j), upper = _parameters->_vConfigUpperLimit.at(j);
                 if( _vdiffdata.at(i+j) < lower ) {
                     if( _vdiffdata.at(i+j) < lower-g_fEpsilonJointLimit ) {
