@@ -112,7 +112,7 @@ class _CppParamInfo:
         serName = self.RenderName(True)
 
         if self.isEnum:
-            writer.WriteLine(f'std::string {serName}String = Get{self.cppType}String({serName});')
+            writer.WriteLine(f'std::string {serName}String = Get{self.cppType}String(*{serName});')
             serName += "String"
         
         if not self.isRequired:
@@ -142,7 +142,7 @@ class _CppParamInfo:
                 writer.WriteLine(f'{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});')
             writer.EndBlock()
         else:
-            if self.shouldScaleInJson:
+            if self.isEnum or self.shouldScaleInJson:
                 writer.WriteLine(f"orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});")
             else:
                 writer.WriteLine(f"orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", *{serName}, {cppJsonAllocVariable});")
@@ -173,10 +173,13 @@ class _CppParamInfo:
                 writer.WriteLine(f'(*{deserName})[{deserName}->size()-1].DeserializeJSON(*it, fUnitScale, options);')
             writer.EndBlock()
         else:
-            writer.WriteLine(f'orjson::LoadOptionalJsonValueByKey(value, "{self.cppParamName}", {deserName});')
+            if self.isEnum:
+                writer.WriteLine(f'orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});')
+            else:
+                writer.WriteLine(f'orjson::LoadOptionalJsonValueByKey(value, "{self.cppParamName}", {deserName});')
         
         if self.isEnum:
-            writer.WriteLine(f"{self.RenderName(True)} = Get{self.cppType}FromString({deserName}.c_str());")
+            writer.WriteLine(f"*{self.RenderName(True)} = Get{self.cppType}FromString({deserName}.c_str());")
 
         if self.shouldScaleInJson:
             scaleField = self.RenderName(True)
@@ -255,7 +258,7 @@ def OutputEnumDefinition(schema):
     enumDefinition = f"enum {schema['typeName']} : uint8_t\n{{\n    "
     enumInitials = ''.join(re.findall(r'([A-Z])+', schema['typeName']))
     enumDefinition += '\n    '.join(f"{enumInitials}_{value.title()} = {index}," for index, value in enumerate(schema['enum']))
-    enumDefinition += "};"
+    enumDefinition += "\n};"
 
     enumInstanceName = schema['typeName'][0].lower() + schema['typeName'][1:]
     enumInstancesList = f'static const char * {enumInstanceName}Strings[{len(schema["enum"])}] = {{"' + '", "'.join(schema['enum']) + '"};'

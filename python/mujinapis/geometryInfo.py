@@ -39,18 +39,19 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
         "name": {"type": "string"},
         "type": {
             "type": "string",
+            "typeName": "GeometryType",
             "enum": [
-                "mesh",
+                "none",
                 "box",
-                "container",
-                "cage",
                 "sphere",
                 "cylinder",
-                "axial",
                 "trimesh",
+                "container",
+                "cage",
                 "calibrationboard",
+                "axial",
                 "conicalfrustum",
-                ""]
+            ]
         },
         "diffuseColor": {
             'type': 'array',
