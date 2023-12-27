@@ -207,6 +207,18 @@ class _CppParamInfo:
         writer.WriteLine(f'return true;')
         writer.EndBlock()
 
+    def RenderClone(self, writer):
+        writer.WriteLine(f'cloned.{self.RenderName(True)} = {self.RenderName(True)};')
+        if self.sharedPointerType:
+            writer.WriteLine(f'if ({self.RenderName(True)})')
+            writer.StartBlock()
+            writer.WriteLine(f'for (size_t i=0; i<{self.RenderName(True)}->size(); i++)')
+            writer.StartBlock()
+            writer.WriteLine(f'(*cloned.{self.RenderName(True)})[i] = boost::make_shared<{self.itemTypeName}>(std::move((*{self.RenderName(True)})[i]->Clone()));')
+            writer.EndBlock()
+            writer.EndBlock()
+            
+
 def OutputInClassSerialization(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
@@ -281,6 +293,26 @@ def OutputIsEmpty(schema):
     writer.WriteLine(f'return true;')
     writer.EndBlock()
     writer.WriteLine(f'return false;')
+    writer.EndBlock()
+
+    return writer.GetCode()
+
+def OutputClone(schema):
+    fieldInfos = [
+        _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
+            for fieldName, fieldSchema in schema.get('properties', dict()).items()
+    ]
+
+    param = _CppParamInfo(schema, '')
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    writer.WriteLine(f"{param.cppType} Clone()")
+    writer.StartBlock()
+    writer.WriteLine(f"{param.cppType} cloned;")
+    for info in fieldInfos:
+        info.RenderClone(writer)
+    writer.WriteLine(f'cloned._deleted = _deleted;')
+    writer.WriteLine(f"return cloned;")
     writer.EndBlock()
 
     return writer.GetCode()
@@ -422,6 +454,7 @@ class CppFileGenerator:
         structString += OutputDiffing(schema)
         structString += OutputReset(schema)
         structString += OutputIsEmpty(schema)
+        structString += OutputClone(schema)
 
         for fieldName, fieldSchema in schema.get('properties', dict()).items():
             if fieldSchema.get('diffById'):
