@@ -193,10 +193,13 @@ class _CppParamInfo:
             writer.EndBlock()
 
     def RenderDiffing(self, writer):
-        writer.WriteLine(f'if ({self.RenderName(True)} != other.{self.RenderName(True)})')
-        writer.StartBlock()
-        writer.WriteLine(f'diffResult.{self.RenderName(True)} = {self.RenderName(True)};')
-        writer.EndBlock()
+        if self.diffById:
+            writer.WriteLine(f'diffResult.{self.RenderName(True)} = _Diff_{self.cppParamName}(other.{self.RenderName(True)});')
+        else:
+            writer.WriteLine(f'if ({self.RenderName(True)} != other.{self.RenderName(True)})')
+            writer.StartBlock()
+            writer.WriteLine(f'diffResult.{self.RenderName(True)} = {self.RenderName(True)};')
+            writer.EndBlock()
 
     def RenderReset(self, writer):
         writer.WriteLine(f'{self.RenderName(True)} = {self.RenderDefaultValue()};')
@@ -217,7 +220,6 @@ class _CppParamInfo:
             writer.WriteLine(f'(*cloned.{self.RenderName(True)})[i] = boost::make_shared<{self.itemTypeName}>(std::move((*{self.RenderName(True)})[i]->Clone()));')
             writer.EndBlock()
             writer.EndBlock()
-            
 
 def OutputInClassSerialization(schema):
     fieldInfos = [
@@ -360,7 +362,7 @@ def OutputDiffArray(fieldName, fieldSchema):
     writer = CppCodeWriter(indent=4)
     writer.WriteLine(f'')
     returnType = f'boost::optional<{paramInfo.cppType}>'
-    writer.WriteLine(f'{returnType} _Diff_{fieldName}(const boost::optional<{paramInfo.cppType}>& reference)')
+    writer.WriteLine(f'{returnType} _Diff_{fieldName}(const boost::optional<{paramInfo.cppType}>& reference) const')
     writer.StartBlock()
 
     writer.WriteLine(f'if (!reference)')
@@ -420,6 +422,14 @@ def OutputDiffArray(fieldName, fieldSchema):
     writer.WriteLine(f'continue;')
     writer.EndBlock()
     writer.WriteLine(f'std::string id = (*{paramInfo.RenderName(True)})[i]->_id.value_or("");')
+    writer.WriteLine(f'{idMapType}::iterator referenceIdMapIt = referencedIdMap.find(id);')
+    writer.WriteLine(f'if (referenceIdMapIt == referencedIdMap.end())')
+    writer.StartBlock()
+    writer.WriteLine(f'// this model is new')
+    writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}>(std::move((*{paramInfo.RenderName(True)})[i]->Clone())));')
+    writer.WriteLine(f'continue;')
+    writer.EndBlock()
+    writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}>(std::move((*{paramInfo.RenderName(True)})[i]->Diff(*(referenceIdMapIt->second)))));')
     writer.EndBlock()
 
     writer.WriteLine(f'if (diffResult.size() == 0)')
