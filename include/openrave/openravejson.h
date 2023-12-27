@@ -884,6 +884,28 @@ bool inline LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t)
     return false;
 }
 
+//get one json value by key, and store it in local data structures
+template<class T>
+bool inline LoadOptionalJsonValueByKey(const rapidjson::Value& v, const char* key, boost::optional<T>& t) {
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object (\"" + std::string(GetJsonTypeName(v)) + "\") for key \"" + std::string(key) + "\".", OpenRAVE::ORE_InvalidArguments);
+    }
+    rapidjson::Value::ConstMemberIterator itMember = v.FindMember(key);
+    if( itMember != v.MemberEnd() ) {
+        const rapidjson::Value& rMember = itMember->value;
+        if( !rMember.IsNull() ) {
+            try {
+                LoadJsonValue(rMember, *t);
+                return true;
+            }
+            catch (const OpenRAVEException& ex) {
+                throw OPENRAVE_EXCEPTION_FORMAT0("Got \"" + ex.message() + "\" while parsing the value of \"" + key + "\"", OpenRAVE::ORE_InvalidArguments);
+            }
+        }
+    }
+    return false;
+}
+
 template<class T, class U>
 inline void LoadJsonValueByKey(const rapidjson::Value& v, const char* key, T& t, const U& d) {
     if (!v.IsObject()) {

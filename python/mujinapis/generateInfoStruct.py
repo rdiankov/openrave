@@ -91,9 +91,9 @@ class _CppParamInfo:
             self.itemTypeName = _JsonSchemaTypeToCppType(schema['items'])
     def RenderFields(self, prefixOverride=None):
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
-        paramString = self.cppType + ' ' + prefix + self.cppParamName
-        default = '' if not self.hasDefault else ' = ' + self.RenderDefaultValue()
-        return paramString + default
+        # paramString = f"{self.cppType} {prefix}{self.cppParamName}"
+        paramString = f"boost::optional<{self.cppType}> {prefix}{self.cppParamName} = {self.RenderDefaultValue()}"
+        return paramString
     def RenderName(self, needsPrefix):
         if needsPrefix:
             return self.fieldNamePrefix + self.cppParamName
@@ -103,7 +103,7 @@ class _CppParamInfo:
         if isinstance(self.defaultValue, bool):
             return 'true' if self.defaultValue else 'false'
         if self.cppType == "std::string":
-            return '"' + (self.defaultValue if self.hasDefault else '') + '"'
+            return 'std::string("' + (self.defaultValue if self.hasDefault else '') + '")'
         if self.hasDefault:
             return str(self.defaultValue)
         return self.cppType + "{}"
@@ -116,31 +116,36 @@ class _CppParamInfo:
             serName += "String"
         
         if not self.isRequired:
-            writer.WriteLine(f'if ({self.RenderName(True)} != {self.RenderDefaultValue()})')
+            writer.WriteLine(f'if (*{self.RenderName(True)} != {self.RenderDefaultValue()})')
             writer.StartBlock()
             
         if self.shouldScaleInJson:
             if self.cppType == 'Transform':
-                writer.WriteLine(f"Transform scaled{serName} = {serName};")
+                writer.WriteLine(f"Transform scaled{serName} = *{serName};")
                 serName = "scaled" + serName
                 writer.WriteLine(f"{serName}.trans *= fUnitScale;")
             else:
-                writer.WriteLine(f"{serName}*fUnitScale;")
+                writer.WriteLine(f"{self.cppType} scaled{serName} = *{serName};")
+                serName = "scaled" + serName
+                writer.WriteLine(f"{serName} *= fUnitScale;")
 
         if self.diffById:
-            writer.WriteLine(f'for(int i=0; i<{serName}.size(); i++)')
+            writer.WriteLine(f'for(int i=0; i<{serName}->size(); i++)')
             writer.StartBlock()
             if self.sharedPointerType:
                 writer.WriteLine(f'rapidjson::Value value;')
-                writer.WriteLine(f'{serName}[i]->SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n')
+                writer.WriteLine(f'(*{serName})[i]->SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n')
                 writer.WriteLine(f'{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});')
             else:
                 writer.WriteLine(f'rapidjson::Value value;')
-                writer.WriteLine(f'{serName}[i].SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);')
+                writer.WriteLine(f'(*{serName})[i].SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);')
                 writer.WriteLine(f'{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});')
             writer.EndBlock()
         else:
-            writer.WriteLine(f"orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});")
+            if self.shouldScaleInJson:
+                writer.WriteLine(f"orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", {serName}, {cppJsonAllocVariable});")
+            else:
+                writer.WriteLine(f"orjson::SetJsonValueByKey({cppJsonVariable}, \"{self.cppParamName}\", *{serName}, {cppJsonAllocVariable});")
         
         if not self.isRequired:
             writer.EndBlock()
@@ -157,18 +162,18 @@ class _CppParamInfo:
             deserName += "String"
 
         if self.diffById:
-            writer.WriteLine(f'{deserName}.clear();')
+            writer.WriteLine(f'{deserName}->clear();')
             writer.WriteLine(f'for (rapidjson::Value::ConstValueIterator it = value["{self.cppParamName}"].Begin(); it != value["{self.cppParamName}"].End(); ++it)')
             writer.StartBlock()
             if self.sharedPointerType:
-                writer.WriteLine(f'{deserName}.push_back(boost::make_shared<{self.itemTypeName}>());')
-                writer.WriteLine(f'{deserName}[{deserName}.size()-1]->DeserializeJSON(*it, fUnitScale, options);')
+                writer.WriteLine(f'{deserName}->push_back(boost::make_shared<{self.itemTypeName}>());')
+                writer.WriteLine(f'(*{deserName})[{deserName}->size()-1]->DeserializeJSON(*it, fUnitScale, options);')
             else:
-                writer.WriteLine(f'{deserName}.push_back({self.itemTypeName}());')
-                writer.WriteLine(f'{deserName}[{deserName}.size()-1].DeserializeJSON(*it, fUnitScale, options);')
+                writer.WriteLine(f'{deserName}->push_back({self.itemTypeName}());')
+                writer.WriteLine(f'(*{deserName})[{deserName}->size()-1].DeserializeJSON(*it, fUnitScale, options);')
             writer.EndBlock()
         else:
-            writer.WriteLine(f'orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});')
+            writer.WriteLine(f'orjson::LoadOptionalJsonValueByKey(value, "{self.cppParamName}", {deserName});')
         
         if self.isEnum:
             writer.WriteLine(f"{self.RenderName(True)} = Get{self.cppType}FromString({deserName}.c_str());")
@@ -176,8 +181,10 @@ class _CppParamInfo:
         if self.shouldScaleInJson:
             scaleField = self.RenderName(True)
             if self.cppType == 'Transform':
-                scaleField = scaleField + '.trans'
-            writer.WriteLine(f"{scaleField} *= fUnitScale;")
+                scaleField = scaleField + '->trans'
+                writer.WriteLine(f"{scaleField} *= fUnitScale;")
+            else:
+                writer.WriteLine(f"*{scaleField} *= fUnitScale;")
 
         if not self.isRequired:
             writer.EndBlock()
@@ -314,6 +321,7 @@ class CppFileGenerator:
 #include <openrave/openrave.h>
 
 #include "rapidjson/rapidjson.h"
+#include <boost/optional.hpp>
 
 namespace OpenRAVE {{
 
