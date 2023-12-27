@@ -6,7 +6,7 @@ class CppCodeWriter:
     indent = 0
     code = ''
 
-    def __init__(self, indent):
+    def __init__(self, indent=0):
         self.indent = indent
 
     def WriteLine(self, line):
@@ -130,7 +130,7 @@ class _CppParamInfo:
                 writer.WriteLine(f"{serName} *= fUnitScale;")
 
         if self.diffById:
-            writer.WriteLine(f'for(int i=0; i<{serName}->size(); i++)')
+            writer.WriteLine(f'for (size_t i=0; i<{serName}->size(); i++)')
             writer.StartBlock()
             if self.sharedPointerType:
                 writer.WriteLine(f'rapidjson::Value value;')
@@ -208,12 +208,14 @@ def OutputInClassSerialization(schema):
     ]
 
     writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
     writer.WriteLine(f"void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)")
     writer.StartBlock()
     for info in fieldInfos:
         info.RenderDeserialization(writer)
     writer.EndBlock()
 
+    writer.WriteLine('')
     writer.WriteLine(f"void SerializeJSON(rapidjson::Value& rSerializedOutput, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const")
     writer.StartBlock()
     for info in fieldInfos:
@@ -229,6 +231,7 @@ def OutputDiffing(schema):
     ]
 
     writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
     writer.WriteLine(f"{schema['typeName']} Diff(const {schema['typeName']}& other) const")
     writer.StartBlock()
     writer.WriteLine(f"{schema['typeName']} diffResult;")
@@ -246,6 +249,7 @@ def OutputReset(schema):
     ]
 
     writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
     writer.WriteLine("void Reset()")
     writer.StartBlock()
     for info in fieldInfos:
@@ -291,12 +295,76 @@ def OutputEnumDefinition(schema):
 
     return '\n\n'.join([enumDefinition, enumToStringFunction, stringToEnumFunction])
 
+def OutputDiffArray(fieldName, fieldSchema):
+    paramInfo = _CppParamInfo(fieldSchema, fieldName)
+
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine(f'')
+    returnType = f'boost::optional<{paramInfo.cppType}>'
+    writer.WriteLine(f'{returnType} _Diff_{fieldName}(const boost::optional<{paramInfo.cppType}>& reference)')
+    writer.StartBlock()
+
+    writer.WriteLine(f'if (!reference)')
+    writer.StartBlock()
+    writer.WriteLine(f'return {paramInfo.RenderName(True)};')
+    writer.EndBlock()
+
+    writer.WriteLine(f'if (!{paramInfo.RenderName(True)})')
+    writer.StartBlock()
+    writer.WriteLine(f'return boost::none;')
+    writer.EndBlock()
+
+    writer.WriteLine(f'{paramInfo.cppType} diffResult;')
+
+    typeSuffix = 'Ptr' if fieldSchema.get('sharedPointerType', False) else ''
+    idMapType = f'std::unordered_map<std::string, {paramInfo.itemTypeName}{typeSuffix}>'
+    writer.WriteLine(f'{idMapType} idMap;')
+    writer.WriteLine(f'idMap.reserve({paramInfo.RenderName(True)}->size());')
+    
+    writer.WriteLine(f'for (size_t i=0; i<{paramInfo.RenderName(True)}->size(); i++)')
+    writer.StartBlock()
+    writer.WriteLine(f'if ((*{paramInfo.RenderName(True)})[i]->_deleted)')
+    writer.StartBlock()
+    writer.WriteLine(f'continue;')
+    writer.EndBlock()
+    writer.WriteLine(f'std::string id = (*{paramInfo.RenderName(True)})[i]->_id.value_or("");')
+    writer.WriteLine(f'idMap[id] = (*{paramInfo.RenderName(True)})[i];')
+    writer.EndBlock()
+
+    writer.WriteLine(f'{idMapType} referencedIdMap;')
+    writer.WriteLine(f'referencedIdMap.reserve(reference->size());')
+
+    writer.WriteLine(f'for (size_t i=0; i<reference->size(); i++)')
+    writer.StartBlock()
+    writer.WriteLine(f'if ((*reference)[i]->_deleted)')
+    writer.StartBlock()
+    writer.WriteLine(f'continue;')
+    writer.EndBlock()
+    writer.WriteLine(f'std::string id = (*reference)[i]->_id.value_or("");')
+    writer.WriteLine(f'referencedIdMap[id] = (*reference)[i];')
+    writer.EndBlock()
+
+
+    writer.WriteLine(f'if (diffResult.size() == 0)')
+    writer.StartBlock()
+    writer.WriteLine(f'return boost::none;')
+    writer.EndBlock()
+    writer.WriteLine(f'else')
+    writer.StartBlock()
+    writer.WriteLine(f'return {returnType}(diffResult);')
+    writer.EndBlock()
+
+    writer.EndBlock()
+    writer.WriteLine('')
+    return writer.GetCode()
+
 class CppFileGenerator:
     _enums = []  # type: List[str] # A list of enums to output before class definitions.
     def __init__(self):
         self._enums = []
     def OutputOneClass(self, schema):
         structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
+        structString += "\npublic:\n"
         for fieldName, fieldSchema in schema.get('properties', dict()).items():
             param = _CppParamInfo(fieldSchema, fieldName)
             if param.isEnum:
@@ -305,10 +373,14 @@ class CppFileGenerator:
                 structString += '\n   /// ' + fieldSchema['description'] + '\n'
             structString += '\n    ' + param.RenderFields() + ';\n'
         structString += "\n    bool _deleted;\n"
-        structString += "\npublic:\n"
         structString += OutputInClassSerialization(schema)
         structString += OutputDiffing(schema)
         structString += OutputReset(schema)
+
+        for fieldName, fieldSchema in schema.get('properties', dict()).items():
+            if fieldSchema.get('diffById'):
+                structString += OutputDiffArray(fieldName, fieldSchema)
+
         structString += "\n};\n"
         structString += f"typedef boost::shared_ptr<{schema['typeName']}> {schema['typeName']}Ptr;\n"
         return structString
@@ -321,6 +393,7 @@ class CppFileGenerator:
 #include <cstring>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include <openrave/openrave.h>
 
