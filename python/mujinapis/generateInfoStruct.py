@@ -304,6 +304,7 @@ class CppFileGenerator:
             if 'description' in fieldSchema:
                 structString += '\n   /// ' + fieldSchema['description'] + '\n'
             structString += '\n    ' + param.RenderFields() + ';\n'
+        structString += "\n    bool _deleted;\n"
         structString += "\npublic:\n"
         structString += OutputInClassSerialization(schema)
         structString += OutputDiffing(schema)
