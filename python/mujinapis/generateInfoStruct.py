@@ -201,6 +201,12 @@ class _CppParamInfo:
     def RenderReset(self, writer):
         writer.WriteLine(f'{self.RenderName(True)} = {self.RenderDefaultValue()};')
 
+    def RenderIsEmpty(self, writer):
+        writer.WriteLine(f'if ({self.RenderName(True)})')
+        writer.StartBlock()
+        writer.WriteLine(f'return true;')
+        writer.EndBlock()
+
 def OutputInClassSerialization(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
@@ -254,6 +260,27 @@ def OutputReset(schema):
     writer.StartBlock()
     for info in fieldInfos:
         info.RenderReset(writer)
+    writer.EndBlock()
+
+    return writer.GetCode()
+
+def OutputIsEmpty(schema):
+    fieldInfos = [
+        _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
+            for fieldName, fieldSchema in schema.get('properties', dict()).items()
+    ]
+
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    writer.WriteLine("bool IsEmpty()")
+    writer.StartBlock()
+    for info in fieldInfos:
+        info.RenderIsEmpty(writer)
+    writer.WriteLine(f'if (_deleted)')
+    writer.StartBlock()
+    writer.WriteLine(f'return true;')
+    writer.EndBlock()
+    writer.WriteLine(f'return false;')
     writer.EndBlock()
 
     return writer.GetCode()
@@ -316,7 +343,7 @@ def OutputDiffArray(fieldName, fieldSchema):
 
     writer.WriteLine(f'{paramInfo.cppType} diffResult;')
 
-    typeSuffix = 'Ptr' if fieldSchema.get('sharedPointerType', False) else ''
+    typeSuffix = 'Ptr' if fieldSchema.get('sharedPointerType') else ''
     idMapType = f'std::unordered_map<std::string, {paramInfo.itemTypeName}{typeSuffix}>'
     writer.WriteLine(f'{idMapType} idMap;')
     writer.WriteLine(f'idMap.reserve({paramInfo.RenderName(True)}->size());')
@@ -325,6 +352,7 @@ def OutputDiffArray(fieldName, fieldSchema):
     writer.StartBlock()
     writer.WriteLine(f'if ((*{paramInfo.RenderName(True)})[i]->_deleted)')
     writer.StartBlock()
+    writer.WriteLine(f'// skip deleted model')
     writer.WriteLine(f'continue;')
     writer.EndBlock()
     writer.WriteLine(f'std::string id = (*{paramInfo.RenderName(True)})[i]->_id.value_or("");')
@@ -338,12 +366,29 @@ def OutputDiffArray(fieldName, fieldSchema):
     writer.StartBlock()
     writer.WriteLine(f'if ((*reference)[i]->_deleted)')
     writer.StartBlock()
+    writer.WriteLine(f'// skip deleted model')
     writer.WriteLine(f'continue;')
     writer.EndBlock()
     writer.WriteLine(f'std::string id = (*reference)[i]->_id.value_or("");')
     writer.WriteLine(f'referencedIdMap[id] = (*reference)[i];')
+    writer.WriteLine(f'if (idMap.find(id) == idMap.end())')
+    writer.StartBlock()
+    writer.WriteLine(f'// this model is deleted')
+    if fieldSchema.get('sharedPointerType'):
+        writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}>());')
+        writer.WriteLine(f'diffResult[diffResult.size()-1]->_deleted = true;')
+    writer.EndBlock()
     writer.EndBlock()
 
+    writer.WriteLine(f'for (size_t i=0; i<{paramInfo.RenderName(True)}->size(); i++)')
+    writer.StartBlock()
+    writer.WriteLine(f'if ((*{paramInfo.RenderName(True)})[i]->_deleted)')
+    writer.StartBlock()
+    writer.WriteLine(f'// skip deleted model')
+    writer.WriteLine(f'continue;')
+    writer.EndBlock()
+    writer.WriteLine(f'std::string id = (*{paramInfo.RenderName(True)})[i]->_id.value_or("");')
+    writer.EndBlock()
 
     writer.WriteLine(f'if (diffResult.size() == 0)')
     writer.StartBlock()
@@ -376,6 +421,7 @@ class CppFileGenerator:
         structString += OutputInClassSerialization(schema)
         structString += OutputDiffing(schema)
         structString += OutputReset(schema)
+        structString += OutputIsEmpty(schema)
 
         for fieldName, fieldSchema in schema.get('properties', dict()).items():
             if fieldSchema.get('diffById'):
