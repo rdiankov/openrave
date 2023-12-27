@@ -62,7 +62,6 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
             },
             "typeName": "RaveVector<float>",
             "default": "RaveVector<float>{1, 1, 1}",
-
         },
         "ambientColor": {
             'type': 'array',

@@ -30,11 +30,10 @@ linkInfoSchema = {  # TODO(felixvd): Link from openrave kinbody.LinkInfo
         #     "items": {"type": "string"},
         #     "description": _('Links which will be considered "adjacent". Collisions between adjacent links are ignored.')
         # },
-        # "geometries": geometryInfosSchema,
         # "readableInterfaces": readableInterfacesSchema,
-        # "isStatic": {"type": "boolean"},
-        # "isEnabled": {"type": "boolean"},
-        # "isSelfCollisionIgnored": {"type": "boolean"},
+        "isStatic": {"type": "boolean"},
+        "isEnabled": {"type": "boolean"},
+        "isSelfCollisionIgnored": {"type": "boolean"},
         "geometries": {
             "type": "array",
             "items": geometryInfoSchema,

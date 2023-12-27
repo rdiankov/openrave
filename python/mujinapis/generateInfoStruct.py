@@ -1,5 +1,7 @@
 from geometryInfo import geometryInfoSchema
 from linkInfo import linkInfoSchema
+from jointInfo import jointInfoSchema
+from kinBodyInfo import kinBodyInfoSchema
 import re
 
 class CppCodeWriter:
@@ -503,4 +505,4 @@ namespace generated {{
 """
 
 if __name__ == "__main__":
-    print(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema]))
+    print(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
