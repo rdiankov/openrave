@@ -1,8 +1,9 @@
+import re
+import sys
 from geometryInfo import geometryInfoSchema
 from linkInfo import linkInfoSchema
 from jointInfo import jointInfoSchema
 from kinBodyInfo import kinBodyInfoSchema
-import re
 
 class CppCodeWriter:
     indent = 0
@@ -513,4 +514,7 @@ namespace generated {{
 """
 
 if __name__ == "__main__":
-    print(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
+    outputFilePath = sys.argv[1]
+    with open(outputFilePath, 'w') as file:
+        # file.write(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
+        file.write(CppFileGenerator().OutputFile([geometryInfoSchema]))

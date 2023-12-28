@@ -60,7 +60,7 @@ add_custom_command(
           ${MUJIN_CLIENT_GENERATORS_BASEDIR}/*
           ${MUJIN_SENSORBRIDGE_API_SPEC_BASEDIR}/*
   OUTPUT geometry_test.cpp
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/../../python/mujinapis/generateInfoStruct.py > ${CMAKE_CURRENT_BINARY_DIR}/geometry_test.cpp
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/../../python/mujinapis/generateInfoStruct.py ${CMAKE_CURRENT_BINARY_DIR}/geometry_test.cpp
   VERBATIM
 )
 
