@@ -39,7 +39,7 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
         "name": {"type": "string"},
         "type": {
             "type": "string",
-            "typeName": "GeometryType",
+            # "typeName": "GeometryType",
             "enum": [
                 "none",
                 "box",

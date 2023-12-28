@@ -477,12 +477,23 @@ class CppFileGenerator:
         structString += OutputIsEmpty(schema)
         structString += OutputClone(schema)
 
+    def OutputOneClassDeclaration(self, schema):
+        structString = f"class OPENRAVE_API {schema['typeName']}Base : public InfoBase\n{{"
+        structString += "\npublic:\n"
+        for fieldName, fieldSchema in schema.get('properties', dict()).items():
+            param = _CppParamInfo(fieldSchema, fieldName)
+            if param.isEnum:
+                self._enums.append(OutputEnumDefinition(fieldSchema))
+            if 'description' in fieldSchema:
+                structString += '\n   /// ' + fieldSchema['description'] + '\n'
+            structString += '\n    ' + param.RenderFields() + ';\n'
+        structString += "\n    bool _deleted;\n"
+
         for fieldName, fieldSchema in schema.get('properties', dict()).items():
             if fieldSchema.get('diffById'):
                 structString += OutputDiffArray(fieldName, fieldSchema)
 
         structString += "\n};\n"
-        structString += f"typedef boost::shared_ptr<{schema['typeName']}> {schema['typeName']}Ptr;\n"
         return structString
     
     def OutputFile(self, schemas):
@@ -497,7 +508,35 @@ class CppFileGenerator:
 
 #include <openrave/openrave.h>
 
-#include "rapidjson/rapidjson.h"
+#include <rapidjson/rapidjson.h>
+#include <boost/optional.hpp>
+
+namespace OpenRAVE {{
+
+namespace generated {{
+
+{classDelimiter.join(self._enums)}
+
+{classDelimiter.join(classes)}
+
+}}
+
+}}
+"""
+    
+    def OutputHeaderFile(self, schemas):
+        classDelimiter = '\n\n'
+        classes = [self.OutputOneClassDeclaration(schema) for schema in schemas]
+        return f"""\
+#include <algorithm>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <unordered_map>
+
+#include <openrave/openrave.h>
+
+#include <rapidjson/rapidjson.h>
 #include <boost/optional.hpp>
 
 namespace OpenRAVE {{
@@ -514,7 +553,7 @@ namespace generated {{
 """
 
 if __name__ == "__main__":
-    outputFilePath = sys.argv[1]
-    with open(outputFilePath, 'w') as file:
+    headerFilePath = sys.argv[1]
+    with open(headerFilePath, 'w') as file:
         # file.write(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
-        file.write(CppFileGenerator().OutputFile([geometryInfoSchema]))
+        file.write(CppFileGenerator().OutputHeaderFile([geometryInfoSchema]))

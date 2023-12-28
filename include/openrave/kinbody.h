@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
+#include <openrave/geometryinfobase.h>
+
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
@@ -347,7 +349,7 @@ public:
     /// \brief Describes the properties of a geometric primitive.
     ///
     /// Contains everything associated with a geometry's appearance and shape
-    class OPENRAVE_API GeometryInfo : public InfoBase
+    class OPENRAVE_API GeometryInfo : public generated::GeometryInfoBase
     {
 public:
         GeometryInfo() {
