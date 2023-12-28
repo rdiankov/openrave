@@ -273,15 +273,21 @@ def OutputDiffing(schema):
 
     return writer.GetCode()
 
+def OutputResetDeclaration():
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    writer.WriteLine("void Reset() override;")
+    return writer.GetCode()
+
 def OutputReset(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
             for fieldName, fieldSchema in schema.get('properties', dict()).items()
     ]
 
-    writer = CppCodeWriter(indent=4)
+    writer = CppCodeWriter()
     writer.WriteLine('')
-    writer.WriteLine("void Reset()")
+    writer.WriteLine(f"void {schema['typeName']}Base::Reset()")
     writer.StartBlock()
     for info in fieldInfos:
         info.RenderReset(writer)
@@ -460,22 +466,25 @@ class CppFileGenerator:
     _enums = []  # type: List[str] # A list of enums to output before class definitions.
     def __init__(self):
         self._enums = []
-    def OutputOneClass(self, schema):
-        structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
-        structString += "\npublic:\n"
-        for fieldName, fieldSchema in schema.get('properties', dict()).items():
-            param = _CppParamInfo(fieldSchema, fieldName)
-            if param.isEnum:
-                self._enums.append(OutputEnumDefinition(fieldSchema))
-            if 'description' in fieldSchema:
-                structString += '\n   /// ' + fieldSchema['description'] + '\n'
-            structString += '\n    ' + param.RenderFields() + ';\n'
-        structString += "\n    bool _deleted;\n"
-        structString += OutputInClassSerialization(schema)
-        structString += OutputDiffing(schema)
+    def OutputOneClassImplementation(self, schema):
+        structString = ''
+        # structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
+        # structString += "\npublic:\n"
+        # for fieldName, fieldSchema in schema.get('properties', dict()).items():
+        #     param = _CppParamInfo(fieldSchema, fieldName)
+        #     if param.isEnum:
+        #         self._enums.append(OutputEnumDefinition(fieldSchema))
+        #     if 'description' in fieldSchema:
+        #         structString += '\n   /// ' + fieldSchema['description'] + '\n'
+        #     structString += '\n    ' + param.RenderFields() + ';\n'
+        # structString += "\n    bool _deleted;\n"
+        # structString += OutputInClassSerialization(schema)
+        # structString += OutputDiffing(schema)
         structString += OutputReset(schema)
-        structString += OutputIsEmpty(schema)
-        structString += OutputClone(schema)
+        # structString += OutputIsEmpty(schema)
+        # structString += OutputClone(schema)
+
+        return structString
 
     def OutputOneClassDeclaration(self, schema):
         structString = f"class OPENRAVE_API {schema['typeName']}Base : public InfoBase\n{{"
@@ -493,12 +502,13 @@ class CppFileGenerator:
             if fieldSchema.get('diffById'):
                 structString += OutputDiffArray(fieldName, fieldSchema)
 
+        structString += OutputResetDeclaration()
+
         structString += "\n};\n"
         return structString
     
-    def OutputFile(self, schemas):
-        classDelimiter = '\n\n'
-        classes = [self.OutputOneClass(schema) for schema in schemas]
+    def OutputBodyFile(self, schema):
+        classImplementation = self.OutputOneClassImplementation(schema)
         return f"""\
 #include <algorithm>
 #include <cstring>
@@ -507,6 +517,7 @@ class CppFileGenerator:
 #include <unordered_map>
 
 #include <openrave/openrave.h>
+#include <openrave/geometryinfobase.h>
 
 #include <rapidjson/rapidjson.h>
 #include <boost/optional.hpp>
@@ -515,9 +526,7 @@ namespace OpenRAVE {{
 
 namespace generated {{
 
-{classDelimiter.join(self._enums)}
-
-{classDelimiter.join(classes)}
+{classImplementation}
 
 }}
 
@@ -558,6 +567,9 @@ namespace generated {{
 
 if __name__ == "__main__":
     headerFilePath = sys.argv[1]
+    bodyFilePath = sys.argv[2]
     with open(headerFilePath, 'w') as file:
         # file.write(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
         file.write(CppFileGenerator().OutputHeaderFile(geometryInfoSchema))
+    with open(bodyFilePath, 'w') as file:
+        file.write(CppFileGenerator().OutputBodyFile(geometryInfoSchema))

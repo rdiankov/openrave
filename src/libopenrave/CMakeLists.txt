@@ -59,15 +59,12 @@ add_custom_command(
   DEPENDS ${MUJIN_CLIENT_GENERATORS_EXECUTABLE}
           ${MUJIN_CLIENT_GENERATORS_BASEDIR}/*
           ${MUJIN_SENSORBRIDGE_API_SPEC_BASEDIR}/*
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../../include/openrave/geometryinfobase.h
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/../../python/mujinapis/generateInfoStruct.py ${CMAKE_CURRENT_BINARY_DIR}/../../include/openrave/geometryinfobase.h
-  # OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/geometryinfobase.h
-  # COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/../../python/mujinapis/generateInfoStruct.py ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/geometryinfobase.h
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/../../include/openrave/geometryinfobase.h ${CMAKE_CURRENT_BINARY_DIR}/geometryinfobase.cpp
+  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/../../python/mujinapis/generateInfoStruct.py ${CMAKE_CURRENT_BINARY_DIR}/../../include/openrave/geometryinfobase.h ${CMAKE_CURRENT_BINARY_DIR}/geometryinfobase.cpp
   VERBATIM
 )
 
-# add_library(libopenrave SHARED ${openrave_lib_SOURCES})
-add_library(libopenrave SHARED ${openrave_lib_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/../../include/openrave/geometryinfobase.h)
+add_library(libopenrave SHARED ${openrave_lib_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/../../include/openrave/geometryinfobase.h ${CMAKE_CURRENT_BINARY_DIR}/geometryinfobase.cpp)
 
 add_dependencies(libopenrave interfacehashes_target openrave-md5)
 if( TARGET crlibm-native )
