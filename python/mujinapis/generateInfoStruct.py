@@ -93,9 +93,9 @@ class _CppParamInfo:
             self.itemTypeName = _JsonSchemaTypeToCppType(schema['items'])
     def RenderFields(self, prefixOverride=None):
         prefix = prefixOverride if prefixOverride is not None else self.fieldNamePrefix
-        # paramString = f"{self.cppType} {prefix}{self.cppParamName}"
-        paramString = f"boost::optional<{self.cppType}> {prefix}{self.cppParamName} = {self.RenderDefaultValue()}"
-        return paramString
+        paramString = f"boost::optional<{self.cppType}> {prefix}{self.cppParamName}"
+        default = '' if not self.hasDefault else ' = ' + self.RenderDefaultValue()
+        return paramString + default
     def RenderName(self, needsPrefix):
         if needsPrefix:
             return self.fieldNamePrefix + self.cppParamName
