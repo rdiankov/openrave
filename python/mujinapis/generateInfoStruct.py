@@ -524,10 +524,13 @@ namespace generated {{
 }}
 """
     
-    def OutputHeaderFile(self, schemas):
+    def OutputHeaderFile(self, schema):
         classDelimiter = '\n\n'
-        classes = [self.OutputOneClassDeclaration(schema) for schema in schemas]
+        generatedClass = self.OutputOneClassDeclaration(schema)
+        macroName = f"OPENRAVE_{schema['typeName'].upper()}BASE_H"
         return f"""\
+#ifndef {macroName}
+#define {macroName}
 #include <algorithm>
 #include <cstring>
 #include <string>
@@ -545,15 +548,16 @@ namespace generated {{
 
 {classDelimiter.join(self._enums)}
 
-{classDelimiter.join(classes)}
+{generatedClass}
 
 }}
 
 }}
+#endif
 """
 
 if __name__ == "__main__":
     headerFilePath = sys.argv[1]
     with open(headerFilePath, 'w') as file:
         # file.write(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
-        file.write(CppFileGenerator().OutputHeaderFile([geometryInfoSchema]))
+        file.write(CppFileGenerator().OutputHeaderFile(geometryInfoSchema))
