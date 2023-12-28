@@ -232,22 +232,30 @@ class _CppParamInfo:
             writer.EndBlock()
             writer.EndBlock()
 
+def OutputInClassSerializationDeclaration():
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    writer.WriteLine(f"void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options) override;")
+    writer.WriteLine('')
+    writer.WriteLine(f"void SerializeJSON(rapidjson::Value& rSerializedOutput, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const override;")
+    return writer.GetCode()
+
 def OutputInClassSerialization(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
             for fieldName, fieldSchema in schema.get('properties', dict()).items()
     ]
 
-    writer = CppCodeWriter(indent=4)
+    writer = CppCodeWriter()
     writer.WriteLine('')
-    writer.WriteLine(f"void DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)")
+    writer.WriteLine(f"void {schema['typeName']}Base::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)")
     writer.StartBlock()
     for info in fieldInfos:
         info.RenderDeserialization(writer)
     writer.EndBlock()
 
     writer.WriteLine('')
-    writer.WriteLine(f"void SerializeJSON(rapidjson::Value& rSerializedOutput, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const")
+    writer.WriteLine(f"void {schema['typeName']}Base::SerializeJSON(rapidjson::Value& rSerializedOutput, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const")
     writer.StartBlock()
     for info in fieldInfos:
         info.RenderSerialization(writer)
@@ -466,24 +474,13 @@ class CppFileGenerator:
     _enums = []  # type: List[str] # A list of enums to output before class definitions.
     def __init__(self):
         self._enums = []
+
     def OutputOneClassImplementation(self, schema):
         structString = ''
-        # structString = f"class OPENRAVE_API {schema['typeName']} : public InfoBase\n{{"
-        # structString += "\npublic:\n"
-        # for fieldName, fieldSchema in schema.get('properties', dict()).items():
-        #     param = _CppParamInfo(fieldSchema, fieldName)
-        #     if param.isEnum:
-        #         self._enums.append(OutputEnumDefinition(fieldSchema))
-        #     if 'description' in fieldSchema:
-        #         structString += '\n   /// ' + fieldSchema['description'] + '\n'
-        #     structString += '\n    ' + param.RenderFields() + ';\n'
-        # structString += "\n    bool _deleted;\n"
-        # structString += OutputInClassSerialization(schema)
-        # structString += OutputDiffing(schema)
+        structString += OutputInClassSerialization(schema)
         structString += OutputReset(schema)
         # structString += OutputIsEmpty(schema)
         # structString += OutputClone(schema)
-
         return structString
 
     def OutputOneClassDeclaration(self, schema):
@@ -502,7 +499,10 @@ class CppFileGenerator:
             if fieldSchema.get('diffById'):
                 structString += OutputDiffArray(fieldName, fieldSchema)
 
+        structString += OutputInClassSerializationDeclaration()
         structString += OutputResetDeclaration()
+        # structString += OutputIsEmpty(schema)
+        # structString += OutputClone(schema)
 
         structString += "\n};\n"
         return structString
