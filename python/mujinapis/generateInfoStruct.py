@@ -178,6 +178,10 @@ class _CppParamInfo:
             if self.isEnum:
                 writer.WriteLine(f'orjson::LoadJsonValueByKey(value, "{self.cppParamName}", {deserName});')
             else:
+                writer.WriteLine(f'if ({deserName} == boost::none)')
+                writer.StartBlock()
+                writer.WriteLine(f'{deserName} = {self.RenderDefaultValue()};')
+                writer.EndBlock()
                 writer.WriteLine(f'orjson::LoadOptionalJsonValueByKey(value, "{self.cppParamName}", {deserName});')
         
         if self.isEnum:
@@ -201,6 +205,10 @@ class _CppParamInfo:
             writer.WriteLine(f'if ({self.RenderName(True)} != other.{self.RenderName(True)})')
             writer.StartBlock()
             writer.WriteLine(f'diffResult.{self.RenderName(True)} = {self.RenderName(True)};')
+            writer.EndBlock()
+            writer.WriteLine(f'else')
+            writer.StartBlock()
+            writer.WriteLine(f'diffResult.{self.RenderName(True)} = boost::none;')
             writer.EndBlock()
 
     def RenderReset(self, writer):
