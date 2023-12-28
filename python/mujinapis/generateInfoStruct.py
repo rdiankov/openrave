@@ -118,7 +118,7 @@ class _CppParamInfo:
             serName += "String"
         
         if not self.isRequired:
-            writer.WriteLine(f'if (*{self.RenderName(True)} != {self.RenderDefaultValue()})')
+            writer.WriteLine(f'if ({self.RenderName(True)} != boost::none)')
             writer.StartBlock()
             
         if self.shouldScaleInJson:
@@ -136,7 +136,7 @@ class _CppParamInfo:
             writer.StartBlock()
             if self.sharedPointerType:
                 writer.WriteLine(f'rapidjson::Value value;')
-                writer.WriteLine(f'(*{serName})[i]->SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);\n')
+                writer.WriteLine(f'(*{serName})[i]->SerializeJSON(value, {cppJsonAllocVariable}, fUnitScale, options);')
                 writer.WriteLine(f'{cppJsonVariable}.AddMember(rapidjson::Document::StringRefType("{self.cppParamName}"), value, {cppJsonAllocVariable});')
             else:
                 writer.WriteLine(f'rapidjson::Value value;')
