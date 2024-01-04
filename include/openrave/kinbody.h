@@ -44,23 +44,6 @@ enum ExtractInfoOptions : uint8_t
     EIO_SkipDOFValues = 1, ///< extracts everything but dof values, this allows extraction even when body is not added to the environment
 };
 
-/// \brief The type of geometry primitive.
-enum GeometryType : uint8_t
-{
-    GT_None = 0,
-    GT_Box = 1,
-    GT_Sphere = 2,
-    GT_Cylinder = 3, ///< oriented towards z-axis
-    GT_TriMesh = 4,
-    GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z. The origin is at the bottom of the base.
-    GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
-    GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
-    GT_Axial = 8, ///< a geometry defined by many slices along an axis, oriented towards z-axis
-    GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
-};
-
-OPENRAVE_API const char* GetGeometryTypeString(GeometryType geometryType);
-
 enum DynamicsConstraintsType : int8_t
 {
     DC_Unknown = -1, ///< constraints type is not set.
@@ -349,7 +332,7 @@ public:
     /// \brief Describes the properties of a geometric primitive.
     ///
     /// Contains everything associated with a geometry's appearance and shape
-    class OPENRAVE_API GeometryInfo : public generated::GeometryInfoBase
+    class OPENRAVE_API GeometryInfo : public GeometryInfoBase
     {
 public:
         GeometryInfo() {

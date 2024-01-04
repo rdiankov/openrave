@@ -1022,33 +1022,6 @@ void KinBody::GeometryInfo::Reset()
     _vPositiveCropContainerEmptyMargins = Vector(0,0,0);
 }
 
-const char* GetGeometryTypeString(GeometryType geometryType)
-{
-    switch(geometryType) {
-    case GT_Box:
-        return "box";
-    case GT_Container:
-        return "container";
-    case GT_Cage:
-        return "cage";
-    case GT_Sphere:
-        return "sphere";
-    case GT_Cylinder:
-        return "cylinder";
-    case GT_Axial:
-        return "axial";
-    case GT_TriMesh:
-        return "trimesh";
-    case GT_CalibrationBoard:
-        return "calibrationboard";
-    case GT_ConicalFrustum:
-        return "conicalfrustum";
-    case GT_None:
-        return "";
-    }
-    return "(unknown)";
-}
-
 void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapidjson::Document::AllocatorType& allocator, const dReal fUnitScale, int options) const
 {
     rGeometryInfo.SetObject();

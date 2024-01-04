@@ -365,14 +365,13 @@ def OutputClone(schema):
 
 def OutputEnumDefinition(schema):
     enumDefinition = f"enum {schema['typeName']} : uint8_t\n{{\n    "
-    enumInitials = ''.join(re.findall(r'([A-Z])+', schema['typeName']))
-    enumDefinition += '\n    '.join(f"{enumInitials}_{value.title()} = {index}," for index, value in enumerate(schema['enum']))
+    enumDefinition += '\n    '.join(f"{value[1]} = {index}," for index, value in enumerate(schema['enum']))
     enumDefinition += "\n};"
 
     enumInstanceName = schema['typeName'][0].lower() + schema['typeName'][1:]
     enumToStringFunctionDeclaration = f"OPENRAVE_API const char * Get{schema['typeName']}String({schema['typeName']} {enumInstanceName})"
 
-    enumInstancesList = f'static const char * {enumInstanceName}Strings[{len(schema["enum"])}] = {{"' + '", "'.join(schema['enum']) + '"};'
+    enumInstancesList = f'static const char * {enumInstanceName}Strings[{len(schema["enum"])}] = {{"' + '", "'.join([value[0] for value in schema['enum']]) + '"};'
     enumToStringFunction = f"""{enumToStringFunctionDeclaration}
 {{
     {enumInstancesList}
@@ -568,13 +567,9 @@ class CppFileGenerator:
 
 namespace OpenRAVE {{
 
-namespace generated {{
-
 {classDelimiter.join([enum[1] for enum in self._enums])}
 
 {classDelimiter.join(classImplementations)}
-
-}}
 
 }}
 """
@@ -599,13 +594,9 @@ namespace generated {{
 
 namespace OpenRAVE {{
 
-namespace generated {{
-
 {classDelimiter.join([enum[0] for enum in self._enums])}
 
 {classDelimiter.join(generatedClasses)}
-
-}}
 
 }}
 #endif
