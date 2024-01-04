@@ -50,7 +50,7 @@ def _JsonSchemaTypeToCppType(schema):
     if jsonType == 'boolean':
         return 'bool'
     if jsonType == 'array':
-        typeSuffix = 'Ptr' if schema.get('sharedPointerType', False) else ''
+        typeSuffix = 'BasePtr' if schema.get('sharedPointerType', False) else ''
         if schema.get('prefixItems'):
             return 'std::tuple<' + ', '.join(f'{_JsonSchemaTypeToCppType(item)}{typeSuffix}' for item in schema['prefixItems']) + '>'
         elif schema.get('items'):
@@ -169,7 +169,7 @@ class _CppParamInfo:
             writer.WriteLine(f'for (rapidjson::Value::ConstValueIterator it = value["{self.cppParamName}"].Begin(); it != value["{self.cppParamName}"].End(); ++it)')
             writer.StartBlock()
             if self.sharedPointerType:
-                writer.WriteLine(f'{deserName}->push_back(boost::make_shared<{self.itemTypeName}>());')
+                writer.WriteLine(f'{deserName}->push_back(boost::make_shared<{self.itemTypeName}Base>());')
                 writer.WriteLine(f'(*{deserName})[{deserName}->size()-1]->DeserializeJSON(*it, fUnitScale, options);')
             else:
                 writer.WriteLine(f'{deserName}->push_back({self.itemTypeName}());')
@@ -228,7 +228,7 @@ class _CppParamInfo:
             writer.StartBlock()
             writer.WriteLine(f'for (size_t i=0; i<{self.RenderName(True)}->size(); i++)')
             writer.StartBlock()
-            writer.WriteLine(f'(*cloned.{self.RenderName(True)})[i] = boost::make_shared<{self.itemTypeName}>(std::move((*{self.RenderName(True)})[i]->Clone()));')
+            writer.WriteLine(f'(*cloned.{self.RenderName(True)})[i] = boost::make_shared<{self.itemTypeName}Base>(std::move((*{self.RenderName(True)})[i]->Clone()));')
             writer.EndBlock()
             writer.EndBlock()
 
@@ -263,6 +263,12 @@ def OutputInClassSerialization(schema):
 
     return writer.GetCode()
 
+def OutputDiffingDeclaration(schema):
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    writer.WriteLine(f"{schema['typeName']}Base Diff(const {schema['typeName']}Base& other) const;")
+    return writer.GetCode()
+
 def OutputDiffing(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName)\
@@ -271,9 +277,9 @@ def OutputDiffing(schema):
 
     writer = CppCodeWriter(indent=4)
     writer.WriteLine('')
-    writer.WriteLine(f"{schema['typeName']} Diff(const {schema['typeName']}& other) const")
+    writer.WriteLine(f"{schema['typeName']}Base {schema['typeName']}Base::Diff(const {schema['typeName']}Base& other) const")
     writer.StartBlock()
-    writer.WriteLine(f"{schema['typeName']} diffResult;")
+    writer.WriteLine(f"{schema['typeName']}Base diffResult;")
     for info in fieldInfos:
         info.RenderDiffing(writer)
     writer.WriteLine(f"return diffResult;")
@@ -303,6 +309,12 @@ def OutputReset(schema):
 
     return writer.GetCode()
 
+def OutputIsEmptyDeclaration():
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    writer.WriteLine("bool IsEmpty();")
+    return writer.GetCode()
+
 def OutputIsEmpty(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
@@ -311,7 +323,7 @@ def OutputIsEmpty(schema):
 
     writer = CppCodeWriter(indent=4)
     writer.WriteLine('')
-    writer.WriteLine("bool IsEmpty()")
+    writer.WriteLine(f"bool {schema['typeName']}Base::IsEmpty()")
     writer.StartBlock()
     for info in fieldInfos:
         info.RenderIsEmpty(writer)
@@ -324,6 +336,13 @@ def OutputIsEmpty(schema):
 
     return writer.GetCode()
 
+def OutputCloneDeclaration(schema):
+    param = _CppParamInfo(schema, '')
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    writer.WriteLine(f"{param.cppType}Base Clone();")
+    return writer.GetCode()
+
 def OutputClone(schema):
     fieldInfos = [
         _CppParamInfo(fieldSchema, fieldName, isRequired=(fieldName in schema.get('required', [])))\
@@ -333,9 +352,9 @@ def OutputClone(schema):
     param = _CppParamInfo(schema, '')
     writer = CppCodeWriter(indent=4)
     writer.WriteLine('')
-    writer.WriteLine(f"{param.cppType} Clone()")
+    writer.WriteLine(f"{param.cppType}Base {schema['typeName']}Base::Clone()")
     writer.StartBlock()
-    writer.WriteLine(f"{param.cppType} cloned;")
+    writer.WriteLine(f"{param.cppType}Base cloned;")
     for info in fieldInfos:
         info.RenderClone(writer)
     writer.WriteLine(f'cloned._deleted = _deleted;')
@@ -351,8 +370,10 @@ def OutputEnumDefinition(schema):
     enumDefinition += "\n};"
 
     enumInstanceName = schema['typeName'][0].lower() + schema['typeName'][1:]
+    enumToStringFunctionDeclaration = f"OPENRAVE_API const char * Get{schema['typeName']}String({schema['typeName']} {enumInstanceName})"
+
     enumInstancesList = f'static const char * {enumInstanceName}Strings[{len(schema["enum"])}] = {{"' + '", "'.join(schema['enum']) + '"};'
-    enumToStringFunction = f"""OPENRAVE_API const char * Get{schema['typeName']}String({schema['typeName']} {enumInstanceName})
+    enumToStringFunction = f"""{enumToStringFunctionDeclaration}
 {{
     {enumInstancesList}
     BOOST_ASSERT({enumInstanceName} < {len(schema['enum'])});
@@ -361,7 +382,8 @@ def OutputEnumDefinition(schema):
     """
 
     enumInstanceName += "String"
-    stringToEnumFunction = f'''OPENRAVE_API {schema["typeName"]} Get{schema["typeName"]}FromString(const char* {enumInstanceName})
+    stringToEnumFunctionDeclaration = f"OPENRAVE_API {schema['typeName']} Get{schema['typeName']}FromString(const char* {enumInstanceName})"
+    stringToEnumFunction = f'''{stringToEnumFunctionDeclaration}
 {{
     // TODO(heman.gandhi): consider generating a std::unordered_map instead?
     {enumInstancesList}
@@ -379,15 +401,24 @@ def OutputEnumDefinition(schema):
 }}
 '''
 
-    return '\n\n'.join([enumDefinition, enumToStringFunction, stringToEnumFunction])
+    return '\n\n'.join([enumDefinition, f'{enumToStringFunctionDeclaration};', f'{stringToEnumFunctionDeclaration};']), '\n'.join([enumToStringFunction, stringToEnumFunction])
 
-def OutputDiffArray(fieldName, fieldSchema):
+def OutputDiffArrayDeclaration(fieldName, fieldSchema):
+
+    paramInfo = _CppParamInfo(fieldSchema, fieldName)
+    writer = CppCodeWriter(indent=4)
+    writer.WriteLine('')
+    returnType = f'boost::optional<{paramInfo.cppType}>'
+    writer.WriteLine(f'{returnType} _Diff_{fieldName}(const boost::optional<{paramInfo.cppType}>& reference) const;')
+    return writer.GetCode()
+
+def OutputDiffArray(schema, fieldName, fieldSchema):
     paramInfo = _CppParamInfo(fieldSchema, fieldName)
 
     writer = CppCodeWriter(indent=4)
     writer.WriteLine(f'')
     returnType = f'boost::optional<{paramInfo.cppType}>'
-    writer.WriteLine(f'{returnType} _Diff_{fieldName}(const boost::optional<{paramInfo.cppType}>& reference) const')
+    writer.WriteLine(f'{returnType} {schema["typeName"]}Base::_Diff_{fieldName}(const boost::optional<{paramInfo.cppType}>& reference) const')
     writer.StartBlock()
 
     writer.WriteLine(f'if (!reference)')
@@ -402,7 +433,7 @@ def OutputDiffArray(fieldName, fieldSchema):
 
     writer.WriteLine(f'{paramInfo.cppType} diffResult;')
 
-    typeSuffix = 'Ptr' if fieldSchema.get('sharedPointerType') else ''
+    typeSuffix = 'BasePtr' if fieldSchema.get('sharedPointerType') else ''
     idMapType = f'std::unordered_map<std::string, {paramInfo.itemTypeName}{typeSuffix}>'
     writer.WriteLine(f'{idMapType} idMap;')
     writer.WriteLine(f'idMap.reserve({paramInfo.RenderName(True)}->size());')
@@ -434,7 +465,7 @@ def OutputDiffArray(fieldName, fieldSchema):
     writer.StartBlock()
     writer.WriteLine(f'// this model is deleted')
     if fieldSchema.get('sharedPointerType'):
-        writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}>());')
+        writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}Base>());')
         writer.WriteLine(f'diffResult[diffResult.size()-1]->_deleted = true;')
     writer.EndBlock()
     writer.EndBlock()
@@ -451,10 +482,10 @@ def OutputDiffArray(fieldName, fieldSchema):
     writer.WriteLine(f'if (referenceIdMapIt == referencedIdMap.end())')
     writer.StartBlock()
     writer.WriteLine(f'// this model is new')
-    writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}>(std::move((*{paramInfo.RenderName(True)})[i]->Clone())));')
+    writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}Base>(std::move((*{paramInfo.RenderName(True)})[i]->Clone())));')
     writer.WriteLine(f'continue;')
     writer.EndBlock()
-    writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}>(std::move((*{paramInfo.RenderName(True)})[i]->Diff(*(referenceIdMapIt->second)))));')
+    writer.WriteLine(f'diffResult.push_back(boost::make_shared<{paramInfo.itemTypeName}Base>(std::move((*{paramInfo.RenderName(True)})[i]->Diff(*(referenceIdMapIt->second)))));')
     writer.EndBlock()
 
     writer.WriteLine(f'if (diffResult.size() == 0)')
@@ -479,9 +510,19 @@ class CppFileGenerator:
         structString = ''
         structString += OutputInClassSerialization(schema)
         structString += OutputReset(schema)
-        # structString += OutputIsEmpty(schema)
-        # structString += OutputClone(schema)
+        structString += OutputIsEmpty(schema)
+        structString += OutputClone(schema)
+        structString += OutputDiffing(schema)
+        for fieldName, fieldSchema in schema.get('properties', dict()).items():
+            param = _CppParamInfo(fieldSchema, fieldName)
+            if param.isEnum:
+                self._enums.append(OutputEnumDefinition(fieldSchema))
+            if fieldSchema.get('diffById'):
+                structString += OutputDiffArray(schema, fieldName, fieldSchema)
         return structString
+
+    def OutputPointerDeclaration(self, schema):
+        return f"typedef boost::shared_ptr<{schema['typeName']}Base> {schema['typeName']}BasePtr;\n"
 
     def OutputOneClassDeclaration(self, schema):
         structString = f"class OPENRAVE_API {schema['typeName']}Base : public InfoBase\n{{"
@@ -495,20 +536,23 @@ class CppFileGenerator:
             structString += '\n    ' + param.RenderFields() + ';\n'
         structString += "\n    bool _deleted;\n"
 
-        for fieldName, fieldSchema in schema.get('properties', dict()).items():
-            if fieldSchema.get('diffById'):
-                structString += OutputDiffArray(fieldName, fieldSchema)
-
         structString += OutputInClassSerializationDeclaration()
         structString += OutputResetDeclaration()
-        # structString += OutputIsEmpty(schema)
-        # structString += OutputClone(schema)
+        structString += OutputIsEmptyDeclaration()
+        structString += OutputCloneDeclaration(schema)
+        structString += OutputDiffingDeclaration(schema)
 
-        structString += "\n};\n"
+        for fieldName, fieldSchema in schema.get('properties', dict()).items():
+            if fieldSchema.get('diffById'):
+                structString += OutputDiffArrayDeclaration(fieldName, fieldSchema)
+
+        structString += "\n};\n\n"
+        structString += self.OutputPointerDeclaration(schema)
         return structString
     
-    def OutputBodyFile(self, schema):
-        classImplementation = self.OutputOneClassImplementation(schema)
+    def OutputBodyFile(self, schemas):
+        classDelimiter = '\n\n'
+        classImplementations = [self.OutputOneClassImplementation(schema) for schema in schemas]
         return f"""\
 #include <algorithm>
 #include <cstring>
@@ -517,7 +561,7 @@ class CppFileGenerator:
 #include <unordered_map>
 
 #include <openrave/openrave.h>
-#include <openrave/geometryinfobase.h>
+#include <openrave/infobase.h>
 
 #include <rapidjson/rapidjson.h>
 #include <boost/optional.hpp>
@@ -526,17 +570,19 @@ namespace OpenRAVE {{
 
 namespace generated {{
 
-{classImplementation}
+{classDelimiter.join([enum[1] for enum in self._enums])}
+
+{classDelimiter.join(classImplementations)}
 
 }}
 
 }}
 """
-    
-    def OutputHeaderFile(self, schema):
+
+    def OutputHeaderFile(self, schemas):
         classDelimiter = '\n\n'
-        generatedClass = self.OutputOneClassDeclaration(schema)
-        macroName = f"OPENRAVE_{schema['typeName'].upper()}BASE_H"
+        generatedClasses = [self.OutputOneClassDeclaration(schema) for schema in schemas]
+        macroName = f"OPENRAVE_INFOBASE_H"
         return f"""\
 #ifndef {macroName}
 #define {macroName}
@@ -555,9 +601,9 @@ namespace OpenRAVE {{
 
 namespace generated {{
 
-{classDelimiter.join(self._enums)}
+{classDelimiter.join([enum[0] for enum in self._enums])}
 
-{generatedClass}
+{classDelimiter.join(generatedClasses)}
 
 }}
 
@@ -569,7 +615,7 @@ if __name__ == "__main__":
     headerFilePath = sys.argv[1]
     bodyFilePath = sys.argv[2]
     with open(headerFilePath, 'w') as file:
-        # file.write(CppFileGenerator().OutputFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
-        file.write(CppFileGenerator().OutputHeaderFile(geometryInfoSchema))
+        file.write(CppFileGenerator().OutputHeaderFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))
+        # file.write(CppFileGenerator().OutputHeaderFile([geometryInfoSchema]))
     with open(bodyFilePath, 'w') as file:
-        file.write(CppFileGenerator().OutputBodyFile(geometryInfoSchema))
+        file.write(CppFileGenerator().OutputBodyFile([geometryInfoSchema, linkInfoSchema, jointInfoSchema, kinBodyInfoSchema]))

@@ -22,7 +22,7 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
-#include <openrave/geometryinfobase.h>
+#include <openrave/infobase.h>
 
 namespace OpenRAVE {
 
