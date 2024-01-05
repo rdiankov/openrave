@@ -285,9 +285,9 @@ static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Ve
             aiMaterial* mtrl = scene->mMaterials[input_mesh->mMaterialIndex];
             aiColor4D color;
             aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_DIFFUSE,&color);
-            g._vDiffuseColor = Vector(color.r,color.g,color.b,color.a);
+            g._diffuseColor = Vector(color.r,color.g,color.b,color.a);
             aiGetMaterialColor(mtrl,AI_MATKEY_COLOR_AMBIENT,&color);
-            g._vAmbientColor = Vector(color.r,color.g,color.b,color.a);
+            g._ambientColor = Vector(color.r,color.g,color.b,color.a);
         }
     }
 
@@ -363,7 +363,7 @@ static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& fil
             if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
                 if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
                     FOREACH(itgeom, listGeometries) {
-                        itgeom->_vDiffuseColor = vcolor;
+                        itgeom->_diffuseColor = vcolor;
                         if( bTransformOffset ) {
                             itgeom->_meshcollision.ApplyTransform(toffset.inverse());
                         }
@@ -809,10 +809,10 @@ public:
         listGeometries.push_back(KinBody::GeometryInfo());
         KinBody::GeometryInfo& g = listGeometries.back();
         g._type = GT_TriMesh;
-        g._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        g._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        g._diffuseColor=Vector(1,0.5f,0.5f,1);
+        g._ambientColor=Vector(0.1,0.0f,0.0f,0);
         g._vRenderScale = vscale;
-        if( !CreateTriMeshFromFile(penv,filename,vscale,g._meshcollision,g._vDiffuseColor,g._vAmbientColor,g._fTransparency) ) {
+        if( !CreateTriMeshFromFile(penv,filename,vscale,g._meshcollision,*g._diffuseColor,*g._ambientColor,*g._transparency) ) {
             return false;
         }
         return true;
@@ -1028,21 +1028,21 @@ public:
                                 extension = info->_filenamerender.substr(info->_filenamerender.find_last_of('.')+1);
                             }
                             FOREACH(itnewgeom,listGeometryInfos) {
-                                itnewgeom->_bVisible = info->_bVisible;
+                                itnewgeom->_visible = info->_visible;
                                 itnewgeom->_bModifiable = info->_bModifiable;
-                                itnewgeom->_fTransparency = info->_fTransparency;
+                                itnewgeom->_transparency = info->_transparency;
                                 itnewgeom->_filenamerender = string("__norenderif__:")+extension;
                                 FOREACH(it,itnewgeom->_meshcollision.vertices) {
                                     *it = tmres * *it;
                                 }
                                 if( geomreader->IsOverwriteDiffuse() ) {
-                                    itnewgeom->_vDiffuseColor = info->_vDiffuseColor;
+                                    itnewgeom->_diffuseColor = info->_diffuseColor;
                                 }
                                 if( geomreader->IsOverwriteAmbient() ) {
-                                    itnewgeom->_vAmbientColor = info->_vAmbientColor;
+                                    itnewgeom->_ambientColor = info->_ambientColor;
                                 }
                                 if( geomreader->IsOverwriteTransparency() ) {
-                                    itnewgeom->_fTransparency = info->_fTransparency;
+                                    itnewgeom->_transparency = info->_transparency;
                                 }
 
                                 Transform t = info->GetTransform();
@@ -1054,7 +1054,7 @@ public:
                             listGeometryInfos.front()._filenamerender = info->_filenamerender;
                             listGeometryInfos.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
                             listGeometryInfos.front()._filenamecollision = info->_filenamecollision;
-                            listGeometryInfos.front()._bVisible = info->_bVisible;
+                            listGeometryInfos.front()._visible = info->_visible;
                             listGeometryInfos.front()._name = info->_name;
                             FOREACH(itinfo, listGeometryInfos) {
                                 _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*itinfo)));
@@ -2367,7 +2367,7 @@ public:
                 // overwrite the color
                 FOREACH(itlink, _pchain->_veclinks) {
                     FOREACH(itgeom, (*itlink)->_vGeometries) {
-                        (*itgeom)->_info._vDiffuseColor = _diffusecol;
+                        (*itgeom)->_info._diffuseColor = _diffusecol;
                     }
                 }
             }
@@ -2375,7 +2375,7 @@ public:
                 // overwrite the color
                 FOREACH(itlink, _pchain->_veclinks) {
                     FOREACH(itgeom, (*itlink)->_vGeometries) {
-                        (*itgeom)->_info._vAmbientColor = _ambientcol;
+                        (*itgeom)->_info._ambientColor = _ambientcol;
                     }
                 }
             }
@@ -2383,7 +2383,7 @@ public:
                 // overwrite the color
                 FOREACH(itlink, _pchain->_veclinks) {
                     FOREACH(itgeom, (*itlink)->_vGeometries) {
-                        (*itgeom)->_info._fTransparency = _transparency;
+                        *(*itgeom)->_info._transparency = _transparency;
                     }
                 }
             }

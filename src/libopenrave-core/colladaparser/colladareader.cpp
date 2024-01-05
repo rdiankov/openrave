@@ -2467,7 +2467,7 @@ public:
             //  Switch between different type of geometry PRIMITIVES
             Transform toriginal = itgeominfo->GetTransform();
             itgeominfo->SetTransform(tnodegeom * itgeominfo->GetTransform());
-            switch (itgeominfo->_type) {
+            switch (itgeominfo->_type.value_or(GT_None)) {
             case GT_Box:
                 itgeominfo->_vGeomData *= vscale;
                 break;
@@ -2500,7 +2500,7 @@ public:
                 itgeominfo->_calibrationBoardParameters[0].dotsDistanceY *= vscale.y;
                 break;
             default:
-                RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type));
+                RAVELOG_WARN(str(boost::format("unknown geometry type: 0x%x")%itgeominfo->_type.value_or(GT_None)));
             }
 
             KinBody::Link::GeometryPtr pgeom(new KinBody::Link::Geometry(plink,*itgeominfo));
@@ -2527,27 +2527,27 @@ public:
                 domProfile_common::domTechnique::domPhongRef pphong = daeSafeCast<domProfile_common::domTechnique::domPhong>(peffect->getDescendant(daeElement::matchType(domProfile_common::domTechnique::domPhong::ID())));
                 if( !!pphong ) {
                     if( !!pphong->getAmbient() && !!pphong->getAmbient()->getColor() ) {
-                        geom._vAmbientColor = getVector4(pphong->getAmbient()->getColor()->getValue());
+                        geom._ambientColor = getVector4(pphong->getAmbient()->getColor()->getValue());
                         if( pphong->getAmbient()->getColor()->getValue().getCount() >= 4 ) {
                             // colors of the phong element in collada have the 4th value set to alpha.
-                            geom._fTransparency = 1-geom._vAmbientColor.w;
+                            geom._transparency = 1-geom._ambientColor->w;
                         }
-                        geom._vAmbientColor.w = 0; // not used in openrave
+                        geom._ambientColor->w = 0; // not used in openrave
                     }
                     if( !!pphong->getDiffuse() && !!pphong->getDiffuse()->getColor() ) {
-                        geom._vDiffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
+                        geom._diffuseColor = getVector4(pphong->getDiffuse()->getColor()->getValue());
                         if( pphong->getDiffuse()->getColor()->getValue().getCount() >= 4 ) {
                             // colors of the phong element in collada have the 4th value set to alpha.
-                            geom._fTransparency = 1-geom._vDiffuseColor.w;
+                            geom._transparency = 1-geom._diffuseColor->w;
                         }
-                        geom._vDiffuseColor.w = 0; // not used in openrave
+                        geom._diffuseColor->w = 0; // not used in openrave
                     }
                     if( !!pphong->getTransparency() && !!pphong->getTransparency()->getFloat() ) {
-                        geom._fTransparency = 1-static_cast<dReal>(pphong->getTransparency()->getFloat()->getValue());
+                        geom._transparency = 1-static_cast<dReal>(pphong->getTransparency()->getFloat()->getValue());
                     }
-                    if( geom._fTransparency >= 1 ) {
-                        RAVELOG_WARN(str(boost::format("transparecy is %f, which means the item will be rendered invisible, this must be a mistake so setting to opaque (1)")%geom._fTransparency));
-                        geom._fTransparency = 0;
+                    if( *geom._transparency >= 1 ) {
+                        RAVELOG_WARN(str(boost::format("transparecy is %f, which means the item will be rendered invisible, this must be a mistake so setting to opaque (1)")%*geom._transparency));
+                        geom._transparency = 0;
                     }
                 }
             }
@@ -3269,8 +3269,8 @@ public:
                             RAVELOG_WARN("plane geometries are not supported");
                         }
                         else if( name == "visible" ) {
-                            resolveCommon_bool_or_param(children[i],domgeom,geominfo._bVisible);
-                            bgeomvisible = geominfo._bVisible;
+                            resolveCommon_bool_or_param(children[i],domgeom,*geominfo._visible);
+                            bgeomvisible = *geominfo._visible;
                         }
                     }
                     if( bfoundgeom ) {
@@ -3291,28 +3291,28 @@ public:
                 _ExtractGeometry(meshRef->getTriangles_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back().SetTransform(tlocalgeom);
-                listGeometryInfos.back()._bVisible = bgeomvisible;
+                *listGeometryInfos.back()._visible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTrifans_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTrifans_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back().SetTransform(tlocalgeom);
-                listGeometryInfos.back()._bVisible = bgeomvisible;
+                *listGeometryInfos.back()._visible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getTristrips_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getTristrips_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back().SetTransform(tlocalgeom);
-                listGeometryInfos.back()._bVisible = bgeomvisible;
+                *listGeometryInfos.back()._visible = bgeomvisible;
             }
             for (size_t tg = 0; tg<meshRef->getPolylist_array().getCount(); tg++) {
                 listGeometryInfos.push_back(KinBody::GeometryInfo());
                 _ExtractGeometry(meshRef->getPolylist_array()[tg], meshRef->getVertices(), mapmaterials, listGeometryInfos.back(),tlocalgeominv);
                 listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back().SetTransform(tlocalgeom);
-                listGeometryInfos.back()._bVisible = bgeomvisible;
+                *listGeometryInfos.back()._visible = bgeomvisible;
             }
             if( meshRef->getPolygons_array().getCount()> 0 ) {
                 RAVELOG_WARN("openrave does not support collada polygons\n");
@@ -3373,7 +3373,7 @@ public:
                 listGeometryInfos.back()._name = geomname;
                 listGeometryInfos.back()._type = GT_TriMesh;
                 listGeometryInfos.back().SetTransform(tlocalgeom);
-                listGeometryInfos.back()._bVisible = bgeomvisible;
+                *listGeometryInfos.back()._visible = bgeomvisible;
                 _computeConvexHull(vconvexhull,listGeometryInfos.back()._meshcollision);
             }
             return true;
@@ -5116,10 +5116,10 @@ private:
                             if( resolveCommon_bool_or_param(pelt, referenceElt, bVisible) ) {
                                 FOREACH(itgeometry, plink->_vGeometries) {
                                     if( bAndWithPrevious ) {
-                                        (*itgeometry)->_info._bVisible &= bVisible;
+                                        *(*itgeometry)->_info._visible &= bVisible;
                                     }
                                     else {
-                                        (*itgeometry)->_info._bVisible = bVisible;
+                                        *(*itgeometry)->_info._visible = bVisible;
                                     }
                                 }
                             }

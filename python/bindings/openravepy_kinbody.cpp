@@ -295,10 +295,10 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vGeomData2 = toPyVector4(info._vGeomData2);
     _vGeomData3 = toPyVector4(info._vGeomData3);
     _vGeomData4 = toPyVector4(info._vGeomData4);
-    _vNegativeCropContainerMargins = toPyVector3(info._vNegativeCropContainerMargins);
-    _vPositiveCropContainerMargins = toPyVector3(info._vPositiveCropContainerMargins);
-    _vNegativeCropContainerEmptyMargins = toPyVector3(info._vNegativeCropContainerEmptyMargins);
-    _vPositiveCropContainerEmptyMargins = toPyVector3(info._vPositiveCropContainerEmptyMargins);
+    _vNegativeCropContainerMargins = toPyVector3(*info._negativeCropContainerMargins);
+    _vPositiveCropContainerMargins = toPyVector3(*info._positiveCropContainerMargins);
+    _vNegativeCropContainerEmptyMargins = toPyVector3(*info._negativeCropContainerEmptyMargins);
+    _vPositiveCropContainerEmptyMargins = toPyVector3(*info._positiveCropContainerEmptyMargins);
 
     _vSideWalls = py::list();
     for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
@@ -310,18 +310,18 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
         _vAxialSlices.append(PyAxialSlice(info._vAxialSlices[i]));
     }
 
-    _vDiffuseColor = toPyVector3(info._vDiffuseColor);
-    _vAmbientColor = toPyVector3(info._vAmbientColor);
+    _vDiffuseColor = toPyVector3(*info._diffuseColor);
+    _vAmbientColor = toPyVector3(*info._ambientColor);
     _meshcollision = toPyTriMesh(info._meshcollision);
-    _id = ConvertStringToUnicode(info._id);
-    _type = info._type;
-    _name = ConvertStringToUnicode(info._name);
+    _id = ConvertStringToUnicode(info.GetId());
+    _type = info._type.value_or(OpenRAVE::GT_None);
+    _name = ConvertStringToUnicode(info.GetName());
     _filenamerender = ConvertStringToUnicode(info._filenamerender);
     _filenamecollision = ConvertStringToUnicode(info._filenamecollision);
     _vRenderScale = toPyVector3(info._vRenderScale);
     _vCollisionScale = toPyVector3(info._vCollisionScale);
-    _fTransparency = info._fTransparency;
-    _bVisible = info._bVisible;
+    _fTransparency = *info._transparency;
+    _bVisible = *info._visible;
     _bModifiable = info._bModifiable;
     py::dict calibrationBoardParameters;
     if (info._type == GT_CalibrationBoard && info._calibrationBoardParameters.size() > 0 ) {
@@ -393,10 +393,10 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
     info._vGeomData2 = ExtractVector<dReal>(_vGeomData2);
     info._vGeomData3 = ExtractVector<dReal>(_vGeomData3);
     info._vGeomData4 = ExtractVector<dReal>(_vGeomData4);
-    info._vNegativeCropContainerMargins = ExtractVector<dReal>(_vNegativeCropContainerMargins);
-    info._vPositiveCropContainerMargins = ExtractVector<dReal>(_vPositiveCropContainerMargins);
-    info._vNegativeCropContainerEmptyMargins = ExtractVector<dReal>(_vNegativeCropContainerEmptyMargins);
-    info._vPositiveCropContainerEmptyMargins = ExtractVector<dReal>(_vPositiveCropContainerEmptyMargins);
+    info._negativeCropContainerMargins = ExtractVector<dReal>(_vNegativeCropContainerMargins);
+    info._positiveCropContainerMargins = ExtractVector<dReal>(_vPositiveCropContainerMargins);
+    info._negativeCropContainerEmptyMargins = ExtractVector<dReal>(_vNegativeCropContainerEmptyMargins);
+    info._positiveCropContainerEmptyMargins = ExtractVector<dReal>(_vPositiveCropContainerEmptyMargins);
 
     info._vSideWalls.clear();
     for (size_t i = 0; i < (size_t)len(_vSideWalls); ++i) {
@@ -412,8 +412,8 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
         pyaxialslice->Get(info._vAxialSlices[i]);
     }
 
-    info._vDiffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
-    info._vAmbientColor = ExtractVector34<dReal>(_vAmbientColor,0);
+    info._diffuseColor = ExtractVector34<dReal>(_vDiffuseColor,0);
+    info._ambientColor = ExtractVector34<dReal>(_vAmbientColor,0);
     if( !IS_PYTHONOBJECT_NONE(_meshcollision) ) {
         ExtractTriMesh(_meshcollision,info._meshcollision);
     }
@@ -433,8 +433,8 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
     }
     info._vRenderScale = ExtractVector3(_vRenderScale);
     info._vCollisionScale = ExtractVector3(_vCollisionScale);
-    info._fTransparency = _fTransparency;
-    info._bVisible = _bVisible;
+    info._transparency = _fTransparency;
+    info._visible = _bVisible;
     info._bModifiable = _bModifiable;
     if (info._type == GT_CalibrationBoard) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

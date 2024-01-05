@@ -338,31 +338,7 @@ public:
         GeometryInfo() {
         }
         bool operator==(const GeometryInfo& other) const {
-            return _t == other._t
-                   && _vGeomData == other._vGeomData
-                   && _vGeomData2 == other._vGeomData2
-                   && _vGeomData3 == other._vGeomData3
-                   && _vGeomData4 == other._vGeomData4
-                   && _vSideWalls == other._vSideWalls
-                   && _vAxialSlices == other._vAxialSlices
-                   && _vDiffuseColor == other._vDiffuseColor
-                   && _vAmbientColor == other._vAmbientColor
-                   && _meshcollision == other._meshcollision
-                   && _id == other._id
-                   && _name == other._name
-                   && _type == other._type
-                   && _filenamerender == other._filenamerender
-                   && _filenamecollision == other._filenamecollision
-                   && _vRenderScale == other._vRenderScale
-                   && _vCollisionScale == other._vCollisionScale
-                   && _fTransparency == other._fTransparency
-                   && _bVisible == other._bVisible
-                   && _bModifiable == other._bModifiable
-                   && _calibrationBoardParameters == other._calibrationBoardParameters
-                   && _vNegativeCropContainerMargins == other._vNegativeCropContainerMargins
-                   && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins
-                   && _vNegativeCropContainerEmptyMargins == other._vNegativeCropContainerEmptyMargins
-                   && _vPositiveCropContainerEmptyMargins == other._vPositiveCropContainerEmptyMargins;
+            return Diff(other).IsEmpty();
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -436,10 +412,10 @@ public:
         uint8_t GetSideWallExists() const;
 
         inline const std::string& GetId() const {
-            return _id;
+            return *_id;
         }
         inline const std::string& GetName() const {
-            return _name;
+            return *_name;
         }
 
         inline const Vector& GetContainerOuterExtents() const {
@@ -503,19 +479,12 @@ public:
         };
         std::vector<SideWall> _vSideWalls; ///< used by GT_Cage
 
-        RaveVector<float> _vDiffuseColor = Vector(1,1,1);
-        RaveVector<float> _vAmbientColor; ///< hints for how to color the meshes
-
         /// \brief trimesh representation of the collision data of this object in this local coordinate system
         ///
         /// Should be transformed by \ref _t before rendering.
         /// For spheres and cylinders, an appropriate discretization value is chosen.
         /// If empty, will be automatically computed from the geometry's type and render data
         TriMesh _meshcollision;
-
-        GeometryType _type = GT_None; ///< the type of geometry primitive
-        std::string _id;   ///< unique id of the geometry
-        std::string _name; ///< the name of the geometry
 
         /// \brief filename for render model (optional)
         ///
@@ -531,13 +500,7 @@ public:
 
         Vector _vRenderScale = Vector(1,1,1); ///< render scale of the object (x,y,z) from _filenamerender
         Vector _vCollisionScale = Vector(1,1,1); ///< render scale of the object (x,y,z) from _filenamecollision
-        float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
-        bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
-        Vector _vNegativeCropContainerMargins = Vector(0,0,0); ///< The negative crop margins component
-        Vector _vPositiveCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
-        Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
-        Vector _vPositiveCropContainerEmptyMargins = Vector(0,0,0); ///< The positive crop empty margins component
 
         struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
@@ -624,10 +587,10 @@ public:
         };
 
         inline const Transform& GetTransform() const {
-            return _t;
+            return *_transform;
         }
         inline void SetTransform(const Transform& t) {
-            _t = t;
+            _transform = t;
             _modifiedFields |= GIF_Transform;
         }
 
@@ -635,8 +598,6 @@ public:
             return !!(_modifiedFields & field);
         }
 private:
-        Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
-
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of GeometryInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
         /// \brief adds modified fields
@@ -682,10 +643,10 @@ public:
 
         /// \brief get local geometry transform
         inline const Transform& GetTransform() const {
-            return _info._t;
+            return _info.GetTransform();
         }
         inline GeometryType GetType() const {
-            return _info._type;
+            return _info._type.value_or(GT_None);
         }
 
         inline const Vector& GetRenderScale() const {
@@ -696,14 +657,14 @@ public:
             return _info._filenamerender;
         }
         inline float GetTransparency() const {
-            return _info._fTransparency;
+            return *_info._transparency;
         }
         /// \deprecated (12/1/12)
         inline bool IsDraw() const RAVE_DEPRECATED {
-            return _info._bVisible;
+            return *_info._visible;
         }
         inline bool IsVisible() const {
-            return _info._bVisible;
+            return *_info._visible;
         }
         inline bool IsModifiable() const {
             return _info._bModifiable;
@@ -743,28 +704,28 @@ public:
             return _info._vGeomData4;
         }
         inline const RaveVector<float>& GetDiffuseColor() const {
-            return _info._vDiffuseColor;
+            return *_info._diffuseColor;
         }
         inline const RaveVector<float>& GetAmbientColor() const {
-            return _info._vAmbientColor;
+            return *_info._ambientColor;
         }
         inline const std::string& GetId() const {
-            return _info._id;
+            return *_info._id;
         }
         inline const std::string& GetName() const {
-            return _info._name;
+            return *_info._name;
         }
         inline const Vector& GetNegativeCropContainerMargins() const {
-            return _info._vNegativeCropContainerMargins;
+            return *_info._negativeCropContainerMargins;
         }
         inline const Vector& GetPositiveCropContainerMargins() const {
-            return _info._vPositiveCropContainerMargins;
+            return *_info._positiveCropContainerMargins;
         }
         inline const Vector& GetNegativeCropContainerEmptyMargins() const {
-            return _info._vNegativeCropContainerEmptyMargins;
+            return *_info._negativeCropContainerEmptyMargins;
         }
         inline const Vector& GetPositiveCropContainerEmptyMargins() const {
-            return _info._vPositiveCropContainerEmptyMargins;
+            return *_info._positiveCropContainerEmptyMargins;
         }
         inline int GetNumberOfAxialSlices() const {
             return _info._vAxialSlices.size();

@@ -630,7 +630,7 @@ private:
     dGeomID _CreateODEGeomFromGeometryInfo(dSpaceID space, boost::shared_ptr<KinBodyInfo::LINK> link, const KinBody::GeometryInfo& info)
     {
         dGeomID odegeom = NULL;
-        switch(info._type) {
+        switch(info._type.value_or(OpenRAVE::GT_None)) {
         case OpenRAVE::GT_None:
             break;
         case OpenRAVE::GT_Box:
@@ -666,7 +666,7 @@ private:
             }
             break;
         default:
-            RAVELOG_WARN(str(boost::format("ode doesn't support geom type %d")%info._type));
+            RAVELOG_WARN(str(boost::format("ode doesn't support geom type %d")%info._type.value_or(OpenRAVE::GT_None)));
             break;
         }
 

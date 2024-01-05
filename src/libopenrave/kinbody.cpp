@@ -510,11 +510,11 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
     FOREACHC(itab, vaabbs) {
         GeometryInfo info;
         info._type = GT_Box;
-        info._t.trans = itab->pos;
-        info._bVisible = visible;
+        info._transform->trans = itab->pos;
+        info._visible = visible;
         info._vGeomData = itab->extents;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info._diffuseColor=Vector(1,0.5f,0.5f,1);
+        info._ambientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
@@ -555,11 +555,11 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
         tm.m[8] = itobb->right.z; tm.m[9] = itobb->up.z; tm.m[10] = itobb->dir.z;
         GeometryInfo info;
         info._type = GT_Box;
-        info._t = tm;
-        info._bVisible = visible;
+        info._transform = tm;
+        info._visible = visible;
         info._vGeomData = itobb->extents;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info._diffuseColor=Vector(1,0.5f,0.5f,1);
+        info._ambientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
@@ -595,11 +595,11 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
     FOREACHC(itv, vspheres) {
         GeometryInfo info;
         info._type = GT_Sphere;
-        info._t.trans.x = itv->x; info._t.trans.y = itv->y; info._t.trans.z = itv->z;
-        info._bVisible = visible;
+        info._transform->trans.x = itv->x; info._transform->trans.y = itv->y; info._transform->trans.z = itv->z;
+        info._visible = visible;
         info._vGeomData.x = itv->w;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info._diffuseColor=Vector(1,0.5f,0.5f,1);
+        info._ambientColor=Vector(0.1,0.0f,0.0f,0);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
@@ -626,9 +626,9 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     plink->_collision = trimesh;
     GeometryInfo info;
     info._type = GT_TriMesh;
-    info._bVisible = visible;
-    info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-    info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+    info._visible = visible;
+    info._diffuseColor=Vector(1,0.5f,0.5f,1);
+    info._ambientColor=Vector(0.1,0.0f,0.0f,0);
     info._meshcollision = trimesh;
     Link::GeometryPtr geom(new Link::Geometry(plink,info));
     plink->_vGeometries.push_back(geom);
@@ -5384,7 +5384,7 @@ bool KinBody::SetVisible(bool visible)
     FOREACH(it, _veclinks) {
         FOREACH(itgeom,(*it)->_vGeometries) {
             if( (*itgeom)->IsVisible() != visible ) {
-                (*itgeom)->_info._bVisible = visible;
+                (*itgeom)->_info._visible = visible;
                 bchanged = true;
             }
         }

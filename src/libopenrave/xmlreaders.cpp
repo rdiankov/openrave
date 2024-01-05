@@ -219,7 +219,7 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     else {
         RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
     }
-    _pgeom->_bVisible = bVisible;
+    _pgeom->_visible = bVisible;
     _pgeom->_bModifiable = bModifiable;
 }
 
@@ -270,7 +270,7 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
     if( find(tags.begin(),tags.end(),xmlname) != tags.end() ) {
         return PE_Support;
     }
-    switch(_pgeom->_type) {
+    switch(_pgeom->_type.value_or(GT_None)) {
     case GT_Container:
         if( xmlname == "outer_extents" || xmlname == "inner_extents" || xmlname == "bottom_cross" || xmlname == "bottom" ) {
             return PE_Support;
@@ -348,22 +348,22 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
     }
     else if( xmlname == "diffusecolor" ) {
         _bOverwriteDiffuse = true;
-        _ss >> _pgeom->_vDiffuseColor.x >> _pgeom->_vDiffuseColor.y >> _pgeom->_vDiffuseColor.z;
+        _ss >> _pgeom->_diffuseColor->x >> _pgeom->_diffuseColor->y >> _pgeom->_diffuseColor->z;
     }
     else if( xmlname == "ambientcolor" ) {
         _bOverwriteAmbient = true;
-        _ss >> _pgeom->_vAmbientColor.x >> _pgeom->_vAmbientColor.y >> _pgeom->_vAmbientColor.z;
+        _ss >> _pgeom->_ambientColor->x >> _pgeom->_ambientColor->y >> _pgeom->_ambientColor->z;
     }
     else if( xmlname == "transparency" ) {
         _bOverwriteTransparency = true;
-        _ss >> _pgeom->_fTransparency;
+        _ss >> *_pgeom->_transparency;
     }
     else if( xmlname == "name" ) {
-        _ss >> _pgeom->_name;
+        _ss >> *_pgeom->_name;
     }
     else {
         // could be type specific features
-        switch(_pgeom->_type) {
+        switch(_pgeom->_type.value_or(GT_None)) {
         case GT_None:
             // Do nothing
             break;

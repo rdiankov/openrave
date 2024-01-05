@@ -29,13 +29,17 @@ def MakePoseSchema(title, description):
     customPoseSchema = copy.deepcopy(poseSchema)
     customPoseSchema["title"] = title
     customPoseSchema["description"] = description
+    customPoseSchema["default"] = "Transform{}"
     return customPoseSchema
 
 geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
     "type": "object",
     "typeName": "GeometryInfo",
     "properties": {
-        "id": {"type": "string"},
+        "id": {
+            "type": "string",
+            "default": "",
+        },
         "name": {"type": "string"},
         "type": {
             "type": "string",
@@ -116,6 +120,7 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
                 "type": "number"
             },
             "typeName": "Vector",
+            "default": "Vector(0, 0, 0)",
             "scaleInSerialization": True
 
         },
@@ -127,6 +132,7 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
                 "type": "number"
             },
             "typeName": "Vector",
+            "default": "Vector(0, 0, 0)",
             "scaleInSerialization": True
 
         },
@@ -138,6 +144,7 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
                 "type": "number"
             },
             "typeName": "Vector",
+            "default": "Vector(0, 0, 0)",
             "scaleInSerialization": True
 
         },
@@ -149,6 +156,7 @@ geometryInfoSchema = {  # TODO(felixvd): Link to kinbody.GeometryInfo
                 "type": "number"
             },
             "typeName": "Vector",
+            "default": "Vector(0, 0, 0)",
             "scaleInSerialization": True
 
         },

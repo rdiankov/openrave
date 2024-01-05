@@ -457,7 +457,7 @@ void _AppendFclBoxCollsionObject(const OpenRAVE::Vector& fullExtents, const Open
 
 CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::GeometryInfo &info)
 {
-    switch(info._type) {
+    switch(info._type.value_or(OpenRAVE::GT_None)) {
 
     case OpenRAVE::GT_None:
         return CollisionGeometryPtr();
@@ -557,7 +557,7 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
     }
 
     default:
-        RAVELOG_WARN(str(boost::format("FCL doesn't support geom type %d")%info._type));
+        RAVELOG_WARN(str(boost::format("FCL doesn't support geom type %d")%info._type.value_or(OpenRAVE::GT_None)));
         return CollisionGeometryPtr();
     }
 }

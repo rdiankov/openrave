@@ -504,7 +504,7 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
             FOREACH(itInfo, vInfos) {
                 if ((*itInfo)->GetName() == name) {
                     itExistingInfo = itInfo;
-                    id = (*itInfo)->_id;
+                    id = (*itInfo)->GetId();
                     break;
                 }
             }
@@ -602,7 +602,7 @@ bool UpdateChildrenFromInfo(const std::vector<InfoPtrType>& vInfos, std::vector<
             return false;
         }
 
-        if( !pInfo->_id.empty() && pInfo->_id != pMatchExistingPointer->GetId() ) {
+        if( !pInfo->GetId().empty() && pInfo->GetId() != pMatchExistingPointer->GetId() ) {
             // new element, requires re-init
             RAVELOG_VERBOSE("could not find existing pointer which matches and can update");
             result = UFIR_RequireReinitialize;

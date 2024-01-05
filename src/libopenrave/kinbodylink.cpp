@@ -444,8 +444,8 @@ bool KinBody::Link::SetVisible(bool visible)
 {
     bool bchanged = false;
     FOREACH(itgeom,_vGeometries) {
-        if( (*itgeom)->_info._bVisible != visible ) {
-            (*itgeom)->_info._bVisible = visible;
+        if( *(*itgeom)->_info._visible != visible ) {
+            (*itgeom)->_info._visible = visible;
             bchanged = true;
         }
     }
@@ -846,24 +846,24 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
     }
 
     const KinBody::GeometryInfo& ginfo = *pginfo;
-    if( ginfo._name.size() > 0 ) {
+    if( (*ginfo._name).size() > 0 ) {
         // check if similar name exists and throw if it does
         FOREACH(itgeometry, _vGeometries) {
             if( (*itgeometry)->GetName() == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo.GetName()%GetName(), ORE_InvalidArguments);
             }
         }
 
         FOREACH(itgeometryinfo, _info._vgeometryinfos) {
             if( (*itgeometryinfo)->_name == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo.GetName()%GetName(), ORE_InvalidArguments);
             }
         }
         if( addToGroups ) {
             FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
                 FOREACH(itgeometryinfo, itgeometrygroup->second) {
                     if( (*itgeometryinfo)->_name == ginfo._name ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo.GetName()%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
                     }
                 }
             }
@@ -893,10 +893,10 @@ void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const st
     if( it == _info._mapExtraGeometries.end() ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
     }
-    if( ginfo._name.size() > 0 ) {
+    if( (*ginfo._name).size() > 0 ) {
         FOREACHC(itgeometryinfo, it->second) {
-            if( (*itgeometryinfo)->_name == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%groupname%GetName(), ORE_InvalidArguments);
+            if( (*itgeometryinfo)->GetName() == ginfo.GetName() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo.GetName()%groupname%GetName(), ORE_InvalidArguments);
             }
         }
     }

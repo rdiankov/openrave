@@ -1737,7 +1737,7 @@ public:
                     }
                     string norender = string("__norenderif__:")+extension;
                     FOREACH(itinfo,listGeometries) {
-                        itinfo->_bVisible = true;
+                        itinfo->_visible = true;
                         itinfo->_filenamerender = norender;
                     }
                     listGeometries.front()._filenamerender = fullfilename;
@@ -1953,7 +1953,7 @@ public:
                     }
                     string norender = string("__norenderif__:")+extension;
                     FOREACH(itinfo,listGeometries) {
-                        itinfo->_bVisible = true;
+                        itinfo->_visible = true;
                         itinfo->_filenamerender = norender;
                     }
                     listGeometries.front()._filenamerender = fullfilename;
