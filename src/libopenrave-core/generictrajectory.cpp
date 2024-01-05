@@ -1078,6 +1078,9 @@ protected:
                 _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
             }
+            if( interpolation == "max" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateMax,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
+            }
             else if( interpolation == "" ) {
                 // if there is no interpolation, default to "next". deltatime is such a group, but that is overwritten
                 _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateNext,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
@@ -1232,8 +1235,13 @@ protected:
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
-                dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
-                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
+                if( std::isinf(_vtrajdata[offset+g.offset+i]) || std::isinf(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]) ) {
+                    *(itdata + g.offset+i) = std::numeric_limits<dReal>::infinity();
+                }
+                else {
+                    dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
+                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
+                }
             }
         }
     }
@@ -1284,11 +1292,16 @@ protected:
             int derivoffset = _vderivoffsets[g.offset];
             if( derivoffset >= 0 ) {
                 for(int i = 0; i < g.dof; ++i) {
-                    // coeff*t^2 + deriv0*t + pos0
-                    dReal deriv0 = _vtrajdata[offset+derivoffset+i];
-                    dReal deriv1 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
-                    dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(deriv1-deriv0);
-                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+                    if( std::isinf(_vtrajdata[offset+g.offset+i]) || std::isinf(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]) ) {
+                        *(itdata + g.offset+i) = std::numeric_limits<dReal>::infinity();
+                    }
+                    else {
+                        // coeff*t^2 + deriv0*t + pos0
+                        dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+                        dReal deriv1 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
+                        dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(deriv1-deriv0);
+                        *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
+                    }
                 }
             }
             else {
@@ -1696,6 +1709,14 @@ protected:
             for(int i = 0; i < g.dof; ++i) {
                 *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i];
             }
+        }
+    }
+
+    void _InterpolateMax(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
+    {
+        size_t offset = ipoint*_spec.GetDOF()+g.offset;
+        for(int i = 0; i < g.dof; ++i) {
+            *(itdata + g.offset+i) = std::max(_vtrajdata[offset+i], _vtrajdata[_spec.GetDOF()+offset+i]);
         }
     }
 
