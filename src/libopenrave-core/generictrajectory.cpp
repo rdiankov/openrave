@@ -1225,23 +1225,13 @@ protected:
             // expected derivative offset, interpolation can be wrong for circular joints
             dReal f = _vdeltainvtime.at(ipoint+1)*deltatime;
             for(int i = 0; i < g.dof; ++i) {
-                if( std::isinf(_vtrajdata[offset+g.offset+i]) || std::isinf(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]) ) {
-                    *(itdata + g.offset+i) = std::numeric_limits<dReal>::infinity();
-                }
-                else {
-                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i]*(1-f) + f*_vtrajdata[_spec.GetDOF()+offset+g.offset+i];
-                }
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i]*(1-f) + f*_vtrajdata[_spec.GetDOF()+offset+g.offset+i];
             }
         }
         else {
             for(int i = 0; i < g.dof; ++i) {
-                if( std::isinf(_vtrajdata[offset+g.offset+i]) || std::isinf(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]) ) {
-                    *(itdata + g.offset+i) = std::numeric_limits<dReal>::infinity();
-                }
-                else {
-                    dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
-                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
-                }
+                dReal deriv0 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
+                *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*deriv0;
             }
         }
     }
@@ -1292,16 +1282,11 @@ protected:
             int derivoffset = _vderivoffsets[g.offset];
             if( derivoffset >= 0 ) {
                 for(int i = 0; i < g.dof; ++i) {
-                    if( std::isinf(_vtrajdata[offset+g.offset+i]) || std::isinf(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]) ) {
-                        *(itdata + g.offset+i) = std::numeric_limits<dReal>::infinity();
-                    }
-                    else {
-                        // coeff*t^2 + deriv0*t + pos0
-                        dReal deriv0 = _vtrajdata[offset+derivoffset+i];
-                        dReal deriv1 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
-                        dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(deriv1-deriv0);
-                        *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
-                    }
+                    // coeff*t^2 + deriv0*t + pos0
+                    dReal deriv0 = _vtrajdata[offset+derivoffset+i];
+                    dReal deriv1 = _vtrajdata[_spec.GetDOF()+offset+derivoffset+i];
+                    dReal coeff = 0.5*_vdeltainvtime.at(ipoint+1)*(deriv1-deriv0);
+                    *(itdata + g.offset+i) = _vtrajdata[offset+g.offset+i] + deltatime*(deriv0 + deltatime*coeff);
                 }
             }
             else {
@@ -1309,25 +1294,20 @@ protected:
                 dReal ideltatime2 = ideltatime*ideltatime;
                 int integraloffset = _vintegraloffsets[g.offset];
                 for(int i = 0; i < g.dof; ++i) {
-                    if( std::isinf(_vtrajdata[offset+g.offset+i]) || std::isinf(_vtrajdata[_spec.GetDOF()+offset+g.offset+i]) ) {
-                        *(itdata + g.offset+i) = std::numeric_limits<dReal>::infinity();
-                    }
-                    else {
-                        // c2*t**2 + c1*t + v0
-                        // c2*deltatime**2 + c1*deltatime + v0 = v1
-                        // integral: c2/3*deltatime**3 + c1/2*deltatime**2 + v0*deltatime = p1-p0
-                        // mult by (3/deltatime): c2*deltatime**2 + 3/2*c1*deltatime + 3*v0 = 3*(p1-p0)/deltatime
-                        // subtract by original: 0.5*c1*deltatime + 2*v0 - 3*(p1-p0)/deltatime + v1 = 0
-                        // c1*deltatime = 6*(p1-p0)/deltatime - 4*v0 - 2*v1
-                        dReal integral0 = _vtrajdata[offset+integraloffset+i];
-                        dReal integral1 = _vtrajdata[_spec.GetDOF()+offset+integraloffset+i];
-                        dReal value0 = _vtrajdata[offset+g.offset+i];
-                        dReal value1 = _vtrajdata[_spec.GetDOF()+offset+g.offset+i];
-                        dReal c1TimesDelta = 6*(integral1-integral0)*ideltatime - 4*value0 - 2*value1;
-                        dReal c1 = c1TimesDelta*ideltatime;
-                        dReal c2 = (value1 - value0 - c1TimesDelta)*ideltatime2;
-                        *(itdata + g.offset+i) = value0 + deltatime * (c1 + deltatime*c2);
-                    }
+                    // c2*t**2 + c1*t + v0
+                    // c2*deltatime**2 + c1*deltatime + v0 = v1
+                    // integral: c2/3*deltatime**3 + c1/2*deltatime**2 + v0*deltatime = p1-p0
+                    // mult by (3/deltatime): c2*deltatime**2 + 3/2*c1*deltatime + 3*v0 = 3*(p1-p0)/deltatime
+                    // subtract by original: 0.5*c1*deltatime + 2*v0 - 3*(p1-p0)/deltatime + v1 = 0
+                    // c1*deltatime = 6*(p1-p0)/deltatime - 4*v0 - 2*v1
+                    dReal integral0 = _vtrajdata[offset+integraloffset+i];
+                    dReal integral1 = _vtrajdata[_spec.GetDOF()+offset+integraloffset+i];
+                    dReal value0 = _vtrajdata[offset+g.offset+i];
+                    dReal value1 = _vtrajdata[_spec.GetDOF()+offset+g.offset+i];
+                    dReal c1TimesDelta = 6*(integral1-integral0)*ideltatime - 4*value0 - 2*value1;
+                    dReal c1 = c1TimesDelta*ideltatime;
+                    dReal c2 = (value1 - value0 - c1TimesDelta)*ideltatime2;
+                    *(itdata + g.offset+i) = value0 + deltatime * (c1 + deltatime*c2);
                 }
             }
         }

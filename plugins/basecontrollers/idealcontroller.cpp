@@ -478,7 +478,7 @@ private:
     {
         for(size_t i = 0; i < _vlower[0].size(); ++i) {
             if( !_dofcircular[i] ) {
-                if( std::isinf(curvalues.at(i)) ) {
+                if( std::isnan(curvalues.at(i)) ) {
                     continue;
                 }
                 if( curvalues.at(i) < _vlower[0][i]-g_fEpsilonJointLimit ) {
@@ -493,7 +493,7 @@ private:
             vector<dReal> vdiff = curvalues;
             probot->SubtractDOFValues(vdiff,prevvalues);
             for(size_t i = 0; i < _vupper[1].size(); ++i) {
-                if( std::isinf(vdiff.at(i)) ) {
+                if( std::isnan(vdiff.at(i)) ) {
                     continue;
                 }
                 dReal maxallowed = timeelapsed * _vupper[1][i]+1e-6;

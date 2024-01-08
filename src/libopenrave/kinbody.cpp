@@ -2170,14 +2170,14 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
             // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
             // and then overwrite with the user set values
             for(size_t i = 0; i < dofindices.size(); ++i) {
-                if( !std::isinf(pJointValues[i]) ) {
+                if( !std::isnan(pJointValues[i]) ) {
                     _vTempJoints.at(dofindices[i]) = pJointValues[i];
                 }
             }
         }
         else {
             for(size_t i = 0; i < _vTempJoints.size(); ++i) {
-                if( !std::isinf(pJointValues[i]) ) {
+                if( !std::isnan(pJointValues[i]) ) {
                     _vTempJoints[i] = pJointValues[i];
                 }
             }
