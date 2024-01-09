@@ -879,6 +879,12 @@ void KinBody::SetName(const std::string& newname)
         }
         _name = newname;
         _PostprocessChangedParameters(Prop_Name);
+        if (_callbackOnModify != nullptr) {
+            KinBody::KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
+            diffInfo->_id = _id;
+            diffInfo->_name = _name;
+            _callbackOnModify(diffInfo);
+        }
     }
 }
 
@@ -5384,7 +5390,7 @@ bool KinBody::SetVisible(bool visible)
     FOREACH(it, _veclinks) {
         FOREACH(itgeom,(*it)->_vGeometries) {
             if( (*itgeom)->IsVisible() != visible ) {
-                (*itgeom)->_info._bVisible = visible;
+                (*itgeom)->SetVisible(visible);
                 bchanged = true;
             }
         }
@@ -6015,6 +6021,12 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->SetReadableInterface(it->first, it->second);
     }
 
+    plink->RegisterCallbackOnModify(
+        [this](KinBody::LinkInfoPtr linkInfo) {
+            _MergeLinksDiff(linkInfo);
+        }
+    );
+    
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __hashKinematicsGeometryDynamics.resize(0);
@@ -6070,6 +6082,11 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     else {
         _vPassiveJoints.push_back(pjoint);
     }
+    pjoint->RegisterCallbackOnModify(
+        [this](KinBody::JointInfoPtr jointInfo) {
+            _MergeJointsDiff(jointInfo);
+        }
+    ); 
     __hashKinematicsGeometryDynamics.resize(0);
 }
 

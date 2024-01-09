@@ -1022,6 +1022,14 @@ public:
         const uint32_t maskPotentialyChanged(0xffffffff&~KinBody::Prop_JointMimic& ~KinBody::Prop_LinkStatic& ~KinBody::Prop_BodyRemoved& ~KinBody::Prop_LinkGeometry& ~KinBody::Prop_LinkGeometryGroup& ~KinBody::Prop_LinkDynamics);
         pbody->_PostprocessChangedParameters(maskPotentialyChanged);
         _CallBodyCallbacks(pbody, 1);
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_description = _description;
+            _callbackOnModify(diffInfo);
+        pbody->RegisterCallbackOnModify(
+            [this](KinBody::KinBodyInfoPtr kinBodyInfo) {
+                _MergeKinbodyDiff(kinBodyInfo);
+            }
+        );
     }
 
     virtual void _AddRobot(RobotBasePtr robot, InterfaceAddMode addMode)
@@ -2758,6 +2766,11 @@ public:
     virtual void SetUnit(std::pair<std::string, dReal> unit)
     {
         _unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
+        if (_callbackOnModify != nullptr) {
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_unitInfo = _unitInfo;
+            _callbackOnModify(diffInfo);
+        }
     }
 
     virtual UnitInfo GetUnitInfo() const
@@ -2768,6 +2781,11 @@ public:
     virtual void SetUnitInfo(UnitInfo unitInfo)
     {
         _unitInfo = unitInfo;
+        if (_callbackOnModify != nullptr) {
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_unitInfo = _unitInfo;
+            _callbackOnModify(diffInfo);
+        }
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
@@ -3227,6 +3245,11 @@ public:
     void SetDescription(const std::string& sceneDescription) override {
         EnvironmentLock lockenv(GetMutex());
         _description = sceneDescription;
+        if (_callbackOnModify != nullptr) {
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_description = _description;
+            _callbackOnModify(diffInfo);
+        }
     }
 
     std::string GetDescription() const override {
@@ -3237,6 +3260,11 @@ public:
     void SetKeywords(const std::vector<std::string>& sceneKeywords) override {
         EnvironmentLock lockenv(GetMutex());
         _keywords = sceneKeywords;
+        if (_callbackOnModify != nullptr) {
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_keywords = _keywords;
+            _callbackOnModify(diffInfo);
+        }
     }
 
     std::vector<std::string> GetKeywords() const override {
@@ -3247,6 +3275,11 @@ public:
     void SetUInt64Parameter(const std::string& parameterName, uint64_t value) override {
         EnvironmentLock lockenv(GetMutex());
         _mapUInt64Parameters[parameterName] = value;
+        if (_callbackOnModify != nullptr) {
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_uInt64Parameters = _mapUInt64Parameters;
+            _callbackOnModify(diffInfo);
+        }
     }
 
     bool RemoveUInt64Parameter(const std::string& parameterName) override
@@ -4292,6 +4325,29 @@ protected:
         // TODO resize smartly
         _prLoadEnvAlloc->Clear();
     }
+
+public:
+    inline void RegisterCallbackOnModify(std::function<void(EnvironmentBaseInfoPtr)> callback) {
+        _callbackOnModify = callback;
+        for (size_t index=0;index<_vecbodies.size();index++) {
+            _vecbodies[index]->RegisterCallbackOnModify(
+                [this](KinBody::KinBodyInfoPtr kinBodyInfo) {
+                    _MergeKinbodyDiff(kinBodyInfo);
+                }
+            );
+        }
+    }
+private:
+    std::function<void(EnvironmentBaseInfoPtr)> _callbackOnModify;
+
+    inline void _MergeKinbodyDiff(KinBody::KinBodyInfoPtr kinBodyInfo) {
+        if (_callbackOnModify != nullptr) {
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_vBodyInfos.push_back(kinBodyInfo);
+            _callbackOnModify(diffInfo);
+        }
+    }
+protected:
 
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be nullptr, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces. [0] should always be kept null since 0 means no assignment.
     std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces

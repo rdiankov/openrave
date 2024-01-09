@@ -1821,6 +1821,12 @@ bool KinBody::Geometry::SetVisible(bool visible)
         LinkPtr parent(_parent);
         parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
         return true;
+        if (_callbackOnModify != nullptr) {
+            KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+            diffInfo->_id = _info._id;
+            diffInfo->_bVisible = _info._bVisible;
+            _callbackOnModify(diffInfo);
+        }
     }
     return false;
 }
@@ -1830,6 +1836,12 @@ void KinBody::Geometry::SetTransparency(float f)
     LinkPtr parent(_parent);
     _info._fTransparency = f;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_fTransparency = _info._fTransparency;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Geometry::SetDiffuseColor(const RaveVector<float>& color)
@@ -1837,6 +1849,12 @@ void KinBody::Geometry::SetDiffuseColor(const RaveVector<float>& color)
     LinkPtr parent(_parent);
     _info._vDiffuseColor = color;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vDiffuseColor = _info._vDiffuseColor;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
@@ -1844,6 +1862,12 @@ void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
     LinkPtr parent(_parent);
     _info._vAmbientColor = color;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vAmbientColor = _info._vAmbientColor;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Geometry::SetNegativeCropContainerMargins(const Vector& negativeCropContainerMargins)
@@ -1851,6 +1875,12 @@ void KinBody::Geometry::SetNegativeCropContainerMargins(const Vector& negativeCr
     LinkPtr parent(_parent);
     _info._vNegativeCropContainerMargins = negativeCropContainerMargins;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vNegativeCropContainerMargins = _info._vNegativeCropContainerMargins;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Geometry::SetPositiveCropContainerMargins(const Vector& positiveCropContainerMargins)
@@ -1858,6 +1888,12 @@ void KinBody::Geometry::SetPositiveCropContainerMargins(const Vector& positiveCr
     LinkPtr parent(_parent);
     _info._vPositiveCropContainerMargins = positiveCropContainerMargins;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vPositiveCropContainerMargins = _info._vPositiveCropContainerMargins;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Geometry::SetNegativeCropContainerEmptyMargins(const Vector& negativeCropContainerEmptyMargins)
@@ -1865,6 +1901,12 @@ void KinBody::Geometry::SetNegativeCropContainerEmptyMargins(const Vector& negat
     LinkPtr parent(_parent);
     _info._vNegativeCropContainerEmptyMargins = negativeCropContainerEmptyMargins;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vNegativeCropContainerEmptyMargins = _info._vNegativeCropContainerEmptyMargins;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Geometry::SetPositiveCropContainerEmptyMargins(const Vector& positiveCropContainerEmptyMargins)
@@ -1872,6 +1914,12 @@ void KinBody::Geometry::SetPositiveCropContainerEmptyMargins(const Vector& posit
     LinkPtr parent(_parent);
     _info._vPositiveCropContainerEmptyMargins = positiveCropContainerEmptyMargins;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vPositiveCropContainerEmptyMargins = _info._vPositiveCropContainerEmptyMargins;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 /*
@@ -1993,6 +2041,12 @@ void KinBody::Geometry::SetName(const std::string& name)
     LinkPtr parent(_parent);
     _info._name = name;
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
+    if (_callbackOnModify != nullptr) {
+        KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_name = name;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Geometry::UpdateInfo()

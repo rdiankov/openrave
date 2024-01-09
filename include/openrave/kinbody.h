@@ -671,6 +671,15 @@ private:
     /// \brief geometry object holding a link parent and wrapping access to a protected geometry info
     class OPENRAVE_API Geometry
     {
+
+public:
+    inline void RegisterCallbackOnModify(std::function<void(KinBody::GeometryInfoPtr)> callback) {
+        _callbackOnModify = callback;
+    }
+private:
+    std::function<void(KinBody::GeometryInfoPtr)> _callbackOnModify;
+
+
 public:
         /// \deprecated (12/07/16)
         static const GeometryType GeomNone RAVE_DEPRECATED = OpenRAVE::GT_None;
@@ -1072,6 +1081,28 @@ private:
     /// \brief A rigid body holding all its collision and rendering data.
     class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>, public ReadablesContainer
     {
+public:
+    inline void RegisterCallbackOnModify(std::function<void(LinkInfoPtr)> callback) {
+        _callbackOnModify = callback;
+        for (size_t index=0;index<_vGeometries.size();index++) {
+            _vGeometries[index]->RegisterCallbackOnModify(
+                [this](KinBody::GeometryInfoPtr geometryInfo) {
+                    _MergeGeometriesDiff(geometryInfo);
+                }
+            );
+        }
+    }
+private:
+    std::function<void(LinkInfoPtr)> _callbackOnModify;
+
+    inline void _MergeGeometriesDiff(KinBody::GeometryInfoPtr geometryInfo) {
+        if (_callbackOnModify != nullptr) {
+            LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+            diffInfo->_vgeometryinfos.push_back(geometryInfo);
+            _callbackOnModify(diffInfo);
+        }
+    }
+
 public:
         Link(KinBodyPtr parent);         ///< pass in a ODE world
         ~Link();
@@ -1628,6 +1659,13 @@ public:
     /// \brief Information about a joint that controls the relationship between two links.
     class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>, public ReadablesContainer
     {
+public:
+    inline void RegisterCallbackOnModify(std::function<void(KinBody::JointInfoPtr)> callback) {
+        _callbackOnModify = callback;
+    }
+private:
+    std::function<void(KinBody::JointInfoPtr)> _callbackOnModify;
+
 public:
         /// \deprecated 12/10/19
         typedef Mimic MIMIC RAVE_DEPRECATED;
@@ -2391,6 +2429,43 @@ protected:
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+
+public:
+    inline void RegisterCallbackOnModify(std::function<void(KinBodyInfoPtr)> callback) {
+        _callbackOnModify = callback;
+        for (size_t index=0;index<_veclinks.size();index++) {
+            _veclinks[index]->RegisterCallbackOnModify(
+                [this](KinBody::LinkInfoPtr linkInfo) {
+                    _MergeLinksDiff(linkInfo);
+                }
+            );
+        }
+        for (size_t index=0;index<_vecjoints.size();index++) {
+            _vecjoints[index]->RegisterCallbackOnModify(
+                [this](KinBody::JointInfoPtr jointInfo) {
+                    _MergeJointsDiff(jointInfo);
+                }
+            );
+        }
+    }
+private:
+    std::function<void(KinBodyInfoPtr)> _callbackOnModify;
+
+    inline void _MergeLinksDiff(KinBody::LinkInfoPtr linkInfo) {
+        if (_callbackOnModify != nullptr) {
+            KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
+            diffInfo->_vLinkInfos.push_back(linkInfo);
+            _callbackOnModify(diffInfo);
+        }
+    }
+    inline void _MergeJointsDiff(KinBody::JointInfoPtr jointInfo) {
+        if (_callbackOnModify != nullptr) {
+            KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
+            diffInfo->_vJointInfos.push_back(jointInfo);
+            _callbackOnModify(diffInfo);
+        }
+    }
+public:
 
     /// \brief Helper class to save and restore the entire kinbody state.
     ///

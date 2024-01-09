@@ -1610,6 +1610,12 @@ void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std:
         }
     }
     if( bChanged ) {
+        if (_callbackOnModify != nullptr) {
+            KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+            diffInfo->_id = _info._id;
+            diffInfo->_vlowerlimit = _info._vlowerlimit;
+            _callbackOnModify(diffInfo);
+        }
         GetParent()->_PostprocessChangedParameters(Prop_JointLimits);
     }
 }
@@ -1647,6 +1653,12 @@ void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
         _info._vmaxvel[i] = vmaxvel.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vmaxvel = _info._vmaxvel;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -1670,6 +1682,12 @@ void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
         _info._vmaxaccel[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vmaxaccel = _info._vmaxaccel;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -1693,6 +1711,12 @@ void KinBody::Joint::SetJerkLimits(const std::vector<dReal>& vmax)
         _info._vmaxjerk[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vmaxjerk = _info._vmaxjerk;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetHardVelocityLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -1716,6 +1740,12 @@ void KinBody::Joint::SetHardVelocityLimits(const std::vector<dReal>& vmax)
         _info._vhardmaxvel[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vhardmaxvel = _info._vhardmaxvel;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetHardAccelerationLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -1739,6 +1769,12 @@ void KinBody::Joint::SetHardAccelerationLimits(const std::vector<dReal>& vmax)
         _info._vhardmaxaccel[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vhardmaxaccel = _info._vhardmaxaccel;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetHardJerkLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -1762,6 +1798,12 @@ void KinBody::Joint::SetHardJerkLimits(const std::vector<dReal>& vmax)
         _info._vhardmaxjerk[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vhardmaxjerk = _info._vhardmaxjerk;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetTorqueLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -1780,6 +1822,12 @@ void KinBody::Joint::SetTorqueLimits(const std::vector<dReal>& vmax)
         _info._vmaxtorque[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vmaxtorque = _info._vmaxtorque;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetInertiaLimits(std::vector<dReal>& vmax, bool bAppend) const
@@ -1798,6 +1846,12 @@ void KinBody::Joint::SetInertiaLimits(const std::vector<dReal>& vmax)
         _info._vmaxinertia[i] = vmax.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointAccelerationVelocityTorqueLimits);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vmaxinertia = _info._vmaxinertia;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
@@ -1827,6 +1881,12 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
             _tinvRight = _tRight.inverse();
         }
         GetParent()->_PostprocessChangedParameters(Prop_JointOffset);
+        if (_callbackOnModify != nullptr) {
+            KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+            diffInfo->_id = _info._id;
+            diffInfo->_voffsets = _info._voffsets;
+            _callbackOnModify(diffInfo);
+        }
     }
 }
 
@@ -1849,6 +1909,12 @@ void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
 {
     _info._vresolution.at(iaxis) = resolution;
     GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vresolution = _info._vresolution;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::GetWeights(std::vector<dReal>& weights, bool bAppend) const
@@ -1873,6 +1939,12 @@ void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
         _info._vweights[i] = vweights.at(i);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointProperties);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vweights = _info._vweights;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::SubtractValues(std::vector<dReal>& q1, const std::vector<dReal>& q2) const
@@ -2549,6 +2621,12 @@ void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vecto
         _info._mapFloatParameters.erase(key);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_mapFloatParameters = _info._mapFloatParameters;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<int>& parameters)
@@ -2560,6 +2638,12 @@ void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<
         _info._mapIntParameters.erase(key);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_mapIntParameters = _info._mapIntParameters;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::SetStringParameters(const std::string& key, const std::string& value)
@@ -2571,6 +2655,12 @@ void KinBody::Joint::SetStringParameters(const std::string& key, const std::stri
         _info._mapStringParameters.erase(key);
     }
     GetParent()->_PostprocessChangedParameters(Prop_JointCustomParameters);
+    if (_callbackOnModify != nullptr) {
+        KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_mapStringParameters = _info._mapStringParameters;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Joint::UpdateInfo()

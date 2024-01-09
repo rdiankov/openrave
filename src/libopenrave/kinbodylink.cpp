@@ -445,7 +445,7 @@ bool KinBody::Link::SetVisible(bool visible)
     bool bchanged = false;
     FOREACH(itgeom,_vGeometries) {
         if( (*itgeom)->_info._bVisible != visible ) {
-            (*itgeom)->_info._bVisible = visible;
+            (*itgeom)->SetVisible(visible);
             bchanged = true;
         }
     }
@@ -523,18 +523,36 @@ void KinBody::Link::SetLocalMassFrame(const Transform& massframe)
 {
     _info._tMassFrame=massframe;
     GetParent()->_PostprocessChangedParameters(Prop_LinkDynamics);
+    if (_callbackOnModify != nullptr) {
+        KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_tMassFrame = _info._tMassFrame;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Link::SetPrincipalMomentsOfInertia(const Vector& inertiamoments)
 {
     _info._vinertiamoments = inertiamoments;
     GetParent()->_PostprocessChangedParameters(Prop_LinkDynamics);
+    if (_callbackOnModify != nullptr) {
+        KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_vinertiamoments = _info._vinertiamoments;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Link::SetMass(dReal mass)
 {
     _info._mass=mass;
     GetParent()->_PostprocessChangedParameters(Prop_LinkDynamics);
+    if (_callbackOnModify != nullptr) {
+        KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_mass = _info._mass;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 AABB KinBody::Link::ComputeLocalAABB() const
@@ -691,6 +709,12 @@ void KinBody::Link::SetStatic(bool bStatic)
     if( _info._bStatic != bStatic ) {
         _info._bStatic = bStatic;
         GetParent()->_PostprocessChangedParameters(Prop_LinkStatic);
+        if (_callbackOnModify != nullptr) {
+            KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+            diffInfo->_id = _info._id;
+            diffInfo->_bStatic = _info._bStatic;
+            _callbackOnModify(diffInfo);
+        }
     }
 }
 
@@ -698,6 +722,12 @@ void KinBody::Link::SetTransform(const Transform& t)
 {
     _info._t = t;
     GetParent()->_nUpdateStampId++;
+    if (_callbackOnModify != nullptr) {
+        KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_t = _info._t;
+        _callbackOnModify(diffInfo);
+    }
 }
 
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)
@@ -872,6 +902,11 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
 
     _vGeometries.push_back(GeometryPtr(new Geometry(shared_from_this(),*pginfo)));
     _vGeometries.back()->InitCollisionMesh();
+    _vGeometries.back()->RegisterCallbackOnModify(
+        [this](KinBody::GeometryInfoPtr geometryInfo) {
+            _MergeGeometriesDiff(geometryInfo);
+        }
+    );
     _info._vgeometryinfos.push_back(pginfo);
     if( addToGroups ) {
         FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
