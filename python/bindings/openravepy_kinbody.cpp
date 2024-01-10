@@ -366,7 +366,11 @@ object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOption = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOption);
+    }
     return toPyObject(doc);
 }
 
@@ -375,7 +379,11 @@ void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, object option
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOption = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pgeominfo->DeserializeJSON(doc, fUnitScale, intOption);
+    }
     Init(*pgeominfo);
 }
 
@@ -608,7 +616,11 @@ py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOption = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOption);
+    }
     return toPyObject(doc);
 }
 
@@ -617,7 +629,11 @@ void PyLinkInfo::DeserializeJSON(object obj, dReal fUnitScale, py::object option
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOption = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pInfo->DeserializeJSON(doc, fUnitScale, intOption);
+    }
     _Update(*pInfo);
 }
 
@@ -1769,6 +1785,7 @@ void PyLink::InitGeometries(object ogeometryinfos)
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
+    openravepy::PythonThreadSaver threadsaver;
     return _plink->InitGeometries(geometries);
 }
 
@@ -1819,6 +1836,7 @@ void PyLink::SetGroupGeometries(const std::string& name, object ogeometryinfos)
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
+    openravepy::PythonThreadSaver threadsaver;
     _plink->SetGroupGeometries(name, geometries);
 }
 
@@ -2686,6 +2704,7 @@ bool PyKinBody::InitFromKinBodyInfo(const object pyKinBodyInfo)
     KinBody::KinBodyInfoPtr pKinBodyInfo;
     pKinBodyInfo = ExtractKinBodyInfo(pyKinBodyInfo);
     if(!!pKinBodyInfo) {
+        openravepy::PythonThreadSaver threadsaver;
         return _pbody->InitFromKinBodyInfo(*pKinBodyInfo);
     }
     return false;
@@ -2714,6 +2733,7 @@ bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bD
         vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
         vaabbs[i].extents = Vector(vboxes[i][3],vboxes[i][4],vboxes[i][5]);
     }
+    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromBoxes(vaabbs,bDraw,uri);
 }
 
@@ -2739,6 +2759,7 @@ bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, boo
     for(size_t i = 0; i < vvspheres.size(); ++i) {
         vvspheres[i] = Vector(vspheres[i][0],vspheres[i][1],vspheres[i][2],vspheres[i][3]);
     }
+    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromSpheres(vvspheres,bDraw,uri);
 }
 
@@ -2746,6 +2767,7 @@ bool PyKinBody::InitFromTrimesh(object pytrimesh, bool bDraw, const std::string&
 {
     TriMesh mesh;
     if( ExtractTriMesh(pytrimesh,mesh) ) {
+        openravepy::PythonThreadSaver threadsaver;
         return _pbody->InitFromTrimesh(mesh,bDraw,uri);
     }
     else {
@@ -2763,6 +2785,7 @@ bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
+    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromGeometries(geometries, uri);
 }
 
@@ -2776,6 +2799,7 @@ void PyKinBody::InitFromLinkInfos(py::object olinkinfos, const std::string& uri)
         }
         linkInfos[i] = *pylinkinfo->GetLinkInfo();
     }
+    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromLinkInfos(linkInfos, uri);
 }
 
@@ -2785,11 +2809,13 @@ bool PyKinBody::Init(object olinkinfos, object ojointinfos, const std::string& u
     _ParseLinkInfos(olinkinfos, vlinkinfos);
     std::vector<KinBody::JointInfoConstPtr> vjointinfos;
     _ParseJointInfos(ojointinfos, vjointinfos);
+    openravepy::PythonThreadSaver threadsaver;
     return _pbody->Init(vlinkinfos, vjointinfos, uri);
 }
 
 void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker)
 {
+    openravepy::PythonThreadSaver threadsaver;
     _pbody->SetLinkGeometriesFromGroup(geomname, propagateGroupNameToSelfCollisionChecker);
 }
 
@@ -2808,6 +2834,7 @@ void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olink
             geometries[j] = pygeom->GetGeometryInfo();
         }
     }
+    openravepy::PythonThreadSaver threadsaver;
     _pbody->SetLinkGroupGeometries(geomname, linkgeometries);
 }
 
