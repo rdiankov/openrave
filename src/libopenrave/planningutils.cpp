@@ -2861,8 +2861,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 //
                 // Since we expect to do all the checks for _vtempconfig here, we need to make sure that this
                 // _SetAndCheckState is called for all unchecked configurations. Without the condition
-                // (!bComputeNewStep) above, we will accidentally skip checking the updated _vtempconfig when, for
-                // example, istep == 0 and start == 0 (IT_OpenStart).
+                // (!bComputeNewStep) above, we can accidentally skip checking the updated _vtempconfig when istep = 0
+                // and start = 1.
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
                 if( !!params->_getstatefn ) {
                     params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
