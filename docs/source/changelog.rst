@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.137.0
+===============
+
+* Added new apis efficient sampling of trajectory range
+
 Version 0.136.0
 ===============
 
