@@ -2854,7 +2854,15 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         bool bHasNewTempConfigToAdd = false;
         while(istep < numSteps && prevtimestep < timeelapsed) {
             int nstateret = 0;
-            if( istep >= start ) {
+            if( istep >= start || !bComputeNewStep ) {
+                // In case bComputeNewStep is false, _vtempconfig has already been updated to a new value (bHasMoved is
+                // true) but istep has not been incremented (so that we keep using the same fBestNewStep in this
+                // iteration, due to dqscale < 1).
+                //
+                // Since we expect to do all the checks for _vtempconfig here, we need to make sure that this
+                // _SetAndCheckState is called for all unchecked configurations. Without the condition
+                // (!bComputeNewStep) above, we will accidentally skip checking the updated _vtempconfig when, for
+                // example, istep == 0 and start == 0 (IT_OpenStart).
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
                 if( !!params->_getstatefn ) {
                     params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
