@@ -125,31 +125,44 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
     }
 }
 
-void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const
+void _SampleEvenly(std::vector<dReal>& vtimes, dReal step, dReal start, dReal stop, bool ensureLast)
 {
-    const dReal duration = GetDuration();
-    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
-    std::vector<dReal> vtimes(numPoints, deltatime);
+    const dReal duration = stop - start;
+    const int numPoints = int(ceil(duration / step)); // ceil to make it behave same way as numpy arange(0, duration, step)
+    vtimes.assign(numPoints, start);
     for (int i = 0; i < numPoints; ++i) {
-        vtimes[i] *= i;
+        vtimes[i] += step*i;
     }
-    if (ensureLastPoint && vtimes.back() < duration) {
+    if (ensureLast && vtimes.back() < duration) {
         vtimes.push_back(duration);
     }
+}
+
+void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const
+{
+    std::vector<dReal> vtimes;
+    _SampleEvenly(vtimes, deltatime, 0, GetDuration(), ensureLastPoint);
     return SamplePoints(data, vtimes);
 }
 
 void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
 {
-    const dReal duration = GetDuration();
-    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
-    std::vector<dReal> vtimes(numPoints, deltatime);
-    for (int i = 0; i < numPoints; ++i) {
-        vtimes[i] *= i;
-    }
-    if (ensureLastPoint && vtimes.back() < duration) {
-        vtimes.push_back(duration);
-    }
+    std::vector<dReal> vtimes;
+    _SampleEvenly(vtimes, deltatime, 0, GetDuration(), ensureLastPoint);
+    return SamplePoints(data, vtimes, spec);
+}
+
+void TrajectoryBase::SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const
+{
+    std::vector<dReal> vtimes;
+    _SampleEvenly(vtimes, deltatime, startTime, stopTime, ensureLastPoint);
+    return SamplePoints(data, vtimes);
+}
+
+void TrajectoryBase::SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
+{
+    std::vector<dReal> vtimes;
+    _SampleEvenly(vtimes, deltatime, startTime, stopTime, ensureLastPoint);
     return SamplePoints(data, vtimes, spec);
 }
 

@@ -133,6 +133,28 @@ public:
      */
     virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
 
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param startTime[in] start time to sample from
+        \param stopTime[in] stop time to sample to
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+     */
+    virtual void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param startTime[in] start time to sample from
+        \param stopTime[in] stop time to sample to
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
     virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
 
     /// \brief return the number of waypoints
