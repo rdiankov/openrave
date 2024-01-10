@@ -918,6 +918,8 @@ public:
     /// \param updateMode one of UFIM_X
     virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
 
+    virtual void RegisterCallbackOnModify(std::function<void(EnvironmentBaseInfoPtr)> callback) = 0;
+    
     int _revision = 0;  ///< environment current revision
     std::string _description;   ///< environment description
     std::vector<std::string> _keywords;  ///< some string values for describinging the environment
