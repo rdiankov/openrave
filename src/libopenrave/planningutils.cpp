@@ -3952,7 +3952,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         while( istep < totalSteps && tcur < timeelapsed ) {
             // Check the current state (q, qd, qdd)
             int nstateret = 0;
-            if( istep >= start ) {
+            if( istep >= start || !bComputeNewTimeStep ) {
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
                 if( !!params->_getstatefn ) {
                     params->_getstatefn(_vtempconfig);
