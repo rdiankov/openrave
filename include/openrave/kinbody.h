@@ -3692,6 +3692,7 @@ protected:
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
     int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+    std::function<void(KinBodyInfoPtr)> _callbackOnModify;
 
 private:
     mutable std::vector<dReal> _vTempJoints;
