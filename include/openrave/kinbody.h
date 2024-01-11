@@ -935,9 +935,14 @@ public:
             return 0;
         }
 
+        inline void RegisterCallbackOnModify(std::function<void(KinBody::GeometryInfoPtr)> callback) {
+            _callbackOnModify = callback;
+        }
+
 protected:
         boost::weak_ptr<Link> _parent;
         KinBody::GeometryInfo _info; ///< geometry info
+        std::function<void(KinBody::GeometryInfoPtr)> _callbackOnModify;
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class OpenRAVEXMLParser::LinkXMLReader;
