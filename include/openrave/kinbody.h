@@ -3569,6 +3569,24 @@ private:
         return _prAssociatedFileEntries;
     }
 
+    inline void RegisterCallbackOnModify(std::function<void(KinBodyInfoPtr)> callback) {
+        _callbackOnModify = callback;
+        for (size_t index=0;index<_veclinks.size();index++) {
+            _veclinks[index]->RegisterCallbackOnModify(
+                [this](KinBody::LinkInfoPtr linkInfo) {
+                    _MergeLinksDiff(linkInfo);
+                }
+            );
+        }
+        for (size_t index=0;index<_vecjoints.size();index++) {
+            _vecjoints[index]->RegisterCallbackOnModify(
+                [this](KinBody::JointInfoPtr jointInfo) {
+                    _MergeJointsDiff(jointInfo);
+                }
+            );
+        }
+    }
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -3663,6 +3681,21 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    inline void _MergeLinksDiff(KinBody::LinkInfoPtr linkInfo) {
+        if (_callbackOnModify != nullptr) {
+            KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
+            diffInfo->_vLinkInfos.push_back(linkInfo);
+            _callbackOnModify(diffInfo);
+        }
+    }
+    inline void _MergeJointsDiff(KinBody::JointInfoPtr jointInfo) {
+        if (_callbackOnModify != nullptr) {
+            KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
+            diffInfo->_vJointInfos.push_back(jointInfo);
+            _callbackOnModify(diffInfo);
+        }
+    }
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
@@ -3724,6 +3757,7 @@ protected:
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
     int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+    std::function<void(KinBodyInfoPtr)> _callbackOnModify;
 
 private:
     mutable std::vector<dReal> _vTempJoints;
