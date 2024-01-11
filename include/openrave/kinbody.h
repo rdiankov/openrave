@@ -1397,6 +1397,17 @@ public:
         /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
         UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
 
+        inline void RegisterCallbackOnModify(std::function<void(LinkInfoPtr)> callback) {
+            _callbackOnModify = callback;
+            for (size_t index=0;index<_vGeometries.size();index++) {
+                _vGeometries[index]->RegisterCallbackOnModify(
+                    [this](KinBody::GeometryInfoPtr geometryInfo) {
+                        _MergeGeometriesDiff(geometryInfo);
+                    }
+                );
+            }
+        }
+
 protected:
         /// \brief enables / disables LinkInfo as well as notifies parent KinBody
         void _Enable(bool enable);
@@ -1406,10 +1417,19 @@ protected:
         /// \param parameterschanged if true, will
         void _Update(bool parameterschanged=true, uint32_t extraParametersChanged=0);
 
+        inline void _MergeGeometriesDiff(KinBody::GeometryInfoPtr geometryInfo) {
+            if (_callbackOnModify != nullptr) {
+                LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+                diffInfo->_vgeometryinfos.push_back(geometryInfo);
+                _callbackOnModify(diffInfo);
+            }
+        }
+
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
         LinkInfo _info; ///< parameter information of the link
 
+        std::function<void(LinkInfoPtr)> _callbackOnModify;
 
 private:
         /// Sensitive variables that are auto-generated and should not be modified by the user.
