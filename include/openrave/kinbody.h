@@ -1410,6 +1410,7 @@ protected:
 
         LinkInfo _info; ///< parameter information of the link
 
+
 private:
         /// Sensitive variables that are auto-generated and should not be modified by the user.
         /// @name Private Link Variables
@@ -2111,6 +2112,10 @@ public:
         /// \brief update the cached _doflastsetvalues
         //virtual void SetDOFLastSetValue(dReal dofvalue, const int iaxis = 0);
 
+        inline void RegisterCallbackOnModify(std::function<void(KinBody::JointInfoPtr)> callback) {
+            _callbackOnModify = callback;
+        }
+
 protected:
         JointInfo _info;
 
@@ -2160,6 +2165,8 @@ protected:
         dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
         boost::array<dReal,3> _doflastsetvalues; ///< the last set value by the kinbody (_voffsets not applied). For revolute joints that have a range greater than 2*pi, it is only possible to recover the joint value from the link positions mod 2*pi. In order to recover the branch, multiplies of 2*pi are added/subtracted to this value that is closest to _doflastsetvalues. For circular joints, the last set value can be ignored since they always return a value from [-pi,pi)
+
+        std::function<void(KinBody::JointInfoPtr)> _callbackOnModify;
 
 private:
         /// Sensitive variables that should not be modified.
