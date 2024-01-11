@@ -3317,6 +3317,17 @@ public:
         return true;
     }
 
+    inline void RegisterCallbackOnModify(std::function<void(EnvironmentBaseInfoPtr)> callback) {
+        _callbackOnModify = callback;
+        for (size_t index=0;index<_vecbodies.size();index++) {
+            _vecbodies[index]->RegisterCallbackOnModify(
+                [this](KinBody::KinBodyInfoPtr kinBodyInfo) {
+                    _MergeKinbodyDiff(kinBodyInfo);
+                }
+            );
+        }
+    }
+
 protected:
 
     void _Init()
@@ -4293,6 +4304,14 @@ protected:
         _prLoadEnvAlloc->Clear();
     }
 
+    inline void _MergeKinbodyDiff(KinBody::KinBodyInfoPtr kinBodyInfo) {
+        if (_callbackOnModify != nullptr) {
+            EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
+            diffInfo->_vBodyInfos.push_back(kinBodyInfo);
+            _callbackOnModify(diffInfo);
+        }
+    }
+
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be nullptr, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces. [0] should always be kept null since 0 means no assignment.
     std::unordered_map<std::string, int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
     std::unordered_map<std::string, int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
@@ -4338,6 +4357,7 @@ protected:
     std::map<std::string, uint64_t> _mapUInt64Parameters; ///< a custom user-driven parameters
     std::vector<uint8_t> _vRapidJsonLoadBuffer;
     boost::shared_ptr<rapidjson::MemoryPoolAllocator<> > _prLoadEnvAlloc; ///< allocator used for loading environments
+    std::function<void(EnvironmentBaseInfoPtr)> _callbackOnModify;
 
     bool _bInit;                   ///< environment is initialized
     bool _bEnableSimulation;            ///< enable simulation loop
