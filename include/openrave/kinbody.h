@@ -1420,6 +1420,7 @@ protected:
         inline void _MergeGeometriesDiff(KinBody::GeometryInfoPtr geometryInfo) {
             if (_callbackOnModify != nullptr) {
                 LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+                diffInfo->_id = _info._id;
                 diffInfo->_vgeometryinfos.push_back(geometryInfo);
                 _callbackOnModify(diffInfo);
             }
@@ -3684,6 +3685,7 @@ protected:
     inline void _MergeLinksDiff(KinBody::LinkInfoPtr linkInfo) {
         if (_callbackOnModify != nullptr) {
             KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
+            diffInfo->_id = _id;
             diffInfo->_vLinkInfos.push_back(linkInfo);
             _callbackOnModify(diffInfo);
         }
@@ -3691,6 +3693,7 @@ protected:
     inline void _MergeJointsDiff(KinBody::JointInfoPtr jointInfo) {
         if (_callbackOnModify != nullptr) {
             KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
+            diffInfo->_id = _id;
             diffInfo->_vJointInfos.push_back(jointInfo);
             _callbackOnModify(diffInfo);
         }
