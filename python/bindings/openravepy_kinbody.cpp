@@ -366,10 +366,10 @@ object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    const int intOption = pyGetIntFromPy(options, 0);
+    const int intOptions = pyGetIntFromPy(options, 0);
     {
         openravepy::PythonThreadSaver threadsaver;
-        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOption);
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOptions);
     }
     return toPyObject(doc);
 }
@@ -379,10 +379,10 @@ void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, object option
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    const int intOption = pyGetIntFromPy(options, 0);
+    const int intOptions = pyGetIntFromPy(options, 0);
     {
         openravepy::PythonThreadSaver threadsaver;
-        pgeominfo->DeserializeJSON(doc, fUnitScale, intOption);
+        pgeominfo->DeserializeJSON(doc, fUnitScale, intOptions);
     }
     Init(*pgeominfo);
 }
@@ -616,10 +616,10 @@ py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    const int intOption = pyGetIntFromPy(options, 0);
+    const int intOptions = pyGetIntFromPy(options, 0);
     {
         openravepy::PythonThreadSaver threadsaver;
-        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOption);
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOptions);
     }
     return toPyObject(doc);
 }
@@ -629,10 +629,10 @@ void PyLinkInfo::DeserializeJSON(object obj, dReal fUnitScale, py::object option
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    const int intOption = pyGetIntFromPy(options, 0);
+    const int intOptions = pyGetIntFromPy(options, 0);
     {
         openravepy::PythonThreadSaver threadsaver;
-        pInfo->DeserializeJSON(doc, fUnitScale, intOption);
+        pInfo->DeserializeJSON(doc, fUnitScale, intOptions);
     }
     _Update(*pInfo);
 }

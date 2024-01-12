@@ -2472,13 +2472,13 @@ object PyEnvironmentBase::plot3(object opoints,float pointsize,object ocolors, i
         return toPyGraphHandle(phandle);
     }
     BOOST_ASSERT(vcolors.size()<=4);
-    RaveVector<float> vcolor;
-    for(int i = 0; i < (int)vcolors.size(); ++i) {
-        vcolor[i] = vcolors[i];
-    }
     GraphHandlePtr phandle;
     {
         PythonThreadSaver saver;
+        RaveVector<float> vcolor;
+        for(int i = 0; i < (int)vcolors.size(); ++i) {
+            vcolor[i] = vcolors[i];
+        }
         phandle = _penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle);
     }
     return toPyGraphHandle(phandle);
