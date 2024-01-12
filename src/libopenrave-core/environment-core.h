@@ -624,6 +624,7 @@ public:
             if (_IsColladaFile(path)) {
                 if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
                     UpdatePublishedBodies();
+                    _RegisterKinBodyCallbackOnModify();
                     return true;
                 }
             }
@@ -631,30 +632,35 @@ public:
         else if( _IsColladaFile(filename) ) {
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
                 UpdatePublishedBodies();
+                _RegisterKinBodyCallbackOnModify();
                 return true;
             }
         }
         else if( _IsJSONFile(filename) ) {
             _ClearRapidJsonBuffer();
             if( RaveParseJSONFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                _RegisterKinBodyCallbackOnModify();
                 return true;
             }
         }
         else if( _IsMsgPackFile(filename) ) {
             _ClearRapidJsonBuffer();
             if( RaveParseMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                _RegisterKinBodyCallbackOnModify();
                 return true;
             }
         }
         else if (StringEndsWith(filename, ".json.gpg")) {
             _ClearRapidJsonBuffer();
             if( RaveParseEncryptedJSONFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                _RegisterKinBodyCallbackOnModify();
                 return true;
             }
         }
         else if (StringEndsWith(filename, ".msgpack.gpg")) {
             _ClearRapidJsonBuffer();
             if( RaveParseEncryptedMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                _RegisterKinBodyCallbackOnModify();
                 return true;
             }
         }
@@ -663,6 +669,7 @@ public:
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, IAM_AllowRenaming);
                 UpdatePublishedBodies();
+                _RegisterKinBodyCallbackOnModify();
                 return true;
             }
         }
@@ -671,6 +678,7 @@ public:
             if( !!pbody ) {
                 _AddKinBody(pbody,IAM_AllowRenaming);
                 UpdatePublishedBodies();
+                _RegisterKinBodyCallbackOnModify();
                 return true;
             }
         }
@@ -678,6 +686,7 @@ public:
             if( _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename) ) {
                 if( OpenRAVEXMLParser::GetXMLErrorCount() == 0 ) {
                     UpdatePublishedBodies();
+                    _RegisterKinBodyCallbackOnModify();
                     return true;
                 }
             }
@@ -3344,15 +3353,7 @@ public:
 
     inline void RegisterCallbackOnModify(std::function<void(EnvironmentBaseInfoPtr)> callback) override {
         _callbackOnModify = callback;
-        for (size_t index=0;index<_vecbodies.size();index++) {
-            if (!!_vecbodies[index]) {
-                _vecbodies[index]->RegisterCallbackOnModify(
-                    [this](KinBody::KinBodyInfoPtr kinBodyInfo) {
-                        _MergeKinbodyDiff(kinBodyInfo);
-                    }
-                );
-            }
-        }
+        _RegisterKinBodyCallbackOnModify();
     }
 
 protected:
@@ -3444,6 +3445,19 @@ protected:
 
         _nBodiesModifiedStamp++;
         return pbody;
+    }
+
+    void _RegisterKinBodyCallbackOnModify()
+    {
+        for (size_t index=0;index<_vecbodies.size();index++) {
+            if (!!_vecbodies[index]) {
+                _vecbodies[index]->RegisterCallbackOnModify(
+                    [this](KinBody::KinBodyInfoPtr kinBodyInfo) {
+                        _MergeKinbodyDiff(kinBodyInfo);
+                    }
+                );
+            }
+        }
     }
 
     void _SetDefaultGravity()
