@@ -1785,7 +1785,6 @@ void PyLink::InitGeometries(object ogeometryinfos)
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
-    openravepy::PythonThreadSaver threadsaver;
     return _plink->InitGeometries(geometries);
 }
 
@@ -1836,7 +1835,6 @@ void PyLink::SetGroupGeometries(const std::string& name, object ogeometryinfos)
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
-    openravepy::PythonThreadSaver threadsaver;
     _plink->SetGroupGeometries(name, geometries);
 }
 
@@ -2704,7 +2702,6 @@ bool PyKinBody::InitFromKinBodyInfo(const object pyKinBodyInfo)
     KinBody::KinBodyInfoPtr pKinBodyInfo;
     pKinBodyInfo = ExtractKinBodyInfo(pyKinBodyInfo);
     if(!!pKinBodyInfo) {
-        openravepy::PythonThreadSaver threadsaver;
         return _pbody->InitFromKinBodyInfo(*pKinBodyInfo);
     }
     return false;
@@ -2765,7 +2762,6 @@ bool PyKinBody::InitFromTrimesh(object pytrimesh, bool bDraw, const std::string&
 {
     TriMesh mesh;
     if( ExtractTriMesh(pytrimesh,mesh) ) {
-        openravepy::PythonThreadSaver threadsaver;
         return _pbody->InitFromTrimesh(mesh,bDraw,uri);
     }
     else {
@@ -2783,7 +2779,6 @@ bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
         }
         geometries[i] = pygeom->GetGeometryInfo();
     }
-    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromGeometries(geometries, uri);
 }
 
@@ -2797,7 +2792,6 @@ void PyKinBody::InitFromLinkInfos(py::object olinkinfos, const std::string& uri)
         }
         linkInfos[i] = *pylinkinfo->GetLinkInfo();
     }
-    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromLinkInfos(linkInfos, uri);
 }
 
@@ -2807,13 +2801,11 @@ bool PyKinBody::Init(object olinkinfos, object ojointinfos, const std::string& u
     _ParseLinkInfos(olinkinfos, vlinkinfos);
     std::vector<KinBody::JointInfoConstPtr> vjointinfos;
     _ParseJointInfos(ojointinfos, vjointinfos);
-    openravepy::PythonThreadSaver threadsaver;
     return _pbody->Init(vlinkinfos, vjointinfos, uri);
 }
 
 void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker)
 {
-    openravepy::PythonThreadSaver threadsaver;
     _pbody->SetLinkGeometriesFromGroup(geomname, propagateGroupNameToSelfCollisionChecker);
 }
 
@@ -2832,7 +2824,6 @@ void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olink
             geometries[j] = pygeom->GetGeometryInfo();
         }
     }
-    openravepy::PythonThreadSaver threadsaver;
     _pbody->SetLinkGroupGeometries(geomname, linkgeometries);
 }
 
