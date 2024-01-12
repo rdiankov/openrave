@@ -3345,11 +3345,13 @@ public:
     inline void RegisterCallbackOnModify(std::function<void(EnvironmentBaseInfoPtr)> callback) override {
         _callbackOnModify = callback;
         for (size_t index=0;index<_vecbodies.size();index++) {
-            _vecbodies[index]->RegisterCallbackOnModify(
-                [this](KinBody::KinBodyInfoPtr kinBodyInfo) {
-                    _MergeKinbodyDiff(kinBodyInfo);
-                }
-            );
+            if (!!_vecbodies[index]) {
+                _vecbodies[index]->RegisterCallbackOnModify(
+                    [this](KinBody::KinBodyInfoPtr kinBodyInfo) {
+                        _MergeKinbodyDiff(kinBodyInfo);
+                    }
+                );
+            }
         }
     }
 
