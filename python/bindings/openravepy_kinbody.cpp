@@ -2733,7 +2733,6 @@ bool PyKinBody::InitFromBoxes(const boost::multi_array<dReal,2>& vboxes, bool bD
         vaabbs[i].pos = Vector(vboxes[i][0],vboxes[i][1],vboxes[i][2]);
         vaabbs[i].extents = Vector(vboxes[i][3],vboxes[i][4],vboxes[i][5]);
     }
-    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromBoxes(vaabbs,bDraw,uri);
 }
 
@@ -2759,7 +2758,6 @@ bool PyKinBody::InitFromSpheres(const boost::multi_array<dReal,2>& vspheres, boo
     for(size_t i = 0; i < vvspheres.size(); ++i) {
         vvspheres[i] = Vector(vspheres[i][0],vspheres[i][1],vspheres[i][2],vspheres[i][3]);
     }
-    openravepy::PythonThreadSaver threadsaver;
     return _pbody->InitFromSpheres(vvspheres,bDraw,uri);
 }
 
@@ -4288,7 +4286,10 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
 object PyKinBody::ExtractInfo(ExtractInfoOptions options) const
 {
     KinBody::KinBodyInfo info;
-    _pbody->ExtractInfo(info, options);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        _pbody->ExtractInfo(info, options);
+    }
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
