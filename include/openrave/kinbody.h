@@ -636,6 +636,14 @@ public:
         {
             GIF_Transform = (1 << 0), // _t field
             GIF_Mesh = (1 << 1), // _meshcollision field
+            GIF_Visible = (1 << 2), // _bVisible field
+            GIF_Transparency = (1 << 3), // _fTransparency field
+            GIF_DiffuseColor = (1 << 4), // _vDiffuseColor field
+            GIF_AmbientColor = (1 << 5), // _vAmbientColor field
+            GIF_NegativeCropContainerMargins = (1 << 6), // _vNegativeCropContainerMargins field
+            GIF_PositiveCropContainerMargins = (1 << 7), // _vPositiveCropContainerMargins field
+            GIF_NegativeCropContainerEmptyMargins = (1 << 8), // _vNegativeCropContainerEmptyMargins field
+            GIF_PositiveCropContainerEmptyMargins = (1 << 9), // _vPositiveCropContainerEmptyMargins field
         };
 
         inline const Transform& GetTransform() const {
@@ -653,6 +661,8 @@ private:
         Transform _t; ///< Local transformation of the geom primitive with respect to the link's coordinate system.
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of GeometryInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
+        bool _isPartial = false;
 
         /// \brief adds modified fields
         inline void AddModifiedField(GeometryInfoField field) {

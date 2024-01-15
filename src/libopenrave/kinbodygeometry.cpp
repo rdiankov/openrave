@@ -1053,6 +1053,36 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
 {
     rGeometryInfo.SetObject();
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
+
+    if (_isPartial) {
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_Visible)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "visible", _bVisible, allocator);
+        }
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_Transparency)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "transparency", _fTransparency, allocator);
+        }
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_DiffuseColor)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "diffuseColor", _vDiffuseColor, allocator);
+        }
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_AmbientColor)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "ambientColor", _vAmbientColor, allocator);
+        }
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerMargins)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
+        }
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerMargins)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
+        }
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerEmptyMargins)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
+        }
+        if (IsModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerEmptyMargins)) {
+            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
+        }
+        return;
+    }
+
+
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);
 
     // unfortunately too much code relies on "transform" being present
@@ -1825,6 +1855,8 @@ bool KinBody::Geometry::SetVisible(bool visible)
             KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
             diffInfo->_id = _info._id;
             diffInfo->_bVisible = _info._bVisible;
+            diffInfo->_isPartial = true;
+            diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_Visible);
             _callbackOnModify(diffInfo);
         }
     }
@@ -1840,6 +1872,8 @@ void KinBody::Geometry::SetTransparency(float f)
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_fTransparency = _info._fTransparency;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_Transparency);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1853,6 +1887,8 @@ void KinBody::Geometry::SetDiffuseColor(const RaveVector<float>& color)
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vDiffuseColor = _info._vDiffuseColor;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_DiffuseColor);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1866,6 +1902,8 @@ void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vAmbientColor = _info._vAmbientColor;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_AmbientColor);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1879,6 +1917,8 @@ void KinBody::Geometry::SetNegativeCropContainerMargins(const Vector& negativeCr
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vNegativeCropContainerMargins = _info._vNegativeCropContainerMargins;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerMargins);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1892,6 +1932,8 @@ void KinBody::Geometry::SetPositiveCropContainerMargins(const Vector& positiveCr
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vPositiveCropContainerMargins = _info._vPositiveCropContainerMargins;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerMargins);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1905,6 +1947,8 @@ void KinBody::Geometry::SetNegativeCropContainerEmptyMargins(const Vector& negat
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vNegativeCropContainerEmptyMargins = _info._vNegativeCropContainerEmptyMargins;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerEmptyMargins);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1918,6 +1962,8 @@ void KinBody::Geometry::SetPositiveCropContainerEmptyMargins(const Vector& posit
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vPositiveCropContainerEmptyMargins = _info._vPositiveCropContainerEmptyMargins;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerEmptyMargins);
         _callbackOnModify(diffInfo);
     }
 }
