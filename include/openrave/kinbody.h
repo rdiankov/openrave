@@ -1041,7 +1041,11 @@ public:
 
         enum LinkInfoField : uint32_t
         {
-            LIF_Transform = 0x1, // _t field
+            LIF_Transform = (1 << 0), // _t field
+            LIF_MassFrame = (1 << 1), // _tMassFrame field
+            LIF_Static = (1 << 2), // _bStatic field
+            LIF_Mass = (1 << 3), // _mass field
+            LIF_InertiaMoments = (1 << 4), // _vinertiamoments field
         };
 
         inline const Transform& GetTransform() const {
@@ -1073,6 +1077,8 @@ private:
         Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+
+        bool _isPartial = false;
 
         /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
         void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);

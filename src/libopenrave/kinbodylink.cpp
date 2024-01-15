@@ -136,13 +136,32 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 {
     value.SetObject();
     orjson::SetJsonValueByKey(value, "id", _id, allocator);
-    orjson::SetJsonValueByKey(value, "name", _name, allocator);
 
     Transform tmpTransform {_t};
     Transform tmpMassTransform {_tMassFrame};
     tmpTransform.trans *= fUnitScale;
     tmpMassTransform.trans *= fUnitScale;
 
+    if (_isPartial) {
+        if (IsModifiedField(KinBody::LinkInfo::LIF_Transform)) {
+            orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+        }
+        if (IsModifiedField(KinBody::LinkInfo::LIF_MassFrame)) {
+            orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
+        }
+        if (IsModifiedField(KinBody::LinkInfo::LIF_Static)) {
+            orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
+        }
+        if (IsModifiedField(KinBody::LinkInfo::LIF_Mass)) {
+            orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
+        }
+        if (IsModifiedField(KinBody::LinkInfo::LIF_InertiaMoments)) {
+            orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
+        }
+        return;
+    }
+
+    orjson::SetJsonValueByKey(value, "name", _name, allocator);
     orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
     orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
     orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
@@ -527,6 +546,8 @@ void KinBody::Link::SetLocalMassFrame(const Transform& massframe)
         KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_tMassFrame = _info._tMassFrame;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_MassFrame);
         _callbackOnModify(diffInfo);
     }
 }
@@ -538,7 +559,9 @@ void KinBody::Link::SetPrincipalMomentsOfInertia(const Vector& inertiamoments)
     if (_callbackOnModify != nullptr) {
         KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
         diffInfo->_id = _info._id;
-        diffInfo->_vinertiamoments = _info._vinertiamoments;
+        diffInfo->_vinertiamoments = _info._vinertiamoments;\
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_InertiaMoments);
         _callbackOnModify(diffInfo);
     }
 }
@@ -551,6 +574,8 @@ void KinBody::Link::SetMass(dReal mass)
         KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_mass = _info._mass;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_Mass);
         _callbackOnModify(diffInfo);
     }
 }
@@ -713,6 +738,8 @@ void KinBody::Link::SetStatic(bool bStatic)
             KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
             diffInfo->_id = _info._id;
             diffInfo->_bStatic = _info._bStatic;
+            diffInfo->_isPartial = true;
+            diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_Static);
             _callbackOnModify(diffInfo);
         }
     }
@@ -726,6 +753,8 @@ void KinBody::Link::SetTransform(const Transform& t)
         KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_t = _info._t;
+        diffInfo->_isPartial = true;
+        diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_Transform);
         _callbackOnModify(diffInfo);
     }
 }
