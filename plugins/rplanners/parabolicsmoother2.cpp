@@ -543,6 +543,11 @@ public:
         std::vector<dReal>& waypoints = _cacheWaypoints; // to store concatenated waypoints obtained from ptraj
         std::vector<dReal>& x0Vect = _cacheX0Vect, &x1Vect = _cacheX1Vect, &v0Vect = _cacheV0Vect, &v1Vect = _cacheV1Vect, &tVect = _cacheTVect;
         RampOptimizer::RampND& tempRampND = _cacheRampND;
+        // skipShortcutting is set to true when the initial trajectory is linear and the number of waypoints is reduced
+        // to two in _SetMileStones. Although shortcutting may be possible to reduce the total trajectory duration
+        // further, most likely the computation time will be more than the trajectory duration it can reduce, making it
+        // not worth the effort.
+        bool skipShortcutting = false;
 
         if( _parameters->_hastimestamps && itcompatposgroup->interpolation == "quadratic" ) {
             RAVELOG_VERBOSE_FORMAT("env=%d, The initial trajectory is piecewise quadratic", _environmentid);
@@ -689,6 +694,7 @@ public:
                 return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
             }
             RAVELOG_DEBUG_FORMAT("env=%d, Finished initializing linear waypoints via _SetMileStones. #waypoint: %d -> %d", _environmentid%ptraj->GetNumWaypoints()%vWaypoints.size());
+            skipShortcutting = vWaypoints.size() == 2;
         }
 
         // Tell parabolicsmoother not to check constraints again if we already did (e.g. in linearsmoother, etc.)
@@ -716,7 +722,7 @@ public:
 #ifdef SMOOTHER2_ENABLE_MERGING
             int nummerges = 0;
 #endif
-            if( !!parameters->_setstatevaluesfn && _parameters->_nMaxIterations > 0 ) {
+            if( !!parameters->_setstatevaluesfn && _parameters->_nMaxIterations > 0 && !skipShortcutting ) {
                 // TODO: add a check here so that we do merging only when the initial path is linear (i.e. comes directly from a linear smoother or RRT)
                 mergeStartTime = utils::GetMicroTime();
 #ifdef SMOOTHER2_TIMING_DEBUG
@@ -740,7 +746,12 @@ public:
                 }
             }
             else {
-                RAVELOG_DEBUG_FORMAT("env=%d, skip shortcutting since nMaxIterations=%d", _environmentid%_parameters->_nMaxIterations);
+                if( skipShortcutting ) {
+                    RAVELOG_DEBUG_FORMAT("env=%d, skip shortcutting since the initial interpolation is piecewise linear and the number of waypoints is 2", _environmentid);
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("env=%d, skip shortcutting since nMaxIterations=%d", _environmentid%_parameters->_nMaxIterations);
+                }
             }
 
             ++_progress._iteration;
