@@ -2770,7 +2770,7 @@ public:
         if (_callbackOnModify != nullptr) {
             EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
             diffInfo->_unitInfo = _unitInfo;
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             diffInfo->AddModifiedField(EnvironmentBaseInfo::EIF_UnitInfo);
             _callbackOnModify(diffInfo);
@@ -2788,7 +2788,7 @@ public:
         if (_callbackOnModify != nullptr) {
             EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
             diffInfo->_unitInfo = _unitInfo;
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             diffInfo->AddModifiedField(EnvironmentBaseInfo::EIF_UnitInfo);
             _callbackOnModify(diffInfo);
@@ -3255,7 +3255,7 @@ public:
         if (_callbackOnModify != nullptr) {
             EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
             diffInfo->_description = _description;
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             diffInfo->AddModifiedField(EnvironmentBaseInfo::EIF_Description);
             _callbackOnModify(diffInfo);
@@ -3273,7 +3273,7 @@ public:
         if (_callbackOnModify != nullptr) {
             EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
             diffInfo->_keywords = _keywords;
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             diffInfo->AddModifiedField(EnvironmentBaseInfo::EIF_Keywords);
             _callbackOnModify(diffInfo);
@@ -3291,7 +3291,7 @@ public:
         if (_callbackOnModify != nullptr) {
             EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
             diffInfo->_uInt64Parameters = _mapUInt64Parameters;
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             diffInfo->AddModifiedField(EnvironmentBaseInfo::EIF_Int64Parameters);
             _callbackOnModify(diffInfo);
@@ -4364,7 +4364,7 @@ protected:
         if (_callbackOnModify != nullptr) {
             EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
             diffInfo->_vBodyInfos.push_back(kinBodyInfo);
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             _callbackOnModify(diffInfo);
         }

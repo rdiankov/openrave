@@ -61,7 +61,7 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     // for all SerializeJSON, we clear the output
     rEnvInfo.SetObject();
 
-    if (_isPartial) {
+    if (_isDiffResult) {
         if (IsModifiedField(EnvironmentBaseInfo::EIF_UnitInfo)) {
             orjson::SetJsonValueByKey(rEnvInfo, "unitInfo", _unitInfo, allocator);
         }
