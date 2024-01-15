@@ -2450,6 +2450,7 @@ public:
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
+        bool _isDiffResult = false; ///< true if this info represents a diff result.
 
         enum KinBodyInfoField {
             KBIF_Transform = (1 << 0), // _transform field
@@ -3741,7 +3742,7 @@ protected:
             KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
             diffInfo->_id = _id;
             diffInfo->_vLinkInfos.push_back(linkInfo);
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             _callbackOnModify(diffInfo);
         }
@@ -3751,7 +3752,7 @@ protected:
             KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
             diffInfo->_id = _id;
             diffInfo->_vJointInfos.push_back(jointInfo);
-            diffInfo->_isPartial = true;
+            diffInfo->_isDiffResult = true;
             diffInfo->_modifiedFields = 0;
             _callbackOnModify(diffInfo);
         }
