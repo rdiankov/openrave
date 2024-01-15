@@ -891,6 +891,9 @@ public:
 
         enum EnvironmentInfoField {
             EIF_UnitInfo = (1 << 0), // _unitInfo field
+            EIF_Description = (1 << 1), // _description field
+            EIF_Keywords = (1 << 2), // _keywords field
+            EIF_Int64Parameters = (1 << 3), // _uInt64Parameters field
         };
         inline bool IsModifiedField(EnvironmentInfoField field) const {
             return !!(_modifiedFields & field);

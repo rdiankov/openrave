@@ -61,6 +61,48 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     // for all SerializeJSON, we clear the output
     rEnvInfo.SetObject();
 
+    if (_isPartial) {
+        if (IsModifiedField(EnvironmentBaseInfo::EIF_UnitInfo)) {
+            orjson::SetJsonValueByKey(rEnvInfo, "unitInfo", _unitInfo, allocator);
+        }
+        if (IsModifiedField(EnvironmentBaseInfo::EIF_Description)) {
+            orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
+        }
+        if (IsModifiedField(EnvironmentBaseInfo::EIF_Keywords)) {
+            orjson::SetJsonValueByKey(rEnvInfo, "keywords", _keywords, allocator);
+        }
+        if (IsModifiedField(EnvironmentBaseInfo::EIF_Int64Parameters)) {
+            if( _uInt64Parameters.size() > 0 ) {
+                rapidjson::Value rUInt64Parameters;
+                rUInt64Parameters.SetArray();
+                FOREACHC(it, _uInt64Parameters) {
+                    rapidjson::Value rInt64Parameter;
+                    rInt64Parameter.SetObject();
+                    orjson::SetJsonValueByKey(rInt64Parameter, "id", it->first, allocator);
+                    orjson::SetJsonValueByKey(rInt64Parameter, "value", it->second, allocator);
+                    rUInt64Parameters.PushBack(rInt64Parameter, allocator);
+                }
+                rEnvInfo.AddMember("uint64Parameters", rUInt64Parameters, allocator);
+            }
+        }        
+
+        if (_vBodyInfos.size() > 0) {
+            rapidjson::Value rBodiesValue;
+            rBodiesValue.SetArray();
+            rBodiesValue.Reserve(_vBodyInfos.size(), allocator);
+            for (const KinBody::KinBodyInfoPtr& pinfo : _vBodyInfos) {
+                if (!pinfo) {
+                    continue;
+                }
+                rapidjson::Value bodyValue;
+                pinfo->SerializeJSON(bodyValue, allocator, fUnitScale, options);
+                rBodiesValue.PushBack(bodyValue, allocator);
+            }
+            rEnvInfo.AddMember("bodies", rBodiesValue, allocator);
+        }
+        return;
+    }
+
     orjson::SetJsonValueByKey(rEnvInfo, "keywords", _keywords, allocator);
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);

@@ -1439,6 +1439,8 @@ protected:
                 LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
                 diffInfo->_id = _info._id;
                 diffInfo->_vgeometryinfos.push_back(geometryInfo);
+                diffInfo->_isPartial = true;
+                diffInfo->_modifiedFields = 0;
                 _callbackOnModify(diffInfo);
             }
         }
@@ -3739,6 +3741,8 @@ protected:
             KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
             diffInfo->_id = _id;
             diffInfo->_vLinkInfos.push_back(linkInfo);
+            diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
             _callbackOnModify(diffInfo);
         }
     }
@@ -3747,6 +3751,8 @@ protected:
             KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
             diffInfo->_id = _id;
             diffInfo->_vJointInfos.push_back(jointInfo);
+            diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
             _callbackOnModify(diffInfo);
         }
     }
