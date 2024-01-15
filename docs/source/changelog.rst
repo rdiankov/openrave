@@ -6,12 +6,80 @@ ChangeLog
 Unreleased
 ==========
 
-* When loading connected body, also have to prefix "grippername" and "grippernames"
-
-Version 0.131.3
+Version 0.136.1
 ===============
 
 * Support reading of `grippername` under `manipulator` from XML files.
+
+Version 0.136.0
+===============
+
+* Set correct geometry group name for fclspace
+
+Version 0.135.2
+===============
+
+* Fix the issue that grabbed bodies are not checked for collision when their grabbing links are not collision-enabled.
+
+Version 0.135.1
+===============
+
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
+* Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
+
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
+
+Version 0.134.1
+===============
+
+* Fixed QtCoinViewer SetUserText, fixing compilation
+
+Version 0.134.0
+===============
+
+* Add AABBFromOrientedBox
+
+* Add ViewerBase::SetUserText
+
+Version 0.133.3
+===============
+
+* Fix changing bias for the configuration jitterer and support more dofs than the arm joints.
+* Fix `KinBody::RegrabAll` to not accidentally invalidate `Grabbed::_setGrabberLinkIndicesToIgnore`.
+
+Version 0.133.2
+===============
+
+* Fix not initializing grabbed bodies to self-collision checker when cloning KinBody, restoring grabbed state from the state saver.
+* Fix cloning _listNonCollidingLinksWhenGrabbed to different env
+
+Version 0.133.1
+===============
+
+* Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
+
+* Fix initializing _listNonCollidingLinksWhenGrabbed based on incorrect grabbed bodies when grabbed bodies are shuffled between creation of Grabbed and Grabbed::ComputeListNonCollidingLinks.
+
+Version 0.133.0
+===============
+
+* Fix nonAdjacentLinks and _listNonCollidingLinksWhenGrabbed were affected by collision callbacks.
+
+Version 0.132.0
+===============
+
+* Fix bugs around multiple grabbed bodies
+  1. Self-collision between grabbed bodies were checked even after the grabbed body was released under the certain condition.
+  2. When cloning a kinbody with multiple grabbed bodies, `Grabbed::_listNonCollidingLinksWhenGrabbed` was not copied properly. caused `std::vector` range error.
+* When loading connected body, also have to prefix "grippername" and "grippernames"
 
 Version 0.131.2
 ===============

@@ -341,14 +341,14 @@ public:
         void SwitchPadded() {
             if( !_bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to padded robot\n");
-                _pbody->SetLinkGeometriesFromGroup(_sPaddedGeometryGroup);
+                _pbody->SetLinkGeometriesFromGroup(_sPaddedGeometryGroup, false);
                 _bPadded = true;
             }
         }
         void SwitchRegular() {
             if( _bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to regular robot\n");
-                _pbody->SetLinkGeometriesFromGroup("self");
+                _pbody->SetLinkGeometriesFromGroup("self", false);
                 _bPadded = false;
             }
         }

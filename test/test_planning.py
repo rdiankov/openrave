@@ -364,7 +364,7 @@ class RunPlanning(EnvironmentSetup):
             assert(ret==None)
 
             robot.SetDOFValues([ 1.34046301, -0.52360053,  0.03541482, -2.32130534,  0, 0,  0], robot.GetManipulator('leftarm').GetArmIndices())
-            assert(robot.CheckSelfCollision())
+            assert(not robot.CheckSelfCollision())
             ret = basemanip.MoveToHandPosition([Tnew],jitter=0.08,execute=False)
             assert(ret is not None)
 

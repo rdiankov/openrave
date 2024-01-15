@@ -210,11 +210,11 @@ bool GpgEncrypt(std::istream& inputStream, std::ostream& outputStream, const std
 #else
 
 bool GpgDecrypt(std::istream&, std::ostream&) {
-    throw OPENRAVE_EXCEPTION_FORMAT("Encryption not enabled in OpenRAVE, but decryption was requested.");
+    throw OPENRAVE_EXCEPTION_FORMAT0("Encryption not enabled in OpenRAVE, but decryption was requested.", ORE_NotImplemented);
 }
 
-bool GpgEncrypt(std::istream&, std::ostream&, const std::string&) {
-    throw OPENRAVE_EXCEPTION_FORMAT("Encryption not enabled in OpenRAVE, but encryption was requested.");
+bool GpgEncrypt(std::istream&, std::ostream&, const std::unordered_set<std::string>&) {
+    throw OPENRAVE_EXCEPTION_FORMAT0("Encryption not enabled in OpenRAVE, but encryption was requested.", ORE_NotImplemented);
 }
 
 #endif
