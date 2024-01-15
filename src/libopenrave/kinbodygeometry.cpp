@@ -1856,6 +1856,7 @@ bool KinBody::Geometry::SetVisible(bool visible)
             diffInfo->_id = _info._id;
             diffInfo->_bVisible = _info._bVisible;
             diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
             diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_Visible);
             _callbackOnModify(diffInfo);
         }
@@ -1873,6 +1874,7 @@ void KinBody::Geometry::SetTransparency(float f)
         diffInfo->_id = _info._id;
         diffInfo->_fTransparency = _info._fTransparency;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_Transparency);
         _callbackOnModify(diffInfo);
     }
@@ -1888,6 +1890,7 @@ void KinBody::Geometry::SetDiffuseColor(const RaveVector<float>& color)
         diffInfo->_id = _info._id;
         diffInfo->_vDiffuseColor = _info._vDiffuseColor;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_DiffuseColor);
         _callbackOnModify(diffInfo);
     }
@@ -1903,6 +1906,7 @@ void KinBody::Geometry::SetAmbientColor(const RaveVector<float>& color)
         diffInfo->_id = _info._id;
         diffInfo->_vAmbientColor = _info._vAmbientColor;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_AmbientColor);
         _callbackOnModify(diffInfo);
     }
@@ -1918,6 +1922,7 @@ void KinBody::Geometry::SetNegativeCropContainerMargins(const Vector& negativeCr
         diffInfo->_id = _info._id;
         diffInfo->_vNegativeCropContainerMargins = _info._vNegativeCropContainerMargins;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerMargins);
         _callbackOnModify(diffInfo);
     }
@@ -1933,6 +1938,7 @@ void KinBody::Geometry::SetPositiveCropContainerMargins(const Vector& positiveCr
         diffInfo->_id = _info._id;
         diffInfo->_vPositiveCropContainerMargins = _info._vPositiveCropContainerMargins;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerMargins);
         _callbackOnModify(diffInfo);
     }
@@ -1948,6 +1954,7 @@ void KinBody::Geometry::SetNegativeCropContainerEmptyMargins(const Vector& negat
         diffInfo->_id = _info._id;
         diffInfo->_vNegativeCropContainerEmptyMargins = _info._vNegativeCropContainerEmptyMargins;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerEmptyMargins);
         _callbackOnModify(diffInfo);
     }
@@ -1963,6 +1970,7 @@ void KinBody::Geometry::SetPositiveCropContainerEmptyMargins(const Vector& posit
         diffInfo->_id = _info._id;
         diffInfo->_vPositiveCropContainerEmptyMargins = _info._vPositiveCropContainerEmptyMargins;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerEmptyMargins);
         _callbackOnModify(diffInfo);
     }
@@ -2091,6 +2099,9 @@ void KinBody::Geometry::SetName(const std::string& name)
         KinBody::GeometryInfoPtr diffInfo = boost::make_shared<KinBody::GeometryInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_name = name;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::GeometryInfo::GIF_Name);
         _callbackOnModify(diffInfo);
     }
 }

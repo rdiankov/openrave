@@ -142,7 +142,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     if( !_id.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);
     }
-    if( !_name.empty() ) {
+    if( !_name.empty() && (!_isPartial || IsModifiedField(KinBody::KinBodyInfo::KBIF_Name)) ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
     }
     if (!_referenceUri.empty()) {
@@ -883,6 +883,9 @@ void KinBody::SetName(const std::string& newname)
             KinBody::KinBodyInfoPtr diffInfo = boost::make_shared<KinBody::KinBodyInfo>();
             diffInfo->_id = _id;
             diffInfo->_name = _name;
+            diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
+            diffInfo->AddModifiedField(KinBody::KinBodyInfo::KBIF_Name);
             _callbackOnModify(diffInfo);
         }
     }

@@ -888,6 +888,20 @@ public:
         UnitInfo _unitInfo; ///< environment unitInfo
         int64_t _lastModifiedAtUS = 0; ///< us, linux epoch, last modified time of the environment when it was originally loaded from the environment.
         int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+
+        enum EnvironmentInfoField {
+            EIF_UnitInfo = (1 << 0), // _unitInfo field
+        };
+        inline bool IsModifiedField(EnvironmentInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+        /// \brief adds modified fields
+        inline void AddModifiedField(EnvironmentInfoField field) {
+            _modifiedFields |= field;
+        }
+
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of EnvironmentInfoField, for supported fields, indicating which fields are touched.
+        bool _isPartial = true; ///< true if this info contains partial information.
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;

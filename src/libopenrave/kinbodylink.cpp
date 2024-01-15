@@ -158,6 +158,17 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         if (IsModifiedField(KinBody::LinkInfo::LIF_InertiaMoments)) {
             orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
         }
+        if (_vgeometryinfos.size() > 0) {
+            rapidjson::Value geometriesValue;
+            geometriesValue.SetArray();
+            geometriesValue.Reserve(_vgeometryinfos.size(), allocator);
+            FOREACHC(it, _vgeometryinfos) {
+                rapidjson::Value geometryValue;
+                (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
+                geometriesValue.PushBack(geometryValue, allocator);
+            }
+            value.AddMember("geometries", geometriesValue, allocator);
+        }
         return;
     }
 
@@ -547,6 +558,7 @@ void KinBody::Link::SetLocalMassFrame(const Transform& massframe)
         diffInfo->_id = _info._id;
         diffInfo->_tMassFrame = _info._tMassFrame;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_MassFrame);
         _callbackOnModify(diffInfo);
     }
@@ -561,6 +573,7 @@ void KinBody::Link::SetPrincipalMomentsOfInertia(const Vector& inertiamoments)
         diffInfo->_id = _info._id;
         diffInfo->_vinertiamoments = _info._vinertiamoments;\
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_InertiaMoments);
         _callbackOnModify(diffInfo);
     }
@@ -575,6 +588,7 @@ void KinBody::Link::SetMass(dReal mass)
         diffInfo->_id = _info._id;
         diffInfo->_mass = _info._mass;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_Mass);
         _callbackOnModify(diffInfo);
     }
@@ -739,6 +753,7 @@ void KinBody::Link::SetStatic(bool bStatic)
             diffInfo->_id = _info._id;
             diffInfo->_bStatic = _info._bStatic;
             diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
             diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_Static);
             _callbackOnModify(diffInfo);
         }
@@ -754,6 +769,7 @@ void KinBody::Link::SetTransform(const Transform& t)
         diffInfo->_id = _info._id;
         diffInfo->_t = _info._t;
         diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
         diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_Transform);
         _callbackOnModify(diffInfo);
     }

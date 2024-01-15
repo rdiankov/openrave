@@ -292,6 +292,96 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         newvlowerlimit[i] *= fjointmult;
         newvupperlimit[i] *= fjointmult;
     }
+
+   if (_isPartial) {
+        value.SetObject();
+        orjson::SetJsonValueByKey(value, "id", _id, allocator);
+        if (IsModifiedField(KinBody::JointInfo::JIF_Limit)) {
+            orjson::SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
+            orjson::SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Maxvel)) {
+            orjson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Maxaccel)) {
+            orjson::SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Maxjerk)) {
+            orjson::SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxvel)) {
+            orjson::SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxaccel)) {
+            orjson::SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxjerk)) {
+            orjson::SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Maxtorque)) {
+            orjson::SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Maxinertia)) {
+            orjson::SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Offsets)) {
+            orjson::SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Resolution)) {
+            orjson::SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_Weights)) {
+            orjson::SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_MapFloatParameters)) {
+            if(_mapFloatParameters.size() > 0)
+            {
+                rapidjson::Value parameters;
+                parameters.SetArray();
+                FOREACHC(it, _mapFloatParameters) {
+                    rapidjson::Value parameter;
+                    parameter.SetObject();
+                    orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+                    orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+                    parameters.PushBack(parameter, allocator);
+                }
+                value.AddMember("floatParameters", parameters, allocator);
+            }
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_MapIntParameters)) {
+            if(_mapIntParameters.size() > 0)
+            {
+                rapidjson::Value parameters;
+                parameters.SetArray();
+                FOREACHC(it, _mapIntParameters) {
+                    rapidjson::Value parameter;
+                    parameter.SetObject();
+                    orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+                    orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+                    parameters.PushBack(parameter, allocator);
+                }
+                value.AddMember("intParameters", parameters, allocator);
+            }
+        }
+        if (IsModifiedField(KinBody::JointInfo::JIF_MapStringParameters)) {
+            if(_mapStringParameters.size() > 0)
+            {
+                rapidjson::Value parameters;
+                parameters.SetArray();
+                FOREACHC(it, _mapStringParameters) {
+                    rapidjson::Value parameter;
+                    parameter.SetObject();
+                    orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+                    orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
+                    parameters.PushBack(parameter, allocator);
+                }
+                value.AddMember("stringParameters", parameters, allocator);
+            }
+        }
+        return;
+    }
+
+
     orjson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
     orjson::SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
     orjson::SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
@@ -1614,6 +1704,10 @@ void KinBody::Joint::SetLimits(const std::vector<dReal>& vLowerLimit, const std:
             KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
             diffInfo->_id = _info._id;
             diffInfo->_vlowerlimit = _info._vlowerlimit;
+            diffInfo->_vupperlimit = _info._vupperlimit;
+            diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
+            diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Limit);
             _callbackOnModify(diffInfo);
         }
         GetParent()->_PostprocessChangedParameters(Prop_JointLimits);
@@ -1657,6 +1751,9 @@ void KinBody::Joint::SetVelocityLimits(const std::vector<dReal>& vmaxvel)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vmaxvel = _info._vmaxvel;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Maxvel);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1686,6 +1783,9 @@ void KinBody::Joint::SetAccelerationLimits(const std::vector<dReal>& vmax)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vmaxaccel = _info._vmaxaccel;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Maxaccel);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1715,6 +1815,9 @@ void KinBody::Joint::SetJerkLimits(const std::vector<dReal>& vmax)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vmaxjerk = _info._vmaxjerk;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Maxjerk);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1744,6 +1847,9 @@ void KinBody::Joint::SetHardVelocityLimits(const std::vector<dReal>& vmax)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vhardmaxvel = _info._vhardmaxvel;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Hardmaxvel);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1773,6 +1879,9 @@ void KinBody::Joint::SetHardAccelerationLimits(const std::vector<dReal>& vmax)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vhardmaxaccel = _info._vhardmaxaccel;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Hardmaxaccel);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1802,6 +1911,9 @@ void KinBody::Joint::SetHardJerkLimits(const std::vector<dReal>& vmax)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vhardmaxjerk = _info._vhardmaxjerk;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Hardmaxjerk);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1826,6 +1938,9 @@ void KinBody::Joint::SetTorqueLimits(const std::vector<dReal>& vmax)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vmaxtorque = _info._vmaxtorque;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Maxtorque);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1850,6 +1965,9 @@ void KinBody::Joint::SetInertiaLimits(const std::vector<dReal>& vmax)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vmaxinertia = _info._vmaxinertia;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Maxinertia);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1885,6 +2003,9 @@ void KinBody::Joint::SetWrapOffset(dReal newoffset, int iaxis)
             KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
             diffInfo->_id = _info._id;
             diffInfo->_voffsets = _info._voffsets;
+            diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
+            diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Offsets);
             _callbackOnModify(diffInfo);
         }
     }
@@ -1913,6 +2034,9 @@ void KinBody::Joint::SetResolution(dReal resolution, int iaxis)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vresolution = _info._vresolution;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Resolution);
         _callbackOnModify(diffInfo);
     }
 }
@@ -1943,6 +2067,9 @@ void KinBody::Joint::SetWeights(const std::vector<dReal>& vweights)
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_vweights = _info._vweights;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_Weights);
         _callbackOnModify(diffInfo);
     }
 }
@@ -2625,6 +2752,9 @@ void KinBody::Joint::SetFloatParameters(const std::string& key, const std::vecto
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_mapFloatParameters = _info._mapFloatParameters;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_MapFloatParameters);
         _callbackOnModify(diffInfo);
     }
 }
@@ -2642,6 +2772,9 @@ void KinBody::Joint::SetIntParameters(const std::string& key, const std::vector<
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_mapIntParameters = _info._mapIntParameters;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_MapIntParameters);
         _callbackOnModify(diffInfo);
     }
 }
@@ -2659,6 +2792,9 @@ void KinBody::Joint::SetStringParameters(const std::string& key, const std::stri
         KinBody::JointInfoPtr diffInfo = boost::make_shared<KinBody::JointInfo>();
         diffInfo->_id = _info._id;
         diffInfo->_mapStringParameters = _info._mapStringParameters;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::JointInfo::JIF_MapStringParameters);
         _callbackOnModify(diffInfo);
     }
 }

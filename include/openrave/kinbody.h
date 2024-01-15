@@ -644,6 +644,7 @@ public:
             GIF_PositiveCropContainerMargins = (1 << 7), // _vPositiveCropContainerMargins field
             GIF_NegativeCropContainerEmptyMargins = (1 << 8), // _vNegativeCropContainerEmptyMargins field
             GIF_PositiveCropContainerEmptyMargins = (1 << 9), // _vPositiveCropContainerEmptyMargins field
+            GIF_Name = (1 << 10), // _name field
         };
 
         inline const Transform& GetTransform() const {
@@ -1663,6 +1664,40 @@ public:
         JointControlInfo_ExternalDevicePtr _jci_externaldevice; ///< valid if controlMode==JCM_ExternalDevice
         /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
         void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
+        
+        enum JointInfoField : uint32_t
+        {
+            JIF_Limit = (1 << 0), // _vlowerlimit field
+            JIF_Maxvel = (1 << 1), // _vmaxvel field
+            JIF_Maxaccel = (1 << 2), // _vmaxaccel field
+            JIF_Maxjerk = (1 << 3), // _vmaxjerk field
+            JIF_Hardmaxvel = (1 << 4), // _vhardmaxvel field
+            JIF_Hardmaxaccel = (1 << 5), // _vhardmaxaccel field
+            JIF_Hardmaxjerk = (1 << 6), // _vhardmaxjerk field
+            JIF_Maxtorque = (1 << 7), // _vmaxtorque field
+            JIF_Maxinertia = (1 << 8), // _vmaxinertia field
+            JIF_Offsets = (1 << 9), // _voffsets field
+            JIF_Resolution = (1 << 10), // _vresolution field
+            JIF_Weights = (1 << 11), // _vweights field
+            JIF_MapFloatParameters = (1 << 12), // _mapFloatParameters field
+            JIF_MapIntParameters = (1 << 13), // _mapIntParameters field
+            JIF_MapStringParameters = (1 << 14), // _mapStringParameters field
+        };
+
+
+        /// \brief adds modified fields
+        inline void AddModifiedField(JointInfoField field) {
+            _modifiedFields |= field;
+        }
+
+        inline bool IsModifiedField(JointInfoField field) const {
+            return !!(_modifiedFields & field);
+        }
+private:
+        uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of JointInfoField, for supported fields, indicating which fields are modified.
+        bool _isPartial = false;
+
+        friend class Joint;
     };
 
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
@@ -2419,6 +2454,7 @@ public:
             KBIF_DOFValues = (1 << 1), // _dofValues field
             KBIF_URI = (1 << 2), // _uri field
             KBIF_ReferenceURI = (1 << 3), // _referenceUri field
+            KBIF_Name = (1 << 3), // _name field
         };
         inline bool IsModifiedField(KinBodyInfoField field) const {
             return !!(_modifiedFields & field);

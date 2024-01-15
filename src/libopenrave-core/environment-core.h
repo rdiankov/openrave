@@ -2770,6 +2770,9 @@ public:
         if (_callbackOnModify != nullptr) {
             EnvironmentBaseInfoPtr diffInfo = boost::make_shared<EnvironmentBaseInfo>();
             diffInfo->_unitInfo = _unitInfo;
+            diffInfo->_isPartial = true;
+            diffInfo->_modifiedFields = 0;
+            diffInfo->AddModifiedField(EnvironmentBaseInfo::EIF_UnitInfo);
             _callbackOnModify(diffInfo);
         }
     }
