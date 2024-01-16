@@ -5453,7 +5453,7 @@ void KinBody::Enable(bool bEnable)
     for (const LinkPtr& plink : _veclinks) {
         Link& link = *plink;
         if( link._info._bIsEnabled != bEnable ) {
-            link.Enable(bEnable);
+            (*itgeom)->_info._bVisible = visible;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
@@ -5487,7 +5487,7 @@ bool KinBody::SetVisible(bool visible)
     FOREACH(it, _veclinks) {
         FOREACH(itgeom,(*it)->_vGeometries) {
             if( (*itgeom)->IsVisible() != visible ) {
-                (*itgeom)->SetVisible(visible);
+                (*itgeom)->_info._bVisible = visible;
                 bchanged = true;
             }
         }
