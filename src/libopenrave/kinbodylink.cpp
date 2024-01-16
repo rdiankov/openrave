@@ -158,6 +158,9 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         if (IsModifiedField(KinBody::LinkInfo::LIF_InertiaMoments)) {
             orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
         }
+        if (IsModifiedField(KinBody::LinkInfo::LIF_Enabled)) {
+            orjson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+        }
         if (_vgeometryinfos.size() > 0) {
             rapidjson::Value geometriesValue;
             geometriesValue.SetArray();
@@ -453,6 +456,15 @@ void KinBody::Link::_Enable(bool bEnable)
 {
     _info._bIsEnabled = bEnable;
     GetParent()->NotifyLinkEnabled(GetIndex(), bEnable);
+    if (_callbackOnModify != nullptr) {
+        KinBody::LinkInfoPtr diffInfo = boost::make_shared<KinBody::LinkInfo>();
+        diffInfo->_id = _info._id;
+        diffInfo->_bIsEnabled = _info._bIsEnabled;
+        diffInfo->_isPartial = true;
+        diffInfo->_modifiedFields = 0;
+        diffInfo->AddModifiedField(KinBody::LinkInfo::LIF_Enabled);
+        _callbackOnModify(diffInfo);
+    }
 }
 
 bool KinBody::Link::IsEnabled() const
@@ -819,6 +831,11 @@ void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& g
             }
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
+        _vGeometries[i]->RegisterCallbackOnModify(
+            [this](KinBody::GeometryInfoPtr geometryInfo) {
+                _MergeGeometriesDiff(geometryInfo);
+            }
+        );
     }
     _info._mapExtraGeometries.clear();
     // have to reset the self group! cannot use geometries directly since we require exclusive access to the GeometryInfo objects
@@ -845,6 +862,11 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries,
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
         ++i;
+        _vGeometries[i]->RegisterCallbackOnModify(
+            [this](KinBody::GeometryInfoPtr geometryInfo) {
+                _MergeGeometriesDiff(geometryInfo);
+            }
+        );
     }
     _info._mapExtraGeometries.clear();
     // have to reset the self group!
@@ -878,6 +900,11 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
             RAVELOG_VERBOSE("geometry has empty collision mesh\n");
             _vGeometries[i]->InitCollisionMesh();
         }
+        _vGeometries[i]->RegisterCallbackOnModify(
+            [this](KinBody::GeometryInfoPtr geometryInfo) {
+                _MergeGeometriesDiff(geometryInfo);
+            }
+        );
     }
     _Update();
 }
@@ -1036,9 +1063,19 @@ void KinBody::Link::SwapGeometries(boost::shared_ptr<Link>& link)
     _vGeometries.swap(link->_vGeometries);
     FOREACH(itgeom,_vGeometries) {
         (*itgeom)->_parent = shared_from_this();
+        (*itgeom)->RegisterCallbackOnModify(
+            [this](KinBody::GeometryInfoPtr geometryInfo) {
+                _MergeGeometriesDiff(geometryInfo);
+            }
+        );
     }
     FOREACH(itgeom,link->_vGeometries) {
         (*itgeom)->_parent = link;
+        (*itgeom)->RegisterCallbackOnModify(
+            [link](KinBody::GeometryInfoPtr geometryInfo) {
+                link->_MergeGeometriesDiff(geometryInfo);
+            }
+        );
     }
     _Update();
     link->_Update();

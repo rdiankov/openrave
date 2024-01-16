@@ -904,7 +904,6 @@ public:
         }
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of EnvironmentInfoField, for supported fields, indicating which fields are touched.
-        bool _isPartial = true; ///< true if this info contains partial information.
         bool _isDiffResult = false; ///< true if this info represents a diff result.
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;

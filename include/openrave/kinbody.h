@@ -1047,6 +1047,7 @@ public:
             LIF_Static = (1 << 2), // _bStatic field
             LIF_Mass = (1 << 3), // _mass field
             LIF_InertiaMoments = (1 << 4), // _vinertiamoments field
+            LIF_Enabled = (1 << 5), // _bIsEnabled field
         };
 
         inline const Transform& GetTransform() const {
