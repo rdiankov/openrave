@@ -1727,7 +1727,6 @@ protected:
         }
 
         const dReal trajDuration = GetDuration();
-        OPENRAVE_ASSERT_OP_FORMAT0(trajDuration,>=,stopTime, "stop time needs to be at most trajectory duration", ORE_InvalidArguments);
         int numPoints = 0;
         {
             const dReal duration = stopTime - startTime;
