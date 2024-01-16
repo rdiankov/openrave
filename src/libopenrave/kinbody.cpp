@@ -5453,7 +5453,7 @@ void KinBody::Enable(bool bEnable)
     for (const LinkPtr& plink : _veclinks) {
         Link& link = *plink;
         if( link._info._bIsEnabled != bEnable ) {
-            (*itgeom)->_info._bVisible = visible;
+            link._info._bIsEnabled = bEnable;
             _nNonAdjacentLinkCache &= ~AO_Enabled;
             bchanged = true;
         }
