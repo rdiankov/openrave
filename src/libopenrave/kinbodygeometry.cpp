@@ -1054,33 +1054,33 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     rGeometryInfo.SetObject();
     orjson::SetJsonValueByKey(rGeometryInfo, "id", _id, allocator);
 
-    if (_isPartial) {
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_Visible)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "visible", _bVisible, allocator);
-        }
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_Transparency)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "transparency", _fTransparency, allocator);
-        }
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_DiffuseColor)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "diffuseColor", _vDiffuseColor, allocator);
-        }
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_AmbientColor)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "ambientColor", _vAmbientColor, allocator);
-        }
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerMargins)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
-        }
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerMargins)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
-        }
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerEmptyMargins)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
-        }
-        if (IsModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerEmptyMargins)) {
-            orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
-        }
-        return;
-    }
+    // if (_isPartial) {
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_Visible)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "visible", _bVisible, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_Transparency)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "transparency", _fTransparency, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_DiffuseColor)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "diffuseColor", _vDiffuseColor, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_AmbientColor)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "ambientColor", _vAmbientColor, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerMargins)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerMargins", _vNegativeCropContainerMargins*fUnitScale, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerMargins)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerMargins", _vPositiveCropContainerMargins*fUnitScale, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_NegativeCropContainerEmptyMargins)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "negativeCropContainerEmptyMargins", _vNegativeCropContainerEmptyMargins*fUnitScale, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::GeometryInfo::GIF_PositiveCropContainerEmptyMargins)) {
+    //         orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
+    //     }
+    //     return;
+    // }
 
 
     orjson::SetJsonValueByKey(rGeometryInfo, "name", _name, allocator);

@@ -142,35 +142,35 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     tmpTransform.trans *= fUnitScale;
     tmpMassTransform.trans *= fUnitScale;
 
-    if (_isPartial) {
-        if (IsModifiedField(KinBody::LinkInfo::LIF_Transform)) {
-            orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
-        }
-        if (IsModifiedField(KinBody::LinkInfo::LIF_MassFrame)) {
-            orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
-        }
-        if (IsModifiedField(KinBody::LinkInfo::LIF_Static)) {
-            orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
-        }
-        if (IsModifiedField(KinBody::LinkInfo::LIF_Mass)) {
-            orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
-        }
-        if (IsModifiedField(KinBody::LinkInfo::LIF_InertiaMoments)) {
-            orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
-        }
-        if (_vgeometryinfos.size() > 0) {
-            rapidjson::Value geometriesValue;
-            geometriesValue.SetArray();
-            geometriesValue.Reserve(_vgeometryinfos.size(), allocator);
-            FOREACHC(it, _vgeometryinfos) {
-                rapidjson::Value geometryValue;
-                (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
-                geometriesValue.PushBack(geometryValue, allocator);
-            }
-            value.AddMember("geometries", geometriesValue, allocator);
-        }
-        return;
-    }
+    // if (_isPartial) {
+    //     if (IsModifiedField(KinBody::LinkInfo::LIF_Transform)) {
+    //         orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::LinkInfo::LIF_MassFrame)) {
+    //         orjson::SetJsonValueByKey(value, "massTransform", tmpMassTransform, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::LinkInfo::LIF_Static)) {
+    //         orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::LinkInfo::LIF_Mass)) {
+    //         orjson::SetJsonValueByKey(value, "mass", _mass, allocator);
+    //     }
+    //     if (IsModifiedField(KinBody::LinkInfo::LIF_InertiaMoments)) {
+    //         orjson::SetJsonValueByKey(value, "inertiaMoments", _vinertiamoments*fUnitScale*fUnitScale, allocator);
+    //     }
+    //     if (_vgeometryinfos.size() > 0) {
+    //         rapidjson::Value geometriesValue;
+    //         geometriesValue.SetArray();
+    //         geometriesValue.Reserve(_vgeometryinfos.size(), allocator);
+    //         FOREACHC(it, _vgeometryinfos) {
+    //             rapidjson::Value geometryValue;
+    //             (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
+    //             geometriesValue.PushBack(geometryValue, allocator);
+    //         }
+    //         value.AddMember("geometries", geometriesValue, allocator);
+    //     }
+    //     return;
+    // }
 
     orjson::SetJsonValueByKey(value, "name", _name, allocator);
     orjson::SetJsonValueByKey(value, "transform", tmpTransform, allocator);

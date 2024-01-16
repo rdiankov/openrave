@@ -139,24 +139,24 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
 {
     rKinBodyInfo.SetObject();
 
-    if (_isDiffResult) {
-        if (IsModifiedField(KinBody::KinBodyInfo::KBIF_Name)) {
-            orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
-        }
+    // if (_isDiffResult) {
+    //     if (IsModifiedField(KinBody::KinBodyInfo::KBIF_Name)) {
+    //         orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
+    //     }
 
-        if (_vLinkInfos.size() > 0) {
-            rapidjson::Value rLinkInfoValues;
-            rLinkInfoValues.SetArray();
-            rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
-            FOREACHC(it, _vLinkInfos) {
-                rapidjson::Value linkInfoValue;
-                (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
-                rLinkInfoValues.PushBack(linkInfoValue, allocator);
-            }
-            rKinBodyInfo.AddMember("links", rLinkInfoValues, allocator);
-        }
-        return;
-    }
+    //     if (_vLinkInfos.size() > 0) {
+    //         rapidjson::Value rLinkInfoValues;
+    //         rLinkInfoValues.SetArray();
+    //         rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
+    //         FOREACHC(it, _vLinkInfos) {
+    //             rapidjson::Value linkInfoValue;
+    //             (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
+    //             rLinkInfoValues.PushBack(linkInfoValue, allocator);
+    //         }
+    //         rKinBodyInfo.AddMember("links", rLinkInfoValues, allocator);
+    //     }
+    //     return;
+    // }
 
     if( !_id.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "id", _id, allocator);

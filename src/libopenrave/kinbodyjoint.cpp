@@ -293,93 +293,93 @@ void KinBody::JointInfo::SerializeJSON(rapidjson::Value& value, rapidjson::Docum
         newvupperlimit[i] *= fjointmult;
     }
 
-   if (_isPartial) {
-        value.SetObject();
-        orjson::SetJsonValueByKey(value, "id", _id, allocator);
-        if (IsModifiedField(KinBody::JointInfo::JIF_Limit)) {
-            orjson::SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
-            orjson::SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Maxvel)) {
-            orjson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Maxaccel)) {
-            orjson::SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Maxjerk)) {
-            orjson::SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxvel)) {
-            orjson::SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxaccel)) {
-            orjson::SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxjerk)) {
-            orjson::SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Maxtorque)) {
-            orjson::SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Maxinertia)) {
-            orjson::SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Offsets)) {
-            orjson::SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Resolution)) {
-            orjson::SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_Weights)) {
-            orjson::SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_MapFloatParameters)) {
-            if(_mapFloatParameters.size() > 0)
-            {
-                rapidjson::Value parameters;
-                parameters.SetArray();
-                FOREACHC(it, _mapFloatParameters) {
-                    rapidjson::Value parameter;
-                    parameter.SetObject();
-                    orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
-                    orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
-                    parameters.PushBack(parameter, allocator);
-                }
-                value.AddMember("floatParameters", parameters, allocator);
-            }
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_MapIntParameters)) {
-            if(_mapIntParameters.size() > 0)
-            {
-                rapidjson::Value parameters;
-                parameters.SetArray();
-                FOREACHC(it, _mapIntParameters) {
-                    rapidjson::Value parameter;
-                    parameter.SetObject();
-                    orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
-                    orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
-                    parameters.PushBack(parameter, allocator);
-                }
-                value.AddMember("intParameters", parameters, allocator);
-            }
-        }
-        if (IsModifiedField(KinBody::JointInfo::JIF_MapStringParameters)) {
-            if(_mapStringParameters.size() > 0)
-            {
-                rapidjson::Value parameters;
-                parameters.SetArray();
-                FOREACHC(it, _mapStringParameters) {
-                    rapidjson::Value parameter;
-                    parameter.SetObject();
-                    orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
-                    orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
-                    parameters.PushBack(parameter, allocator);
-                }
-                value.AddMember("stringParameters", parameters, allocator);
-            }
-        }
-        return;
-    }
+//    if (_isPartial) {
+//         value.SetObject();
+//         orjson::SetJsonValueByKey(value, "id", _id, allocator);
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Limit)) {
+//             orjson::SetJsonValueByKey(value, "lowerLimit", newvlowerlimit, allocator, dof);
+//             orjson::SetJsonValueByKey(value, "upperLimit", newvupperlimit, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Maxvel)) {
+//             orjson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Maxaccel)) {
+//             orjson::SetJsonValueByKey(value, "maxAccel", newvmaxaccel, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Maxjerk)) {
+//             orjson::SetJsonValueByKey(value, "maxJerk", _vmaxjerk, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxvel)) {
+//             orjson::SetJsonValueByKey(value, "hardMaxVel", _vhardmaxvel, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxaccel)) {
+//             orjson::SetJsonValueByKey(value, "hardMaxAccel", _vhardmaxaccel, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Hardmaxjerk)) {
+//             orjson::SetJsonValueByKey(value, "hardMaxJerk", _vhardmaxjerk, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Maxtorque)) {
+//             orjson::SetJsonValueByKey(value, "maxTorque", _vmaxtorque, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Maxinertia)) {
+//             orjson::SetJsonValueByKey(value, "maxInertia", _vmaxinertia, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Offsets)) {
+//             orjson::SetJsonValueByKey(value, "offsets", _voffsets, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Resolution)) {
+//             orjson::SetJsonValueByKey(value, "resolutions", _vresolution, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_Weights)) {
+//             orjson::SetJsonValueByKey(value, "weights", _vweights, allocator, dof);
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_MapFloatParameters)) {
+//             if(_mapFloatParameters.size() > 0)
+//             {
+//                 rapidjson::Value parameters;
+//                 parameters.SetArray();
+//                 FOREACHC(it, _mapFloatParameters) {
+//                     rapidjson::Value parameter;
+//                     parameter.SetObject();
+//                     orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+//                     orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+//                     parameters.PushBack(parameter, allocator);
+//                 }
+//                 value.AddMember("floatParameters", parameters, allocator);
+//             }
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_MapIntParameters)) {
+//             if(_mapIntParameters.size() > 0)
+//             {
+//                 rapidjson::Value parameters;
+//                 parameters.SetArray();
+//                 FOREACHC(it, _mapIntParameters) {
+//                     rapidjson::Value parameter;
+//                     parameter.SetObject();
+//                     orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+//                     orjson::SetJsonValueByKey(parameter, "values", it->second, allocator);
+//                     parameters.PushBack(parameter, allocator);
+//                 }
+//                 value.AddMember("intParameters", parameters, allocator);
+//             }
+//         }
+//         if (IsModifiedField(KinBody::JointInfo::JIF_MapStringParameters)) {
+//             if(_mapStringParameters.size() > 0)
+//             {
+//                 rapidjson::Value parameters;
+//                 parameters.SetArray();
+//                 FOREACHC(it, _mapStringParameters) {
+//                     rapidjson::Value parameter;
+//                     parameter.SetObject();
+//                     orjson::SetJsonValueByKey(parameter, "id", it->first, allocator);
+//                     orjson::SetJsonValueByKey(parameter, "value", it->second, allocator);
+//                     parameters.PushBack(parameter, allocator);
+//                 }
+//                 value.AddMember("stringParameters", parameters, allocator);
+//             }
+//         }
+//         return;
+//     }
 
 
     orjson::SetJsonValueByKey(value, "maxVel", newvmaxvel, allocator, dof);
