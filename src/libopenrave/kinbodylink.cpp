@@ -445,7 +445,7 @@ bool KinBody::Link::SetVisible(bool visible)
     bool bchanged = false;
     FOREACH(itgeom,_vGeometries) {
         if( (*itgeom)->_info._bVisible != visible ) {
-            (*itgeom)->SetVisible(visible);
+            (*itgeom)->_info._bVisible = visible;
             bchanged = true;
         }
     }

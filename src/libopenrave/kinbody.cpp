@@ -5390,7 +5390,7 @@ bool KinBody::SetVisible(bool visible)
     FOREACH(it, _veclinks) {
         FOREACH(itgeom,(*it)->_vGeometries) {
             if( (*itgeom)->IsVisible() != visible ) {
-                (*itgeom)->SetVisible(visible);
+                (*itgeom)->_info._bVisible = visible;
                 bchanged = true;
             }
         }
