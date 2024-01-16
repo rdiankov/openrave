@@ -1717,8 +1717,8 @@ protected:
     {
         BOOST_ASSERT(_bInit);
         BOOST_ASSERT(_timeoffset>=0);
-        BOOST_ASSERT(startTime>=0);
-        BOOST_ASSERT(stopTime>=startTime);
+        OPENRAVE_ASSERT_OP_FORMAT0(startTime,>=,0, "start time needs to be non-negative", ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT0(stopTime,>=,startTime, "stop time needs to be at least start time", ORE_InvalidArguments);
 
         _ComputeInternal();
         OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
@@ -1727,7 +1727,7 @@ protected:
         }
 
         const dReal trajDuration = GetDuration();
-        BOOST_ASSERT(trajDuration>=stopTime);
+        OPENRAVE_ASSERT_OP_FORMAT0(trajDuration,>=,stopTime, "stop time needs to be at most trajectory duration", ORE_InvalidArguments);
         int numPoints = 0;
         {
             const dReal duration = stopTime - startTime;
