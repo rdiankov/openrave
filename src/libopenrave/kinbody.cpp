@@ -539,11 +539,6 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
         numvertices += geom->GetCollisionMesh().vertices.size();
         numindices += geom->GetCollisionMesh().indices.size();
         plink->_vGeometries.push_back(geom);
-        geom->RegisterCallbackOnModify(
-            [plink](KinBody::GeometryInfoPtr geometryInfo) {
-                plink->_MergeGeometriesDiff(geometryInfo);
-            }
-        );
     }
 
     plink->_collision.vertices.reserve(numvertices);
@@ -554,11 +549,6 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
         trimesh.ApplyTransform((*itgeom)->GetTransform());
         plink->_collision.Append(trimesh);
     }
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
@@ -594,11 +584,6 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
         numvertices += geom->GetCollisionMesh().vertices.size();
         numindices += geom->GetCollisionMesh().indices.size();
         plink->_vGeometries.push_back(geom);
-        geom->RegisterCallbackOnModify(
-            [plink](KinBody::GeometryInfoPtr geometryInfo) {
-                plink->_MergeGeometriesDiff(geometryInfo);
-            }
-        );
     }
 
     plink->_collision.vertices.reserve(numvertices);
@@ -610,11 +595,6 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
         plink->_collision.Append(trimesh);
     }
     _veclinks.push_back(plink);
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
@@ -645,18 +625,8 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
         trimesh = geom->GetCollisionMesh();
         trimesh.ApplyTransform(geom->GetTransform());
         plink->_collision.Append(trimesh);
-        geom->RegisterCallbackOnModify(
-            [plink](KinBody::GeometryInfoPtr geometryInfo) {
-                plink->_MergeGeometriesDiff(geometryInfo);
-            }
-        );
     }
     _veclinks.push_back(plink);
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
@@ -681,17 +651,7 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     info._meshcollision = trimesh;
     Link::GeometryPtr geom(new Link::Geometry(plink,info));
     plink->_vGeometries.push_back(geom);
-    geom->RegisterCallbackOnModify(
-        [plink](KinBody::GeometryInfoPtr geometryInfo) {
-            plink->_MergeGeometriesDiff(geometryInfo);
-        }
-    );
     _veclinks.push_back(plink);
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
@@ -714,18 +674,8 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
-        geom->RegisterCallbackOnModify(
-            [plink](KinBody::GeometryInfoPtr geometryInfo) {
-                plink->_MergeGeometriesDiff(geometryInfo);
-            }
-        );
     }
     _veclinks.push_back(plink);
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
@@ -748,18 +698,8 @@ bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometr
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
-        geom->RegisterCallbackOnModify(
-            [plink](KinBody::GeometryInfoPtr geometryInfo) {
-                plink->_MergeGeometriesDiff(geometryInfo);
-            }
-        );
     }
     _veclinks.push_back(plink);
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
@@ -782,18 +722,8 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geome
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
-        geom->RegisterCallbackOnModify(
-            [plink](KinBody::GeometryInfoPtr geometryInfo) {
-                plink->_MergeGeometriesDiff(geometryInfo);
-            }
-        );
     }
     _veclinks.push_back(plink);
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
     _vLinkTransformPointers.clear();
     __struri = uri;
     _referenceUri.clear(); // because completely removing the previous body, should reset
