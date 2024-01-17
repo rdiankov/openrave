@@ -6123,12 +6123,6 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
         plink->SetReadableInterface(it->first, it->second);
     }
 
-    plink->RegisterCallbackOnModify(
-        [this](KinBody::LinkInfoPtr linkInfo) {
-            _MergeLinksDiff(linkInfo);
-        }
-    );
-    
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __hashKinematicsGeometryDynamics.resize(0);
