@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.136.1
+===============
+
+* Exclude virtual links (links with no geometries) from jittering computation
+
 Version 0.136.0
 ===============
 
