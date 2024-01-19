@@ -17,7 +17,7 @@
 #include "libopenrave.h"
 
 #include <algorithm>
-
+#include "mujincontrollerclient/mujinjson.h"
 namespace OpenRAVE {
 
 void KinBody::LinkInfo::Reset()

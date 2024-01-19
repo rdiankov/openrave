@@ -892,6 +892,8 @@ public:
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
 
+    virtual EnvironmentBaseInfoPtr ExtractLoggerEnvironmentInfo() = 0;
+
     /// \brief returns environment revision number
     virtual int GetRevision() const = 0;
 

@@ -3358,7 +3358,7 @@ public:
         InitMirrorInfo();
     }
 
-    void ExtractLoggerEnvironmentInfo() {
+    EnvironmentBaseInfoPtr ExtractLoggerEnvironmentInfo() override {
         _mirrorInfo->_vBodyInfos.reserve(_vecbodies.size());
         for (size_t index=0;index<_vecbodies.size();index++) {
             if (!!_vecbodies[index]) {
@@ -3367,6 +3367,7 @@ public:
             }
         }
         _environmentLogger->SetEnvironmentInfo(_mirrorInfo);
+        return _mirrorInfo;
     }
 
 protected:
