@@ -698,6 +698,9 @@ void KinBody::Link::SetTransform(const Transform& t)
 {
     _info._t = t;
     GetParent()->_nUpdateStampId++;
+    if (!!_mirrorInfo) {
+        _mirrorInfo->_t = t;
+    }
 }
 
 void KinBody::Link::SetForce(const Vector& force, const Vector& pos, bool bAdd)

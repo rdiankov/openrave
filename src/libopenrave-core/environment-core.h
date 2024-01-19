@@ -156,6 +156,24 @@ protected:
 };
 typedef boost::shared_ptr<KinBodyIdSaver> KinBodyIdSaverPtr;
 
+class EnvironmentLogger {
+    EnvironmentBase::EnvironmentBaseInfoPtr envInfo;
+
+public:
+    EnvironmentLogger() {
+        envInfo = boost::make_shared<EnvironmentBase::EnvironmentBaseInfo>();
+    }
+
+    EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentInfo() {
+        return envInfo;
+    }
+
+    void SetEnvironmentInfo(EnvironmentBase::EnvironmentBaseInfoPtr info) {
+        envInfo = info;
+    }
+};
+typedef boost::shared_ptr<EnvironmentLogger> EnvironmentLoggerPtr;
+
 class Environment : public EnvironmentBase
 {
     class GraphHandleMulti : public GraphHandle
@@ -624,6 +642,7 @@ public:
             if (_IsColladaFile(path)) {
                 if( RaveParseColladaURI(shared_from_this(), filename, atts) ) {
                     UpdatePublishedBodies();
+                    InitMirrorInfo();
                     return true;
                 }
             }
@@ -631,30 +650,35 @@ public:
         else if( _IsColladaFile(filename) ) {
             if( RaveParseColladaFile(shared_from_this(), filename, atts) ) {
                 UpdatePublishedBodies();
+                InitMirrorInfo();
                 return true;
             }
         }
         else if( _IsJSONFile(filename) ) {
             _ClearRapidJsonBuffer();
             if( RaveParseJSONFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                InitMirrorInfo();
                 return true;
             }
         }
         else if( _IsMsgPackFile(filename) ) {
             _ClearRapidJsonBuffer();
             if( RaveParseMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                InitMirrorInfo();
                 return true;
             }
         }
         else if (StringEndsWith(filename, ".json.gpg")) {
             _ClearRapidJsonBuffer();
             if( RaveParseEncryptedJSONFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                InitMirrorInfo();
                 return true;
             }
         }
         else if (StringEndsWith(filename, ".msgpack.gpg")) {
             _ClearRapidJsonBuffer();
             if( RaveParseEncryptedMsgPackFile(shared_from_this(), filename, UFIM_Exact, atts, *_prLoadEnvAlloc) ) {
+                InitMirrorInfo();
                 return true;
             }
         }
@@ -663,6 +687,7 @@ public:
             if( RaveParseXFile(shared_from_this(), robot, filename, atts) ) {
                 _AddRobot(robot, IAM_AllowRenaming);
                 UpdatePublishedBodies();
+                InitMirrorInfo();
                 return true;
             }
         }
@@ -671,6 +696,7 @@ public:
             if( !!pbody ) {
                 _AddKinBody(pbody,IAM_AllowRenaming);
                 UpdatePublishedBodies();
+                InitMirrorInfo();
                 return true;
             }
         }
@@ -678,6 +704,7 @@ public:
             if( _ParseXMLFile(OpenRAVEXMLParser::CreateInterfaceReader(shared_from_this(),atts,true), filename) ) {
                 if( OpenRAVEXMLParser::GetXMLErrorCount() == 0 ) {
                     UpdatePublishedBodies();
+                    InitMirrorInfo();
                     return true;
                 }
             }
@@ -3317,6 +3344,31 @@ public:
         return true;
     }
 
+    inline void InitMirrorInfo() {
+        _mirrorInfo = boost::make_shared<EnvironmentBase::EnvironmentBaseInfo>();
+    }
+
+    void RegisterEnvironmentLogger(EnvironmentLoggerPtr environmentLogger) {
+        _environmentLogger = environmentLogger;
+        InitMirrorInfo();
+        for (size_t index=0;index<_vecbodies.size();index++) {
+            if (!!_vecbodies[index]) {
+                _vecbodies[index]->InitMirrorInfo();
+            }
+        }
+    }
+
+    void ExtractLoggerEnvironmentInfo() {
+        _mirrorInfo->_vBodyInfos.reserve(_vecbodies.size());
+        for (size_t index=0;index<_vecbodies.size();index++) {
+            if (!!_vecbodies[index]) {
+                _vecbodies[index]->ExtractLoggerEnvironmentInfo();
+                _mirrorInfo->_vBodyInfos.push_back(_vecbodies[index]->_mirrorInfo);
+            }
+        }
+        _environmentLogger->SetEnvironmentInfo(_mirrorInfo);
+    }
+
 protected:
 
     void _Init()
@@ -4343,6 +4395,8 @@ protected:
     bool _bEnableSimulation;            ///< enable simulation loop
     bool _bShutdownSimulation; ///< if true, the simulation thread should shutdown
     bool _bRealTime;
+    EnvironmentBaseInfoPtr _mirrorInfo;
+    EnvironmentLoggerPtr _environmentLogger;
 
     friend class EnvironmentXMLReader;
 };

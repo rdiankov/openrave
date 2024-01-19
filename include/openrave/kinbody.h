@@ -935,9 +935,15 @@ public:
             return 0;
         }
 
+        inline void InitMirrorInfo() {
+            _mirrorInfo = boost::make_shared<KinBody::GeometryInfo>();
+            _mirrorInfo->_id = _info._id;
+        }
+
 protected:
         boost::weak_ptr<Link> _parent;
         KinBody::GeometryInfo _info; ///< geometry info
+        KinBody::GeometryInfoPtr _mirrorInfo;
 #ifdef RAVE_PRIVATE
 #ifdef _MSC_VER
         friend class OpenRAVEXMLParser::LinkXMLReader;
@@ -1392,6 +1398,21 @@ public:
         /// \brief update Link according to new LinkInfo, returns false if update cannot be performed and requires InitFromInfo
         UpdateFromInfoResult UpdateFromInfo(const KinBody::LinkInfo& info);
 
+        inline void InitMirrorInfo() {
+            _mirrorInfo = boost::make_shared<KinBody::LinkInfo>();
+            _mirrorInfo->_id = _info._id;
+            for(size_t index=0;index<_vGeometries.size();index++) {
+                _vGeometries[index]->InitMirrorInfo();
+            }
+        }
+
+        void ExtractLoggerEnvironmentInfo() {
+            _mirrorInfo->_vgeometryinfos.reserve(_vGeometries.size());
+            for (size_t index=0;index<_vGeometries.size();index++) {
+                _mirrorInfo->_vgeometryinfos.push_back(_vGeometries[index]->_mirrorInfo);
+            }
+        }
+
 protected:
         /// \brief enables / disables LinkInfo as well as notifies parent KinBody
         void _Enable(bool enable);
@@ -1404,6 +1425,8 @@ protected:
         std::vector<GeometryPtr> _vGeometries;         ///< \see GetGeometries
 
         LinkInfo _info; ///< parameter information of the link
+
+        KinBody::LinkInfoPtr _mirrorInfo;
 
 private:
         /// Sensitive variables that are auto-generated and should not be modified by the user.
@@ -2106,8 +2129,14 @@ public:
         /// \brief update the cached _doflastsetvalues
         //virtual void SetDOFLastSetValue(dReal dofvalue, const int iaxis = 0);
 
+        inline void InitMirrorInfo() {
+            _mirrorInfo = boost::make_shared<KinBody::JointInfo>();
+            _mirrorInfo->_id = _info._id;
+        }
+
 protected:
         JointInfo _info;
+        KinBody::JointInfoPtr _mirrorInfo;
 
         boost::array< MimicPtr,3> _vmimic;          ///< the mimic properties of each of the joint axes. It is theoretically possible for a multi-dof joint to have one axes mimiced and the others free. When cloning, is it ok to copy this and assume it is constant?
 
@@ -3537,6 +3566,29 @@ private:
         return _prAssociatedFileEntries;
     }
 
+    inline void InitMirrorInfo() {
+        _mirrorInfo = boost::make_shared<KinBody::KinBodyInfo>();
+        _mirrorInfo->_id = _id;
+        for(size_t index=0;index<_vecjoints.size();index++) {
+            _vecjoints[index]->InitMirrorInfo();
+        }
+        for(size_t index=0;index<_veclinks.size();index++) {
+            _veclinks[index]->InitMirrorInfo();
+        }
+    }
+
+    void ExtractLoggerEnvironmentInfo() {
+        _mirrorInfo->_vLinkInfos.reserve(_veclinks.size());
+        _mirrorInfo->_vJointInfos.reserve(_vecjoints.size());
+        for (size_t index=0;index<_veclinks.size();index++) {
+            _veclinks[index]->ExtractLoggerEnvironmentInfo();
+            _mirrorInfo->_vLinkInfos.push_back(_veclinks[index]->_mirrorInfo);
+        }
+        for (size_t index=0;index<_vecjoints.size();index++) {
+            _mirrorInfo->_vJointInfos.push_back(_vecjoints[index]->_mirrorInfo);
+        }
+    }
+
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
@@ -3692,6 +3744,7 @@ protected:
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
     int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+    KinBody::KinBodyInfoPtr _mirrorInfo;
 
 private:
     mutable std::vector<dReal> _vTempJoints;
