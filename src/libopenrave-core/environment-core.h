@@ -3346,16 +3346,16 @@ public:
 
     inline void InitMirrorInfo() {
         _mirrorInfo = boost::make_shared<EnvironmentBase::EnvironmentBaseInfo>();
-    }
-
-    void RegisterEnvironmentLogger(EnvironmentLoggerPtr environmentLogger) {
-        _environmentLogger = environmentLogger;
-        InitMirrorInfo();
         for (size_t index=0;index<_vecbodies.size();index++) {
             if (!!_vecbodies[index]) {
                 _vecbodies[index]->InitMirrorInfo();
             }
         }
+    }
+
+    void RegisterEnvironmentLogger(EnvironmentLoggerPtr environmentLogger) {
+        _environmentLogger = environmentLogger;
+        InitMirrorInfo();
     }
 
     void ExtractLoggerEnvironmentInfo() {
