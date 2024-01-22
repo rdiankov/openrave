@@ -366,7 +366,11 @@ object PyGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOptions = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pgeominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOptions);
+    }
     return toPyObject(doc);
 }
 
@@ -375,7 +379,11 @@ void PyGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, object option
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
-    pgeominfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOptions = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pgeominfo->DeserializeJSON(doc, fUnitScale, intOptions);
+    }
     Init(*pgeominfo);
 }
 
@@ -608,7 +616,11 @@ py::object PyLinkInfo::SerializeJSON(dReal fUnitScale, object options)
 {
     rapidjson::Document doc;
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOptions = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOptions);
+    }
     return toPyObject(doc);
 }
 
@@ -617,7 +629,11 @@ void PyLinkInfo::DeserializeJSON(object obj, dReal fUnitScale, py::object option
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
     KinBody::LinkInfoPtr pInfo = GetLinkInfo();
-    pInfo->DeserializeJSON(doc, fUnitScale, pyGetIntFromPy(options, 0));
+    const int intOptions = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pInfo->DeserializeJSON(doc, fUnitScale, intOptions);
+    }
     _Update(*pInfo);
 }
 
@@ -4261,7 +4277,10 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
 object PyKinBody::ExtractInfo(ExtractInfoOptions options) const
 {
     KinBody::KinBodyInfo info;
-    _pbody->ExtractInfo(info, options);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        _pbody->ExtractInfo(info, options);
+    }
     return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
 }
 
