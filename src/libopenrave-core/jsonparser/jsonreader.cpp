@@ -824,17 +824,6 @@ protected:
         return unit.second * _fGlobalScale * _fGeomScale;
     }
 
-    template<typename T>
-    void _ExtractTransform(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale)
-    {
-        Transform transform;
-        if (bodyValue.HasMember("transform")) {
-            orjson::LoadJsonValueByKey(bodyValue, "transform", transform);
-        }
-        transform.trans *= fUnitScale;
-        pbody->SetTransform(transform);
-    }
-
     bool _Extract(const rapidjson::Value& rBodyInfo, KinBodyPtr& pBodyOut, const rapidjson::Value& rEnvInfo, dReal fUnitScale, rapidjson::Document::AllocatorType& alloc, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
     {
         // extract for robot
@@ -942,7 +931,7 @@ protected:
                 pBody->SetRevisionId(revisionId);
             }
         }
-        _ExtractTransform(rBodyInfo, pBody, fUnitScale);
+        pBody->SetTransform(pKinBodyInfo->_transform); // needs to call KinBody::SetTransform because KinBody::InitFromKinBodyInfo resets the transform and does not respect KinBodyInfo::_transform.
         pBodyOut = pBody;
         return true;
     }
