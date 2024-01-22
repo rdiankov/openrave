@@ -416,7 +416,7 @@ const FCLSpace::FCLKinBodyInfoPtr& FCLSpace::GetInfo(const KinBody &body) const
 
 void FCLSpace::RemoveUserData(KinBodyConstPtr pbody) {
     if( !!pbody ) {
-        RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
+        // RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
         const int envId = pbody->GetEnvironmentBodyIndex();
         if (envId < (int) _vecInitializedBodies.size()) {
             _vecInitializedBodies.at(envId).reset();

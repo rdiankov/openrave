@@ -270,7 +270,7 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
 }
 
 bool FCLCollisionManagerInstance::RemoveBody(const KinBody& body) {
-    RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp % body.GetName());
+    // RAVELOG_VERBOSE_FORMAT("%u removing body %s", _lastSyncTimeStamp % body.GetName());
 
     const int bodyIndex = body.GetEnvironmentBodyIndex();
     if ((int)_vecCachedBodies.size() > bodyIndex && bodyIndex > 0) {
@@ -286,13 +286,13 @@ bool FCLCollisionManagerInstance::RemoveBody(const KinBody& body) {
 
             return true;
         } else {
-            RAVELOG_VERBOSE_FORMAT(
-                "env=%s 0x%x body %s(envBodyIndex=%d) is invalidated in cache, maybe previously removed or never added",
-                body.GetEnv()->GetNameId() % this % body.GetName() % bodyIndex);
+            // RAVELOG_VERBOSE_FORMAT(
+            //     "env=%s 0x%x body %s(envBodyIndex=%d) is invalidated in cache, maybe previously removed or never added",
+            //     body.GetEnv()->GetNameId() % this % body.GetName() % bodyIndex);
         }
     } else {
-        RAVELOG_VERBOSE_FORMAT(
-            "env=%s body %s has invalid envBodyIndex=%d, cache size is %d", body.GetEnv()->GetNameId() % body.GetName() % bodyIndex % _vecCachedBodies.size());
+        // RAVELOG_VERBOSE_FORMAT(
+        //     "env=%s body %s has invalid envBodyIndex=%d, cache size is %d", body.GetEnv()->GetNameId() % body.GetName() % bodyIndex % _vecCachedBodies.size());
     }
     return false;
 }
