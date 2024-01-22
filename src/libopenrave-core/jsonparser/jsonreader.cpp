@@ -928,7 +928,6 @@ protected:
                 return false;
             }
         }
-        pBody->SetName(pKinBodyInfo->_name);
         {
             const char *const modifiedAt = orjson::GetCStringJsonValueByKey(rEnvInfo, "modifiedAt");
             if ( modifiedAt != nullptr ) {
