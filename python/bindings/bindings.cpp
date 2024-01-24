@@ -269,6 +269,18 @@ void init_python_bindings()
     .def("close",&PyVoidHandle::Close,"deprecated")
     .def("Close",&PyVoidHandle::Close)
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyVoidHandleConst, OPENRAVE_SHARED_PTR<PyVoidHandleConst> >(m, "VoidHandleConst")
+    .def(init<>())
+    // error: static assertion failed: Holder classes are only supported for custom types, so cannot do
+    // .def(init<OPENRAVE_SHARED_PTR<void>>(), "handle"_a)
+#else
+    class_<PyVoidHandleConst, OPENRAVE_SHARED_PTR<PyVoidHandleConst> >("VoidHandleConst")
+#endif
+    .def("close",&PyVoidHandleConst::Close,"deprecated")
+    .def("Close",&PyVoidHandleConst::Close)
+    ;
 }
 
 } // namespace openravepy
