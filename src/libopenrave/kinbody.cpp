@@ -4798,6 +4798,10 @@ void KinBody::_ComputeInternalInformation()
                     }
                 }
             }
+            if( vattachedlinks.size() == _veclinks.size() ) {
+                // All links are static. vattachedlinks already contains all possible indices
+                continue;
+            }
             FOREACHC(itjoint, GetJoints()) {
                 if( (*itjoint)->IsStatic() ) {
                     if( !(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() && !(*itjoint)->GetSecondAttached()->IsStatic() ) {
@@ -4924,13 +4928,18 @@ void KinBody::_ComputeInternalInformation()
             vector<JointPtr> vjoints;
             for(int ind0 = 0; ind0 < (int)_veclinks.size()-1; ++ind0) {
                 for(int ind1 = ind0+1; ind1 < (int)_veclinks.size(); ++ind1) {
+                    const size_t adjindex = _GetIndex1d(ind0, ind1);
+                    if( _vAdjacentLinks.at(adjindex) == 1 ) {
+                        continue;
+                    }
+
                     GetChain(ind0, ind1, vjoints);
                     size_t numstatic = 0;
                     FOREACH(it,vjoints) {
                         numstatic += (*it)->IsStatic();
                     }
                     if( numstatic+1 >= vjoints.size() ) {
-                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
+                        _vAdjacentLinks.at(adjindex) = 1;
                     }
                 }
             }
