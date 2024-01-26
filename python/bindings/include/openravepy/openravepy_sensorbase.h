@@ -306,7 +306,7 @@ public:
     object GetTransform();
     object GetTransformPose();
 
-    object GetName();
+    object GetName() const;
 
     void SetName(const std::string& name);
 

@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.137.0
+===============
+
+* Add `GetId` to python bindings
+
 Version 0.136.0
 ===============
 

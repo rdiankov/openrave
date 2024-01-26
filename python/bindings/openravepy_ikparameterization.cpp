@@ -85,11 +85,15 @@ PyIkParameterization::PyIkParameterization(const IkParameterization &ikparam) {
 PyIkParameterization::~PyIkParameterization() {
 }
 
-IkParameterizationType PyIkParameterization::GetType() {
+IkParameterizationType PyIkParameterization::GetType() const {
     return _param.GetType();
 }
 
-object PyIkParameterization::GetName() {
+std::string PyIkParameterization::GetId() const {
+    return _param.GetId();
+}
+
+object PyIkParameterization::GetName() const {
     return ConvertStringToUnicode(_param.GetName());
 }
 
@@ -495,6 +499,7 @@ void init_openravepy_ikparameterization()
                                     .def(init<OPENRAVE_SHARED_PTR<PyIkParameterization> >(py::args("ikparam")))
 #endif
                                     .def("GetType",&PyIkParameterization::GetType, DOXY_FN(IkParameterization,GetType))
+                                    .def("GetId",&PyIkParameterization::GetId, DOXY_FN(IkParameterization,GetId))
                                     .def("GetName",&PyIkParameterization::GetName, DOXY_FN(IkParameterization,GetName))
                                     .def("SetTransform6D",&PyIkParameterization::SetTransform6D, PY_ARGS("transform") DOXY_FN(IkParameterization,SetTransform6D))
                                     .def("SetRotation3D",&PyIkParameterization::SetRotation3D, PY_ARGS("quat") DOXY_FN(IkParameterization,SetRotation3D))
