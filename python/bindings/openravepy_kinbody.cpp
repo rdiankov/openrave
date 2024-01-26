@@ -1582,10 +1582,10 @@ KinBody::LinkPtr PyLink::GetLink() {
     return _plink;
 }
 
-std::string PyLink::GetId() {
+std::string PyLink::GetId() const {
     return _plink->GetId();
 }
-object PyLink::GetName() {
+object PyLink::GetName() const {
     return ConvertStringToUnicode(_plink->GetName());
 }
 int PyLink::GetIndex() {
@@ -1958,10 +1958,10 @@ KinBody::JointPtr PyJoint::GetJoint() {
     return _pjoint;
 }
 
-std::string PyJoint::GetId() {
+std::string PyJoint::GetId() const {
     return _pjoint->GetId();
 }
-object PyJoint::GetName() {
+object PyJoint::GetName() const {
     return ConvertStringToUnicode(_pjoint->GetName());
 }
 bool PyJoint::IsMimic(int iaxis) {
