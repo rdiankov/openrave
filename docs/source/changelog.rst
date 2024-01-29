@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.136.1
+===============
+
+* Fix the issue that some robot configurations might not be checked in `Check` function.
+
 Version 0.136.0
 ===============
 
