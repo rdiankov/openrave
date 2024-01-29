@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.136.1
+===============
+
+* Support reading of `grippername` under `manipulator` from XML files.
+
 Version 0.136.0
 ===============
 

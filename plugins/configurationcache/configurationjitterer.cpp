@@ -75,8 +75,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _vActiveIndices = _probot->GetActiveDOFIndices();
         _nActiveAffineDOFs = _probot->GetAffineDOF();
         _vActiveAffineAxis = _probot->GetAffineRotationAxis();
+        _vLinks.reserve(_probot->GetLinks().size());
         if( _nActiveAffineDOFs == 0 ) {
             for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                if( _probot->GetLinks()[ilink]->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
                 for (int dofindex : _vActiveIndices) {
                     if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
                         _vLinks.push_back(_probot->GetLinks()[ilink]);
@@ -86,7 +91,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             }
         }
         else {
-            _vLinks = _probot->GetLinks();
+            for (const KinBody::LinkPtr& plink: _probot->GetLinks()) {
+                if( plink->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
+                _vLinks.push_back(plink);
+            }
         }
         _vLinkAABBs.resize(_vLinks.size());
         for(size_t i = 0; i < _vLinks.size(); ++i) {
@@ -970,9 +981,14 @@ protected:
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
         // robot itself might have changed?
+        _vLinks.resize(0);
+        _vLinks.reserve(_probot->GetLinks().size());
         if( _nActiveAffineDOFs == 0 ) {
-            _vLinks.clear();
             for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                if( _probot->GetLinks()[ilink]->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
                 for (int dofindex : _vActiveIndices) {
                     if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
                         _vLinks.push_back(_probot->GetLinks()[ilink]);
@@ -982,7 +998,13 @@ protected:
             }
         }
         else {
-            _vLinks = _probot->GetLinks();
+            for (const KinBody::LinkPtr& plink: _probot->GetLinks()) {
+                if( plink->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
+                _vLinks.push_back(plink);
+            }
         }
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
