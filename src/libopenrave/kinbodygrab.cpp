@@ -740,6 +740,23 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
+void KinBody::GrabbedInfo::UpdateFromOtherInfo(const GrabbedInfo& other)
+{
+    if( !other._id.empty() ) {
+        _id = other._id;
+    }
+    _grabbedname = other._grabbedname;
+    _robotlinkname = other._robotlinkname;
+    _trelative = other._trelative;
+    if( !other._setIgnoreRobotLinkNames.empty() ) {
+        _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
+    }
+    if( !other._rGrabbedUserData.IsNull() ) {
+        _rGrabbedUserData = rapidjson::Document(); // to remove the allocator
+        _rGrabbedUserData.CopyFrom(other._rGrabbedUserData, _rGrabbedUserData.GetAllocator());
+    }
+}
+
 void KinBody::GrabbedInfo::serialize(std::ostream& os) const
 {
     os << _grabbedname << " ";

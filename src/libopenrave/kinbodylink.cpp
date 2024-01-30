@@ -358,6 +358,66 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
+void KinBody::LinkInfo::UpdateFromOtherInfo(const LinkInfo& other)
+{
+    _id = other._id;
+    _name = other._name;
+
+    _t = other._t;
+    _modifiedFields |= KinBody::LinkInfo::LIF_Transform;
+    _tMassFrame = other._tMassFrame;
+    _mass = other._mass;
+    _vinertiamoments = other._vinertiamoments;
+
+    for (const std::map<std::string, std::vector<dReal> >::value_type& pair : other._mapFloatParameters) {
+        if( pair.first.empty() ) {
+            RAVELOG_WARN_FORMAT("ignored an entry in floatParameters in link %s due to missing or empty id", _id);
+            continue;
+        }
+        _mapFloatParameters[pair.first] = pair.second;
+    }
+    for (const std::map<std::string, std::vector<int> >::value_type& pair : other._mapIntParameters) {
+        if( pair.first.empty() ) {
+            RAVELOG_WARN_FORMAT("ignored an entry in intParameters in link %s due to missing or empty id", _id);
+            continue;
+        }
+        _mapIntParameters[pair.first] = pair.second;
+    }
+    for (const std::map<std::string, std::string>::value_type& pair : other._mapStringParameters) {
+        if( pair.first.empty() ) {
+            RAVELOG_WARN_FORMAT("ignored an entry in stringParameters in link %s due to missing or empty id", _id);
+            continue;
+        }
+        _mapStringParameters[pair.first] = pair.second;
+    }
+
+    if( !other._vForcedAdjacentLinks.empty() ) {
+        _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
+    }
+
+    if( !other._vgeometryinfos.empty() ) {
+        _vgeometryinfos.reserve(other._vgeometryinfos.size() + _vgeometryinfos.size());
+        for (const GeometryInfoPtr& pGeometryInfo : other._vgeometryinfos) {
+            if( !pGeometryInfo ) { // nullptr is to delete existing geometries.
+                _vgeometryinfos.clear();
+            }
+            else {
+                UpdateOrCreateInfoWithNameCheck(pGeometryInfo, _vgeometryinfos);
+            }
+        }
+    }
+
+    for (const std::map<std::string, ReadablePtr>::value_type& pair : other._mReadableInterfaces) {
+        _mReadableInterfaces[pair.first] = pair.second;
+    }
+
+    _mapExtraGeometries.clear();
+
+    _bStatic = other._bStatic;
+    _bIsEnabled = other._bIsEnabled;
+    _bIgnoreSelfCollision = other._bIgnoreSelfCollision;
+}
+
 void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale) {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;

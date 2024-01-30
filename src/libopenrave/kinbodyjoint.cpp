@@ -640,6 +640,85 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
 }
 
+void KinBody::JointInfo::UpdateFromOtherInfo(const JointInfo& other)
+{
+    _type = other._type;
+
+    _id = other._id;
+    _name = other._name;
+    _vanchor = other._vanchor;
+    _linkname0 = other._linkname0;
+    _linkname1 = other._linkname1;
+    _vaxes = other._vaxes;
+    _vcurrentvalues = other._vcurrentvalues;
+    _vresolution = other._vresolution;
+
+    _vmaxvel = other._vmaxvel;
+    _vhardmaxvel = other._vhardmaxvel;
+    _vmaxaccel = other._vmaxaccel;
+    _vhardmaxaccel = other._vhardmaxaccel;
+    _vmaxjerk = other._vmaxjerk;
+    _vhardmaxjerk = other._vhardmaxjerk;
+    _vmaxtorque = other._vmaxtorque;
+    _vmaxinertia = other._vmaxinertia;
+    _vweights = other._vweights;
+    _voffsets = other._voffsets;
+    _vlowerlimit = other._vlowerlimit;
+    _vupperlimit = other._vupperlimit;
+
+    const int dof = other.GetDOF();
+    for (size_t i = 0; i < other._vmimic.size() && i < (size_t)dof; ++i) {
+        if( !!other._vmimic[i] ) {
+            _vmimic = other._vmimic;
+            break;
+        }
+    }
+
+    for (const std::map<std::string, std::vector<dReal> >::value_type& pair : other._mapFloatParameters) {
+        if( pair.first.empty() ) {
+            RAVELOG_WARN_FORMAT("ignored an entry in floatParameters in joint %s due to missing or empty id", _id);
+            continue;
+        }
+        _mapFloatParameters[pair.first] = pair.second;
+    }
+    for (const std::map<std::string, std::vector<int> >::value_type& pair : other._mapIntParameters) {
+        if( pair.first.empty() ) {
+            RAVELOG_WARN_FORMAT("ignored an entry in intParameters in joint %s due to missing or empty id", _id);
+            continue;
+        }
+        _mapIntParameters[pair.first] = pair.second;
+    }
+    for (const std::map<std::string, std::string>::value_type& pair : other._mapStringParameters) {
+        if( pair.first.empty() ) {
+            RAVELOG_WARN_FORMAT("ignored an entry in stringParameters in joint %s due to missing or empty id", _id);
+            continue;
+        }
+        _mapStringParameters[pair.first] = pair.second;
+    }
+
+    if( !!other._infoElectricMotor ) {
+        _infoElectricMotor = other._infoElectricMotor;
+    }
+
+    _bIsCircular = other._bIsCircular;
+    _bIsActive = other._bIsActive;
+    _controlMode = other._controlMode;
+
+    if( !!other._jci_robotcontroller ) {
+        _jci_robotcontroller = other._jci_robotcontroller;
+    }
+    if( !!other._jci_io ) {
+        _jci_io = other._jci_io;
+    }
+    if( !!other._jci_externaldevice ) {
+        _jci_externaldevice = other._jci_externaldevice;
+    }
+
+    for (const std::map<std::string, ReadablePtr>::value_type& pair : other._mReadableInterfaces) {
+        _mReadableInterfaces[pair.first] = pair.second;
+    }
+}
+
 void KinBody::JointInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale) {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;

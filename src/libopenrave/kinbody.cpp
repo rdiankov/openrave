@@ -410,6 +410,128 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
+void KinBody::KinBodyInfo::UpdateFromOtherInfo(const KinBodyInfo& other)
+{
+    if( !other._id.empty() ) {
+        _id = other._id;
+    }
+    if( !other._name.empty() ) {
+        _name = other._name;
+    }
+    if( !other._uri.empty() ) {
+        _uri = other._uri;
+    }
+    if( !other._referenceUri.empty() ) {
+        _referenceUri = other._referenceUri;
+    }
+    if( !other._interfaceType.empty() ) {
+        _interfaceType = other._interfaceType;
+    }
+    _transform = other._transform; // always overwrite
+    if( !other._dofValues.empty() ) {
+        _dofValues = other._dofValues;
+    }
+    if( !other._vGrabbedInfos.empty() ) {
+        _vGrabbedInfos.reserve(other._vGrabbedInfos.size() + _vGrabbedInfos.size());
+        for (const GrabbedInfoPtr& pInputGrabbedInfo : other._vGrabbedInfos) {
+            const std::string& id = pInputGrabbedInfo->_id;
+            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
+            if( !id.empty() ) {
+                // only try to find old info if id is not empty
+                FOREACH(itInfo, _vGrabbedInfos) {
+                    if ((*itInfo)->_id == id) {
+                        itMatchingId = itInfo;
+                        break;
+                    }
+                }
+            }
+
+            const std::string& grabbedName = pInputGrabbedInfo->_grabbedname;
+            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
+            // only try to find old info if id is not empty
+            FOREACH(itInfo, _vGrabbedInfos) {
+                if( (*itInfo)->_grabbedname == grabbedName ) {
+                    itMatchingName = itInfo;
+                    break;
+                }
+            }
+
+            // here we allow items with empty id to be created because
+            // when we load things from json, some id could be missing on file
+            // and for the partial update case, the id should be non-empty
+            if( itMatchingId != _vGrabbedInfos.end() ) {
+                (*itMatchingId)->UpdateFromOtherInfo(*pInputGrabbedInfo);
+
+                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
+                    // there is another entry with matching name, so remove it
+                    _vGrabbedInfos.erase(itMatchingName);
+                }
+                continue;
+            }
+
+            if( itMatchingName != _vGrabbedInfos.end() ) {
+                (*itMatchingName)->UpdateFromOtherInfo(*pInputGrabbedInfo);
+                continue;
+            }
+
+            _vGrabbedInfos.push_back(pInputGrabbedInfo);
+        }
+    }
+
+    if( !other._vLinkInfos.empty() ) {
+        _vLinkInfos.reserve(other._vLinkInfos.size() + _vLinkInfos.size());
+        for (const LinkInfoPtr& pLinkInfo : other._vLinkInfos) {
+            if( !pLinkInfo ) {   // nullptr is to delete existing geometries.
+                _vLinkInfos.clear();
+            }
+            else {
+                UpdateOrCreateInfoWithNameCheck(pLinkInfo, _vLinkInfos);
+            }
+        }
+        // if has conflicting names, should error here
+        for (int ilink0 = 0; ilink0 < (int)_vLinkInfos.size(); ++ilink0) {
+            for (int ilink1 = ilink0 + 1; ilink1 < (int)_vLinkInfos.size(); ++ilink1) {
+                if( _vLinkInfos[ilink0]->_name == _vLinkInfos[ilink1]->_name ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("Body '%s' has info with link[%d] and link[%d] having the same linkname '%s', which is not allowed. link[%d].id='%s', link[%d].id='%s'", _name%ilink0%ilink1%_vLinkInfos[ilink0]->_name%ilink0%_vLinkInfos[ilink0]->_id%ilink1%_vLinkInfos[ilink1]->_id, ORE_Assert);
+                }
+            }
+        }
+    }
+
+    _vJointInfos.reserve(other._vJointInfos.size() + _vJointInfos.size());
+    for (const JointInfoPtr& pJointInfo : other._vJointInfos) {
+        if( !pJointInfo ) {
+            _vJointInfos.clear();
+        }
+        else {
+            UpdateOrCreateInfoWithNameCheck(pJointInfo, _vJointInfos);
+        }
+    }
+
+    if( !other._mReadableInterfaces.empty() ) {
+        for(std::map<std::string, ReadablePtr>::const_iterator it = other._mReadableInterfaces.begin(); it != other._mReadableInterfaces.end(); ++it) {
+            // skip over __collada__ since it will most likely fail to deserialize
+            if( it->first == "__collada__" ) {
+                continue;
+            }
+            _mReadableInterfaces[it->first] = it->second;
+        }
+    }
+    if( !!other._prAssociatedFileEntries ) {
+        if( !_prAssociatedFileEntries ) {
+            _prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *_prAssociatedFileEntries = rapidjson::Document();
+        }
+        _prAssociatedFileEntries->CopyFrom(*(other._prAssociatedFileEntries), _prAssociatedFileEntries->GetAllocator());
+    }
+    _isRobot = other._isRobot;
+    if( !other._isPartial ) {
+        _isPartial = false;
+    }
+}
+
 void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale)
 {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
