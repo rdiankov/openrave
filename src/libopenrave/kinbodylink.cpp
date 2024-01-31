@@ -358,12 +358,16 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
-void KinBody::LinkInfo::UpdateFromOtherInfo(const LinkInfo& other)
+void KinBody::LinkInfo::UpdateByOtherInfo(const LinkInfo& other)
 {
-    _id = other._id;
-    _name = other._name;
+    if( !other._id.empty() ) {
+        _id = other._id;
+    }
+    if( !other._name.empty() ) {
+        _name = other._name;
+    }
 
-    _t = other._t;
+    _t = other._t;              // always overwrite
     _modifiedFields |= KinBody::LinkInfo::LIF_Transform;
     _tMassFrame = other._tMassFrame;
     _mass = other._mass;

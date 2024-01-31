@@ -533,9 +533,11 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
 }
 
 template<typename T>
-void UpdateOrCreateInfoWithNameCheck(const boost::shared_ptr<T>& pOther, std::vector<boost::shared_ptr<T> >& vInfos)
+void UpdateOrCreateInfoWithNameCheck(const boost::shared_ptr<T>& pInput, std::vector<boost::shared_ptr<T> >& vInfos)
 {
-    const std::string& id = pOther->_id;
+    const std::string& id = pInput->_id;
+    const std::string& name = pInput->_name;
+
     typename std::vector<boost::shared_ptr<T> >::iterator itExistingInfo = vInfos.end();
     if( !id.empty() ) {
         // only try to find old info if id is not empty
@@ -546,36 +548,23 @@ void UpdateOrCreateInfoWithNameCheck(const boost::shared_ptr<T>& pOther, std::ve
             }
         }
     }
-    else {
+    else if ( !name.empty() ) {
         // sometimes names can be empty, in which case, always create a new object
-        const std::string& name = pOther->_name;
-        if( !name.empty() ) {
-            // only try to find old info if id is not empty
-            FOREACH(itInfo, vInfos) {
-                if ((*itInfo)->GetName() == name) {
-                    itExistingInfo = itInfo;
-                    break;
-                }
+        // only try to find old info if name is not empty
+        FOREACH(itInfo, vInfos) {
+            if( (*itInfo)->_name == name ) {
+                itExistingInfo = itInfo;
+                break;
             }
         }
     }
 
-    // here we allow items with empty id to be created because
-    // when we load things from json, some id could be missing on file
-    // and for the partial update case, the id should be non-empty
     if( itExistingInfo != vInfos.end() ) {
-        if( id.empty() ) {
-            const std::string originalId = (*itExistingInfo)->_id;
-            (*itExistingInfo)->UpdateFromOtherInfo(*pOther);
-            (*itExistingInfo)->_id = originalId;
-        }
-        else {
-            (*itExistingInfo)->UpdateFromOtherInfo(*pOther);
-        }
-        return;
+        (*itExistingInfo)->UpdateByOtherInfo(*pInput); // update info
     }
-
-    vInfos.push_back(pOther);
+    else {
+        vInfos.push_back(pInput); // create info
+    }
 }
 
 /// \brief Recursively call UpdateFromInfo on children. If children need to be added or removed, require re-init. Returns false if update fails and caller should not continue with other parts of the update.

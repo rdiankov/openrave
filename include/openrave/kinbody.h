@@ -389,8 +389,8 @@ public:
 
         void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
-        /// \brief update GeometryInfo by the same way with this->DeserializeJSON(other.SerializeJSON()).
-        void UpdateFromOtherInfo(const GeometryInfo& other);
+        /// \brief update GeometryInfo by other info
+        void UpdateByOtherInfo(const GeometryInfo& other);
 
         /// \brief compare two geometry infos. If the floating differences are within fEpsilon, then comparison will return true.
         ///
@@ -976,8 +976,8 @@ public:
         void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
         void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
 
-        /// \brief update LinkInfo by the same way with this->DeserializeJSON(other.SerializeJSON()).
-        void UpdateFromOtherInfo(const LinkInfo& other);
+        /// \brief update LinkInfo by other info
+        void UpdateByOtherInfo(const LinkInfo& other);
 
         /// \brief compare two link infos. If the floating differences are within fEpsilon, then comparison will return true.
         ///
@@ -1547,8 +1547,8 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        /// \brief update JoinInfo by the same way with this->DeserializeJSON(other.SerializeJSON()).
-        void UpdateFromOtherInfo(const JointInfo& other);
+        /// \brief update JoinInfo by other info
+        void UpdateByOtherInfo(const JointInfo& other);
 
         inline int GetDOF() const {
             if(_type & KinBody::JointSpecialBit) {
@@ -2224,8 +2224,8 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        /// \brief update GrabbedInfo by the same way with this->DeserializeJSON(other.SerializeJSON()).
-        void UpdateFromOtherInfo(const GrabbedInfo& other);
+        /// \brief update GrabbedInfo by other info
+        void UpdateByOtherInfo(const GrabbedInfo& other);
 
         void serialize(std::ostream& o) const; ///< used only for hash computation
         std::string GetGrabbedInfoHash() const;
@@ -2357,8 +2357,8 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        /// \brief update KinBodyInfo by the same way with this->DeserializeJSON(other.SerializeJSON()).
-        void UpdateFromOtherInfo(const KinBodyInfo& other);
+        /// \brief update KinBodyInfo by other info
+        void UpdateByOtherInfo(const KinBodyInfo& other);
 
         std::string _id; ///< unique id of the body used to identify it when changing it.
         std::string _name; ///< name of the body

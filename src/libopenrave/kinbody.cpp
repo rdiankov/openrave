@@ -410,7 +410,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::KinBodyInfo::UpdateFromOtherInfo(const KinBodyInfo& other)
+void KinBody::KinBodyInfo::UpdateByOtherInfo(const KinBodyInfo& other)
 {
     if( !other._id.empty() ) {
         _id = other._id;
@@ -431,57 +431,51 @@ void KinBody::KinBodyInfo::UpdateFromOtherInfo(const KinBodyInfo& other)
     if( !other._dofValues.empty() ) {
         _dofValues = other._dofValues;
     }
+
     if( !other._vGrabbedInfos.empty() ) {
         _vGrabbedInfos.reserve(other._vGrabbedInfos.size() + _vGrabbedInfos.size());
-        for (const GrabbedInfoPtr& pInputGrabbedInfo : other._vGrabbedInfos) {
-            const std::string& id = pInputGrabbedInfo->_id;
-            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
-            if( !id.empty() ) {
-                // only try to find old info if id is not empty
-                FOREACH(itInfo, _vGrabbedInfos) {
-                    if ((*itInfo)->_id == id) {
-                        itMatchingId = itInfo;
-                        break;
+        for (const GrabbedInfoPtr& pGrabbedInfo : other._vGrabbedInfos) {
+            if( !pGrabbedInfo ) {
+                _vGrabbedInfos.clear(); // nullptr is to delete existing joint infos.
+            }
+            else {
+                const std::string& id = pGrabbedInfo->_id;
+                const std::string& name = pGrabbedInfo->_grabbedname;
+                std::vector<GrabbedInfoPtr>::iterator itExistingInfo = _vGrabbedInfos.end();
+                if( !id.empty() ) {
+                    // only try to find old info if id is not empty
+                    FOREACH(itInfo, _vGrabbedInfos) {
+                        if( (*itInfo)->_id == id ) {
+                            itExistingInfo = itInfo;
+                            break;
+                        }
                     }
                 }
-            }
+                else if ( !name.empty() ) {
+                    // sometimes names can be empty, in which case, always create a new object
+                    // only try to find old info if name is not empty
+                    FOREACH(itInfo, _vGrabbedInfos) {
+                        if( (*itInfo)->_grabbedname == name ) {
+                            itExistingInfo = itInfo;
+                            break;
+                        }
+                    }
+                }
 
-            const std::string& grabbedName = pInputGrabbedInfo->_grabbedname;
-            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
-            // only try to find old info if id is not empty
-            FOREACH(itInfo, _vGrabbedInfos) {
-                if( (*itInfo)->_grabbedname == grabbedName ) {
-                    itMatchingName = itInfo;
-                    break;
+                if( itExistingInfo != _vGrabbedInfos.end() ) {
+                    (*itExistingInfo)->UpdateByOtherInfo(*pGrabbedInfo); // update info
+                }
+                else {
+                    _vGrabbedInfos.push_back(pGrabbedInfo); // create info
                 }
             }
-
-            // here we allow items with empty id to be created because
-            // when we load things from json, some id could be missing on file
-            // and for the partial update case, the id should be non-empty
-            if( itMatchingId != _vGrabbedInfos.end() ) {
-                (*itMatchingId)->UpdateFromOtherInfo(*pInputGrabbedInfo);
-
-                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
-                    // there is another entry with matching name, so remove it
-                    _vGrabbedInfos.erase(itMatchingName);
-                }
-                continue;
-            }
-
-            if( itMatchingName != _vGrabbedInfos.end() ) {
-                (*itMatchingName)->UpdateFromOtherInfo(*pInputGrabbedInfo);
-                continue;
-            }
-
-            _vGrabbedInfos.push_back(pInputGrabbedInfo);
         }
     }
 
     if( !other._vLinkInfos.empty() ) {
         _vLinkInfos.reserve(other._vLinkInfos.size() + _vLinkInfos.size());
         for (const LinkInfoPtr& pLinkInfo : other._vLinkInfos) {
-            if( !pLinkInfo ) {   // nullptr is to delete existing links.
+            if( !pLinkInfo ) {   // nullptr is to delete existing link infos.
                 _vLinkInfos.clear();
             }
             else {
@@ -498,23 +492,21 @@ void KinBody::KinBodyInfo::UpdateFromOtherInfo(const KinBodyInfo& other)
         }
     }
 
-    _vJointInfos.reserve(other._vJointInfos.size() + _vJointInfos.size());
-    for (const JointInfoPtr& pJointInfo : other._vJointInfos) {
-        if( !pJointInfo ) {
-            _vJointInfos.clear();
-        }
-        else {
-            UpdateOrCreateInfoWithNameCheck(pJointInfo, _vJointInfos);
+    if( !other._vJointInfos.empty() ) {
+        _vJointInfos.reserve(other._vJointInfos.size() + _vJointInfos.size());
+        for (const JointInfoPtr& pJointInfo : other._vJointInfos) {
+            if( !pJointInfo ) {
+                _vJointInfos.clear(); // nullptr is to delete existing joint infos.
+            }
+            else {
+                UpdateOrCreateInfoWithNameCheck(pJointInfo, _vJointInfos);
+            }
         }
     }
 
     if( !other._mReadableInterfaces.empty() ) {
         for(std::map<std::string, ReadablePtr>::const_iterator it = other._mReadableInterfaces.begin(); it != other._mReadableInterfaces.end(); ++it) {
-            // skip over __collada__ since it will most likely fail to deserialize
-            if( it->first == "__collada__" ) {
-                continue;
-            }
-            _mReadableInterfaces[it->first] = it->second;
+            _mReadableInterfaces[it->first] = it->second; // accept nullptr so that SetReadableInterface can delete the key
         }
     }
     if( !!other._prAssociatedFileEntries ) {

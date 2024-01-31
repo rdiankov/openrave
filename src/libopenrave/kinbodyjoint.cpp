@@ -640,17 +640,31 @@ void KinBody::JointInfo::DeserializeJSON(const rapidjson::Value& value, dReal fU
     }
 }
 
-void KinBody::JointInfo::UpdateFromOtherInfo(const JointInfo& other)
+void KinBody::JointInfo::UpdateByOtherInfo(const JointInfo& other)
 {
-    _type = other._type;
+    if( other._type != JointNone ) {
+        _type = other._type;
+    }
 
-    _id = other._id;
-    _name = other._name;
+    if( !other._id.empty() ) {
+        _id = other._id;
+    }
+    if( !other._name.empty() ) {
+        _name = other._name;
+    }
+
     _vanchor = other._vanchor;
-    _linkname0 = other._linkname0;
-    _linkname1 = other._linkname1;
+
+    if( !other._linkname0.empty() ) {
+        _linkname0 = other._linkname0;
+    }
+    if( !other._linkname1.empty() ) {
+        _linkname1 = other._linkname1;
+    }
     _vaxes = other._vaxes;
-    _vcurrentvalues = other._vcurrentvalues;
+    if( !other._vcurrentvalues.empty() ) {
+        _vcurrentvalues = other._vcurrentvalues;
+    }
     _vresolution = other._vresolution;
 
     _vmaxvel = other._vmaxvel;

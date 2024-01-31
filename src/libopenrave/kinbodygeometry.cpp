@@ -1544,207 +1544,213 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     orjson::LoadJsonValueByKey(value, "modifiable", _bModifiable);
 }
 
-void KinBody::GeometryInfo::UpdateFromOtherInfo(const GeometryInfo& other)
+void KinBody::GeometryInfo::UpdateByOtherInfo(const GeometryInfo& other)
 {
-    _id = other._id;
-    _name = other._name;
+    if( !other._id.empty() ) {
+        _id = other._id;
+    }
+    if( !other._name.empty() ) {
+        _name = other._name;
+    }
     if( _t.CompareTransform(other._t, g_fEpsilon) ) {
         _modifiedFields |= KinBody::GeometryInfo::GIF_Transform;
     }
-    _t = other._t; // should always set in case of error less than epsilon
+    _t = other._t; // always overwrite
 
-    if( _type != other._type ) {
-        _meshcollision.Clear();
-        _type = other._type;
-    }
+    if( _type != GT_None ) {
+        if( _type != other._type ) {
+            _meshcollision.Clear();
+            _type = other._type;
+        }
 
-    switch(_type) {
-    case GT_Box:
-        if( _vGeomData != other._vGeomData ) {
-            _vGeomData = other._vGeomData;
-            _meshcollision.Clear();
-        }
-        break;
-    case GT_Container:
-        if( _vGeomData != other._vGeomData ) {
-            _vGeomData = other._vGeomData;
-            _meshcollision.Clear();
-        }
-        if( _vGeomData2 != other._vGeomData2 ) {
-            _vGeomData2 = other._vGeomData2;
-            _meshcollision.Clear();
-        }
-        if( other._vGeomData3[0] != 0 || other._vGeomData3[1] != 0 || other._vGeomData3[2] != 0 ) {
-            if( _vGeomData3 != other._vGeomData3 ) {
-                _vGeomData3 = other._vGeomData3;
+        switch(_type) {
+        case GT_Box:
+            if( _vGeomData != other._vGeomData ) {
+                _vGeomData = other._vGeomData;
                 _meshcollision.Clear();
             }
-        }
-        if( other._vGeomData4[0] != 0 || other._vGeomData4[1] != 0 || other._vGeomData4[2] != 0 ) {
-            if( _vGeomData4 != other._vGeomData4 ) {
-                _vGeomData4 = other._vGeomData4;
+            break;
+        case GT_Container:
+            if( _vGeomData != other._vGeomData ) {
+                _vGeomData = other._vGeomData;
                 _meshcollision.Clear();
             }
-        }
-        if( other._vNegativeCropContainerMargins[0] != 0 || other._vNegativeCropContainerMargins[1] != 0 || other._vNegativeCropContainerMargins[2] != 0 ) {
-            if( _vNegativeCropContainerMargins != other._vNegativeCropContainerMargins ) {
-                _vNegativeCropContainerMargins = other._vNegativeCropContainerMargins;
+            if( _vGeomData2 != other._vGeomData2 ) {
+                _vGeomData2 = other._vGeomData2;
+                _meshcollision.Clear();
             }
-        }
-        if( other._vPositiveCropContainerMargins[0] != 0 || other._vPositiveCropContainerMargins[1] != 0 || other._vPositiveCropContainerMargins[2] != 0 ) {
-            if( _vPositiveCropContainerMargins != other._vPositiveCropContainerMargins ) {
-                _vPositiveCropContainerMargins = other._vPositiveCropContainerMargins;
+            if( other._vGeomData3[0] != 0 || other._vGeomData3[1] != 0 || other._vGeomData3[2] != 0 ) {
+                if( _vGeomData3 != other._vGeomData3 ) {
+                    _vGeomData3 = other._vGeomData3;
+                    _meshcollision.Clear();
+                }
             }
-        }
-        if( other._vNegativeCropContainerEmptyMargins[0] != 0 || other._vNegativeCropContainerEmptyMargins[1] != 0 || other._vNegativeCropContainerEmptyMargins[2] != 0 ) {
-            if( _vNegativeCropContainerEmptyMargins != other._vNegativeCropContainerEmptyMargins ) {
-                _vNegativeCropContainerEmptyMargins = other._vNegativeCropContainerEmptyMargins;
+            if( other._vGeomData4[0] != 0 || other._vGeomData4[1] != 0 || other._vGeomData4[2] != 0 ) {
+                if( _vGeomData4 != other._vGeomData4 ) {
+                    _vGeomData4 = other._vGeomData4;
+                    _meshcollision.Clear();
+                }
             }
-        }
-        if( other._vPositiveCropContainerEmptyMargins[0] != 0 || other._vPositiveCropContainerEmptyMargins[1] != 0 || other._vPositiveCropContainerEmptyMargins[2] != 0 ) {
-            if( _vPositiveCropContainerEmptyMargins != other._vPositiveCropContainerEmptyMargins ) {
-                _vPositiveCropContainerEmptyMargins = other._vPositiveCropContainerEmptyMargins;
+            if( other._vNegativeCropContainerMargins[0] != 0 || other._vNegativeCropContainerMargins[1] != 0 || other._vNegativeCropContainerMargins[2] != 0 ) {
+                if( _vNegativeCropContainerMargins != other._vNegativeCropContainerMargins ) {
+                    _vNegativeCropContainerMargins = other._vNegativeCropContainerMargins;
+                }
             }
+            if( other._vPositiveCropContainerMargins[0] != 0 || other._vPositiveCropContainerMargins[1] != 0 || other._vPositiveCropContainerMargins[2] != 0 ) {
+                if( _vPositiveCropContainerMargins != other._vPositiveCropContainerMargins ) {
+                    _vPositiveCropContainerMargins = other._vPositiveCropContainerMargins;
+                }
+            }
+            if( other._vNegativeCropContainerEmptyMargins[0] != 0 || other._vNegativeCropContainerEmptyMargins[1] != 0 || other._vNegativeCropContainerEmptyMargins[2] != 0 ) {
+                if( _vNegativeCropContainerEmptyMargins != other._vNegativeCropContainerEmptyMargins ) {
+                    _vNegativeCropContainerEmptyMargins = other._vNegativeCropContainerEmptyMargins;
+                }
+            }
+            if( other._vPositiveCropContainerEmptyMargins[0] != 0 || other._vPositiveCropContainerEmptyMargins[1] != 0 || other._vPositiveCropContainerEmptyMargins[2] != 0 ) {
+                if( _vPositiveCropContainerEmptyMargins != other._vPositiveCropContainerEmptyMargins ) {
+                    _vPositiveCropContainerEmptyMargins = other._vPositiveCropContainerEmptyMargins;
+                }
+            }
+            break;
+        case GT_Cage: {
+            if( _vGeomData != other._vGeomData ) {
+                _vGeomData = other._vGeomData;
+                _meshcollision.Clear();
+            }
+            {
+                bool isChanged = false;
+                for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
+                    if( other._vGeomData2[iXYZ] > g_fEpsilon ) {
+                        _vGeomData2[iXYZ] = other._vGeomData2[iXYZ];
+                        isChanged = true;
+                    }
+                }
+                if( isChanged ) {
+                    _meshcollision.Clear();
+                }
+            }
+            if( !other._vSideWalls.empty() ) {
+                if( _vSideWalls.size() != other._vSideWalls.size() ) {
+                    _vSideWalls = other._vSideWalls;
+                }
+                else {
+                    bool bSideWallChanged = false;
+                    for (size_t iSideWall = 0; iSideWall < other._vSideWalls.size(); ++iSideWall) {
+                        if( other._vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall]) > 0 ) {
+                            _vSideWalls[iSideWall] = other._vSideWalls[iSideWall];
+                            bSideWallChanged = true;
+                        }
+                    }
+                    if( bSideWallChanged ) {
+                        _meshcollision.Clear();
+                    }
+                }
+            }
+            if( other._vNegativeCropContainerMargins[0] != 0 || other._vNegativeCropContainerMargins[1] != 0 || other._vNegativeCropContainerMargins[2] != 0 ) {
+                if( _vNegativeCropContainerMargins != other._vNegativeCropContainerMargins ) {
+                    _vNegativeCropContainerMargins = other._vNegativeCropContainerMargins;
+                }
+            }
+            if( other._vPositiveCropContainerMargins[0] != 0 || other._vPositiveCropContainerMargins[1] != 0 || other._vPositiveCropContainerMargins[2] != 0 ) {
+                if( _vPositiveCropContainerMargins != other._vPositiveCropContainerMargins ) {
+                    _vPositiveCropContainerMargins = other._vPositiveCropContainerMargins;
+                }
+            }
+            if( other._vNegativeCropContainerEmptyMargins[0] != 0 || other._vNegativeCropContainerEmptyMargins[1] != 0 || other._vNegativeCropContainerEmptyMargins[2] != 0 ) {
+                if( _vNegativeCropContainerEmptyMargins != other._vNegativeCropContainerEmptyMargins ) {
+                    _vNegativeCropContainerEmptyMargins = other._vNegativeCropContainerEmptyMargins;
+                }
+            }
+            if( other._vPositiveCropContainerEmptyMargins[0] != 0 || other._vPositiveCropContainerEmptyMargins[1] != 0 || other._vPositiveCropContainerEmptyMargins[2] != 0 ) {
+                if( _vPositiveCropContainerEmptyMargins != other._vPositiveCropContainerEmptyMargins ) {
+                    _vPositiveCropContainerEmptyMargins = other._vPositiveCropContainerEmptyMargins;
+                }
+            }
+            break;
         }
-        break;
-    case GT_Cage: {
-        if( _vGeomData != other._vGeomData ) {
-            _vGeomData = other._vGeomData;
-            _meshcollision.Clear();
+        case GT_Sphere:
+            if( _vGeomData.x != other._vGeomData.x ) {
+                _vGeomData.x = other._vGeomData.x;
+                _meshcollision.Clear();
+            }
+            break;
+        case GT_Cylinder: {
+            bool isChanged = false;
+            for (size_t iXY = 0; iXY < 2; ++iXY) {
+                if( _vGeomData[iXY] != other._vGeomData[iXY] ) {
+                    _vGeomData[iXY] = other._vGeomData[iXY];
+                    isChanged = true;
+                }
+            }
+            if( isChanged ) {
+                _vGeomData = other._vGeomData;
+                _meshcollision.Clear();
+            }
+            break;
         }
-        {
+        case GT_ConicalFrustum: {
             bool isChanged = false;
             for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
-                if( other._vGeomData2[iXYZ] > g_fEpsilon ) {
-                    _vGeomData2[iXYZ] = other._vGeomData2[iXYZ];
+                if( _vGeomData[iXYZ] != other._vGeomData[iXYZ] ) {
+                    _vGeomData[iXYZ] = other._vGeomData[iXYZ];
                     isChanged = true;
                 }
             }
             if( isChanged ) {
                 _meshcollision.Clear();
             }
+            break;
         }
-        if( !other._vSideWalls.empty() ) {
-            if( _vSideWalls.size() != other._vSideWalls.size() ) {
-                _vSideWalls = other._vSideWalls;
-            }
-            else {
-                bool bSideWallChanged = false;
-                for (size_t iSideWall = 0; iSideWall < other._vSideWalls.size(); ++iSideWall) {
-                    if( other._vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall]) > 0 ) {
-                        _vSideWalls[iSideWall] = other._vSideWalls[iSideWall];
-                        bSideWallChanged = true;
-                    }
-                }
-                if( bSideWallChanged ) {
-                    _meshcollision.Clear();
-                }
-            }
-        }
-        if( other._vNegativeCropContainerMargins[0] != 0 || other._vNegativeCropContainerMargins[1] != 0 || other._vNegativeCropContainerMargins[2] != 0 ) {
-            if( _vNegativeCropContainerMargins != other._vNegativeCropContainerMargins ) {
-                _vNegativeCropContainerMargins = other._vNegativeCropContainerMargins;
-            }
-        }
-        if( other._vPositiveCropContainerMargins[0] != 0 || other._vPositiveCropContainerMargins[1] != 0 || other._vPositiveCropContainerMargins[2] != 0 ) {
-            if( _vPositiveCropContainerMargins != other._vPositiveCropContainerMargins ) {
-                _vPositiveCropContainerMargins = other._vPositiveCropContainerMargins;
-            }
-        }
-        if( other._vNegativeCropContainerEmptyMargins[0] != 0 || other._vNegativeCropContainerEmptyMargins[1] != 0 || other._vNegativeCropContainerEmptyMargins[2] != 0 ) {
-            if( _vNegativeCropContainerEmptyMargins != other._vNegativeCropContainerEmptyMargins ) {
-                _vNegativeCropContainerEmptyMargins = other._vNegativeCropContainerEmptyMargins;
-            }
-        }
-        if( other._vPositiveCropContainerEmptyMargins[0] != 0 || other._vPositiveCropContainerEmptyMargins[1] != 0 || other._vPositiveCropContainerEmptyMargins[2] != 0 ) {
-            if( _vPositiveCropContainerEmptyMargins != other._vPositiveCropContainerEmptyMargins ) {
-                _vPositiveCropContainerEmptyMargins = other._vPositiveCropContainerEmptyMargins;
-            }
-        }
-        break;
-    }
-    case GT_Sphere:
-        if( _vGeomData.x != other._vGeomData.x ) {
-            _vGeomData.x = other._vGeomData.x;
-            _meshcollision.Clear();
-        }
-        break;
-    case GT_Cylinder: {
-        bool isChanged = false;
-        for (size_t iXY = 0; iXY < 2; ++iXY) {
-            if( _vGeomData[iXY] != other._vGeomData[iXY] ) {
-                _vGeomData[iXY] = other._vGeomData[iXY];
-                isChanged = true;
-            }
-        }
-        if( isChanged ) {
-            _vGeomData = other._vGeomData;
-            _meshcollision.Clear();
-        }
-        break;
-    }
-    case GT_ConicalFrustum: {
-        bool isChanged = false;
-        for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
-            if( _vGeomData[iXYZ] != other._vGeomData[iXYZ] ) {
-                _vGeomData[iXYZ] = other._vGeomData[iXYZ];
-                isChanged = true;
-            }
-        }
-        if( isChanged ) {
-            _meshcollision.Clear();
-        }
-        break;
-    }
-    case GT_Axial:
-        if( _vAxialSlices != other._vAxialSlices ) {
-            _vAxialSlices = other._vAxialSlices;
-            _meshcollision.Clear();
-        }
-        break;
-    case GT_TriMesh:
-        _meshcollision = other._meshcollision;
-        _modifiedFields |= KinBody::GeometryInfo::GIF_Mesh; // hard to check if mesh changed, need to do manual rapidjson operations for that
-        break;
-    case GT_CalibrationBoard: {
-        if( other._vGeomData[0] != 0 || other._vGeomData[1] != 0 || other._vGeomData[2] != 0 ) {
-            if( _vGeomData != other._vGeomData ) {
-                _vGeomData = other._vGeomData;
+        case GT_Axial:
+            if( _vAxialSlices != other._vAxialSlices ) {
+                _vAxialSlices = other._vAxialSlices;
                 _meshcollision.Clear();
             }
-        }
-        const bool isOriginalEmpty = _calibrationBoardParameters.empty();
-        const bool isInputEmpty = other._calibrationBoardParameters.empty();
-        if( isOriginalEmpty ) {
-            _calibrationBoardParameters.push_back(CalibrationBoardParameters());
-            if( !isInputEmpty ) {
-                if( _calibrationBoardParameters[0] != other._calibrationBoardParameters[0] ) {
-                    _calibrationBoardParameters[0] = other._calibrationBoardParameters[0];
+            break;
+        case GT_TriMesh:
+            _meshcollision = other._meshcollision;
+            _modifiedFields |= KinBody::GeometryInfo::GIF_Mesh; // hard to check if mesh changed, need to do manual rapidjson operations for that
+            break;
+        case GT_CalibrationBoard: {
+            if( other._vGeomData[0] != 0 || other._vGeomData[1] != 0 || other._vGeomData[2] != 0 ) {
+                if( _vGeomData != other._vGeomData ) {
+                    _vGeomData = other._vGeomData;
                     _meshcollision.Clear();
                 }
             }
-        }
-        else {
-            if( isInputEmpty ) {
-                CalibrationBoardParameters defaultParameters;
-                if( _calibrationBoardParameters[0] != defaultParameters ) {
-                    _calibrationBoardParameters.clear();
-                    _calibrationBoardParameters.push_back(defaultParameters);
-                    _meshcollision.Clear();
+            const bool isOriginalEmpty = _calibrationBoardParameters.empty();
+            const bool isInputEmpty = other._calibrationBoardParameters.empty();
+            if( isOriginalEmpty ) {
+                _calibrationBoardParameters.push_back(CalibrationBoardParameters());
+                if( !isInputEmpty ) {
+                    if( _calibrationBoardParameters[0] != other._calibrationBoardParameters[0] ) {
+                        _calibrationBoardParameters[0] = other._calibrationBoardParameters[0];
+                        _meshcollision.Clear();
+                    }
                 }
             }
             else {
-                if( _calibrationBoardParameters[0] != other._calibrationBoardParameters[0] ) {
-                    _calibrationBoardParameters.clear();
-                    _calibrationBoardParameters[0] = other._calibrationBoardParameters[0];
-                    _meshcollision.Clear();
+                if( isInputEmpty ) {
+                    CalibrationBoardParameters defaultParameters;
+                    if( _calibrationBoardParameters[0] != defaultParameters ) {
+                        _calibrationBoardParameters.clear();
+                        _calibrationBoardParameters.push_back(defaultParameters);
+                        _meshcollision.Clear();
+                    }
+                }
+                else {
+                    if( _calibrationBoardParameters[0] != other._calibrationBoardParameters[0] ) {
+                        _calibrationBoardParameters.clear();
+                        _calibrationBoardParameters[0] = other._calibrationBoardParameters[0];
+                        _meshcollision.Clear();
+                    }
                 }
             }
+            break;
         }
-        break;
-    }
-    default:
-        break;
+        default:
+            break;
+        }
     }
 
     if( other._fTransparency != 0 ) {

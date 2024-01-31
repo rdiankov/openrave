@@ -740,14 +740,18 @@ void KinBody::GrabbedInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     }
 }
 
-void KinBody::GrabbedInfo::UpdateFromOtherInfo(const GrabbedInfo& other)
+void KinBody::GrabbedInfo::UpdateByOtherInfo(const GrabbedInfo& other)
 {
     if( !other._id.empty() ) {
         _id = other._id;
     }
-    _grabbedname = other._grabbedname;
-    _robotlinkname = other._robotlinkname;
-    _trelative = other._trelative;
+    if( !other._grabbedname.empty() ) {
+        _grabbedname = other._grabbedname;
+    }
+    if( !other._robotlinkname.empty() ) {
+        _robotlinkname = other._robotlinkname;
+    }
+    _trelative = other._trelative; // always overwrite
     if( !other._setIgnoreRobotLinkNames.empty() ) {
         _setIgnoreRobotLinkNames = other._setIgnoreRobotLinkNames;
     }
