@@ -481,7 +481,7 @@ void KinBody::KinBodyInfo::UpdateFromOtherInfo(const KinBodyInfo& other)
     if( !other._vLinkInfos.empty() ) {
         _vLinkInfos.reserve(other._vLinkInfos.size() + _vLinkInfos.size());
         for (const LinkInfoPtr& pLinkInfo : other._vLinkInfos) {
-            if( !pLinkInfo ) {   // nullptr is to delete existing geometries.
+            if( !pLinkInfo ) {   // nullptr is to delete existing links.
                 _vLinkInfos.clear();
             }
             else {
