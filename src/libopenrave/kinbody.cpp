@@ -5593,6 +5593,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _pKinematicsGenerator.reset();
     _pCurrentKinematicsFunctions.reset();
     _name = r->_name;
+    _referenceUri = r->_referenceUri;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;

@@ -1506,6 +1506,9 @@ object PyLink::PyGeometry::GetRenderScale() const {
 object PyLink::PyGeometry::GetRenderFilename() const {
     return ConvertStringToUnicode(_pgeometry->GetRenderFilename());
 }
+std::string PyLink::PyGeometry::GetId() const {
+    return _pgeometry->GetId();
+}
 object PyLink::PyGeometry::GetName() const {
     return ConvertStringToUnicode(_pgeometry->GetName());
 }
@@ -1579,7 +1582,10 @@ KinBody::LinkPtr PyLink::GetLink() {
     return _plink;
 }
 
-object PyLink::GetName() {
+std::string PyLink::GetId() const {
+    return _plink->GetId();
+}
+object PyLink::GetName() const {
     return ConvertStringToUnicode(_plink->GetName());
 }
 int PyLink::GetIndex() {
@@ -1952,7 +1958,10 @@ KinBody::JointPtr PyJoint::GetJoint() {
     return _pjoint;
 }
 
-object PyJoint::GetName() {
+std::string PyJoint::GetId() const {
+    return _pjoint->GetId();
+}
+object PyJoint::GetName() const {
     return ConvertStringToUnicode(_pjoint->GetName());
 }
 bool PyJoint::IsMimic(int iaxis) {
@@ -6110,6 +6119,7 @@ void init_openravepy_kinbody()
 #else
             scope_ link = class_<PyLink, OPENRAVE_SHARED_PTR<PyLink>, bases<PyReadablesContainer> >("Link", DOXY_CLASS(KinBody::Link), no_init)
 #endif
+                          .def("GetId",&PyLink::GetId, DOXY_FN(KinBody::Link,GetId))
                           .def("GetName",&PyLink::GetName, DOXY_FN(KinBody::Link,GetName))
                           .def("GetIndex",&PyLink::GetIndex, DOXY_FN(KinBody::Link,GetIndex))
                           .def("Enable",&PyLink::Enable,PY_ARGS("enable") DOXY_FN(KinBody::Link,Enable))
@@ -6252,6 +6262,7 @@ void init_openravepy_kinbody()
                                   .def("GetContainerBottom",&PyLink::PyGeometry::GetContainerBottom, DOXY_FN(KinBody::Link::Geometry,GetContainerBottom))
                                   .def("GetRenderScale",&PyLink::PyGeometry::GetRenderScale, DOXY_FN(KinBody::Link::Geometry,GetRenderScale))
                                   .def("GetRenderFilename",&PyLink::PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
+                                  .def("GetId",&PyLink::PyGeometry::GetId, DOXY_FN(KinBody::Link::Geometry,GetId))
                                   .def("GetName",&PyLink::PyGeometry::GetName, DOXY_FN(KinBody::Link::Geometry,GetName))
                                   .def("GetTransparency",&PyLink::PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                   .def("GetDiffuseColor",&PyLink::PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
@@ -6284,6 +6295,7 @@ void init_openravepy_kinbody()
 #else
             scope_ joint = class_<PyJoint, OPENRAVE_SHARED_PTR<PyJoint>, bases<PyReadablesContainer> >("Joint", DOXY_CLASS(KinBody::Joint),no_init)
 #endif
+                           .def("GetId", &PyJoint::GetId, DOXY_FN(KinBody::Joint,GetId))
                            .def("GetName", &PyJoint::GetName, DOXY_FN(KinBody::Joint,GetName))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                            .def("IsMimic",&PyJoint::IsMimic,
