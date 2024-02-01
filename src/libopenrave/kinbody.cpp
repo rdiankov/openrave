@@ -190,7 +190,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rGrabbedInfoValues.Reserve(_vGrabbedInfos.size(), allocator);
         FOREACHC(it, _vGrabbedInfos) {
             rapidjson::Value grabbedInfoValue;
-            (*it)->SerializeJSON(grabbedInfoValue, allocator, fUnitScale, options);
+            if( !!(*it) ) {
+                (*it)->SerializeJSON(grabbedInfoValue, allocator, fUnitScale, options);
+            }
             rGrabbedInfoValues.PushBack(grabbedInfoValue, allocator);
         }
         rKinBodyInfo.AddMember("grabbed", rGrabbedInfoValues, allocator);
@@ -202,7 +204,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rLinkInfoValues.Reserve(_vLinkInfos.size(), allocator);
         FOREACHC(it, _vLinkInfos) {
             rapidjson::Value linkInfoValue;
-            (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
+            if( !!(*it) ) {
+                (*it)->SerializeJSON(linkInfoValue, allocator, fUnitScale, options);
+            }
             rLinkInfoValues.PushBack(linkInfoValue, allocator);
         }
         rKinBodyInfo.AddMember("links", rLinkInfoValues, allocator);
@@ -214,7 +218,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         rJointInfoValues.Reserve(_vJointInfos.size(), allocator);
         FOREACHC(it, _vJointInfos) {
             rapidjson::Value jointInfoValue;
-            (*it)->SerializeJSON(jointInfoValue, allocator, fUnitScale, options);
+            if( !!(*it) ) {
+                (*it)->SerializeJSON(jointInfoValue, allocator, fUnitScale, options);
+            }
             rJointInfoValues.PushBack(jointInfoValue, allocator);
         }
         rKinBodyInfo.AddMember("joints", rJointInfoValues, allocator);
@@ -229,7 +235,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
                 continue;
             }
             rapidjson::Value rReadable;
-            it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
+            if( !!it->second ) {
+                it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
+            }
             orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
         }
         rKinBodyInfo.AddMember("readableInterfaces", rReadableInterfaces, allocator);

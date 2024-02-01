@@ -195,7 +195,9 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         geometriesValue.Reserve(_vgeometryinfos.size(), allocator);
         FOREACHC(it, _vgeometryinfos) {
             rapidjson::Value geometryValue;
-            (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
+            if( !!(*it) ) {
+                (*it)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
+            }
             geometriesValue.PushBack(geometryValue, allocator);
         }
         value.AddMember("geometries", geometriesValue, allocator);
