@@ -613,6 +613,29 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
     }
 }
 
+/// Scope guard to ensure that user data for a kinbody is cleared on scope exit
+/// May be reset to 'disarm' the guard if the data should be kept on scope exit after all.
+struct ScopedUserDataRemover
+{
+    ScopedUserDataRemover(FCLSpace& space, const KinBodyPtr& ptr)
+        : _space(space), _ptr(ptr)
+    {
+    }
+    ~ScopedUserDataRemover()
+    {
+        if (!!_ptr) {
+            _space.RemoveUserData(_ptr);
+        }
+    }
+    void reset() {
+        _ptr.reset();
+    }
+
+private:
+    FCLSpace& _space;
+    KinBodyPtr _ptr;
+};
+
 void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
 {
     FCLKinBodyInfoPtr pinfo = _pinfo.lock();
@@ -621,18 +644,17 @@ void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pi
     if (0 < bodyIndex && bodyIndex < (int)_currentpinfo.size()) {
         const FCLKinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
 
-        if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
+        if (!!pinfo && pinfo == pcurrentinfo) { //pinfo->_geometrygroup.size() == 0 ) {
             // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
-            try {
-                ReloadKinBodyLinks(pbody, pinfo);
-            }
-            catch (...) {
-                // If something goes wrong processing this body, remove it from the FCL space.
-                RemoveUserData(pbody);
-                throw;
-            }
+
+            // In order to ensure that the body is removed from the FCL space if something goes wrong during the reload process,
+            // create a scoped remover that will clear our user data for this body on scope exit. If the reload succeeds, we
+            // reset the scoped remover to prevent it clearing the data.
+            ScopedUserDataRemover userDataGuard{*this, pbody};
+            ReloadKinBodyLinks(pbody, pinfo);
+            userDataGuard.reset();
         }
         //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
     }
@@ -648,15 +670,15 @@ void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pin
     if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
         //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
         pinfo->nGeometryUpdateStamp++;
-        try {
-            ReloadKinBodyLinks(pbody, pinfo);
-        }
-        catch (...) {
-            // If something goes wrong processing this body, remove it from the FCL space.
-            RemoveUserData(pbody);
-            throw;
-        }
+
+        // In order to ensure that the body is removed from the FCL space if something goes wrong during the reload process,
+        // create a scoped remover that will clear our user data for this body on scope exit. If the reload succeeds, we
+        // reset the scoped remover to prevent it clearing the data.
+        ScopedUserDataRemover userDataGuard{*this, pbody};
+        ReloadKinBodyLinks(pbody, pinfo);
+        userDataGuard.reset();
     }
+
 //   FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
 //   _cachedpinfo.erase(pbody->GetEnvironmentBodyIndex());
 //   if( !!pinfoCurrentGeometry ) {
