@@ -6,12 +6,7 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.136.0
-===============
-
-* Set correct geometry group name for fclspace
-
-Version 0.135.2
+Version 0.136.1
 ===============
 
 * Initialization of internal costs in KinBodies now only considers links that are part of a joint
@@ -20,6 +15,15 @@ Version 0.135.2
 * Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
 * FCLRave geometry callbacks now only update when the link has actually changed
 * Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with exceptions
+
+Version 0.136.0
+===============
+
+* Set correct geometry group name for fclspace
+
+Version 0.135.2
+===============
+
 * Fix the issue that grabbed bodies are not checked for collision when their grabbing links are not collision-enabled.
 
 Version 0.135.1
