@@ -711,6 +711,10 @@ object PyRobotBase::PyManipulator::GetVelocity() const {
 #endif
 }
 
+std::string PyRobotBase::PyManipulator::GetId() const {
+    return _pmanip->GetId();
+}
+
 object PyRobotBase::PyManipulator::GetName() const {
     return ConvertStringToUnicode(_pmanip->GetName());
 }
@@ -1321,6 +1325,9 @@ object PyRobotBase::PyAttachedSensor::GetTransformPose() const {
 PyRobotBasePtr PyRobotBase::PyAttachedSensor::GetRobot() const {
     return !_pattached->GetRobot() ? PyRobotBasePtr() : PyRobotBasePtr(new PyRobotBase(_pattached->GetRobot(), _pyenv));
 }
+std::string PyRobotBase::PyAttachedSensor::GetId() const {
+    return _pattached->GetId();
+}
 object PyRobotBase::PyAttachedSensor::GetName() const {
     return ConvertStringToUnicode(_pattached->GetName());
 }
@@ -1385,7 +1392,11 @@ RobotBase::ConnectedBodyPtr PyRobotBase::PyConnectedBody::GetConnectedBody() con
     return _pconnected;
 }
 
-object PyRobotBase::PyConnectedBody::GetName() {
+std::string PyRobotBase::PyConnectedBody::GetId() const {
+    return _pconnected->GetId();
+}
+
+object PyRobotBase::PyConnectedBody::GetName() const {
     return ConvertStringToUnicode(_pconnected->GetName());
 }
 
@@ -2774,6 +2785,7 @@ void init_openravepy_robot()
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransformPose", &PyRobotBase::PyManipulator::GetTransformPose, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetVelocity", &PyRobotBase::PyManipulator::GetVelocity, DOXY_FN(RobotBase::Manipulator,GetVelocity))
+        .def("GetId",&PyRobotBase::PyManipulator::GetId, DOXY_FN(RobotBase::Manipulator,GetId))
         .def("GetName",&PyRobotBase::PyManipulator::GetName, DOXY_FN(RobotBase::Manipulator,GetName))
         .def("SetName",&PyRobotBase::PyManipulator::SetName, PY_ARGS("name") DOXY_FN(RobotBase::Manipulator,SetName))
         .def("GetGripperName",&PyRobotBase::PyManipulator::GetGripperName, DOXY_FN(RobotBase::Manipulator,GetGripperName))
@@ -2938,6 +2950,7 @@ void init_openravepy_robot()
         .def("GetTransform",&PyRobotBase::PyAttachedSensor::GetTransform, DOXY_FN(RobotBase::AttachedSensor,GetTransform))
         .def("GetTransformPose",&PyRobotBase::PyAttachedSensor::GetTransformPose, DOXY_FN(RobotBase::AttachedSensor,GetTransform))
         .def("GetRobot",&PyRobotBase::PyAttachedSensor::GetRobot, DOXY_FN(RobotBase::AttachedSensor,GetRobot))
+        .def("GetId",&PyRobotBase::PyAttachedSensor::GetId, DOXY_FN(RobotBase::AttachedSensor,GetId))
         .def("GetName",&PyRobotBase::PyAttachedSensor::GetName, DOXY_FN(RobotBase::AttachedSensor,GetName))
         .def("GetData",&PyRobotBase::PyAttachedSensor::GetData, DOXY_FN(RobotBase::AttachedSensor,GetData))
         .def("SetRelativeTransform",&PyRobotBase::PyAttachedSensor::SetRelativeTransform, PY_ARGS("transform") DOXY_FN(RobotBase::AttachedSensor,SetRelativeTransform))
@@ -2972,6 +2985,7 @@ void init_openravepy_robot()
 #else
         class_<PyRobotBase::PyConnectedBody, OPENRAVE_SHARED_PTR<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
 #endif
+        .def("GetId",&PyRobotBase::PyConnectedBody::GetId, DOXY_FN(RobotBase::ConnectedBody,GetId))
         .def("GetName",&PyRobotBase::PyConnectedBody::GetName, DOXY_FN(RobotBase::ConnectedBody,GetName))
         .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))
         .def("SetActive", &PyRobotBase::PyConnectedBody::SetActive, DOXY_FN(RobotBase::ConnectedBody,SetActive))
