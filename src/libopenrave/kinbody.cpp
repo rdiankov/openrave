@@ -4324,15 +4324,15 @@ void KinBody::_ComputeInternalInformation()
 
         // All of our arrays are essentially 2d look up tables, so create a wrapper to generate an array index from a 2d point
         const size_t linksSize = _veclinks.size();
-        auto MakeIndex = [&](size_t x, size_t y) -> size_t { return x * linksSize + y; };
+#define MAKE_INDEX(X, Y) ((X) * linksSize + (Y))
 
-        // Create an NxN array of costs, where vcosts[MakeIndex(i, j)] is the cost of joint i -> joint j
+        // Create an NxN array of costs, where vcosts[MAKE_INDEX(i, j)] is the cost of joint i -> joint j
         // Initialize the costs to 2^30-1 rather than uint32_t max as a default 'infinite' value because we will later be adding costs together and need to make sure that value doesn't overflow
         vector<uint32_t> vcosts(_veclinks.size() * _veclinks.size(), 0x3fffffff);
 
         // Set the diagonal values (all paths from a link to itself) to zero
         for (size_t i = 0; i < _veclinks.size(); ++i) {
-            vcosts[MakeIndex(i, i)] = 0;
+            vcosts[MAKE_INDEX(i, i)] = 0;
         }
 
         // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
@@ -4356,14 +4356,14 @@ void KinBody::_ComputeInternalInformation()
 
             // First link
             {
-                int index = MakeIndex(firstLinkIndex, secondLinkIndex);
+                int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
                 _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointIndex);
                 vcosts[index] = 1;
             }
 
             // Second link
             {
-                int index = MakeIndex(secondLinkIndex, firstLinkIndex);
+                int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
                 _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointIndex);
                 vcosts[index] = 1;
             }
@@ -4387,14 +4387,14 @@ void KinBody::_ComputeInternalInformation()
 
             // First link
             {
-                int index = MakeIndex(firstLinkIndex, secondLinkIndex);
+                int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
                 _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointindex);
                 vcosts[index] = 1;
             }
 
             // Second link
             {
-                int index = MakeIndex(secondLinkIndex, firstLinkIndex);
+                int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
                 _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointindex);
                 vcosts[index] = 1;
             }
@@ -4418,19 +4418,20 @@ void KinBody::_ComputeInternalInformation()
                     }
 
                     // Calculate the total cost of going from j -> i via k (aka the cost of j -> k + cost k -> i)
-                    uint32_t kcost = vcosts[MakeIndex(j, k)] + vcosts[MakeIndex(k, i)];
+                    uint32_t kcost = vcosts[MAKE_INDEX(j, k)] + vcosts[MAKE_INDEX(k, i)];
 
                     // If that's cheaper than the current cost of going from j -> i, pick it as the new shortest path
-                    if (vcosts[MakeIndex(j, i)] > kcost) {
+                    if (vcosts[MAKE_INDEX(j, i)] > kcost) {
                         // Floor the cost for this movement
-                        vcosts[MakeIndex(j, i)] = kcost;
+                        vcosts[MAKE_INDEX(j, i)] = kcost;
 
                         // Update the path with the new route
-                        _vAllPairsShortestPaths[MakeIndex(j, i)] = _vAllPairsShortestPaths[MakeIndex(k, i)];
+                        _vAllPairsShortestPaths[MAKE_INDEX(j, i)] = _vAllPairsShortestPaths[MAKE_INDEX(k, i)];
                     }
                 }
             }
         }
+#undef MAKE_INDEX
     }
 
     // Use the APAC algorithm to initialize the kinematics hierarchy: _vTopologicallySortedJoints, _vJointsAffectingLinks, Link::_vParentLinks.
