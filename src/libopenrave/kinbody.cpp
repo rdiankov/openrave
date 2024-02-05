@@ -641,18 +641,7 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     return true;
 }
 
-static inline KinBody::Link::GeometryPtr CreateGeometry(KinBody::LinkPtr plink, const KinBody::GeometryInfoConstPtr& geometryInfoPtr)
-{
-    return KinBody::Link::GeometryPtr{new KinBody::Link::Geometry(plink, *geometryInfoPtr)};
-}
-
-static inline KinBody::Link::GeometryPtr CreateGeometry(KinBody::LinkPtr plink, const KinBody::GeometryInfo& geometryInfo)
-{
-    return KinBody::Link::GeometryPtr{new KinBody::Link::Geometry(plink, geometryInfo)};
-}
-
-template <typename GeometryIterableT>
-bool KinBody::_InitFromGeometriesInternal(const GeometryIterableT& geometries, const std::string& uri)
+bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex() == 0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP_FORMAT(geometries.size(), >, 0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
@@ -666,7 +655,7 @@ bool KinBody::_InitFromGeometriesInternal(const GeometryIterableT& geometries, c
     // Initialize each of our geometries and track the total vertex/index count
     unsigned totalVertices = 0, totalIndices = 0;
     FOREACHC(geomIt, geometries) {
-        Link::GeometryPtr geom = CreateGeometry(plink, *geomIt);
+        Link::GeometryPtr geom {new KinBody::Link::Geometry(plink, *geomIt)};
         geom->_info.InitCollisionMesh();
         const TriMesh& mesh = geom->GetCollisionMesh();
         totalVertices += mesh.vertices.size();
@@ -677,7 +666,7 @@ bool KinBody::_InitFromGeometriesInternal(const GeometryIterableT& geometries, c
     // Once we have all of the geometries initialized and know their total size, reserve space in our unified collision mesh and append them all at once to reduce reallocs
     plink->_collision.vertices.reserve(totalVertices);
     plink->_collision.indices.reserve(totalIndices);
-    for (const KinBody::GeometryConstPtr& geom : plink->_vGeometries) {
+    for (const KinBody::GeometryPtr& geom : plink->_vGeometries) {
         plink->_collision.Append(geom->GetCollisionMesh(), geom->GetTransform());
     }
 
@@ -687,21 +676,6 @@ bool KinBody::_InitFromGeometriesInternal(const GeometryIterableT& geometries, c
     _referenceUri.clear(); // because completely removing the previous body, should reset
     _prAssociatedFileEntries.reset();
     return true;
-}
-
-bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
-{
-    return _InitFromGeometriesInternal(geometries, uri);
-}
-
-bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri)
-{
-    return _InitFromGeometriesInternal(geometries, uri);
-}
-
-bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri)
-{
-    return _InitFromGeometriesInternal(geometries, uri);
 }
 
 void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker)
