@@ -2538,7 +2538,6 @@ private:
     /// \param uri the new URI to set for the interface
     virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
 
-public:
     /// \brief initializes an complex kinematics body with links and joints
     ///
     /// \param linkinfos information for all the links. Links will be created in this order
