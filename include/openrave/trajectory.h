@@ -24,6 +24,8 @@
 
 namespace OpenRAVE {
 
+template <typename T> class RangeGenerator;
+
 /** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> \arch_trajectory
     \ingroup interfaces
  */
@@ -241,6 +243,21 @@ protected:
     inline TrajectoryBaseConstPtr shared_trajectory_const() const {
         return boost::static_pointer_cast<TrajectoryBase const>(shared_from_this());
     }
+
+    /// \brief sample points in time range
+    ///
+    /// \param data[out] the sampled points for every time entry.
+    /// \param timeRange[in] time range to sample points at
+    template <typename T>
+    void _SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange) const;
+
+    /// \brief sample points in time range
+    ///
+    /// \param data[out] the sampled points for every time entry.
+    /// \param timeRange[in] time range to sample points at
+    /// \param spec[in] the specification to return the data in
+    template <typename T>
+    void _SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange, const ConfigurationSpecification& spec) const;
 
 private:
     virtual const char* GetHash() const {
