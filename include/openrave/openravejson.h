@@ -28,6 +28,7 @@
 #include <boost/smart_ptr/make_shared.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 #include <stdint.h>
 #include <string>
 #include <stdexcept>
@@ -308,6 +309,29 @@ inline void LoadJsonValue(const rapidjson::Value& v, int64_t& t) {
         t = v.GetBool() ? 1 : 0;
     } else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Int64", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
+#ifdef __SIZEOF_INT128__
+inline void LoadJsonValue(const rapidjson::Value& v, __uint128_t& t) {
+    // TODO support number somehow
+    if (v.IsString()) {
+        t = boost::lexical_cast<__uint128_t>(v.GetString());
+    } else if (v.IsBool()) {
+        t = v.GetBool() ? 1 : 0;
+    } else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert json JSON %s to UInt128", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+#endif
+
+inline void LoadJsonValue(const rapidjson::Value& v, boost::multiprecision::uint128_t& t) {
+    if (v.IsString()) {
+        t = boost::lexical_cast<boost::multiprecision::uint128_t>(v.GetString());
+    } else if (v.IsBool()) {
+        t = v.GetBool() ? 1 : 0;
+    } else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert json JSON %s to UInt128", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
 }
 
@@ -650,6 +674,24 @@ inline void SaveJsonValue(rapidjson::Value& v, uint64_t t, rapidjson::Document::
 
 inline void SaveJsonValue(rapidjson::Value& v, bool t, rapidjson::Document::AllocatorType& alloc) {
     v.SetBool(t);
+}
+
+#ifdef __SIZEOF_INT128__
+inline void SaveJsonValue(rapidjson::Value& v, __uint128_t t, rapidjson::Document::AllocatorType& alloc) {
+    char buffer[39];            // the maximum number of digits of 128bit unsigned integer is 39
+    char *d = std::end(buffer);
+    do {
+        --d;
+        *d = "0123456789"[t % 10];
+        t /= 10;
+    } while (t != 0);
+
+    v.SetString(d, std::end(buffer) - d, alloc);
+}
+#endif
+
+inline void SaveJsonValue(rapidjson::Value& v, boost::multiprecision::uint128_t t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetString(t.str().c_str(), alloc);
 }
 
 inline void SaveJsonValue(rapidjson::Value& v, double t, rapidjson::Document::AllocatorType& alloc) {
