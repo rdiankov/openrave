@@ -1557,7 +1557,7 @@ void KinBody::GeometryInfo::UpdateByOtherInfo(const GeometryInfo& other)
     }
     _t = other._t; // always overwrite
 
-    if( _type != GT_None ) {
+    if( other._type != GT_None ) {
         if( _type != other._type ) {
             _meshcollision.Clear();
             _type = other._type;
