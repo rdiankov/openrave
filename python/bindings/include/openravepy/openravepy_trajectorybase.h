@@ -23,6 +23,8 @@
 namespace openravepy {
 using py::object;
 
+/// \brief wrapper around TrajectoryBase.
+/// This class is not multi-thread safe in general, however concurrent read operations (Sample and GetWaypoints methods) are supported.
 class OPENRAVEPY_API PyTrajectoryBase : public PyInterfaceBase
 {
 protected:
@@ -114,7 +116,7 @@ public:
     object GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
 
 private:
-    mutable std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation
+    static thread_local std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation. TLS to suppport concurrent data read ( getting waypoint, sampling and so on ) from multiple threads.
 };
 
 } // namespace openravepy
