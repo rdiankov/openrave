@@ -123,6 +123,8 @@ inline int ExtractContiguousArrayToPointer(py::object oContiguousArray,
     return pointsnum;
 }
 
+extern thread_local std::vector<dReal> PyTrajectoryBase::_vdataCache, PyTrajectoryBase::_vtimesCache;
+
 PyTrajectoryBase::PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {
 }
 PyTrajectoryBase::~PyTrajectoryBase() {
