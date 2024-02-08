@@ -6,10 +6,20 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.136.1
+Version 0.138.1
 ===============
 
 * Fix the issue that some robot configurations might not be checked in `Check` function.
+
+Version 0.138.0
+===============
+
+* Added new apis efficient sampling of trajectory range
+
+Version 0.137.0
+===============
+
+* Add `GetId` to python bindings
 
 Version 0.136.0
 ===============
