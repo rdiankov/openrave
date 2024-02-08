@@ -631,7 +631,7 @@ object PySensorBase::GetTransformPose() {
     return toPyArray(_psensor->GetTransform());
 }
 
-object PySensorBase::GetName() {
+object PySensorBase::GetName() const {
     return ConvertStringToUnicode(_psensor->GetName());
 }
 

@@ -23,6 +23,8 @@
 namespace openravepy {
 using py::object;
 
+/// \brief wrapper around TrajectoryBase.
+/// This class is not multi-thread safe in general, however concurrent read operations (Sample and GetWaypoints methods) are supported.
 class OPENRAVEPY_API PyTrajectoryBase : public PyInterfaceBase
 {
 protected:
@@ -55,6 +57,10 @@ public:
     object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint) const;
 
     object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
+
+    object SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const;
+
+    object SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
 
     object GetConfigurationSpecification() const;
 
@@ -103,13 +109,14 @@ public:
     object SampleFromPrevious(object odata, dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetWaypoints(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
 
 private:
-    mutable std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation
+    static thread_local std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation. TLS to suppport concurrent data read ( getting waypoint, sampling and so on ) from multiple threads.
 };
 
 } // namespace openravepy
