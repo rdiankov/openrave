@@ -310,6 +310,7 @@ public:
         object GetContainerBottom() const;
         object GetRenderScale() const;
         object GetRenderFilename() const;
+        std::string GetId() const;
         object GetName() const;
         float GetTransparency() const;
         object GetDiffuseColor() const;
@@ -336,7 +337,8 @@ public:
 
     KinBody::LinkPtr GetLink();
 
-    object GetName();
+    std::string GetId() const;
+    object GetName() const;
     int GetIndex();
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -442,7 +444,8 @@ public:
 
     KinBody::JointPtr GetJoint();
 
-    object GetName();
+    std::string GetId() const;
+    object GetName() const;
     bool IsMimic(int iaxis=-1);
     string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="");
     object GetMimicDOFIndices(int iaxis=0);

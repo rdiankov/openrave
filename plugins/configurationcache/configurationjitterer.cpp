@@ -729,7 +729,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                                 }
                             }
                             ss << "]";
-                            RAVELOG_VERBOSE_FORMAT("env=%s, link '%s' exceeded linkdisthresh=%e. ellipdist[%e] > rhs[%e], %s", GetEnv()->GetNameId()%_linkdistthresh%_vLinks[ilink]->GetName()%ellipdist%rhs%ss.str());
+                            RAVELOG_VERBOSE_FORMAT("env=%s, link '%s' exceeded linkdisthresh=%e. ellipdist[%e] > rhs[%e], %s", GetEnv()->GetNameId()%_vLinks[ilink]->GetName()%_linkdistthresh%ellipdist%rhs%ss.str());
                         }
                         break;
                     }
