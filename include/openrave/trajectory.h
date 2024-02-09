@@ -24,6 +24,8 @@
 
 namespace OpenRAVE {
 
+template <typename T> class RangeGenerator;
+
 /** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> \arch_trajectory
     \ingroup interfaces
  */
@@ -133,6 +135,28 @@ public:
      */
     virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
 
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param startTime[in] start time to sample from
+        \param stopTime[in] stop time to sample to
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+     */
+    virtual void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param startTime[in] start time to sample from
+        \param stopTime[in] stop time to sample to
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
     virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
 
     /// \brief return the number of waypoints
@@ -219,6 +243,21 @@ protected:
     inline TrajectoryBaseConstPtr shared_trajectory_const() const {
         return boost::static_pointer_cast<TrajectoryBase const>(shared_from_this());
     }
+
+    /// \brief sample points in time range
+    ///
+    /// \param data[out] the sampled points for every time entry.
+    /// \param timeRange[in] time range to sample points at
+    template <typename T>
+    void _SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange) const;
+
+    /// \brief sample points in time range
+    ///
+    /// \param data[out] the sampled points for every time entry.
+    /// \param timeRange[in] time range to sample points at
+    /// \param spec[in] the specification to return the data in
+    template <typename T>
+    void _SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange, const ConfigurationSpecification& spec) const;
 
 private:
     virtual const char* GetHash() const {

@@ -6,7 +6,7 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.137.1
+Version 0.138.1
 ===============
 
 * Initialization of internal costs in KinBodies now only considers links that are part of a joint
@@ -16,6 +16,10 @@ Version 0.137.1
 * FCLRave geometry callbacks now only update when the link has actually changed
 * Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with scoped cleanup classes
 
+Version 0.138.0
+===============
+
+* Added new apis efficient sampling of trajectory range
 Version 0.137.0
 ===============
 
