@@ -650,8 +650,13 @@ bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr
     plink->_info._name = "base";
     plink->_vGeometries.reserve(geometries.size());
     plink->_info._bStatic = true;
-    FOREACHC(itinfo,geometries) {
-        Link::GeometryPtr geom(new Link::Geometry(plink,**itinfo));
+    for (size_t index = 0; index < geometries.size(); ++index) {
+        const KinBody::GeometryInfo& geomInfo = *geometries[index];
+        if (geomInfo.GetName().empty()) {
+            RAVELOG_WARN_FORMAT("env=%s, geometry of index %d of link \"%s:%s\" has empty name", GetEnv()->GetNameId()%index%GetName()%plink->GetName());
+        }
+            
+        Link::GeometryPtr geom(new Link::Geometry(plink, geomInfo));
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
         plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
