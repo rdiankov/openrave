@@ -123,6 +123,8 @@ inline int ExtractContiguousArrayToPointer(py::object oContiguousArray,
     return pointsnum;
 }
 
+extern thread_local std::vector<dReal> PyTrajectoryBase::_vdataCache, PyTrajectoryBase::_vtimesCache;
+
 PyTrajectoryBase::PyTrajectoryBase(TrajectoryBasePtr pTrajectory, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pTrajectory, pyenv),_ptrajectory(pTrajectory) {
 }
 PyTrajectoryBase::~PyTrajectoryBase() {
@@ -300,13 +302,8 @@ object PyTrajectoryBase::SamplePoints2D(object otimes, PyConfigurationSpecificat
 }
 
 
-object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
-                                                     bool ensureLastPoint) const
+object _ConvertToObject(const std::vector<dReal>& values, int numdof)
 {
-    std::vector<dReal>& values = _vdataCache;
-    _ptrajectory->SamplePointsSameDeltaTime(values, deltatime, ensureLastPoint);
-
-    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pypos = toPyArray(values);
     pypos.resize({(int) values.size()/numdof, numdof});
@@ -319,6 +316,15 @@ object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
     }
     return py::to_array_astype<dReal>(pypos);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
+}
+
+object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
+                                                     bool ensureLastPoint) const
+{
+    std::vector<dReal>& values = _vdataCache;
+    _ptrajectory->SamplePointsSameDeltaTime(values, deltatime, ensureLastPoint);
+    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    return _ConvertToObject(values, numdof);
 }
 
 
@@ -331,18 +337,7 @@ object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
     _ptrajectory->SamplePointsSameDeltaTime(values, deltatime, ensureLastPoint, spec);
 
     const int numdof = spec.GetDOF();
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pypos = toPyArray(values);
-    pypos.resize({(int) values.size()/numdof, numdof});
-    return pypos;
-#else // USE_PYBIND11_PYTHON_BINDINGS
-    npy_intp dims[] = { npy_intp(values.size()/numdof), npy_intp(numdof) };
-    PyObject *pypos = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    if( !values.empty() ) {
-        memcpy(PyArray_DATA(pypos), values.data(), values.size()*sizeof(values[0]));
-    }
-    return py::to_array_astype<dReal>(pypos);
-#endif // USE_PYBIND11_PYTHON_BINDINGS
+    return _ConvertToObject(values, numdof);
 }
 
 object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
@@ -351,6 +346,42 @@ object PyTrajectoryBase::SamplePointsSameDeltaTime2D(dReal deltatime,
 {
     PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
     return this->SamplePointsSameDeltaTime2D(deltatime, ensureLastPoint, pyspec);
+}
+
+object PyTrajectoryBase::SampleRangeSameDeltaTime2D(dReal deltatime,
+                                                    dReal startTime,
+                                                    dReal stopTime,
+                                                    bool ensureLastPoint) const
+{
+    std::vector<dReal>& values = _vdataCache;
+    _ptrajectory->SampleRangeSameDeltaTime(values, deltatime, startTime, stopTime, ensureLastPoint);
+    const int numdof = _ptrajectory->GetConfigurationSpecification().GetDOF();
+    return _ConvertToObject(values, numdof);
+}
+
+
+object PyTrajectoryBase::SampleRangeSameDeltaTime2D(dReal deltatime,
+                                                    dReal startTime,
+                                                    dReal stopTime,
+                                                    bool ensureLastPoint,
+                                                    PyConfigurationSpecificationPtr pyspec) const
+{
+    std::vector<dReal>& values = _vdataCache;
+    ConfigurationSpecification spec = openravepy::GetConfigurationSpecification(pyspec);
+    _ptrajectory->SampleRangeSameDeltaTime(values, deltatime, startTime, stopTime, ensureLastPoint, spec);
+
+    const int numdof = spec.GetDOF();
+    return _ConvertToObject(values, numdof);
+}
+
+object PyTrajectoryBase::SampleRangeSameDeltaTime2D(dReal deltatime,
+                                                    dReal startTime,
+                                                    dReal stopTime,
+                                                    bool ensureLastPoint,
+                                                    OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
+{
+    PyConfigurationSpecificationPtr pyspec(new PyConfigurationSpecification(*pygroup));
+    return this->SampleRangeSameDeltaTime2D(deltatime, startTime, stopTime, ensureLastPoint, pyspec);
 }
 
 object PyTrajectoryBase::SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const
@@ -654,6 +685,9 @@ void init_openravepy_trajectory()
     object (PyTrajectoryBase::*SamplePointsSameDeltaTime2D1)(dReal, bool) const = &PyTrajectoryBase::SamplePointsSameDeltaTime2D;
     object (PyTrajectoryBase::*SamplePointsSameDeltaTime2D2)(dReal, bool, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::SamplePointsSameDeltaTime2D;
     object (PyTrajectoryBase::*SamplePointsSameDeltaTime2D3)(dReal, bool, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::SamplePointsSameDeltaTime2D;
+    object (PyTrajectoryBase::*SampleRangeSameDeltaTime2D1)(dReal, dReal, dReal, bool) const = &PyTrajectoryBase::SampleRangeSameDeltaTime2D;
+    object (PyTrajectoryBase::*SampleRangeSameDeltaTime2D2)(dReal, dReal, dReal, bool, PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::SampleRangeSameDeltaTime2D;
+    object (PyTrajectoryBase::*SampleRangeSameDeltaTime2D3)(dReal, dReal, dReal, bool, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::SampleRangeSameDeltaTime2D;
     object (PyTrajectoryBase::*GetWaypoints1)(size_t,size_t) const = &PyTrajectoryBase::GetWaypoints;
     object (PyTrajectoryBase::*GetWaypoints2)(size_t,size_t,PyConfigurationSpecificationPtr) const = &PyTrajectoryBase::GetWaypoints;
     object (PyTrajectoryBase::*GetWaypoints3)(size_t, size_t, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group>) const = &PyTrajectoryBase::GetWaypoints;
@@ -696,6 +730,12 @@ void init_openravepy_trajectory()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // why boost::python can resolve this overload?
     .def("SamplePointsSameDeltaTime2D",SamplePointsSameDeltaTime2D3, PY_ARGS("deltatime","ensurelastpoint","group") DOXY_FN(TrajectoryBase,SamplePointsSameDeltaTime2D "dReal; bool; const ConfigurationSpecification::Group"))
+#endif
+    .def("SampleRangeSameDeltaTime2D",SampleRangeSameDeltaTime2D1, PY_ARGS("deltatime","startTime","stopTime","ensurelastpoint") DOXY_FN(TrajectoryBase,SampleRangeSameDeltaTime2D "dReal; dReal; dReal; bool"))
+    .def("SampleRangeSameDeltaTime2D",SampleRangeSameDeltaTime2D2, PY_ARGS("deltatime","startTime","stopTime","ensurelastpoint","spec") DOXY_FN(TrajectoryBase,SampleRangeSameDeltaTime2D "dReal; dReal; dReal; bool; const ConfigurationSpecification"))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    // why boost::python can resolve this overload?
+    .def("SampleRangeSameDeltaTime2D",SampleRangeSameDeltaTime2D3, PY_ARGS("deltatime","startTime","stopTime","ensurelastpoint","group") DOXY_FN(TrajectoryBase,SampleRangeSameDeltaTime2D "dReal; dReal; dReal; bool; const ConfigurationSpecification::Group"))
 #endif
     .def("GetConfigurationSpecification",&PyTrajectoryBase::GetConfigurationSpecification,DOXY_FN(TrajectoryBase,GetConfigurationSpecification))
     .def("GetNumWaypoints",&PyTrajectoryBase::GetNumWaypoints,DOXY_FN(TrajectoryBase,GetNumWaypoints))
