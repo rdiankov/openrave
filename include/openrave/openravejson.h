@@ -314,8 +314,9 @@ inline void LoadJsonValue(const rapidjson::Value& v, int64_t& t) {
 
 #ifdef __SIZEOF_INT128__
 inline void LoadJsonValue(const rapidjson::Value& v, __uint128_t& t) {
-    // TODO support number somehow
-    if (v.IsString()) {
+    if (v.IsUint64()) {
+        t = v.GetUint64();
+    } else if (v.IsString()) {
         t = boost::lexical_cast<__uint128_t>(v.GetString());
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
@@ -326,7 +327,9 @@ inline void LoadJsonValue(const rapidjson::Value& v, __uint128_t& t) {
 #endif
 
 inline void LoadJsonValue(const rapidjson::Value& v, boost::multiprecision::uint128_t& t) {
-    if (v.IsString()) {
+    if (v.IsUint64()) {
+        t = v.GetUint64();
+    } else if (v.IsString()) {
         t = boost::lexical_cast<boost::multiprecision::uint128_t>(v.GetString());
     } else if (v.IsBool()) {
         t = v.GetBool() ? 1 : 0;
