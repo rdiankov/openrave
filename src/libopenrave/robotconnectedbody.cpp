@@ -15,7 +15,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
+#include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
+
+using namespace boost::placeholders;
 
 namespace OpenRAVE {
 
@@ -159,9 +162,6 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
 {
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "id", _id);
-    if( _id.empty() ) {
-        _id = _name;
-    }
     orjson::LoadJsonValueByKey(value, "linkName", _linkname);
 
     if( !(options & IDO_IgnoreReferenceUri) ) {
@@ -172,81 +172,36 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
 
     if(value.HasMember("links") && value["links"].IsArray()) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
-        size_t iLink = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it, ++iLink) {
-            const rapidjson::Value& linkValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(linkValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(linkValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("link%d") % iLink);
-            }
-            UpdateOrCreateInfo(linkValue, id, _vLinkInfos, fUnitScale, options);
+        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
+            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("joints") && value["joints"].IsArray()) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
-        size_t iJoint = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it, ++iJoint) {
-            const rapidjson::Value& jointValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(jointValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(jointValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("joint%d") % iJoint);
-            }
-            UpdateOrCreateInfo(jointValue, id, _vJointInfos, fUnitScale, options);
+        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
+            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("tools") && value["tools"].IsArray()) {
         _vManipulatorInfos.reserve(value["tools"].Size() + _vManipulatorInfos.size());
-        size_t iManipualtor = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it, ++iManipualtor) {
-            const rapidjson::Value& manipulatorValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(manipulatorValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(manipulatorValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("tool%d") % iManipualtor);
-            }
-            UpdateOrCreateInfo(manipulatorValue, id, _vManipulatorInfos, fUnitScale, options);
+        for (rapidjson::Value::ConstValueIterator it = value["tools"].Begin(); it != value["tools"].End(); ++it) {
+            UpdateOrCreateInfoWithNameCheck(*it, _vManipulatorInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("attachedSensors") && value["attachedSensors"].IsArray()) {
         _vAttachedSensorInfos.reserve(value["attachedSensors"].Size() + _vAttachedSensorInfos.size());
-        size_t iAttachedSensor = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it, ++iAttachedSensor) {
-            const rapidjson::Value& attachedSensorValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(attachedSensorValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(attachedSensorValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("attachedSensor%d") % iAttachedSensor);
-            }
-            UpdateOrCreateInfo(attachedSensorValue, id, _vAttachedSensorInfos, fUnitScale, options);
+        for (rapidjson::Value::ConstValueIterator it = value["attachedSensors"].Begin(); it != value["attachedSensors"].End(); ++it) {
+            UpdateOrCreateInfoWithNameCheck(*it, _vAttachedSensorInfos, "name", fUnitScale, options);
         }
     }
 
     if(value.HasMember("gripperInfos") && value["gripperInfos"].IsArray()) {
         _vGripperInfos.reserve(value["gripperInfos"].Size() + _vGripperInfos.size());
-        size_t iGripperInfo = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it, ++iGripperInfo) {
-            const rapidjson::Value& gripperInfoValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(gripperInfoValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(gripperInfoValue, "name");
-            }
-            if (id.empty()) {
-                id = boost::str(boost::format("gripperInfo%d") % iGripperInfo);
-            }
-            UpdateOrCreateInfo(gripperInfoValue, id, _vGripperInfos, fUnitScale, options);
+        for (rapidjson::Value::ConstValueIterator it = value["gripperInfos"].Begin(); it != value["gripperInfos"].End(); ++it) {
+            UpdateOrCreateInfoWithNameCheck(*it, _vGripperInfos, "name", fUnitScale, options);
         }
     }
 
@@ -260,49 +215,13 @@ bool RobotBase::ConnectedBodyInfo::operator==(const RobotBase::ConnectedBodyInfo
            && _linkname == other._linkname
            && _uri == other._uri
            && _trelative == other._trelative
-           && _vLinkInfos == other._vLinkInfos
-           && _vJointInfos == other._vJointInfos
-           && _vManipulatorInfos == other._vManipulatorInfos
-           && _vAttachedSensorInfos == other._vAttachedSensorInfos
-           && _vGripperInfos == other._vGripperInfos
            && _bIsActive == other._bIsActive
-           && IsInfoVectorEqual(_vLinkInfos, other._vLinkInfos)
-           && IsInfoVectorEqual(_vJointInfos, other._vJointInfos)
-           && IsInfoVectorEqual(_vManipulatorInfos, other._vManipulatorInfos)
-           && IsInfoVectorEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
-           && IsInfoVectorEqual(_vGripperInfos, other._vGripperInfos);
+           && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
+           && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
+           && AreVectorsDeepEqual(_vManipulatorInfos, other._vManipulatorInfos)
+           && AreVectorsDeepEqual(_vAttachedSensorInfos, other._vAttachedSensorInfos)
+           && AreVectorsDeepEqual(_vGripperInfos, other._vGripperInfos);
 }
-
-RobotBase::ConnectedBodyInfo& RobotBase::ConnectedBodyInfo::operator=(const RobotBase::ConnectedBodyInfo& other) {
-    _id = other._id;
-    _name = other._name;
-    _linkname = other._linkname;
-    _uri = other._uri;
-    _trelative = other._trelative;
-    _vLinkInfos.resize(other._vLinkInfos.size());
-    for (size_t iLink = 0; iLink < other._vLinkInfos.size(); iLink++) {
-        _vLinkInfos[iLink].reset(new LinkInfo(*other._vLinkInfos[iLink]));
-    }
-    _vJointInfos.resize(other._vJointInfos.size());
-    for (size_t iJoint = 0; iJoint < other._vJointInfos.size(); iJoint++) {
-        _vJointInfos[iJoint].reset(new JointInfo(*other._vJointInfos[iJoint]));
-    }
-    _vManipulatorInfos.resize(other._vManipulatorInfos.size());
-    for (size_t iManipulator = 0; iManipulator < other._vManipulatorInfos.size(); iManipulator++) {
-        _vManipulatorInfos[iManipulator].reset(new ManipulatorInfo(*other._vManipulatorInfos[iManipulator]));
-    }
-    _vAttachedSensorInfos.resize(other._vAttachedSensorInfos.size());
-    for (size_t iAttachedSensor = 0; iAttachedSensor < other._vAttachedSensorInfos.size(); iAttachedSensor++) {
-        _vAttachedSensorInfos[iAttachedSensor].reset(new AttachedSensorInfo(*other._vAttachedSensorInfos[iAttachedSensor]));
-    }
-    _vGripperInfos.resize(other._vGripperInfos.size());
-    for (size_t iGripperInfo = 0; iGripperInfo < other._vGripperInfos.size(); iGripperInfo++) {
-        _vGripperInfos[iGripperInfo].reset(new GripperInfo(*other._vGripperInfos[iGripperInfo]));
-    }
-    _bIsActive = other._bIsActive;
-    return *this;
-}
-
 
 RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot) : _pattachedrobot(probot)
 {
@@ -503,107 +422,102 @@ void RobotBase::ConnectedBody::GetResolvedGripperInfos(std::vector<RobotBase::Gr
 
 void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) const
 {
+    // TODO: extract info from connectedbody to make extra geometry working
     info = _info;
+
+    for(size_t iLinkInfo = 0; iLinkInfo < _info._vLinkInfos.size(); ++iLinkInfo) {
+        info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());
+        *info._vLinkInfos[iLinkInfo] = *_info._vLinkInfos[iLinkInfo];
+        for(size_t iGeometryInfo = 0; iGeometryInfo < _info._vLinkInfos[iLinkInfo]->_vgeometryinfos.size(); ++iGeometryInfo){
+            info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo].reset(new KinBody::GeometryInfo());
+            *info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo] = *_info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo];
+        }
+    }
+
+    for(size_t iJointInfo = 0; iJointInfo < _info._vJointInfos.size(); ++iJointInfo) {
+        info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
+        *info._vJointInfos[iJointInfo] = *_info._vJointInfos[iJointInfo];
+    }
+
+    for(size_t iManipulatorInfo = 0; iManipulatorInfo < _info._vManipulatorInfos.size(); ++iManipulatorInfo) {
+        info._vManipulatorInfos[iManipulatorInfo].reset(new RobotBase::ManipulatorInfo());
+        *info._vManipulatorInfos[iManipulatorInfo] = *_info._vManipulatorInfos[iManipulatorInfo];
+    }
+
+    for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < _info._vAttachedSensorInfos.size(); ++iAttachedSensorInfo) {
+        info._vAttachedSensorInfos[iAttachedSensorInfo].reset(new RobotBase::AttachedSensorInfo());
+        *info._vAttachedSensorInfos[iAttachedSensorInfo] = *_info._vAttachedSensorInfos[iAttachedSensorInfo];
+    }
+
+    for(size_t iGripperInfo = 0; iGripperInfo < _info._vGripperInfos.size(); ++iGripperInfo) {
+        info._vGripperInfos[iGripperInfo].reset(new RobotBase::GripperInfo());
+        *info._vGripperInfos[iGripperInfo] = *_info._vGripperInfos[iGripperInfo];
+    }
 }
 
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
 {
     BOOST_ASSERT(info._id == _info._id);
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
+
     // name
     if (_info._name != info._name) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // linkname
     if (_info._linkname != info._linkname) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("connected body %s link name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _trelative
-    if (GetRelativeTransform() != info._trelative) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (GetRelativeTransform().CompareTransform(info._trelative, g_fEpsilon)) {
+        RAVELOG_VERBOSE_FORMAT("connected body %s relative transform changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
-    // _vLinkInfos, links has orders, so only compare one by one
-    std::vector<KinBody::LinkPtr> links;
-    GetResolvedLinks(links);
-    if (links.size() != info._vLinkInfos.size()) {
-        return UFIR_RequireRemoveFromEnvironment;
-    }
-    for(size_t iLink = 0; iLink < links.size(); iLink++) {
-        KinBody::LinkInfo linkInfo;
-        links[iLink]->ExtractInfo(linkInfo);  // might be slow
-        if (linkInfo != (*info._vLinkInfos[iLink])) {
-            return UFIR_RequireRemoveFromEnvironment;
-        }
+    if (!AreVectorsDeepEqual(info._vLinkInfos, _info._vLinkInfos)) {
+        RAVELOG_VERBOSE_FORMAT("connected body %s links changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
-    // _vJointInfos
-    std::vector<KinBody::JointPtr> joints;
-    GetResolvedJoints(joints);
-    std::vector<KinBody::JointInfoPtr> jointInfos;
-    jointInfos.reserve(joints.size());
-    for(std::vector<KinBody::JointPtr>::iterator itJoint = joints.begin(); itJoint != joints.end(); itJoint++) {
-        KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
-        (*itJoint)->ExtractInfo(*pJointInfo);  // might be slow
-        jointInfos.push_back(pJointInfo);
-    }
-    std::vector<KinBody::JointInfoPtr> diffJointInfo;
-    GetInfoVectorDiff(jointInfos, info._vJointInfos, diffJointInfo);
-    if (diffJointInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (!AreVectorsDeepEqual(info._vJointInfos, _info._vJointInfos)) {
+        RAVELOG_VERBOSE_FORMAT("connected body %s joints changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
-    // _vManipulatorInfos
-    std::vector<RobotBase::ManipulatorPtr> manipulators;
-    GetResolvedManipulators(manipulators);
-
-    std::vector<RobotBase::ManipulatorInfoPtr> manipulatorInfos;
-    manipulatorInfos.reserve(manipulators.size());
-    for(std::vector<RobotBase::ManipulatorPtr>::iterator itManip = manipulators.begin(); itManip != manipulators.end(); itManip++) {
-        RobotBase::ManipulatorInfoPtr pManipInfo(new RobotBase::ManipulatorInfo());
-        (*itManip)->ExtractInfo(*pManipInfo);
-        manipulatorInfos.push_back(pManipInfo);
-    }
-    std::vector<RobotBase::ManipulatorInfoPtr> diffManipInfo;
-    GetInfoVectorDiff(manipulatorInfos, info._vManipulatorInfos, diffManipInfo);
-
-    if (diffManipInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (!AreVectorsDeepEqual(info._vManipulatorInfos, _info._vManipulatorInfos)) {
+        RAVELOG_VERBOSE_FORMAT("connected body %s manipulators changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
-    // _vAttachedSensorInfos
-    std::vector<RobotBase::AttachedSensorPtr> attachedSensors;
-    GetResolvedAttachedSensors(attachedSensors);
-    std::vector<RobotBase::AttachedSensorInfoPtr> attachedSensorInfos;
-    attachedSensorInfos.reserve(attachedSensors.size());
-    for(std::vector<RobotBase::AttachedSensorPtr>::iterator itAttachedSensor = attachedSensors.begin(); itAttachedSensor != attachedSensors.end(); itAttachedSensor++) {
-        RobotBase::AttachedSensorInfoPtr pAttachedSensorInfo(new RobotBase::AttachedSensorInfo());
-        (*itAttachedSensor)->ExtractInfo(*pAttachedSensorInfo);
-        attachedSensorInfos.push_back(pAttachedSensorInfo);
-    }
-    std::vector<RobotBase::AttachedSensorInfoPtr> diffAttachedSensorInfo;
-    GetInfoVectorDiff(attachedSensorInfos, info._vAttachedSensorInfos, diffAttachedSensorInfo);
-
-    if (diffAttachedSensorInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (!AreVectorsDeepEqual(info._vAttachedSensorInfos, _info._vAttachedSensorInfos)) {
+        RAVELOG_VERBOSE_FORMAT("connected body %s attached sensors changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
-    // _vGripperInfos
-    std::vector<RobotBase::GripperInfoPtr> gripperInfos;
-    GetResolvedGripperInfos(gripperInfos);
-    std::vector<RobotBase::GripperInfoPtr> diffGripperInfo;
-    GetInfoVectorDiff(gripperInfos, info._vGripperInfos, diffGripperInfo);
-    if (diffGripperInfo.size() > 0) {
-        return UFIR_RequireRemoveFromEnvironment;
+    if (!AreVectorsDeepEqual(info._vGripperInfos, _info._vGripperInfos)) {
+        RAVELOG_VERBOSE_FORMAT("connected body %s gripper infos changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _bIsActive
     if (IsActive() != info._bIsActive) {
-        return UFIR_RequireRemoveFromEnvironment;
+        // we can only change isActive if the robot is not in the environment
+        RobotBasePtr pattachedrobot = _pattachedrobot.lock();
+        if (!!pattachedrobot && pattachedrobot->_nHierarchyComputed == 0) {
+            _info._bIsActive = info._bIsActive;
+            RAVELOG_VERBOSE_FORMAT("connected body %s is active changed", _info._id);
+            updateFromInfoResult = UFIR_Success;
+        } else {
+            RAVELOG_VERBOSE_FORMAT("connected body %s is active changed", _info._id);
+            return UFIR_RequireRemoveFromEnvironment;
+        }
     }
 
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 bool RobotBase::ConnectedBody::CanProvideManipulator(const std::string& resolvedManipulatorName) const
@@ -823,11 +737,33 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !plink ) {
                 plink.reset(new KinBody::Link(shared_kinbody()));
             }
-            plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // copy
+            plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // shallow copy
             plink->_info._name = connectedBody._nameprefix + plink->_info._name;
-            plink->_info._t = tBaseLinkInWorld * plink->_info._t;
+            plink->_info.SetTransform(tBaseLinkInWorld * plink->_info.GetTransform());
+            for( std::string& forcedAdjacentLink : plink->_info._vForcedAdjacentLinks ) {
+                forcedAdjacentLink = connectedBody._nameprefix + forcedAdjacentLink;
+            }
+
             _InitAndAddLink(plink);
             connectedBody._vResolvedLinkNames[ilink].first = plink->_info._name;
+
+            // Set all links from connected bodies with -1 to be adjacent, otherwise, we can detect self collision when in indeterminable state.
+            if (connectedBody.IsActive() == -1) {
+                vector<ConnectedBodyPtr>::iterator itPrevConnectedBody = itconnectedBody;
+                while(itPrevConnectedBody != _vecConnectedBodies.begin()) {
+                    --itPrevConnectedBody;
+                    ConnectedBody& prevConnectedBody = **itPrevConnectedBody;
+                    if (prevConnectedBody.IsActive() == -1) {
+                        for(int prevIlink = 0; prevIlink < (int)prevConnectedBody._info._vLinkInfos.size(); ++prevIlink) {
+                            KinBody::LinkPtr& pPrevBodyLink = prevConnectedBody._vResolvedLinkNames[prevIlink].second;
+                            if( !!pPrevBodyLink ) {
+                                plink->_info.SetNoncollidingLink(pPrevBodyLink->GetName());
+                                _SetForcedAdjacentLinks(plink->GetIndex(), pPrevBodyLink->GetIndex());
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Joints
@@ -839,8 +775,13 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !pjoint ) {
                 pjoint.reset(new KinBody::Joint(shared_kinbody()));
             }
-            pjoint->_info = *connectedBodyInfo._vJointInfos[ijoint]; // copy
+            pjoint->_info = *connectedBodyInfo._vJointInfos[ijoint]; // shallow copy
             pjoint->_info._name = connectedBody._nameprefix + pjoint->_info._name;
+            for (size_t iMimic = 0; iMimic < pjoint->_info._vmimic.size(); ++iMimic) {
+                if (!!pjoint->_info._vmimic[iMimic]) {
+                    pjoint->_info._vmimic[iMimic].reset(new MimicInfo(*(pjoint->_info._vmimic[iMimic])));
+                }
+            }
 
             // search for the correct resolved _linkname0 and _linkname1
             bool bfoundlink0 = false, bfoundlink1 = false;
@@ -906,7 +847,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             }
 
             if( bHasSameTool ) {
-                RAVELOG_INFO_FORMAT("When adding ConnectedBody %s for robot %s, got resolved manipulator with same name '%s'. Perhaps trying to overwrite? For now, passing through.", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name);
+                RAVELOG_INFO_FORMAT("env=%s, when adding ConnectedBody %s for robot %s, got resolved manipulator with same name '%s'. Perhaps trying to overwrite? For now, passing through.", GetEnv()->GetNameId()%connectedBody.GetName()%GetName()%pnewmanipulator->_info._name);
                 pnewmanipulator.reset(); // will not be adding it
                 continue;
             }
@@ -919,17 +860,50 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewmanipulator->_info._sBaseLinkName = pArmBaseLink->_info._name;
             }
 
-            // search for the correct resolved _sEffectorLinkName
-            bool bFoundEffectorLink = false;
-            for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
-                if( pnewmanipulator->_info._sEffectorLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
-                    pnewmanipulator->_info._sEffectorLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
-                    bFoundEffectorLink = true;
+            if( !pnewmanipulator->_info._sIkChainEndLinkName.empty() ) {
+                // search for the correct resolved _sIkChainEndLinkName
+                bool bFoundIkChainEndLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._sIkChainEndLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._sIkChainEndLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundIkChainEndLink = true;
+                    }
+                }
+
+                if( !bFoundIkChainEndLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find ikChainEndLink '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sIkChainEndLinkName, ORE_InvalidArguments);
                 }
             }
 
-            if( !bFoundEffectorLink ) {
-                throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find linkname1 %s in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
+            if( !pnewmanipulator->_info._sEffectorLinkName.empty() ) {
+                // search for the correct resolved _sEffectorLinkName
+                bool bFoundEffectorLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._sEffectorLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._sEffectorLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundEffectorLink = true;
+                    }
+                }
+
+                if( !bFoundEffectorLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find endEffectorLink '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._sEffectorLinkName, ORE_InvalidArguments);
+                }
+            }
+
+            if( !pnewmanipulator->_info._toolChangerLinkName.empty() ) {
+                // search for the correct resolved _toolChangerLinkName
+                bool bFoundToolChangerLink = false;
+                for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
+                    if( pnewmanipulator->_info._toolChangerLinkName == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
+                        pnewmanipulator->_info._toolChangerLinkName = connectedBody._vResolvedLinkNames.at(ilink).first;
+                        bFoundToolChangerLink = true;
+                    }
+                }
+
+                if( !bFoundToolChangerLink ) {
+                    // it is OK if the toolChangerLinkName is pointing to another link name not in the connected body!
+                    //throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for manipulator %s, could not find toolChangerLinkName '%s' in connected body link infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%pnewmanipulator->_info._toolChangerLinkName, ORE_InvalidArguments);
+                }
             }
 
             // search for the correct resolved joint name
@@ -947,7 +921,6 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, for Manipulator %s, could not find joint %s in connected body joint infos!", connectedBody.GetName()%GetName()%pnewmanipulator->_info._name%gripperJointName, ORE_InvalidArguments);
                 }
             }
-
             _vecManipulators.push_back(pnewmanipulator);
             connectedBody._vResolvedManipulatorNames[imanipulator].first = pnewmanipulator->_info._name;
         }
@@ -963,14 +936,19 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 pnewattachedSensor->_info = *connectedBodyInfo._vAttachedSensorInfos[iattachedsensor];
             }
             pnewattachedSensor->_info._name = connectedBody._nameprefix + pnewattachedSensor->_info._name;
-
             FOREACH(ittestattachedSensor, _vecAttachedSensors) {
                 if( pnewattachedSensor->_info._name == (*ittestattachedSensor)->GetName() ) {
                     throw OPENRAVE_EXCEPTION_FORMAT("When adding ConnectedBody %s for robot %s, got resolved attachedSensor with same name %s!", connectedBody.GetName()%GetName()%pnewattachedSensor->_info._name, ORE_InvalidArguments);
                 }
             }
 
-            // search for the correct resolved _linkname and _sEffectorLinkName
+            // since we will be prefixing all the attached sensor from the connected body
+            // also need to fix referenceAttachedSensorName
+            if ( pnewattachedSensor->_info._referenceAttachedSensorName.size() > 0 ) {
+                pnewattachedSensor->_info._referenceAttachedSensorName = connectedBody._nameprefix + pnewattachedSensor->_info._referenceAttachedSensorName;
+            }
+
+            // search for the correct resolved _linkname
             bool bFoundLink = false;
             for(size_t ilink = 0; ilink < connectedBodyInfo._vLinkInfos.size(); ++ilink) {
                 if( pnewattachedSensor->_info._linkname == connectedBodyInfo._vLinkInfos[ilink]->_name ) {
@@ -1019,13 +997,17 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 }
             }
 
-            // look recursively for fields that end in "linkname" (case insensitive) and resolve their names
+            // look recursively for fields that end in "linkname(s)", "toolname(s)" and "jointname(s)" (case insensitive) and resolve their names
             if(connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo.IsObject()) {
                 rapidjson::Document newGripperInfoDoc;
                 newGripperInfoDoc.CopyFrom(connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo, newGripperInfoDoc.GetAllocator());
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linkname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("linknames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
-                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("links")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("links")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);  // deprecated. only for commpatibility.
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("toolname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("toolnames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("jointname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("jointnames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
                 pnewgripperInfo->_docGripperInfo.Swap(newGripperInfoDoc);
             }
             else {
@@ -1044,7 +1026,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         KinBody::JointInfo& dummyJointInfo = connectedBody._pDummyJointCache->_info;
         dummyJointInfo._name = connectedBody._dummyPassiveJointName;
         dummyJointInfo._bIsActive = false;
-        dummyJointInfo._type = KinBody::JointType::JointPrismatic;
+        dummyJointInfo._type = KinBody::JointType::JointRevolute;
         dummyJointInfo._vmaxaccel[0] = 0.0;
         dummyJointInfo._vmaxvel[0] = 0.0;
         dummyJointInfo._vupperlimit[0] = 0;
@@ -1160,12 +1142,17 @@ void RobotBase::GetConnectedBodyActiveStates(std::vector<int8_t>& activestates) 
     }
 }
 
-void RobotBase::SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates)
+bool RobotBase::SetConnectedBodyActiveStates(const std::vector<int8_t>& activestates)
 {
     OPENRAVE_ASSERT_OP(activestates.size(),==,_vecConnectedBodies.size());
+    bool bChanged = false;
     for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
-        _vecConnectedBodies[iconnectedbody]->SetActive(activestates[iconnectedbody]);
+        bChanged |= _vecConnectedBodies[iconnectedbody]->SetActive(activestates[iconnectedbody]);
     }
+    if (bChanged) {
+        __hashKinematicsGeometryDynamics.resize(0);
+    }
+    return bChanged;
 }
 
 } // end namespace OpenRAVE

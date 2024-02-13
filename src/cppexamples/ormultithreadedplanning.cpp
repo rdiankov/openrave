@@ -40,10 +40,10 @@ public:
 
 
         while(IsOk()) {
-            EnvironmentMutex::scoped_lock lock(pclondedenv->GetMutex()); // lock environment
+            EnvironmentLock lock(pclondedenv->GetMutex()); // lock environment
 
             // find a new manipulator position and feed that into the planner. If valid, robot will move to it safely.
-            Transform t = pmanip->GetEndEffectorTransform();
+            Transform t = pmanip->GetTransform();
             t.trans += Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f);
             t.rot = quatMultiply(t.rot,quatFromAxisAngle(Vector(RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f,RaveRandomFloat()-0.5f)*0.2f));
 
@@ -95,13 +95,13 @@ public:
         int numthreads = 2;
 
         // start worker threads
-        vector<boost::shared_ptr<boost::thread> > vthreads(numthreads);
+        vector<boost::shared_ptr<std::thread> > vthreads(numthreads);
         for(size_t i = 0; i < vthreads.size(); ++i) {
-            vthreads[i].reset(new boost::thread(boost::bind(&MultithreadedPlanningExample::_PlanningThread,this,probot->GetName())));
+            vthreads[i] = boost::make_shared<std::thread>(std::bind(&MultithreadedPlanningExample::_PlanningThread, this, probot->GetName()));
         }
 
         while(IsOk()) {
-            boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
         RAVELOG_INFO("wait for threads to finish\n");

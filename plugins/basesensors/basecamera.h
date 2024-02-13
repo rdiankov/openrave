@@ -35,33 +35,15 @@ public:
                 }
                 return PE_Ignore;
             }
-            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "sensor_reference", "target_region", "gain", "hardware_id"}};
+            static boost::array<string, 18> tags = { { "sensor", "kk", "width", "height", "framerate", "power", "color", "focal_length","image_dimensions","intrinsic","measurement_time", "format", "distortion_model", "distortion_coeffs", "target_region", "gain", "hardware_id"}};
             if( find(tags.begin(),tags.end(),name) == tags.end() ) {
                 return PE_Pass;
             }
-            if( name == std::string("sensor_reference") ) {
-                // read the URL attribute
-                FOREACHC(itatt, atts) {
-                    if( itatt->first == "url" ) {
-                        _psensor->_pgeom->sensor_reference = itatt->second;
-//                        size_t startindex = 0;
-//                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
-//                            startindex = 1;
-//                        }
-//                        _psensor->_pgeom->sensor_reference = itatt->second.substr(startindex);
-                    }
-                }
-            }
-            else if( name == std::string("target_region") ) {
+            if( name == std::string("target_region") ) {
                 // read the URL attribute
                 FOREACHC(itatt, atts) {
                     if( itatt->first == "url" ) {
                         _psensor->_pgeom->target_region = itatt->second;
-//                        size_t startindex = 0;
-//                        if( itatt->second.size() > 0 && itatt->second[0] == '#' ) {
-//                            startindex = 1;
-//                        }
-//                        _psensor->_pgeom->target_region = itatt->second.substr(startindex);
                     }
                 }
             }
@@ -106,9 +88,6 @@ public:
             }
             else if( name == "height" ) {
                 ss >> _psensor->_pgeom->height;
-            }
-            else if( name == "sensor_reference" ) {
-                // nothing to do here
             }
             else if( name == "measurement_time" ) {
                 ss >> _psensor->_pgeom->measurement_time;
@@ -169,8 +148,13 @@ protected:
     class BaseCameraJSONReader : public BaseJSONReader
     {
 public:
-        BaseCameraJSONReader() { 
-            _pgeom.reset(new CameraGeomData());
+        BaseCameraJSONReader(ReadablePtr pReadable) {
+            if (!!pReadable) {
+                _pgeom = boost::dynamic_pointer_cast<CameraGeomData>(pReadable);
+            }
+            else {
+                _pgeom.reset(new CameraGeomData());
+            }
         }
         virtual ~BaseCameraJSONReader() {}
         ReadablePtr GetReadable() override {
@@ -186,9 +170,9 @@ public:
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
 
-    static BaseJSONReaderPtr CreateJSONReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseJSONReaderPtr CreateJSONReader(ReadablePtr pReadable, const AttributesList& atts)
     {
-        return BaseJSONReaderPtr(new BaseCameraJSONReader());
+        return BaseJSONReaderPtr(new BaseCameraJSONReader(pReadable));
     }
 
     BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
@@ -212,7 +196,7 @@ public:
         _Reset();
     }
 
-    virtual int Configure(ConfigureCommand command, bool blocking)
+    virtual int Configure(ConfigureCommand command, bool blocking) override
     {
         switch(command) {
         case CC_PowerOn:
@@ -243,7 +227,7 @@ public:
             return _bRenderData;
         }
         case CC_RenderDataOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _dataviewer.reset();
             _bRenderData = false;
             return _bRenderData;
@@ -255,7 +239,7 @@ public:
             _RenderGeometry();
             return _bRenderData;
         case CC_RenderGeometryOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _graphgeometry.reset();
             _bRenderGeometry = false;
             return _bRenderData;
@@ -274,29 +258,16 @@ public:
         _fTimeToImage = 0;
         _graphgeometry.reset();
         _dataviewer.reset();
-        _psensor_reference.reset();
-        
-        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
-        if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
-            // does not exist yet
-            SensorBasePtr psensor_reference = GetEnv()->GetSensor(pgeom->sensor_reference);
-            if( !psensor_reference ) {
-                RAVELOG_VERBOSE_FORMAT("could not find sensor reference %s of sensor %s", pgeom->sensor_reference%_name);
-            }
-//            else {
-//                _psensor_reference = psensor_reference;
-//            }
-        }
     }
 
-    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
+    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry) override
     {
         OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Camera );
         *_pgeom = *boost::static_pointer_cast<CameraGeomData const>(pgeometry);
         _Reset();
     }
 
-    virtual bool SimulationStep(dReal fTimeElapsed)
+    virtual bool SimulationStep(dReal fTimeElapsed) override
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
@@ -310,7 +281,7 @@ public:
                     _vimagedata.resize(3*_pgeom->width*_pgeom->height);
                     if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
                         // copy the data
-                        boost::mutex::scoped_lock lock(_mutexdata);
+                        std::lock_guard<std::mutex> lock(_mutexdata);
                         pdata->vimagedata = _vimagedata;
                         pdata->__stamp = GetEnv()->GetSimulationTime();
                         pdata->__trans = _trans;
@@ -321,15 +292,9 @@ public:
         return true;
     }
 
-    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type)
+    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type) override
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
-            if( !!_pgeom ) {
-                SensorBasePtr psensor_reference = _psensor_reference.lock();
-                if( !!psensor_reference ) {
-                    _pgeom->sensor_reference = psensor_reference->GetName();
-                }
-            }
             CameraGeomData* pgeom = new CameraGeomData();
             *pgeom = *_pgeom;
             return SensorGeometryConstPtr(boost::shared_ptr<CameraGeomData>(pgeom));
@@ -337,7 +302,7 @@ public:
         return SensorGeometryConstPtr();
     }
 
-    virtual SensorDataPtr CreateSensorData(SensorType type)
+    virtual SensorDataPtr CreateSensorData(SensorType type) override
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             return SensorDataPtr(boost::shared_ptr<CameraSensorData>(new CameraSensorData()));
@@ -345,10 +310,10 @@ public:
         return SensorDataPtr();
     }
 
-    virtual bool GetSensorData(SensorDataPtr psensordata)
+    virtual bool GetSensorData(SensorDataPtr psensordata) override
     {
         if( _bPower &&( psensordata->GetType() == ST_Camera) ) {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             if( _pdata->vimagedata.size() > 0 ) {
                 *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
                 return true;
@@ -357,7 +322,7 @@ public:
         return false;
     }
 
-    virtual bool Supports(SensorType type) {
+    virtual bool Supports(SensorType type) override {
         return type == ST_Camera;
     }
 
@@ -398,20 +363,19 @@ public:
         return false;
     }
 
-    virtual void SetTransform(const Transform& trans)
+    virtual void SetTransform(const Transform& trans) override
     {
         _trans = trans;
     }
 
-    virtual const Transform& GetTransform() {
+    virtual const Transform& GetTransform() override {
         return _trans;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
-        // r->_pgeom->sensor_reference should already be correct
         *_pgeom = *r->_pgeom;
         _vColor = r->_vColor;
         _trans = r->_trans;
@@ -420,18 +384,11 @@ public:
         _bRenderGeometry = r->_bRenderGeometry;
         _bRenderData = r->_bRenderData;
         _bPower = r->_bPower;
-        _psensor_reference.reset();
         _Reset();
     }
 
     void Serialize(BaseXMLWriterPtr writer, int options=0) const override
     {
-        if( !!_pgeom ) {
-            SensorBasePtr psensor_reference = _psensor_reference.lock();
-            if( !!psensor_reference ) {
-                _pgeom->sensor_reference = psensor_reference->GetName();
-            }
-        }
         _pgeom->SerializeXML(writer, options);
         AttributesList atts;
         stringstream ss;
@@ -440,43 +397,13 @@ public:
         writer->AddChild("format",atts)->SetCharData(_channelformat.size() > 0 ? _channelformat : std::string("uint8"));
     }
 
-    virtual void SetName(const std::string& newname)
-    {
-        boost::shared_ptr<CameraGeomData> pgeom = _pgeom;
-        if( !!pgeom && pgeom->sensor_reference.size() > 0 ) {
-            // does not exist yet
-            SensorBasePtr psensor_reference = _psensor_reference.lock();
-            if( !psensor_reference ) {
-                // HACK for collada: check if pgeom->sensor_reference is in robotname:sensorname and that matches with the current sensor name's robot. If it does, then most likely robot is changing its name and sensor_reference is part of the same changing robot, so have to update sensor_reference! The only way to resolve this issue is to introduce unique IDs in openrave, slated for openrave JSON format.
-                if( newname.find(':') != std::string::npos && _name.find(':') != std::string::npos && pgeom->sensor_reference.find(':') != std::string::npos) {
-                    std::string oldrobotname = _name.substr(0, _name.find(':'));
-                    std::string newrobotname = newname.substr(0, newname.find(':'));
-                    std::string oldreferencerobotname = pgeom->sensor_reference.substr(0, pgeom->sensor_reference.find(':'));
-                    
-                    if( oldrobotname == oldreferencerobotname ) {
-                        std::string newreference = newrobotname + ":" + pgeom->sensor_reference.substr(pgeom->sensor_reference.find(':')+1);
-                        RAVELOG_DEBUG_FORMAT("old reference name %s matches with old sensor %s, so changing name to %s", oldrobotname%pgeom->sensor_reference%newreference);
-                        pgeom->sensor_reference = newreference;
-                        SensorBasePtr psensor_reference = GetEnv()->GetSensor(pgeom->sensor_reference);
-                        if( !!psensor_reference ) {
-                            _psensor_reference = psensor_reference;
-                        }
-                    }
-                }
-                //RAVELOG_WARN_FORMAT("could not find sensor reference %s of sensor %s", pgeom->sensor_reference%_name);
-            }
-        }
-
-        SensorBase::SetName(newname);
-    }
-
 protected:
     void _RenderGeometry()
     {
         if( !_bRenderGeometry ) {
             return;
         }
-        if( !_graphgeometry ) {
+        if( !_graphgeometry && _pgeom->KK.fx > 0 && _pgeom->KK.fy > 0 ) {
             // render a simple frustum outlining camera's dimension
             // the frustum is colored with vColor, the x and y axes are colored separetely
             Vector points[7];
@@ -520,7 +447,6 @@ protected:
     // more geom stuff
     vector<uint8_t> _vimagedata;
     RaveVector<float> _vColor;
-    SensorBaseWeakPtr _psensor_reference; ///< weak pointer to the sensor reference. Used to keep track of name changes!
 
     Transform _trans;
     dReal _fTimeToImage;
@@ -530,7 +456,7 @@ protected:
     ViewerBasePtr _dataviewer;
     string _channelformat;
 
-    mutable boost::mutex _mutexdata;
+    mutable std::mutex _mutexdata;
 
     bool _bRenderGeometry, _bRenderData;
     bool _bPower;     ///< if true, gather data, otherwise don't

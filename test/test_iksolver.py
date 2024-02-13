@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 class TestIkSolver(EnvironmentSetup):
     def test_customfilter(self):
@@ -245,7 +248,7 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(newtransvelocity, dot(T[0:3,0:3],transvelocity)) <= g_epsilon)
 
             # test pickling
-            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3))
+            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3), 2)
             assert(str(ikparam3pickled) == str(ikparam3))
 
     def test_ikfastrobotsolutions(self):

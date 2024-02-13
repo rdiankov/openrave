@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyCollisionCheckerBase : public PyInterfaceBase
+class OPENRAVEPY_API PyCollisionCheckerBase : public PyInterfaceBase
 {
 protected:
     CollisionCheckerBasePtr _pCollisionChecker;
@@ -47,6 +47,8 @@ public:
     bool SetBodyGeometryGroup(PyKinBodyPtr pybody, const std::string& groupname);
 
     object GetGeometryGroup();
+
+    object GetBodyGeometryGroup(PyKinBodyPtr pybody);
 
     void RemoveKinBody(PyKinBodyPtr pbody);
 
@@ -91,6 +93,8 @@ public:
     bool CheckCollisionTriMesh(object otrimesh, PyCollisionReportPtr pReport);
 
     bool CheckCollisionOBB(object oaabb, object otransform, PyCollisionReportPtr pReport);
+
+    bool CheckCollisionOBB(object oaabb, object otransform, object bodiesincluded, PyCollisionReportPtr pReport);
 
     virtual bool CheckSelfCollision(object o1, PyCollisionReportPtr pReport);
 };

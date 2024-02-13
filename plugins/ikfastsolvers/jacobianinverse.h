@@ -110,9 +110,9 @@ public:
     int ComputeSolution(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         // check if manip's iksolver suppports this ikgoal type
-        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
-        }
+//        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+//            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator '%s' does not support iktype 0x%x."),manip.GetIkSolver()%manip.GetName()%ikgoal.GetType(),ORE_InvalidArguments);
+//        }
 
         RobotBasePtr probot = manip.GetRobot();
         uint32_t checklimits = bIgnoreJointLimits ? OpenRAVE::KinBody::CLA_Nothing : OpenRAVE::KinBody::CLA_CheckLimitsSilent; // if not ignoring limits, silently clamp the values to their limits.
@@ -133,18 +133,18 @@ public:
         probot->SetTransform(tbase.inverse()*trobot); // transform so that the manip's base is at the identity and matches tgoal
 
         const IkParameterization ikpprev = manip.GetIkParameterization(ikgoal);
-        T totalerror2 = _ComputeConstraintError(ikpprev, _error, _nMaxIterations);
-        if( totalerror2 <= _errorthresh2 ) {
+        T totalerror21 = _ComputeConstraintError(ikpprev, _error, _nMaxIterations);
+        if( totalerror21 <= _errorthresh2 ) {
             return -1;
         }
 
         const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
         using namespace boost::numeric::ublas;
 
-        T firsterror2 = totalerror2;
-        T besterror2 = totalerror2;
-        _lasterror2 = totalerror2;
-        int armdof = manip.GetArmDOF();
+        T firsterror2 = totalerror21;
+        T besterror2 = totalerror21;
+        _lasterror2 = totalerror21;
+        //int armdof = manip.GetArmDOF();
         std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
         std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
         bool bSuccess = false;
@@ -307,9 +307,9 @@ public:
     int ComputeSolutionTranslation(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         // check if manip's iksolver suppports this ikgoal type
-        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
-        }
+//        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+//            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator '%s' do not support iktype 0x%x"),manip.GetIkSolver()%manip.GetName()%ikgoal.GetIkType(),ORE_InvalidArguments);
+//        }
 
         _goalIkp = ikgoal;
         
@@ -322,17 +322,17 @@ public:
         probot->SetTransform(tbase.inverse()*trobot); // transform so that the manip's base is at the identity and matches tgoal
 
         Transform tprev = manip.GetTransform();
-        T totalerror2 = _ComputeConstraintError(tprev, _error3d, _nMaxIterations, false);
-        if( totalerror2 <= _errorthresh2 ) {
+        T totalerror21 = _ComputeConstraintError(tprev, _error3d, _nMaxIterations, false);
+        if( totalerror21 <= _errorthresh2 ) {
             return -1;
         }
 
         const T lambda2 = 1e-12;         // normalization constant, changes the rate of convergence, but also improves convergence stability
         using namespace boost::numeric::ublas;
 
-        T firsterror2 = totalerror2;
-        T besterror2 = totalerror2;
-        _lasterror2 = totalerror2;
+        T firsterror2 = totalerror21;
+        T besterror2 = totalerror21;
+        _lasterror2 = totalerror21;
         int armdof = manip.GetArmDOF();
         std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
         std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
@@ -571,7 +571,7 @@ public:
                 break;
             }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam %s."),ikpcur.GetName(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam '%s'."),ikpcur.GetTypeString(),ORE_InvalidArguments);
             break;
         };
         return totalerror2;

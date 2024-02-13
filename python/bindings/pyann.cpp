@@ -128,7 +128,7 @@ OPENRAVE_SHARED_PTR<ANNkd_tree>       init_from_list(object lst)
     for (int p = 0; p < npts; ++p) {
         ANNpoint& pt = dataPts[p];
         for (int c = 0; c < dimension; ++c) {
-            pt[c] = extract<ANNcoord>(lst[p][c]);
+            pt[c] = extract<ANNcoord>(lst[py::to_object(p)][py::to_object(c)]);
         }
     }
 
@@ -147,17 +147,17 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
     BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
     ANNpointManaged annq(kdtree.theDim());
     for (int c = 0; c < kdtree.theDim(); ++c) {
-        annq.pt[c] = extract<ANNcoord>(q[c]);
+        annq.pt[c] = extract<ANNcoord>(q[py::to_object(c)]);
     }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // distance
-    py::array_t<ANNdist> pydists({k});
+    py::array_t<ANNdist> pydists(k);
     py::buffer_info bufdists = pydists.request();
     ANNdist* pdists = (ANNdist*) bufdists.ptr;
 
     // index
-    py::array_t<ANNidx> pyidx({k});
+    py::array_t<ANNidx> pyidx(k);
     py::buffer_info bufidx = pyidx.request();
     ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
@@ -224,9 +224,9 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
     std::vector<ANNdist> dists(k);
     std::vector<ANNidx> nn_idx(k);
     for(int i = 0; i < N; ++i) {
-        object q = qarray[i];
+        object q = qarray[py::to_object(i)];
         for (int c = 0; c < kdtree.theDim(); ++c) {
-            annq.pt[c] = extract<ANNcoord>(q[c]);
+            annq.pt[c] = extract<ANNcoord>(q[py::to_object(c)]);
         }
         if (priority) {
             kdtree.annkPriSearch(annq.pt, k, nn_idx.data(), dists.data(), eps);
@@ -251,7 +251,7 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
     ANNpointManaged annq(kdtree.theDim());
     for (int c = 0; c < kdtree.theDim(); ++c) {
-        annq.pt[c] = extract<ANNcoord>(q[c]);
+        annq.pt[c] = extract<ANNcoord>(q[py::to_object(c)]);
     }
 
     if( k <= 0 ) {
@@ -269,12 +269,12 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
     const int numel = std::min(k, kball);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     // distance
-    py::array_t<ANNdist> pydists({numel});
+    py::array_t<ANNdist> pydists(numel);
     py::buffer_info bufdists = pydists.request();
     ANNdist* pdists = (ANNdist*) bufdists.ptr;
 
     // index
-    py::array_t<ANNidx> pyidx({numel});
+    py::array_t<ANNidx> pyidx(numel);
     py::buffer_info bufidx = pyidx.request();
     ANNidx* pidx = (ANNidx*) bufidx.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS    
@@ -317,7 +317,7 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     BOOST_ASSERT(len(qarray[0])==kdtree.theDim());
     ANNpointManaged annq(kdtree.theDim());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<int> pykball({N});
+    py::array_t<int> pykball(N);
     py::buffer_info bufkball = pykball.request();
     int* pkball = (int*) bufkball.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
@@ -329,9 +329,9 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
 
     if( k <= 0 ) {
         for(int i = 0; i < N; ++i) {
-            object q = qarray[i];
+            object q = qarray[py::to_object(i)];
             for (int c = 0; c < kdtree.theDim(); ++c) {
-                annq.pt[c] = extract<ANNcoord>(q[c]);
+                annq.pt[c] = extract<ANNcoord>(q[py::to_object(c)]);
             }
             pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, NULL, NULL, eps);
         }
@@ -372,9 +372,9 @@ object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqR
     std::vector<ANNdist> dists(k);
     std::vector<ANNidx> nn_idx(k);
     for(int i = 0; i < N; ++i) {
-        object q = qarray[i];
+        object q = qarray[py::to_object(i)];
         for (int c = 0; c < kdtree.theDim(); ++c) {
-            annq.pt[c] = extract<ANNcoord>(q[c]);
+            annq.pt[c] = extract<ANNcoord>(q[py::to_object(c)]);
         }
         pkball[i] = kdtree.annkFRSearch(annq.pt, sqRad, k, nn_idx.data(), dists.data(), eps);
 
@@ -411,7 +411,14 @@ object k_priority_search_array(ANNkd_tree& kdtree, object q, int k, double eps)
 
 OPENRAVE_PYTHON_MODULE(pyANN_int)
 {
-    import_array();
+    // expansion of the macro `import_array()` in
+    // numpy/core/include/numpy/__multiarray_api.h
+    if (_import_array() < 0) {
+        PyErr_Print();
+        PyErr_SetString(PyExc_ImportError, "numpy.core.multiarray failed to import");
+        return;
+    }
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
 #else
@@ -428,7 +435,7 @@ OPENRAVE_PYTHON_MODULE(pyANN_int)
     class_< pyann_exception >( "_pyann_exception_" )
     .def( init<const std::string&>() )
     .def( init<const pyann_exception&>() )
-    .def( "message", &pyann_exception::message, return_copy_const_ref() )
+    .add_property( "message", make_function(&pyann_exception::message, return_copy_const_ref()) )
     .def( "__str__", &pyann_exception::message, return_copy_const_ref() )
     ;
     OpenRAVEBoostPythonExceptionTranslator<pyann_exception>();

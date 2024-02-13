@@ -67,4 +67,9 @@
 // whether msgpack is to be used
 #define OPENRAVE_MSGPACK @OPENRAVE_MSGPACK@
 
+// whether curl is to be used
+#define OPENRAVE_CURL @OPENRAVE_CURL@
+
+#define OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK @OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK@
+
 #endif

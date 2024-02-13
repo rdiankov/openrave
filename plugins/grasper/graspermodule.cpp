@@ -16,10 +16,12 @@
 #include "plugindefs.h"
 
 #include <algorithm>
-#include <boost/thread/condition.hpp>
-#include <boost/thread/mutex.hpp>
+#include <condition_variable>
+#include <mutex>
 #include <cmath>
+#include <boost/bind/bind.hpp>
 
+using namespace boost::placeholders;
 
 #ifdef QHULL_FOUND
 
@@ -52,7 +54,7 @@ extern "C"
 
 #endif
 
-static boost::mutex s_QhullMutex;
+static std::mutex s_QhullMutex;
 
 #define GTS_M_ICOSAHEDRON_X /* sqrt(sqrt(5)+1)/sqrt(2*sqrt(5)) */   \
     (dReal)0.850650808352039932181540497063011072240401406
@@ -145,7 +147,7 @@ public:
 
     virtual bool _GraspCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         string strsavetraj;
         bool bGetLinkCollisions = false;
@@ -163,7 +165,7 @@ public:
         params->vtargetdirection = Vector(0,0,1);
         params->vmanipulatordirection =  _robot->GetActiveManipulator()->GetLocalToolDirection();
 
-        std::vector<dReal> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
+        std::vector<int> vchuckingdir = _robot->GetActiveManipulator()->GetChuckingDirection();
         boost::shared_ptr<CollisionCheckerMngr> pcheckermngr;
 
         string cmd;
@@ -184,8 +186,8 @@ public:
             }
             else if( cmd == "bodyid" ) {
                 // initialization
-                int id = 0; sinput >> id;
-                params->targetbody = GetEnv()->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0; sinput >> bodyIndex;
+                params->targetbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( cmd == "direction" ) {
                 // grasp
@@ -311,7 +313,7 @@ public:
             params->vgoalconfig.resize(_robot->GetActiveDOF()); // chucking direction
             for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 params->vgoalconfig[i] = 0;
-                vector<dReal>::const_iterator itchucking = vchuckingdir.begin();
+                vector<int>::const_iterator itchucking = vchuckingdir.begin();
                 FOREACHC(itgripper,_robot->GetActiveManipulator()->GetGripperIndices()) {
                     if(( *itchucking != 0) &&( *itgripper == _robot->GetActiveDOFIndices().at(i)) ) {
                         params->vgoalconfig[i] = *itchucking;
@@ -419,7 +421,7 @@ public:
 
     virtual bool _ComputeDistanceMapCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         dReal conewidth = 0.25f*PI;
         int nDistMapSamples = 60000;
@@ -477,7 +479,7 @@ public:
 
     virtual bool _GetStableContactsCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         string cmd;
         dReal mu=0;
@@ -711,7 +713,7 @@ public:
 
     virtual bool _GraspThreadedCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock543(GetEnv()->GetMutex());
 
         WorkerParametersPtr worker_params(new WorkerParameters());
         int numthreads = 2;
@@ -840,9 +842,9 @@ public:
 
         _bContinueWorker = true;
         // start worker threads
-        vector<boost::shared_ptr<boost::thread> > listthreads(numthreads);
-        FOREACH(itthread,listthreads) {
-            itthread->reset(new boost::thread(boost::bind(&GrasperModule::_WorkerThread,this,worker_params,pcloneenv)));
+        vector<boost::shared_ptr<std::thread> > listthreads(numthreads);
+        for (int threadIdx = 0; threadIdx < numthreads; ++threadIdx) {
+            listthreads[threadIdx] = boost::make_shared<std::thread>(std::bind(&GrasperModule::_WorkerThread, this, worker_params, pcloneenv));
         }
 
         _listGraspResults.clear();
@@ -859,7 +861,7 @@ public:
             size_t iapproachray = (id / (rolls.size() * preshapes.size() * standoffs.size()))%approachrays.size();
             size_t imanipulatordirection = (id / (rolls.size() * preshapes.size() * standoffs.size()*approachrays.size()));
 
-            boost::mutex::scoped_lock lock(_mutexGrasp);
+            std::unique_lock<std::mutex> lock123(_mutexGrasp);
             if( _listGraspResults.size() >= maxgrasps ) {
                 break;
             }
@@ -875,7 +877,7 @@ public:
             _graspParamsWork->fstandoff = standoffs.at(istandoff);
             _graspParamsWork->preshape = preshapes.at(ipreshape);
             _condGraspHasWork.notify_one();     // notify there is work
-            _condGraspReceivedWork.wait(lock);     // wait for more work
+            _condGraspReceivedWork.wait(lock123);     // wait for more work
         }
 
         // wait for workers
@@ -915,7 +917,7 @@ public:
         // clone environment
         EnvironmentBasePtr pcloneenv = penv->CloneSelf(Clone_Bodies|Clone_Simulation);
         {
-            EnvironmentMutex::scoped_lock lock(pcloneenv->GetMutex());
+            EnvironmentLock lock765(pcloneenv->GetMutex());
             boost::shared_ptr<CollisionCheckerMngr> pcheckermngr(new CollisionCheckerMngr(pcloneenv, worker_params->collisionchecker));
             PlannerBasePtr planner = RaveCreatePlanner(pcloneenv,"Grasper");
             RobotBasePtr probot = pcloneenv->GetRobot(_robot->GetName());
@@ -943,8 +945,6 @@ public:
             probot->GetActiveManipulator()->GetIndependentLinks(vindependentlinks);
             Transform trobotstart = probot->GetTransform();
 
-            vector<dReal> vtrajpoint;
-
             // use CO_ActiveDOFs since might be calling FindIKSolution
             int coloptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions()|(worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0);
             coloptions &= ~CO_Contacts;
@@ -953,9 +953,9 @@ public:
             while(_bContinueWorker) {
                 {
                     // wait for work
-                    boost::mutex::scoped_lock lock(_mutexGrasp);
+                    std::unique_lock<std::mutex> lock653(_mutexGrasp);
                     if( !_graspParamsWork ) {
-                        _condGraspHasWork.wait(lock);
+                        _condGraspHasWork.wait(lock653);
                         // after signal
                         if( !_graspParamsWork ) {
                             continue;
@@ -1017,7 +1017,7 @@ public:
 
                 if ( worker_params->bCheckGraspIK ) {
                     CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
-                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                    Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                     RobotBase::RobotStateSaver linksaver(probot);
                     probot->SetTransform(trobotstart);
                     FOREACH(itlink,vlinks) {
@@ -1087,7 +1087,7 @@ public:
                             Transform t = probot->GetTransform();
                             ptraj->GetConfigurationSpecification().ExtractTransform(t,vtrajpoint.begin(),probot);
                             probot->SetTransform(t);
-                            Transform Tgoalgrasp = probot->GetActiveManipulator()->GetEndEffectorTransform();
+                            Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                             probot->SetTransform(trobotstart);
                             FOREACH(itlink,vlinks) {
                                 (*itlink)->Enable(false);
@@ -1163,7 +1163,7 @@ public:
 
                 RAVELOG_DEBUG(str(boost::format("grasp %d: success")%grasp_params->id));
 
-                boost::mutex::scoped_lock lock(_mutexGrasp);
+                std::lock_guard<std::mutex> lock(_mutexGrasp);
                 _listGraspResults.push_back(grasp_params);
             }
         }
@@ -1171,10 +1171,10 @@ public:
     }
 
     bool _bContinueWorker;
-    boost::mutex _mutexGrasp;
+    std::mutex _mutexGrasp;
     GraspParametersThreadPtr _graspParamsWork;
     list<GraspParametersThreadPtr> _listGraspResults;
-    boost::condition _condGraspHasWork, _condGraspReceivedWork;
+    std::condition_variable _condGraspHasWork, _condGraspReceivedWork;
 
 protected:
     void _ComputeJointMaxLengths(vector<dReal>& vjointlengths)
@@ -1494,7 +1494,7 @@ protected:
         //make sure we get the right chucking direction and don't look at irrelevant joints
         vector<dReal> chuckingdir(_robot->GetDOF(),0);
         FOREACH(itmanip,_robot->GetManipulators()) {
-            vector<dReal>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
+            vector<int>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
             FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
                 chuckingdir.at(*itgripper) = *itchucking++;
             }
@@ -1659,10 +1659,10 @@ protected:
         boolT ismalloc = 0;               // True if qhull should free points in qh_freeqhull() or reallocation
         char flags[]= "qhull Tv FA";     // option flags for qhull, see qh_opt.htm, output volume (FA)
 
-        boost::mutex::scoped_lock lock(s_QhullMutex);
+        std::lock_guard<std::mutex> lock(s_QhullMutex);
 
         if( !outfile ) {
-            outfile = tmpfile();        // stdout from qhull code
+            // outfile = tmpfile();        // stdout from qhull code
         }
         if( !errfile ) {
             errfile = tmpfile();        // stderr, error messages from qhull code
@@ -1782,7 +1782,7 @@ protected:
     PlannerBasePtr _planner;
     RobotBasePtr _robot;
     CollisionReportPtr _report;
-    boost::mutex _mutex;
+    std::mutex _mutex;
     FILE *outfile;
     FILE *errfile;
     std::vector<dReal> _vjointmaxlengths;

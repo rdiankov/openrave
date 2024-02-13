@@ -208,9 +208,9 @@ public:
     RaveVector() : x(0), y(0), z(0), w(0) {
     }
 
-    RaveVector(T x, T y, T z) : x(x), y(y), z(z), w(0) {
+    RaveVector(T x_, T y_, T z_) : x(x_), y(y_), z(z_), w(0) {
     }
-    RaveVector(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {
+    RaveVector(T x_, T y_, T z_, T w_) : x(x_), y(y_), z(z_), w(w_) {
     }
     template<typename U> RaveVector(const RaveVector<U> &vec) : x((T)vec.x), y((T)vec.y), z((T)vec.z), w((T)vec.w) {
     }
@@ -407,7 +407,7 @@ public:
 #endif
     }
 
-    template <typename U> RaveTransform(const RaveVector<U>& rot, const RaveVector<U>& trans) : rot(rot), trans(trans) {
+    template <typename U> RaveTransform(const RaveVector<U>& rot_, const RaveVector<U>& trans_) : rot(rot_), trans(trans_) {
 #if !defined(MATH_DISABLE_ASSERTS)
         const T l = rot.lengthsqr4();
         MATH_ASSERT( l > 0.99f && l < 1.01f );
@@ -489,6 +489,12 @@ public:
     }
     inline bool operator!= (const RaveTransform<T>& right) const{
         return !operator==(right);
+    }
+
+    /// \brief return true if any element of transform is different by mor ethan epsilon, otherwise false.
+    inline bool CompareTransform(const RaveTransform<T>& rhs, T epsilon) const {
+        return RaveFabs(trans.x - rhs.trans.x) > epsilon || RaveFabs(trans.y - rhs.trans.y) > epsilon || RaveFabs(trans.z - rhs.trans.z) > epsilon ||
+           RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
     }
 
     inline RaveTransform<T> inverse() const {
@@ -659,206 +665,6 @@ public:
     RaveVector<T> trans;     ///< translation component
 };
 
-/// \brief A ray defined by an origin and a direction.
-/// \ingroup geometric_primitives
-template <typename T>
-class ray
-{
-public:
-    ray() {
-    }
-    ray(const RaveVector<T>&_pos, const RaveVector<T>&_dir) : pos(_pos), dir(_dir) {
-    }
-    RaveVector<T> pos, dir;
-};
-
-/// \brief An axis aligned bounding box.
-/// \ingroup geometric_primitives
-template <typename T>
-class aabb
-{
-public:
-    aabb() {
-    }
-    aabb(const RaveVector<T>&vpos, const RaveVector<T>&vextents) : pos(vpos), extents(vextents) {
-    }
-    RaveVector<T> pos, extents;
-};
-
-/// \brief An oriented bounding box.
-/// \ingroup geometric_primitives
-template <typename T>
-class OrientedBox
-{
-public:
-    RaveTransform<T> transform;
-    RaveVector<T> extents;
-
-    virtual bool operator==(const OrientedBox& other) const {
-        return transform == other.transform && extents == other.extents;
-    }
-
-    virtual bool operator!=(const OrientedBox& other) const {
-        return !operator==(other);
-    }
-};
-
-/// \brief An oriented bounding box.
-/// \ingroup geometric_primitives
-template <typename T>
-class obb
-{
-public:
-    RaveVector<T> right, up, dir, pos, extents;
-};
-
-/// \brief A triangle defined by 3 points.
-/// \ingroup geometric_primitives
-template <typename T>
-class triangle
-{
-public:
-    triangle() {
-    }
-    triangle(const RaveVector<T>&v1, const RaveVector<T>&v2, const RaveVector<T>&v3) : v1(v1), v2(v2), v3(v3) {
-    }
-    ~triangle() {
-    }
-
-    RaveVector<T> v1, v2, v3;          //!< the vertices of the triangle
-
-    const RaveVector<T>& operator[] (int i) const {
-        return (&v1)[i];
-    }
-    RaveVector<T>& operator[] (int i)       {
-        return (&v1)[i];
-    }
-
-    /// assumes CCW ordering of vertices
-    inline RaveVector<T> normal() {
-        return (v2-v1).cross(v3-v1);
-    }
-};
-
-/// \brief A pyramid with its vertex clipped.
-/// \ingroup geometric_primitives
-template <typename T>
-class frustum
-{
-public:
-    RaveVector<T> right, up, dir, pos;
-    T fnear, ffar;
-    T ffovx,ffovy;
-    T fcosfovx,fsinfovx,fcosfovy,fsinfovy;
-};
-
-/// \brief intrinsic parameters for a camera.
-template <typename T>
-class RaveCameraIntrinsics
-{
-public:
-    RaveCameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {
-    }
-    RaveCameraIntrinsics(T fx, T fy, T cx, T cy) : fx(fx), fy(fy), cx(cx), cy(cy), focal_length(0.01) {
-    }
-
-    template <typename U>
-    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r) {
-        distortion_model = r.distortion_model;
-        distortion_coeffs.resize(r.distortion_coeffs.size());
-        std::copy(r.distortion_coeffs.begin(),r.distortion_coeffs.end(),distortion_coeffs.begin());
-        focal_length = r.focal_length;
-        fx = r.fx;
-        fy = r.fy;
-        cx = r.cx;
-        cy = r.cy;
-    }
-
-    template<typename U>
-    bool operator==(const RaveCameraIntrinsics<U>& r) {
-        return distortion_model == r.distortion_model
-            && distortion_coeffs == r.distortion_coeffs
-            && focal_length == r.focal_length
-            && fx == r.fx
-            && fy == r.fy
-            && cx == r.cx
-            && cy == r.cy;
-    }
-
-    template<typename U>
-    bool operator!=(const RaveCameraIntrinsics<U>& other) const {
-        return !operator==(other);
-    }
-
-    T fx,fy, cx,cy;
-
-    /** \brief distortion model of the camera. if left empty, no distortion model is used.
-
-        Possible values are:
-        - "plumb_bob" - Brown. "Decentering Distortion of Lenses", Photometric Engineering, pages 444-462, Vol. 32, No. 3, 1966
-     */
-    std::string distortion_model;
-    std::vector<T> distortion_coeffs;     ///< coefficients of the distortion model
-    T focal_length;     ///< physical focal length distance since focal length cannot be recovered from the intrinsic matrix, but is necessary for determining the lens plane.
-};
-
-/// Don't add new lines to the output << operators. Some applications use it to serialize the data
-/// to send across the network.
-/// \name Primitive Serialization functions.
-//@{
-template <typename U>
-std::ostream& operator<<(std::ostream& O, const RaveVector<U>&v)
-{
-    return O << v.x << " " << v.y << " " << v.z << " " << v.w << " ";
-}
-
-template <typename U>
-std::istream& operator>>(std::istream& I, RaveVector<U>&v)
-{
-    return I >> v.x >> v.y >> v.z >> v.w;
-}
-
-template <typename U>
-std::ostream& operator<<(std::ostream& O, const RaveTransform<U>&v)
-{
-    return O << v.rot.x << " " << v.rot.y << " " << v.rot.z << " " << v.rot.w << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
-}
-
-template <typename U>
-std::istream& operator>>(std::istream& I, RaveTransform<U>&v)
-{
-    return I >> v.rot.x >> v.rot.y >> v.rot.z >> v.rot.w >> v.trans.x >> v.trans.y >> v.trans.z;
-}
-
-template <typename U>
-std::ostream& operator<<(std::ostream& O, const ray<U>&r)
-{
-    return O << r.pos.x << " " << r.pos.y << " " << r.pos.z << " " << r.dir.x << " " << r.dir.y << " " << r.dir.z << " ";
-}
-
-template <typename U>
-std::istream& operator>>(std::istream& I, ray<U>&r)
-{
-    return I >> r.pos.x >> r.pos.y >> r.pos.z >> r.dir.x >> r.dir.y >> r.dir.z;
-}
-
-
-/// \brief serialize in column order! This is the format transformations are passed across the network
-template <typename U>
-std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>&v)
-{
-    return O << v.m[0] << " " << v.m[4] << " " << v.m[8] << " " << v.m[1] << " " << v.m[5] << " " << v.m[9] << " " << v.m[2] << " " << v.m[6] << " " << v.m[10] << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
-}
-
-/// \brief de-serialize in column order! This is the format transformations are passed across the network
-template <typename U>
-std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>&v)
-{
-    return I >> v.m[0] >> v.m[4] >> v.m[8] >> v.m[1] >> v.m[5] >> v.m[9] >> v.m[2] >> v.m[6] >> v.m[10] >> v.trans.x >> v.trans.y >> v.trans.z;
-}
-
-//@}
-
 /// \brief Converts an axis-angle rotation into a quaternion.
 ///
 /// \ingroup affine_math
@@ -1011,6 +817,251 @@ template <typename T> inline RaveTransformMatrix<T> matrixFromAxisAngle(const Ra
 {
     return matrixFromQuat(quatFromAxisAngle(axisangle));
 }
+
+/// \brief A ray defined by an origin and a direction.
+/// \ingroup geometric_primitives
+template <typename T>
+class ray
+{
+public:
+    ray() {
+    }
+    ray(const RaveVector<T>&_pos, const RaveVector<T>&_dir) : pos(_pos), dir(_dir) {
+    }
+    RaveVector<T> pos;
+    RaveVector<T> dir; ///< not necessarily unit direction
+};
+
+/// \brief An axis aligned bounding box.
+/// \ingroup geometric_primitives
+template <typename T>
+class RaveAxisAlignedBox
+{
+public:
+    RaveAxisAlignedBox() {
+    }
+    RaveAxisAlignedBox(const RaveVector<T>&vpos, const RaveVector<T>&vextents) : pos(vpos), extents(vextents) {
+    }
+
+    template <typename U>
+    inline RaveAxisAlignedBox<T> GetCombined(const RaveAxisAlignedBox<U>& rhs) const
+    {
+        RaveVector<T> lower = pos - extents;
+        RaveVector<T> rhslower = rhs.pos - rhs.extents;
+        if( lower.x > rhslower.x ) {
+            lower.x = rhslower.x;
+        }
+        if( lower.y > rhslower.y ) {
+            lower.y = rhslower.y;
+        }
+        if( lower.z > rhslower.z ) {
+            lower.z = rhslower.z;
+        }
+        RaveVector<T> upper = pos + extents;
+        RaveVector<T> rhsupper = rhs.pos + rhs.extents;
+        if( upper.x < rhsupper.x ) {
+            upper.x = rhsupper.x;
+        }
+        if( upper.y < rhsupper.y ) {
+            upper.y = rhsupper.y;
+        }
+        if( upper.z < rhsupper.z ) {
+            upper.z = rhsupper.z;
+        }
+        RaveVector<T> newpos = 0.5*(upper+lower);
+        return RaveAxisAlignedBox<T>(newpos, upper-newpos);
+    }
+
+    template <typename U>
+    inline RaveAxisAlignedBox<T> GetTransformed(const RaveTransform<U>& transform) const
+    {
+        RaveTransformMatrix<T> matrix = matrixFromQuat<T>(transform.rot);
+        RaveAxisAlignedBox<T> newab;
+        newab.pos = transform * pos;
+        newab.extents[0] = RaveFabs(matrix.m[0]*extents[0]) + RaveFabs(matrix.m[1]*extents[1]) + RaveFabs(matrix.m[2]*extents[2]);
+        newab.extents[1] = RaveFabs(matrix.m[4]*extents[0]) + RaveFabs(matrix.m[5]*extents[1]) + RaveFabs(matrix.m[6]*extents[2]);
+        newab.extents[2] = RaveFabs(matrix.m[8]*extents[0]) + RaveFabs(matrix.m[9]*extents[1]) + RaveFabs(matrix.m[10]*extents[2]);
+        return newab;
+    }
+
+    RaveVector<T> pos, extents;
+};
+
+/// \brief An oriented bounding box.
+/// \ingroup geometric_primitives
+template <typename T>
+class RaveOrientedBox
+{
+public:
+    RaveTransform<T> transform;
+    RaveVector<T> extents;
+
+    template<typename U> 
+    inline bool operator==(const RaveOrientedBox<U>& other) const {
+        return transform == other.transform && extents == other.extents;
+    }
+
+    template<typename U> 
+    inline bool operator!=(const RaveOrientedBox<U>& other) const {
+        return !operator==(other);
+    }
+};
+
+/// \brief An oriented bounding box.
+/// \ingroup geometric_primitives
+template <typename T>
+class obb
+{
+public:
+    RaveVector<T> right, up, dir, pos, extents;
+};
+
+/// \brief A triangle defined by 3 points.
+/// \ingroup geometric_primitives
+template <typename T>
+class triangle
+{
+public:
+    triangle() {
+    }
+    triangle(const RaveVector<T>&v1_, const RaveVector<T>&v2_, const RaveVector<T>&v3_) : v1(v1_), v2(v2_), v3(v3_) {
+    }
+    ~triangle() {
+    }
+
+    RaveVector<T> v1, v2, v3;          //!< the vertices of the triangle
+
+    const RaveVector<T>& operator[] (int i) const {
+        return (&v1)[i];
+    }
+    RaveVector<T>& operator[] (int i)       {
+        return (&v1)[i];
+    }
+
+    /// assumes CCW ordering of vertices
+    inline RaveVector<T> normal() {
+        return (v2-v1).cross(v3-v1);
+    }
+};
+
+/// \brief A pyramid with its vertex clipped.
+/// \ingroup geometric_primitives
+template <typename T>
+class frustum
+{
+public:
+    RaveVector<T> right, up, dir, pos;
+    T fnear, ffar;
+    T ffovx,ffovy;
+    T fcosfovx,fsinfovx,fcosfovy,fsinfovy;
+};
+
+/// \brief intrinsic parameters for a camera.
+template <typename T>
+class RaveCameraIntrinsics
+{
+public:
+    RaveCameraIntrinsics() : fx(0),fy(0),cx(0),cy(0), focal_length(0.01) {
+    }
+    RaveCameraIntrinsics(T fx_, T fy_, T cx_, T cy_) : fx(fx_), fy(fy_), cx(cx_), cy(cy_), focal_length(0.01) {
+    }
+
+    template <typename U>
+    RaveCameraIntrinsics<T>& operator=(const RaveCameraIntrinsics<U>&r) {
+        distortion_model = r.distortion_model;
+        distortion_coeffs.resize(r.distortion_coeffs.size());
+        std::copy(r.distortion_coeffs.begin(),r.distortion_coeffs.end(),distortion_coeffs.begin());
+        focal_length = r.focal_length;
+        fx = r.fx;
+        fy = r.fy;
+        cx = r.cx;
+        cy = r.cy;
+    }
+
+    template<typename U>
+    bool operator==(const RaveCameraIntrinsics<U>& r) const {
+        return distortion_model == r.distortion_model
+            && distortion_coeffs == r.distortion_coeffs
+            && focal_length == r.focal_length
+            && fx == r.fx
+            && fy == r.fy
+            && cx == r.cx
+            && cy == r.cy;
+    }
+
+    template<typename U>
+    bool operator!=(const RaveCameraIntrinsics<U>& other) const {
+        return !operator==(other);
+    }
+
+    T fx,fy, cx,cy;
+
+    /** \brief distortion model of the camera. if left empty, no distortion model is used.
+
+        Possible values are:
+        - "plumb_bob" - Brown. "Decentering Distortion of Lenses", Photometric Engineering, pages 444-462, Vol. 32, No. 3, 1966
+     */
+    std::string distortion_model;
+    std::vector<T> distortion_coeffs;     ///< coefficients of the distortion model
+    T focal_length;     ///< physical focal length distance since focal length cannot be recovered from the intrinsic matrix, but is necessary for determining the lens plane.
+};
+
+/// Don't add new lines to the output << operators. Some applications use it to serialize the data
+/// to send across the network.
+/// \name Primitive Serialization functions.
+//@{
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const RaveVector<U>&v)
+{
+    return O << v.x << " " << v.y << " " << v.z << " " << v.w << " ";
+}
+
+template <typename U>
+std::istream& operator>>(std::istream& I, RaveVector<U>&v)
+{
+    return I >> v.x >> v.y >> v.z >> v.w;
+}
+
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const RaveTransform<U>&v)
+{
+    return O << v.rot.x << " " << v.rot.y << " " << v.rot.z << " " << v.rot.w << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
+}
+
+template <typename U>
+std::istream& operator>>(std::istream& I, RaveTransform<U>&v)
+{
+    return I >> v.rot.x >> v.rot.y >> v.rot.z >> v.rot.w >> v.trans.x >> v.trans.y >> v.trans.z;
+}
+
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const ray<U>&r)
+{
+    return O << r.pos.x << " " << r.pos.y << " " << r.pos.z << " " << r.dir.x << " " << r.dir.y << " " << r.dir.z << " ";
+}
+
+template <typename U>
+std::istream& operator>>(std::istream& I, ray<U>&r)
+{
+    return I >> r.pos.x >> r.pos.y >> r.pos.z >> r.dir.x >> r.dir.y >> r.dir.z;
+}
+
+
+/// \brief serialize in column order! This is the format transformations are passed across the network
+template <typename U>
+std::ostream& operator<<(std::ostream& O, const RaveTransformMatrix<U>&v)
+{
+    return O << v.m[0] << " " << v.m[4] << " " << v.m[8] << " " << v.m[1] << " " << v.m[5] << " " << v.m[9] << " " << v.m[2] << " " << v.m[6] << " " << v.m[10] << " " << v.trans.x << " " << v.trans.y << " " << v.trans.z << " ";
+}
+
+/// \brief de-serialize in column order! This is the format transformations are passed across the network
+template <typename U>
+std::istream& operator>>(std::istream& I, RaveTransformMatrix<U>&v)
+{
+    return I >> v.m[0] >> v.m[4] >> v.m[8] >> v.m[1] >> v.m[5] >> v.m[9] >> v.m[2] >> v.m[6] >> v.m[10] >> v.trans.x >> v.trans.y >> v.trans.z;
+}
+
+//@}
 
 /// \brief Multiply two quaternions
 ///
@@ -1367,22 +1418,28 @@ inline int insideTriangle(const RaveVector<T> v, const triangle<T>& tri)
 /// \brief Test collision of a ray with an axis aligned bounding box.
 /// \ingroup geometric_primitives
 template <typename T>
-inline bool RayAABBTest(const ray<T>& r, const aabb<T>& ab)
+inline bool RayAABBTest(const ray<T>& r, const RaveAxisAlignedBox<T>& ab)
 {
     RaveVector<T> vd, vpos = r.pos - ab.pos;
-    if((MATH_FABS(vpos.x) > ab.extents.x)&&(r.dir.x* vpos.x > 0.0f))
+    if((MATH_FABS(vpos.x) > ab.extents.x)&&(r.dir.x* vpos.x > 0.0f)) {
         return false;
-    if((MATH_FABS(vpos.y) > ab.extents.y)&&(r.dir.y * vpos.y > 0.0f))
+    }
+    if((MATH_FABS(vpos.y) > ab.extents.y)&&(r.dir.y * vpos.y > 0.0f)) {
         return false;
-    if((MATH_FABS(vpos.z) > ab.extents.z)&&(r.dir.z * vpos.z > 0.0f))
+    }
+    if((MATH_FABS(vpos.z) > ab.extents.z)&&(r.dir.z * vpos.z > 0.0f)) {
         return false;
+    }
     vd = r.dir.cross(vpos);
-    if( MATH_FABS(vd.x) > ab.extents.y * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.y) )
+    if( MATH_FABS(vd.x) > ab.extents.y * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.y) ) {
         return false;
-    if( MATH_FABS(vd.y) > ab.extents.x * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.x) )
+    }
+    if( MATH_FABS(vd.y) > ab.extents.x * MATH_FABS(r.dir.z) + ab.extents.z * MATH_FABS(r.dir.x) ) {
         return false;
-    if( MATH_FABS(vd.z) > ab.extents.x * MATH_FABS(r.dir.y) + ab.extents.y * MATH_FABS(r.dir.x) )
+    }
+    if( MATH_FABS(vd.z) > ab.extents.x * MATH_FABS(r.dir.y) + ab.extents.y * MATH_FABS(r.dir.x) ) {
         return false;
+    }
     return true;
 }
 
@@ -1408,10 +1465,10 @@ inline bool RayOBBTest(const ray<T>& r, const obb<T>& o)
     if((MATH_FABS(vpos.z) > o.extents.z)&&(vdir.z * vpos.z > 0.0f)) {
         return false;
     }
-    cross3(vd, vdir, vpos);
-    if((MATH_FABS(vd.x) > o.extents.y * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.y))||
-       ( MATH_FABS(vd.y) > o.extents.x * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.x)) ||
-       ( MATH_FABS(vd.z) > o.extents.x * MATH_FABS(vdir.y) + o.extents.y * MATH_FABS(vdir.x)) ) {
+    vd = vdir.cross(vpos);
+    if( (MATH_FABS(vd.x) > o.extents.y * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.y)) ||
+        (MATH_FABS(vd.y) > o.extents.x * MATH_FABS(vdir.z) + o.extents.z * MATH_FABS(vdir.x)) ||
+        (MATH_FABS(vd.z) > o.extents.x * MATH_FABS(vdir.y) + o.extents.y * MATH_FABS(vdir.x)) ) {
         return false;
     }
     return true;
@@ -1830,7 +1887,7 @@ inline bool TriTriCollision(const RaveVector<T>& u1, const RaveVector<T>& u2, co
 /// \ingroup geometric_primitives
 /// \param[in] t transformation used to set the coordinate system of ab.
 template <typename T>
-inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransformMatrix<T>& t)
+inline obb<T> OBBFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransformMatrix<T>& t)
 {
     obb<T> o;
     o.right = RaveVector<T>(t.m[0],t.m[4],t.m[8]);
@@ -1846,9 +1903,33 @@ inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransformMatrix<T>& t)
 /// \ingroup geometric_primitives
 /// \param[in] t transformation used to set the coordinate system of ab.
 template <typename T>
-inline obb<T> OBBFromAABB(const aabb<T>& ab, const RaveTransform<T>& t)
+inline obb<T> OBBFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T>& t)
 {
     return OBBFromAABB(ab,RaveTransformMatrix<T>(t));
+}
+
+/// \brief Transform an axis aligned bounding box to an oriented bounding box expressed in transform.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of ab.
+template <typename T>
+inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransform<T>& t)
+{
+    RaveOrientedBox<T> o;
+    o.transform.rot = t.rot;
+    o.transform.trans = t*ab.pos;
+    o.extents = ab.extents;
+    return o;
+}
+
+/// \brief Transform an axis aligned bounding box to an oriented bounding box expressed in transform.
+///
+/// \ingroup geometric_primitives
+/// \param[in] t transformation used to set the coordinate system of ab.
+template <typename T>
+inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, const RaveTransformMatrix<T>& t)
+{
+    return OrientedBoxFromAABB(ab,RaveTransform<T>(t));
 }
 
 /// \brief Transforms an oriented bounding box.
@@ -1898,7 +1979,7 @@ inline obb<T> TransformOBB(const RaveTransformMatrix<T>& t, const obb<T>& o)
 ///
 /// \ingroup geometric_primitives
 template <typename T>
-inline bool AABBCollision(const aabb<T>& ab1, const aabb<T>& ab2)
+inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2)
 {
     RaveVector<T> v = ab1.pos-ab2.pos;
     return MATH_FABS(v.x) <= ab1.extents.x+ab2.extents.x && MATH_FABS(v.y) <= ab1.extents.y+ab2.extents.y && MATH_FABS(v.z) <= ab1.extents.z+ab2.extents.z;

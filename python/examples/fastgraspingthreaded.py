@@ -26,7 +26,6 @@ This type of example is suited for object geometries that are dynamically create
 from __future__ import with_statement # for python 2.5
 __author__ = 'Atsushi Tsuda and Rosen Diankov'
 
-from itertools import izip
 import openravepy
 if not __openravepy_build_doc__:
     from openravepy import *
@@ -168,7 +167,7 @@ class FastGraspingThreaded:
                     with self.robot:
                         Tlocalgrasp = eye(4)
                         self.robot.SetTransform(Tfinal)
-                        Tgrasp = self.manip.GetEndEffectorTransform()
+                        Tgrasp = self.manip.GetTransform()
                         Tlocalgrasp = dot(linalg.inv(self.target.GetTransform()),Tgrasp)
                         grasp[self.gmodel.graspindices.get('igrasptrans')] = reshape(transpose(Tlocalgrasp[0:3,0:4]),12)
                     grasps.append(grasp)
@@ -176,7 +175,7 @@ class FastGraspingThreaded:
 
                 grasps = array(grasps)
                 jointvalues = array(jointvalues)
-                print 'found %d grasps in %.3fs'%(len(grasps),totaltime)
+                print('found %d grasps in %.3fs'%(len(grasps),totaltime))
                 return grasps, jointvalues
 
     def showgrasps(self, grasps, jointvalues):

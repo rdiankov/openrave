@@ -28,7 +28,7 @@ void KinBody::LinkInfo::Reset()
     _name.clear();
     _t = Transform();
     _tMassFrame = Transform();
-    _mass = 0;
+    _mass = 1e-10; // to avoid divide by 0 for inverse dynamics/physics computations
     _vinertiamoments = Vector();
     _mapFloatParameters.clear();
     _mapIntParameters.clear();
@@ -36,6 +36,7 @@ void KinBody::LinkInfo::Reset()
     _vForcedAdjacentLinks.clear();
     _bStatic = false;
     _bIsEnabled = false;
+    _bIgnoreSelfCollision = false;
 }
 
 int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dReal fUnitScale, dReal fEpsilon) const
@@ -101,10 +102,14 @@ int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dRea
         return 17;
     }
 
+    if( _bIgnoreSelfCollision != rhs._bIgnoreSelfCollision ) {
+        return 18;
+    }
+
     for(int igeom = 0; igeom < (int)_vgeometryinfos.size(); ++igeom) {
         int geomcompare = _vgeometryinfos[igeom]->Compare(*rhs._vgeometryinfos[igeom], fUnitScale, fEpsilon);
         if (geomcompare != 0) {
-            return 18|(igeom<<16)|(geomcompare<<24);
+            return 19|(igeom<<16)|(geomcompare<<24);
         }
     }
 
@@ -128,6 +133,7 @@ void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
 
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
+    value.SetObject();
     orjson::SetJsonValueByKey(value, "id", _id, allocator);
     orjson::SetJsonValueByKey(value, "name", _name, allocator);
 
@@ -215,19 +221,18 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
     orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
     orjson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
+    orjson::SetJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision, allocator);
 }
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options)
 {
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
-    if( _id.empty() ) {
-        _id = _name;
-    }
 
     if (value.HasMember("transform")) {
         orjson::LoadJsonValueByKey(value, "transform", _t);
         _t.trans *= fUnitScale;  // partial update should only mutliply fUnitScale once if the key is in value
+        _modifiedFields |= KinBody::LinkInfo::LIF_Transform;
     }
     if (value.HasMember("massTransform")) {
         orjson::LoadJsonValueByKey(value, "massTransform", _tMassFrame);
@@ -239,7 +244,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     _vinertiamoments *= fUnitScale*fUnitScale;
 
     if (value.HasMember("floatParameters") && value["floatParameters"].IsArray()) {
-        _mapFloatParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["floatParameters"].Begin(); it != value["floatParameters"].End(); ++it) {
             std::string key;
             if( it->HasMember("id") ) {
@@ -253,11 +257,15 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
                 RAVELOG_WARN_FORMAT("ignored an entry in floatParameters in link %s due to missing or empty id", _id);
                 continue;
             }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapFloatParameters.erase(key);
+                continue;
+            }
             orjson::LoadJsonValueByKey(*it, "values", _mapFloatParameters[key]);
         }
     }
     if (value.HasMember("intParameters") && value["intParameters"].IsArray()) {
-        _mapIntParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["intParameters"].Begin(); it != value["intParameters"].End(); ++it) {
             std::string key;
             if( it->HasMember("id") ) {
@@ -271,11 +279,15 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
                 RAVELOG_WARN_FORMAT("ignored an entry in intParameters in link %s due to missing or empty id", _id);
                 continue;
             }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapIntParameters.erase(key);
+                continue;
+            }
             orjson::LoadJsonValueByKey(*it, "values", _mapIntParameters[key]);
         }
     }
     if (value.HasMember("stringParameters") && value["stringParameters"].IsArray()) {
-        _mapStringParameters.clear();
         for (rapidjson::Value::ConstValueIterator it = value["stringParameters"].Begin(); it != value["stringParameters"].End(); ++it) {
             std::string key;
             if( it->HasMember("id") ) {
@@ -289,6 +301,11 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
                 RAVELOG_WARN_FORMAT("ignored an entry in stringParameters in link %s due to missing or empty id", _id);
                 continue;
             }
+            // delete
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(*it, "__deleted__", false)) {
+                _mapStringParameters.erase(key);
+                continue;
+            }
             orjson::LoadJsonValueByKey(*it, "value", _mapStringParameters[key]);
         }
     }
@@ -298,12 +315,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     if (value.HasMember("geometries")) {
         _vgeometryinfos.reserve(value["geometries"].Size() + _vgeometryinfos.size());
         for (rapidjson::Value::ConstValueIterator it = value["geometries"].Begin(); it != value["geometries"].End(); ++it) {
-            const rapidjson::Value& geometryValue = *it;
-            std::string id = orjson::GetStringJsonValueByKey(geometryValue, "id");
-            if (id.empty()) {
-                id = orjson::GetStringJsonValueByKey(geometryValue, "name");
-            }
-            UpdateOrCreateInfo(geometryValue, id, _vgeometryinfos, fUnitScale, options);
+            UpdateOrCreateInfoWithNameCheck(*it, _vgeometryinfos, "name", fUnitScale, options);
         }
     }
 
@@ -318,19 +330,14 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     //         size_t iGeometry = 0;
     //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
     //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-    //             if (id.empty()) {
-    //                 id = orjson::GetStringJsonValueByKey(*im, "name");
-    //             }
-    //             if (id.empty()) {
-    //                 id = boost::str(boost::format("geometry%d") % iGeometry);
-    //             }
-    //             UpdateOrCreateInfo(*im, id, vgeometries, fUnitScale);
+    //             UpdateOrCreateInfoWithNameCheck(*im, id, vgeometries, "name", fUnitScale);
     //         }
     //     }
     // }
 
     orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
     orjson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
+    orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
@@ -346,43 +353,8 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
            && _vForcedAdjacentLinks == other._vForcedAdjacentLinks
            && _bStatic == other._bStatic
            && _bIsEnabled == other._bIsEnabled
-           && _vgeometryinfos == other._vgeometryinfos;
-}
-
-KinBody::LinkInfo& KinBody::LinkInfo::operator=(const LinkInfo& other) {
-    _vgeometryinfos.resize(other._vgeometryinfos.size());
-    for( size_t i = 0; i < _vgeometryinfos.size(); ++i ) {
-        if( !other._vgeometryinfos[i] ) {
-            _vgeometryinfos[i].reset();
-        }
-        else {
-            _vgeometryinfos[i].reset(new GeometryInfo(*(other._vgeometryinfos[i])));
-        }
-    }
-
-    _mapExtraGeometries.clear();
-    for( std::map< std::string, std::vector<GeometryInfoPtr> >::const_iterator it = other._mapExtraGeometries.begin(); it != other._mapExtraGeometries.end(); ++it ) {
-        _mapExtraGeometries[it->first] = std::vector<GeometryInfoPtr>(it->second.size());
-        std::vector<GeometryInfoPtr>& extraGeometries = _mapExtraGeometries[it->first];
-        for( size_t i = 0; i < extraGeometries.size(); ++i ) {
-            if( !!(it->second[i]) ) {
-                extraGeometries[i].reset(new GeometryInfo(*(it->second[i])));
-            }
-        }
-    }
-    _id = other._id;
-    _name = other._name;
-    _t = other._t;
-    _tMassFrame = other._tMassFrame;
-    _mass = other._mass;
-    _vinertiamoments = other._vinertiamoments;
-    _mapFloatParameters = other._mapFloatParameters;
-    _mapIntParameters = other._mapIntParameters;
-    _mapStringParameters = other._mapStringParameters;
-    _vForcedAdjacentLinks = other._vForcedAdjacentLinks;
-    _bStatic = other._bStatic;
-    _bIsEnabled = other._bIsEnabled;
-    return *this;
+           && _bIgnoreSelfCollision == other._bIgnoreSelfCollision
+           && AreVectorsDeepEqual(_vgeometryinfos, other._vgeometryinfos);
 }
 
 KinBody::Link::Link(KinBodyPtr parent)
@@ -400,14 +372,30 @@ void KinBody::Link::Enable(bool bEnable)
     if( _info._bIsEnabled != bEnable ) {
         KinBodyPtr parent = GetParent();
         parent->_nNonAdjacentLinkCache &= ~AO_Enabled;
-        _info._bIsEnabled = bEnable;
+        _Enable(bEnable);
         GetParent()->_PostprocessChangedParameters(Prop_LinkEnable);
     }
+}
+
+void KinBody::Link::_Enable(bool bEnable)
+{
+    _info._bIsEnabled = bEnable;
+    GetParent()->NotifyLinkEnabled(GetIndex(), bEnable);
 }
 
 bool KinBody::Link::IsEnabled() const
 {
     return _info._bIsEnabled;
+}
+
+void KinBody::Link::SetIgnoreSelfCollision(bool bIgnore)
+{
+    _info._bIgnoreSelfCollision = bIgnore;
+}
+
+bool KinBody::Link::IsSelfCollisionIgnored() const
+{
+    return _info._bIgnoreSelfCollision;
 }
 
 bool KinBody::Link::SetVisible(bool visible)
@@ -573,6 +561,73 @@ AABB KinBody::Link::ComputeAABBFromTransform(const Transform& tLink) const
     return AABB(tLink.trans,Vector(0,0,0));
 }
 
+AABB KinBody::Link::ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, Transform());
+}
+
+AABB KinBody::Link::ComputeAABBForGeometryGroup(const std::string& geomgroupname) const
+{
+    return ComputeAABBForGeometryGroupFromTransform(geomgroupname, _info._t);
+}
+
+AABB KinBody::Link::ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tLink) const
+{
+    const std::vector<KinBody::GeometryInfoPtr>& vgeoms = GetGeometriesFromGroup(geomgroupname);
+    if( vgeoms.size() == 1 ) {
+        return vgeoms.front()->ComputeAABB(tLink);
+    }
+    else if( vgeoms.size() > 1 ) {
+        Vector vmin, vmax;
+        bool binitialized = false;
+        AABB ab;
+        FOREACHC(itgeom, vgeoms) {
+            ab = (*itgeom)->ComputeAABB(tLink);
+            if( ab.extents.x <= 0 || ab.extents.y <= 0 || ab.extents.z <= 0 ) {
+                continue;
+            }
+            Vector vnmin = ab.pos - ab.extents;
+            Vector vnmax = ab.pos + ab.extents;
+            if( !binitialized ) {
+                vmin = vnmin;
+                vmax = vnmax;
+                binitialized = true;
+            }
+            else {
+                if( vmin.x > vnmin.x ) {
+                    vmin.x = vnmin.x;
+                }
+                if( vmin.y > vnmin.y ) {
+                    vmin.y = vnmin.y;
+                }
+                if( vmin.z > vnmin.z ) {
+                    vmin.z = vnmin.z;
+                }
+                if( vmax.x < vnmax.x ) {
+                    vmax.x = vnmax.x;
+                }
+                if( vmax.y < vnmax.y ) {
+                    vmax.y = vnmax.y;
+                }
+                if( vmax.z < vnmax.z ) {
+                    vmax.z = vnmax.z;
+                }
+            }
+        } // end FOREACHC
+        if( !binitialized ) {
+            ab.pos = tLink.trans;
+            ab.extents = Vector(0,0,0);
+        }
+        else {
+            ab.pos = (dReal)0.5 * (vmin + vmax);
+            ab.extents = vmax - ab.pos;
+        }
+        return ab;
+    }
+    // have to at least return the correct position
+    return AABB(tLink.trans, Vector(0, 0, 0));
+}
+
 void KinBody::Link::serialize(std::ostream& o, int options) const
 {
     o << _index << " ";
@@ -666,8 +721,10 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries,
     size_t i = 0;
     FOREACH(itinfo,geometries) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*itinfo));
-        if( _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
-            RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+        if( bForceRecomputeMeshCollision || _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+            if( !bForceRecomputeMeshCollision ) {
+                RAVELOG_VERBOSE("geometry has empty collision mesh\n");
+            }
             _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
         ++i;
@@ -676,7 +733,7 @@ void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries,
     // have to reset the self group!
     std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
-    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
+    for(i = 0; i < vgeometryinfos.size(); ++i) {
         vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         *vgeometryinfos[i] = _vGeometries[i]->_info;
     }
@@ -712,7 +769,7 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
 {
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(groupname);
     if( it == _info._mapExtraGeometries.end() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
+        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group '%s' does not exist for link '%s', current number of geometries=%d, numGroups=%d, isEnabled=%d."), groupname%GetName()%_vGeometries.size()%_info._mapExtraGeometries.size()%_info._bIsEnabled, ORE_InvalidArguments);
     }
     return it->second;
 }
@@ -751,20 +808,20 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
         // check if similar name exists and throw if it does
         FOREACH(itgeometry, _vGeometries) {
             if( (*itgeometry)->GetName() == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
 
         FOREACH(itgeometryinfo, _info._vgeometryinfos) {
             if( (*itgeometryinfo)->_name == ginfo._name ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s has conflicting name for link %s"), ginfo._name%GetName(), ORE_InvalidArguments);
             }
         }
         if( addToGroups ) {
             FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
                 FOREACH(itgeometryinfo, itgeometrygroup->second) {
                     if( (*itgeometryinfo)->_name == ginfo._name ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("new added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
                     }
                 }
             }
@@ -779,6 +836,30 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             itgeometrygroup->second.push_back(pginfo);
         }
     }
+    _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+}
+
+void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const std::string& groupname)
+{
+    if( !pginfo ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);
+    }
+
+    const KinBody::GeometryInfo& ginfo = *pginfo;
+
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
+    if( it == _info._mapExtraGeometries.end() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
+    }
+    if( ginfo._name.size() > 0 ) {
+        FOREACHC(itgeometryinfo, it->second) {
+            if( (*itgeometryinfo)->_name == ginfo._name ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%groupname%GetName(), ORE_InvalidArguments);
+            }
+        }
+    }
+
+    it->second.push_back(pginfo);
     _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
@@ -914,6 +995,7 @@ void KinBody::Link::UpdateInfo()
 void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 {
     info = _info;
+    info._modifiedFields = 0;
     info._vgeometryinfos.resize(_vGeometries.size());
     for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
@@ -923,76 +1005,71 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 
 UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info)
 {
-    BOOST_ASSERT(info._id == _info._id);
+    if(!info._id.empty() && _info._id != info._id) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Do not allow updating body '%s' link '%s' (id='%s') with a different info id='%s'", GetParent()->GetName()%GetName()%_info._id%info._id, ORE_Assert);
+    }
+
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
+
+    std::vector<KinBody::Link::GeometryPtr> vGeometries = _vGeometries;
+    if (!UpdateChildrenFromInfo(info._vgeometryinfos, vGeometries, updateFromInfoResult)) {
+        return updateFromInfoResult;
+    }
+
+    // transform
+    if( info.IsModifiedField(KinBody::LinkInfo::LIF_Transform) ) {
+        if (TransformDistanceFast(GetTransform(), info._t) > g_fEpsilonLinear) {
+            RAVELOG_VERBOSE_FORMAT("link %s transform changed", _info._id);
+            return UFIR_RequireReinitialize;
+        }
+    }
 
     // name
     if (GetName() != info._name) {
-        return UFIR_RequireRemoveFromEnvironment;
+        RAVELOG_VERBOSE_FORMAT("link %s name changed", _info._id);
+        return UFIR_RequireReinitialize;
     }
 
     // _bIsEnable
     if (IsEnabled() != info._bIsEnabled) {
         Enable(info._bIsEnabled);
+        RAVELOG_VERBOSE_FORMAT("link %s enabled changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // _bIgnoreSelfCollision
+    if (IsSelfCollisionIgnored() != info._bIgnoreSelfCollision) {
+        SetIgnoreSelfCollision(info._bIgnoreSelfCollision);
+        RAVELOG_VERBOSE_FORMAT("link %s ignoreSelfCollision changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _bStatic
     if (IsStatic() != info._bStatic) {
         SetStatic(info._bStatic);
+        RAVELOG_VERBOSE_FORMAT("link %s static changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _mass
     if (GetMass() != info._mass) {
         SetMass(info._mass);
+        RAVELOG_VERBOSE_FORMAT("link %s mass changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // inertiamoments
     if (_info._vinertiamoments != info._vinertiamoments) {
         SetPrincipalMomentsOfInertia(info._vinertiamoments);
+        RAVELOG_VERBOSE_FORMAT("link %s inertia moments changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
-    // geometries
-    bool isGeometryChanged = false;
-    FOREACHC(itGeometryInfo, info._vgeometryinfos) {
-        std::vector<KinBody::Link::GeometryPtr>::iterator itExistingGeometry = _vGeometries.end();
-        FOREACH(itGeometry, _vGeometries) {
-            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
-                itExistingGeometry = itGeometry;
-                break;
-            }
-        }
-
-        KinBody::GeometryInfoPtr pGeometryInfo = *itGeometryInfo;
-        if (itExistingGeometry != _vGeometries.end()) {
-            // update current geometry
-            UpdateFromInfoResult updateFromGeometryInfoResult = UFIR_Success;
-            KinBody::Link::GeometryPtr pGeometry = *itExistingGeometry;
-            updateFromGeometryInfoResult = pGeometry->UpdateFromInfo(*pGeometryInfo);
-            if (updateFromGeometryInfoResult == UFIR_Success) {
-                continue;
-            }
-            return UFIR_RequireRemoveFromEnvironment;
-        }
-        // new geometry is added;
-        AddGeometry(pGeometryInfo, true); // TODO: add to groups?
-        isGeometryChanged = true;
-    }
-
-    FOREACHC(itGeometry, _vGeometries) {
-        bool stillExists = false;
-        FOREACHC(itGeometryInfo, info._vgeometryinfos) {
-            if ((*itGeometry)->_info._id == (*itGeometryInfo)->_id) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (stillExists) {
-            continue;
-        }
-        RemoveGeometryByName((*itGeometry)->GetName(), true);
-        isGeometryChanged = true;
-    }
-    if (isGeometryChanged) {
-        _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+    // mass frame
+    if (TransformDistanceFast(GetLocalMassFrame(), info._tMassFrame) > g_fEpsilonLinear) {
+        SetLocalMassFrame(info._tMassFrame);
+        RAVELOG_VERBOSE_FORMAT("link %s mass frame changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _mapFloatParameters
@@ -1001,10 +1078,11 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         FOREACH(itParam, floatParameters) {
             SetFloatParameters(itParam->first, {}); // erase current parameters
         }
-
         FOREACH(itParam, info._mapFloatParameters) {
             SetFloatParameters(itParam->first, itParam->second);  // update with new info
         }
+        RAVELOG_VERBOSE_FORMAT("link %s float parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _mapIntParameters
@@ -1016,6 +1094,8 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         FOREACH(itParam, info._mapIntParameters) {
             SetIntParameters(itParam->first, itParam->second);
         }
+        RAVELOG_VERBOSE_FORMAT("link %s int parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
     // _mapStringParameters
@@ -1027,9 +1107,19 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         FOREACH(itParam, info._mapStringParameters) {
             SetStringParameters(itParam->first, itParam->second);
         }
+        RAVELOG_VERBOSE_FORMAT("link %s string parameters changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
     }
 
-    return UFIR_Success;
+
+    // forced adjacent links
+    if (_info._vForcedAdjacentLinks != info._vForcedAdjacentLinks) {
+        _info._vForcedAdjacentLinks = info._vForcedAdjacentLinks;
+        RAVELOG_VERBOSE_FORMAT("link %s forced adjacent links changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    return updateFromInfoResult;
 }
 
 void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChanged)

@@ -207,8 +207,12 @@ protected:
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1)) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual GraphHandlePtr drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual GraphHandlePtr drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency) OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual GraphHandlePtr drawplane(const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     virtual GraphHandlePtr drawtrimesh(const float* ppoints, int stride, const int* pIndices, int numTriangles, const RaveVector<float>& color) OPENRAVE_DUMMY_IMPLEMENTATION;

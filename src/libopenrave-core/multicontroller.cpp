@@ -28,7 +28,7 @@ public:
 
     virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         _probot=robot;
         if( !_probot ) {
             return false;
@@ -62,7 +62,7 @@ public:
 
     virtual bool AttachController(ControllerBasePtr controller, const std::vector<int>& dofindices, int nControlTransformation)
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         if( nControlTransformation && !!_ptransformcontroller ) {
             throw openrave_exception(_("controller already attached for transformation"),ORE_InvalidArguments);
         }
@@ -86,7 +86,7 @@ public:
 
     virtual void RemoveController(ControllerBasePtr controller)
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         _listcontrollers.remove(controller);
         if( _ptransformcontroller == controller ) {
             _ptransformcontroller.reset();
@@ -100,7 +100,7 @@ public:
 
     virtual ControllerBasePtr GetController(int dof) const
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         if( dof < 0 ) {
             return _ptransformcontroller;
         }
@@ -116,7 +116,7 @@ public:
 
     virtual void Reset(int options=0)
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACH(itcontroller,_listcontrollers) {
             (*itcontroller)->Reset(options);
         }
@@ -124,7 +124,7 @@ public:
 
     virtual bool SetDesired(const std::vector<dReal>& values, TransformConstPtr trans=TransformConstPtr())
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         vector<dReal> v;
         bool bsuccess = true;
         FOREACH(itcontroller,_listcontrollers) {
@@ -139,7 +139,7 @@ public:
 
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         bool bsuccess = true;
         FOREACH(itcontroller,_listcontrollers) {
             bsuccess &= (*itcontroller)->SetPath(ptraj);
@@ -148,7 +148,7 @@ public:
     }
 
     virtual void SimulationStep(dReal fTimeElapsed) {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         FOREACH(it,_listcontrollers) {
             (*it)->SimulationStep(fTimeElapsed);
         }
@@ -156,7 +156,7 @@ public:
 
     virtual bool IsDone()
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         bool bdone=true;
         FOREACH(it,_listcontrollers) {
             bdone &= (*it)->IsDone();
@@ -166,7 +166,7 @@ public:
 
     virtual dReal GetTime() const
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         dReal t = 0;
         FOREACHC(it,_listcontrollers) {
             if( it == _listcontrollers.begin() ) {
@@ -185,7 +185,7 @@ public:
 
     virtual void GetVelocity(std::vector<dReal>& vel) const
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         vel.resize(_dofindices.size());
         FOREACH(it,vel) {
             *it = 0;
@@ -205,7 +205,7 @@ public:
     /// The feedforward and friction terms should be subtracted out already
     virtual void GetTorque(std::vector<dReal>& torque) const
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         torque.resize(_dofindices.size());
         FOREACH(it,torque) {
             *it = 0;
@@ -228,7 +228,7 @@ protected:
     std::vector<ControllerBasePtr> _vcontrollersbydofs;
     ControllerBasePtr _ptransformcontroller;
     TrajectoryBasePtr _ptraj;
-    mutable boost::mutex _mutex;
+    mutable std::mutex _mutex;
 };
 
 MultiControllerBasePtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput)

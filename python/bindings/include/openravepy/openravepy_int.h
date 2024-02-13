@@ -40,6 +40,7 @@
 #include <boost/format.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/version.hpp>
+#include <boost/bind/bind.hpp>
 
 #define PY_ARRAY_UNIQUE_SYMBOL PyArrayHandle
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
@@ -54,6 +55,8 @@
 #define OPENRAVE_BINDINGS_PYARRAY
 #include <openravepy/bindings.h>
 #include <openravepy/docstrings.h>
+
+using namespace boost::placeholders;
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave", msgid)
 
@@ -76,8 +79,8 @@ OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
 OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
 OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
 OPENRAVEPY_API py::object toPyArray(const Transform& t);
+OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfo>& infos);
 OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
-// OPENRAVEPY_API py::object toPyArray(std::vector<KinBody::GeometryInfoPtr>& infos);
 OPENRAVEPY_API ReadablePtr ExtractReadable(py::object o);
 OPENRAVEPY_API py::object toPyReadable(ReadablePtr p);
 OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
@@ -206,12 +209,16 @@ protected:
 class OPENRAVEPY_API PythonGILSaver
 {
 public:
-    PythonGILSaver() {
-        PyEval_ReleaseLock();
+    PythonGILSaver()
+        : _pythreadstate(PyEval_SaveThread()) {
     }
-    virtual ~PythonGILSaver() {
-        PyEval_AcquireLock();
+
+    virtual ~PythonGILSaver() noexcept {
+        PyEval_RestoreThread(_pythreadstate);
     }
+
+private:
+    PyThreadState* _pythreadstate;
 };
 
 class OPENRAVEPY_API AutoPyArrayObjectDereferencer
@@ -231,25 +238,25 @@ typedef OPENRAVE_SHARED_PTR<PythonThreadSaver> PythonThreadSaverPtr;
 
 inline RaveVector<float> ExtractFloat3(const py::object& o)
 {
-    return RaveVector<float>(py::extract<float>(o[0]), py::extract<float>(o[1]), py::extract<float>(o[2]));
+    return RaveVector<float>(py::extract<float>(o[py::to_object(0)]), py::extract<float>(o[py::to_object(1)]), py::extract<float>(o[py::to_object(2)]));
 }
 
 template <typename T>
 inline RaveVector<T> ExtractVector2Type(const py::object& o)
 {
-    return RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]),0);
+    return RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]),0);
 }
 
 template <typename T>
 inline RaveVector<T> ExtractVector3Type(const py::object& o)
 {
-    return RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]));
+    return RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]));
 }
 
 template <typename T>
 inline RaveVector<T> ExtractVector4Type(const py::object& o)
 {
-    return RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]), py::extract<T>(o[3]));
+    return RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]), py::extract<T>(o[py::to_object(3)]));
 }
 
 inline Vector ExtractVector2(const py::object& oraw)
@@ -291,7 +298,7 @@ inline RaveVector<T> ExtractVector(const py::object& oraw)
     }
     Vector v;
     for(int i = 0; i < n; ++i) {
-        v[i] = (T)py::extract<T>(oraw[i]);
+        v[i] = (T)py::extract<T>(oraw[py::to_object(i)]);
     }
     return v;
 }
@@ -300,15 +307,15 @@ template <typename T>
 inline RaveTransform<T> ExtractTransformType(const py::object& o)
 {
     if( len(o) == 7 ) {
-        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]), py::extract<T>(o[3])), RaveVector<T>(py::extract<T>(o[4]), py::extract<T>(o[5]), py::extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]), py::extract<T>(o[py::to_object(3)])), RaveVector<T>(py::extract<T>(o[py::to_object(4)]), py::extract<T>(o[py::to_object(5)]), py::extract<T>(o[py::to_object(6)])));
     }
     RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
-        py::object orow = o[i];
-        t.m[4*i+0] = py::extract<T>(orow[0]);
-        t.m[4*i+1] = py::extract<T>(orow[1]);
-        t.m[4*i+2] = py::extract<T>(orow[2]);
-        t.trans[i] = py::extract<T>(orow[3]);
+        py::object orow = o[py::to_object(i)];
+        t.m[4*i+0] = py::extract<T>(orow[py::to_object(0)]);
+        t.m[4*i+1] = py::extract<T>(orow[py::to_object(1)]);
+        t.m[4*i+2] = py::extract<T>(orow[py::to_object(2)]);
+        t.trans[i] = py::extract<T>(orow[py::to_object(3)]);
     }
     return t;
 }
@@ -317,15 +324,15 @@ template <typename T>
 inline RaveTransformMatrix<T> ExtractTransformMatrixType(const py::object& o)
 {
     if( len(o) == 7 ) {
-        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[0]), py::extract<T>(o[1]), py::extract<T>(o[2]), py::extract<T>(o[3])), RaveVector<T>(py::extract<T>(o[4]), py::extract<T>(o[5]), py::extract<T>(o[6])));
+        return RaveTransform<T>(RaveVector<T>(py::extract<T>(o[py::to_object(0)]), py::extract<T>(o[py::to_object(1)]), py::extract<T>(o[py::to_object(2)]), py::extract<T>(o[py::to_object(3)])), RaveVector<T>(py::extract<T>(o[py::to_object(4)]), py::extract<T>(o[py::to_object(5)]), py::extract<T>(o[py::to_object(6)])));
     }
     RaveTransformMatrix<T> t;
     for(int i = 0; i < 3; ++i) {
-        py::object orow = o[i];
-        t.m[4*i+0] = py::extract<T>(orow[0]);
-        t.m[4*i+1] = py::extract<T>(orow[1]);
-        t.m[4*i+2] = py::extract<T>(orow[2]);
-        t.trans[i] = py::extract<T>(orow[3]);
+        py::object orow = o[py::to_object(i)];
+        t.m[4*i+0] = py::extract<T>(orow[py::to_object(0)]);
+        t.m[4*i+1] = py::extract<T>(orow[py::to_object(1)]);
+        t.m[4*i+2] = py::extract<T>(orow[py::to_object(2)]);
+        t.trans[i] = py::extract<T>(orow[py::to_object(3)]);
     }
     return t;
 }
@@ -388,7 +395,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 inline py::object toPyVector2(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({2});
+    py::array_t<dReal> pyvec(2);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -403,7 +410,7 @@ inline py::object toPyVector2(Vector v)
 inline py::object toPyVector3(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({3});
+    py::array_t<dReal> pyvec(3);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -419,7 +426,7 @@ inline py::object toPyVector3(Vector v)
 inline py::object toPyVector4(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvec({4});
+    py::array_t<dReal> pyvec(4);
     py::buffer_info buf = pyvec.request();
     dReal* pvec = (dReal*) buf.ptr;
     pvec[0] = v.x;
@@ -439,17 +446,10 @@ AttributesList toAttributesList(py::dict odict);
 AttributesList toAttributesList(py::list olist);
 AttributesList toAttributesList(py::object oattributes);
 
-bool GetReturnTransformQuaternions();
-
 template <typename T>
-inline py::object ReturnTransform(T t)
+inline py::object ReturnTransform(const T& t)
 {
-    if( GetReturnTransformQuaternions() ) {
-        return toPyArray(Transform(t));
-    }
-    else {
-        return toPyArray(TransformMatrix(t));
-    }
+    return toPyArray(TransformMatrix(t));
 }
 
 class OPENRAVEPY_API PyPluginInfo
@@ -599,14 +599,21 @@ void init_openravepy_ikparameterization(py::module& m);
 void init_openravepy_ikparameterization();
 #endif
 OPENRAVEPY_API py::object toPyAABB(const AABB& ab);
-OPENRAVEPY_API py::object toPyRay(const RAY& r);
-OPENRAVEPY_API RAY ExtractRay(py::object o);
-
 /// \brief PyAABB -> AABB
 OPENRAVEPY_API AABB ExtractAABB(py::object o);
+OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
+OPENRAVEPY_API OrientedBox ExtractOrientedBox(py::object o);
+OPENRAVEPY_API std::vector<OrientedBox> ExtractOrientedBoxArray(py::object pyOrientedBoxList);
+OPENRAVEPY_API py::object toPyRay(const RAY& r);
+OPENRAVEPY_API RAY ExtractRay(py::object o);
 OPENRAVEPY_API bool ExtractRay(py::object o, RAY& r);
+
 OPENRAVEPY_API py::object toPyTriMesh(const TriMesh& mesh);
 OPENRAVEPY_API bool ExtractTriMesh(py::object o, TriMesh& mesh);
+
+/// \brief extracts the geometries from pyGeometryInfoList into vGeometryInfos
+OPENRAVEPY_API void ExtractGeometryInfoArray(py::object pyGeometryInfoList, std::vector<KinBody::GeometryInfo>& vGeometryInfos);
+
 OPENRAVEPY_API std::vector<KinBody::LinkInfoPtr> ExtractLinkInfoArray(py::object pyLinkInfoList);
 OPENRAVEPY_API std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(py::object pyJointInfoList);
 OPENRAVEPY_API KinBody::GrabbedInfoPtr ExtractGrabbedInfo(py::object pyGrabbedInfo);
@@ -614,6 +621,7 @@ OPENRAVEPY_API std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(py::
 OPENRAVEPY_API std::vector< std::pair< std::pair<std::string, int>, dReal>> ExtractDOFValuesArray(py::object pyDOFValuesList);
 OPENRAVEPY_API std::map<std::string, ReadablePtr> ExtractReadableInterfaces(py::object pyReadableInterfaces);
 OPENRAVEPY_API std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(py::object pyAttachedSensorInfoList);
+OPENRAVEPY_API std::vector<RobotBase::GripperInfoPtr> ExtractGripperInfoArray(py::object pyGripperInfoList);
 OPENRAVEPY_API std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(py::object pyManipList);
 OPENRAVEPY_API std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(py::object pyConnectedBodyInfoList);
 OPENRAVEPY_API py::object ReturnDOFValues(const std::vector<std::pair<std::pair<std::string, int>, dReal>>& vDOFValues);
@@ -687,8 +695,8 @@ public:
     virtual py::object __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
-    virtual int __hash__() {
-        return static_cast<int>(uintptr_t(_pbase.get()));
+    virtual long __hash__() {
+        return static_cast<long>(uintptr_t(_pbase.get()));
     }
     virtual bool __eq__(PyInterfaceBasePtr p) {
         return !!p && _pbase == p->GetInterfaceBase();
@@ -721,6 +729,8 @@ OPENRAVEPY_API py::object GetUserData(UserDataPtr pdata);
 
 OPENRAVEPY_API EnvironmentBasePtr GetEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API EnvironmentBasePtr GetEnvironment(py::object);
+OPENRAVEPY_API PyEnvironmentBasePtr GetPyEnvironment(EnvironmentBasePtr);
+OPENRAVEPY_API py::object GetPyEnvironmentObject(EnvironmentBasePtr);
 OPENRAVEPY_API void LockEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API void UnlockEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv);
@@ -766,6 +776,7 @@ OPENRAVEPY_API PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyKinBody(KinBodyPtr, py::object opyenv);
 OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, py::object opyenv);
+OPENRAVEPY_API py::object toPyKinBodyGeometry(KinBody::GeometryPtr pgeom);
 OPENRAVEPY_API KinBody::LinkPtr GetKinBodyLink(py::object);
 OPENRAVEPY_API KinBody::LinkConstPtr GetKinBodyLinkConst(py::object);
 OPENRAVEPY_API py::object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr);

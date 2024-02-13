@@ -19,20 +19,25 @@
 #include "osgpick.h"
 #include "osgskybox.h"
 
+#include <QTime>
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
 #include <QtWidgets/QOpenGLWidget>
+
+#include <osg/AnimationPath>
+#include <osgManipulator/Dragger>
 #include <osgViewer/CompositeViewer>
 #include <osgViewer/ViewerEventHandlers>
 #include <osg/PositionAttitudeTransform>
-#include <osgManipulator/Dragger>
+#include <osgGA/NodeTrackerManipulator>
 #include <iostream>
 
 namespace qtosgrave {
 
 using namespace OpenRAVE;
 
+class OpenRAVETracker;
 class OpenRAVETrackball;
 
 /// \brief  Class of the openscene graph 3d viewer
@@ -47,7 +52,7 @@ public:
     virtual ~QOSGViewerWidget();
 
     /// \brief Draws bounding box around actual kinbody
-    void DrawBoundingBox(bool pressed);
+    //void DrawBoundingBox(bool pressed);
 
     /// \brief Active selection
     void ActivateSelection(bool active);
@@ -84,8 +89,29 @@ public:
     /// \brief sets the near plane for the camera
     void SetNearPlane(double nearplane);
 
-    /// \brief sets the zoom factor. only affects orthogonal view
-    /// \param factor > 1.0 = Zoom in. < 1.0 = Zoom out
+    /// \brief Rotates the camera around the current focal point in the direction of the screen x vector (in world coordinates). The argument thetaX is in radians -pi < thetaX < pi.
+    virtual void RotateCameraXDirection(float thetaX);
+
+    /// \brief Rotates the camera around the current focal point in the direction of the screen y vector (in world coordinates). The argument thetaY is in radians -pi < thetaY < pi.
+    virtual void RotateCameraYDirection(float thetaY);
+
+    /// \brief Pans the camera in the direction of the screen x vector, parallel to screen plane. The argument dx is in normalized coordinates 0 < dx < 1, where 1 means canvas width.
+    virtual void PanCameraXDirection(float dx);
+
+    /// \brief Pans the camera in the direction of the screen y vector, parallel to screen plane. The argument dy is in normalized coordinates 0 < dy < 1, where 1 means canvas height.
+    virtual void PanCameraYDirection(float dy);
+
+
+    /// \param axis, the axis to align camera to. It will translate the camera so the whole scene can be visible, and new center of view will be the scene's bounding box center.
+    void MoveCameraPointOfView(const std::string& axis);
+
+    /// \param factor > 1.0 = zoom in. < 1.0 = zoom out
+    /// \param isPan, if true, then focal distance will not change, but rather camera position will move along with focal point
+    /// \param panDelta, if true, then focal distance will not change, but rather camera position will move along with focal point
+    void MoveCameraZoom(float factor, bool isPan, float panDelta);
+
+    /// \brief changes current focal distance (if in perspective mode) or the current projection plane size (if in ortho mode) in order
+    /// to zoom in/out towards/from focal point (if factor < 1). This function never changes de focal point position.
     void Zoom(float factor);
 
     /// \brief set the cubemap for skybox
@@ -100,7 +126,13 @@ public:
     double GetCameraNearPlane();
 
     /// \brief called when the qt window size changes
-    void SetViewport(int width, int height, double metersinunit);
+    void SetViewport(int width, int height);
+
+    /// \brief gets the screen offset of HUD text (default with no control buttons is (10.0, 0.0))
+    osg::Vec2 GetHUDTextOffset();
+
+    /// \brief sets the screen offset of HUD text (default with no control buttons is (10.0, 0.0))
+    void SetHUDTextOffset(double xOffset, double yOffset);
 
     /// \brief sets user-controlled hud text
     void SetUserHUDText(const std::string &text);
@@ -123,9 +155,23 @@ public:
     /// \brief handle case when link is selected
     void SelectOSGLink(OSGNodePtr node, int modkeymask);
 
-    osg::Camera *GetCamera();
+    /// \brief activate and configure trackmode manipulator to track given OSG node
+    /// \brief trackInfoText is the text to display in canvas about the current element being tracked
+    void TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance);
+    void StopTrackNode();
 
-    osg::ref_ptr<osgGA::CameraManipulator> GetCameraManipulator();
+    osg::Camera *GetCamera();
+    bool IsInOrthoMode();
+
+    osg::ref_ptr<osgGA::CameraManipulator> GetCurrentCameraManipulator();
+    void SetCurrentCameraManipulator(osgGA::CameraManipulator* manipulator);
+    void SetCameraDistanceToFocus(double distance);
+    double GetCameraDistanceToFocus();
+    void SetCameraCenter(osg::Vec3d);
+    void RestoreDefaultManipulator();
+    bool IsUsingDefaultCameraManipulator();
+    osg::ref_ptr<osgGA::TrackballManipulator> GetDefaultCameraManipulator();
+    osg::ref_ptr<osgGA::NodeTrackerManipulator> GetTrackModeManipulator();
 
     OSGMatrixTransformPtr GetCameraHUD();
 
@@ -134,6 +180,12 @@ public:
 
     /// \brief Find node of Robot for the link picked
     KinBodyItemPtr FindKinBodyItemFromOSGNode(OSGNodePtr node);
+
+    /// \brief Find KinBodyItem from a kinbody name
+    KinBodyItemPtr GetItemFromName(const std::string &name);
+
+    /// \brief Find KinBodyItem from a kinbody instance
+    KinBodyItemPtr GetItemFromKinBody(KinBodyPtr kinBody);
 
     /// \brief restores cursor to what it was originally set to
     void RestoreCursor();
@@ -154,6 +206,8 @@ public:
         _bSwitchMouseLeftMiddleButton = !_bSwitchMouseLeftMiddleButton;
     }
 
+    static void SetFont(osgText::Font *font);
+
 protected:
     /// \brief handles a key press and looks at the modifier keys
     bool HandleOSGKeyDown(const osgGA::GUIEventAdapter &ea, osgGA::GUIActionAdapter &aa);
@@ -168,12 +222,14 @@ protected:
     void _SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
                       osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview);
 
+    /// \brief Retrieves RAVE environment world up unitary vector
+    void _GetRAVEEnvironmentUpVector(osg::Vec3d& upVector);
+
     /// \brief Create Open GL Context
     osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h, double metersinunit);
 
     osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit);
 
-    KinBodyItemPtr _GetItemFromName(const std::string &name);
 
     /// \brief Find joint into OpenRAVE core
     KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link);
@@ -192,6 +248,27 @@ protected:
     /// \brief Loads the stored matrix transform to the camera
     void _LoadMatrixTransform();
 
+    /// \brief update hud display axis from current manipulator transform
+    void _UpdateHUDAxisTransform(int width, int height);
+
+    /// \brief set camera projection matrix as orthogonal using the given projection plane size
+    void _SetCameraViewOrthoProjectionPlaneSize(double size);
+
+    /// \brief will move the camera to sceneBoudingBox.center + axis * distance, and set view center to camerapos - axis, where distance is some distance that provide good visualization of the whole scene
+    /// \param axis is an arbitrary *unitary* axis vector
+    void _MoveCameraPointOfView(const osg::Vec3d& axis);
+
+    /// \brief performs a rotation of the camera over the current focal point (see GetCameraDistanceToFocus()).
+    /// Camera will keep looking ate the focal point after performing the rotation.
+    /// \param angle in radians, -pi < angle < pi, camSpaceRotationOverDirection is the direction in camera space over which to rotate to.
+    /// \param useCameraUpDirection in radians, -pi < angle < pi, camSpaceRotationOverDirection is the direction, in camera, space over which to rotate to.
+    void _RotateCameraOverDirection(double angle, const osg::Vec3d& camSpaceRotationOverDirection, bool useCameraUpDirection=true);
+
+    /// \brief performs a a pan translation of both camera and focal point position.
+    /// \param camSpacePanDirection is the pan direction in camera space to apply to camera and focal point.
+    /// \param delta is how much to translate in worlds units (see _metersinunit and QOSGViewerWidget() constructor)
+    void _PanCameraTowardsDirection(double delta, const osg::Vec3d& camSpacePanDirection);
+
     /// \brief Create a dragger with a name given
     std::vector<osg::ref_ptr<osgManipulator::Dragger> > _CreateDragger(const std::string &name);
 
@@ -200,6 +277,8 @@ protected:
     /// \param draggerName the type of dragger to create
     /// \param joint if not empty, the joint to create the dragger over (ie for moving the joint value)
     OSGNodePtr _AddDraggerToObject(const std::string &draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
+
+    virtual void initializeGL();
 
     virtual void paintGL();
 
@@ -247,16 +326,18 @@ protected:
     osgViewer::GraphicsWindowEmbedded* _osgGraphicWindow;
     osg::ref_ptr<osgViewer::View> _osgview;
     osg::ref_ptr<osgViewer::View> _osghudview;
-    osg::ref_ptr<OpenRAVETrackball> _osgCameraManipulator;
+    osg::ref_ptr<OpenRAVETrackball> _osgDefaultManipulator; //< default manipulator
+    osg::ref_ptr<OpenRAVETracker> _osgTrackModeManipulator; //< manipulator used by TrackLink and TrackManip commands
 
     osg::ref_ptr<osgText::Text> _osgHudText; ///< the HUD text in the upper left corner
-    std::string _strUserText, _strSelectedItemText, _strRayInfoText; ///< the user hud text
+    std::string _strUserText, _strSelectedItemText, _strRayInfoText, _strTrackInfoText; ///< the user hud text
+    osg::Vec2 _vecTextScreenOffset; ///< hud text screen offset
 
     osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
-
+    double _metersinunit; //< current meter unit to be used in all transformations and calculations
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)
     bool _bLightOn; ///< whether lights are on or not
@@ -264,8 +345,13 @@ protected:
     double _zNear; ///< In OSG, znear and zfar are updated by CullVisitor, which
                    ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
+    double _currentOrthoFrustumSize; ///< coordinate for the right vertical clipping plane 
 
     void GetSwitchedButtonValue(unsigned int &button);
+
+    private:
+        /// font for HUD text
+        static osg::ref_ptr<osgText::Font> OSG_FONT;
 };
 
 class QtOSGKeyEventTranslator

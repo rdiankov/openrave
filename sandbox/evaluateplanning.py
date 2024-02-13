@@ -19,7 +19,13 @@ from openravepy import *
 from openravepy.examples import mobilemanipulation,graspplanning
 from openravepy.databases import inversereachability,linkstatistics
 from numpy import *
-import numpy,time,os,pickle
+import numpy,time,os
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from itertools import izip
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
@@ -139,7 +145,7 @@ class EvaluateInverseReachability(OpenRAVEEvaluator):
             data.targetname = gmodel.target.GetName()
             datafilename = self.dataprefix+'.'+gmodel.target.GetName()+'.pp'
             with open(datafilename,'w') as f:
-                pickle.dump(data, f)
+                pickle.dump(data, f, 2)
         print 'finished inversereachability'
             
     @staticmethod
@@ -247,7 +253,7 @@ class EvaluateDistanceMetric(OpenRAVEEvaluator):
             data.catimes.append([self.fntimer(self.planning.basemanip.MoveToHandPosition,matrices=Tgrasps[0:1],maxtries=1,seedik=4,maxiter=10000,execute=False)[0] for i in range(N)])
         datafilename = self.dataprefix+'.pp'
         with open(datafilename,'w') as f:
-            pickle.dump(data, f)
+            pickle.dump(data, f, 2)
     @staticmethod
     def gatherdata(robotnames):
         env = Environment()
@@ -324,7 +330,7 @@ class EvaluateResolutions(OpenRAVEEvaluator):
             data.catimes.append([self.fntimer(self.planning.basemanip.MoveToHandPosition,matrices=Tgrasps[0:1],maxtries=1,seedik=4,maxiter=10000,execute=False)[0] for i in range(N)])
         datafilename = self.dataprefix+'.pp'
         with open(datafilename, 'w') as f:
-            pickle.dump(data, f)
+            pickle.dump(data, f, 2)
     @staticmethod
     def gatherdata(robotnames):
         env = Environment()

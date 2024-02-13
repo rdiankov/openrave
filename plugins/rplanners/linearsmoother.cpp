@@ -24,14 +24,14 @@ public:
         _linearretimer = RaveCreatePlanner(GetEnv(), "LinearTrajectoryRetimer");
         _nUseSingleDOFSmoothing = 1;
         sinput >> _nUseSingleDOFSmoothing;
-        RAVELOG_INFO_FORMAT("env=%d, _nUseSingleDOFSmoothing=%d", GetEnv()->GetId()%_nUseSingleDOFSmoothing);
+        RAVELOG_INFO_FORMAT("env=%s, _nUseSingleDOFSmoothing=%d", GetEnv()->GetNameId()%_nUseSingleDOFSmoothing);
     }
     virtual ~LinearSmoother() {
     }
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
         _probot = pbase;
@@ -40,7 +40,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
         _probot = pbase;
@@ -128,17 +128,21 @@ public:
             dReal totaldist = 0;
 
             bool isBranching = false;
-            if(!!_probot && _nUseSingleDOFSmoothing == 1) {
-                std::set<KinBody::LinkConstPtr> setJoints;
-                FOREACHC(it, _probot->GetActiveDOFIndices()) {
-                    KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
-                    bool canInsert = setJoints.insert(pjoint->GetHierarchyParentLink()).second;
-                    if(!canInsert) {
-                        isBranching = true;
-                        break;
-                    }
-                }
-            }
+            // The following code is commented out because _OptimizePathSingleGroupShift only works
+            // with some specific kinds of robots, as it assumes certain kinematics structures, and
+            // isBranching is not a sufficient condition to detect such robots.
+
+            // if(!!_probot && _nUseSingleDOFSmoothing == 1) {
+            //     std::set<KinBody::LinkConstPtr> setJoints;
+            //     FOREACHC(it, _probot->GetActiveDOFIndices()) {
+            //         KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+            //         bool canInsert = setJoints.insert(pjoint->GetHierarchyParentLink()).second;
+            //         if(!canInsert) {
+            //             isBranching = true;
+            //             break;
+            //         }
+            //     }
+            // }
 
             if( _nUseSingleDOFSmoothing == 3 or (isBranching and _nUseSingleDOFSmoothing == 1)) {
                 uint32_t basetime1 = utils::GetMilliTime();
@@ -153,7 +157,7 @@ public:
                 if( newdist1 < 0 ) {
                     return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
                 }
-                RAVELOG_DEBUG_FORMAT("env=%d, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetId()%totalshiftdist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
+                RAVELOG_DEBUG_FORMAT("env=%s, path optimizing shift smoothing - dist %f->%f computation time=%fs", GetEnv()->GetNameId()%totalshiftdist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
 
 //                if( listsimplepath.size() <= 1 ) {
 //                    // trajectory contains similar points, so at least add another point and send to the next post-processing stage
@@ -201,13 +205,13 @@ public:
                     if( newdist1 < 0 ) {
                         return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
                     }
-                    RAVELOG_DEBUG_FORMAT("env=%d, path optimizing first stage - dist %f->%f, computation time=%fs, num=%d", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))%listpath.size());
+                    RAVELOG_DEBUG_FORMAT("env=%s, path optimizing first stage - dist %f->%f, computation time=%fs, num=%d", GetEnv()->GetNameId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime))%listpath.size());
                     uint32_t basetime2 = utils::GetMilliTime();
                     dReal newdist2 = _OptimizePathSingleDOF(listpath, newdist1, parameters->_nMaxIterations*2/10);
                     if( newdist2 < 0 ) {
                         return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
                     }
-                    RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs, num=%d", GetEnv()->GetId()%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2))%listpath.size());
+                    RAVELOG_DEBUG_FORMAT("env=%s, path optimizing second stage - dist %f->%f computation time=%fs, num=%d", GetEnv()->GetNameId()%newdist1%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime2))%listpath.size());
                 }
                 else if( _nUseSingleDOFSmoothing == 2 ) {
                     uint32_t basetime1 = utils::GetMilliTime();
@@ -222,14 +226,14 @@ public:
                         if( newdist2 < 0 ) {
                             return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
                         }
-                        RAVELOG_DEBUG_FORMAT("env=%d, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetId()%totaldist%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
+                        RAVELOG_DEBUG_FORMAT("env=%s, path optimizing second stage - dist %f->%f computation time=%fs", GetEnv()->GetNameId()%totaldist%newdist2%(0.001f*(float)(utils::GetMilliTime()-basetime1)));
                         totaldist = newdist2;
                         nCurIterations += 2*nIterationGroup;
                     }
                 }
                 else {
                     dReal newdist1 = _OptimizePath(listpath, totaldist, parameters->_nMaxIterations);
-                    RAVELOG_DEBUG_FORMAT("env=%d, path optimizing stage - dist %f->%f, computation time=%fs", GetEnv()->GetId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+                    RAVELOG_DEBUG_FORMAT("env=%s, path optimizing stage - dist %f->%f, computation time=%fs", GetEnv()->GetNameId()%totaldist%newdist1%(0.001f*(float)(utils::GetMilliTime()-basetime)));
                 }
 
                 if( listpath.size() <= 1 ) {
@@ -268,7 +272,7 @@ protected:
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
         trajectory->serialize(f);
-        RAVELOG_DEBUG_FORMAT("env=%d, trajectory dumped to %s", GetEnv()->GetId()%filename);
+        RAVELOG_DEBUG_FORMAT("env=%s, trajectory dumped to %s", GetEnv()->GetNameId()%filename);
         return filename;
     }
 
@@ -283,7 +287,7 @@ protected:
         int nrejected = 0;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
             if( nrejected >= 20 ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, smoothing quitting early", GetEnv()->GetId());
+                RAVELOG_VERBOSE_FORMAT("env=%s, smoothing quitting early", GetEnv()->GetNameId());
                 break;
             }
             dReal fstartdist = max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
@@ -366,7 +370,7 @@ protected:
             itendnode = listpath.insert(itendnode, make_pair(vendvalues, fnewsegmentdist)); // get new endnode
             listpath.erase(itstartnode, itendnode);
             totaldist += fnewsegmentdist - (fenddist-fstartdist);
-            RAVELOG_VERBOSE_FORMAT("env=%d, smoother iter %d, totaldist=%f", GetEnv()->GetId()%curiter%totaldist);
+            RAVELOG_VERBOSE_FORMAT("env=%s, smoother iter %d, totaldist=%f", GetEnv()->GetNameId()%curiter%totaldist);
             nrejected = 0;
         }
         // double check the distances
@@ -388,7 +392,7 @@ protected:
         PlannerProgress progress;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
             if( nrejected >= 20 ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, smoothing quitting early", GetEnv()->GetId());
+                RAVELOG_VERBOSE_FORMAT("env=%s, smoothing quitting early", GetEnv()->GetNameId());
                 break;
             }
             dReal fstartdist = max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
@@ -542,7 +546,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(RaveFabs(totaldist-dist),<=,1e-7);
 
-            RAVELOG_VERBOSE_FORMAT("env=%d, singledof iter %d, totaldist=%f", GetEnv()->GetId()%curiter%totaldist);
+            RAVELOG_VERBOSE_FORMAT("env=%s, singledof iter %d, totaldist=%f", GetEnv()->GetNameId()%curiter%totaldist);
             nrejected = 0;
         }
         // double check the distances
@@ -565,7 +569,7 @@ protected:
         PlannerProgress progress;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
             if( nrejected >= 20 ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, smoothing quitting early", GetEnv()->GetId());
+                RAVELOG_VERBOSE_FORMAT("env=%s, smoothing quitting early", GetEnv()->GetNameId());
                 break;
             }
             dReal fstartdist = max(dReal(0),totaldist-parameters->_fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
@@ -740,7 +744,7 @@ protected:
             }
             OPENRAVE_ASSERT_OP(RaveFabs(totaldist-dist),<=,1e-7);
 
-            RAVELOG_VERBOSE_FORMAT("env=%d, singledof iter %d, totaldist=%f", GetEnv()->GetId()%curiter%totaldist);
+            RAVELOG_VERBOSE_FORMAT("env=%s, singledof iter %d, totaldist=%f", GetEnv()->GetNameId()%curiter%totaldist);
             nrejected = 0;
         }
         // double check the distances
@@ -769,7 +773,8 @@ protected:
     {
         SampleInfo() : fabsnodedist(0), fdeltadist(0), inode(0) {
         }
-        SampleInfo(std::list< vector<dReal> >::iterator itnode, const vector<dReal>& vsample, dReal fabsnodedist, dReal fdeltadist, int inode) : itnode(itnode), vsample(vsample), fabsnodedist(fabsnodedist), fdeltadist(fdeltadist), inode(inode) {
+        SampleInfo(std::list< vector<dReal> >::iterator itnode_, const vector<dReal>& vsample_, dReal fabsnodedist_, dReal fdeltadist_, int inode_)
+            : itnode(itnode_), vsample(vsample_), fabsnodedist(fabsnodedist_), fdeltadist(fdeltadist_), inode(inode_) {
         }
         std::list< vector<dReal> >::iterator itnode;
         vector<dReal> vsample; /// the interpolated data
@@ -807,7 +812,7 @@ protected:
     void _InterpolateValuesGroup(const std::vector<dReal>& v0, const std::vector<dReal>& v1, dReal f, int ioptgroup, std::vector<dReal>& vout)
     {
         if( f < 0 || f > 1 ) {
-            RAVELOG_WARN_FORMAT("env=%d, bad interpolation value %f!", GetEnv()->GetId()%f);
+            RAVELOG_WARN_FORMAT("env=%s, bad interpolation value %f!", GetEnv()->GetNameId()%f);
         }
         int iGroupStartIndex = v0.size()/2;
         OPENRAVE_ASSERT_OP(vout.size(), ==, v0.size());
@@ -845,11 +850,11 @@ protected:
         for(size_t i = 0; i < v.size(); ++i) {
             f += (v[i]-listNewNodes.back()[i])*(v[i]-listNewNodes.back()[i]);
             if( v[i] < _parameters->_vConfigLowerLimit[i] ) {
-                RAVELOG_WARN_FORMAT("env=%d, dof %d does not follow lower limit %f < %f", GetEnv()->GetId()%i%v[i]%_parameters->_vConfigLowerLimit[i]);
+                RAVELOG_WARN_FORMAT("env=%s, dof %d does not follow lower limit %f < %f", GetEnv()->GetNameId()%i%v[i]%_parameters->_vConfigLowerLimit[i]);
                 v[i] = _parameters->_vConfigLowerLimit[i];
             }
             if( v[i] > _parameters->_vConfigUpperLimit[i] ) {
-                RAVELOG_WARN_FORMAT("env=%d, dof %d does not follow upper limit %f > %f", GetEnv()->GetId()%i%v[i]%_parameters->_vConfigUpperLimit[i]);
+                RAVELOG_WARN_FORMAT("env=%s, dof %d does not follow upper limit %f > %f", GetEnv()->GetNameId()%i%v[i]%_parameters->_vConfigUpperLimit[i]);
                 v[i]  = _parameters->_vConfigUpperLimit[i];
             }
         }
@@ -861,7 +866,7 @@ protected:
                     ss << "]; vendvalues=[";
                     SerializeValues(ss, v);
                     ss << "]";
-                    RAVELOG_VERBOSE_FORMAT("env=%d, not feasible %s", GetEnv()->GetId()%ss.str());
+                    RAVELOG_VERBOSE_FORMAT("env=%s, not feasible %s", GetEnv()->GetNameId()%ss.str());
                 }
                 return false;
             }
@@ -876,7 +881,7 @@ protected:
         const PlannerParameters& parameters = *GetParameters();
         list< vector<dReal> >::iterator itmidnode, itmidnodeprev;
         SampleInfo startInfo, endInfo, midInfo;
-        vector<dReal> vmidvalues(parameters.GetDOF());
+        //vector<dReal> vmidvalues(parameters.GetDOF());    // shadowed anyway
 
         PlannerProgress progress;
 
@@ -885,7 +890,7 @@ protected:
         int nrejected = 0;
         for(int curiter = 0; curiter < nMaxIterations; ++curiter ) {
             if( nrejected >= 40 ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, smoothing quitting early", GetEnv()->GetId());
+                RAVELOG_VERBOSE_FORMAT("env=%s, smoothing quitting early", GetEnv()->GetNameId());
                 break;
             }
             dReal fstartdist = max(dReal(0),totaldist-parameters._fStepLength)*_puniformsampler->SampleSequenceOneReal(IT_OpenEnd);
@@ -899,7 +904,7 @@ protected:
 
             if( startInfo.itnode == endInfo.itnode || startInfo.itnode == listpath.end() || endInfo.itnode == listpath.end() ) {
                 // choose a line, so ignore
-                RAVELOG_VERBOSE_FORMAT("env=%d, sampled same node", GetEnv()->GetId());
+                RAVELOG_VERBOSE_FORMAT("env=%s, sampled same node", GetEnv()->GetNameId());
                 continue;
             }
 
@@ -934,7 +939,7 @@ protected:
             dReal fmiddist = fstartdist + fTimeToOptGroup;
             midInfo = _SampleBasedOnVelocity(listpath, fmiddist);
             if( midInfo.itnode == listpath.end() ) {
-                RAVELOG_VERBOSE_FORMAT("env=%d, could not find at %f/%f", GetEnv()->GetId()%fmiddist%totaldist);
+                RAVELOG_VERBOSE_FORMAT("env=%s, could not find at %f/%f", GetEnv()->GetNameId()%fmiddist%totaldist);
                 continue;
             }
 
@@ -974,7 +979,7 @@ protected:
                 itinterpnodeprev = itinterpnode = startInfo.itnode;
                 itinterpnode++;
                 if(itinterpnode==listpath.end()) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, could not find interp", GetEnv()->GetId());
+                    RAVELOG_VERBOSE_FORMAT("env=%s, could not find interp", GetEnv()->GetNameId());
                     continue;
                 }
 
@@ -1101,7 +1106,7 @@ protected:
                             vmidvalues = *itoptgroup;
                             _InterpolateValuesGroup(listNewNodes.back(), *itothergroup, fOptDist/fOtherDist, iOtherOptGroup, vmidvalues);
                             if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%d, not feasible group=%d, start=%f (%d), end=%f (%d), total=%f", GetEnv()->GetId()%ioptgroup%fstartdist%startInfo.inode%fenddist%endInfo.inode%totaldist);
+                                RAVELOG_VERBOSE_FORMAT("env=%s, not feasible group=%d, start=%f (%d), end=%f (%d), total=%f", GetEnv()->GetNameId()%ioptgroup%fstartdist%startInfo.inode%fenddist%endInfo.inode%totaldist);
                                 bIsFeasible = false;
                                 break;
                             }
@@ -1130,7 +1135,7 @@ protected:
                             }
 
                             if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%d, not feasible group=%d, start=%f, end=%f", GetEnv()->GetId()%ioptgroup%fstartdist%fenddist);
+                                RAVELOG_VERBOSE_FORMAT("env=%s, not feasible group=%d, start=%f, end=%f", GetEnv()->GetNameId()%ioptgroup%fstartdist%fenddist);
                                 bIsFeasible = false;
                                 break;
                             }
@@ -1143,7 +1148,7 @@ protected:
                         vmidvalues = *itothergroup;
                         _SetValuesGroup(listpath.back(),ioptgroup,vmidvalues);
                         if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
-                            RAVELOG_VERBOSE_FORMAT("env=%d, not feasible group=%d, start=%f, end=%f", GetEnv()->GetId()%ioptgroup%fstartdist%fenddist);
+                            RAVELOG_VERBOSE_FORMAT("env=%s, not feasible group=%d, start=%f, end=%f", GetEnv()->GetNameId()%ioptgroup%fstartdist%fenddist);
                             bIsFeasible = false;
                             break;
                         }
@@ -1164,7 +1169,7 @@ protected:
                         vmidvalues = *itoptgroup;
                         _SetValuesGroup(listpath.back(),iOtherOptGroup,vmidvalues);
                         if( !_AddAndCheck(vmidvalues, listNewNodes, true) ) {
-                            RAVELOG_VERBOSE_FORMAT("env=%d, not feasible group=%d, start=%f, end=%f", GetEnv()->GetId()%ioptgroup%fstartdist%fenddist);
+                            RAVELOG_VERBOSE_FORMAT("env=%s, not feasible group=%d, start=%f, end=%f", GetEnv()->GetNameId()%ioptgroup%fstartdist%fenddist);
                             bIsFeasible = false;
                             break;
                         }
@@ -1181,9 +1186,9 @@ protected:
                     // make sure that the last point in listpath is covered!
                     dReal fFinalDist = _ComputeExpectedVelocity(listNewNodes.back(), listpath.back());
                     if( fFinalDist > g_fEpsilonLinear ) {
-                        RAVELOG_WARN_FORMAT("env=%d, still some distance left %f with optgroup %d, so fill it", GetEnv()->GetId()%fFinalDist%ioptgroup);
+                        RAVELOG_WARN_FORMAT("env=%s, still some distance left %f with optgroup %d, so fill it", GetEnv()->GetNameId()%fFinalDist%ioptgroup);
                         if( !_AddAndCheck(listpath.back(), listNewNodes, true) ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, final not feasible group=%d, start=%f, end=%f", GetEnv()->GetId()%ioptgroup%fstartdist%fenddist);
+                            RAVELOG_DEBUG_FORMAT("env=%s, final not feasible group=%d, start=%f, end=%f", GetEnv()->GetNameId()%ioptgroup%fstartdist%fenddist);
                             bIsFeasible = false;
                             continue;
                         }
@@ -1194,7 +1199,7 @@ protected:
                     dReal fFinalDist = _ComputeExpectedVelocity(listNewNodes.back(), listpath.back());
                     if( fFinalDist > g_fEpsilonLinear ) {
                         if( !_AddAndCheck(listpath.back(), listNewNodes, true) ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, final not feasible group=%d, start=%f, end=%f", GetEnv()->GetId()%ioptgroup%fstartdist%fenddist);
+                            RAVELOG_DEBUG_FORMAT("env=%s, final not feasible group=%d, start=%f, end=%f", GetEnv()->GetNameId()%ioptgroup%fstartdist%fenddist);
                             bIsFeasible = false;
                             continue;
                         }
@@ -1211,7 +1216,7 @@ protected:
             listpath.erase(startInfo.itnode, listpath.end());
             listpath.splice(listpath.end(), listNewNodes, listNewNodes.begin(), listNewNodes.end());
             dReal newtotaldist = _ComputePathDurationOnVelocity(listpath);
-            RAVELOG_INFO_FORMAT("env=%d, smoother iter %d, totaldist=%f -> %f, new path %d", GetEnv()->GetId()%curiter%totaldist%newtotaldist%listpath.size());
+            RAVELOG_INFO_FORMAT("env=%s, smoother iter %d, totaldist=%f -> %f, new path %d", GetEnv()->GetNameId()%curiter%totaldist%newtotaldist%listpath.size());
             totaldist = newtotaldist;
             nrejected = 0;
         }

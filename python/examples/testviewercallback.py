@@ -30,7 +30,7 @@ if not __openravepy_build_doc__:
 ghandle = None
 def itemselectioncb(link,pos,org,env):
     global ghandle
-    print 'in python: body ',link.GetParent().GetName(),':',link.GetName(),'at',reshape(pos,(3))
+    print('in python: body %r : %r at %r'%(link.GetParent().GetName(),link.GetName(),reshape(pos,(3))))
     ghandle = env.plot3(points=pos,pointsize=25.0,colors=array((1,0,0)))
     return 0
 
@@ -39,7 +39,7 @@ def main(env,options):
     env.Load(options.scene)
     handle = env.GetViewer().RegisterItemSelectionCallback(lambda link,pos,org: itemselectioncb(link,pos,org,env))
     if handle is None:
-        print 'failed to register handle'
+        print('failed to register handle')
         sys.exit(1)
     while True:
         cmd = raw_input('In selection mode (ESC), click anywhere on the viewer. Enter command (q-quit): ')

@@ -19,10 +19,11 @@ import os.path
 from sys import platform as sysplatformname
 from sys import stdout
 import numpy
+import six
 try:
     from itertools import izip
 except ImportError:
-    pass
+    izip = zip
 
 try:
     from threading import Thread
@@ -144,7 +145,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
                           help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
         ogroup.add_option('--level','-l','--log_level', action="store",type='string',dest='_level',default=None,
-                          help='Debug level')#, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
+                          help='Debug level')#, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.items())))
         if testmode:
             ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
                               help='if set, will run the program in a finite amount of time and spend computation time validating results. Used for testing')
@@ -153,7 +154,7 @@ class OpenRAVEGlobalArguments:
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
         if options._level is not None:
-            for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems():
+            for debuglevel,debugname in openravepy_int.DebugLevel.values.items():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
                     openravepy_int.RaveSetDebugLevel(debugname)
                     break
@@ -290,7 +291,7 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     :param colormode: optionally override default color mode of rgb to cmy
     :param coloradd: an optional 3-element vector for 
     """
-    if isinstance(target,basestring):
+    if isinstance(target,six.string_types):
         T = env.GetKinBody(target).GetTransform()
     elif hasattr(target,'GetTransform'):
         T = target.GetTransform()
@@ -312,6 +313,16 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     if coloradd is not None:
         colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)
+
+def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0]),color=numpy.array([0,0,0,1])):
+    """draws a string label at position specified by worldPosition.
+    
+    :param env: Environment
+    :param label: string to be used in the label
+    :param worldPosition: a 3-element vector for positional offset relative to the root world transform
+    :param color: a 4-element vector defining the color of the label
+    """
+    return env.drawlabel(label, worldPosition, color)
 
 def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     """draws an IkParameterization

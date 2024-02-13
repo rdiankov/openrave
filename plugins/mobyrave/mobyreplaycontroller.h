@@ -409,7 +409,7 @@ public:
         // this will also let it have consistent mechanics as SetPath
         // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
         if( !_bPause ) {
-            EnvironmentMutex::scoped_lock lockenv(_probot->GetEnv()->GetMutex());
+            EnvironmentLock lockenv(_probot->GetEnv()->GetMutex());
             _vecdesired = values;
             if( _nControlTransformation ) {
                 if( !!trans ) {
@@ -431,7 +431,7 @@ public:
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         OPENRAVE_ASSERT_FORMAT0(!ptraj || GetEnv()==ptraj->GetEnv(), "trajectory needs to come from the same environment as the controller", ORE_InvalidArguments);
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         if( _bPause ) {
             RAVELOG_DEBUG("MobyReplayController cannot start trajectories when paused\n");
             _ptraj.reset();
@@ -559,7 +559,7 @@ public:
             return;
         }
  
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
             vector<dReal> sampledata;
@@ -583,7 +583,7 @@ public:
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
-                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(abs(bodyid));
                     if( !pbody ) {
                         RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
                         continue;
@@ -664,11 +664,11 @@ public:
                 {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                _probot->Grab(grabinfo.pbody, plink);
+                _probot->Grab(grabinfo.pbody, plink, nullptr);
             }
             FOREACH(it,listgrab)
             {
-                _probot->Grab(it->first,it->second);
+                _probot->Grab(it->first,it->second, nullptr);
             }
 
             // set _bIsDone after all computation is done!
@@ -963,7 +963,7 @@ private:
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
     boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gjointvelocities, _gtransform;
-    boost::mutex _mutex;
+    std::mutex _mutex;
 
     EnvironmentBasePtr _penv;
 

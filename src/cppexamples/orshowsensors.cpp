@@ -36,7 +36,7 @@ public:
                 sensors[isensor]->Configure(isensor == ienablesensor ? SensorBase::CC_RenderDataOn : SensorBase::CC_RenderDataOff);
             }
             ienablesensor = (ienablesensor+1)%sensors.size();
-            boost::this_thread::sleep(boost::posix_time::seconds(5));
+            std::this_thread::sleep_for(std::chrono::seconds(5));
         }
     }
 };

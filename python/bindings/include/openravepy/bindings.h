@@ -248,7 +248,7 @@ inline std::vector<int8_t> ExtractArrayInt8(const py::object& o)
         const size_t n = len(o);
         v.resize(n);
         for(size_t i = 0; i < n; ++i) {
-            v[i] = (int8_t)(py::extract<int>(o[i]));
+            v[i] = (int8_t)(py::extract<int>(o[py::to_object(i)]));
         }
     }
     catch(...) {
@@ -268,7 +268,7 @@ inline std::vector<T> ExtractArray(const py::object& o)
         const size_t n = len(o);
         v.resize(n);
         for(size_t i = 0; i < n; ++i) {
-            v[i] = py::extract<T>(o[i]);
+            v[i] = py::extract<T>(o[py::to_object(i)]);
         }
     }
     catch(...) {
@@ -283,7 +283,7 @@ inline std::set<T> ExtractSet(const py::object& o)
     std::set<T> v;
     size_t nlen = len(o);
     for(size_t i = 0; i < nlen; ++i) {
-        v.insert(py::extract<T>(o[i]));
+        v.insert(py::extract<T>(o[py::to_object(i)]));
     }
     return v;
 }
@@ -297,7 +297,11 @@ inline std::string GetPyErrorString()
     if(error != nullptr) {
         string = PyObject_Str(value);
         if(string != nullptr) {
+#if PY_MAJOR_VERSION >= 3
+            s.assign(PyUnicode_AsUTF8(string));
+#else
             s.assign(PyString_AsString(string));
+#endif
             Py_DECREF(string);
         }
     }

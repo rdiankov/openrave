@@ -89,7 +89,7 @@ const T& mymax(const T& a, const T& b)
             } \
         } \
         if( (SPin).size() == 0 ) { \
-            mData->mEvalErrorType=reterror; return;  \
+            multiData->mEvalErrorType=reterror; return;  \
         } \
 } \
 
@@ -158,13 +158,13 @@ public:
     void EvalMulti(std::vector<Value_t>& finalret, const Value_t* Vars)
     {
         using namespace FUNCTIONPARSERTYPES;
-        typename FunctionParserBase<Value_t>::Data* mData = FunctionParserBase<Value_t>::getParserData();
+        typename FunctionParserBase<Value_t>::Data* multiData = FunctionParserBase<Value_t>::getParserData();
         finalret.resize(0);
-        if(mData->mParseErrorType != FP_NO_ERROR) return;
+        if(multiData->mParseErrorType != FP_NO_ERROR) return;
 
-        const unsigned* const byteCode = &(mData->mByteCode[0]);
-        const Value_t* const immed = mData->mImmed.empty() ? 0 : &(mData->mImmed[0]);
-        const unsigned byteCodeSize = unsigned(mData->mByteCode.size());
+        const unsigned* const byteCode = &(multiData->mByteCode[0]);
+        const Value_t* const immed = multiData->mImmed.empty() ? 0 : &(multiData->mImmed[0]);
+        const unsigned byteCodeSize = unsigned(multiData->mByteCode.size());
         unsigned IP, DP=0;
         int SP=-1;
         int uniquevaluethreadindex = 1;
@@ -185,11 +185,11 @@ public:
                 for(unsigned i = 0; i < mStackSize; ++i) { ptr[i].~VALUES(); }
             }
         } AutoDeallocStack;
-        AutoDeallocStack.ptr = (VALUES*)alloca(mData->mStackSize*sizeof(VALUES));
-        for(unsigned i = 0; i < mData->mStackSize; ++i) {
+        AutoDeallocStack.ptr = (VALUES*)alloca(multiData->mStackSize*sizeof(VALUES));
+        for(unsigned i = 0; i < multiData->mStackSize; ++i) {
             new (AutoDeallocStack.ptr+i)VALUES();
         }
-        AutoDeallocStack.mStackSize = (int)mData->mStackSize;
+        AutoDeallocStack.mStackSize = (int)multiData->mStackSize;
         VALUES*& Stack = AutoDeallocStack.ptr;
 #else
         /* Allocate from the heap. Ensure that it is freed
@@ -201,12 +201,12 @@ public:
             ~AutoDealloc() {
                 delete[] ptr;
             }
-        } AutoDeallocStack = { new VALUES[mData->mStackSize] };
+        } AutoDeallocStack = { new VALUES[multiData->mStackSize] };
         VALUES*& Stack = AutoDeallocStack.ptr;
 #endif
 #else
         /* No thread safety, so use a global stack. */
-        std::vector< VALUES >& Stack = mData->mStack;
+        std::vector< VALUES >& Stack = multiData->mStack;
 #endif
 
         for(IP=0; IP<byteCodeSize; ++IP)
@@ -353,7 +353,7 @@ public:
                 /*if(Stack[SP-1] < Value_t(0) &&
                    !isInteger(Stack[SP]) &&
                    !isInteger(1.0 / Stack[SP]))
-                   { mData->mEvalErrorType=3; return; }*/
+                   { multiData->mEvalErrorType=3; return; }*/
                 // x:0 ^ y:negative is failure
                 EVAL_MULTI_CHECK(itvalue->first == Value_t(0), Stack[SP-1],3);
                 EVAL_MULTI_CHECK(itvalue->first < Value_t(0), Stack[SP],3);
@@ -467,7 +467,7 @@ public:
             case cFCall:
             {
                 unsigned index = byteCode[++IP];
-                unsigned params = mData->mFuncPtrs[index].mParams;
+                unsigned params = multiData->mFuncPtrs[index].mParams;
                 // have to use the cross product, the for loop does this without recursion
                 std::vector<Value_t> vparams(params), retVal; retVal.reserve(Stack[SP-params+1].size());
                 std::vector<int> vparamindices(params,0);
@@ -488,11 +488,11 @@ public:
                         }
                     }
                     if( docall ) {
-                        if( !mData->mFuncPtrs[index].mRawFuncPtr ) {
-                            BoostFunctionWrapper* pboostfn = dynamic_cast<BoostFunctionWrapper*>(mData->mFuncPtrs[index].mFuncWrapperPtr);
+                        if( !multiData->mFuncPtrs[index].mRawFuncPtr ) {
+                            BoostFunctionWrapper* pboostfn = dynamic_cast<BoostFunctionWrapper*>(multiData->mFuncPtrs[index].mFuncWrapperPtr);
                             if( !pboostfn ) {
                                 r.resize(1);
-                                r[0] = mData->mFuncPtrs[index].mFuncWrapperPtr->callFunction(&vparams.at(0));
+                                r[0] = multiData->mFuncPtrs[index].mFuncWrapperPtr->callFunction(&vparams.at(0));
                             }
                             else {
                                 pboostfn->_fn(r,vparams);
@@ -500,7 +500,7 @@ public:
                         }
                         else {
                             r.resize(1);
-                            r[0] = mData->mFuncPtrs[index].mRawFuncPtr(&vparams.at(0));
+                            r[0] = multiData->mFuncPtrs[index].mRawFuncPtr(&vparams.at(0));
                         }
                         retVal.insert(retVal.end(),r.begin(),r.end());
                     }
@@ -525,7 +525,7 @@ public:
                     Stack[SP][ii] = std::make_pair(retVal[ii],uniquevaluethreadindex++);
                 }
                 if(retVal.size() == 0 ) {
-                    mData->mEvalErrorType = 10;
+                    multiData->mEvalErrorType = 10;
                     return;
                 }
                 break;
@@ -534,7 +534,7 @@ public:
             case cPCall:
             {
                 unsigned index = byteCode[++IP];
-                unsigned params = mData->mFuncParsers[index].mParams;
+                unsigned params = multiData->mFuncParsers[index].mParams;
                 // have to use the cross product, the for loop does this without recursion
                 std::vector<Value_t> vparams(params), retVal; retVal.reserve(Stack[SP-params+1].size());
                 std::vector<int> vparamindices(params,0);
@@ -556,14 +556,14 @@ public:
                     }
                     if( docall ) {
                         // for some reason cannot do dynamic cast.......
-                        //OpenRAVEFunctionParser<Value_t>* mParserPtr = dynamic_cast< OpenRAVEFunctionParser<Value_t>* >(mData->mFuncParsers[index].mParserPtr);
-                        OpenRAVEFunctionParser<Value_t>* mParserPtr = static_cast< OpenRAVEFunctionParser<Value_t>* >(mData->mFuncParsers[index].mParserPtr);
+                        //OpenRAVEFunctionParser<Value_t>* mParserPtr = dynamic_cast< OpenRAVEFunctionParser<Value_t>* >(multiData->mFuncParsers[index].mParserPtr);
+                        OpenRAVEFunctionParser<Value_t>* mParserPtr = static_cast< OpenRAVEFunctionParser<Value_t>* >(multiData->mFuncParsers[index].mParserPtr);
                         if( mParserPtr == NULL ) {
-                            mData->mEvalErrorType = UNEXPECTED_ERROR;
+                            multiData->mEvalErrorType = UNEXPECTED_ERROR;
                             return;
                         }
                         mParserPtr->EvalMulti(r,&vparams.at(0));
-                        const int error = mData->mFuncParsers[index].mParserPtr->EvalError();
+                        const int error = multiData->mFuncParsers[index].mParserPtr->EvalError();
                         if(!error) {
                             retVal.insert(retVal.end(),r.begin(),r.end());
                         }
@@ -589,7 +589,7 @@ public:
                     Stack[SP][ii] = std::make_pair(retVal[ii],uniquevaluethreadindex++);
                 }
                 if(retVal.size() == 0 ) {
-                    mData->mEvalErrorType = 10;
+                    multiData->mEvalErrorType = 10;
                     return;
                 }
                 break;
@@ -707,7 +707,7 @@ public:
             }
         }
 
-        mData->mEvalErrorType=0;
+        multiData->mEvalErrorType=0;
         finalret.resize(Stack[SP].size());
         for(size_t ii = 0; ii < finalret.size(); ++ii) {
             finalret[ii] = Stack[SP][ii].first;
@@ -769,17 +769,17 @@ public:
     bool toMathML(std::string& sout, const std::vector<std::string>& Vars)
     {
         using namespace FUNCTIONPARSERTYPES;
-        typename FunctionParserBase<Value_t>::Data* mData = FunctionParserBase<Value_t>::getParserData();
-        if(mData->mParseErrorType != FP_NO_ERROR) {
+        typename FunctionParserBase<Value_t>::Data* multiData = FunctionParserBase<Value_t>::getParserData();
+        if(multiData->mParseErrorType != FP_NO_ERROR) {
             return false;
         }
 
-        const unsigned* const byteCode = &(mData->mByteCode[0]);
-        const Value_t* const immed = mData->mImmed.empty() ? 0 : &(mData->mImmed[0]);
-        const unsigned byteCodeSize = unsigned(mData->mByteCode.size());
+        const unsigned* const byteCode = &(multiData->mByteCode[0]);
+        const Value_t* const immed = multiData->mImmed.empty() ? 0 : &(multiData->mImmed[0]);
+        const unsigned byteCodeSize = unsigned(multiData->mByteCode.size());
         unsigned IP, DP=0;
         int SP=-1;
-        std::vector<std::string> Stack(mData->mStackSize);
+        std::vector<std::string> Stack(multiData->mStackSize);
 
         for(IP=0; IP<byteCodeSize; ++IP)
         {
@@ -939,17 +939,17 @@ public:
             {
 
                 unsigned index = byteCode[++IP];
-                unsigned params = mData->mFuncPtrs[index].mParams;
+                unsigned params = multiData->mFuncPtrs[index].mParams;
                 // go through the existing names to find the function name
                 string functionname;
-                for(typename NamePtrsMap<Value_t>::iterator i = mData->mNamePtrs.begin(); i != mData->mNamePtrs.end(); ++i) {
+                for(typename NamePtrsMap<Value_t>::iterator i = multiData->mNamePtrs.begin(); i != multiData->mNamePtrs.end(); ++i) {
                     if(i->second.type == NameData<Value_t>::FUNC_PTR && i->second.index == index ) {
                         functionname = std::string(i->first.name,i->first.nameLength);
                         break;
                     }
                 }
                 if( functionname.size() == 0 ) {
-                    mData->mEvalErrorType = SYNTAX_ERROR;
+                    multiData->mEvalErrorType = SYNTAX_ERROR;
                     return false;
                 }
 
@@ -972,14 +972,14 @@ public:
             {
                 printf("parser calls not supported\n");
                 unsigned index = byteCode[++IP];
-                unsigned params = mData->mFuncParsers[index].mParams;
-                //Value_t retVal = mData->mFuncParsers[index].mParserPtr->Eval(&Stack[SP-params+1]);
+                unsigned params = multiData->mFuncParsers[index].mParams;
+                //Value_t retVal = multiData->mFuncParsers[index].mParserPtr->Eval(&Stack[SP-params+1]);
                 SP -= int(params)-1;
                 Stack[SP] = "";
-                const int error = SYNTAX_ERROR; //mData->mFuncParsers[index].mParserPtr->EvalError();
+                const int error = SYNTAX_ERROR; //multiData->mFuncParsers[index].mParserPtr->EvalError();
                 if(error)
                 {
-                    mData->mEvalErrorType = error;
+                    multiData->mEvalErrorType = error;
                     return false;
                 }
                 break;
@@ -1090,7 +1090,7 @@ public:
             }
         }
 
-        mData->mEvalErrorType=0;
+        multiData->mEvalErrorType=0;
         sout = Stack[SP];
         return true;
     }

@@ -46,11 +46,15 @@ public:
 
     std::string __str__();
     object __unicode__();
+    void Reset(int coloptions=0);
 
     int options;
     object plink1 = py::none_();
     object plink2 = py::none_();
+    object pgeom1 = py::none_();
+    object pgeom2 = py::none_();
     py::list vLinkColliding;
+    py::list vGeometryContacts;
     dReal minDistance;
     int numWithinTol;
     py::list contacts;

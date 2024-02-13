@@ -73,7 +73,7 @@ bool PPRamp::SolveMinTime(Real amax)
         //Real c = (Sqr(dx0)-Sqr(dx1))*0.5/a+x0-x1;
         Real b = 2.0*_a1*dx0; //2.0*(dx0-dx1);
         Real c = (Sqr(dx0)-Sqr(dx1))*0.5+(x0-x1)*_a1;
-        Real t1,t2;
+        Real t1 = 0.0, t2 = 0.0;
         int res=SolveQuadratic(_a1*_a1,b,c,t1,t2);
         PARABOLICWARN("Quadratic equation %.15e x^2 + %.15e x + %.15e = 0\n",_a1*_a1,b,c);
         PARABOLICWARN("%d results, %.15e %.15e\n",res,t1,t2);
@@ -151,10 +151,10 @@ bool PPRamp::SolveMinTime2(Real amax,Real timeLowerBound)
         //Real c = (Sqr(dx0)-Sqr(dx1))*0.5/a+x0-x1;
         Real b = 2.0*_a1*dx0; //2.0*(dx0-dx1);
         Real c = (Sqr(dx0)-Sqr(dx1))*0.5+(x0-x1)*_a1;
-        Real t1,t2;
-        int res=SolveQuadratic(_a1*_a1,b,c,t1,t2);
+        Real t1 = 0.0, t2 = 0.0;
+        int res_=SolveQuadratic(_a1*_a1,b,c,t1,t2);
         PARABOLICWARN("Quadratic equation %.15e x^2 + %.15e x + %.15e = 0\n",_a1*_a1,b,c);
-        PARABOLICWARN("%d results, %.15e %.15e\n",res,t1,t2);
+        PARABOLICWARN("%d results, %.15e %.15e\n",res_,t1,t2);
         SaveRamp("PP_SolveMinTime_failure.dat",x0,dx0,x1,dx1,amax,Inf,timeLowerBound);
         return false;
     }
@@ -298,7 +298,7 @@ bool PPRamp::SolveMinAccel(Real endTime)
             Real b=sign*(2.0*(dx0+dx1)*endTime+4.0*(x0-x1));
             Real c=-Sqr(dx1-dx0);
             PARABOLICWARN("Quadratic %.15e x^2 + %.15e x + %.15e = 0\n",a,b,c);
-            Real t1,t2;
+            Real t1 = 0.0, t2 = 0.0;
             int res = SolveQuadratic(a,b,c,t1,t2);
             PARABOLICWARN("Solutions: %d, %.15e and %.15e\n",res,t1,t2);
         }
@@ -308,7 +308,7 @@ bool PPRamp::SolveMinAccel(Real endTime)
             Real b=sign*(2.0*(dx0+dx1)*endTime+4.0*(x0-x1));
             Real c=-Sqr(dx1-dx0);
             PARABOLICWARN("Quadratic %.15e x^2 + %.15e x + %.15e = 0\n",a,b,c);
-            Real t1,t2;
+            Real t1 = 0.0, t2 = 0.0;
             int res = SolveQuadratic(a,b,c,t1,t2);
             PARABOLICWARN("Solutions: %d, %.15e and %.15e\n",res,t1,t2);
         }
@@ -339,15 +339,15 @@ Real PPRamp::GetMaxSpeed() const
 
 Real PPRamp::CalcTotalTime(Real a) const
 {
-    Real tswitch = CalcSwitchTime(a);
-    //PARABOLIC_RAMP_PLOG("a = %.15e, switch time %.15e\n",a,tswitch);
-    if(tswitch < 0) {
+    Real tSwitch = CalcSwitchTime(a);
+    //PARABOLIC_RAMP_PLOG("a = %.15e, switch time %.15e\n",a,tSwitch);
+    if(tSwitch < 0) {
         return -1;
     }
-    if(tswitch < (dx1-dx0)/a) {
+    if(tSwitch < (dx1-dx0)/a) {
         return -1;
     }
-    return tswitch*2.0 - (dx1-dx0)/a;
+    return tSwitch*2.0 - (dx1-dx0)/a;
 }
 
 int PPRamp::CalcTotalTimes(Real a,Real& t1,Real& t2) const
@@ -429,7 +429,7 @@ int PPRamp::CalcSwitchTimes(Real a,Real& t1,Real& t2) const
 
 Real PPRamp::CalcSwitchTime(Real a) const
 {
-    Real t1,t2;
+    Real t1 = 0.0, t2 = 0.0;
     int res = CalcSwitchTimes(a,t1,t2);
     if(res == 0) {
         return -1;

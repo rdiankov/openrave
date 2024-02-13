@@ -181,7 +181,7 @@ CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, C
     // allocate memory for the structure and the internal state vectors
     void* pmemory;
     {
-        //boost::mutex::scoped_lock lock(_mutexpool);
+        //std::lock_guard<std::mutex> lock(_mutexpool);
         pmemory = _poolNodes->malloc();
     }
     //Vector* plinkspheres = (Vector*)((uint8_t*)pmemory + sizeof(CacheTreeNode) + sizeof(dReal)*_statedof);
@@ -198,7 +198,7 @@ CacheTreeNodePtr CacheTree::_CloneCacheTreeNode(CacheTreeNodeConstPtr refnode)
     // allocate memory for the structure and the internal state vectors
     void* pmemory;
     {
-        //boost::mutex::scoped_lock lock(_mutexpool);
+        //std::lock_guard<std::mutex> lock(_mutexpool);
         pmemory = _poolNodes->malloc();
     }
     //Vector* plinkspheres = (Vector*)((uint8_t*)pmemory + sizeof(CacheTreeNode) + sizeof(dReal)*_statedof);
@@ -657,7 +657,6 @@ bool CacheTree::_Remove(CacheTreeNodePtr removenode, std::vector< std::vector<Ca
     std::vector<CacheTreeNodePtr>& vNextLevelNodes = vvCoverSetNodes[coverindex];
     vNextLevelNodes.resize(0);
 
-    bool bfound = false;
     FOREACH(itcurrentnode, vvCoverSetNodes.at(coverindex-1)) {
         // only take the children whose distances are within the bound
         if( setLevelRawChildren.find(*itcurrentnode) != setLevelRawChildren.end() ) {
@@ -668,7 +667,6 @@ bool CacheTree::_Remove(CacheTreeNodePtr removenode, std::vector< std::vector<Ca
                     vNextLevelNodes.resize(0);
                     vNextLevelNodes.push_back(*itchild);
                     itchild = (*itcurrentnode)->_vchildren.erase(itchild);
-                    bfound = true;
                 }
                 else {
                     if( curdist <= fLevelBound2 ) {
@@ -790,7 +788,7 @@ int CacheTree::RemoveCollisionConfigurations()
 
 int CacheTree::SaveCache(std::string filename)
 {
-    //boost::mutex::scoped_lock lock(_mutexpool);
+    //std::lock_guard<std::mutex> lock(_mutexpool);
     _mapNodeIndices.clear();
     int index=0;
     int knownnodes=0;
@@ -863,7 +861,7 @@ int CacheTree::SaveCache(std::string filename)
 
 int CacheTree::LoadCache(std::string filename, EnvironmentBasePtr penv)
 {
-    //boost::mutex::scoped_lock lock(_mutexpool);
+    //std::lock_guard<std::mutex> lock(_mutexpool);
     _fulldirname = RaveFindDatabaseFile(std::string("selfcache.")+filename,false);
 
     FILE* pfile = fopen(_fulldirname.c_str(),"rb");

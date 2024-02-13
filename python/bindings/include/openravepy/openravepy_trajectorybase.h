@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyTrajectoryBase : public PyInterfaceBase
+class OPENRAVEPY_API PyTrajectoryBase : public PyInterfaceBase
 {
 protected:
     TrajectoryBasePtr _ptrajectory;
@@ -51,6 +51,10 @@ public:
     object SamplePoints2D(object otimes) const;
 
     object SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const;
+
+    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint) const;
+
+    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
 
     object GetConfigurationSpecification() const;
 
@@ -98,10 +102,14 @@ public:
     object Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object SampleFromPrevious(object odata, dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetWaypoints(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
     object GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+
+private:
+    mutable std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation
 };
 
 } // namespace openravepy

@@ -311,24 +311,32 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
     else if( xmlname == "translation" ) {
         Vector v;
         _ss >>v.x >> v.y >> v.z;
-        _pgeom->_t.trans += v;
+        Transform t = _pgeom->GetTransform();
+        t.trans += v;
+        _pgeom->SetTransform(t);
     }
     else if( xmlname == "rotationmat" ) {
         TransformMatrix tnew;
         _ss >> tnew.m[0] >> tnew.m[1] >> tnew.m[2] >> tnew.m[4] >> tnew.m[5] >> tnew.m[6] >> tnew.m[8] >> tnew.m[9] >> tnew.m[10];
-        _pgeom->_t.rot = (Transform(tnew)*_pgeom->_t).rot;
+        Transform t = _pgeom->GetTransform();
+        t.rot = (Transform(tnew)*t).rot;
+        _pgeom->SetTransform(t);
     }
     else if( xmlname == "rotationaxis" ) {
         Vector vaxis; dReal fangle=0;
         _ss >> vaxis.x >> vaxis.y >> vaxis.z >> fangle;
+        Transform t = _pgeom->GetTransform();
         Transform tnew; tnew.rot = quatFromAxisAngle(vaxis, fangle * PI / 180.0f);
-        _pgeom->_t.rot = (tnew*_pgeom->_t).rot;
+        t.rot = (tnew*t).rot;
+        _pgeom->SetTransform(t);
     }
     else if( xmlname == "quat" ) {
         Transform tnew;
         _ss >> tnew.rot.x >> tnew.rot.y >> tnew.rot.z >> tnew.rot.w;
         tnew.rot.normalize4();
-        _pgeom->_t.rot = (tnew*_pgeom->_t).rot;
+        Transform t = _pgeom->GetTransform();
+        t.rot = (tnew*t).rot;
+        _pgeom->SetTransform(t);
     }
     else if( xmlname == "render" ) {
         if( _pgeom->_filenamerender.size() == 0 ) {

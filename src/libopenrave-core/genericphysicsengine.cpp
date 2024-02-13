@@ -31,7 +31,7 @@ public:
         std::vector< std::pair<Vector, Vector> > linkvelocities;
     };
 
-    boost::shared_ptr<PhysicsData> _GetData(KinBodyConstPtr pbody) {
+    inline boost::shared_ptr<PhysicsData> _GetData(const KinBodyConstPtr& pbody) {
         boost::shared_ptr<PhysicsData> pdata = boost::dynamic_pointer_cast<PhysicsData>(pbody->GetUserData("_genericphysics_"));
         if( !pdata ) {
             // isn't initialized for some reason, this can happen during environment cloning
@@ -76,31 +76,55 @@ public:
         pbody->SetUserData("_genericphysics_", UserDataPtr(new PhysicsData(pbody)));
         return true;
     }
+
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {
             pbody->RemoveUserData("_genericphysics_");
+
+            const int bodyid = pbody->GetEnvironmentBodyIndex();
+            if (bodyid < (int)_pysicsDataCache.size() && !!_pysicsDataCache.at(bodyid)) {
+                _pysicsDataCache.at(bodyid).reset();
+            }
+            else {
+                RAVELOG_VERBOSE_FORMAT("bodyid=%d(name=%s) is already invalidated (either never initialized or invalidated already)", bodyid%(pbody->GetName()));
+            }
         }
     }
 
+    inline const boost::shared_ptr<PhysicsData>& _EnsureData(const KinBodyConstPtr& pbody)
+    {
+        // cannot access GetEnv()->GetMaxEnvironmentBodyIndex() because this function can be called while _mutexInterfaces is already locked, and _mutexInterfaces is not recursive mutex
+        // so just resize to bodyIndex + 1 for now
+        const int bodyIndex = pbody->GetEnvironmentBodyIndex();
+        if (bodyIndex >= (int)_pysicsDataCache.size()) {
+            //RAVELOG_INFO_FORMAT("extend _pysicsDataCache of size %d to %d from bodyIndex=%d (name=%s)", (_pysicsDataCache.size())%(bodyIndex + 1)%bodyIndex%(pbody->GetName()));
+            _pysicsDataCache.resize(bodyIndex + 1, boost::shared_ptr<PhysicsData>());
+        }
+        if (!_pysicsDataCache.at(bodyIndex)) {
+            _pysicsDataCache.at(bodyIndex) = _GetData(pbody);
+        }
+        return _pysicsDataCache.at(bodyIndex);
+    }
+
     virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {
-        std::pair<Vector, Vector> vel = _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex());
+        std::pair<Vector, Vector> vel = _EnsureData(plink->GetParent())->linkvelocities.at(plink->GetIndex());
         linearvel = vel.first;
         angularvel = vel.second;
         return true;
     }
     bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) {
-        velocities = _GetData(body)->linkvelocities;
+        velocities = _EnsureData(body)->linkvelocities;
         return true;
     }
 
     virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
     {
-        _GetData(plink->GetParent())->linkvelocities.at(plink->GetIndex()) = make_pair(linearvel,angularvel);
+        _EnsureData(plink->GetParent())->linkvelocities.at(plink->GetIndex()) = make_pair(linearvel,angularvel);
         return true;
     }
     bool SetLinkVelocities(KinBodyPtr body, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
-        _GetData(body)->linkvelocities = velocities;
+        _EnsureData(body)->linkvelocities = velocities;
         return true;
     }
 
@@ -139,6 +163,7 @@ public:
 
 private:
     Vector _vgravity;
+    std::vector<boost::shared_ptr<PhysicsData> > _pysicsDataCache; // cache of physics data to avoid slow call to dynamic_pointer_cast and GetUserData("_genericphysics_"). Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody who holds  at that index. It is assumed that environment id of kin body does not grow to infinity over time.
 };
 
 PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)

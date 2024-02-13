@@ -46,7 +46,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         params->Validate();
         _goalindex = -1;
         _startindex = -1;
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         }
@@ -61,7 +61,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
-            RAVELOG_ERROR_FORMAT("env=%d, initial config wrong dim: %d %% %d != 0", GetEnv()->GetId()%params->vinitialconfig.size()%params->GetDOF());
+            RAVELOG_ERROR_FORMAT("env=%s, initial config wrong dim: %d %% %d != 0", GetEnv()->GetNameId()%params->vinitialconfig.size()%params->GetDOF());
             return false;
         }
 
@@ -73,15 +73,15 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         for(size_t index = 0; index < params->vinitialconfig.size(); index += params->GetDOF()) {
             std::copy(params->vinitialconfig.begin()+index,params->vinitialconfig.begin()+index+params->GetDOF(),vinitialconfig.begin());
             _filterreturn->Clear();
-            if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, CFO_FillCollisionReport, _filterreturn) != 0 ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, initial configuration for rrt does not satisfy constraints: %s", GetEnv()->GetId()%_filterreturn->_report.__str__());
+            if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCollisionReport, _filterreturn) != 0 ) {
+                RAVELOG_DEBUG_FORMAT("env=%s, initial configuration for rrt does not satisfy constraints: %s", GetEnv()->GetNameId()%_filterreturn->_report.__str__());
                 continue;
             }
             _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitialconfig, _vecInitialNodes.size()));
         }
 
         if( _treeForward.GetNumNodes() == 0 && !params->_sampleinitialfn ) {
-            RAVELOG_WARN_FORMAT("env=%d, no initial configurations", GetEnv()->GetId());
+            RAVELOG_WARN_FORMAT("env=%s, no initial configurations", GetEnv()->GetNameId());
             return false;
         }
 
@@ -296,7 +296,7 @@ Some python code to display data::\n\
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
         _parameters->copy(pparams);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
@@ -313,7 +313,7 @@ Some python code to display data::\n\
 
         //read in all goals
         if( (_parameters->vgoalconfig.size() % _parameters->GetDOF()) != 0 ) {
-            RAVELOG_ERROR_FORMAT("env=%d, BirrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetId());
+            RAVELOG_ERROR_FORMAT("env=%s, BirrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetNameId());
             _parameters.reset();
             return false;
         }
@@ -329,16 +329,16 @@ Some python code to display data::\n\
                 _nValidGoals++;
             }
             else {
-                RAVELOG_WARN_FORMAT("env=%d, goal %d fails constraints with 0x%x", GetEnv()->GetId()%igoal%ret);
+                RAVELOG_WARN_FORMAT("env=%s, goal %d fails constraints with 0x%x", GetEnv()->GetNameId()%igoal%ret);
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                    int ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
+                    ret = _parameters->CheckPathAllConstraints(vgoal,vgoal,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart);
                 }
                 _vecGoalNodes.push_back(NULL); // have to push back dummy or else indices will be messed up
             }
         }
 
         if( _treeBackward.GetNumNodes() == 0 && !_parameters->_samplegoalfn ) {
-            RAVELOG_WARN_FORMAT("env=%d, no goals specified", GetEnv()->GetId());
+            RAVELOG_WARN_FORMAT("env=%s, no goals specified", GetEnv()->GetNameId());
             _parameters.reset();
             return false;
         }
@@ -351,7 +351,7 @@ Some python code to display data::\n\
         if( _vgoalpaths.capacity() < _parameters->_minimumgoalpaths ) {
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
+        RAVELOG_DEBUG_FORMAT("env=%s, BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetNameId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
         return true;
     }
 
@@ -360,10 +360,10 @@ Some python code to display data::\n\
         _goalindex = -1;
         _startindex = -1;
         if(!_parameters) {
-            return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, BirrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetId()), PS_Failed);
+            return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%s, BirrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetNameId()), PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint64_t basetimeus = utils::GetMonotonicTime();
         
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
@@ -385,13 +385,13 @@ Some python code to display data::\n\
         PlannerProgress progress;
         PlannerAction callbackaction=PA_None;
         while(_vgoalpaths.size() < _parameters->_minimumgoalpaths && iter < 3*_parameters->_nMaxIterations) {
-            RAVELOG_VERBOSE_FORMAT("env=%d, iter=%d, forward=%d, backward=%d", GetEnv()->GetId()%(iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
+            RAVELOG_VERBOSE_FORMAT("env=%s, iter=%d, forward=%d, backward=%d", GetEnv()->GetNameId()%(iter/3)%_treeForward.GetNumNodes()%_treeBackward.GetNumNodes());
             ++iter;
 
             // have to check callbacks at the beginning since code can continue
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
+                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%s, Planning was interrupted")%GetEnv()->GetNameId()), PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( _vgoalpaths.size() > 0 ) {
@@ -402,7 +402,7 @@ Some python code to display data::\n\
             if( _parameters->_nMaxPlanningTime > 0 ) {
                 uint64_t elapsedtime = utils::GetMonotonicTime()-basetimeus;
                 if( elapsedtime >= 1000*_parameters->_nMaxPlanningTime ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, time exceeded (%d[us] > %d[us]) so breaking. iter=%d < %d", GetEnv()->GetId()%elapsedtime%(1000*_parameters->_nMaxPlanningTime)%(iter/3)%_parameters->_nMaxIterations);
+                    RAVELOG_DEBUG_FORMAT("env=%s, time exceeded (%d[us] > %d[us]) so breaking. iter=%d < %d", GetEnv()->GetNameId()%elapsedtime%(1000*_parameters->_nMaxPlanningTime)%(iter/3)%_parameters->_nMaxIterations);
                     break;
                 }
             }
@@ -411,7 +411,7 @@ Some python code to display data::\n\
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
-                    RAVELOG_VERBOSE(str(boost::format("env=%d, inserting new goal index %d")%GetEnv()->GetId()%_vecGoalNodes.size()));
+                    RAVELOG_VERBOSE(str(boost::format("env=%s, inserting new goal index %d")%GetEnv()->GetNameId()%_vecGoalNodes.size()));
                     _vecGoalNodes.push_back(_treeBackward.InsertNode(NULL, vgoal, _vecGoalNodes.size()));
                     _nValidGoals++;
                 }
@@ -419,7 +419,7 @@ Some python code to display data::\n\
             if( !!_parameters->_sampleinitialfn ) {
                 vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
-                    RAVELOG_VERBOSE(str(boost::format("env=%d, inserting new initial %d")%GetEnv()->GetId()%_vecInitialNodes.size()));
+                    RAVELOG_VERBOSE(str(boost::format("env=%s, inserting new initial %d")%GetEnv()->GetNameId()%_vecInitialNodes.size()));
                     _vecInitialNodes.push_back(_treeForward.InsertNode(NULL,vinitial, _vecInitialNodes.size()));
                 }
             }
@@ -470,7 +470,7 @@ Some python code to display data::\n\
             if( et == ET_Failed ) {
                 // necessary to increment iterator in case spaces are not connected
                 if( iter > 3*_parameters->_nMaxIterations ) {
-                    RAVELOG_WARN_FORMAT("env=%d, iterations exceeded", GetEnv()->GetId());
+                    RAVELOG_WARN_FORMAT("env=%s, iterations exceeded", GetEnv()->GetNameId());
                     break;
                 }
                 continue;
@@ -490,7 +490,8 @@ Some python code to display data::\n\
                 int startindex = _vgoalpaths.back().startindex;
                 if( IS_DEBUGLEVEL(Level_Debug) ) {
                     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                    ss << "env=" << GetEnv()->GetId() << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", startvalues=[";
+                    ss << "env=" << GetEnv()->GetId() << "(" << GetEnv()->GetName() << ")"
+                       << ", found a goal, start index=" << startindex << " goal index=" << goalindex << ", path length=" << _vgoalpaths.back().length << ", startvalues=[";
                     for(int i = 0; i < _parameters->GetDOF(); ++i) {
                         ss << _vgoalpaths.back().qall.at(i) << ", ";
                     }
@@ -512,7 +513,7 @@ Some python code to display data::\n\
             swap(TreeA, TreeB);
             iter += 3;
             if( iter > 3*_parameters->_nMaxIterations ) {
-                RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d", GetEnv()->GetId()%_parameters->_nMaxIterations);
+                RAVELOG_WARN_FORMAT("env=%s, iterations exceeded %d", GetEnv()->GetNameId()%_parameters->_nMaxIterations);
                 break;
             }
 
@@ -521,7 +522,7 @@ Some python code to display data::\n\
 
         if( _vgoalpaths.size() == 0 ) {
             uint64_t elapsedtimeus = utils::GetMonotonicTime()-basetimeus;
-            std::string description = str(boost::format(_("env=%d, plan failed in %u[us], iter=%d, nMaxIterations=%d"))%GetEnv()->GetId()%(elapsedtimeus)%(iter/3)%_parameters->_nMaxIterations);
+            std::string description = str(boost::format(_("env=%s, plan failed in %u[us], iter=%d, nMaxIterations=%d"))%GetEnv()->GetNameId()%(elapsedtimeus)%(iter/3)%_parameters->_nMaxIterations);
             RAVELOG_WARN(description);
             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
@@ -539,7 +540,7 @@ Some python code to display data::\n\
         }
         ptraj->Insert(ptraj->GetNumWaypoints(), itbest->qall, _parameters->_configurationspecification);
         uint64_t elapsedtimeus = utils::GetMonotonicTime()-basetimeus;
-        std::string description = str(boost::format(_("env=%d, plan success, iters=%d, path=%d points, computation time=%u[us]\n"))%GetEnv()->GetId()%progress._iteration%ptraj->GetNumWaypoints()%(elapsedtimeus));
+        std::string description = str(boost::format(_("env=%s, plan success, iters=%d, path=%d points, computation time=%u[us]\n"))%GetEnv()->GetNameId()%progress._iteration%ptraj->GetNumWaypoints()%(elapsedtimeus));
         RAVELOG_DEBUG(description);
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
         //TODO should use accessor to change description
@@ -692,7 +693,7 @@ public:
 
     bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
         _parameters->copy(pparams);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
@@ -711,7 +712,7 @@ public:
                 if(goal_index < (int)_parameters->vgoalconfig.size())
                     vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {
-                    RAVELOG_ERROR_FORMAT("env=%d, BasicRrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetId());
+                    RAVELOG_ERROR_FORMAT("env=%s, BasicRrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetNameId());
                     _parameters.reset();
                     return false;
                 }
@@ -722,7 +723,7 @@ public:
                 _vecGoals.push_back(vgoal);
             }
             else {
-                RAVELOG_WARN_FORMAT("env=%d, goal in collision", GetEnv()->GetId());
+                RAVELOG_WARN_FORMAT("env=%s, goal in collision", GetEnv()->GetNameId());
             }
 
             if(goal_index == (int)_parameters->vgoalconfig.size()) {
@@ -731,25 +732,25 @@ public:
         }
 
         if(( _vecGoals.size() == 0) && !_parameters->_goalfn ) {
-            RAVELOG_WARN_FORMAT("env=%d, no goals or goal function specified", GetEnv()->GetId());
+            RAVELOG_WARN_FORMAT("env=%s, no goals or goal function specified", GetEnv()->GetNameId());
             _parameters.reset();
             return false;
         }
 
         _bOneStep = _parameters->_nRRTExtentType == 1;
-        RAVELOG_DEBUG_FORMAT("env=%d, BasicRrtPlanner initialized _nRRTExtentType=%d", GetEnv()->GetId()%_parameters->_nRRTExtentType);
+        RAVELOG_DEBUG_FORMAT("env=%s, BasicRrtPlanner initialized _nRRTExtentType=%d", GetEnv()->GetNameId()%_parameters->_nRRTExtentType);
         return true;
     }
 
     PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
-            std::string description = str(boost::format("env=%d, BasicRrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetId());
+            std::string description = str(boost::format("env=%s, BasicRrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetNameId());
             RAVELOG_WARN(description);
             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
 
         NodeBasePtr lastnode; // the last node visited by the RRT
@@ -777,14 +778,14 @@ public:
             if( !!_parameters->_samplegoalfn ) {
                 vector<dReal> vgoal;
                 if( _parameters->_samplegoalfn(vgoal) ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, found goal", GetEnv()->GetId());
+                    RAVELOG_VERBOSE_FORMAT("env=%s, found goal", GetEnv()->GetNameId());
                     _vecGoals.push_back(vgoal);
                 }
             }
             if( !!_parameters->_sampleinitialfn ) {
                 vector<dReal> vinitial;
                 if( _parameters->_sampleinitialfn(vinitial) ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, found initial", GetEnv()->GetId());
+                    RAVELOG_VERBOSE_FORMAT("env=%s, found initial", GetEnv()->GetNameId());
                     _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitial, _vecInitialNodes.size()));
                 }
             }
@@ -817,7 +818,7 @@ public:
                             _goalindex = (int)(itgoal-_vecGoals.begin());
                         }
                         if( iter >= _parameters->_nMinIterations ) {
-                            RAVELOG_DEBUG_FORMAT("env=%d, found goal index: %d", GetEnv()->GetId()%_goalindex);
+                            RAVELOG_DEBUG_FORMAT("env=%s, found goal index: %d", GetEnv()->GetNameId()%_goalindex);
                             break;
                         }
                     }
@@ -847,7 +848,7 @@ public:
                             bestGoalNode = ptestnode;
                             fBestGoalNodeDist = fGoalNodeDist;
                             _goalindex = -1;
-                            RAVELOG_DEBUG_FORMAT("env=%d, found node at goal at dist=%f at %d iterations, computation time=%fs", GetEnv()->GetId()%fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+                            RAVELOG_DEBUG_FORMAT("env=%s, found node at goal at dist=%f at %d iterations, computation time=%fs", GetEnv()->GetNameId()%fBestGoalNodeDist%iter%(0.001f*(float)(utils::GetMilliTime()-basetime)));
                         }
                     }
 
@@ -866,14 +867,14 @@ public:
 
             // check if reached any goals
             if( iter > _parameters->_nMaxIterations ) {
-                RAVELOG_WARN_FORMAT("env=%d, iterations exceeded %d\n", GetEnv()->GetId()%_parameters->_nMaxIterations);
+                RAVELOG_WARN_FORMAT("env=%s, iterations exceeded %d\n", GetEnv()->GetNameId()%_parameters->_nMaxIterations);
                 break;
             }
 
             if( !!bestGoalNode && _parameters->_nMaxPlanningTime > 0 ) {
                 uint32_t elapsedtime = utils::GetMilliTime()-basetime;
                 if( elapsedtime >= _parameters->_nMaxPlanningTime ) {
-                    RAVELOG_VERBOSE_FORMAT("env=%d, time exceeded (%dms) so breaking with bestdist=%f", GetEnv()->GetId()%elapsedtime%fBestGoalNodeDist);
+                    RAVELOG_VERBOSE_FORMAT("env=%s, time exceeded (%dms) so breaking with bestdist=%f", GetEnv()->GetNameId()%elapsedtime%fBestGoalNodeDist);
                     break;
                 }
             }
@@ -881,7 +882,7 @@ public:
             progress._iteration = iter;
             callbackaction = _CallCallbacks(progress);
             if( callbackaction ==  PA_Interrupt ) {
-                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%d, Planning was interrupted")%GetEnv()->GetId()), PS_Interrupted);
+                return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%s, Planning was interrupted")%GetEnv()->GetNameId()), PS_Interrupted);
             }
             else if( callbackaction == PA_ReturnWithAnySolution ) {
                 if( !!bestGoalNode ) {
@@ -891,7 +892,7 @@ public:
         }
 
         if( !bestGoalNode ) {
-            std::string description = str(boost::format("env=%d, plan failed, %fs")%GetEnv()->GetId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
+            std::string description = str(boost::format("env=%s, plan failed, %fs")%GetEnv()->GetNameId()%(0.001f*(float)(utils::GetMilliTime()-basetime)));
             RAVELOG_DEBUG(description);
             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
@@ -917,7 +918,7 @@ public:
         ptraj->Insert(ptraj->GetNumWaypoints(), vinsertvalues, _parameters->_configurationspecification);
 
         PlannerStatus status = _ProcessPostPlanners(_robot,ptraj);
-        RAVELOG_DEBUG_FORMAT("env=%d, plan success, path=%d points computation time=%fs, maxPlanningTime=%f", GetEnv()->GetId()%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime)))%(0.001*_parameters->_nMaxPlanningTime));
+        RAVELOG_DEBUG_FORMAT("env=%s, plan success, path=%d points computation time=%fs, maxPlanningTime=%f", GetEnv()->GetNameId()%ptraj->GetNumWaypoints()%((0.001f*(float)(utils::GetMilliTime()-basetime)))%(0.001*_parameters->_nMaxPlanningTime));
         return status;
     }
 
@@ -954,14 +955,14 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());
         _parameters->copy(pparams);
         if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
             _parameters.reset();
             return false;
         }
-        RAVELOG_DEBUG_FORMAT("env=%d, ExplorationPlanner::InitPlan - RRT Planner Initialized", GetEnv()->GetId());
+        RAVELOG_DEBUG_FORMAT("env=%s, ExplorationPlanner::InitPlan - RRT Planner Initialized", GetEnv()->GetNameId());
         return true;
     }
 
@@ -972,7 +973,7 @@ public:
         if( !_parameters ) {
             return OPENRAVE_PLANNER_STATUS(PS_Failed);
         }
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
 
         PlannerParameters::StateSaver savestate(_parameters);
@@ -993,7 +994,7 @@ public:
                 if( GetParameters()->CheckPathAllConstraints(_treeForward.GetVectorConfig(pnode), vSampleConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) == 0 ) {
                     _treeForward.InsertNode(pnode, vSampleConfig, 0);
                     GetEnv()->UpdatePublishedBodies();
-                    RAVELOG_DEBUG_FORMAT("env=%d, size %d", GetEnv()->GetId()%_treeForward.GetNumNodes());
+                    RAVELOG_DEBUG_FORMAT("env=%s, size %d", GetEnv()->GetNameId()%_treeForward.GetNumNodes());
                 }
             }
             else {     // rrt extend
@@ -1002,7 +1003,7 @@ public:
                 }
                 NodeBasePtr plastnode;
                 if( _treeForward.Extend(vSampleConfig, plastnode, true) == ET_Connected ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, size %d", GetEnv()->GetId()%_treeForward.GetNumNodes());
+                    RAVELOG_DEBUG_FORMAT("env=%s, size %d", GetEnv()->GetNameId()%_treeForward.GetNumNodes());
                 }
             }
         }

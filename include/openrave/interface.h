@@ -26,6 +26,13 @@
 
 namespace OpenRAVE {
 
+/// \brief options to pass into UpdateFromInfo that control what gets updated
+enum UpdateFromInfoMode
+{
+    UFIM_Exact = 0, ///< kinbody is initialized exactly as the Info is. If Info is not specifying certain components, then those will be removed from the existing interface
+    UFIM_OnlySpecifiedBodiesExact = 1, ///< when updating the environment with bodies, will only update the bodies that are specified in the info structure and not touch the other bodies or other environment info. Bodies will be udpated with Exact
+};
+
 /// serialization options for interfaces
 enum SerializationOptions
 {
@@ -112,9 +119,18 @@ public:
     /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
     virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
 
+    /// \brief sets a set of readable interfaces all at once. The pointers are copied
+    ///
+    /// \param mapReadables the readable interfaces to ste
+    /// \param bClearAllExisting if true, then clears the existing readables, if false, just updates the readables that are specified in mapReadables
+    virtual void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting);
+
     /// \brief clears the readable interfaces
     virtual void ClearReadableInterfaces();
     virtual void ClearReadableInterface(const std::string& id);
+
+    /// \brief updates the readable interfaces. returns true if there are any changes
+    virtual bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces);
 
     /// \brief Documentation of the interface in reStructuredText format. See \ref writing_plugins_doc. <b>[multi-thread safe]</b>
     virtual const std::string& GetDescription() const {

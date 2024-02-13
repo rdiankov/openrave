@@ -199,7 +199,7 @@ protected:
             O << *it << " ";
         }
         O << "</grasps>" << std::endl;
-        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentId() : 0) << "</target>" << std::endl;
+        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentBodyIndex() : 0) << "</target>" << std::endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << std::endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << std::endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << std::endl;
@@ -236,9 +236,9 @@ protected:
                 }
             }
             else if( name == "target" ) {
-                int id = 0;
-                _ss >> id;
-                _ptarget = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                _ptarget = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "numgradsamples" ) {
                 _ss >> _nGradientSamples;
@@ -317,7 +317,7 @@ protected:
             return false;
         }
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << std::endl;
-        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << std::endl;
+        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentBodyIndex()) << "</targetbody>" << std::endl;
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << std::endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << std::endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << std::endl;
@@ -383,9 +383,9 @@ protected:
                 _ss >> fstandoff;
             }
             else if( name == "targetbody") {
-                int id = 0;
-                _ss >> id;
-                targetbody = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                targetbody = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "ftargetroll") {
                 _ss >> ftargetroll;
@@ -452,11 +452,12 @@ typedef boost::shared_ptr<GraspParameters const> GraspParametersConstPtr;
 class OPENRAVE_API TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), verifyinitialpath(1), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _hasaccelerations(false), _outputaccelchanges(true), _multidofinterp(0), verifyinitialpath(1), _bProcessing(false) {
         _fStepLength = 0; // reset to 0 since it is being used
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("hasvelocities");
+        _vXMLParameters.push_back("hasaccelerations");
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
         _vXMLParameters.push_back("multidofinterp");
@@ -465,7 +466,7 @@ public:
 
     std::string _interpolation;
     dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
-    bool _hastimestamps, _hasvelocities;
+    bool _hastimestamps, _hasvelocities, _hasaccelerations;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
     int _multidofinterp; ///< if 1, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible. if 0, will compute minimum acceleration. If 2, will match acceleration ramps of all dofs.
     int verifyinitialpath; ///< if 0 then does not verify whether the path given as input is in collision
@@ -480,6 +481,7 @@ protected:
         O << "<interpolation>" << _interpolation << "</interpolation>" << std::endl;
         O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << std::endl;
         O << "<hasvelocities>" << _hasvelocities << "</hasvelocities>" << std::endl;
+        O << "<hasaccelerations>" << _hasvelocities << "</hasaccelerations>" << std::endl;
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << std::endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << std::endl;
         O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << std::endl;
@@ -502,7 +504,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp"||name=="verifyinitialpath";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="hasaccelerations" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp"||name=="verifyinitialpath";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -517,6 +519,9 @@ protected:
             }
             else if( name == "hasvelocities" ) {
                 _ss >> _hasvelocities;
+            }
+            else if( name == "hasaccelerations" ) {
+                _ss >> _hasaccelerations;
             }
             else if( name == "pointtolerance" ) {
                 _ss >> _pointtolerance;

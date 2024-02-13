@@ -345,7 +345,7 @@ public:
                 }
                 return ET_Failed;
             }
-            if( params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal ? NSO_GoalToInitial : 0) == NSS_Failed ) {
+            if( params->_neighstatefn(_vNewConfig,_vDeltaConfig,(_fromgoal ? NSO_GoalToInitial : 0)|NSO_FromPathSampling) == NSS_Failed ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
@@ -362,12 +362,12 @@ public:
 
             // necessary to pass in _constraintreturn since _neighstatefn can have constraints and it can change the interpolation. Use _constraintreturn->_bHasRampDeviatedFromInterpolation to figure out if something changed.
             if( _fromgoal ) {
-                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, constraintFilterOptions, _constraintreturn) != 0 ) {
+                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, constraintFilterOptions|CFO_FromPathSampling, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
             else {
-                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, constraintFilterOptions, _constraintreturn) != 0 ) {
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, constraintFilterOptions|CFO_FromPathSampling, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
@@ -950,7 +950,7 @@ private:
         std::vector<NodePtr>& vNextLevelNodes = vvCoverSetNodes[coverindex];
         vNextLevelNodes.resize(0);
 
-        bool bfound = false;
+        //bool bfound = false;
         FOREACH(itcurrentnode, vvCoverSetNodes.at(coverindex-1)) {
             // only take the children whose distances are within the bound
             if( setLevelRawChildren.find(*itcurrentnode) != setLevelRawChildren.end() ) {
@@ -964,7 +964,7 @@ private:
                         if( (*itcurrentnode)->_hasselfchild && _ComputeDistance(*itcurrentnode, *itchild) <= _mindistance) {
                             (*itcurrentnode)->_hasselfchild = 0;
                         }
-                        bfound = true;
+                        //bfound = true;
                         //break;
                     }
                     else {

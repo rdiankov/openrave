@@ -606,7 +606,7 @@ private:
 
     virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
     {
-        EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
+        EnvironmentLock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         if( !pinfo ) 

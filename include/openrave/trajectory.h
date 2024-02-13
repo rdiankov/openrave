@@ -61,6 +61,24 @@ public:
      */
     virtual void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite=false) = 0;
 
+    /** \brief Sets/inserts new waypoints in a \b user-given configuration specification.
+        \param index The index where to start modifying the trajectory.
+        \param pdata The data to insert, can represent multiple consecutive waypoints.
+        \param nDataElements The number of data to insert, can represent multiple consecutive waypoints. nDataElements/GetConfigurationSpecification().GetDOF() waypoints are added.
+        \param spec the specification in which the input data come in. Depending on what data is offered, some values of this trajectory's specification might not be initialized.
+        \param bOverwrite If true, will overwrite the waypoints starting at index, and will insert new waypoints only if end of trajectory is reached; if the input spec does not overwrite all the data of the trjectory spec, then the original trajectory data will not be overwritten. If false, will insert the points before index: a 0 index inserts the new data in the beginning, a GetNumWaypoints() index inserts the new data at the end.
+     */
+    virtual void Insert(size_t index, const dReal* pdata, size_t nDataElements, const ConfigurationSpecification& spec, bool bOverwrite=false) = 0;
+
+    /** \brief Sets/inserts new waypoints in the same configuration specification as the trajectory.
+
+        \param index The index where to start modifying the trajectory.
+        \param data The data to insert.
+        \param nDataElements The number of data to insert, can represent multiple consecutive waypoints. nDataElements/GetConfigurationSpecification().GetDOF() waypoints are added.
+        \param bOverwrite If true, will overwrite the waypoints starting at index, and will insert new waypoints only if end of trajectory is reached. If false, will insert the points before index: a 0 index inserts the new data in the beginning, a GetNumWaypoints() index inserts the new data at the end.
+     */
+    virtual void Insert(size_t index, const dReal* pdata, size_t nDataElements, bool bOverwrite=false) = 0;
+
     /// \brief removes a range of waypoints [startindex, endindex) removing starting at startindex and ending at the element before endindex.
     virtual void Remove(size_t startindex, size_t endindex) = 0;
 
@@ -96,6 +114,24 @@ public:
         \param spec[in] the specification format to return the data in
      */
     virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times, const ConfigurationSpecification& spec) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time using the trajectory's specification.
+
+        \param data[out] the sampled points depending on the times
+        \param deltatime[in] the delta time to sample
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+     */
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
 
     virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
 
@@ -165,6 +201,9 @@ public:
     /// \brief initialize the trajectory
     virtual void deserialize(std::istream& I);
 
+    /// \brief initialize the trajectory via a raw pointer to memory
+    virtual void DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize);
+    
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief swap the contents of the data between the two trajectories.

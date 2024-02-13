@@ -92,7 +92,10 @@ from __future__ import with_statement # for python 2.5
 __author__ = 'Rosen Diankov'
 
 import time
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 import openravepy
 if not __openravepy_build_doc__:
     from openravepy import *
@@ -116,7 +119,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
         except ValueError:
-            print '6D IK failed, trying 5D IK'
+            print('6D IK failed, trying 5D IK')
             self.ikmodel = databases.inversekinematics.InverseKinematicsModel(robot=robot,iktype=IkParameterization.Type.TranslationDirection5D)
             if not self.ikmodel.load():
                 self.ikmodel.autogenerate()
@@ -126,8 +129,8 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             self.lmodel.autogenerate()
         self.lmodel.setRobotWeights()
         self.lmodel.setRobotResolutions(xyzdelta=0.005)
-        print 'robot resolutions: ',robot.GetDOFResolutions()
-        print 'robot weights: ',robot.GetDOFWeights()
+        print('robot resolutions: %r'%robot.GetDOFResolutions())
+        print('robot weights: %r'%robot.GetDOFWeights())
 
         # could possibly affect generated grasp sets?
 #         self.cdmodel = databases.convexdecomposition.ConvexDecompositionModel(self.robot)
@@ -143,7 +146,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             # find all the bodies to manipulate
             self.graspables = self.getGraspables(dests=dests)
             if len(self.graspables) == 0:
-                print 'attempting to auto-generate a grasp table'
+                print('attempting to auto-generate a grasp table')
                 targets=[t for t in self.envreal.GetBodies() if t.GetName().find('mug')>=0 or t.GetName().find('target')>=0]
                 if len(targets) > 0:
                     gmodel = databases.grasping.GraspingModel(robot=self.robot,target=targets[0])
@@ -173,16 +176,16 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                         for target in alltargets:
                             target.Enable(True)
                 else:
-                    print 'could not find %s'%tablename
+                    print('could not find %s'%tablename)
 
     def getGraspables(self,dests=None):
         graspables = []
-        print 'searching for graspable objects (robot=%s)...'%(self.robot.GetRobotStructureHash())
+        print('searching for graspable objects (robot=%s)...'%(self.robot.GetRobotStructureHash()))
         for target in self.envreal.GetBodies():
             if not target.IsRobot():
                 gmodel = databases.grasping.GraspingModel(robot=self.robot,target=target)
                 if gmodel.load():
-                    print '%s is graspable'%target.GetName()
+                    print('%s is graspable'%target.GetName())
                     graspables.append([gmodel,dests])
         return graspables
 
@@ -222,7 +225,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
     @staticmethod
     def setRandomDestinations(targets, table,transdelta=0.1,zoffset=0.01,Trolls=None,randomize=False,preserverotation=True):
         with table.GetEnv():
-            print 'searching for destinations on %s...'%table.GetName()
+            print('searching for destinations on %s...'%table.GetName())
             Ttable = table.GetTransform()
             table.SetTransform(eye(4))
             ab = table.ComputeAABB()
@@ -271,7 +274,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
     def viewDestinations(self,gmodel,Tdests,delay=0.5):
         with gmodel.target:
             for i,T in enumerate(Tdests):
-                print 'target %s dest %d/%d'%(gmodel.target.GetName(),i,len(Tdests))
+                print('target %s dest %d/%d'%(gmodel.target.GetName(),i,len(Tdests)))
                 gmodel.target.SetTransform(T)
                 validgrasps, indices = gmodel.computeValidGrasps(returnnum=1)
                 gmodel.target.GetEnv().UpdatePublishedBodies()
@@ -305,26 +308,26 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             grasp = gmodel.grasps[graspindex]
             Tglobalgrasp = gmodel.getGlobalGraspTransform(grasp,collisionfree=True)
             self.waitrobot(robot)
-            print 'grasp %d initial planning time: %f'%(graspindex,searchtime)
+            print('grasp %d initial planning time: %f'%(graspindex,searchtime))
             
             if approachoffset != 0:
-                print 'moving hand'
+                print('moving hand')
                 expectedsteps = floor(approachoffset/stepsize)
                 try:
                     # should not allow any error since destination goal depends on accurate relative placement
                     # of the gripper with respect to the object
                     with gmodel.target:
-                        print 'current robot', repr(robot.GetDOFValues())
-                        print 'global direction',repr(dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection())), gmodel.getGlobalApproachDir(grasp)
-                        print 'local direction',grasp[gmodel.graspindices.get('igraspdir')]
+                        print('current robot %s'%repr(robot.GetDOFValues()))
+                        print('global direction %s'%repr(dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection())), gmodel.getGlobalApproachDir(grasp))
+                        print('local direction %r'%grasp[gmodel.graspindices.get('igraspdir')])
                         gmodel.target.Enable(False)
                         res = self.basemanip.MoveHandStraight(direction=gmodel.getGlobalApproachDir(grasp), ignorefirstcollision=0,stepsize=stepsize,minsteps=expectedsteps,maxsteps=expectedsteps)
                 except planning_error:
-                    print 'use a planner to move the rest of the way'
+                    print('use a planner to move the rest of the way')
                     try:
                         self.basemanip.MoveToHandPosition(matrices=[Tglobalgrasp],maxiter=1000,maxtries=1,seedik=4)
-                    except planning_error,e:
-                        print 'failed to reach grasp',e
+                    except planning_error as e:
+                        print('failed to reach grasp %r'%e)
                         continue
                 self.waitrobot(robot)
 
@@ -339,19 +342,19 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             success = graspindex
             if movehanddown:
                 try:
-                    print 'move hand up'
+                    print('move hand up')
                     self.basemanip.MoveHandStraight(direction=self.updir,stepsize=0.003,minsteps=1,maxsteps=60)
                 except:
-                    print 'failed to move hand up'
+                    print('failed to move hand up')
                 self.waitrobot(robot)
 
             if len(goals) > 0:
-                print 'planning to destination'
+                print('planning to destination')
                 try:
                     self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
                     self.waitrobot(robot)
-                except planning_error,e:
-                    print 'failed to reach a goal, trying to move goal a little up',e
+                except planning_error as e:
+                    print('failed to reach a goal, trying to move goal a little up %r'%e)
                     if goals[0].GetType() == IkParameterizationType.Transform6D:
                         Tgoal = goals[0].GetTransform6D()
                         Tgoal[0:3,3] += self.updir*0.015
@@ -360,15 +363,15 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                             self.waitrobot(robot)
                             self.basemanip.MoveToHandPosition(ikparams=goals,maxiter=2000,maxtries=2,seedik=8)
                             self.waitrobot(robot)
-                        except planning_error,e:
-                            print e
+                        except planning_error as e:
+                            print(e)
                             success = -1
             if movehanddown:
-                print 'moving hand down'
+                print('moving hand down')
                 try:
                     res = self.basemanip.MoveHandStraight(direction=-self.updir,stepsize=0.003,minsteps=1,maxsteps=100)
                 except:
-                    print 'failed to move hand down'
+                    print('failed to move hand down')
                 self.waitrobot(robot)
 
             try:
@@ -376,7 +379,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
             except planning_error:
                 res = None
             if res is None:
-                print 'problems releasing, releasing target first'
+                print('problems releasing, releasing target first')
                 with env:
                     robot.ReleaseAllGrabbed()
                     try:
@@ -384,7 +387,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                     except planning_error:
                         res = None
                 if res is None:
-                    print 'forcing fingers'
+                    print('forcing fingers')
                     with env:
                         robot.SetDOFValues(gmodel.grasps[graspindex][gmodel.graspindices['igrasppreshape']],gmodel.manip.GetGripperIndices())
             self.waitrobot(robot)
@@ -392,11 +395,11 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                 robot.ReleaseAllGrabbed()
             with CollisionOptionsStateSaver(env.GetCollisionChecker(),CollisionOptions.ActiveDOFs):
                 if env.CheckCollision(robot):
-                    print 'robot in collision, moving back a little'
+                    print('robot in collision, moving back a little')
                     try:
                         self.basemanip.MoveHandStraight(direction=-dot(gmodel.manip.GetTransform()[0:3,0:3],gmodel.manip.GetDirection()), stepsize=stepsize,minsteps=1,maxsteps=10)
                         self.waitrobot(robot)
-                    except planning_error,e:
+                    except planning_error as e:
                         pass
                     if env.CheckCollision(robot):
                         try:
@@ -412,7 +415,7 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
         return -1
 
     def performGraspPlanning(self,withreplacement=True,**kwargs):
-        print 'starting to pick and place random objects'
+        print('starting to pick and place random objects')
         graspables = self.graspables[:]
         failures = 0
         while True:
@@ -430,18 +433,18 @@ class GraspPlanning(openravepy.metaclass.AutoReloader):
                 i = 0
                 
             try:
-                print 'grasping object %s'%graspables[i][0].target.GetName()
+                print('grasping object %s'%graspables[i][0].target.GetName())
                 with self.envreal:
                     self.robot.ReleaseAllGrabbed()
                 success = self.graspAndPlaceObject(graspables[i][0],graspables[i][1],**kwargs)
-                print 'success: ',success
+                print('success: %r'%success)
                 graspables.pop(i)
                 failures = 0
-            except planning_error, e:
-                print 'failed to grasp object %s'%graspables[i][0].target.GetName()
+            except planning_error as e:
+                print('failed to grasp object %s'%graspables[i][0].target.GetName())
                 failures += 1
                 graspables.append(graspables.pop(0)) # push front to back
-                print e
+                print(e)
 
 def main(env,options):
     "Main example code."

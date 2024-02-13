@@ -32,76 +32,79 @@
 # (To distributed this file outside of CMake, substitute the full
 #  License text for the above reference.)
 #==================================================================================
+@PACKAGE_INIT@
+
+cmake_policy(SET CMP0007 NEW)
+
+# Get prefix, go up 2 levels
 get_filename_component(_PREFIX "${CMAKE_CURRENT_LIST_FILE}" PATH)
 get_filename_component(_PREFIX "${_PREFIX}" PATH)
 get_filename_component(_PREFIX "${_PREFIX}" PATH)
 get_filename_component(OpenRAVE_ROOT_DIR "${_PREFIX}" PATH)
 
-if( MSVC )
-  # in order to prevent DLL hell, each of the DLLs have to be suffixed with the major version and msvc prefix
-  if( MSVC70 OR MSVC71 )
-    set(MSVC_PREFIX "vc70")
-  elseif( MSVC80 )
-    set(MSVC_PREFIX "vc80")
-  elseif( MSVC90 )
-    set(MSVC_PREFIX "vc90")
-  else()
-    set(MSVC_PREFIX "vc100")
-  endif()
-  set(OpenRAVE_LIBRARY_SUFFIX "${OpenRAVE_VERSION_MAJOR}.${OpenRAVE_VERSION_MINOR}-${MSVC_PREFIX}-mt" CACHE STRING "the suffix for the openrave libraries" FORCE)
-else()
-  set(OpenRAVE_LIBRARY_SUFFIX "@OPENRAVE_LIBRARY_SUFFIX@" CACHE STRING "the suffix for the openrave libraries" FORCE)
-endif()
-  
-set( OpenRAVE_CXX_FLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL @OPENRAVE_EXPORT_CXXFLAGS@ @OPENRAVE_BOOST_INCLUDE_DIRS@ @OPENRAVE_LOG4CXX_INCLUDE_DIRS@" )
-if( WIN32 )
-  set( OpenRAVE_CXX_FLAGS "${OpenRAVE_CXX_FLAGS} -DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
-endif()
-if( MSVC )
-  set( OpenRAVE_CXX_FLAGS "${OpenRAVE_CXX_FLAGS} /EHc-")
-endif()
-set( OpenRAVE_CXXFLAGS "${OpenRAVE_CXX_FLAGS}") # deprecated
-set( OpenRAVE_LINK_FLAGS "@OPENRAVE_BOOST_LIB_DIRS@ @OPENRAVE_LOG4CXX_LIB_DIRS@" )
-set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_ROOT_DIR}/include/@OPENRAVE_INCLUDE_INSTALL_DIR@")
-set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_ROOT_DIR}/lib@LIB_SUFFIX@")
-set( OpenRAVE_LIBRARIES openrave${OpenRAVE_LIBRARY_SUFFIX})
-set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_LIBRARIES} openrave${OpenRAVE_LIBRARY_SUFFIX}-core @Boost_THREAD_LIBRARY@ @LOG4CXX_LIBRARIES@)
-# c-bindings only
-set( OpenRAVE_C_LIBRARIES openrave${OpenRAVE_LIBRARY_SUFFIX}_c)
-set( OpenRAVE_CORE_C_LIBRARIES ${OpenRAVE_C_LIBRARIES} openrave${OpenRAVE_LIBRARY_SUFFIX}-core_c)
-set( OpenRAVE_PYTHON_INCLUDE_DIRS @PYTHON_INCLUDE_DIRS@)
+set_and_check(OpenRAVE_INCLUDE_DIR "@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@/@OPENRAVE_INCLUDE_INSTALL_DIR@")
+set_and_check(OpenRAVE_RAPIDJSON_INCLUDE_DIR "@RAPIDJSON_INCLUDES@")
 
-if(@USE_OPENRAVEPY@)
-  set( OpenRAVE_PYTHON_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY_VER_INSTALL_DIR@")
-  mark_as_advanced(OpenRAVE_PYTHON_DIR)
-  set( OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS @USE_PYBIND11_PYTHON_BINDINGS@)
-endif()
-
-set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@")
+set( OpenRAVE_INCLUDE_DIRS ${OpenRAVE_INCLUDE_DIR} ${OpenRAVE_RAPIDJSON_INCLUDE_DIR} )
+set( OpenRAVE_LIBRARIES libopenrave )
+set( OpenRAVE_Boost_VERSION "@Boost_MAJOR_VERSION@.@Boost_MINOR_VERSION@" )
 set( OpenRAVE_BLA_VENDOR "@BLA_VENDOR@" )
+set( OpenRAVE_CXX_FLAGS "-DOPENRAVE_DLL -DOPENRAVE_CORE_DLL" )
 
-if( WIN32 )
-  # search for the boost version openrave was compiled with
-  set(Boost_USE_MULTITHREAD ON)
-  set(Boost_USE_STATIC_LIBS OFF)
-  set(Boost_USE_STATIC_RUNTIME OFF)
-  find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS thread date_time)
-  if(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-    set( OpenRAVE_INCLUDE_DIRS "${OpenRAVE_INCLUDE_DIRS}" ${Boost_INCLUDE_DIRS})
-    set( OpenRAVE_LIBRARY_DIRS "${OpenRAVE_LIBRARY_DIRS}" ${Boost_LIBRARY_DIRS})
-    set( OpenRAVE_CORE_LIBRARIES ${OpenRAVE_CORE_LIBRARIES} ${Boost_THREAD_LIBRARY} ${Boost_DATE_TIME_LIBRARY})
-  else(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-    message(WARNING "Failed to find Boost ${OpenRAVE_Boost_VERSION} necessary OpenRAVE")
-  endif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-endif( WIN32 )
+find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS filesystem system thread)
+find_package(LibXml2 REQUIRED)
+
+include(${CMAKE_CURRENT_LIST_DIR}/openrave-targets.cmake)
+
+set( OpenRAVE_PYTHON2 @OPT_PYTHON@ )
+set( OpenRAVE_PYTHON3 @OPT_PYTHON3@ )
+
+if (OpenRAVE_PYTHON2)
+  find_package(Python 2.7 REQUIRED COMPONENTS Interpreter Development NumPy)
+
+  set( OpenRAVE_PYTHON2_INCLUDE_DIRS "${Python_INCLUDE_DIRS};${Python_NumPy_INCLUDE_DIRS}" )
+  set( OpenRAVE_PYTHON2_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY2_VER_INSTALL_DIR@")
+  set( OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS @USE_PYBIND11_PYTHON_BINDINGS@)
+
+  # Backwards compat: Refer to python 2
+  set( OpenRAVE_PYTHON_INCLUDE_DIRS ${OpenRAVE_PYTHON2_INCLUDE_DIRS} CACHE STRING "This is for backward compatibility with deprecated CMake declarations." FORCE)
+  set( OpenRAVE_PYTHON_DIR "${OpenRAVE_PYTHON2_DIR}")
+endif()
+
+if (OpenRAVE_PYTHON3)
+  find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
+
+  set( OpenRAVE_PYTHON3_INCLUDE_DIRS "${Python3_INCLUDE_DIRS};${Python3_NumPy_INCLUDE_DIRS}" )
+  set( OpenRAVE_PYTHON3_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY3_VER_INSTALL_DIR@")
+  set( OpenRAVE_USE_PYBIND11_PYTHON3_BINDINGS @USE_PYBIND11_PYTHON3_BINDINGS@)
+
+  # Set these values if Python2 is not present.
+  if (NOT OpenRAVE_PYTHON2)
+    set( OpenRAVE_PYTHON_INCLUDE_DIRS ${OpenRAVE_PYTHON3_INCLUDE_DIRS} CACHE STRING "This is for backward compatibility with deprecated CMake declarations." FORCE)
+    set( OpenRAVE_PYTHON_DIR "${OpenRAVE_PYTHON3_DIR}")
+  endif()
+endif()
+if (OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS OR OpenRAVE_USE_PYBIND11_PYTHON3_BINDINGS)
+  set(PYBIND11_FINDPYTHON ON)
+  find_package(pybind11 REQUIRED CONFIG)
+else()
+  find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS python)
+endif()
+set_and_check(OpenRAVE_PYTHON_DIR "${OpenRAVE_PYTHON_DIR}")
+
+# Backward compatibility only.
+get_target_property(libopenrave_LOCATION OpenRAVE::libopenrave LOCATION)
+get_target_property(libopenrave-core_LOCATION OpenRAVE::libopenrave-core LOCATION)
+set(OpenRAVE_CORE_LIBRARIES "${libopenrave_LOCATION};${libopenrave-core_LOCATION}")
+
+add_library(libopenrave ALIAS OpenRAVE::libopenrave)
+add_library(libopenrave-core ALIAS OpenRAVE::libopenrave-core)
+
+find_package(Eigen3 3.3.7 REQUIRED)
+
+message(STATUS "Found OpenRAVE ${OpenRAVE_VERSION}, compiled with Boost ${OpenRAVE_Boost_VERSION}.")
 
 mark_as_advanced(
-  OpenRAVE_ROOT_DIR
-  OpenRAVE_CXXFLAGS
-  OpenRAVE_CXX_FLAGS
-  OpenRAVE_LINK_FLAGS
-  OpenRAVE_INCLUDE_DIRS
-  OpenRAVE_LIBRARIES
-  OpenRAVE_CORE_LIBRARIES
-  OpenRAVE_Boost_VERSION
+    libopenrave_LOCATION
+    libopenrave-core_LOCATION
 )

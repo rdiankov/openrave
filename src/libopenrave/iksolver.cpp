@@ -187,7 +187,7 @@ UserDataPtr IkSolverBase::RegisterFinishCallback(const IkFinishCallbackFn& finis
 
 IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr filterreturn, int32_t minpriority, int32_t maxpriority)
 {
-    vector<dReal> vtestsolution,vtestsolution2;
+    vector<dReal> vtestsolution;
     if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
         RobotBasePtr robot = manipulator->GetRobot();
         robot->GetConfigurationValues(vtestsolution);
@@ -199,12 +199,12 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
             if( fdiff > g_fEpsilonJointLimit ) {
                 stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                 ss << "dof " << i << " of solution=[";
-                FOREACH(itvalue, solution) {
-                    ss << *itvalue << ", ";
+                for( const dReal value : solution) {
+                    ss << value << ", ";
                 }
                 ss << "] != dof " << dofindex << " of currentvalues=[";
-                FOREACH(itvalue, vtestsolution) {
-                    ss << *itvalue << ", ";
+                for( const dReal value : vtestsolution) {
+                    ss << value << ", ";
                 }
                 ss << "]";
                 throw OPENRAVE_EXCEPTION_FORMAT(_("_CallFilters on robot %s manip %s need to start with robot configuration set to the solution, most likely a problem with internal ik solver call. %s"),robot->GetName()%manipulator->GetName()%ss.str(), ORE_InconsistentConstraints);
@@ -234,12 +234,12 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                         
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                         ss << "dof " << dofindex << " of solution=[";
-                        FOREACH(itvalue, vtestsolution) {
-                            ss << *itvalue << ", ";
+                        for( const dReal value : vtestsolution) {
+                            ss << value << ", ";
                         }
                         ss << "] != dof " << dofindex << " of currentvalues=[";
-                        FOREACH(itvalue, vtestsolution2) {
-                            ss << *itvalue << ", ";
+                        for( const dReal value : vtestsolution2) {
+                            ss << value << ", ";
                         }
                         ss << "]";
 

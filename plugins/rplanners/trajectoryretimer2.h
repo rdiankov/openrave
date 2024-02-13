@@ -27,7 +27,7 @@ protected:
     class GroupInfo
     {
 public:
-        GroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : degree(degree), gpos(gpos), gvel(gvel), orgposoffset(-1), orgveloffset(-1) {
+        GroupInfo(int degree_, const ConfigurationSpecification::Group& gpos_, const ConfigurationSpecification::Group &gvel_) : degree(degree_), gpos(gpos_), gvel(gvel_), orgposoffset(-1), orgveloffset(-1) {
         }
         virtual ~GroupInfo() {
         }
@@ -50,7 +50,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         params->Validate();
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
@@ -62,7 +62,7 @@ public:
 
     virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
         _parameters->Validate();
