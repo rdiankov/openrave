@@ -21,7 +21,16 @@ public:
     PYBIND11_TYPE_CASTER(__uint128_t, const_name("__uint128_t"));
     // Python -> C++
     bool load(handle src, bool) {
-        return false;
+        if( !isinstance<int_>(src) ) {
+            return false;
+        }
+        if( src >= (pybind11::cast(1)<<pybind11::cast(128)) ) {
+            return false;
+        }
+        const uint64_t upper = pybind11::cast<uint64_t>(src >> pybind11::cast(64));
+        const uint64_t lower = pybind11::cast<uint64_t>(src & pybind11::cast(0xFFFFFFFFFFFFFFFFUL));
+        value = (static_cast<__uint128_t>(upper) << 64) | static_cast<__uint128_t>(lower);
+        return true;
     }
     // C++ -> Python
     static handle cast(const __uint128_t& src, return_value_policy, handle) {
@@ -33,7 +42,16 @@ template <> struct type_caster<boost::multiprecision::uint128_t> {
 public:
     PYBIND11_TYPE_CASTER(boost::multiprecision::uint128_t, const_name("boost::multiprecision::uint128_t"));
     bool load(handle src, bool) {
-        return false;
+        if( !isinstance<int_>(src) ) {
+            return false;
+        }
+        if( src >= (pybind11::cast(1)<<pybind11::cast(128)) ) {
+            return false;
+        }
+        const uint64_t upper = pybind11::cast<uint64_t>(src >> pybind11::cast(64));
+        const uint64_t lower = pybind11::cast<uint64_t>(src & pybind11::cast(0xFFFFFFFFFFFFFFFFUL));
+        value = (static_cast<boost::multiprecision::uint128_t>(upper) << 64) | static_cast<boost::multiprecision::uint128_t>(lower);
+        return true;
     }
     static handle cast(const boost::multiprecision::uint128_t& src, return_value_policy, handle) {
         return ((pybind11::cast(static_cast<uint64_t>(src>>64)) << pybind11::cast(64)) | pybind11::cast(static_cast<uint64_t>(src & 0xFFFFFFFFFFFFFFFFUL))).inc_ref();
