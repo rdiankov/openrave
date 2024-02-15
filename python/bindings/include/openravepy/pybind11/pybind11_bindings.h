@@ -11,8 +11,35 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 PYBIND11_DECLARE_HOLDER_TYPE(T, OPENRAVE_SHARED_PTR<T>);
 namespace pybind11 {
+namespace detail {
+#ifdef __SIZEOF_INT128__
+template <> struct type_caster<__uint128_t> {
+public:
+    PYBIND11_TYPE_CASTER(__uint128_t, const_name("__uint128_t"));
+    // Python -> C++
+    bool load(handle src, bool) {
+        return false;
+    }
+    // C++ -> Python
+    static handle cast(const __uint128_t& src, return_value_policy, handle) {
+        return ((pybind11::cast(static_cast<uint64_t>(src>>64)) << pybind11::cast(64)) | pybind11::cast(static_cast<uint64_t>(src & 0xFFFFFFFFFFFFFFFFUL))).inc_ref();
+    }
+};
+#endif
+template <> struct type_caster<boost::multiprecision::uint128_t> {
+public:
+    PYBIND11_TYPE_CASTER(boost::multiprecision::uint128_t, const_name("boost::multiprecision::uint128_t"));
+    bool load(handle src, bool) {
+        return false;
+    }
+    static handle cast(const boost::multiprecision::uint128_t& src, return_value_policy, handle) {
+        return ((pybind11::cast(static_cast<uint64_t>(src>>64)) << pybind11::cast(64)) | pybind11::cast(static_cast<uint64_t>(src & 0xFFFFFFFFFFFFFFFFUL))).inc_ref();
+    }
+};
+}
 namespace numeric {
 // so py::numeric::array = py::array_t<double>
 using array = ::pybind11::array_t<double>;
