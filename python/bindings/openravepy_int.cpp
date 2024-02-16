@@ -247,7 +247,22 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
         int overflow;
         PyLong_AsLongAndOverflow(obj.ptr(), &overflow);
         if (overflow) {
-            value.SetUint64(PyLong_AsUnsignedLong(obj.ptr()));
+            if (obj >= py::cast(1)<<py::cast(64)) { // convert to a string if this integer is bigger than uint64_t(-1).
+                PyObject* pStringRepresentation = PyObject_Str(obj.ptr());
+                if (!!pStringRepresentation) {
+#if PY_MAJOR_VERSION >= 3
+                    value.SetString(PyUnicode_AsUTF8(pStringRepresentation), PyUnicode_GET_SIZE(pStringRepresentation), allocator);
+#else
+                    value.SetString(PyString_AsString(pStringRepresentation), PyString_GET_SIZE(pStringRepresentation), allocator);
+#endif
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT0(_("failed to convert an integer which is bigger than 2**64 to a string."), ORE_InvalidArguments);
+                }
+            }
+            else {
+                value.SetUint64(PyLong_AsUnsignedLong(obj.ptr()));
+            }
         }
         else {
             value.SetInt64(PyLong_AsLong(obj.ptr()));
