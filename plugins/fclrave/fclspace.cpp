@@ -627,7 +627,7 @@ struct ScopedUserDataRemover
             _space.RemoveUserData(_ptr);
         }
     }
-    void reset() {
+    void Reset() {
         _ptr.reset();
     }
 
@@ -654,7 +654,7 @@ void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pi
             // reset the scoped remover to prevent it clearing the data.
             ScopedUserDataRemover userDataGuard{*this, pbody};
             ReloadKinBodyLinks(pbody, pinfo);
-            userDataGuard.reset();
+            userDataGuard.Reset();
         }
         //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
     }
@@ -676,7 +676,7 @@ void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pin
         // reset the scoped remover to prevent it clearing the data.
         ScopedUserDataRemover userDataGuard{*this, pbody};
         ReloadKinBodyLinks(pbody, pinfo);
-        userDataGuard.reset();
+        userDataGuard.Reset();
     }
 
 //   FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
