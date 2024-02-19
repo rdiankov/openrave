@@ -593,7 +593,7 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
     vGrabbedInfos.reserve(_vGrabbedBodies.size());
     vGrabbedInfos.clear();
     for(size_t i = 0; i < _vGrabbedBodies.size(); ++i) {
-        GrabbedConstPtr pgrabbed = _vGrabbedBodies[i];
+        const GrabbedPtr& pgrabbed = _vGrabbedBodies[i];
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
@@ -609,7 +609,7 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
                     poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
                 }
             }
-            vGrabbedInfos.push_back(poutputinfo);
+            vGrabbedInfos.emplace_back(std::move(poutputinfo));
         }
     }
 }
@@ -620,7 +620,7 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
     for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
         vGrabbedInfos[igrabbed].Reset(); /// have to reset everything
 
-        GrabbedConstPtr pgrabbed = _vGrabbedBodies[igrabbed];
+        const GrabbedPtr& pgrabbed = _vGrabbedBodies[igrabbed];
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
@@ -644,7 +644,7 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
 {
     grabbedInfo.Reset();
     for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
-        GrabbedConstPtr pgrabbed = _vGrabbedBodies[igrabbed];
+        const GrabbedPtr& pgrabbed = _vGrabbedBodies[igrabbed];
         if( !!pgrabbed ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody && pgrabbedbody->GetName() == grabbedname ) {
