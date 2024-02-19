@@ -6,7 +6,7 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.138.1
+Version 0.139.0
 ===============
 
 * Initialization of internal costs in KinBodies now only considers links that are part of a joint

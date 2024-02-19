@@ -733,37 +733,22 @@ KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
     return _vGeometries.at(index);
 }
 
-static inline KinBody::Link::Geometry* CreateGeometry(KinBody::LinkPtr plink, const KinBody::GeometryInfoConstPtr& geometryInfoPtr)
-{
-    return new KinBody::Link::Geometry(plink, *geometryInfoPtr);
-}
-
-static inline KinBody::Link::Geometry* CreateGeometry(KinBody::LinkPtr plink, const KinBody::GeometryInfo& geometryInfo)
-{
-    return new KinBody::Link::Geometry(plink, geometryInfo);
-}
-
-template <typename GeometryIterableT>
-void KinBody::Link::_InitGeometriesInternal(const GeometryIterableT& geometries, bool bForceRecomputeMeshCollision) {
-    _vGeometries.resize(geometries.size());
-    size_t i = 0;
-    FOREACH(itGeometry, geometries) {
-        _vGeometries[i].reset(CreateGeometry(shared_from_this(), *itGeometry));
-        if( bForceRecomputeMeshCollision || _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+void KinBody::Link::_InitGeometriesInternal(bool bForceRecomputeMeshCollision) {
+    for(GeometryPtr& pgeom : _vGeometries) {
+        if( bForceRecomputeMeshCollision || pgeom->GetCollisionMesh().vertices.size() == 0 ) {
             if( !bForceRecomputeMeshCollision ) {
                 RAVELOG_VERBOSE("geometry has empty collision mesh\n");
             }
-            _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
+            pgeom->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
-        i++;
     }
     _info._mapExtraGeometries.clear();
     // have to reset the self group! cannot use geometries directly since we require exclusive access to the GeometryInfo objects
     std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
-    for(i = 0; i < vgeometryinfos.size(); ++i) {
-        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-        *vgeometryinfos[i] = _vGeometries[i]->_info;
+    for(int index = 0; index < (int)vgeometryinfos.size(); ++index) {
+        vgeometryinfos[index].reset(new KinBody::GeometryInfo());
+        *vgeometryinfos[index] = _vGeometries[index]->_info;
     }
 
     // SetGroupGeometries calls PostprocessChangedParameters on the parent, which would increment the body update stamp, and then we would invoke PostprocessChangedParameters _again_ in _Update here, resulting in duplicated work in callbacks.
@@ -774,12 +759,22 @@ void KinBody::Link::_InitGeometriesInternal(const GeometryIterableT& geometries,
 
 void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
 {
-    _InitGeometriesInternal(geometries, bForceRecomputeMeshCollision);
+    int index = 0;
+    _vGeometries.resize(geometries.size());
+    for(KinBody::GeometryInfoConstPtr& pgeominfo : geometries) {
+        _vGeometries[index++].reset(new KinBody::Link::Geometry(shared_from_this(), *pgeominfo));
+    }
+    _InitGeometriesInternal(bForceRecomputeMeshCollision);
 }
 
 void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision)
 {
-    _InitGeometriesInternal(geometries, bForceRecomputeMeshCollision);
+    int index = 0;
+    _vGeometries.resize(geometries.size());
+    for(KinBody::GeometryInfo& geominfo : geometries) {
+        _vGeometries[index++].reset(new KinBody::Link::Geometry(shared_from_this(), geominfo));
+    }
+    _InitGeometriesInternal(bForceRecomputeMeshCollision);
 }
 
 void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)

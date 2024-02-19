@@ -1278,10 +1278,10 @@ public:
         void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
 private:
-        /// \brief inits the current geometries with the new geometry info.
+        /// \brief _vGeometries is expected to be filled with the new Geometries already. This will initialize them.
+        ///
         /// This is an internal method to provide a common implementation to the public InitGeometries API.
-        template <typename GeometryIterableT>
-        void _InitGeometriesInternal(const GeometryIterableT& geometries, bool bForceRecomputeMeshCollision);
+        void _InitGeometriesInternal(bool bForceRecomputeMeshCollision);
 
 public:
         /// \brief adds geometry info to all the current geometries and possibly stored extra group geometries
