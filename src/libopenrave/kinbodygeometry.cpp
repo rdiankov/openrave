@@ -1072,9 +1072,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
 
     case GT_Container:
         //if( _vGeomData[0] != 0 || _vGeomData[1] != 0 || _vGeomData[2] != 0 )
-    {
-        orjson::SetJsonValueByKey(rGeometryInfo, "outerExtents", _vGeomData*fUnitScale, allocator);
-    }
+        {
+            orjson::SetJsonValueByKey(rGeometryInfo, "outerExtents", _vGeomData*fUnitScale, allocator);
+        }
         //if( _vGeomData2[0] != 0 || _vGeomData2[1] != 0 || _vGeomData2[2] != 0 )
         {
             orjson::SetJsonValueByKey(rGeometryInfo, "innerExtents", _vGeomData2*fUnitScale, allocator);
