@@ -174,6 +174,8 @@ public:
         SetName(ptitle);
     }
 
+    virtual void SetUserText(const std::string& userText) OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /// \brief controls showing the viewer.
     ///
     /// \param showtype If zero, will hide all viewers. If != 0, should show viewers (dependent on plugin could have different meanings)

@@ -10,6 +10,63 @@ Version 0.132.0
 
 - Add IkFilterInfo and IkFailureAccumulator to allow for fast accumulation of IK failures.
 
+Version 0.139.0
+===============
+
+* Initialization of internal costs in KinBodies now only considers links that are part of a joint
+* Trimesh construction in KinBodies optimized to reduce reallocs
+* FCLRave no longer re-initializes all callbacks on link state change
+* Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
+* FCLRave geometry callbacks now only update when the link has actually changed
+* Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with scoped cleanup classes
+
+Version 0.138.0
+===============
+
+* Added new apis efficient sampling of trajectory range
+Version 0.137.0
+===============
+
+* Add `GetId` to python bindings
+
+Version 0.136.0
+===============
+
+* Set correct geometry group name for fclspace
+
+Version 0.135.2
+===============
+
+* Fix the issue that grabbed bodies are not checked for collision when their grabbing links are not collision-enabled.
+
+Version 0.135.1
+===============
+
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
+* Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
+
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
+
+Version 0.134.1
+===============
+
+* Fixed QtCoinViewer SetUserText, fixing compilation
+
+Version 0.134.0
+===============
+
+* Add AABBFromOrientedBox
+
+* Add ViewerBase::SetUserText
+
 Version 0.133.3
 ===============
 

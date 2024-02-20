@@ -131,6 +131,7 @@ public:
     virtual const std::string& GetName() const {
         return _name;
     }
+    virtual void SetUserText(const string& userText);
 
     virtual bool LoadModel(const string& filename);
 
@@ -419,6 +420,7 @@ public:
     int _VideoFrameRate;
 
     std::string _name;
+    std::string _userText;
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;        ///< all the bodies created
 
     ItemPtr _pSelectedItem;                   ///< the currently selected item

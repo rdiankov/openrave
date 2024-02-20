@@ -264,9 +264,9 @@ private:
 
 class PyGeometry
 {
-    KinBody::GeometryPtr _pgeometry;
+    KinBody::Link::GeometryPtr _pgeometry;
 public:
-    PyGeometry(KinBody::GeometryPtr pgeometry);
+    PyGeometry(KinBody::Link::GeometryPtr pgeometry);
 
     virtual void SetCollisionMesh(object pytrimesh);
 
@@ -305,6 +305,7 @@ public:
     object GetContainerBottom() const;
     object GetRenderScale() const;
     object GetRenderFilename() const;
+    std::string GetId() const;
     object GetName() const;
     float GetTransparency() const;
     object GetDiffuseColor() const;
@@ -331,12 +332,14 @@ class PyLink : public PyReadablesContainer
     KinBody::LinkPtr _plink;
     PyEnvironmentBasePtr _pyenv;
 public:
+
     PyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv);
     virtual ~PyLink();
 
     KinBody::LinkPtr GetLink();
 
-    object GetName();
+    std::string GetId() const;
+    object GetName() const;
     int GetIndex();
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -443,7 +446,8 @@ public:
 
     KinBody::JointPtr GetJoint();
 
-    object GetName();
+    std::string GetId() const;
+    object GetName() const;
     bool IsMimic(int iaxis=-1);
     string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="");
     object GetMimicDOFIndices(int iaxis=0);

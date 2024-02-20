@@ -2036,6 +2036,11 @@ void QtOSGViewer::_SetName(const string& name)
     setWindowTitle(name.c_str());
 }
 
+void QtOSGViewer::SetUserText(const string& userText)
+{
+    _posgWidget->SetUserHUDText(userText);
+}
+
 bool QtOSGViewer::LoadModel(const string& filename)
 {
     if( filename == "") {

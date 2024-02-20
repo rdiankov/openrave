@@ -2089,6 +2089,7 @@ void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, 
             addMode = py::extract<InterfaceAddMode>(oAddMode);
         }
     }
+    PythonThreadSaver threadsaver;
     _penv->Add(pinterface->GetInterfaceBase(), addMode, cmdargs);
 }
 
@@ -2551,14 +2552,24 @@ object PyEnvironmentBase::plot3(object opoints,float pointsize,object ocolors, i
     pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
     bool bhasalpha = vcolors.size() == 4*sizes.second;
     if( sizes.first == sizes.second ) {
-        return toPyGraphHandle(_penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolors.data(),drawstyle,bhasalpha));
+        GraphHandlePtr phandle;
+        {
+            PythonThreadSaver saver;
+            phandle = _penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolors.data(),drawstyle,bhasalpha);
+        }
+        return toPyGraphHandle(phandle);
     }
     BOOST_ASSERT(vcolors.size()<=4);
-    RaveVector<float> vcolor;
-    for(int i = 0; i < (int)vcolors.size(); ++i) {
-        vcolor[i] = vcolors[i];
+    GraphHandlePtr phandle;
+    {
+        PythonThreadSaver saver;
+        RaveVector<float> vcolor;
+        for(int i = 0; i < (int)vcolors.size(); ++i) {
+            vcolor[i] = vcolors[i];
+        }
+        phandle = _penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle);
     }
-    return toPyGraphHandle(_penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
+    return toPyGraphHandle(phandle);
 }
 
 object PyEnvironmentBase::drawlinestrip(object opoints,float linewidth,object ocolors, int drawstyle)

@@ -110,6 +110,9 @@ public:
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
 
+    /// \brief Set User-defined text to be displayed in the viewer window
+    virtual void SetUserText(const string& userText);
+
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {

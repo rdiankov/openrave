@@ -1820,20 +1820,20 @@ public:
                 robot = RaveCreateRobot(shared_from_this(),"");
             }
             if( !!robot ) {
-                std::list<KinBody::GeometryInfo> listGeometries;
-                std::string fullfilename = _ReadGeometriesFile(listGeometries,filename,atts);
+                std::vector<KinBody::GeometryInfo> vGeometries;
+                std::string fullfilename = _ReadGeometriesFile(vGeometries,filename,atts);
                 if( fullfilename.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
                     }
                     string norender = string("__norenderif__:")+extension;
-                    FOREACH(itinfo,listGeometries) {
+                    FOREACH(itinfo,vGeometries) {
                         itinfo->_bVisible = true;
                         itinfo->_filenamerender = norender;
                     }
-                    listGeometries.front()._filenamerender = fullfilename;
-                    if( robot->InitFromGeometries(listGeometries) ) {
+                    vGeometries.front()._filenamerender = fullfilename;
+                    if( robot->InitFromGeometries(vGeometries) ) {
 #if defined(HAVE_BOOST_FILESYSTEM) && BOOST_VERSION >= 103600 // stem() was introduced in 1.36
 #if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3
                         boost::filesystem::path pfilename(filename);
@@ -2036,20 +2036,20 @@ public:
                 body = RaveCreateKinBody(shared_from_this(),"");
             }
             if( !!body ) {
-                std::list<KinBody::GeometryInfo> listGeometries;
-                std::string fullfilename = _ReadGeometriesFile(listGeometries,filename,atts);
+                std::vector<KinBody::GeometryInfo> vGeometries;
+                std::string fullfilename = _ReadGeometriesFile(vGeometries,filename,atts);
                 if( fullfilename.size() > 0 ) {
                     string extension;
                     if( filename.find_last_of('.') != string::npos ) {
                         extension = filename.substr(filename.find_last_of('.')+1);
                     }
                     string norender = string("__norenderif__:")+extension;
-                    FOREACH(itinfo,listGeometries) {
+                    FOREACH(itinfo,vGeometries) {
                         itinfo->_bVisible = true;
                         itinfo->_filenamerender = norender;
                     }
-                    listGeometries.front()._filenamerender = fullfilename;
-                    if( body->InitFromGeometries(listGeometries) ) {
+                    vGeometries.front()._filenamerender = fullfilename;
+                    if( body->InitFromGeometries(vGeometries) ) {
                         if( body->__struri.empty() ) {
                             body->__struri = fullfilename;
                         }
@@ -2423,8 +2423,8 @@ public:
 
     /// \brief parses the file into GeometryInfo and returns the full path of the file opened
     ///
-    /// \param[in] listGeometries geometry list to be filled
-    virtual std::string _ReadGeometriesFile(std::list<KinBody::GeometryInfo>& listGeometries, const std::string& filename, const AttributesList& atts)
+    /// \param[in] vGeometries geometry list to be filled
+    virtual std::string _ReadGeometriesFile(std::vector<KinBody::GeometryInfo>& vGeometries, const std::string& filename, const AttributesList& atts)
     {
         EnvironmentLock lockenv(GetMutex());
         string filedata = RaveFindLocalFile(filename);
@@ -2441,10 +2441,10 @@ public:
                 }
             }
         }
-        if( OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, listGeometries) && listGeometries.size() > 0 ) {
+        if( OpenRAVEXMLParser::CreateGeometries(shared_from_this(),filedata, vScaleGeometry, vGeometries) && vGeometries.size() > 0 ) {
             return filedata;
         }
-        listGeometries.clear();
+        vGeometries.clear();
         return std::string();
     }
 
@@ -3284,6 +3284,13 @@ public:
 
             if (itExistingBody != vBodies.end()) {
                 // grabbed infos
+                if (pKinBodyInfo->_vGrabbedInfos.size() != (*itExistingBody)->GetNumGrabbed()) {
+                    RAVELOG_DEBUG_FORMAT("env=%s, body name='%s' updating grab from %d -> %d", GetNameId()%bodyName%(*itExistingBody)->GetNumGrabbed()%pKinBodyInfo->_vGrabbedInfos.size());
+                    // when grab info changes, have to report to caller
+                    if (std::find(vModifiedBodies.begin(), vModifiedBodies.end(), *itExistingBody) == vModifiedBodies.end() && std::find(vCreatedBodies.begin(), vCreatedBodies.end(), *itExistingBody) == vCreatedBodies.end()) {
+                        vModifiedBodies.push_back(*itExistingBody);
+                    }
+                }
                 vGrabbedInfos.clear();
                 vGrabbedInfos.reserve(pKinBodyInfo->_vGrabbedInfos.size());
                 FOREACHC(itGrabbedInfo, pKinBodyInfo->_vGrabbedInfos) {
