@@ -356,7 +356,7 @@ public:
     /// shouldn't call Reset on the report since it could be compounded!
     bool _CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr preport)
     {
-        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
+        const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         vector<dContact> vcontacts;
@@ -372,7 +372,7 @@ public:
 
                 int N = _GeomCollide(geom1, geom2, vcontacts, !!preport && !!(preport->options & OpenRAVE::CO_Contacts));
                 if (N) {
-                    if( !preport && bHasCallbacks ) {
+                    if( !preport && bUseCallbacks ) {
                         preport.reset(new CollisionReport());
                         preport->Reset(_options);
                     }
@@ -408,7 +408,7 @@ public:
                             }
                         }
 
-                        if( bHasCallbacks ) {
+                        if( bUseCallbacks ) {
                             if( listcallbacks.size() == 0 ) {
                                 GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
                             }
@@ -556,7 +556,7 @@ public:
         dGeomRaySetLength(geomray,fmaxdist);
         dGeomRaySetParams(geomray,0,0);
 
-        bool bHasCallbacks = GetEnv()->HasRegisteredCollisionCallbacks();
+        const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
 
         bool bCollision = false;
@@ -568,7 +568,7 @@ public:
             int N = _GeomCollide(geom1, geomray,vcontacts, !!report && !!(report->options & OpenRAVE::CO_Contacts));
             if (N > 0) {
 
-                if( !report && bHasCallbacks ) {
+                if( !report && bUseCallbacks ) {
                     report.reset(new CollisionReport());
                     report->Reset(_options);
                 }
@@ -620,15 +620,17 @@ public:
                     else {
                         cpinfo.contacts.front() = OpenRAVE::CONTACT(vcontacts[index].geom.pos, vnorm, distance);
                     }
-                    if( listcallbacks.size() == 0 ) {
-                        GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
-                    }
+                    if( bUseCallbacks ) {
+                        if( listcallbacks.size() == 0 ) {
+                            GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
+                        }
 
-                    CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
-                    FOREACHC(itfn, listcallbacks) {
-                        OpenRAVE::CollisionAction action = (*itfn)(preport,false);
-                        if( action != OpenRAVE::CA_DefaultAction ) {
-                            return false;
+                        CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
+                        FOREACHC(itfn, listcallbacks) {
+                            OpenRAVE::CollisionAction action = (*itfn)(preport,false);
+                            if( action != OpenRAVE::CA_DefaultAction ) {
+                                return false;
+                            }
                         }
                     }
 
@@ -949,7 +951,8 @@ private:
         vector<dContact> vcontacts;
         int N = _GeomCollide(o1,o2,vcontacts, !!pcb->_report && !!(_options & OpenRAVE::CO_Contacts));
         if ( N > 0 ) {
-            if( !!pcb->_report || pcb->GetCallbacks().size() > 0 ) {
+            const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && pcb->GetCallbacks().size() > 0;
+            if( !!pcb->_report || bUseCallbacks ) {
                 _report.Reset(_options);
                 _report.minDistance = vcontacts[0].geom.depth;
 
@@ -991,11 +994,13 @@ private:
                     }
                 }
 
-                CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
-                FOREACHC(itfn, pcb->GetCallbacks()) {
-                    OpenRAVE::CollisionAction action = (*itfn)(preport,false);
-                    if( action != OpenRAVE::CA_DefaultAction ) {
-                        return;
+                if( bUseCallbacks ) {
+                    CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
+                    FOREACHC(itfn, pcb->GetCallbacks()) {
+                        OpenRAVE::CollisionAction action = (*itfn)(preport,false);
+                        if( action != OpenRAVE::CA_DefaultAction ) {
+                            return;
+                        }
                     }
                 }
 
@@ -1070,8 +1075,8 @@ private:
         vector<dContact> vcontacts;
         int N = _GeomCollide(o1,o2,vcontacts, !!pcb->_report && !!(_options & OpenRAVE::CO_Contacts));
         if ( N > 0 ) {
-
-            if( !!pcb->_report || pcb->GetCallbacks().size() > 0 ) {
+            const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && pcb->GetCallbacks().size() > 0;
+            if( !!pcb->_report || bUseCallbacks ) {
                 _report.Reset(_options);
                 int icollision = -1;
                 if( !!pkb1 && !!pkb2 ) {
@@ -1107,11 +1112,13 @@ private:
                     }
                 }
 
-                CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
-                FOREACHC(itfn, pcb->GetCallbacks()) {
-                    OpenRAVE::CollisionAction action = (*itfn)(preport, false);
-                    if( action != OpenRAVE::CA_DefaultAction ) {
-                        return;
+                if( bUseCallbacks ) {
+                    CollisionReportPtr preport(&_report,OpenRAVE::utils::null_deleter());
+                    FOREACHC(itfn, pcb->GetCallbacks()) {
+                        OpenRAVE::CollisionAction action = (*itfn)(preport, false);
+                        if( action != OpenRAVE::CA_DefaultAction ) {
+                            return;
+                        }
                     }
                 }
 

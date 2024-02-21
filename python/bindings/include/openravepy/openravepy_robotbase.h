@@ -71,6 +71,7 @@ public:
 
         object GetVelocity() const;
 
+        std::string GetId() const;
         object GetName() const;
 
         void SetName(const std::string& s);
@@ -202,6 +203,7 @@ public:
         object GetTransform() const;
         object GetTransformPose() const;
         PyRobotBasePtr GetRobot() const;
+        std::string GetId() const;
         object GetName() const;
 
         object GetData();
@@ -235,7 +237,8 @@ public:
         virtual ~PyConnectedBody();
         RobotBase::ConnectedBodyPtr GetConnectedBody() const;
 
-        object GetName();
+        std::string GetId() const;
+        object GetName() const;
 
         object GetInfo();
 

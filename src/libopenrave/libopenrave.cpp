@@ -2031,11 +2031,11 @@ void TriMesh::Append(const TriMesh& mesh)
 {
     int offset = (int)vertices.size();
     vertices.insert(vertices.end(), mesh.vertices.begin(), mesh.vertices.end());
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
-    }
-    FOREACHC(it, mesh.indices) {
-        indices.push_back(*it+offset);
+
+    const size_t baseIndicesSize = indices.size();
+    indices.resize(baseIndicesSize + mesh.indices.size());
+    for (size_t i = 0; i < mesh.indices.size(); i++) {
+        indices[baseIndicesSize + i] = mesh.indices[i] + offset;
     }
 }
 
@@ -2046,11 +2046,11 @@ void TriMesh::Append(const TriMesh& mesh, const Transform& trans)
     for(size_t i = 0; i < mesh.vertices.size(); ++i) {
         vertices[i+offset] = trans * mesh.vertices[i];
     }
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
-    }
-    FOREACHC(it, mesh.indices) {
-        indices.push_back(*it+offset);
+
+    const size_t baseIndicesSize = indices.size();
+    indices.resize(baseIndicesSize + mesh.indices.size());
+    for (size_t i = 0; i < mesh.indices.size(); i++) {
+        indices[baseIndicesSize + i] = mesh.indices[i] + offset;
     }
 }
 

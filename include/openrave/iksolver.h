@@ -129,8 +129,6 @@ private:
 class OPENRAVE_API IkFailureAccumulatorBase
 {
 public:
-    virtual ~IkFailureAccumulatorBase() = default;
-
     /// \brief Get the next available IkFailureInfo to fill in failure information.
     virtual IkFailureInfo& GetNextAvailableIkFailureInfo() = 0;
 };
