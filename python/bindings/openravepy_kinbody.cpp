@@ -2780,13 +2780,13 @@ bool PyKinBody::InitFromTrimesh(object pytrimesh, bool bDraw, const std::string&
 
 bool PyKinBody::InitFromGeometries(object ogeometries, const std::string& uri)
 {
-    std::vector<KinBody::GeometryInfoConstPtr> geometries(len(ogeometries));
+    std::vector<KinBody::GeometryInfo> geometries(len(ogeometries));
     for(size_t i = 0; i < geometries.size(); ++i) {
         PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometries[py::to_object(i)]);
         if( !pygeom ) {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
         }
-        geometries[i] = pygeom->GetGeometryInfo();
+        geometries[i] = *pygeom->GetGeometryInfo();
     }
     return _pbody->InitFromGeometries(geometries, uri);
 }
