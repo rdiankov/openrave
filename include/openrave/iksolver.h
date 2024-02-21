@@ -128,7 +128,7 @@ class OPENRAVE_API IkFailureAccumulator
 public:
     IkFailureAccumulator();
 
-    inline const size_t GetCurrentSize() const
+    inline size_t GetCurrentSize() const
     {
         return _nextIndex;
     }
