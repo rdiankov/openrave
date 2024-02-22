@@ -6,7 +6,7 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.140.0
+Version 0.139.1
 ===============
 
 * Add new interpolation type of "max"
