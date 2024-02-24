@@ -6,6 +6,13 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.139.1
+===============
+
+* Add new interpolation type of "max"
+* Ignore NaN in joint values to preserve the old joint value
+* Support NaN in xml deserialization
+
 Version 0.139.0
 ===============
 
