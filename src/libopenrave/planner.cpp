@@ -188,14 +188,14 @@ PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t sta
     InitCollisionReport(report_);
 }
 
-PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const IkParameterization& ikparam_, const std::vector<int>& vIkFailureInfoIndices_) :
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const IkParameterization& ikparam_, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices_) :
     PlannerStatus(description_, statusCode_)
 {
     this->ikparam = ikparam_;
     this->vIkFailureInfoIndices = vIkFailureInfoIndices_;
 }
 
-PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const std::vector<int>& vIkFailureInfoIndices_) :
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices_) :
     PlannerStatus(description_, statusCode_)
 {
     this->vIkFailureInfoIndices = vIkFailureInfoIndices_;

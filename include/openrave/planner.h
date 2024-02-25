@@ -566,8 +566,8 @@ public:
     PlannerStatus(const std::string& description, const uint32_t statusCode, CollisionReportPtr& report);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, CollisionReportPtr& report);
-    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, const std::vector<int>& vIkFailureInfoIndices);
-    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<int>& vIkFailureInfoIndices);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr& report);
 
@@ -596,7 +596,7 @@ public:
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
     CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contain contacts information.
     std::string errorOrigin;                // Auto, a string representing the code path of the error.
-    std::vector<int> vIkFailureInfoIndices; ///< Optional, indices of the ikFailureInfos collected from the run.
+    std::vector<AccumulatorIndex> vIkFailureInfoIndices; ///< Optional, indices of the ikFailureInfos collected from the run.
 
     std::map< std::pair<std::string,std::string>, unsigned int > mCollidingLinksCount; // Counter for colliding body/link/geoms
     uint32_t numPlannerIterations=0; ///< number of planner iterations before failure

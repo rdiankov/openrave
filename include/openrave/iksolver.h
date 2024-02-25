@@ -118,9 +118,10 @@ public:
     //CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
     rapidjson::Document _rCustomData; ///< stored additional information that does not fit elsewhere
 
+    AccumulatorIndex _memoryPoolIndex = -1; // index into the memory pool, managed by IkFailureAccumulatorBase
+
 private:
     IkParameterization _ikparam;   ///< the ikparam that fails (could be different from the ikparam given to FindIKSolutions call).
-    AccumulatorIndex _memoryPoolIndex = -1; // index into the memory pool, managed by IkFailureAccumulatorBase
 
     bool _bIkParamValid=false;     ///< a flag determining whether _ikparam is valid.
 };
