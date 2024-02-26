@@ -2454,6 +2454,10 @@ int SpaceSamplerBase::_CallStatusFunctions(int sampleiteration)
     return ret;
 }
 
+void ModuleBase::SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailureAccumulator)
+{
+}
+
 void RaveInitRandomGeneration(uint32_t seed)
 {
     RaveGlobal::instance()->GetDefaultSampler()->SetSeed(seed);

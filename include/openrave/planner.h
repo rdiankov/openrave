@@ -682,6 +682,9 @@ public:
      */
     virtual UserDataPtr RegisterPlanCallback(const PlanCallbackFn& callbackfn);
 
+    /// \brief sets the ik failure accumulator to use when running functions
+    virtual void SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailureAccumulator);
+        
 protected:
     inline PlannerBasePtr shared_planner() {
         return boost::static_pointer_cast<PlannerBase>(shared_from_this());

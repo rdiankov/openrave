@@ -1170,6 +1170,10 @@ UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
     return pdata;
 }
 
+void PlannerBase::SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailureAccumulator)
+{
+}
+
 PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
 {
     if( GetParameters()->_sPostProcessingPlanner.size() == 0 ) {
