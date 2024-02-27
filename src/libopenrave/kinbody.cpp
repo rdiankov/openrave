@@ -4310,7 +4310,8 @@ void KinBody::_ComputeInternalInformation()
 
         // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
         // Otherwise, scenes that contain a large number of non-jointed links will incur significant overhead.
-        // Note that we use an ordered set here - this is required because TODO(ross)?
+        // Note that we use an ordered set here - iterating the links in-order ensures that we mimic the actual connection order of the links.
+        // Iterating in non-deterministic order may produce unexpected paths where a 'future' link traversal shares the same cost as a traversal that is closer to the robot base.
         std::set<int> usedLinkIndices;
 
         FOREACHC(itjoint,_vecjoints) {
