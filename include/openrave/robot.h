@@ -1435,6 +1435,20 @@ private:
     friend class Grabbed;
 };
 
+///\brief removes the robot from the environment temporarily while in scope
+class OPENRAVE_API EnvironmentBodyRemover
+{
+public:
+    EnvironmentBodyRemover(KinBodyPtr pBody);
+    ~EnvironmentBodyRemover();
+
+private:
+    KinBodyPtr _pBody;
+    std::vector<KinBody::GrabbedInfoPtr> _pGrabbedInfos; ///< the list of the current grabbed info of pBody at the time of removal.
+    RobotBasePtr _pBodyRobot;
+    std::string _activeManipName; ///< the name of the current active manipulator of pBody at the time of removal.
+};
+
 } // end namespace OpenRAVE
 
 #endif   // ROBOT_H

@@ -447,42 +447,55 @@ void RobotBase::RobotStateSaver::Release()
     KinBodyStateSaver::Release();
 }
 
-///\brief removes the robot from the environment temporarily while in scope
-class EnvironmentBodyRemover
-{
-public:
-    EnvironmentBodyRemover(OpenRAVE::KinBodyPtr pBody) : _pBody(pBody), _grabbedStateSaver(pBody, OpenRAVE::KinBody::Save_GrabbedBodies) {
-        if( _pBody->IsRobot() ) {
-            // If the manip comes from a connected body, the information of which manip is active is lost once the robot
-            // is removed from env. Need to save the active manip name so that we can set it back later when the robot
-            // is re-added to the env.
-            _pBodyRobot = OpenRAVE::RaveInterfaceCast<OpenRAVE::RobotBase>(_pBody);
-            if( !!_pBodyRobot->GetActiveManipulator() ) {
-                _activeManipName = _pBodyRobot->GetActiveManipulator()->GetName();
-            }
-        }
-        _pBody->GetEnv()->Remove(_pBody);
-    }
-
-    ~EnvironmentBodyRemover() {
-        _pBody->GetEnv()->Add(_pBody, IAM_StrictNameChecking);
-        _grabbedStateSaver.Restore();
-        _grabbedStateSaver.Release();
-        if( !!_pBodyRobot && !_activeManipName.empty() ) {
-            OpenRAVE::RobotBase::ManipulatorPtr pmanip = _pBodyRobot->GetManipulator(_activeManipName);
-            // it might be ok with manipulator doesn't exist if ConnectedBody acitve state changes.
-            if( !!pmanip ) {
-                _pBodyRobot->SetActiveManipulator(pmanip);
-            }
+EnvironmentBodyRemover::EnvironmentBodyRemover(KinBodyPtr pBody) : _pBody(pBody) {
+    if( _pBody->IsRobot() ) {
+        // If the manip comes from a connected body, the information of which manip is active is lost once the robot
+        // is removed from env. Need to save the active manip name so that we can set it back later when the robot
+        // is re-added to the env.
+        _pBodyRobot = RaveInterfaceCast<RobotBase>(_pBody);
+        if( !!_pBodyRobot->GetActiveManipulator() ) {
+            _activeManipName = _pBodyRobot->GetActiveManipulator()->GetName();
         }
     }
+    _pBody->GetGrabbedInfo(_pGrabbedInfos);
+    _pBody->GetEnv()->Remove(_pBody);
+}
 
-private:
-    OpenRAVE::KinBodyPtr _pBody;
-    OpenRAVE::KinBody::KinBodyStateSaver _grabbedStateSaver;
-    OpenRAVE::RobotBasePtr _pBodyRobot;
-    std::string _activeManipName; ///< the name of the current active manipulator of pBody at the time of removal.
-};
+EnvironmentBodyRemover::~EnvironmentBodyRemover() {
+    _pBody->GetEnv()->Add(_pBody, IAM_StrictNameChecking);
+    if( !!_pBodyRobot && !_activeManipName.empty() ) {
+        RobotBase::ManipulatorPtr pmanip = _pBodyRobot->GetManipulator(_activeManipName);
+        // it might be ok with manipulator doesn't exist if ConnectedBody acitve state changes.
+        if( !!pmanip ) {
+            _pBodyRobot->SetActiveManipulator(pmanip);
+        }
+        else {
+            pmanip = _pBodyRobot->GetActiveManipulator();
+            RAVELOG_WARN_FORMAT("env=%s, robot=%s, cannot restore previous active manip=%s because it does not exist anymore. current active manip=%s", _pBodyRobot->GetEnv()->GetNameId()%_pBodyRobot->GetName()%_activeManipName%(!!pmanip ? pmanip->GetName() : ""));
+        }
+    }
+    if( !_pGrabbedInfos.empty() ) {
+        // it might be ok with grabbing link doesn't exist if ConnectedBody acitve state changes.
+        std::vector<KinBody::GrabbedInfoPtr>::iterator itRemoveFirst = _pGrabbedInfos.begin();
+        for( std::vector<KinBody::GrabbedInfoPtr>::const_iterator itGrabbedInfo = _pGrabbedInfos.begin(); itGrabbedInfo != _pGrabbedInfos.end(); ++itGrabbedInfo ) {
+            if( !_pBody->GetLink((*itGrabbedInfo)->_robotlinkname) ) {
+                RAVELOG_WARN_FORMAT("env=%s, body=%s, cannot re-grab '%s' because grabbing link '%s' does not exist anymore.", _pBody->GetEnv()->GetNameId()%_pBody->GetName()%(*itGrabbedInfo)->_grabbedname%(*itGrabbedInfo)->_robotlinkname);
+            }
+            else if( !_pBody->GetEnv()->GetKinBody((*itGrabbedInfo)->_grabbedname) ) {
+                RAVELOG_WARN_FORMAT("env=%s, body=%s, cannot re-grab '%s' because it does not exist in the environment.", _pBody->GetEnv()->GetNameId()%_pBody->GetName()%(*itGrabbedInfo)->_grabbedname);
+            }
+            else {
+                // will regrasp this info
+                if( itRemoveFirst != itGrabbedInfo ) {
+                    *itRemoveFirst = std::move(*itGrabbedInfo);
+                }
+                ++itRemoveFirst;
+            }
+        }
+        const std::vector<KinBody::GrabbedInfoConstPtr> pConstGrabbedInfos(_pGrabbedInfos.begin(), itRemoveFirst);
+        _pBody->ResetGrabbed(pConstGrabbedInfos);
+    }
+}
 
 void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> probot)
 {
