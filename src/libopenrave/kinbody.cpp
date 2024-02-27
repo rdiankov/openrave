@@ -4310,7 +4310,8 @@ void KinBody::_ComputeInternalInformation()
 
         // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
         // Otherwise, scenes that contain a large number of non-jointed links will incur significant overhead.
-        std::unordered_set<int> usedLinkIndices;
+        // Note that we use an ordered set here - this is required because TODO(ross)?
+        std::set<int> usedLinkIndices;
 
         FOREACHC(itjoint,_vecjoints) {
             // If this joint doesn't have two links to calculate a cost between, skip it
