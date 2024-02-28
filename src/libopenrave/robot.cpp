@@ -478,19 +478,33 @@ EnvironmentBodyRemover::~EnvironmentBodyRemover() {
         // it might be ok with grabbing link doesn't exist if ConnectedBody acitve state changes.
         std::vector<KinBody::GrabbedInfoPtr>::iterator itRemoveFirst = _pGrabbedInfos.begin();
         for( std::vector<KinBody::GrabbedInfoPtr>::const_iterator itGrabbedInfo = _pGrabbedInfos.begin(); itGrabbedInfo != _pGrabbedInfos.end(); ++itGrabbedInfo ) {
-            if( !_pBody->GetLink((*itGrabbedInfo)->_robotlinkname) ) {
-                RAVELOG_WARN_FORMAT("env=%s, body=%s, cannot re-grab '%s' because grabbing link '%s' does not exist anymore.", _pBody->GetEnv()->GetNameId()%_pBody->GetName()%(*itGrabbedInfo)->_grabbedname%(*itGrabbedInfo)->_robotlinkname);
+            const KinBody::GrabbedInfoPtr pGrabbedInfo = *itGrabbedInfo;
+            bool needToDelete = false;
+            if( !_pBody->GetLink(pGrabbedInfo->_robotlinkname) ) {
+                RAVELOG_WARN_FORMAT("env=%s, body=%s, cannot re-grab '%s' because grabbing link '%s' does not exist anymore.", _pBody->GetEnv()->GetNameId()%_pBody->GetName()%pGrabbedInfo->_grabbedname%pGrabbedInfo->_robotlinkname);
+                needToDelete = true;
             }
-            else if( !_pBody->GetEnv()->GetKinBody((*itGrabbedInfo)->_grabbedname) ) {
-                RAVELOG_WARN_FORMAT("env=%s, body=%s, cannot re-grab '%s' because it does not exist in the environment.", _pBody->GetEnv()->GetNameId()%_pBody->GetName()%(*itGrabbedInfo)->_grabbedname);
+            else if( !_pBody->GetEnv()->GetKinBody(pGrabbedInfo->_grabbedname) ) {
+                RAVELOG_WARN_FORMAT("env=%s, body=%s, cannot re-grab '%s' because it does not exist in the environment.", _pBody->GetEnv()->GetNameId()%_pBody->GetName()%pGrabbedInfo->_grabbedname);
+                needToDelete = true;
             }
             else {
-                // will regrasp this info
-                if( itRemoveFirst != itGrabbedInfo ) {
-                    *itRemoveFirst = std::move(*itGrabbedInfo);
+                for( std::set<std::string>::const_iterator itLinkName = pGrabbedInfo->_setIgnoreRobotLinkNames.begin(); itLinkName != pGrabbedInfo->_setIgnoreRobotLinkNames.end(); ++itLinkName ) {
+                    if( !_pBody->GetLink(*itLinkName) ) {
+                        RAVELOG_WARN_FORMAT("env=%s, body=%s, cannot re-grab '%s' because '%s' in _setIgnoreRobotLinkNames does not exist anymore.", _pBody->GetEnv()->GetNameId()%_pBody->GetName()%pGrabbedInfo->_grabbedname%(*itLinkName));
+                        needToDelete = true;
+                        break;
+                    }
                 }
-                ++itRemoveFirst;
             }
+            if( needToDelete ) {
+                continue;
+            }
+            // will regrasp this info
+            if( itRemoveFirst != itGrabbedInfo ) {
+                *itRemoveFirst = std::move(*itGrabbedInfo);
+            }
+            ++itRemoveFirst;
         }
         const std::vector<KinBody::GrabbedInfoConstPtr> pConstGrabbedInfos(_pGrabbedInfos.begin(), itRemoveFirst);
         _pBody->ResetGrabbed(pConstGrabbedInfos);
