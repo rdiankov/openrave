@@ -12,7 +12,9 @@ typedef KinBody::LinkConstPtr LinkConstPtr;
 typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
 typedef KinBody::GeometryConstPtr GeometryConstPtr;
+typedef std::pair<GeometryConstPtr, GeometryConstPtr> GeomPair;
 typedef boost::weak_ptr<KinBody::Geometry> GeometryWeakPtr;
+typedef std::pair<LinkPair, GeomPair> LinkGeomPairs;
 using OpenRAVE::ORE_Assert;
 
 // Warning : this is the only place where we use std::shared_ptr (for compatibility with fcl)

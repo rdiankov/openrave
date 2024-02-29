@@ -1336,16 +1336,17 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
-
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner init", GetEnv()->GetNameId());
         if( !graspplanner->InitPlan(_robot, graspparams) ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
-
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner start to plan", GetEnv()->GetNameId());
         if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner plan finished", GetEnv()->GetNameId());
 
         if( ptraj->GetNumWaypoints() == 0 ) {
             return false;
@@ -1779,20 +1780,24 @@ protected:
             // only check end effector if not trasform 6d
             if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), _report) ) {
                 // if any of the collisions is the target
-                if( (!!_report->plink1 && _report->plink1->GetParent() == ptarget) || (!!_report->plink2 && _report->plink2->GetParent() == ptarget) ) {
-                    // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
-                }
-                else {
-                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ss << "grasper planner CheckEndEffectorCollision: " << _report->__str__() << ", manipvalues=[";
-                        FOREACHC(it, vsolution) {
-                            ss << *it << ", ";
-                        }
-                        ss << "]";
-                        RAVELOG_VERBOSE(ss.str());
+                for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision) {
+                    const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
+                    if( cpinfo.CompareFirstBodyName(ptarget->GetName()) == 0 || cpinfo.CompareSecondBodyName(ptarget->GetName()) == 0 ) {
+                        
+                        // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
                     }
-                    return IKRA_Reject;
+                    else {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            ss << "grasper planner CheckEndEffectorCollision: (" << cpinfo.bodyLinkGeom1Name << ")x(" << cpinfo.bodyLinkGeom2Name << "), manipvalues=[";
+                            FOREACHC(it, vsolution) {
+                                ss << *it << ", ";
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
+                        return IKRA_Reject;
+                    }
                 }
             }
             return IKRA_Success;

@@ -515,10 +515,17 @@ public:
     /// \return first KinBody (including robots) that matches with name
     virtual KinBodyPtr GetKinBody(const std::string& name) const =0;
 
+    /// \brief query a body from its name
+    virtual KinBodyPtr GetKinBody(const string_view name) const =0;
+
+    virtual KinBodyPtr GetKinBody(const char* pname) const =0;
+
     /// \brief Query a body from its id. <b>[multi-thread safe]</b>
     ///
     /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentBodyIndex!
     virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
+
+    virtual KinBodyPtr GetKinBodyById(const string_view id) const =0;
 
     /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>
     ///
