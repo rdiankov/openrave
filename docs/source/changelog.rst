@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.141.0
+===============
+
+- Add IkFailureAccumulatorBase to allow for cache of IK failure data and statistics gathering.
+
 Version 0.140.0
 ===============
 
