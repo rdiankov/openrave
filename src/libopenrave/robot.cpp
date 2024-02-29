@@ -447,7 +447,7 @@ void RobotBase::RobotStateSaver::Release()
     KinBodyStateSaver::Release();
 }
 
-EnvironmentBodyRemover::EnvironmentBodyRemover(KinBodyPtr pBody) : _pBody(pBody) {
+EnvironmentBodyRemover::EnvironmentBodyRemover(KinBodyPtr pBody, bool abortOnActiveManipulatorLost, bool abortOnGrabbedBodiesLost) : _pBody(pBody), _abortOnActiveManipulatorLost(abortOnActiveManipulatorLost), _abortOnGrabbedBodiesLost(abortOnGrabbedBodiesLost) {
     if( _pBody->IsRobot() ) {
         // If the manip comes from a connected body, the information of which manip is active is lost once the robot
         // is removed from env. Need to save the active manip name so that we can set it back later when the robot
@@ -461,7 +461,7 @@ EnvironmentBodyRemover::EnvironmentBodyRemover(KinBodyPtr pBody) : _pBody(pBody)
     _pBody->GetEnv()->Remove(_pBody);
 }
 
-EnvironmentBodyRemover::~EnvironmentBodyRemover() {
+EnvironmentBodyRemover::~EnvironmentBodyRemover() noexcept(true) {
     _pBody->GetEnv()->Add(_pBody, IAM_StrictNameChecking);
     if( !!_pBodyRobot && !_activeManipName.empty() ) {
         RobotBase::ManipulatorPtr pmanip = _pBodyRobot->GetManipulator(_activeManipName);
@@ -469,9 +469,18 @@ EnvironmentBodyRemover::~EnvironmentBodyRemover() {
         if( !!pmanip ) {
             _pBodyRobot->SetActiveManipulator(pmanip);
         }
-        else {
+        else if( !_abortOnActiveManipulatorLost ) {
             pmanip = _pBodyRobot->GetActiveManipulator();
-            RAVELOG_WARN_FORMAT("env=%s, robot=%s, cannot restore previous active manip=%s because it does not exist anymore. current active manip=%s", _pBodyRobot->GetEnv()->GetNameId()%_pBodyRobot->GetName()%_activeManipName%(!!pmanip ? pmanip->GetName() : ""));
+            RAVELOG_WARN_FORMAT("env=%s, robot=%s, cannot restore the original active manip=%s because it does not exist anymore. current active manip=%s", _pBodyRobot->GetEnv()->GetNameId()%_pBodyRobot->GetName()%_activeManipName%(!!pmanip ? pmanip->GetName() : ""));
+        }
+        else {
+            stringstream ss;
+            ss << "available manipulators are [";
+            for( const RobotBase::ManipulatorPtr& pManip : _pBodyRobot->GetManipulators() ) {
+                ss << pManip->GetName() << ", ";
+            }
+            ss << "]";
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, robot=%s, cannot restore the original active manip=%s because it does not exist anymore. %s"), _pBodyRobot->GetEnv()->GetNameId()%_pBodyRobot->GetName()%_activeManipName%ss.str(), ORE_Failed);
         }
     }
     if( !_pGrabbedInfos.empty() ) {
@@ -498,6 +507,9 @@ EnvironmentBodyRemover::~EnvironmentBodyRemover() {
                 }
             }
             if( needToDelete ) {
+                if( _abortOnGrabbedBodiesLost ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, robot=%s, cannot restore the original grabbed bodies."), _pBodyRobot->GetEnv()->GetNameId()%_pBodyRobot->GetName(), ORE_Failed);
+                }
                 continue;
             }
             // will regrasp this info

@@ -1439,14 +1439,16 @@ private:
 class OPENRAVE_API EnvironmentBodyRemover
 {
 public:
-    EnvironmentBodyRemover(KinBodyPtr pBody);
-    ~EnvironmentBodyRemover();
+    EnvironmentBodyRemover(KinBodyPtr pBody, bool abortOnActiveManipulatorLost=false, bool abortOnGrabbedBodiesLost=true);
+    ~EnvironmentBodyRemover() noexcept(true);
 
 private:
     KinBodyPtr _pBody;
     std::vector<KinBody::GrabbedInfoPtr> _pGrabbedInfos; ///< the list of the current grabbed info of pBody at the time of removal.
     RobotBasePtr _pBodyRobot;
     std::string _activeManipName; ///< the name of the current active manipulator of pBody at the time of removal.
+    bool _abortOnActiveManipulatorLost;
+    bool _abortOnGrabbedBodiesLost;
 };
 
 } // end namespace OpenRAVE
