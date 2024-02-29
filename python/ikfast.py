@@ -208,9 +208,12 @@ if sympy_version > '0.7.1':
     zeros = lambda args: _zeros(*args)
     ones = lambda args: _ones(*args)
 try:
-    import mpmath # on some distributions, sympy does not have mpmath in its scope
-except ImportError:
-    pass
+    from sympy import mpmath
+except:
+    try:
+        import mpmath # on some distributions, sympy does not have mpmath in its scope
+    except ImportError:
+        pass
 
 try:
     import re # for latex cleanup
@@ -1306,7 +1309,7 @@ class IKFastSolver(AutoReloader):
             return u'%s: %s'%(self.__class__.__name__, self.value)
         
         def __str__(self):
-            return unicode(self).encode('utf-8')
+            return self.__unicode__()
         
         def __repr__(self):
             return '<%s(%r)>'%(self.__class__.__name__, self.value)

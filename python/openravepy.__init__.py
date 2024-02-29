@@ -142,7 +142,7 @@ class PlanningError(Exception):
         return s
         
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return self.__unicode__()
     
     def __repr__(self):
         return '<openravepy.PlanningError(%r,%r)>'%(self.parameter,self.recoverySuggestions)

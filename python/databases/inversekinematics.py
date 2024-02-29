@@ -176,7 +176,7 @@ class InverseKinematicsError(Exception):
         return s
         
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return self.__unicode__()
     
     def __repr__(self):
         return '<openravepy.databases.inversekinematics.InverseKinematicsError(%r)>'%(self.parameter)
@@ -589,7 +589,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             solveindices, freeindices = self.GetDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
-        basename = 'ikfast%s.%s.'%(self.ikfast.__version__,self.iktype)
+        basename = 'ikfast%s.%s.%s.'%(self.ikfast.__version__,self.iktype,platform.machine())
         basename += '_'.join(str(ind) for ind in sorted(solveindices))
         if len(freeindices)>0:
             basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
@@ -960,8 +960,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                 except AttributeError: # python 2.5 does not have os.path.relpath
                    output_dir = relpath('/',getcwd())
 
-                platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
-                shutil.copyfile(sourcefilename, platformsourcefilename)
+                platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures
+                if sourcefilename != platformsourcefilename:
+                    shutil.copyfile(sourcefilename, platformsourcefilename)
                 objectfiles=[]
                 try:
                     objectfiles = compiler.compile(sources=[platformsourcefilename],macros=[('IKFAST_CLIBRARY',1),('IKFAST_NO_MAIN',1)],extra_postargs=compile_flags,output_dir=output_dir)
