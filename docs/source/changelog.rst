@@ -6,10 +6,22 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.139.1
+Version 0.139.3
 ===============
 
 * Fix the issue that some robot configurations might not be checked in `Check` function.
+
+Version 0.139.2
+===============
+
+* Fix link traversal order when calculating internal shortest path information
+
+Version 0.139.1
+===============
+
+* Add new interpolation type of "max"
+* Ignore NaN in joint values to preserve the old joint value
+* Support NaN in xml deserialization
 
 Version 0.139.0
 ===============

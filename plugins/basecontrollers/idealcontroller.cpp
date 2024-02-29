@@ -478,6 +478,9 @@ private:
     {
         for(size_t i = 0; i < _vlower[0].size(); ++i) {
             if( !_dofcircular[i] ) {
+                if( std::isnan(curvalues.at(i)) ) {
+                    continue;
+                }
                 if( curvalues.at(i) < _vlower[0][i]-g_fEpsilonJointLimit ) {
                     _ReportError(str(boost::format("robot %s dof %d is violating lower limit %e < %e, time=%f")%probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
                 }
@@ -490,6 +493,9 @@ private:
             vector<dReal> vdiff = curvalues;
             probot->SubtractDOFValues(vdiff,prevvalues);
             for(size_t i = 0; i < _vupper[1].size(); ++i) {
+                if( std::isnan(vdiff.at(i)) ) {
+                    continue;
+                }
                 dReal maxallowed = timeelapsed * _vupper[1][i]+1e-6;
                 if( RaveFabs(vdiff.at(i)) > maxallowed ) {
                     _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %.15e > %.15e, time=%f")%probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed%_fCommandTime));
