@@ -6,6 +6,11 @@ ChangeLog
 Unreleased
 ==========
 
+Version 0.139.2
+===============
+
+* Fix link traversal order when calculating internal shortest path information
+
 Version 0.139.1
 ===============
 
