@@ -11,6 +11,11 @@ Version 0.140.0
 
 * Allow EnvironmentBodyRemover not to restore a grabbed body when the grabbing link does not exist as we do for active manipulator
 
+Version 0.139.2
+===============
+
+* Fix link traversal order when calculating internal shortest path information
+
 Version 0.139.1
 ===============
 
