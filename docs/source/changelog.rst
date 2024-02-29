@@ -6,18 +6,39 @@ ChangeLog
 Unreleased
 ==========
 
-Version 0.139.0
+Version 0.140.0
 ===============
 
 * Support the conversion between Python Int and C++ __uint128_t
 * Support the conversion between RapidJSON String and C++ __uint128_t
 * Support the conversion from Python Int >= 2**64 to RapidJSON String
 
+Version 0.139.2
+===============
+
+* Fix link traversal order when calculating internal shortest path information
+
+Version 0.139.1
+===============
+
+* Add new interpolation type of "max"
+* Ignore NaN in joint values to preserve the old joint value
+* Support NaN in xml deserialization
+
+Version 0.139.0
+===============
+
+* Initialization of internal costs in KinBodies now only considers links that are part of a joint
+* Trimesh construction in KinBodies optimized to reduce reallocs
+* FCLRave no longer re-initializes all callbacks on link state change
+* Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
+* FCLRave geometry callbacks now only update when the link has actually changed
+* Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with scoped cleanup classes
+
 Version 0.138.0
 ===============
 
 * Added new apis efficient sampling of trajectory range
-
 Version 0.137.0
 ===============
 
