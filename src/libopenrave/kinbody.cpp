@@ -2126,20 +2126,26 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
     int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
     OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, not enough values %d<%d", GetEnv()->GetNameId()%dof%GetDOF(),ORE_InvalidArguments);
 
-    if(checklimits == CLA_Nothing && dofindices.empty()) {
-        _vTempJoints.assign(pJointValues, pJointValues + dof);
-    }
-    else {
-        _vTempJoints.resize(GetDOF());
-        if( dofindices.size() > 0 ) {
-            // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
-            // and then overwrite with the user set values
-            GetDOFValues(_vTempJoints);
-            for(size_t i = 0; i < dofindices.size(); ++i) {
+    GetDOFValues(_vTempJoints);
+    if( dofindices.size() > 0 ) {
+        // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
+        // and then overwrite with the user set values
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            if( !std::isnan(pJointValues[i]) ) {
                 _vTempJoints.at(dofindices[i]) = pJointValues[i];
             }
-            pJointValues = &_vTempJoints[0];
         }
+    }
+    else {
+        for(size_t i = 0; i < _vTempJoints.size(); ++i) {
+            if( !std::isnan(pJointValues[i]) ) {
+                _vTempJoints[i] = pJointValues[i];
+            }
+        }
+    }
+    pJointValues = &_vTempJoints[0];
+
+    if( checklimits != CLA_Nothing ) {
         dReal* ptempjoints = &_vTempJoints[0];
 
         // check the limits
@@ -2147,13 +2153,6 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
             const Joint& joint = *pjoint;
 
             const dReal* p = pJointValues+joint.GetDOFIndex();
-            if( checklimits == CLA_Nothing ) {
-                // limits should not be checked, so just copy
-                for(int i = 0; i < joint.GetDOF(); ++i) {
-                    *ptempjoints++ = p[i];
-                }
-                continue;
-            }
             if( joint.GetType() == JointSpherical ) {
                 dReal fcurang = fmod(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
                 dReal lowerlimit = joint.GetLowerLimit(0);
@@ -4343,7 +4342,9 @@ void KinBody::_ComputeInternalInformation()
 
         // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
         // Otherwise, scenes that contain a large number of non-jointed links will incur significant overhead.
-        std::unordered_set<int> usedLinkIndices;
+        // Note that we use an ordered set here - iterating the links in-order ensures that we mimic the actual connection order of the links.
+        // Iterating in non-deterministic order may produce unexpected paths where a 'future' link traversal shares the same cost as a traversal that is closer to the robot base.
+        std::set<int> usedLinkIndices;
 
         FOREACHC(itjoint,_vecjoints) {
             // If this joint doesn't have two links to calculate a cost between, skip it
