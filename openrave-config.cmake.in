@@ -60,7 +60,7 @@ set( OpenRAVE_PYTHON2 @OPT_PYTHON@ )
 set( OpenRAVE_PYTHON3 @OPT_PYTHON3@ )
 
 if (OpenRAVE_PYTHON2)
-  find_package(Python 2.7 REQUIRED COMPONENTS Interpreter Development NumPy)
+  find_package(Python 2.7 REQUIRED COMPONENTS Interpreter Development)
 
   set( OpenRAVE_PYTHON2_INCLUDE_DIRS "${Python_INCLUDE_DIRS};${Python_NumPy_INCLUDE_DIRS}" )
   set( OpenRAVE_PYTHON2_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY2_VER_INSTALL_DIR@")
@@ -72,7 +72,7 @@ if (OpenRAVE_PYTHON2)
 endif()
 
 if (OpenRAVE_PYTHON3)
-  find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter Development NumPy)
+  find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter Development)
 
   set( OpenRAVE_PYTHON3_INCLUDE_DIRS "${Python3_INCLUDE_DIRS};${Python3_NumPy_INCLUDE_DIRS}" )
   set( OpenRAVE_PYTHON3_DIR "${OpenRAVE_ROOT_DIR}/@OPENRAVEPY3_VER_INSTALL_DIR@")
