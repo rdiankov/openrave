@@ -17,6 +17,7 @@
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_spacesampler.h>
 
 namespace openravepy {
 
@@ -45,158 +46,153 @@ using py::def;
 
 namespace numeric = py::numeric;
 
-class PySpaceSamplerBase : public PyInterfaceBase
+PySpaceSamplerBase::PySpaceSamplerBase(SpaceSamplerBasePtr pspacesampler, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pspacesampler, pyenv), _pspacesampler(pspacesampler) {
+}
+
+PySpaceSamplerBase::~PySpaceSamplerBase() {
+}
+
+SpaceSamplerBasePtr PySpaceSamplerBase::GetSpaceSampler() {
+    return _pspacesampler;
+}
+
+void PySpaceSamplerBase::SetSeed(uint32_t seed) {
+    _pspacesampler->SetSeed(seed);
+}
+void PySpaceSamplerBase::SetSpaceDOF(int dof) {
+    _pspacesampler->SetSpaceDOF(dof);
+}
+int PySpaceSamplerBase::GetDOF() {
+    return _pspacesampler->GetDOF();
+}
+int PySpaceSamplerBase::GetNumberOfValues() {
+    return _pspacesampler->GetNumberOfValues();
+}
+
+bool PySpaceSamplerBase::Supports(SampleDataType type) {
+    return _pspacesampler->Supports(type);
+}
+
+object PySpaceSamplerBase::GetLimits(SampleDataType type)
 {
-protected:
-    SpaceSamplerBasePtr _pspacesampler;
-public:
-    PySpaceSamplerBase(SpaceSamplerBasePtr pspacesampler, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pspacesampler, pyenv), _pspacesampler(pspacesampler) {
+    if( type == SDT_Real ) {
+        std::vector<dReal> vlower, vupper;
+        _pspacesampler->GetLimits(vlower,vupper);
+        return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
-    virtual ~PySpaceSamplerBase() {
+    else if( type == SDT_Uint32 ) {
+        std::vector<uint32_t> vlower, vupper;
+        _pspacesampler->GetLimits(vlower,vupper);
+        return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
     }
+    throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
+}
 
-    SpaceSamplerBasePtr GetSpaceSampler() {
-        return _pspacesampler;
+object PySpaceSamplerBase::SampleSequence(SampleDataType type, size_t num, int interval)
+{
+    if( type == SDT_Real ) {
+        std::vector<dReal> samples;
+        _pspacesampler->SampleSequence(samples,num, (IntervalType) interval);
+        return toPyArray(samples);
     }
+    else if( type == SDT_Uint32 ) {
+        std::vector<uint32_t> samples;
+        _pspacesampler->SampleSequence(samples,num);
+        return toPyArray(samples);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
+}
 
-    void SetSeed(uint32_t seed) {
-        _pspacesampler->SetSeed(seed);
+object PySpaceSamplerBase::SampleSequence2D(SampleDataType type, size_t num, int interval)
+{
+    if( type == SDT_Real ) {
+        std::vector<dReal> samples;
+        _pspacesampler->SampleSequence(samples,num, (IntervalType) interval);
+        return _ReturnSamples2D(samples);
     }
-    void SetSpaceDOF(int dof) {
-        _pspacesampler->SetSpaceDOF(dof);
+    else if( type == SDT_Uint32 ) {
+        std::vector<uint32_t> samples;
+        _pspacesampler->SampleSequence(samples,num);
+        return _ReturnSamples2D(samples);
     }
-    int GetDOF() {
-        return _pspacesampler->GetDOF();
-    }
-    int GetNumberOfValues() {
-        return _pspacesampler->GetNumberOfValues();
-    }
+    throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
+}
 
-    bool Supports(SampleDataType type) {
-        return _pspacesampler->Supports(type);
-    }
+dReal PySpaceSamplerBase::SampleSequenceOneReal(int interval)
+{
+    return _pspacesampler->SampleSequenceOneReal((IntervalType) interval);
+}
 
-    object GetLimits(SampleDataType type)
-    {
-        if( type == SDT_Real ) {
-            std::vector<dReal> vlower, vupper;
-            _pspacesampler->GetLimits(vlower,vupper);
-            return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
-        }
-        else if( type == SDT_Uint32 ) {
-            std::vector<uint32_t> vlower, vupper;
-            _pspacesampler->GetLimits(vlower,vupper);
-            return py::make_tuple(toPyArray(vlower),toPyArray(vupper));
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
-    }
+uint32_t PySpaceSamplerBase::SampleSequenceOneUInt32()
+{
+    return _pspacesampler->SampleSequenceOneUInt32();
+}
 
-    object SampleSequence(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
-    {
-        if( type == SDT_Real ) {
-            std::vector<dReal> samples;
-            _pspacesampler->SampleSequence(samples,num, (IntervalType) interval);
-            return toPyArray(samples);
-        }
-        else if( type == SDT_Uint32 ) {
-            std::vector<uint32_t> samples;
-            _pspacesampler->SampleSequence(samples,num);
-            return toPyArray(samples);
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
+object PySpaceSamplerBase::SampleComplete(SampleDataType type, size_t num, int interval)
+{
+    if( type == SDT_Real ) {
+        std::vector<dReal> samples;
+        _pspacesampler->SampleComplete(samples,num, (IntervalType) interval);
+        return toPyArray(samples);
     }
+    else if( type == SDT_Uint32 ) {
+        std::vector<uint32_t> samples;
+        _pspacesampler->SampleComplete(samples,num);
+        return toPyArray(samples);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
+}
 
-    object SampleSequence2D(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
-    {
-        if( type == SDT_Real ) {
-            std::vector<dReal> samples;
-            _pspacesampler->SampleSequence(samples,num, (IntervalType) interval);
-            return _ReturnSamples2D(samples);
-        }
-        else if( type == SDT_Uint32 ) {
-            std::vector<uint32_t> samples;
-            _pspacesampler->SampleSequence(samples,num);
-            return _ReturnSamples2D(samples);
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
+object PySpaceSamplerBase::SampleComplete2D(SampleDataType type, size_t num, int interval)
+{
+    if( type == SDT_Real ) {
+        std::vector<dReal> samples;
+        _pspacesampler->SampleComplete(samples,num, (IntervalType) interval);
+        return _ReturnSamples2D(samples);
     }
+    else if( type == SDT_Uint32 ) {
+        std::vector<uint32_t> samples;
+        _pspacesampler->SampleComplete(samples,num);
+        return _ReturnSamples2D(samples);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
+}
 
-    dReal SampleSequenceOneReal(int interval = IntervalType::IT_Closed)
-    {
-        return _pspacesampler->SampleSequenceOneReal((IntervalType) interval);
+object PySpaceSamplerBase::_ReturnSamples2D(const std::vector<dReal>&samples)
+{
+    if( samples.empty() ) {
+        return py::empty_array_astype<double>();
     }
-
-    uint32_t SampleSequenceOneUInt32()
-    {
-        return _pspacesampler->SampleSequenceOneUInt32();
-    }
-
-    object SampleComplete(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
-    {
-        if( type == SDT_Real ) {
-            std::vector<dReal> samples;
-            _pspacesampler->SampleComplete(samples,num, (IntervalType) interval);
-            return toPyArray(samples);
-        }
-        else if( type == SDT_Uint32 ) {
-            std::vector<uint32_t> samples;
-            _pspacesampler->SampleComplete(samples,num);
-            return toPyArray(samples);
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
-    }
-
-    object SampleComplete2D(SampleDataType type, size_t num, int interval = IntervalType::IT_Closed)
-    {
-        if( type == SDT_Real ) {
-            std::vector<dReal> samples;
-            _pspacesampler->SampleComplete(samples,num, (IntervalType) interval);
-            return _ReturnSamples2D(samples);
-        }
-        else if( type == SDT_Uint32 ) {
-            std::vector<uint32_t> samples;
-            _pspacesampler->SampleComplete(samples,num);
-            return _ReturnSamples2D(samples);
-        }
-        throw OPENRAVE_EXCEPTION_FORMAT(_("%d sampling type not supported"),type,ORE_InvalidArguments);
-    }
-protected:
-    object _ReturnSamples2D(const std::vector<dReal>&samples)
-    {
-        if( samples.empty() ) {
-            return py::empty_array_astype<double>();
-        }
-        const int dim = _pspacesampler->GetNumberOfValues();
+    const int dim = _pspacesampler->GetNumberOfValues();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        py::array_t<dReal> pyvalues = toPyArray(samples);
-        pyvalues.resize({(int) samples.size()/dim, dim});
-        return pyvalues;
+    py::array_t<dReal> pyvalues = toPyArray(samples);
+    pyvalues.resize({(int) samples.size()/dim, dim});
+    return pyvalues;
 #else // USE_PYBIND11_PYTHON_BINDINGS
-        npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
-        PyObject *pyvalues = PyArray_SimpleNew(2, dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-        memcpy(PyArray_DATA(pyvalues), samples.data(), samples.size()*sizeof(samples[0]));
-        return py::to_array_astype<dReal>(pyvalues);
+    npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
+    PyObject *pyvalues = PyArray_SimpleNew(2, dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    memcpy(PyArray_DATA(pyvalues), samples.data(), samples.size()*sizeof(samples[0]));
+    return py::to_array_astype<dReal>(pyvalues);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-    }
+}
 
-    object _ReturnSamples2D(const std::vector<uint32_t>&samples)
-    {
-        if( samples.empty() == 0 ) {
-            return py::empty_array_astype<uint32_t>();
-        }
-        const int dim = _pspacesampler->GetNumberOfValues();
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        py::array_t<uint32_t> pyvalues = toPyArray(samples);
-        pyvalues.resize({(int) samples.size()/dim, dim});
-        return pyvalues;
-#else // USE_PYBIND11_PYTHON_BINDINGS
-        npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
-        PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_UINT32);
-        memcpy(PyArray_DATA(pyvalues), samples.data(), samples.size()*sizeof(samples[0]));
-        return py::to_array_astype<uint32_t>(pyvalues);
-#endif // USE_PYBIND11_PYTHON_BINDINGS
+object PySpaceSamplerBase::_ReturnSamples2D(const std::vector<uint32_t>&samples)
+{
+    if( samples.empty() == 0 ) {
+        return py::empty_array_astype<uint32_t>();
     }
-};
+    const int dim = _pspacesampler->GetNumberOfValues();
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<uint32_t> pyvalues = toPyArray(samples);
+    pyvalues.resize({(int) samples.size()/dim, dim});
+    return pyvalues;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    npy_intp dims[] = { npy_intp(samples.size()/dim), npy_intp(dim) };
+    PyObject *pyvalues = PyArray_SimpleNew(2,dims, PyArray_UINT32);
+    memcpy(PyArray_DATA(pyvalues), samples.data(), samples.size()*sizeof(samples[0]));
+    return py::to_array_astype<uint32_t>(pyvalues);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+}
 
 SpaceSamplerBasePtr GetSpaceSampler(PySpaceSamplerBasePtr pyspacesampler)
 {
@@ -239,61 +235,61 @@ void init_openravepy_spacesampler()
         scope_ spacesampler = class_<PySpaceSamplerBase, OPENRAVE_SHARED_PTR<PySpaceSamplerBase>, PyInterfaceBase>(m, "SpaceSampler", DOXY_CLASS(SpaceSamplerBase))
 #else
         scope_ spacesampler = class_<PySpaceSamplerBase, OPENRAVE_SHARED_PTR<PySpaceSamplerBase>, bases<PyInterfaceBase> >("SpaceSampler", DOXY_CLASS(SpaceSamplerBase), no_init)
-#endif        
-                             .def("SetSeed",&PySpaceSamplerBase::SetSeed, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,SetSeed))
-                             .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, PY_ARGS("dof") DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
-                             .def("GetDOF",&PySpaceSamplerBase::GetDOF, DOXY_FN(SpaceSamplerBase,GetDOF))
-                             .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, /*PY_ARGS("seed")*/ DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
-                             .def("Supports",&PySpaceSamplerBase::Supports, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,Supports))
-                             .def("GetLimits",&PySpaceSamplerBase::GetLimits, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,GetLimits))
+#endif
+                              .def("SetSeed",&PySpaceSamplerBase::SetSeed, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,SetSeed))
+                              .def("SetSpaceDOF",&PySpaceSamplerBase::SetSpaceDOF, PY_ARGS("dof") DOXY_FN(SpaceSamplerBase,SetSpaceDOF))
+                              .def("GetDOF",&PySpaceSamplerBase::GetDOF, DOXY_FN(SpaceSamplerBase,GetDOF))
+                              .def("GetNumberOfValues",&PySpaceSamplerBase::GetNumberOfValues, /*PY_ARGS("seed")*/ DOXY_FN(SpaceSamplerBase,GetNumberOfValues))
+                              .def("Supports",&PySpaceSamplerBase::Supports, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,Supports))
+                              .def("GetLimits",&PySpaceSamplerBase::GetLimits, PY_ARGS("seed") DOXY_FN(SpaceSamplerBase,GetLimits))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                             .def("SampleSequence", &PySpaceSamplerBase::SampleSequence,
-                                "type"_a,
-                                "num"_a,
-                                "interval"_a = (int) IntervalType::IT_Closed,
-                                DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
-                            )
+                              .def("SampleSequence", &PySpaceSamplerBase::SampleSequence,
+                                   "type"_a,
+                                   "num"_a,
+                                   "interval"_a = (int) IntervalType::IT_Closed,
+                                   DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
+                                   )
 #else
-                             .def("SampleSequence",&PySpaceSamplerBase::SampleSequence, SampleSequence_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
+                              .def("SampleSequence",&PySpaceSamplerBase::SampleSequence, SampleSequence_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                             .def("SampleSequence2D", &PySpaceSamplerBase::SampleSequence2D,
-                                "type"_a,
-                                "num"_a,
-                                "interval"_a = (int) IntervalType::IT_Closed,
-                                DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
-                            )
+                              .def("SampleSequence2D", &PySpaceSamplerBase::SampleSequence2D,
+                                   "type"_a,
+                                   "num"_a,
+                                   "interval"_a = (int) IntervalType::IT_Closed,
+                                   DOXY_FN(SpaceSamplerBase, SampleSequence "std::vector; size_t; IntervalType")
+                                   )
 #else
-                             .def("SampleSequence2D",&PySpaceSamplerBase::SampleSequence2D, SampleSequence2D_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
+                              .def("SampleSequence2D",&PySpaceSamplerBase::SampleSequence2D, SampleSequence2D_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleSequence "std::vector; size_t; IntervalType")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                             .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal,
-                                "interval"_a = (int) IntervalType::IT_Closed,
-                                DOXY_FN(SpaceSamplerBase, SampleSequenceOneReal)
-                            )
+                              .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal,
+                                   "interval"_a = (int) IntervalType::IT_Closed,
+                                   DOXY_FN(SpaceSamplerBase, SampleSequenceOneReal)
+                                   )
 #else
-                             .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal, SampleSequenceOneReal_overloads(PY_ARGS("interval") DOXY_FN(SpaceSamplerBase,SampleSequenceOneReal)))
+                              .def("SampleSequenceOneReal", &PySpaceSamplerBase::SampleSequenceOneReal, SampleSequenceOneReal_overloads(PY_ARGS("interval") DOXY_FN(SpaceSamplerBase,SampleSequenceOneReal)))
 #endif
-                             .def("SampleSequenceOneUInt32", &PySpaceSamplerBase::SampleSequenceOneUInt32, DOXY_FN(SpaceSamplerBase,SampleSequenceOneUInt32))
+                              .def("SampleSequenceOneUInt32", &PySpaceSamplerBase::SampleSequenceOneUInt32, DOXY_FN(SpaceSamplerBase,SampleSequenceOneUInt32))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                             .def("SampleComplete", &PySpaceSamplerBase::SampleComplete,
-                                "type"_a,
-                                "num"_a,
-                                "interval"_a = (int) IntervalType::IT_Closed,
-                                DOXY_FN(SpaceSamplerBase, ampleComplete "std::vector; size_t; IntervalType")
-                            )
+                              .def("SampleComplete", &PySpaceSamplerBase::SampleComplete,
+                                   "type"_a,
+                                   "num"_a,
+                                   "interval"_a = (int) IntervalType::IT_Closed,
+                                   DOXY_FN(SpaceSamplerBase, ampleComplete "std::vector; size_t; IntervalType")
+                                   )
 #else
-                             .def("SampleComplete",&PySpaceSamplerBase::SampleComplete, SampleComplete_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
+                              .def("SampleComplete",&PySpaceSamplerBase::SampleComplete, SampleComplete_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                             .def("SampleComplete2D", &PySpaceSamplerBase::SampleComplete2D,
-                                "type"_a,
-                                "num"_a,
-                                "interval"_a = (int) IntervalType::IT_Closed,
-                                DOXY_FN(SpaceSamplerBase, SampleComplete "std::vector; size_t; IntervalType")
-                            )
+                              .def("SampleComplete2D", &PySpaceSamplerBase::SampleComplete2D,
+                                   "type"_a,
+                                   "num"_a,
+                                   "interval"_a = (int) IntervalType::IT_Closed,
+                                   DOXY_FN(SpaceSamplerBase, SampleComplete "std::vector; size_t; IntervalType")
+                                   )
 #else
-                             .def("SampleComplete2D",&PySpaceSamplerBase::SampleComplete2D, SampleComplete2D_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
+                              .def("SampleComplete2D",&PySpaceSamplerBase::SampleComplete2D, SampleComplete2D_overloads(PY_ARGS("type", "num","interval") DOXY_FN(SpaceSamplerBase,SampleComplete "std::vector; size_t; IntervalType")))
 #endif
         ;
     }

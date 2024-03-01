@@ -1,6 +1,7 @@
 cmake_policy(SET CMP0005 NEW)
 set(openrave_lib_SOURCES
   configurationspecification.cpp
+  collisionchecker.cpp
   controller.cpp
   environment.cpp
   fparsermulti.h

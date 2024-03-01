@@ -41,7 +41,7 @@ public:
     }
 
     /// \param report assumes in the report, plink1 is the robot and plink2 is the colliding link
-    void SetCollisionInfo(CollisionReportPtr report);
+    void SetCollisionInfo(RobotBase& robot, CollisionReportPtr& report);
 
     /// \brief sets the collision info with int values (used by the load/save)
     void SetCollisionInfo(int index, int type);
@@ -120,7 +120,7 @@ protected:
     std::vector<CacheTreeNode*> _vchildren; ///< direct children of this node (for the next level down)
     ConfigurationNodeType _conftype; ///< configuration type for this node
     KinBody::LinkConstPtr _collidinglink; ///< collidinglink in the collision report for this node
-    Transform _collidinglinktrans; ///< the colliding link's transform. Valid if _conftype is CNT_Collision
+    //Transform _collidinglinktrans; ///< the colliding link's transform. Valid if _conftype is CNT_Collision
     int _robotlinkindex; ///< the robot link index that is colliding with _collidinglink. Valid if _conftype is CNT_Collision
 
     // idea: keep k nearest neighbors and update k every now and then, k = (e + e/dim) * log(n+1) where n is the size of the tree?
@@ -165,7 +165,7 @@ class CacheTree
 {
 public:
 
-    CacheTree(int statedof);
+    CacheTree(RobotBasePtr& pstaterobot, int statedof);
 
     virtual ~CacheTree();
 
@@ -313,6 +313,8 @@ private:
             return -(enclevel/2);
         }
     }
+
+    RobotBasePtr _pstaterobot;
 
     std::vector<dReal> _weights; ///< weights used by the distance function
     std::vector<dReal> _curconf;
