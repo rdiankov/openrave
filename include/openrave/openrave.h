@@ -2605,6 +2605,37 @@ OPENRAVE_API void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vect
 
 OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
 
+/// \brief converts hex character to unsigned integer
+/// \param character to be converted into unsigned integer
+/// \return parsed unsigned integer
+inline uint64_t GetUIntFromHexChar(char character)
+{
+    if ('a' <= character && character <= 'f') {
+        return 10 + character - 'a';
+    }
+    if ('A' <= character && character <= 'F') {
+        return 10 + character - 'A';
+    }
+    if ('0' <= character && character <= '9') {
+        return  character - '0';
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT0(("expected hex character and received \'" + std::string(1, character) + "\'"), ORE_InvalidArguments);
+}
+
+/// \brief implements std::stoull wiht sub string without memory allocation. Assumes string is hex-formatted.
+/// \param str string to parse from
+/// \param startPos position of the string to start parsing from
+/// \param length length to parse from the string
+/// \return parsed integer
+inline uint64_t ConvertHexSubStringToUint64(const char* str, size_t startPos, size_t length) {
+    uint64_t value(0);
+    for (size_t index = 0; index < length; ++index) {
+        const int stringPosition = startPos + index;
+        value += GetUIntFromHexChar(str[stringPosition]) << 4*(length - 1 - index);
+    }
+    return value;
+}
+
 template<std::size_t N>
 class OPENRAVE_API MultiUInt64
 {
@@ -2822,6 +2853,34 @@ public:
             ret += _CountBits64(values[index]);
         }
         return ret;
+    }
+
+    /// \brief loads from hex string.
+    /// \param hexStr hex-represented string of unsigned integer
+    void LoadFromHexString(const std::string& hexStr)
+    {
+        OPENRAVE_ASSERT(!hexStr.empty(), "Cannot convert empty string (\"%s\") to unsigned integer", hexStr, ORE_InvalidArguments);
+        // assume hex, 64bits can be represented by 16 chars
+        constexpr size_t lenOfuint64BitAsStr(16);
+
+        const size_t strLen = hexStr.size();
+        size_t startPosition = 0;
+        size_t endPosition = (strLen)%lenOfuint64BitAsStr;
+        if (endPosition == 0) {
+            endPosition = lenOfuint64BitAsStr;
+        }
+        for (size_t index64Bit = 0; index64Bit < N; ++index64Bit) {
+            if (startPosition >= strLen) {
+                break;
+            }
+            // MultiUInt64's MSB is index 0
+            const size_t index64BitWithOffset = (N - 1 - (strLen-1)/lenOfuint64BitAsStr) + index64Bit;
+            const uint64_t value = ConvertHexSubStringToUint64(hexStr.c_str(), startPosition, endPosition - startPosition);
+            SetValue(value, index64BitWithOffset);
+
+            startPosition = endPosition;
+            endPosition += lenOfuint64BitAsStr;
+        }
     }
 
     static std::size_t GetNumUInt64() {

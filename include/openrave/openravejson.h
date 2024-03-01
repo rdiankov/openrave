@@ -327,6 +327,9 @@ inline void LoadJsonValue(const rapidjson::Value& v, MultiUInt64<N>& t)
             t.SetValue(value, index);
         }
     }
+    else if (v.IsString()) {
+        t.LoadFromString(v.GetString());
+    }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON %s to MultiUInt64", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
     }
