@@ -2605,6 +2605,258 @@ OPENRAVE_API void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vect
 
 OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
 
+template<std::size_t N>
+class OPENRAVE_API MultiUInt64
+{
+public:
+    MultiUInt64() {
+        std::fill(values.begin(), values.end(), 0);
+    };
+
+    MultiUInt64(const int value) {
+        if (value >= 0) {
+            std::fill(values.begin(), values.end(), 0);
+        }
+        else {
+            std::fill(values.begin(), values.end(), -1);
+        }
+        values[N - 1] = value;
+    };
+
+    MultiUInt64<N> operator&(const MultiUInt64<N>& other) const {
+        MultiUInt64<N> ret;
+        for (size_t index = 0; index < N; ++index) {
+            ret.SetValue(values[index] & other.GetValue(index), index);
+        }
+        return ret;
+    }
+
+    MultiUInt64<N>& operator&=(const MultiUInt64<N>& other) {
+        for (size_t index = 0; index < N; ++index) {
+            values[index] &= other.GetValue(index);
+        }
+        return *this;
+    }
+
+    // Postfix Decrement
+    MultiUInt64<N> operator--(int) {
+        const MultiUInt64<N> ret = *this;
+        // if values[N-1] == 0, then consider to +(2^64 - 1) - 1 * 2^64 instead of -1, which means values[N-1] = -1 and values[N-2] -= 1
+        for (size_t indexReverse = 0; indexReverse < N; ++indexReverse) {
+            const size_t index = N - indexReverse - 1;
+            const bool canBreak = values[index] != 0;
+            values[index] -= 1;
+            if (canBreak) {
+                break;
+            }
+        }
+        return ret;
+    }
+
+    // Prefix Decrement
+    MultiUInt64<N>& operator--() {
+        for (size_t indexReverse = 0; indexReverse < N; ++indexReverse) {
+            const size_t index = N - indexReverse - 1;
+            const bool canBreak = values[index] != 0;
+            values[index] -= 1;
+            if (canBreak) {
+                break;
+            }
+        }
+        return *this;
+    }
+
+    // Postfix Increment
+    MultiUInt64<N> operator++(int) {
+        const MultiUInt64<N> ret = *this;
+        // if values[N-1] == -1, then consider to -(2^64 - 1) + 1 * 2^64 instead of +1, which means values[N-1] = 0 and values[N-2] += 1
+        for (size_t indexReverse = 0; indexReverse < N; ++indexReverse) {
+            const size_t index = N - indexReverse - 1;
+            const bool canBreak = values[index] != 0xFFFFFFFFFFFFFFFFUL;
+            values[index] += 1;
+            if (canBreak) {
+                break;
+            }
+        }
+        return ret;
+    }
+
+    // Prefix Increment
+    MultiUInt64<N>& operator++() {
+        for (size_t indexReverse = 0; indexReverse < N; ++indexReverse) {
+            const size_t index = N - indexReverse - 1;
+            const bool canBreak = values[index] != 0xFFFFFFFFFFFFFFFFUL;
+            values[index] += 1;
+            if (canBreak) {
+                break;
+            }
+        }
+        return *this;
+    }
+
+    MultiUInt64<N> operator~() const {
+        MultiUInt64<N> ret;
+        for (size_t index = 0; index < N; ++index) {
+            ret.SetValue(~values[index], index);
+        }
+        return ret;
+    }
+
+    MultiUInt64<N> operator|(const MultiUInt64<N>& other) const {
+        MultiUInt64<N> ret;
+        for (size_t index = 0; index < N; ++index) {
+            ret.SetValue(values[index] | other.GetValue(index), index);
+        }
+        return ret;
+    }
+
+    MultiUInt64<N>& operator|=(const MultiUInt64<N>& other) {
+        for (size_t index = 0; index < N; ++index) {
+            values[index] |= other.GetValue(index);
+        }
+        return *this;
+    }
+
+    MultiUInt64<N> operator<<(uint64_t offset) const {
+        MultiUInt64<N> ret = *this;
+        const size_t num64BitShift = offset / 64;
+        if (num64BitShift > 0) {
+            for (size_t index = 0; index < N; ++index) {
+                uint64_t newValue = 0;
+                if (index + num64BitShift < N) {
+                    newValue = values[index + num64BitShift];
+                }
+                ret.SetValue(newValue, index);
+            }
+        }
+        const size_t remainingShift = offset % 64;
+        if (remainingShift > 0) {
+            for (size_t index = 0; index < N; ++index) {
+                uint64_t newValue = ret.GetValue(index) << remainingShift;
+                if (index != N - 1) {
+                    newValue |= (ret.GetValue(index + 1) >> (64 - remainingShift));
+                }
+                ret.SetValue(newValue, index);
+            }
+        }
+        return ret;
+    }
+
+    MultiUInt64<N> operator>>(uint64_t offset) const {
+        MultiUInt64<N> ret = *this;
+        const size_t num64BitShift = offset / 64;
+        if (num64BitShift > 0) {
+            for (size_t index = 0; index < N; ++index) {
+                uint64_t newValue = 0;
+                if (index >= num64BitShift) {
+                    newValue = values[index - num64BitShift];
+                }
+                ret.SetValue(newValue, index);
+            }
+        }
+        const size_t remainingShift = offset % 64;
+        if (remainingShift > 0) {
+            for (size_t indexReverse = 0; indexReverse < N; ++indexReverse) {
+                const size_t index = N - indexReverse - 1;
+                uint64_t newValue = ret.GetValue(index) >> remainingShift;
+                if (index != 0) {
+                    newValue |= (ret.GetValue(index - 1) << (64 - remainingShift));
+                }
+                ret.SetValue(newValue, index);
+            }
+        }
+        return ret;
+    }
+
+    bool operator<(const MultiUInt64<N>& other) const {
+        for (size_t index = 0; index < N; ++index) {
+            if (values[index] == other.GetValue(index)) {
+                continue;
+            }
+            return values[index] < other.GetValue(index);
+        }
+        return false;
+    }
+
+    bool operator>(const MultiUInt64<N>& other) const {
+        for (size_t index = 0; index < N; ++index) {
+            if (values[index] == other.GetValue(index)) {
+                continue;
+            }
+            return values[index] > other.GetValue(index);
+        }
+        return false;
+    }
+
+    bool operator==(const MultiUInt64<N>& other) const {
+        for (size_t index = 0; index < N; ++index) {
+            if (values[index] != other.GetValue(index)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool operator!=(const MultiUInt64<N>& other) const {
+        return !operator==(other);
+    }
+
+    uint64_t GetValue(size_t index) const {
+        return values[index];
+    }
+    void SetValue(uint64_t newValue, size_t index) {
+        values[index] = newValue;
+    }
+
+    uint64_t CountBits() const {
+        uint64_t ret = 0;
+        for (size_t index = 0; index < N; ++index) {
+            ret += _CountBits64(values[index]);
+        }
+        return ret;
+    }
+
+    static std::size_t GetNumUInt64() {
+        return N;
+    }
+
+private:
+    uint64_t _CountBits64(uint64_t num) const {
+        num = num - ((num >> 1) & 0x5555555555555555UL);
+        num = (num & 0x3333333333333333UL) + ((num >> 2) & 0x3333333333333333UL);
+        return (((num + (num >> 4)) & 0xF0F0F0F0F0F0F0FUL) * 0x101010101010101UL) >> 56;
+    };
+
+    std::array<uint64_t, N> values; // index 0 is the highest 64 bit
+};
+
+template<std::size_t N>
+OPENRAVE_API std::ostream& operator<<(std::ostream& O, const MultiUInt64<N>& data) {
+    if (O.flags() & std::ios_base::hex) {
+        bool isFirstWrite = true;
+        for (size_t index = 0; index < N; ++index) {
+            const uint64_t value = data.GetValue(index);
+            if (isFirstWrite) {
+                if (index == N - 1 || value != 0) {
+                    O << value;
+                    isFirstWrite = false;
+                }
+                else {
+                    continue;
+                }
+            }
+            else {
+                O << std::setfill('0') << std::right << std::setw(16) << value << std::setfill(' ');
+            }
+        }
+    }
+    else {
+        O << "(not supported for now. please use hex)";
+    }
+
+    return O;
+};
+
 }
 
 #include <openrave/plugininfo.h>

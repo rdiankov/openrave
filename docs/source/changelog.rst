@@ -6,9 +6,7 @@ ChangeLog
 Version 0.142.0
 ===============
 
-* Support the conversion between Python Int and C++ __uint128_t
-* Support the conversion between RapidJSON String and C++ __uint128_t
-* Support the conversion from Python Int >= 2**64 to RapidJSON String
+* Add MultiUInt64 class which has array of uint64_t to represent bigger integer than uint64_t
 
 Version 0.141.0
 ===============

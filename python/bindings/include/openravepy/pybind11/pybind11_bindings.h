@@ -11,50 +11,42 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <boost/shared_ptr.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
+#include <openrave/openrave.h>
 PYBIND11_DECLARE_HOLDER_TYPE(T, OPENRAVE_SHARED_PTR<T>);
 namespace pybind11 {
 namespace detail {
-#ifdef __SIZEOF_INT128__
-template <> struct type_caster<__uint128_t> {
+template <std::size_t N>
+struct type_caster< OpenRAVE::MultiUInt64<N> > {
 public:
-    PYBIND11_TYPE_CASTER(__uint128_t, const_name("__uint128_t"));
+    // This macro establishes the name 'MultiUInt64' in
+    // function signatures and declares a local variable
+    // 'value' of type MultiUInt64<N>
+    PYBIND11_TYPE_CASTER(OpenRAVE::MultiUInt64<N>, const_name("MultiUInt64"));
     // Python -> C++
     bool load(handle src, bool) {
         if( !isinstance<int_>(src) ) {
             return false;
         }
-        if( src >= (pybind11::cast(1)<<pybind11::cast(128)) ) {
+        const size_t maximumBit = 64 * N;
+        if( src >= (pybind11::cast(1) << pybind11::cast(maximumBit)) ) {
             return false;
         }
-        const uint64_t upper = pybind11::cast<uint64_t>(src >> pybind11::cast(64));
-        const uint64_t lower = pybind11::cast<uint64_t>(src & pybind11::cast(0xFFFFFFFFFFFFFFFFUL));
-        value = (static_cast<__uint128_t>(upper) << 64) | static_cast<__uint128_t>(lower);
+        for( size_t index = 0; index < N; ++index ) {
+            const size_t offset = (N - index - 1) * 64;
+            const uint64_t x = pybind11::cast<uint64_t>(src >> pybind11::cast(offset));
+            value.SetValue(x, index);
+        }
         return true;
     }
     // C++ -> Python
-    static handle cast(const __uint128_t& src, return_value_policy, handle) {
-        return ((pybind11::cast(static_cast<uint64_t>(src>>64)) << pybind11::cast(64)) | pybind11::cast(static_cast<uint64_t>(src & 0xFFFFFFFFFFFFFFFFUL))).inc_ref();
-    }
-};
-#endif
-template <> struct type_caster<boost::multiprecision::uint128_t> {
-public:
-    PYBIND11_TYPE_CASTER(boost::multiprecision::uint128_t, const_name("boost::multiprecision::uint128_t"));
-    bool load(handle src, bool) {
-        if( !isinstance<int_>(src) ) {
-            return false;
+    static handle cast(const OpenRAVE::MultiUInt64<N>& src, return_value_policy, handle) {
+        handle val = pybind11::cast(0);
+        for( size_t index = 0; index < N; ++index ) {
+            const size_t offset = (N - index - 1) * 64;
+            const uint64_t x = src.GetValue(index);
+            val |= pybind11::cast(x) << pybind11::cast(offset);
         }
-        if( src >= (pybind11::cast(1)<<pybind11::cast(128)) ) {
-            return false;
-        }
-        const uint64_t upper = pybind11::cast<uint64_t>(src >> pybind11::cast(64));
-        const uint64_t lower = pybind11::cast<uint64_t>(src & pybind11::cast(0xFFFFFFFFFFFFFFFFUL));
-        value = (static_cast<boost::multiprecision::uint128_t>(upper) << 64) | static_cast<boost::multiprecision::uint128_t>(lower);
-        return true;
-    }
-    static handle cast(const boost::multiprecision::uint128_t& src, return_value_policy, handle) {
-        return ((pybind11::cast(static_cast<uint64_t>(src>>64)) << pybind11::cast(64)) | pybind11::cast(static_cast<uint64_t>(src & 0xFFFFFFFFFFFFFFFFUL))).inc_ref();
+        return val.inc_ref();
     }
 };
 }
