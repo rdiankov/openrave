@@ -296,20 +296,22 @@ public:
         /// \param param The transformation of the end-effector in the global coord system
         /// \param solution Will be of size GetArmIndices().size() and contain the best solution
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        /// \return true if there is a valid ik solution.
         bool FindIKSolution(const IkParameterization& param, std::vector<dReal>& solution, int filteroptions) const;
         bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
-        bool FindIKSolution(const IkParameterization& param, int filteroptions, IkReturnPtr ikreturn) const;
-        bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn) const;
+        bool FindIKSolution(const IkParameterization& param, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
+        bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
 
         /// \brief Find all the IK solutions for the given end effector transform
         ///
         /// \param param The transformation of the end-effector in the global coord system
         /// \param solutions An array of all solutions, each element in solutions is of size GetArmIndices().size()
         /// \param[in] filteroptions A bitmask of \ref IkFilterOptions values controlling what is checked for each ik solution.
+        /// \return true if there is at least one valid ik solution.
         bool FindIKSolutions(const IkParameterization& param, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
         bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
-        bool FindIKSolutions(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const;
-        bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const;
+        bool FindIKSolutions(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
+        bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
 
         /** \brief returns the parameterization of a given IK type for the current manipulator position.
 

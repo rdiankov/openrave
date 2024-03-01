@@ -247,9 +247,20 @@ public:
                         _pdata->ranges[index] = vdir*(_report->minDistance+_pgeom->min_range);
                         _pdata->intensity[index] = 1;
                         // store the colliding bodies
-                        KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
-                        if( !!plink ) {
-                            _databodyids[index] = plink->GetParent()->GetEnvironmentBodyIndex();
+                        for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision) {
+                            const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
+                            string_view bodyname;
+                            cpinfo.ExtractFirstBodyName(bodyname);
+                            if( bodyname.empty() ) {
+                                cpinfo.ExtractSecondBodyName(bodyname);
+                            }
+
+                            if( !bodyname.empty() ) {
+                                KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
+                                if( !!pbody ) {
+                                    _databodyids[index] = pbody->GetEnvironmentBodyIndex();
+                                }
+                            }
                         }
                     }
                     else {

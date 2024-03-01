@@ -2471,7 +2471,7 @@ public:
         if( InterfaceXMLReader::endElement(xmlname) ) {
             if( !_probot ) {
                 if( _robotname.size() > 0 ) {
-                    KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
+                    KinBodyPtr pbody = _penv->GetKinBody(_robotname);
                     if( pbody->IsRobot() )
                         _probot = RaveInterfaceCast<RobotBase>(pbody);
                 }

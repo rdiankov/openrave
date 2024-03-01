@@ -294,7 +294,7 @@ public:
         if( !_pconstraints->GetReport() ) {
             return py::none_();
         }
-        return py::to_object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
+        return py::to_object(openravepy::toPyCollisionReport(_pconstraints->GetReport()));
     }
 
     void SetPlannerParameters(object oparameters)
