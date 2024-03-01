@@ -2801,6 +2801,14 @@ public:
         return !operator==(other);
     }
 
+    explicit operator bool() const {
+        return *this != 0;
+    }
+
+    bool operator!() const noexcept {
+        return *this == 0;
+    }
+
     uint64_t GetValue(size_t index) const {
         return values[index];
     }
