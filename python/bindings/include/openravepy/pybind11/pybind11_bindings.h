@@ -40,11 +40,11 @@ public:
     }
     // C++ -> Python
     static handle cast(const OpenRAVE::MultiUInt64<N>& src, return_value_policy, handle) {
-        handle val = pybind11::cast(0);
+        int_ val(0);
         for( size_t index = 0; index < N; ++index ) {
             const size_t offset = (N - index - 1) * 64;
             const uint64_t x = src.GetValue(index);
-            val |= pybind11::cast(x) << pybind11::cast(offset);
+            val = val | (pybind11::cast(x) << pybind11::cast(offset)); // |= does not work
         }
         return val.inc_ref();
     }
