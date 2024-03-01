@@ -2859,7 +2859,7 @@ public:
     /// \param hexStr hex-represented string of unsigned integer
     void LoadFromHexString(const std::string& hexStr)
     {
-        OPENRAVE_ASSERT(!hexStr.empty(), "Cannot convert empty string (\"%s\") to unsigned integer", hexStr, ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT0(!hexStr.empty(), "Cannot convert empty string to unsigned integer", ORE_InvalidArguments);
         // assume hex, 64bits can be represented by 16 chars
         constexpr size_t lenOfuint64BitAsStr(16);
 
