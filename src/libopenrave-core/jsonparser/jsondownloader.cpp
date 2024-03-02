@@ -180,7 +180,7 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
             }
 
             // check http response code
-            int responseCode = 0;
+            long responseCode = 0;
             const CURLcode getInfoCode = curl_easy_getinfo(pContext->curl, CURLINFO_RESPONSE_CODE, &responseCode);
             if (getInfoCode != CURLE_OK) {
                 throw OPENRAVE_EXCEPTION_FORMAT("failed to get response status code for uri \"%s\": %s", pContext->uri%curl_easy_strerror(getInfoCode), ORE_CurlInvalidHandle);
