@@ -4521,7 +4521,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             else if( neighstatefn == NSS_SuccessfulWithDeviation ) {
                 bHasRampDeviatedFromInterpolation = true;
-                bHasNewTempConfigToAdd = true;
                 // Now _vtempconfig is updated but is different from _vtempconfig2 + dQ. Therefore, need to make sure
                 // again that the segment (_vtempconfig2, _vtempconfig) is at least collision-free.
 
@@ -4584,7 +4583,6 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             else {
                 // neighstatefn returns _vtempconfig + dQ, so no problem.
-                bHasNewTempConfigToAdd = true;
             }
         } // end for iStep
 
