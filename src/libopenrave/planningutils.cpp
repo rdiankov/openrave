@@ -2596,7 +2596,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         return CFO_StateSettingError;
     }
     BOOST_ASSERT(_listCheckBodies.size()>0);
-    int start=0;
+    int start=0; // 0 if should check the first configuration, 1 if should skip the first configuration
     bool bCheckEnd=false;
     switch (maskinterval) {
     case IT_Open:
@@ -2850,13 +2850,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         int numRepeating = 0;
         dReal fBestNewStep=0;
         bool bComputeNewStep = true; // if true, then compute fBestNewStep from fStep. Otherwise use the previous computed one
-        bool bHasNewTempConfigToAdd = false;
+        bool bHasNewTempConfigToAdd = false; // if true, then should call _SetAndCheckState on _vtempconfig and add it to configurations
         while(istep < numSteps && prevtimestep < timeelapsed) {
             int nstateret = 0;
-            if( istep >= start || !bComputeNewStep ) {
+            if( bHasNewTempConfigToAdd ) {
                 // In case bComputeNewStep is false, _vtempconfig has already been updated to a new value (bHasMoved is
-                // true) but istep has not been incremented (so that we keep using the same fBestNewStep in this
-                // iteration, due to dqscale < 1).
+                // true) but istep has not been incremented so that we keep using the same fBestNewStep in this
+                // iteration, due to dqscale < 1. (Look at "!bHasMoved || (istep+1 < numSteps && numRepeating > 2) || dqscale >= 1" check)
                 //
                 // Since we expect to do all the checks for _vtempconfig here, we need to make sure that this
                 // _SetAndCheckState is called for all unchecked configurations. Without the condition
@@ -2961,7 +2961,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             _vprevtempconfig = _vtempconfig;
             _vprevtempvelconfig = _vtempvelconfig;
 
-            dReal dqscale = 1.0;
+            dReal dqscale = 1.0; // time step multiple. < 1 means that robot moves a lot more than the defined resolutions and therefore needs to be more finely sampled.
             int iScaledIndex = -1; // index into dQ of the DOF that has changed the most and affected dqscale
             for( int idof = 0; idof < (int)_vtempconfig.size(); ++idof) {
                 dQ[idof] = q0.at(idof) + timestep * (dq0.at(idof) + timestep * 0.5 * _vtempaccelconfig.at(idof)) - _vtempconfig.at(idof);
@@ -3102,7 +3102,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             bHasNewTempConfigToAdd = true;
 
-            bool bHasMoved = false;
+            bool bHasMoved = false; // true if _vtempconfig is different from the previous tempconfig  _vprevtempconfig) by a significant amount
             {
                 // the neighbor function could be a constraint function and might move _vtempconfig by more than the specified dQ! so double check the straight light distance between them justin case?
                 // TODO check if acceleration limits are satisfied between _vtempconfig, _vprevtempconfig, and _vprevtempvelconfig
@@ -3164,7 +3164,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 bComputeNewStep = true;
                 ++istep;
             }
-            else {
+            else { // bHasMoved && (istep+1 >= numSteps || numRepeating <= 2) && dqscale < 1
                 bComputeNewStep = false;
             }
             prevtimestep = timestep; // have to always update since it serves as the basis for the next timestep chosen
@@ -3243,6 +3243,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         int nstateret = 0;
                         if( istep >= start ) {
                             nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                            bHasNewTempConfigToAdd = false;
                             if( !!params->_getstatefn ) {
                                 params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
                             }
@@ -3943,6 +3944,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         dReal tnext = 0; // the next time instant we are aiming for
         dReal fMinNextTimeStep = 0; // when computing tnext, it should be such that tnext > fMinNextTimeStep
         int istep = 0;   // the number of steps we have taken along the path.
+        bool bHasNewTempConfigToAdd = false; // if true, then should call _SetAndCheckState on _vtempconfig and add it to configurations
 
         std::vector<size_t> vnextcriticalpointindices;
         vnextcriticalpointindices.resize(ndof, 1); // vnextcriticalpointindices[i] is the index of the next closest critical point for dof i considering that we are at the time instant tcur
@@ -3951,7 +3953,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
         while( istep < totalSteps && tcur < timeelapsed ) {
             // Check the current state (q, qd, qdd)
             int nstateret = 0;
-            if( istep >= start || !bComputeNewTimeStep ) {
+            if( istep >= start || bHasNewTempConfigToAdd ) {
                 nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
                 if( !!params->_getstatefn ) {
                     params->_getstatefn(_vtempconfig);
@@ -3960,6 +3962,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
                     filterreturn->_configurationtimes.push_back(tcur);
                 }
+                bHasNewTempConfigToAdd = false;
             }
             if( nstateret != 0 ) {
                 if( !!filterreturn ) {
@@ -4230,6 +4233,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             if( neighstatus == NSS_SuccessfulWithDeviation ) {
                 bHasRampDeviatedFromInterpolation = true;
             }
+            bHasNewTempConfigToAdd = true;
 
             // Fill in _vtempvelconfig and _vtempaccelconfig
             switch( maskinterpolation ) {
@@ -4517,6 +4521,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             else if( neighstatefn == NSS_SuccessfulWithDeviation ) {
                 bHasRampDeviatedFromInterpolation = true;
+                bHasNewTempConfigToAdd = true;
                 // Now _vtempconfig is updated but is different from _vtempconfig2 + dQ. Therefore, need to make sure
                 // again that the segment (_vtempconfig2, _vtempconfig) is at least collision-free.
 
@@ -4579,6 +4584,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
             else {
                 // neighstatefn returns _vtempconfig + dQ, so no problem.
+                bHasNewTempConfigToAdd = true;
             }
         } // end for iStep
 
