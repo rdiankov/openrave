@@ -1109,17 +1109,21 @@ void PyJointInfo::_Update(const KinBody::JointInfo& info) {
     _vupperlimit = toPyArray<dReal,3>(info._vupperlimit);
     // TODO
     // _trajfollow = py::to_object(toPyTrajectory(info._trajfollow, ?env?));
-    FOREACHC(itmimic, info._vmimic) {
-        if( !*itmimic ) {
-            _vmimic.append(py::none_());
-        }
-        else {
-            py::list oequations;
-            FOREACHC(itequation, (*itmimic)->_equations) {
-                oequations.append(*itequation);
+    {
+        py::list vmimic;
+        FOREACHC(itmimic, info._vmimic) {
+            if( !*itmimic ) {
+                vmimic.append(py::none_());
             }
-            _vmimic.append(oequations);
+            else {
+                py::list oequations;
+                FOREACHC(itequation, (*itmimic)->_equations) {
+                    oequations.append(*itequation);
+                }
+                vmimic.append(oequations);
+            }
         }
+        _vmimic = vmimic;
     }
     FOREACHC(it, info._mapFloatParameters) {
         _mapFloatParameters[it->first.c_str()] = toPyArray(it->second);
