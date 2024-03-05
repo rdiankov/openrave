@@ -157,6 +157,7 @@ public:
     boost::array<int16_t, 3> robotControllerAxisIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis (up to the DOF of the joint). -1 if not specified/not valid.
     boost::array<dReal, 3> robotControllerAxisMult = {1.0, 1.0, 1.0}; ///< indicates the multiplier to convert the joint values from the environment units to the robot controller units, per joint axis. (valueInRobotControllerUnits - robotControllerAxisOffset) / robotControllerAxisMult = valueInEnvUnits
     boost::array<dReal, 3> robotControllerAxisOffset = {0.0, 0.0, 0.0}; ///< indicates the offset, in the robot controller units, that should be applied to the joint values, per joint axis.
+    boost::array<std::string, 3> robotControllerAxisManufacturerCode = {"", "", ""}; ///< indicates the manufacturer codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices.
     boost::array<std::string, 3> robotControllerAxisProductCode = {"", "", ""}; ///< indicates the product codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices. it is different from ElectricMotorActuatorInfo::model_type, which is the name of the motor type attached to the servo devices.
 };
 typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;

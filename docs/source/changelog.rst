@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.142.0
+===============
+
+- Add robotControllerAxisManufacturerCode so that servo drives from different manufacturer connected to daisy chain can be handled.
+
 Version 0.141.0
 ===============
 
