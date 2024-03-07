@@ -9,6 +9,11 @@ Version 0.142.0
 - Add robotControllerAxisManufacturerCode so that servo drives from different manufacturer connected to daisy chain can be handled.
 - Fix unbounded growth of _vmimic
 
+Version 0.141.1
+===============
+
+* Fix the issue that some robot configurations might not be checked in `Check` function.
+
 Version 0.141.0
 ===============
 
