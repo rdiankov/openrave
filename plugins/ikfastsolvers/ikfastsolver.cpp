@@ -570,7 +570,7 @@ protected:
             if( !bIndependentLink2 && !bChildLink2 && !cpinfo.bodyLinkGeom2Name.empty() ) {
                 FOREACH(it,_listGrabbedSavedStates) {
                     const KinBodyPtr& pbody = it->GetBody();
-                    if( !!pbody && cpinfo.CompareSecondBodyName(pbody->GetName()) ) {
+                    if( !!pbody && cpinfo.CompareSecondBodyName(pbody->GetName()) == 0 /*compares equal*/ ) {
                         if( !_bCheckEndEffectorEnvCollision ) {
                             // if bodyLinkGeom1Name is not part of the robot, then ignore.
                             if( cpinfo.bodyLinkGeom1Name.empty() || cpinfo.CompareFirstBodyName(_probot->GetName()) != 0 ) {
@@ -587,7 +587,7 @@ protected:
             if( !bIndependentLink1 && !bChildLink1 && !cpinfo.bodyLinkGeom1Name.empty() ) {
                 FOREACH(it,_listGrabbedSavedStates) {
                     const KinBodyPtr& pbody = it->GetBody();
-                    if( !!pbody && cpinfo.CompareFirstBodyName(pbody->GetName()) ) {
+                    if( !!pbody && cpinfo.CompareFirstBodyName(pbody->GetName()) == 0 /*compares equal*/ ) {
                         if( !_bCheckEndEffectorEnvCollision ) {
                             // if plink2 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
                             if( cpinfo.bodyLinkGeom2Name.empty() || cpinfo.CompareSecondBodyName(_probot->GetName()) != 0 ) {
