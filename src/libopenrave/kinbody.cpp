@@ -2193,10 +2193,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                         if( p[i] < lowerlimit ) {
                             if( p[i] < lowerlimit-g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
+                                    RAVELOG_WARN(str(boost::format("env=%s, dof %d value %.16e is smaller than the lower limit %.16e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, dof %d value %.16e is smaller than the lower limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = lowerlimit;
