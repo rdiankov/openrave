@@ -7,6 +7,7 @@ Version 0.141.2
 ===============
 
 - Cache the absence of collision bodies for a kinbody in the FCL collision manager, improving collision checking performance
+- Instead of unconditionally resetting BodyState in _UpdatePublishedBodies, first test whether the state has already been initialized from the given body / update stamp. If it has, skip re-extracting all data. Since bodies are in a relatively stable order, this significantly improves average-case performance.
 
 Version 0.141.1
 ===============

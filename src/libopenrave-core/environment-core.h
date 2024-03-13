@@ -2813,27 +2813,35 @@ public:
             }
 
             KinBody::BodyState& state = _vPublishedBodies.at(iwritten);
-            state.Reset();
-            state.pbody = pbody;
-            pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
-            pbody->GetLinkEnableStates(state.vLinkEnableStates);
-            pbody->GetDOFValues(state.jointvalues);
-            pbody->GetGrabbedInfo(state.vGrabbedInfos);
-            state.strname =pbody->GetName();
-            state.uri = pbody->GetURI();
-            state.updatestamp = pbody->GetUpdateStamp();
-            state.environmentid = pbody->GetEnvironmentBodyIndex();
-            if( pbody->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-                if( !!probot ) {
-                    RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
-                    if( !!pmanip ) {
-                        state.activeManipulatorName = pmanip->GetName();
-                        state.activeManipulatorTransform = pmanip->GetTransform();
+
+            // If this state was already inititalized from this body, we might be able to skip updating it if the body itself hasn't changed.
+            const bool canSkipUpdate = state.pbody == pbody && state.updatestamp == pbody->GetUpdateStamp();
+
+            // Only if the body is mismatched with the state do we need to do a full update
+            if (!canSkipUpdate) {
+                state.Reset();
+                state.pbody = pbody;
+                pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+                pbody->GetLinkEnableStates(state.vLinkEnableStates);
+                pbody->GetDOFValues(state.jointvalues);
+                pbody->GetGrabbedInfo(state.vGrabbedInfos);
+                state.strname = pbody->GetName();
+                state.uri = pbody->GetURI();
+                state.updatestamp = pbody->GetUpdateStamp();
+                state.environmentid = pbody->GetEnvironmentBodyIndex();
+                if (pbody->IsRobot()) {
+                    RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+                    if (!!probot) {
+                        RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
+                        if (!!pmanip) {
+                            state.activeManipulatorName = pmanip->GetName();
+                            state.activeManipulatorTransform = pmanip->GetTransform();
+                        }
+                        probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                     }
-                    probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                 }
             }
+
             ++iwritten;
         }
 
