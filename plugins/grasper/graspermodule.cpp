@@ -1016,7 +1016,7 @@ public:
                         RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
                         for(int icollision = 0; icollision < report->nNumValidCollisions; ++icollision) {
                             const CollisionPairInfo& cpinfo = report->vCollisionInfos[icollision];
-                            bool bFirstMatchesRobot = cpinfo.CompareFirstBodyName(probot->GetName());
+                            bool bFirstMatchesRobot = cpinfo.CompareFirstBodyName(probot->GetName()) == 0;
                             for(const CONTACT& c : cpinfo.contacts) {
                                 if( bFirstMatchesRobot ) {
                                     grasp_params->contacts.emplace_back(c, (*itlink)->GetIndex());
