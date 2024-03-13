@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.141.2
+===============
+
+- Instead of unconditionally resetting BodyState in _UpdatePublishedBodies, first test whether the state has already been initialized from the given body / update stamp. If it has, skip re-extracting all data. Since bodies are in a relatively stable order, this significantly improves average-case performance.
+
 Version 0.141.1
 ===============
 
