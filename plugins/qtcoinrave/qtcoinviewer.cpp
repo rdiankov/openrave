@@ -640,6 +640,12 @@ void QtCoinViewer::SetUserText(const string& userText)
     _userText = userText;
 }
 
+void QtCoinViewer::SetTextSize(double size)
+{
+    _textSize = size;
+    UpdateFromModel();
+}
+
 bool QtCoinViewer::LoadModel(const string& pfilename)
 {
     SoInput mySceneInput;
@@ -3015,7 +3021,9 @@ void QtCoinViewer::UpdateFromModel()
                     }
 
                     if( pbody->IsRobot() ) {
-                        pitem = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
+                        boost::shared_ptr<RobotItem> probot = boost::shared_ptr<RobotItem>(new RobotItem(shared_viewer(), RaveInterfaceCast<RobotBase>(pbody), _viewGeometryMode),ITEM_DELETER);
+                        probot->SetTextSize(_textSize);
+                        pitem = probot;
                     }
                     else {
                         pitem = boost::shared_ptr<KinBodyItem>(new KinBodyItem(shared_viewer(), pbody, _viewGeometryMode),ITEM_DELETER);

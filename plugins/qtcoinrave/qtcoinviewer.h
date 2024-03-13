@@ -132,6 +132,7 @@ public:
         return _name;
     }
     virtual void SetUserText(const string& userText);
+    virtual void SetTextSize(double size);
 
     virtual bool LoadModel(const string& filename);
 
@@ -421,6 +422,7 @@ public:
 
     std::string _name;
     std::string _userText;
+    double _textSize;
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;        ///< all the bodies created
 
     ItemPtr _pSelectedItem;                   ///< the currently selected item

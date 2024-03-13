@@ -233,10 +233,14 @@ public:
     }
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
     virtual void Load();
+    virtual void SetTextSize(double size) {
+        _textSize = size;
+    }
 private:
     void CreateAxis(EE& ee, const string& name, const Vector* pdirection=NULL);
     std::vector< EE > _vEndEffectors, _vAttachedSensors;
     RobotBasePtr _probot;
+    double _textSize;
 };
 typedef boost::shared_ptr<RobotItem> RobotItemPtr;
 typedef boost::shared_ptr<RobotItem const> RobotItemConstPtr;
