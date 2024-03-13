@@ -1170,14 +1170,16 @@ void QOSGViewerWidget::SetViewport(int width, int height)
 
 void QOSGViewerWidget::SetHUDTextSize(double size)
 {
-    _hudTextSize = size;
+    if ( size >= 0 ) {
+        _hudTextSize = size;
 
-    float scale = this->devicePixelRatio();
-    double textheight = _hudTextSize*scale;
-    _osgHudText->setCharacterSize(textheight);
-    _osgHudText->setFontResolution(textheight, textheight);
+        float scale = this->devicePixelRatio();
+        double textheight = _hudTextSize*scale;
+        _osgHudText->setCharacterSize(textheight);
+        _osgHudText->setFontResolution(textheight, textheight);
 
-    SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+        SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+    }
 }
 
 osg::Vec2 QOSGViewerWidget::GetHUDTextOffset()

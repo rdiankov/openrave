@@ -642,8 +642,10 @@ void QtCoinViewer::SetUserText(const string& userText)
 
 void QtCoinViewer::SetTextSize(double size)
 {
-    _textSize = size;
-    UpdateFromModel();
+    if ( size >= 0 ) {
+        _textSize = size;
+        UpdateFromModel();
+    }
 }
 
 bool QtCoinViewer::LoadModel(const string& pfilename)
