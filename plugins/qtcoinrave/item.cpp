@@ -533,7 +533,6 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
 
 RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom), _probot(robot)
 {
-    _textSize = 18;
 }
 
 void RobotItem::Load()
@@ -695,7 +694,7 @@ void RobotItem::CreateAxis(RobotItem::EE& ee, const string& name, const Vector* 
 
         SoFont* pfont = new SoFont();
         pfont->name = "Courier:Bold";
-        pfont->size = _textSize;
+        pfont->size = 18;
         ptextsep->addChild(pfont);
 
         SoText2 * ptext = new SoText2();
