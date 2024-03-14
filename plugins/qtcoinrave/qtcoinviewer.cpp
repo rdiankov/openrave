@@ -259,7 +259,7 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     SoSeparator* pmsgsep = new SoSeparator();
 
     _messagefont = new SoFont();
-    _messagefont->size = 18;
+    _messagefont->size = 10;
     pmsgsep->addChild(_messagefont);
 
     _messageBaseTranslation = new SoTranslation();
@@ -704,16 +704,18 @@ SbVec3f QtCoinViewer::_GetMessageBaseTranslation()
     SbViewportRegion v = _pviewer->getViewportRegion();
     float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
     float size = _messagefont->size.getValue();
+    // magic window-size-independent constants that ensure that all preset text sizes
+    // are roughly vertically aligned by the top of the first line
     if (size < 14.0f) {
         return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.07f*fhratio),0);
     }
     if (size < 18.0f) {
-        return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.098f*fhratio),0);
+        return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.082f*fhratio),0);
     }
     if (size < 26.0f) {
-        return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.126f*fhratio),0);
+        return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.106f*fhratio),0);
     }
-    return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.182f*fhratio),0);
+    return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.126f*fhratio),0);
 }
 
 SbVec3f QtCoinViewer::_GetMessageShadowTranslation()
@@ -721,7 +723,8 @@ SbVec3f QtCoinViewer::_GetMessageShadowTranslation()
     SbViewportRegion v = _pviewer->getViewportRegion();
     float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
     float size = _messagefont->size.getValue();
-
+    // magic window-size-independent constants that ensure that the message shadow
+    // sits roughly one pixel above the base message text
     if (size < 14.0f) {
         return SbVec3f(-0.002f*fwratio,(0.032f*fhratio)*(size/10.0f),0);
     }
@@ -2894,7 +2897,8 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             ss << _userText << endl;
         }
 
-        // adjust the shadow text
+        // adjust the text offsets
+        _messageBaseTranslation->translation.setValue(_GetMessageBaseTranslation());
         _messageShadowTranslation->translation.setValue(_GetMessageShadowTranslation());
 
         // search for all new lines
