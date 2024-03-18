@@ -186,6 +186,7 @@ public:
     object robotControllerAxisIndex;
     object robotControllerAxisMult;
     object robotControllerAxisOffset;
+    py::list robotControllerAxisManufacturerCode;
     py::list robotControllerAxisProductCode;
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
