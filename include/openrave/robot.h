@@ -1437,11 +1437,17 @@ private:
     friend class Grabbed;
 };
 
+enum EnvironmentBodyRemoverRestoreOptions : uint8_t
+{
+    EBRRO_AbortOnActiveManipulatorLost = 0b01, ///< will abort if active manipulator cannot be restored.
+    EBRRO_AbortOnGrabbedBodiesLost = 0b10,     ///< will abort if grabbed bodies cannot be restored.
+};
+
 ///\brief removes the robot from the environment temporarily while in scope
 class OPENRAVE_API EnvironmentBodyRemover
 {
 public:
-    EnvironmentBodyRemover(KinBodyPtr pBody, bool abortOnActiveManipulatorLost=false, bool abortOnGrabbedBodiesLost=true);
+    EnvironmentBodyRemover(KinBodyPtr pBody, int restoreOptions=EBRRO_AbortOnActiveManipulatorLost);
     ~EnvironmentBodyRemover() noexcept(true);
 
 private:
@@ -1449,8 +1455,7 @@ private:
     std::vector<KinBody::GrabbedInfoPtr> _pGrabbedInfos; ///< the list of the current grabbed info of pBody at the time of removal.
     RobotBasePtr _pBodyRobot;
     std::string _activeManipName; ///< the name of the current active manipulator of pBody at the time of removal.
-    bool _abortOnActiveManipulatorLost;
-    bool _abortOnGrabbedBodiesLost;
+    int _restoreOptions;
 };
 
 } // end namespace OpenRAVE
