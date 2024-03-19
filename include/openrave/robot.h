@@ -1447,7 +1447,7 @@ enum EnvironmentBodyRemoverRestoreOptions : uint8_t
 class OPENRAVE_API EnvironmentBodyRemover
 {
 public:
-    EnvironmentBodyRemover(KinBodyPtr pBody, int restoreOptions=EBRRO_AbortOnActiveManipulatorLost);
+    EnvironmentBodyRemover(KinBodyPtr pBody, int restoreOptions=EBRRO_AbortOnGrabbedBodiesLost); // abort on grabbed bodies lost for backward compatibility
     ~EnvironmentBodyRemover() noexcept(true);
 
 private:
