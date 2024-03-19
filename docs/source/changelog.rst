@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.142.0
+===============
+
+* Allow EnvironmentBodyRemover not to restore a grabbed body when the grabbing link does not exist as we do for active manipulator
+
 Version 0.141.1
 ===============
 
