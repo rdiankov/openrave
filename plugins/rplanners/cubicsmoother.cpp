@@ -447,7 +447,7 @@ public:
             // Check to really make sure that all waypoints are certainly at least collision-free.
             std::vector<dReal>& waypoint = _cacheAllWaypoints; // reuse _cacheAllWaypoints
             std::vector<dReal> &x0Vect = _cacheX0Vect, &v0Vect = _cacheV0Vect, &a0Vect = _cacheA0Vect;
-            for( int iwaypoint = 0; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint ) {
+            for( int iwaypoint = 0; iwaypoint < (int)ptraj->GetNumWaypoints(); ++iwaypoint ) {
                 // Get waypoint data from the trajectory
                 ptraj->GetWaypoint(iwaypoint, waypoint, newSpec);
 

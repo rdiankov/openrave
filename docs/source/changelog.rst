@@ -3,13 +3,27 @@
 ChangeLog
 #########
 
-Unreleased
-==========
+Version 0.142.0
+===============
+
+* Allow EnvironmentBodyRemover not to restore a grabbed body when the grabbing link does not exist as we do for active manipulator
+
+Version 0.141.1
+===============
+
+* Fix the issue that some robot configurations might not be checked in `Check` function.
+
+Version 0.141.0
+===============
+
+- Add IkFailureAccumulatorBase to allow for cache of IK failure data and statistics gathering.
 
 Version 0.140.0
 ===============
 
-* Allow EnvironmentBodyRemover not to restore a grabbed body when the grabbing link does not exist as we do for active manipulator
+- Cleanup CollisionReport to be more memory efficient and unify single collision vs all collisions.
+
+- Add IkFilterInfo and IkFailureAccumulator to allow for fast accumulation of IK failures.
 
 Version 0.139.2
 ===============

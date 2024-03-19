@@ -18,12 +18,110 @@
 
 namespace OpenRAVE {
 
+IkFailureInfo::IkFailureInfo(const IkFailureInfo& rhs)
+{
+    _action = rhs._action;
+    _vconfig = rhs._vconfig;
+    _report = rhs._report;
+    _description = rhs._description;
+    _rCustomData.CopyFrom(rhs._rCustomData, _rCustomData.GetAllocator());
+    _bIkParamValid = rhs._bIkParamValid;
+    if( _bIkParamValid ) {
+        _ikparam = rhs._ikparam;
+    }
+    // don't copy _memoryPoolIndex
+}
+
+void IkFailureInfo::Reset()
+{
+    _action = IKRA_Reject;
+    _vconfig.clear();
+    _report.Reset();
+    _description.clear();
+    _rCustomData = rapidjson::Document(); // start a new document to prevent memory leaks
+    _rCustomData.SetObject();
+    //_mapdata.clear();
+    _bIkParamValid = false;
+    // don't reset _memoryPoolIndex
+}
+
+//void IkFailureInfo::Init(const IkFailureInfo& ikFailureInfo)
+//{
+//    _action = ikFailureInfo._action;
+//    _vconfig = ikFailureInfo._vconfig;
+//    _description = ikFailureInfo._description;
+//    _mapdata = ikFailureInfo._mapdata;
+//    _report = ikFailureInfo._report;
+//    if( ikFailureInfo.HasValidIkParam() ) {
+//        SetIkParam(ikFailureInfo.GetIkParam());
+//    }
+//    else {
+//        _bIkParamValid = false;
+//    }
+//}
+
+void IkFailureInfo::SetDescription(const std::string& description)
+{
+    _description = description;
+}
+
+void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Document::AllocatorType& alloc) const
+{
+    rIkFailureInfo.SetObject();
+    orjson::SetJsonValueByKey(rIkFailureInfo, "action", _action, alloc);
+    if( _vconfig.size() > 0 ) {
+        orjson::SetJsonValueByKey(rIkFailureInfo, "config", _vconfig, alloc);
+    }
+    if( _bIkParamValid ) {
+        orjson::SetJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam, alloc);
+    }
+    if( _report.IsValid() ) {
+        rapidjson::Value rCollisionReportInfo;
+        _report.SaveToJson(rCollisionReportInfo, alloc);
+        orjson::SetJsonValueByKey(rIkFailureInfo, "collisionReportInfo", rCollisionReportInfo, alloc);
+    }
+    if( !_description.empty() ) {
+        orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
+    }
+    if( !_rCustomData.IsNull() && _rCustomData.MemberCount() > 0 ) {
+        rapidjson::Value rCustomDataCopy;
+        rCustomDataCopy.CopyFrom(_rCustomData, alloc);
+        rIkFailureInfo.AddMember("mapdata", rCustomDataCopy, alloc);
+    }
+//    if( _mapdata.size() > 0 ) {
+//        rapidjson::Value mapdatajson(rapidjson::kObjectType);
+//        FOREACHC(itKeyValue, _mapdata) {
+//            orjson::SetJsonValueByKey(mapdatajson, itKeyValue->first.c_str(), itKeyValue->second, alloc);
+//        }
+//        orjson::SetJsonValueByKey(rIkFailureInfo, "mapdata", mapdatajson, alloc);
+//    }
+}
+
+void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
+{
+    Reset();
+    {
+        uint64_t actionInt = (uint64_t) _action;
+        orjson::LoadJsonValueByKey(rIkFailureInfo, "action", actionInt);
+        _action = (IkReturnAction) actionInt;
+    }
+    orjson::LoadJsonValueByKey(rIkFailureInfo, "config", _vconfig);
+    _bIkParamValid = orjson::LoadJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam);
+    if( rIkFailureInfo.HasMember("collisionReportInfo") ) {
+        _report.LoadFromJson(rIkFailureInfo["collisionReportInfo"]);
+    }
+    orjson::LoadJsonValueByKey(rIkFailureInfo, "description", _description);
+    if( rIkFailureInfo.HasMember("mapdata") ) {
+        _rCustomData.CopyFrom(rIkFailureInfo["mapdata"], _rCustomData.GetAllocator());
+    }
+}
+
 bool IkReturn::Append(const IkReturn& r)
 {
     bool bclashing = false;
     if( !!r._userdata ) {
         if( !!_userdata ) {
-            RAVELOG_WARN("IkReturn already has _userdata set, but overwriting anyway\n");
+            RAVELOG_WARN("IkReturn already has _userdata set, but overwriting it anyway.");
             bclashing = true;
         }
         _userdata = r._userdata;
@@ -42,11 +140,14 @@ bool IkReturn::Append(const IkReturn& r)
     }
     if( r._vsolution.size() > 0 ) {
         if( _vsolution.size() > 0 ) {
-            RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting anyway\n");
+            RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting it anyway.");
             bclashing = true;
         }
         _vsolution = r._vsolution;
     }
+    _vIkFailureInfoIndices = r._vIkFailureInfoIndices;
+    //_vIkFailureInfos.reserve(_vIkFailureInfos.size() + r._vIkFailureInfos.size());
+    //_vIkFailureInfos.insert(_vIkFailureInfos.end(), r._vIkFailureInfos.begin(), r._vIkFailureInfos.end());
     return bclashing;
 }
 
@@ -55,7 +156,7 @@ void IkReturn::Clear()
     _mapdata.clear();
     _userdata.reset();
     _vsolution.resize(0);
-    //_reports.resize(0); // TODO
+    _vIkFailureInfoIndices.clear();
 }
 
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
@@ -117,6 +218,11 @@ bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dRea
     return true;
 }
 
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn)
+{
+    return Solve(param, q0, filteroptions, ikreturn);
+}
+
 bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns)
 {
     ikreturns.resize(0);
@@ -131,6 +237,11 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, 
         ikreturns[i]->_action = IKRA_Success;
     }
     return vsolutions.size() > 0;
+}
+
+bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
+{
+    return SolveAll(param, filteroptions, ikreturns);
 }
 
 bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
@@ -148,6 +259,11 @@ bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dRea
     return true;
 }
 
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn)
+{
+    return Solve(param, q0, vFreeParameters, filteroptions, ikreturn);
+}
+
 bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns)
 {
     ikreturns.resize(0);
@@ -162,6 +278,11 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<d
         ikreturns[i]->_action = IKRA_Success;
     }
     return vsolutions.size() > 0;
+}
+
+bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
+{
+    return SolveAll(param, vFreeParameters, filteroptions, ikreturns);
 }
 
 UserDataPtr IkSolverBase::RegisterCustomFilter(int32_t priority, const IkSolverBase::IkFilterCallbackFn &filterfn)
@@ -217,6 +338,10 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
         if( !!pitdata && pitdata->_priority >= minpriority && pitdata->_priority <= maxpriority) {
             IkReturn ret = pitdata->_filterfn(solution,manipulator,param);
             if( ret != IKRA_Success ) {
+                if( !!filterreturn ) {
+                    filterreturn->Append(ret);
+                    filterreturn->_action = static_cast<IkReturnAction>(filterreturn->_action | ret._action);
+                }
                 return ret._action; // just return the action
             }
             if( vtestsolution.size() > 0 ) {
@@ -231,7 +356,7 @@ IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBas
                     if( RaveFabs(vtestsolution.at(i)-vtestsolution2.at(i)) > g_fEpsilonJointLimit ) {
                         int dofindex = manipulator->GetArmIndices()[i];
                         KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(dofindex); // for debugging
-                        
+
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                         ss << "dof " << dofindex << " of solution=[";
                         for( const dReal value : vtestsolution) {
@@ -284,4 +409,4 @@ void IkSolverBase::_CallFinishCallbacks(IkReturnPtr ikreturn, RobotBase::Manipul
     }
 }
 
-}
+} // end namespace OpenRAVE

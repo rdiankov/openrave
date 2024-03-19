@@ -728,9 +728,21 @@ std::pair<Vector,Vector> KinBody::Link::GetVelocity() const
     return velocities;
 }
 
-KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
+KinBody::GeometryPtr KinBody::Link::GetGeometry(int index) const
 {
     return _vGeometries.at(index);
+}
+
+KinBody::GeometryPtr KinBody::Link::GetGeometry(const string_view geomname) const
+{
+    if( !geomname.empty() ) {
+        for(const KinBody::GeometryPtr& pgeom : _vGeometries) {
+            if( pgeom->GetName() == geomname ) {
+                return pgeom;
+            }
+        }
+    }
+    return KinBody::GeometryPtr();
 }
 
 void KinBody::Link::_InitGeometriesInternal(bool bForceRecomputeMeshCollision) {
@@ -805,7 +817,11 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
 {
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(groupname);
     if( it == _info._mapExtraGeometries.end() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group '%s' does not exist for link '%s', current number of geometries=%d, numGroups=%d, isEnabled=%d."), groupname%GetName()%_vGeometries.size()%_info._mapExtraGeometries.size()%_info._bIsEnabled, ORE_InvalidArguments);
+        std::stringstream ssGroupNames;
+        for(const std::pair< std::string, std::vector<KinBody::GeometryInfoPtr> >& grouppair : _info._mapExtraGeometries) {
+            ssGroupNames << grouppair.first << ", ";
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, geometry group '%s' does not exist for body '%s' link '%s', current number of geometries=%d, extra groups=[%s], isEnabled=%d."), GetParent()->GetEnv()->GetNameId()%groupname%GetParent()->GetName()%GetName()%_vGeometries.size()%ssGroupNames.str()%_info._bIsEnabled, ORE_InvalidArguments);
     }
     return it->second;
 }
@@ -1021,6 +1037,11 @@ bool KinBody::Link::IsRigidlyAttached(const Link &link) const
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),link.GetIndex()) != _vRigidlyAttachedLinks.end();
 }
 
+bool KinBody::Link::IsRigidlyAttached(const int linkIndex) const
+{
+    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),linkIndex) != _vRigidlyAttachedLinks.end();
+}
+
 void KinBody::Link::UpdateInfo()
 {
     // always have to recompute the geometries
@@ -1044,7 +1065,7 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
     }
     {
         boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
-            FOREACHC(it, GetReadableInterfaces()) {
+        FOREACHC(it, GetReadableInterfaces()) {
             if (!!it->second) {
                 // make a copy of the readable interface
                 // caller may modify and call UpdateFromInfo with modified readable interfaces
