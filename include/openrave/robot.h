@@ -1439,9 +1439,10 @@ private:
 
 enum EnvironmentBodyRemoverRestoreOptions : uint8_t
 {
-    EBRRO_NoAbortOnInfoLost = 0, ///< will not abort even if active manipulator or grabbed bodies cannot be restored.
+    EBRRO_NoAbortOnInfoLost = 0, ///< will not abort even if any info cannot be restored.
     EBRRO_AbortOnActiveManipulatorLost = 0b01, ///< will abort if active manipulator cannot be restored.
     EBRRO_AbortOnGrabbedBodiesLost = 0b10,     ///< will abort if grabbed bodies cannot be restored.
+    EBRRO_AbortOnInfoLost = EBRRO_AbortOnActiveManipulatorLost | EBRRO_AbortOnGrabbedBodiesLost; ///< will abort if any info cannot be restored.
 };
 
 ///\brief removes the robot from the environment temporarily while in scope
