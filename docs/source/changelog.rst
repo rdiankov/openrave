@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.142.0
+===============
+
+* Add centidegree unit definition.
+
 Version 0.141.1
 ===============
 
