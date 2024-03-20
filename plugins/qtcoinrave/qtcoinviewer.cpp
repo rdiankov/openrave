@@ -258,9 +258,9 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     // add the message texts
     SoSeparator* pmsgsep = new SoSeparator();
 
-    _messagefont = new SoFont();
-    _messagefont->size = 10;
-    pmsgsep->addChild(_messagefont);
+    _messageFont = new SoFont();
+    _messageFont->size = 10;
+    pmsgsep->addChild(_messageFont);
 
     _messageBaseTranslation = new SoTranslation();
     _messageBaseTranslation->translation.setValue(SbVec3f(-0.978f,0.874f,0));
@@ -678,7 +678,7 @@ void QtCoinViewer::_SetTextSize(double size)
     if ( size > 0 ) {
         // TODO: use a font that does not rely on hardcoded breakpoints
         // move down to next text size breakpoint so that message shadow aligns nicely
-        _messagefont->size = _GetTextBaseSize(size);
+        _messageFont->size = _GetTextBaseSize(size);
         // adjust the text offsets
         _messageBaseTranslation->translation.setValue(_GetMessageBaseTranslation());
         _messageShadowTranslation->translation.setValue(_GetMessageShadowTranslation());
@@ -703,7 +703,7 @@ SbVec3f QtCoinViewer::_GetMessageBaseTranslation()
 {
     SbViewportRegion v = _pviewer->getViewportRegion();
     float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
-    float size = _messagefont->size.getValue();
+    float size = _messageFont->size.getValue();
     // magic window-size-independent constants that ensure that all preset text sizes
     // are roughly vertically aligned by the top of the first line
     if (size < 14.0f) {
@@ -722,7 +722,7 @@ SbVec3f QtCoinViewer::_GetMessageShadowTranslation()
 {
     SbViewportRegion v = _pviewer->getViewportRegion();
     float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
-    float size = _messagefont->size.getValue();
+    float size = _messageFont->size.getValue();
     // magic window-size-independent constants that ensure that the message shadow
     // sits roughly one pixel above the base message text
     if (size < 14.0f) {
