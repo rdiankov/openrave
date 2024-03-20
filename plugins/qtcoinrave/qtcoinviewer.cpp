@@ -280,7 +280,11 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     _messageNodes[1] = new SoText2();
     pmsgsep->addChild(_messageNodes[1]);
 
-    _ivRoot->addChild(pmsgsep);
+    _messageSwitch = new SoSwitch();
+    _messageSwitch->whichChild.setValue(SO_SWITCH_ALL);
+    _messageSwitch->addChild(pmsgsep);
+
+    _ivRoot->addChild(_messageSwitch);
     _ivRoot->addChild(_ivCamera);
 
     SoEventCallback * ecb = new SoEventCallback;
@@ -675,10 +679,12 @@ void QtCoinViewer::SetTextSize(double size)
 
 void QtCoinViewer::_SetTextSize(double size)
 {
-    if ( size > 0 ) {
+    if ( size >= 0 ) {
         // TODO: use a font that does not rely on hardcoded breakpoints
         // move down to next text size breakpoint so that message shadow aligns nicely
         _messageFont->size = _GetTextBaseSize(size);
+        // hide HUD text if requested size is 0
+        _messageSwitch->whichChild.setValue(size == 0 ? SO_SWITCH_NONE : SO_SWITCH_ALL);
         // adjust the text offsets
         _messageBaseTranslation->translation.setValue(_GetMessageBaseTranslation());
         _messageShadowTranslation->translation.setValue(_GetMessageShadowTranslation());

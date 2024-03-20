@@ -1170,7 +1170,7 @@ void QOSGViewerWidget::SetViewport(int width, int height)
 
 void QOSGViewerWidget::SetHUDTextSize(double size)
 {
-    if ( size > 0 ) {
+    if ( size >= 0 ) {
         _hudTextSize = size;
 
         float scale = this->devicePixelRatio();

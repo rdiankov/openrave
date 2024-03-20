@@ -417,6 +417,7 @@ public:
     std::list< boost::shared_ptr<IvDragger> > _plistdraggers;     /// draggers drawn
     SoEventCallback* _eventKeyboardCB;
 
+    SoSwitch* _messageSwitch;
     SoFont* _messageFont;
     boost::array<SoText2*,2> _messageNodes;
     SoTranslation* _messageBaseTranslation;
