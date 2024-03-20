@@ -685,6 +685,8 @@ void QtCoinViewer::_SetTextSize(double size)
     }
 }
 
+// determines a text size that works best with the default qtcoin font (one of 10px, 14px, 18px, 26px)
+// \param size requested text size
 double QtCoinViewer::_GetTextBaseSize(double size)
 {
     if (size < 14.0) {
@@ -699,6 +701,9 @@ double QtCoinViewer::_GetTextBaseSize(double size)
     return 26.0;
 }
 
+// based on the current font size of HUD text, computes the 3D offset of the black message "base"
+// node relative to the center of the text plane such that the message aligns nicely with
+// the upper left corner across all preset text sizes
 SbVec3f QtCoinViewer::_GetMessageBaseTranslation()
 {
     SbViewportRegion v = _pviewer->getViewportRegion();
@@ -718,6 +723,10 @@ SbVec3f QtCoinViewer::_GetMessageBaseTranslation()
     return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.126f*fhratio),0);
 }
 
+// based on the current font size of HUD text, computes the 3D offset of the white message "shadow"
+// node relative to the message "base" node such that the shadow lies roughly one pixel leftward
+// and upward of the base message, helping to create a shading effect that improves overall HUD text
+// visibility
 SbVec3f QtCoinViewer::_GetMessageShadowTranslation()
 {
     SbViewportRegion v = _pviewer->getViewportRegion();
