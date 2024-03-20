@@ -3,7 +3,7 @@
 ChangeLog
 #########
 
-Version 0.142.0
+Unreleased
 ===============
 
 * Add ViewerBase::SetUserText to customize HUD text size
