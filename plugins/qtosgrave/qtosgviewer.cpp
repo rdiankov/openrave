@@ -2041,6 +2041,11 @@ void QtOSGViewer::SetUserText(const string& userText)
     _posgWidget->SetUserHUDText(userText);
 }
 
+void QtOSGViewer::SetTextSize(double size)
+{
+    _posgWidget->SetHUDTextSize(size);
+}
+
 bool QtOSGViewer::LoadModel(const string& filename)
 {
     if( filename == "") {

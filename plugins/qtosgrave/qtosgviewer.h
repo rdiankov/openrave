@@ -113,6 +113,9 @@ public:
     /// \brief Set User-defined text to be displayed in the viewer window
     virtual void SetUserText(const string& userText);
 
+    /// \brief Set size of text to be displayed in the viewer window
+    virtual void SetTextSize(double size);
+
     /// \brief notified when a body has been removed from the environment
     virtual void RemoveKinBody(KinBodyPtr pbody) {
         if( !!pbody ) {
