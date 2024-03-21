@@ -1957,267 +1957,6 @@ void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularve
     }
 }
 
-void CollisionReport::Reset(int coloptions)
-{
-    options = coloptions;
-    if( !(nKeepPrevious & 1) ) {
-        minDistance = 1e20f;
-        numWithinTol = 0;
-        contacts.resize(0);
-        vLinkColliding.clear();
-        plink1.reset();
-        plink2.reset();
-        pgeom1.reset();
-        pgeom2.reset();
-        vGeometryContacts.clear();
-    }
-}
-
-std::string CollisionReport::__str__() const
-{
-    stringstream s;
-    if( vGeometryContacts.size() > 0 ) {
-        s << "geompairs=" << vGeometryContacts.size();
-        int index = 0;
-        for(const CollisionReport::GeometryPairContact& pairContact : vGeometryContacts) {
-            s << ", [" << index << "](";
-            if( !!pairContact.pgeom1 ) {
-                KinBody::LinkPtr parentLink = pairContact.pgeom1->GetParentLink(true);
-                if( !!parentLink ) {
-                    KinBodyPtr parent = parentLink->GetParent(true);
-                    if( !!parent ) {
-                        s << parent->GetName() << ":" << parentLink->GetName() << ":" << pairContact.pgeom1->GetName();
-                    }
-                    else {
-                        RAVELOG_WARN_FORMAT("could not get parent for link name '%s' when printing collision report", parentLink->GetName());
-                        s << "[deleted]:" << parentLink->GetName() << ":" << pairContact.pgeom1->GetName();
-                    }
-                }
-                else {
-                    RAVELOG_WARN_FORMAT("could not get parent link for geometry name '%s' when printing collision report", pairContact.pgeom1->GetName());
-                    s << "[deleted]:" << pairContact.pgeom1->GetName();
-                }
-            }
-            s << ")x(";
-            if( !!pairContact.pgeom2 ) {
-                KinBody::LinkPtr parentLink = pairContact.pgeom2->GetParentLink(true);
-                if( !!parentLink ) {
-                    KinBodyPtr parent = parentLink->GetParent(true);
-                    if( !!parent ) {
-                        s << parent->GetName() << ":" << parentLink->GetName() << ":" << pairContact.pgeom2->GetName();
-                    }
-                    else {
-                        RAVELOG_WARN_FORMAT("could not get parent for link name '%s' when printing collision report", parentLink->GetName());
-                        s << "[deleted]:" << parentLink->GetName() << ":" << pairContact.pgeom2->GetName();
-                    }
-                }
-                else {
-                    RAVELOG_WARN_FORMAT("could not get parent link for geometry name '%s' when printing collision report", pairContact.pgeom2->GetName());
-                    s << "[deleted]:" << pairContact.pgeom2->GetName();
-                }
-            }
-            s << ") ";
-            ++index;
-        }
-    }
-    else if( vLinkColliding.size() > 0 ) {
-        s << "linkpairs=" << vLinkColliding.size();
-        int index = 0;
-        FOREACH(itlinkpair, vLinkColliding) {
-            s << ", [" << index << "](";
-            if( !!itlinkpair->first ) {
-                KinBodyPtr parent = itlinkpair->first->GetParent(true);
-                if( !!parent ) {
-                    s << parent->GetName() << ":" << itlinkpair->first->GetName();
-                }
-                else {
-                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->first->GetName());
-                    s << "[deleted]:" << itlinkpair->first->GetName();
-                }
-            }
-            s << ")x(";
-            if( !!itlinkpair->second ) {
-                KinBodyPtr parent = itlinkpair->second->GetParent(true);
-                if( !!parent ) {
-                    s << parent->GetName() << ":" << itlinkpair->second->GetName();
-                }
-                else {
-                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->second->GetName());
-                    s << "[deleted]:" << itlinkpair->second->GetName();
-                }
-            }
-            s << ") ";
-            ++index;
-        }
-    }
-    else {
-        s << "(";
-        if( !!plink1 ) {
-            KinBodyPtr parent = plink1->GetParent(true);
-            if( !!parent ) {
-                s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
-            }
-            else {
-                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink1->GetName());
-                s << "[deleted]:" << plink1->GetName();
-            }
-            if( !!pgeom1 ) {
-                s << ":" << pgeom1->GetName();
-            }
-        }
-        s << ")x(";
-        if( !!plink2 ) {
-            KinBodyPtr parent = plink2->GetParent(true);
-            if( !!parent ) {
-                s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
-            }
-            else {
-                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink2->GetName());
-                s << "[deleted]:" << plink2->GetName();
-            }
-            if( !!pgeom2 ) {
-                s << ":" << pgeom2->GetName();
-            }
-        }
-        s << ")";
-    }
-    s << ", contacts="<<contacts.size();
-    if( minDistance < 1e10 ) {
-        s << ", mindist="<<minDistance;
-    }
-    return s.str();
-}
-
-
-void CollisionReportInfo::Reset()
-{
-    body1Name.clear();
-    body2Name.clear();
-    body1LinkName.clear();
-    body2LinkName.clear();
-    body1GeomName.clear();
-    body2GeomName.clear();
-    contacts.clear();
-}
-
-void CollisionReportInfo::InitInfoFromReport(const OpenRAVE::CollisionReport& report)
-{
-    Reset();
-    if ( !!report.plink1 ) {
-        body1LinkName = report.plink1->GetName();
-        const KinBodyPtr pBody1 = report.plink1->GetParent();
-        if ( !!pBody1 ) {
-            body1Name = pBody1->GetName();
-        }
-    }
-    if ( !!report.pgeom1 ) {
-        body1GeomName = report.pgeom1->GetName();
-    }
-
-    if ( !!report.plink2 ) {
-        body2LinkName = report.plink2->GetName();
-        const KinBodyPtr pBody2 = report.plink2->GetParent();
-        if ( !!pBody2 ) {
-            body2Name = pBody2->GetName();
-        }
-    }
-    if ( !!report.pgeom2 ) {
-        body2GeomName = report.pgeom2->GetName();
-    }
-
-    contacts.resize(report.contacts.size());
-    for(int icontact = 0; icontact < (int)contacts.size(); ++icontact) {
-        contacts[icontact] = report.contacts[icontact].pos;
-    }
-}
-
-void CollisionReportInfo::LoadFromJson(const rapidjson::Value& rReport)
-{
-    orjson::LoadJsonValueByKey(rReport, "body1Name", body1Name);
-    orjson::LoadJsonValueByKey(rReport, "body2Name", body2Name);
-    orjson::LoadJsonValueByKey(rReport, "body1LinkName", body1LinkName);
-    orjson::LoadJsonValueByKey(rReport, "body2LinkName", body2LinkName);
-    orjson::LoadJsonValueByKey(rReport, "body1GeomName", body1GeomName);
-    orjson::LoadJsonValueByKey(rReport, "body2GeomName", body2GeomName);
-    if( rReport.HasMember("contacts") && rReport["contacts"].IsArray() ) {
-        for( const rapidjson::Value& rContact : rReport["contacts"].GetArray() ) {
-            if( !rContact.IsArray() || rContact.Size() != 3 ) {
-                continue;
-            }
-            bool isAllNumber = true;
-            for( const rapidjson::Value& rXYZ : rContact.GetArray() ) {
-                if (!rXYZ.IsNumber()) {
-                    isAllNumber = false;
-                    break;
-                }
-            }
-            if (!isAllNumber) {
-                continue;
-            }
-            contacts.push_back(OpenRAVE::Vector(rContact[0].GetDouble(), rContact[1].GetDouble(), rContact[2].GetDouble()));
-        }
-    }
-}
-
-void CollisionReportInfo::SaveToJson(rapidjson::Value& rReport, rapidjson::Document::AllocatorType& alloc) const
-{
-    if( !body1Name.empty() ) {
-        orjson::SetJsonValueByKey(rReport, "body1Name", body1Name, alloc);
-    }
-    if( !body2Name.empty() ) {
-        orjson::SetJsonValueByKey(rReport, "body2Name", body2Name, alloc);
-    }
-
-    if( !body1LinkName.empty() ) {
-        orjson::SetJsonValueByKey(rReport, "body1LinkName", body1LinkName, alloc);
-    }
-    if( !body2LinkName.empty() ) {
-        orjson::SetJsonValueByKey(rReport, "body2LinkName", body2LinkName, alloc);
-    }
-
-    if( !body1GeomName.empty() ) {
-        orjson::SetJsonValueByKey(rReport, "body1GeomName", body1GeomName, alloc);
-    }
-    if( !body2GeomName.empty() ) {
-        orjson::SetJsonValueByKey(rReport, "body2GeomName", body2GeomName, alloc);
-    }
-
-    {
-        rapidjson::Value rContacts; rContacts.SetArray();
-        rContacts.Reserve(contacts.size(), alloc);
-        for(const Vector& contact : contacts) {
-            rapidjson::Value rContact; rContact.SetArray();
-            rContact.Reserve(3, alloc);
-            rContact.PushBack(rapidjson::Value(contact[0]), alloc);
-            rContact.PushBack(rapidjson::Value(contact[1]), alloc);
-            rContact.PushBack(rapidjson::Value(contact[2]), alloc);
-            rContacts.PushBack(rContact, alloc);
-        }
-
-        rReport.AddMember(rapidjson::Document::StringRefType("contacts"), rContacts, alloc);
-    }
-}
-
-bool CollisionReportInfo::operator==(const CollisionReportInfo& other) const
-{
-    if (body1Name != other.body1Name ||
-        body2Name != other.body2Name ||
-        body1LinkName != other.body1LinkName ||
-        body2LinkName != other.body2LinkName ||
-        body1GeomName != other.body1GeomName ||
-        body2GeomName != other.body2GeomName ||
-        contacts.size() != other.contacts.size()) {
-        return false;
-    }
-
-    for (size_t index = 0; index < contacts.size(); ++index) {
-        if (contacts[index] != other.contacts[index]) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool PhysicsEngineBase::GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
 {
     force = Vector(0,0,0);
@@ -2366,6 +2105,21 @@ void TriMesh::serialize(std::ostream& o, int options) const
     FOREACHC(it,indices) {
         o << *it << " ";
     }
+}
+
+void TriMesh::SerializeJSON(rapidjson::Value& rTriMesh, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    rTriMesh.SetObject();
+    rapidjson::Value rVertices;
+    rVertices.SetArray();
+    rVertices.Reserve(vertices.size()*3, allocator);
+    for(size_t ivertex = 0; ivertex < vertices.size(); ++ivertex) {
+        rVertices.PushBack(vertices[ivertex][0]*fUnitScale, allocator);
+        rVertices.PushBack(vertices[ivertex][1]*fUnitScale, allocator);
+        rVertices.PushBack(vertices[ivertex][2]*fUnitScale, allocator);
+    }
+    rTriMesh.AddMember("vertices", rVertices, allocator);
+    orjson::SetJsonValueByKey(rTriMesh, "indices", indices, allocator);
 }
 
 std::ostream& operator<<(std::ostream& O, const TriMesh& trimesh)
@@ -2702,20 +2456,8 @@ int SpaceSamplerBase::_CallStatusFunctions(int sampleiteration)
     return ret;
 }
 
-CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
+void ModuleBase::SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailureAccumulator)
 {
-    _oldoptions = p->GetCollisionOptions();
-    _p = p;
-    if( !_p->SetCollisionOptions(newoptions) ) {
-        if( required ) {
-            throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%newoptions%_p->GetXMLId()));
-        }
-    }
-}
-
-CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
-{
-    _p->SetCollisionOptions(_oldoptions);
 }
 
 void RaveInitRandomGeneration(uint32_t seed)

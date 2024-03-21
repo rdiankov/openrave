@@ -20,22 +20,10 @@
 #include <algorithm>
 #include <string>
 
-#if  __cplusplus >= 201703L
-#define OPENRAVE_NODISCARD [[nodiscard]]
-#include <string_view>
-using string_view = std::string_view;
-#else
-#define OPENRAVE_NODISCARD __attribute__((warn_unused_result))
-
-#include <boost/utility/string_view.hpp>
-
-using string_view = ::boost::string_view;
-#endif
-
 namespace OpenRAVE {
 
 // Returns true if a string begins with a matching prefix.
-OPENRAVE_NODISCARD inline bool StringStartsWith(string_view input, string_view prefix, bool ignoreCase = true)
+inline bool StringStartsWith(string_view input, string_view prefix, bool ignoreCase = true)
 {
     if (input.length() < prefix.length()) {
         return false;
@@ -49,7 +37,7 @@ OPENRAVE_NODISCARD inline bool StringStartsWith(string_view input, string_view p
 }
 
 // Returns true if a string ends with a matching suffix.
-OPENRAVE_NODISCARD inline bool StringEndsWith(string_view input, string_view suffix, bool ignoreCase = true)
+inline bool StringEndsWith(string_view input, string_view suffix, bool ignoreCase = true)
 {
     if (input.length() < suffix.length()) {
         return false;
@@ -83,7 +71,7 @@ inline bool RemoveSuffix(std::string& input, string_view suffix, bool ignoreCase
 }
 
 // Attempt to remove a matching prefix from a string, returning a copy. An empty string is returned if the prefix does not match.
-OPENRAVE_NODISCARD inline std::string RemovePrefix(string_view input, string_view prefix, bool ignoreCase = true)
+inline std::string RemovePrefix(string_view input, string_view prefix, bool ignoreCase = true)
 {
     if (!StringStartsWith(input, prefix, ignoreCase)) {
         return "";
@@ -92,7 +80,7 @@ OPENRAVE_NODISCARD inline std::string RemovePrefix(string_view input, string_vie
 }
 
 // Attempt to remove a matching suffix from a string, returning a copy. An empty string is returned if the suffix does not match.
-OPENRAVE_NODISCARD inline std::string RemoveSuffix(string_view input, string_view suffix, bool ignoreCase = true)
+inline std::string RemoveSuffix(string_view input, string_view suffix, bool ignoreCase = true)
 {
     if (!StringEndsWith(input, suffix, ignoreCase)) {
         return "";

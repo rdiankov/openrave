@@ -2193,10 +2193,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                         if( p[i] < lowerlimit ) {
                             if( p[i] < lowerlimit-g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
+                                    RAVELOG_WARN(str(boost::format("env=%s, joint '%s' dofindex %d value %.16e is smaller than the lower limit %.16e")%GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, joint '%s' dofindex %d value %.16e is smaller than the lower limit %.16e"), GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = lowerlimit;
@@ -2204,10 +2204,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                         else if( p[i] > upperlimit ) {
                             if( p[i] > upperlimit+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN_FORMAT("env=%d, dof %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
+                                    RAVELOG_WARN_FORMAT("env=%s, joint '%s' dofindex %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, joint '%s' dofindex %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = upperlimit;
@@ -2497,12 +2497,44 @@ bool KinBody::IsDOFPrismatic(int dofindex) const
 
 KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
 {
-    for(std::vector<LinkPtr>::const_iterator it = _veclinks.begin(); it != _veclinks.end(); ++it) {
-        if ( (*it)->GetName() == linkname ) {
-            return *it;
+    for(const LinkPtr& plink : _veclinks) {
+        if ( plink->GetName() == linkname ) {
+            return plink;
         }
     }
     return LinkPtr();
+}
+
+KinBody::LinkPtr KinBody::GetLink(const string_view linkname) const
+{
+    for(const LinkPtr& plink : _veclinks) {
+        if ( plink->GetName() == linkname ) {
+            return plink;
+        }
+    }
+    return LinkPtr();
+}
+
+KinBody::LinkPtr KinBody::GetLink(const char* plinkname) const
+{
+    if( !!plinkname ) {
+        for(const LinkPtr& plink : _veclinks) {
+            if ( plink->GetName().compare(plinkname) == 0 ) {
+                return plink;
+            }
+        }
+    }
+    return LinkPtr();
+}
+
+int KinBody::GetLinkIndex(const string_view linkname) const
+{
+    for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
+        if ( _veclinks[ilink]->GetName() == linkname ) {
+            return ilink;
+        }
+    }
+    return -1;
 }
 
 const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() const
