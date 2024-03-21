@@ -196,26 +196,10 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
             stateset->setAttributeAndModes(polyoffset,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
             stateset->setAttributeAndModes(polymode,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
 
-#if 1
             osg::ref_ptr<osg::Material> material = new osg::Material;
             material->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
             material->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0,1,0,1));
-
             stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
-#else
-            // version which sets the color of the wireframe.
-            osg::ref_ptr<osg::Material> material = new osg::Material;
-            material->setColorMode(osg::Material::OFF); // switch glColor usage off
-            // turn all lighting off
-            material->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            material->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,0.0f,0.0f,1.0f));
-            // except emission... in which we set the color we desire
-            material->setEmission(osg::Material::FRONT_AND_BACK, osg::Vec4(0.0,1.0f,0.0f,1.0f));
-            stateset->setAttributeAndModes(material,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-            stateset->setMode(GL_LIGHTING,osg::StateAttribute::OVERRIDE|osg::StateAttribute::ON);
-#endif
 
             stateset->setTextureMode(0,GL_TEXTURE_2D,osg::StateAttribute::OVERRIDE|osg::StateAttribute::OFF);
 
@@ -278,17 +262,6 @@ void KinBodyItem::Load()
         posglinktrans->setName(str(boost::format("link%dtrans")%porlink->GetIndex()));
 
         posglinkroot->addChild(posglinktrans);
-
-//        std::vector< boost::shared_ptr<KinBody::Link> > vParentLinks;
-//        porlink->GetParentLinks(vParentLinks);
-//        if( vParentLinks.size() > 0 ) {
-//            // need to set transform with respect to parent since osg transforms
-//            SetMatrixTransform(*posglink, vParentLinks[0]->GetTransform().inverse() * porlink->GetTransform());
-//        }
-//        else {
-//            // no parent, so use the root link's transform
-//
-//        }
 
         _veclinks.push_back(LinkNodes(posglinkroot, posglinktrans));
         size_t linkindex = itlink - _pbody->GetLinks().begin();
@@ -372,38 +345,13 @@ void KinBodyItem::Load()
                 w = 1.0f;
 
                 mat->setAmbient( osg::Material::FRONT_AND_BACK, osg::Vec4f(x,y,z,w) );
-
-                //mat->setShininess( osg::Material::FRONT, 25.0);
                 mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
 
                 // getting the object to be displayed with transparency
                 if (transparency > 0) {
                     mat->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
-                    state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
-
-                    //state->setAttribute(mat,osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-                    //state->setRenderBinDetails(0, "transparent");
-                    //ss->setRenderBinDetails(10, "RenderBin", osg::StateSet::USE_RENDERBIN_DETAILS);
-
-                    // Enable blending, select transparent bin.
-                    state->setMode( GL_BLEND, osg::StateAttribute::ON );
-                    state->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
-
-                    // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
-                    state->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
-
-                    // Conversely, disable writing to depth buffer so that
-                    // a transparent polygon will allow polygons behind it to shine thru.
-                    // OSG renders transparent polygons after opaque ones.
-                    osg::Depth* depth = new osg::Depth;
-                    depth->setWriteMask( false );
-                    state->setAttributeAndModes( depth, osg::StateAttribute::ON );
-
-                    // Disable conflicting modes.
-                    state->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
                 }
                 state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
-                //pgeometrydata->setStateSet(state);
 
                 switch(orgeom->GetType()) {
                 //  Geometry is defined like a Sphere
@@ -1186,24 +1134,6 @@ void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const float zOffset, co
     boxMaterial->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4(color.x, color.y, color.z, 1));
     boxMaterial->setTransparency(osg::Material::FRONT_AND_BACK, transparency);
     boxGeode->getOrCreateStateSet()->setAttributeAndModes(boxMaterial, osg::StateAttribute::PROTECTED);
-    boxGeode->getOrCreateStateSet()->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA ));
-
-    // Enable blending, select transparent bin.
-    boxGeode->getOrCreateStateSet()->setMode( GL_BLEND, osg::StateAttribute::ON );
-    boxGeode->getOrCreateStateSet()->setRenderingHint( osg::StateSet::TRANSPARENT_BIN );
-
-    // Enable depth test so that an opaque polygon will occlude a transparent one behind it.
-    boxGeode->getOrCreateStateSet()->setMode( GL_DEPTH_TEST, osg::StateAttribute::ON );
-
-    // Conversely, disable writing to depth buffer so that
-    // a transparent polygon will allow polygons behind it to shine thru.
-    // OSG renders transparent polygons after opaque ones.
-    osg::Depth* depth = new osg::Depth;
-    depth->setWriteMask( false );
-    boxGeode->getOrCreateStateSet()->setAttributeAndModes( depth, osg::StateAttribute::ON );
-
-    // Disable conflicting modes.
-    boxGeode->getOrCreateStateSet()->setMode( GL_LIGHTING, osg::StateAttribute::OFF );
 
     pgeometrydata->addChild(boxGeode);
 }
