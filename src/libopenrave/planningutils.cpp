@@ -3123,39 +3123,8 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 }
 
                 if( numPostNeighSteps > 1 ) {
-                    RAVELOG_VERBOSE_FORMAT("have to divide the arc in %d steps post neigh, timestep=%f", numPostNeighSteps%timestep);
-                    // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
-                    // note that circular constraints would break here
-                    std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
-                    dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-                    for( int idof = 0; idof < (int)_vtempconfig.size(); ++idof) {
-                        vpostdq[idof] = (_vtempconfig[idof] - _vprevtempconfig[idof]) * fiNumPostNeighSteps;
-                        vpostddq[idof] = (_vtempvelconfig[idof] - _vprevtempvelconfig[idof]) * fiNumPostNeighSteps;
-                    }
-
-                    // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
-                    for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
-                        for( int idof = 0; idof < (int)_vtempconfig.size(); ++idof) {
-                            _vprevtempconfig[idof] += vpostdq[idof];
-                            _vprevtempvelconfig[idof] += vpostddq[idof]; // probably not right with the way interpolation works out, but it is a reasonable approximation
-                        }
-
-                        nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-//                        if( !!params->_getstatefn ) {
-//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
-//                        }
-                        // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
-//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-//                            filterreturn->_configurationtimes.push_back(timestep);
-//                        }
-                        if( nstateret != 0 ) {
-                            if( !!filterreturn ) {
-                                filterreturn->_returncode = nstateret;
-                            }
-                            return nstateret;
-                        }
-                    }
+                    RAVELOG_WARN_FORMAT("env=%s, have to divide the arc in %d steps post neighstatefn, timestep=%f", _listCheckBodies.front()->GetEnv()->GetNameId() % numPostNeighSteps % timestep);
+                    return CFO_CheckUserConstraints;
                 }
             }
 
@@ -3195,42 +3164,17 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
 
             if( numPostNeighSteps > 1 ) {
-                // should never happen, but just in case _neighstatefn is some non-linear constraint projection
-                RAVELOG_WARN_FORMAT("have to divide the arc in %d steps even after original interpolation is done, timestep=%f", numPostNeighSteps%timestep);
-                // this case should be rare, so can create a vector here. don't look at constraints since we would never converge...
-                // note that circular constraints would break here
-                std::vector<dReal> vpostdq(_vtempconfig.size()), vpostddq(_vtempconfig.size());
-                dReal fiNumPostNeighSteps = 1/(dReal)numPostNeighSteps;
-                for( int idof = 0; idof < (int)_vtempconfig.size(); ++idof) {
-                    vpostdq[idof] = (q1[idof] - _vtempconfig[idof]) * fiNumPostNeighSteps;
-                    vpostddq[idof] = (dq1[idof] - _vtempvelconfig[idof]) * fiNumPostNeighSteps;
-                }
-
-                _vprevtempconfig = _vtempconfig;
-                _vprevtempvelconfig = _vtempvelconfig;
-                // do only numPostNeighSteps-1 since the last step should be checked by _vtempconfig
-                for(int ipoststep = 0; ipoststep+1 < numPostNeighSteps; ++ipoststep) {
-                    for( int idof = 0; idof < (int)_vtempconfig.size(); ++idof) {
-                        _vprevtempconfig[idof] += vpostdq[idof];
-                        _vprevtempvelconfig[idof] += vpostddq[idof]; // probably not right with the way interpolation works out, but it is a reasonable approximation
-                    }
-
-                    int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-//                        if( !!params->_getstatefn ) {
-//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
-//                        }
-                    // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
-//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-//                            filterreturn->_configurationtimes.push_back(timestep);
-//                        }
-                    if( nstateret != 0 ) {
-                        if( !!filterreturn ) {
-                            filterreturn->_returncode = nstateret;
-                        }
-                        return nstateret;
-                    }
-                }
+                // This can happen when _neighstatefn returns some deviated configuration due to complex constraints.
+                RAVELOG_WARN_FORMAT("env=%s, have to divide the arc in %d steps even after original interpolation is done, timestep=%f", _listCheckBodies.front()->GetEnv()->GetNameId() % numPostNeighSteps % timestep);
+                // We could try fixing this situation by generating a segment connecting _vtempconfig to q1 (for
+                // example, linearly in joint space). However, the next problem is how we can assign the time step
+                // associated to these extra configurations. To address the second problem, we can bypass the ambiguity
+                // in timesteps entirely by just checking the extra configurations, making sure they pass all the
+                // constraints, and in the end, *not* adding them to filterreturn. However, the farther _vtempconfig is
+                // from q1, the larger gap we leave out. This can essentially be dangerous.
+                // Unless there is a sensible way to fill in both configurations and timesteps for the gap, it is safest
+                // to reject this.
+                return CFO_CheckUserConstraints;
             }
         }
 
