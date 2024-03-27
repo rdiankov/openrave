@@ -3351,10 +3351,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         if( !!params->_getstatefn ) {
                             params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
                         }
-                        // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-                        //  filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-                        //  filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
-                        // }
+                        // It is totally fine to write checked configs to _configurations. Velocity profiles are not yet
+                        // computed at this stage so there should not be any concerns regarding unclear timestep as
+                        // _configurationtimes will not be used.
+                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+                            filterreturn->_configurationtimes.push_back(0);
+                        }
                         if( ret != 0 ) {
                             if( !!filterreturn ) {
                                 filterreturn->_returncode = ret;
@@ -3470,10 +3473,13 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         if( !!params->_getstatefn ) {
                             params->_getstatefn(_vstepconfig); // query again in order to get normalizations/joint limits
                         }
-                        // if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-                        //  filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
-                        //  filterreturn->_configurationtimes.push_back((s * imaxnumsteps)*fisteps);
-                        // }
+                        // It is totally fine to write checked configs to _configurations. Velocity profiles are not yet
+                        // computed at this stage so there should not be any concerns regarding unclear timestep as
+                        // _configurationtimes will not be used.
+                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vstepconfig.begin(), _vstepconfig.end());
+                            filterreturn->_configurationtimes.push_back(f*fisteps);
+                        }
                         if( ret != 0 ) {
                             if( !!filterreturn ) {
                                 filterreturn->_returncode = ret;
@@ -3539,14 +3545,16 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                     }
 
                     int nstateret = _SetAndCheckState(params, _vprevtempconfig, _vprevtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-//                        if( !!params->_getstatefn ) {
-//                            params->_getstatefn(_vprevtempconfig);     // query again in order to get normalizations/joint limits
-//                        }
-                    // since the timeelapsed is not clear, it is dangerous to write filterreturn->_configurations and filterreturn->_configurationtimes since it could force programing using those times to accelerate too fast. so don't write
-//                        if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-//                            filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-//                            filterreturn->_configurationtimes.push_back(timestep);
-//                        }
+                    if( !!params->_getstatefn ) {
+                        params->_getstatefn(_vprevtempconfig); // query again in order to get values clipped with joint limits.
+                    }
+                    // It is totally fine to write checked configs to _configurations. Velocity profiles are not yet
+                    // computed at this stage so there should not be any concerns regarding unclear timestep as
+                    // _configurationtimes will not be used.
+                    if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                        filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vprevtempconfig.begin(), _vprevtempconfig.end());
+                        filterreturn->_configurationtimes.push_back(1.0);
+                    }
                     if( nstateret != 0 ) {
                         if( !!filterreturn ) {
                             filterreturn->_returncode = nstateret;
