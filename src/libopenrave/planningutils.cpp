@@ -3234,33 +3234,29 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
             }
         }
 
-        if( bCheckEnd && bHasNewTempConfigToAdd && bHasRampDeviatedFromInterpolation ) {
-            dReal dist = params->_distmetricfn(_vtempconfig, q1);
+        if( bHasNewTempConfigToAdd ) {
+            // At this point, _vtempconfig is expected to have reached q1. But if not, then need to check _vtempconfig.
+            const dReal dist = params->_distmetricfn(_vtempconfig, q1);
             if( dist > 1e-7 ) {
-                RAVELOG_DEBUG_FORMAT("env=%d, ramp has deviated, so most likely q1 is not following constraints and there's a difference dist=%f", _listCheckBodies.front()->GetEnv()->GetId()%dist);
-                bCheckEnd = false; // to prevent adding the last point
-
-                if( !!filterreturn ) {
-                    if( options & CFO_FillCheckedConfiguration ) {
-                        int nstateret = 0;
-                        if( istep >= start ) {
-                            nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
-                            bHasNewTempConfigToAdd = false;
-                            if( !!params->_getstatefn ) {
-                                params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
-                            }
-                            if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
-                                filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
-                                filterreturn->_configurationtimes.push_back(timestep);
-                            }
-                        }
-                        if( nstateret != 0 ) {
-                            if( !!filterreturn ) {
-                                filterreturn->_returncode = nstateret;
-                            }
-                            return nstateret;
-                        }
+                bCheckEnd = false; // _vtempconfig ends up far from q1 and we haven't checked the segment connecting _vtempconfig and q1 so prevent adding q1 to the list of checked configuration to tell the caller that the checked segment ends here.
+                int nstateret = 0;
+                nstateret = _SetAndCheckState(params, _vtempconfig, _vtempvelconfig, _vtempaccelconfig, maskoptions, filterreturn);
+                bHasNewTempConfigToAdd = false;
+                if( !!params->_getstatefn ) {
+                    params->_getstatefn(_vtempconfig);     // query again in order to get normalizations/joint limits
+                }
+                if( !!filterreturn && (options & CFO_FillCheckedConfiguration) ) {
+                    filterreturn->_configurations.insert(filterreturn->_configurations.end(), _vtempconfig.begin(), _vtempconfig.end());
+                    filterreturn->_configurationtimes.push_back(timestep);
+                }
+                if( nstateret != 0 ) {
+                    if( !!filterreturn ) {
+                        filterreturn->_returncode = nstateret;
+                        filterreturn->_invalidvalues = _vtempconfig;
+                        filterreturn->_invalidvelocities = _vtempvelconfig;
+                        filterreturn->_fTimeWhenInvalid = timestep;
                     }
+                    return nstateret;
                 }
             }
         }
