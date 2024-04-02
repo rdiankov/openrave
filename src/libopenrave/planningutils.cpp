@@ -3358,6 +3358,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 } // end if maxnumsteps > 1
             } // end check neighstatus
             if( validVelocities ) {
+                // Compute the next velocity
                 for( size_t idof = 0; idof < dQ.size(); ++idof ) {
                     _vtempvelconfig.at(idof) = dq0.at(idof) + _vtempveldelta.at(idof);
                 }
@@ -3481,8 +3482,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                 } // end if maxnumsteps > 1
             } // end check neighstatus
             if( validVelocities ) {
+                // Compute the next velocity
                 for( size_t idof = 0; idof < dQ.size(); ++idof ) {
-                    _vtempvelconfig.at(idof) = dq0.at(idof) + _vtempveldelta.at(idof);
+                    _vtempvelconfig.at(idof) = dq0.at(idof) + dReal(f + 1)*_vtempveldelta.at(idof);
                 }
             }
         } // end for
