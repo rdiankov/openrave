@@ -6,6 +6,8 @@ ChangeLog
 Version 0.142.0
 ===============
 
+- Add robotControllerAxisManufacturerCode so that servo drives from different manufacturer connected to daisy chain can be handled.
+- Fix unbounded growth of _vmimic
 * Add ViewerBase::SetUserText to customize HUD text size
 
 Version 0.141.2
