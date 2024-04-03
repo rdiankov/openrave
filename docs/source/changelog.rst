@@ -8,6 +8,11 @@ Version 0.142.0
 
 * Add ViewerBase::SetUserText to customize HUD text size
 
+Version 0.141.2
+===============
+
+* Fix the issue that second-to-last configuration along the given path segment may not be checked in `Check` function.
+
 Version 0.141.1
 ===============
 
