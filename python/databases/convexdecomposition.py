@@ -134,7 +134,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     
     def getversion(self):
-        return 4
+        return 5
     
     def save(self):
         try:
@@ -462,7 +462,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return planes[uniqueplanes]
 
     def _ValidateConvexDecomposition(self, hullList, trimesh, tol=1e-8):
-        """Checks if the convex hulls specified in hullList conver all the vertices in the given trimesh.
+        """Checks if the convex hulls specified in hullList cover all the vertices in the given trimesh.
         
         Args:
             hullList (list of (vertices, indices)): list of tuples (vertices, indices), where each tuple contains vertices and indices for one convex hull.
