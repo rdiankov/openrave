@@ -1398,9 +1398,18 @@ void KinBody::SetTransform(const Transform& bodyTransform)
     if( _veclinks.size() == 0 ) {
         return;
     }
-    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
-    Transform tbaseinv = _veclinks.front()->GetTransform().inverse();
-    Transform tapply = baseLinkTransform * tbaseinv;
+    /*
+     * B (body transform), L_i (link i transform)
+     * BL_i (link i related to body transform, unchanged)
+     * B' (new body transform), L'_i (new link i transform)
+     *
+     * L_i = B x BL_i    => BL_i = B^-1 x L_i
+     * B = L_1 x BL_1^-1 => B^-1 = BL_1 x L_1^-1
+     * L'_i = B' x BL_i
+     *      = B' x B^-1 x L_i
+     *      = (B' x BL_1 x L_1^-1) x L_i
+     */
+    const Transform tapply = bodyTransform * _baseLinkInBodyTransform * _veclinks.front()->GetTransform().inverse();
     FOREACH(itlink, _veclinks) {
         (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
     }
@@ -2098,14 +2107,7 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
     if( _veclinks.size() == 0 ) {
         return;
     }
-    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
-    Transform tbase = baseLinkTransform*_veclinks.at(0)->GetTransform().inverse();
-    _veclinks.at(0)->SetTransform(baseLinkTransform);
-
-    // apply the relative transformation to all links!! (needed for passive joints)
-    for(size_t i = 1; i < _veclinks.size(); ++i) {
-        _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
-    }
+    SetTransform(bodyTransform);
     SetDOFValues(vJointValues,checklimits);
 }
 
@@ -6287,13 +6289,6 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
         updateFromInfoResult = UFIR_Success;
     }
-    if( info._vLinkInfos.size() > 0 ) {
-        _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
-        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
-    }
-    else {
-        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
-    }
 
     // need to avoid checking links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -6395,10 +6390,9 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) || (info._vLinkInfos.size() > 0 && info._vLinkInfos[0]->IsModifiedField(KinBody::LinkInfo::LIF_Transform)) ) {
-        Transform bodyTransform = info._transform * _invBaseLinkInBodyTransform;
-        if( GetTransform().CompareTransform(bodyTransform, g_fEpsilon) ) {
-            SetTransform(bodyTransform);
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) ) {
+        if( GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
+            SetTransform(info._transform);
             updateFromInfoResult = UFIR_Success;
             RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
         }
