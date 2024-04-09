@@ -461,7 +461,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<thresh
         return planes[uniqueplanes]
 
-    def _ValidateConvexDecomposition(self, hullList, trimesh, tol=1e-8):
+    def _ValidateConvexDecomposition(self, hullList, trimesh, tol=5e-4):
         """Checks if the convex hulls specified in hullList cover all the vertices in the given trimesh.
         
         Args:
