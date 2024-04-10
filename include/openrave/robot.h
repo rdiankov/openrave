@@ -86,6 +86,7 @@ public:
                    && name == other.name
                    && grippertype == other.grippertype
                    && gripperJointNames == other.gripperJointNames
+                   && vChuckingDirections == other.vChuckingDirections
                    && _docGripperInfo == other._docGripperInfo;
         }
         bool operator!=(const GripperInfo& other) const {
@@ -109,6 +110,7 @@ public:
         std::string name; ///< unique name
         std::string grippertype; ///< gripper type
         std::vector<std::string> gripperJointNames; ///< names of the gripper joints
+        std::vector<int> vChuckingDirections; ///< the normal direction to move joints for the hand to grasp something
         rapidjson::Document _docGripperInfo;  ///< contains entire rapid json document to hold custom parameters
     };
     typedef boost::shared_ptr<GripperInfo> GripperInfoPtr;

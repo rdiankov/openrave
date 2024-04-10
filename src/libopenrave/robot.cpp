@@ -26,6 +26,7 @@ RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::Gripp
     name = other.name;
     grippertype = other.grippertype;
     gripperJointNames = other.gripperJointNames;
+    vChuckingDirections = other.vChuckingDirections;
     rapidjson::Document docGripperInfo;
     if (other._docGripperInfo.IsObject()) {
         docGripperInfo.CopyFrom(other._docGripperInfo, docGripperInfo.GetAllocator());
@@ -40,6 +41,7 @@ void RobotBase::GripperInfo::Reset()
     name.clear();
     grippertype.clear();
     gripperJointNames.clear();
+    vChuckingDirections.clear();
     _docGripperInfo = rapidjson::Document();
 }
 
@@ -53,6 +55,7 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
     orjson::SetJsonValueByKey(value, "id", _id, allocator);
     orjson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
     orjson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
+    orjson::SetJsonValueByKey(value, "chuckingDirection", vChuckingDirections, allocator);
 }
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -66,6 +69,41 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     orjson::LoadJsonValueByKey(value, "grippertype", grippertype);
     orjson::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
 
+    {
+        rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirection");
+        if( itChuckingDirections != value.MemberEnd() ) {
+            const rapidjson::Value& rChuckingDirections = itChuckingDirections->value;
+            if( !rChuckingDirections.IsArray() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("When loading tool '%s' with id '%s', 'chuckingDirections' needs to be an array, currently it is '%s'"), name%_id%orjson::DumpJson(rChuckingDirections), ORE_InvalidArguments);
+            }
+
+            vChuckingDirections.resize(rChuckingDirections.Size());
+            for(int index = 0; index < (int)vChuckingDirections.size(); ++index) {
+                int direction = 0;
+                if( rChuckingDirections[index].IsFloat() || rChuckingDirections[index].IsDouble() ) {
+                    double fdirection = 0;
+                    orjson::LoadJsonValue(rChuckingDirections[index], fdirection);
+                    if( fdirection > 0 ) {
+                        direction = 1;
+                    }
+                    else if( fdirection < 0 ) {
+                        direction = -1;
+                    }
+                }
+                else {
+                    orjson::LoadJsonValue(rChuckingDirections[index], direction);
+                    if (direction > 0) {
+                        direction = 1;
+                    }
+                    else if (direction < 0) {
+                        direction = -1;
+                    }
+                }
+                vChuckingDirections[index] = direction;
+            }
+        }
+    }
+
     rapidjson::Document docGripperInfo;
     docGripperInfo.SetObject();
     if (_docGripperInfo.IsObject()) {
@@ -74,7 +112,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     }
     for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
         const std::string& memberName = it->name.GetString();
-        if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames") {
+        if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames" || memberName == "chuckingDirection" ) {
             continue;
         }
 
