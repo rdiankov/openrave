@@ -6364,6 +6364,15 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
+    // update the base link transform after all links have been updated
+    if( info._vLinkInfos.empty() ) {
+        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
+    }
+    else {
+        _baseLinkInBodyTransform = info._vLinkInfos.front()->GetTransform();
+        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
+    }
+
     // joints
     if (!UpdateChildrenFromInfo(info._vJointInfos, vJoints, updateFromInfoResult)) {
         return updateFromInfoResult;
