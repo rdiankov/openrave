@@ -2107,7 +2107,14 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
     if( _veclinks.size() == 0 ) {
         return;
     }
-    SetTransform(bodyTransform);
+    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
+    Transform tbase = baseLinkTransform*_veclinks.at(0)->GetTransform().inverse();
+    _veclinks.at(0)->SetTransform(baseLinkTransform);
+
+    // apply the relative transformation to all links!! (needed for passive joints)
+    for(size_t i = 1; i < _veclinks.size(); ++i) {
+        _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
+    }
     SetDOFValues(vJointValues,checklimits);
 }
 
