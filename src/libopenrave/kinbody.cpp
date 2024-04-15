@@ -1398,18 +1398,9 @@ void KinBody::SetTransform(const Transform& bodyTransform)
     if( _veclinks.size() == 0 ) {
         return;
     }
-    /*
-     * B (body transform), L_i (link i transform)
-     * BL_i (link i related to body transform, unchanged)
-     * B' (new body transform), L'_i (new link i transform)
-     *
-     * L_i = B x BL_i    => BL_i = B^-1 x L_i
-     * B = L_1 x BL_1^-1 => B^-1 = BL_1 x L_1^-1
-     * L'_i = B' x BL_i
-     *      = B' x B^-1 x L_i
-     *      = (B' x BL_1 x L_1^-1) x L_i
-     */
-    const Transform tapply = bodyTransform * _baseLinkInBodyTransform * _veclinks.front()->GetTransform().inverse();
+    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
+    Transform tbaseinv = _veclinks.front()->GetTransform().inverse();
+    Transform tapply = baseLinkTransform * tbaseinv;
     FOREACH(itlink, _veclinks) {
         (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
     }
