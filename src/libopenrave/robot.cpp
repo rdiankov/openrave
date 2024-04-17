@@ -71,14 +71,19 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
 
     {
         rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirection");
+        vChuckingDirections.assign(gripperJointNames.size(), 0);
         if( itChuckingDirections != value.MemberEnd() ) {
             const rapidjson::Value& rChuckingDirections = itChuckingDirections->value;
             if( !rChuckingDirections.IsArray() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("When loading tool '%s' with id '%s', 'chuckingDirections' needs to be an array, currently it is '%s'"), name%_id%orjson::DumpJson(rChuckingDirections), ORE_InvalidArguments);
             }
 
-            vChuckingDirections.resize(rChuckingDirections.Size());
-            for(int index = 0; index < (int)vChuckingDirections.size(); ++index) {
+            int nMinSize = rChuckingDirections.Size();
+            if( gripperJointNames.size() < rChuckingDirections.Size() ) {
+                RAVELOG_WARN_FORMAT("When loading gripper with '%s' with id '%s', the size of 'chuckingDirection'=%d is more than the size of 'gripperJointNames'=%d. Clamp it with 'gripperJointNames' size.", name%_id%rChuckingDirections.Size()%gripperJointNames.size());
+                nMinSize = gripperJointNames.size();
+            }
+            for(int index = 0; index < nMinSize; ++index) {
                 int direction = 0;
                 if( rChuckingDirections[index].IsFloat() || rChuckingDirections[index].IsDouble() ) {
                     double fdirection = 0;
