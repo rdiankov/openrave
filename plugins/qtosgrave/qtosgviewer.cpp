@@ -1667,23 +1667,23 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
     return GraphHandlePtr();
 }
 
-void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
+void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color, float scale)
 {
     // Set up offset node for label
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
     osg::Matrix offsetMatrix;
     offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
     trans->setMatrix(offsetMatrix);
-    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label, color);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label, color, scale);
     trans->addChild(labelTrans);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
-GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
+GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color, float scale)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition, color), ViewerCommandPriority::MEDIUM); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition, color, scale), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 

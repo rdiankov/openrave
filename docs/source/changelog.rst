@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.143.0
+===============
+
+- Allow env.drawlabel to specify size of characters.
+
 Version 0.142.0
 ===============
 
