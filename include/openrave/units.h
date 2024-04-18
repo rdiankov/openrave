@@ -81,7 +81,7 @@ enum AngleUnit : int8_t
 {
     AU_Radian = 0,
     AU_Degree = 1,
-    AU_Centidegree = 2,
+    AU_Centidegree = -2,
 };
 
 OPENRAVE_API const char* GetAngleUnitString(AngleUnit unit);
