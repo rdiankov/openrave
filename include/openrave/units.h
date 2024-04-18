@@ -370,6 +370,9 @@ inline T GetAngleUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "deg") == 0 ) {
         return T(57.29577951308232);
     }
+    if (strcmp(pUnit, "cdeg") == 0 ) {
+        return T(5729.577951308232);
+    }
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_LengthUnitInvalid);
 }
 
