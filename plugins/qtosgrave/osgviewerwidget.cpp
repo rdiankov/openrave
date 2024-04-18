@@ -72,12 +72,11 @@ public:
         switch( ea.getEventType() )
         {
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -333,12 +332,11 @@ public:
             return handleMouseDoubleClick( ea, us );
 
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -1355,10 +1353,10 @@ void QOSGViewerWidget::Zoom(float factor)
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
         _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
-        _SetCameraViewOrthoProjectionPlaneSize(_currentOrthoFrustumSize);
+        _SetCameraViewOrthoProjectionPlaneSize(ClampDistance(_currentOrthoFrustumSize));
         return;
     }
-    SetCameraDistanceToFocus(GetCameraDistanceToFocus() / factor);
+    SetCameraDistanceToFocus(ClampDistance(GetCameraDistanceToFocus() / factor));
 }
 
 
