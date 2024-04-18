@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.142.1
+Version 0.142.2
 ===============
 
 * Add centidegree unit definition.
+
+Version 0.142.1
+===============
+
+* Clamp camera distance in the viewer to prevent invalid values in the published state
 
 Version 0.142.0
 ===============

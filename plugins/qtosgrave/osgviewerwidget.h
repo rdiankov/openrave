@@ -40,6 +40,12 @@ using namespace OpenRAVE;
 class OpenRAVETracker;
 class OpenRAVETrackball;
 
+const float MAX_CAMERA_DISTANCE = 1e10;
+
+inline float ClampDistance(float distance) {
+    return (distance > MAX_CAMERA_DISTANCE) ? MAX_CAMERA_DISTANCE : distance;
+}
+
 /// \brief  Class of the openscene graph 3d viewer
 class QOSGViewerWidget : public QOpenGLWidget
 {
