@@ -3,10 +3,27 @@
 ChangeLog
 #########
 
-Version 0.141.2
+Version 0.142.2
 ===============
 
 - Cache the absence of collision bodies for a kinbody in the FCL collision manager, improving collision checking performance
+
+Version 0.142.1
+===============
+
+* Clamp camera distance in the viewer to prevent invalid values in the published state
+
+Version 0.142.0
+===============
+
+- Add robotControllerAxisManufacturerCode so that servo drives from different manufacturer connected to daisy chain can be handled.
+- Fix unbounded growth of _vmimic
+* Add ViewerBase::SetUserText to customize HUD text size
+
+Version 0.141.2
+===============
+
+* Fix the issue that second-to-last configuration along the given path segment may not be checked in `Check` function.
 
 Version 0.141.1
 ===============

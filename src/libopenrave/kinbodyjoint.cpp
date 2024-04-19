@@ -108,6 +108,7 @@ void JointControlInfo_RobotController::Reset()
     robotControllerAxisIndex[0] = robotControllerAxisIndex[1] = robotControllerAxisIndex[2] = -1;
     robotControllerAxisMult[0] = robotControllerAxisMult[1] = robotControllerAxisMult[2] = 1.0;
     robotControllerAxisOffset[0] = robotControllerAxisOffset[1] = robotControllerAxisOffset[2] = 0.0;
+    robotControllerAxisManufacturerCode[0] = robotControllerAxisManufacturerCode[1] = robotControllerAxisManufacturerCode[2] = "";
     robotControllerAxisProductCode[0] = robotControllerAxisProductCode[1] = robotControllerAxisProductCode[2] = "";
 }
 
@@ -117,6 +118,7 @@ void JointControlInfo_RobotController::SerializeJSON(rapidjson::Value& value, ra
     orjson::SetJsonValueByKey(value, "robotControllerAxisIndex", robotControllerAxisIndex, allocator);
     orjson::SetJsonValueByKey(value, "robotControllerAxisMult", robotControllerAxisMult, allocator);
     orjson::SetJsonValueByKey(value, "robotControllerAxisOffset", robotControllerAxisOffset, allocator);
+    orjson::SetJsonValueByKey(value, "robotControllerAxisManufacturerCode", robotControllerAxisManufacturerCode, allocator);
     orjson::SetJsonValueByKey(value, "robotControllerAxisProductCode", robotControllerAxisProductCode, allocator);
 }
 
@@ -126,6 +128,7 @@ void JointControlInfo_RobotController::DeserializeJSON(const rapidjson::Value& v
     orjson::LoadJsonValueByKey(value, "robotControllerAxisIndex", robotControllerAxisIndex);
     orjson::LoadJsonValueByKey(value, "robotControllerAxisMult", robotControllerAxisMult);
     orjson::LoadJsonValueByKey(value, "robotControllerAxisOffset", robotControllerAxisOffset);
+    orjson::LoadJsonValueByKey(value, "robotControllerAxisManufacturerCode", robotControllerAxisManufacturerCode);
     orjson::LoadJsonValueByKey(value, "robotControllerAxisProductCode", robotControllerAxisProductCode);
 }
 

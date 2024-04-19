@@ -2193,10 +2193,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                         if( p[i] < lowerlimit ) {
                             if( p[i] < lowerlimit-g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
+                                    RAVELOG_WARN(str(boost::format("env=%s, joint '%s' dofindex %d value %.16e is smaller than the lower limit %.16e")%GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, joint '%s' dofindex %d value %.16e is smaller than the lower limit %.16e"), GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = lowerlimit;
@@ -2204,10 +2204,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                         else if( p[i] > upperlimit ) {
                             if( p[i] > upperlimit+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN_FORMAT("env=%d, dof %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
+                                    RAVELOG_WARN_FORMAT("env=%s, joint '%s' dofindex %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, joint '%s' dofindex %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetNameId()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = upperlimit;
@@ -6287,13 +6287,6 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
         updateFromInfoResult = UFIR_Success;
     }
-    if( info._vLinkInfos.size() > 0 ) {
-        _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
-        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
-    }
-    else {
-        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
-    }
 
     // need to avoid checking links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -6369,6 +6362,15 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
+    // update the base link transform after all links have been updated
+    if( info._vLinkInfos.empty() ) {
+        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
+    }
+    else {
+        _baseLinkInBodyTransform = info._vLinkInfos.front()->GetTransform();
+        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
+    }
+
     // joints
     if (!UpdateChildrenFromInfo(info._vJointInfos, vJoints, updateFromInfoResult)) {
         return updateFromInfoResult;
@@ -6395,10 +6397,9 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) || (info._vLinkInfos.size() > 0 && info._vLinkInfos[0]->IsModifiedField(KinBody::LinkInfo::LIF_Transform)) ) {
-        Transform bodyTransform = info._transform * _invBaseLinkInBodyTransform;
-        if( GetTransform().CompareTransform(bodyTransform, g_fEpsilon) ) {
-            SetTransform(bodyTransform);
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) ) {
+        if( GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
+            SetTransform(info._transform);
             updateFromInfoResult = UFIR_Success;
             RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
         }

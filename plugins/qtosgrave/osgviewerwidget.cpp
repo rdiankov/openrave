@@ -72,12 +72,11 @@ public:
         switch( ea.getEventType() )
         {
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -333,12 +332,11 @@ public:
             return handleMouseDoubleClick( ea, us );
 
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -644,6 +642,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
 
     _vecTextScreenOffset = osg::Vec2(10.0, 0.0);
+    _hudTextSize = 18.0;
 
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
@@ -827,7 +826,11 @@ void QOSGViewerWidget::SetHome()
 {
     if (!!_osgLightsGroup) {
         const osg::BoundingSphere& bs = _osgSceneRoot->getBound();
-        _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(1.5*bs.radius(),0,1.5*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
+        _osgview->getCameraManipulator()->setHomePosition(
+            osg::Vec3d(ClampDistance(1.5*bs.radius()), 0, ClampDistance(1.5*bs.radius())),
+            bs.center(),
+            osg::Vec3d(0.0, 0.0, 1.0)
+        );
         _osgview->home();
     }
 }
@@ -1163,11 +1166,22 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     osg::Camera *hudcamera = _osghudview->getCamera();
     hudcamera->setViewport(0, 0, width * scale, height * scale);
 
-    double textheight = 18*scale;
-    _osgHudText->setCharacterSize(textheight);
-    _osgHudText->setFontResolution(textheight, textheight);
-    SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+    SetHUDTextSize(_hudTextSize);
     _UpdateHUDAxisTransform(width, height);
+}
+
+void QOSGViewerWidget::SetHUDTextSize(double size)
+{
+    if ( size >= 0 ) {
+        _hudTextSize = size;
+
+        float scale = this->devicePixelRatio();
+        double textheight = _hudTextSize*scale;
+        _osgHudText->setCharacterSize(textheight);
+        _osgHudText->setFontResolution(textheight, textheight);
+
+        SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+    }
 }
 
 osg::Vec2 QOSGViewerWidget::GetHUDTextOffset()
@@ -1180,7 +1194,7 @@ void QOSGViewerWidget::SetHUDTextOffset(double xOffset, double yOffset)
     _vecTextScreenOffset.set(xOffset, yOffset);
 
     double scale = this->devicePixelRatio();
-    double textheight = 18*scale;
+    double textheight = _hudTextSize*scale;
     _osgHudText->setPosition(
         osg::Vec3(
             -_osgview->getCamera()->getViewport()->width() / 2 + _vecTextScreenOffset.x(),
@@ -1346,7 +1360,7 @@ void QOSGViewerWidget::Zoom(float factor)
         _SetCameraViewOrthoProjectionPlaneSize(_currentOrthoFrustumSize);
         return;
     }
-    SetCameraDistanceToFocus(GetCameraDistanceToFocus() / factor);
+    SetCameraDistanceToFocus(ClampDistance(GetCameraDistanceToFocus() / factor));
 }
 
 
