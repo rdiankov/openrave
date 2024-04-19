@@ -8,6 +8,11 @@ Version 0.143.0
 
 - Allow env.drawlabel to specify size of characters.
 
+Version 0.142.1
+===============
+
+* Clamp camera distance in the viewer to prevent invalid values in the published state
+
 Version 0.142.0
 ===============
 

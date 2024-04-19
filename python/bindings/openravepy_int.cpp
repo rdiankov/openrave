@@ -3829,7 +3829,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           "label"_a,
                           "worldPosition"_a,
                           "color"_a = py::none_(),
-                          "height"_a = 1.0,
+                          "height"_a = 0.05,
                           DOXY_FN(EnvironmentBase,drawlabel)
                           )
 #else
