@@ -287,6 +287,9 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
 #endif
         pmanager->registerObjects(_tmpSortedBuffer); // bulk update
     }
+
+    // Clear our cached collision body vector to ensure we don't prolong the lifetime of any collision objects
+    _ensureBodiesCollisionObjectsCache.clear();
 }
 
 bool FCLCollisionManagerInstance::RemoveBody(const KinBody& body) {
