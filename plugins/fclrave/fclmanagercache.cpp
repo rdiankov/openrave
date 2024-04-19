@@ -245,9 +245,6 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
     // We need to make sure we resize _vecCachedBodies to allow direct lookup by body index, which we can do the first time we encounter a non-null body.
     bool ensuredVecCachedBodies = false;
 
-    // Local scratch buffer of collision objects to reuse to avoid allocations
-    std::vector<CollisionObjectPtr> vCollisionObjects;
-
     // For each tracked body, ensure that we have all necessary collision info
     for (const KinBodyConstPtr& pbody : vbodies) {
         // Null bodies can be ignored
@@ -278,10 +275,10 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
         // Note that if there are no collision volumes for an entity, _AddBody will return false.
         // We still want to cache the _absence_ of collision data however, to avoid expensive recomputes on non-colliding bodies, so cache the returned data even if it's empty.
         const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
-        _AddBody(body, pinfo, vCollisionObjects, _linkEnableStatesBitmasks, false);
+        _AddBody(body, pinfo, _ensureBodiesCollisionObjectsCache, _linkEnableStatesBitmasks, false);
         KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
         cache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
-        cache.vcolobjs.swap(vCollisionObjects);
+        cache.vcolobjs.swap(_ensureBodiesCollisionObjectsCache);
     }
 
     if (_tmpSortedBuffer.size() > 0) {
