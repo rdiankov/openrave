@@ -2613,13 +2613,13 @@ object PyEnvironmentBase::drawarrow(object op1, object op2, float linewidth, obj
     return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
 }
 
-object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition, object ocolor, float scale)
+object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition, object ocolor, float height)
 {
     RaveVector<float> vcolor(0,0,0,1);
     if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
         vcolor = ExtractVector34(ocolor,1.0f);
     }
-    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition), vcolor, scale));
+    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition), vcolor, height));
 }
 
 object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
@@ -3829,7 +3829,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           "label"_a,
                           "worldPosition"_a,
                           "color"_a = py::none_(),
-                          "scale"_a = 1.0,
+                          "height"_a = 0.05,
                           DOXY_FN(EnvironmentBase,drawlabel)
                           )
 #else
