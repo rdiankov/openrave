@@ -2621,221 +2621,11 @@ void init_openravepy_robot()
     ;
 
     {
-        void (PyRobotBase::*psetactivedofs1)(const object&) = &PyRobotBase::SetActiveDOFs;
-        void (PyRobotBase::*psetactivedofs2)(const object&, int) = &PyRobotBase::SetActiveDOFs;
-        void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
-
-        bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
-        bool (PyRobotBase::*pgrab5)(PyKinBodyPtr, object, object, object) = &PyRobotBase::Grab;
-
-        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
-        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
-
-        object (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
-        object (PyRobotBase::*GetManipulators2)(const string &) = &PyRobotBase::GetManipulators;
-        bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
-        bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
-        bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
-        bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase))
+        class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody> robot(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase));
 #else
-        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
+        class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> > robot("Robot", DOXY_CLASS(RobotBase), no_init);
 #endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("Init", initrobot,
-                            "linkinfos"_a,
-                            "jointinfos"_a,
-                            "manipinfos"_a,
-                            "attachedsensorinfos"_a,
-                            "uri"_a = "",
-                            DOXY_FN(RobotBase, Init)
-                            )
-#else
-                       .def("Init", initrobot, Init_overloads(PY_ARGS("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "uri") DOXY_FN(RobotBase, Init)))
-#endif
-                       .def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators))
-                       .def("GetManipulators",GetManipulators2, PY_ARGS("manipname") DOXY_FN(RobotBase,GetManipulators))
-                       .def("GetManipulator",&PyRobotBase::GetManipulator,PY_ARGS("manipname") "Return the manipulator whose name matches")
-                       .def("SetActiveManipulator",setactivemanipulator2, PY_ARGS("manipname") DOXY_FN(RobotBase,SetActiveManipulator "const std::string"))
-                       .def("SetActiveManipulator",setactivemanipulator3,PY_ARGS("manip") "Set the active manipulator given a pointer")
-                       .def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, DOXY_FN(RobotBase,GetActiveManipulator))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("AddManipulator", &PyRobotBase::AddManipulator,
-                            "manipinfo"_a,
-                            "removeduplicate"_a = false,
-                            DOXY_FN(RobotBase, AddManipulator)
-                            )
-#else
-                       .def("AddManipulator",&PyRobotBase::AddManipulator, AddManipulator_overloads(PY_ARGS("manipinfo", "removeduplicate") DOXY_FN(RobotBase,AddManipulator)))
-#endif
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("InitFromRobotInfo", &PyRobotBase::InitFromRobotInfo,
-                            "info"_a,
-                            DOXY_FN(RobotBase, InitFromRobotInfo))
-#else
-                       .def("InitFromRobotInfo",&PyRobotBase::InitFromRobotInfo, DOXY_FN(RobotBase, InitFromRobotInfo))
-#endif
-                       .def("ExtractInfo", &PyRobotBase::ExtractInfo, DOXY_FN(RobotBase, ExtractInfo))
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor,
-                            "attachedsensorinfo"_a,
-                            "removeduplicate"_a = false,
-                            DOXY_FN(RobotBase, AddAttachedSensor)
-                            )
-#else
-                       .def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor, AddAttachedSensor_overloads(PY_ARGS("attachedsensorinfo", "removeduplicate") DOXY_FN(RobotBase,AddAttachedSensor)))
-#endif
-                       .def("RemoveAttachedSensor",&PyRobotBase::RemoveAttachedSensor, PY_ARGS("attsensor") DOXY_FN(RobotBase,RemoveAttachedSensor))
-                       .def("RemoveManipulator",&PyRobotBase::RemoveManipulator, PY_ARGS("manip") DOXY_FN(RobotBase,RemoveManipulator))
-                       .def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors, DOXY_FN(RobotBase,GetAttachedSensors))
-                       .def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,PY_ARGS("sensorname") "Return the attached sensor whose name matches")
-                       .def("GetSensors",&PyRobotBase::GetSensors)
-                       .def("GetSensor",&PyRobotBase::GetSensor,PY_ARGS("sensorname") DOXY_FN(RobotBase, GetSensor))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("AddConnectedBody",&PyRobotBase::AddConnectedBody,
-                            "connectedbodyinfo"_a,
-                            "removeduplicate"_a = false,
-                            DOXY_FN(RobotBase, AddConnectedBody)
-                            )
-#else
-                       .def("AddConnectedBody",&PyRobotBase::AddConnectedBody, AddConnectedBody_overloads(PY_ARGS("connectedbodyinfo", "removeduplicate") DOXY_FN(RobotBase,AddConnectedBody)))
-#endif
-                       .def("RemoveConnectedBody",&PyRobotBase::RemoveConnectedBody, PY_ARGS("connectedbody") DOXY_FN(RobotBase,RemoveConnectedBody))
-                       .def("GetConnectedBodies",&PyRobotBase::GetConnectedBodies, DOXY_FN(RobotBase,GetConnectedBodies))
-                       .def("GetConnectedBody",&PyRobotBase::GetConnectedBody, PY_ARGS("bodyname") DOXY_FN(RobotBase,GetConnectedBody))
-                       .def("GetConnectedBodyActiveStates",&PyRobotBase::GetConnectedBodyActiveStates, DOXY_FN(RobotBase,GetConnectedBodyActiveStates))
-                       .def("SetConnectedBodyActiveStates",&PyRobotBase::SetConnectedBodyActiveStates, DOXY_FN(RobotBase,SetConnectedBodyActiveStates))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("AddGripperInfo",&PyRobotBase::AddGripperInfo,
-                            "gripperInfo"_a,
-                            "removeduplicate"_a = false,
-                            DOXY_FN(RobotBase, AddGripperInfo)
-                            )
-#else
-                       .def("AddGripperInfo",&PyRobotBase::AddGripperInfo, AddGripperInfo_overloads(PY_ARGS("gripperInfo", "removeduplicate") DOXY_FN(RobotBase,AddGripperInfo)))
-#endif
-                       .def("RemoveGripperInfo",&PyRobotBase::RemoveGripperInfo, PY_ARGS("name") DOXY_FN(RobotBase,RemoveGripperInfo))
-                       .def("GetGripperInfo",&PyRobotBase::GetGripperInfo, PY_ARGS("name") DOXY_FN(RobotBase,GetGripperInfo))
-                       .def("GetGripperInfos",&PyRobotBase::GetGripperInfos, DOXY_FN(RobotBase,GetGripperInfos))
-                       .def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController))
-                       .def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController))
-                       .def("SetController",setcontroller2, PY_ARGS("robot","dofindices","controltransform") DOXY_FN(RobotBase,SetController))
-                       .def("SetController",setcontroller3,DOXY_FN(RobotBase,SetController))
-                       .def("SetActiveDOFs",psetactivedofs1, PY_ARGS("dofindices") DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int"))
-                       .def("SetActiveDOFs",psetactivedofs2, PY_ARGS("dofindices","affine") DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int"))
-                       .def("SetActiveDOFs",psetactivedofs3, PY_ARGS("dofindices","affine","rotationaxis") DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int; const Vector"))
-                       .def("GetActiveDOF",&PyRobotBase::GetActiveDOF, DOXY_FN(RobotBase,GetActiveDOF))
-                       .def("GetAffineDOF",&PyRobotBase::GetAffineDOF, DOXY_FN(RobotBase,GetAffineDOF))
-                       .def("GetAffineDOFIndex",&PyRobotBase::GetAffineDOFIndex, PY_ARGS("index") DOXY_FN(RobotBase,GetAffineDOFIndex))
-                       .def("GetAffineRotationAxis",&PyRobotBase::GetAffineRotationAxis, DOXY_FN(RobotBase,GetAffineRotationAxis))
-                       .def("SetAffineTranslationLimits",&PyRobotBase::SetAffineTranslationLimits, PY_ARGS("lower","upper") DOXY_FN(RobotBase,SetAffineTranslationLimits))
-                       .def("SetAffineRotationAxisLimits",&PyRobotBase::SetAffineRotationAxisLimits, PY_ARGS("lower","upper") DOXY_FN(RobotBase,SetAffineRotationAxisLimits))
-                       .def("SetAffineRotation3DLimits",&PyRobotBase::SetAffineRotation3DLimits, PY_ARGS("lower","upper") DOXY_FN(RobotBase,SetAffineRotation3DLimits))
-                       .def("SetAffineRotationQuatLimits",&PyRobotBase::SetAffineRotationQuatLimits, PY_ARGS("quatangle") DOXY_FN(RobotBase,SetAffineRotationQuatLimits))
-                       .def("SetAffineTranslationMaxVels",&PyRobotBase::SetAffineTranslationMaxVels, PY_ARGS("vels") DOXY_FN(RobotBase,SetAffineTranslationMaxVels))
-                       .def("SetAffineRotationAxisMaxVels",&PyRobotBase::SetAffineRotationAxisMaxVels, PY_ARGS("velocity") DOXY_FN(RobotBase,SetAffineRotationAxisMaxVels))
-                       .def("SetAffineRotation3DMaxVels",&PyRobotBase::SetAffineRotation3DMaxVels, PY_ARGS("velocity") DOXY_FN(RobotBase,SetAffineRotation3DMaxVels))
-                       .def("SetAffineRotationQuatMaxVels",&PyRobotBase::SetAffineRotationQuatMaxVels, PY_ARGS("velocity") DOXY_FN(RobotBase,SetAffineRotationQuatMaxVels))
-                       .def("SetAffineTranslationResolution",&PyRobotBase::SetAffineTranslationResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineTranslationResolution))
-                       .def("SetAffineRotationAxisResolution",&PyRobotBase::SetAffineRotationAxisResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineRotationAxisResolution))
-                       .def("SetAffineRotation3DResolution",&PyRobotBase::SetAffineRotation3DResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineRotation3DResolution))
-                       .def("SetAffineRotationQuatResolution",&PyRobotBase::SetAffineRotationQuatResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineRotationQuatResolution))
-                       .def("SetAffineTranslationWeights",&PyRobotBase::SetAffineTranslationWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineTranslationWeights))
-                       .def("SetAffineRotationAxisWeights",&PyRobotBase::SetAffineRotationAxisWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineRotationAxisWeights))
-                       .def("SetAffineRotation3DWeights",&PyRobotBase::SetAffineRotation3DWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineRotation3DWeights))
-                       .def("SetAffineRotationQuatWeights",&PyRobotBase::SetAffineRotationQuatWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineRotationQuatWeights))
-                       .def("GetAffineTranslationLimits",&PyRobotBase::GetAffineTranslationLimits, DOXY_FN(RobotBase,GetAffineTranslationLimits))
-                       .def("GetAffineRotationAxisLimits",&PyRobotBase::GetAffineRotationAxisLimits, DOXY_FN(RobotBase,GetAffineRotationAxisLimits))
-                       .def("GetAffineRotation3DLimits",&PyRobotBase::GetAffineRotation3DLimits, DOXY_FN(RobotBase,GetAffineRotation3DLimits))
-                       .def("GetAffineRotationQuatLimits",&PyRobotBase::GetAffineRotationQuatLimits, DOXY_FN(RobotBase,GetAffineRotationQuatLimits))
-                       .def("GetAffineTranslationMaxVels",&PyRobotBase::GetAffineTranslationMaxVels, DOXY_FN(RobotBase,GetAffineTranslationMaxVels))
-                       .def("GetAffineRotationAxisMaxVels",&PyRobotBase::GetAffineRotationAxisMaxVels, DOXY_FN(RobotBase,GetAffineRotationAxisMaxVels))
-                       .def("GetAffineRotation3DMaxVels",&PyRobotBase::GetAffineRotation3DMaxVels, DOXY_FN(RobotBase,GetAffineRotation3DMaxVels))
-                       .def("GetAffineRotationQuatMaxVels",&PyRobotBase::GetAffineRotationQuatMaxVels, DOXY_FN(RobotBase,GetAffineRotationQuatMaxVels))
-                       .def("GetAffineTranslationResolution",&PyRobotBase::GetAffineTranslationResolution, DOXY_FN(RobotBase,GetAffineTranslationResolution))
-                       .def("GetAffineRotationAxisResolution",&PyRobotBase::GetAffineRotationAxisResolution, DOXY_FN(RobotBase,GetAffineRotationAxisResolution))
-                       .def("GetAffineRotation3DResolution",&PyRobotBase::GetAffineRotation3DResolution, DOXY_FN(RobotBase,GetAffineRotation3DResolution))
-                       .def("GetAffineRotationQuatResolution",&PyRobotBase::GetAffineRotationQuatResolution, DOXY_FN(RobotBase,GetAffineRotationQuatResolution))
-                       .def("GetAffineTranslationWeights",&PyRobotBase::GetAffineTranslationWeights, DOXY_FN(RobotBase,GetAffineTranslationWeights))
-                       .def("GetAffineRotationAxisWeights",&PyRobotBase::GetAffineRotationAxisWeights, DOXY_FN(RobotBase,GetAffineRotationAxisWeights))
-                       .def("GetAffineRotation3DWeights",&PyRobotBase::GetAffineRotation3DWeights, DOXY_FN(RobotBase,GetAffineRotation3DWeights))
-                       .def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights, DOXY_FN(RobotBase,GetAffineRotationQuatWeights))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("SetActiveDOFValues", &PyRobotBase::SetActiveDOFValues,
-                            "values"_a,
-                            "checklimits"_a = (int) KinBody::CLA_CheckLimits,
-                            DOXY_FN(RobotBase, SetActiveDOFValues)
-                            )
-#else
-                       .def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,SetActiveDOFValues_overloads(PY_ARGS("values","checklimits") DOXY_FN(RobotBase,SetActiveDOFValues)))
-#endif
-                       .def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFValues))
-                       .def("GetActiveDOFWeights",&PyRobotBase::GetActiveDOFWeights, DOXY_FN(RobotBase,GetActiveDOFWeights))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("SetActiveDOFVelocities", &PyRobotBase::SetActiveDOFVelocities,
-                            "velocities"_a,
-                            "checklimits"_a = (int) KinBody::CLA_CheckLimits,
-                            DOXY_FN(RobotBase, SetActiveDOFVelocities))
-#else
-                       .def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, SetActiveDOFVelocities_overloads(PY_ARGS("velocities","checklimits") DOXY_FN(RobotBase,SetActiveDOFVelocities)))
-#endif
-                       .def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(RobotBase,GetActiveDOFVelocities))
-                       .def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits))
-                       .def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel))
-                       .def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel))
-                       .def("GetActiveDOFMaxJerk",&PyRobotBase::GetActiveDOFMaxJerk, DOXY_FN(RobotBase,GetActiveDOFMaxJerk))
-                       .def("GetActiveDOFHardMaxVel",&PyRobotBase::GetActiveDOFHardMaxVel, DOXY_FN(RobotBase,GetActiveDOFHardMaxVel))
-                       .def("GetActiveDOFHardMaxAccel",&PyRobotBase::GetActiveDOFHardMaxAccel, DOXY_FN(RobotBase,GetActiveDOFHardMaxAccel))
-                       .def("GetActiveDOFHardMaxJerk",&PyRobotBase::GetActiveDOFHardMaxJerk, DOXY_FN(RobotBase,GetActiveDOFHardMaxJerk))
-                       .def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("GetActiveConfigurationSpecification", &PyRobotBase::GetActiveConfigurationSpecification,
-                            "interpolation"_a = "",
-                            DOXY_FN(RobotBase, GetActiveConfigurationSpecification)
-                            )
-#else
-                       .def("GetActiveConfigurationSpecification",&PyRobotBase::GetActiveConfigurationSpecification, GetActiveConfigurationSpecification_overloads(PY_ARGS("interpolation") DOXY_FN(RobotBase,GetActiveConfigurationSpecification)))
-#endif
-                       .def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices)
-                       .def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices))
-                       .def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, PY_ARGS("values0","values1") DOXY_FN(RobotBase,SubtractActiveDOFValues))
-                       .def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian, PY_ARGS("linkindex","offset") DOXY_FN(RobotBase,CalculateActiveJacobian "int; const Vector; std::vector"))
-                       .def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian, PY_ARGS("linkindex","quat") DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; std::vector"))
-                       .def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian, PY_ARGS("linkindex") DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"))
-                       .def("Grab",pgrab1, PY_ARGS("body") DOXY_FN(RobotBase,Grab "KinBodyPtr"))
-                       .def("Grab",pgrab3, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"))
-                       .def("Grab",pgrab5, PY_ARGS("body","grablink","linkstoignore","grabbedUserData") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; Linkptr; rapidjson::Document"))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
-                            "linkindex"_a,
-                            "linktrans"_a,
-                            "report"_a = py::none_(), // PyCollisionReportPtr(),
-                            DOXY_FN(RobotBase,CheckLinkSelfCollision)
-                            )
-#else
-                       .def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision, CheckLinkSelfCollision_overloads(PY_ARGS("linkindex", "linktrans", "report") DOXY_FN(RobotBase,CheckLinkSelfCollision)))
-#endif
-                       .def("WaitForController",&PyRobotBase::WaitForController,PY_ARGS("timeout") "Wait until the robot controller is done")
-                       .def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-                       .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver,
-                            "options"_a = py::none_(),
-                            "Creates an object that can be entered using 'with' and returns a RobotStateSaver"
-                            )
-#else
-                       .def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()])
-#endif
-                       .def("__repr__", &PyRobotBase::__repr__)
-                       .def("__str__", &PyRobotBase::__str__)
-                       .def("__unicode__", &PyRobotBase::__unicode__)
-        ;
-        robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
-        robot.attr("ManipulatorInfo") = manipulatorinfo;
-        robot.attr("AttachedSensorInfo") = attachedsensorinfo;
 
         object (PyRobotBase::PyManipulator::*pmanipik)(object, int, bool, bool, PyIkFailureAccumulatorBasePtr) const = &PyRobotBase::PyManipulator::FindIKSolution;
         object (PyRobotBase::PyManipulator::*pmanipikf)(object, object, int, bool, bool, PyIkFailureAccumulatorBasePtr) const = &PyRobotBase::PyManipulator::FindIKSolution;
@@ -3086,6 +2876,218 @@ void init_openravepy_robot()
         .def("__eq__",&PyRobotBase::PyConnectedBody::__eq__)
         .def("__ne__",&PyRobotBase::PyConnectedBody::__ne__)
         .def("__hash__",&PyRobotBase::PyConnectedBody::__hash__);
+
+        void (PyRobotBase::*psetactivedofs1)(const object&) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs2)(const object&, int) = &PyRobotBase::SetActiveDOFs;
+        void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
+
+        bool (PyRobotBase::*pgrab1)(PyKinBodyPtr) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab3)(PyKinBodyPtr, object) = &PyRobotBase::Grab;
+        bool (PyRobotBase::*pgrab5)(PyKinBodyPtr, object, object, object) = &PyRobotBase::Grab;
+
+        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
+        PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
+
+        object (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
+        object (PyRobotBase::*GetManipulators2)(const string &) = &PyRobotBase::GetManipulators;
+        bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
+        bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
+        bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
+        bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("Init", initrobot,
+                  "linkinfos"_a,
+                  "jointinfos"_a,
+                  "manipinfos"_a,
+                  "attachedsensorinfos"_a,
+                  "uri"_a = "",
+                  DOXY_FN(RobotBase, Init)
+                  );
+#else
+        robot.def("Init", initrobot, Init_overloads(PY_ARGS("linkinfos", "jointinfos", "manipinfos", "attachedsensorinfos", "uri") DOXY_FN(RobotBase, Init)));
+#endif
+        robot.def("GetManipulators",GetManipulators1, DOXY_FN(RobotBase,GetManipulators));
+        robot.def("GetManipulators",GetManipulators2, PY_ARGS("manipname") DOXY_FN(RobotBase,GetManipulators));
+        robot.def("GetManipulator",&PyRobotBase::GetManipulator,PY_ARGS("manipname") "Return the manipulator whose name matches");
+        robot.def("SetActiveManipulator",setactivemanipulator2, PY_ARGS("manipname") DOXY_FN(RobotBase,SetActiveManipulator "const std::string"));
+        robot.def("SetActiveManipulator",setactivemanipulator3,PY_ARGS("manip") "Set the active manipulator given a pointer");
+        robot.def("GetActiveManipulator",&PyRobotBase::GetActiveManipulator, DOXY_FN(RobotBase,GetActiveManipulator));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("AddManipulator", &PyRobotBase::AddManipulator,
+                  "manipinfo"_a,
+                  "removeduplicate"_a = false,
+                  DOXY_FN(RobotBase, AddManipulator)
+                  );
+#else
+        robot.def("AddManipulator",&PyRobotBase::AddManipulator, AddManipulator_overloads(PY_ARGS("manipinfo", "removeduplicate") DOXY_FN(RobotBase,AddManipulator)));
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("InitFromRobotInfo", &PyRobotBase::InitFromRobotInfo,
+                  "info"_a,
+                  DOXY_FN(RobotBase, InitFromRobotInfo));
+#else
+        robot.def("InitFromRobotInfo",&PyRobotBase::InitFromRobotInfo, DOXY_FN(RobotBase, InitFromRobotInfo));
+#endif
+        robot.def("ExtractInfo", &PyRobotBase::ExtractInfo, DOXY_FN(RobotBase, ExtractInfo));
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor,
+                  "attachedsensorinfo"_a,
+                  "removeduplicate"_a = false,
+                  DOXY_FN(RobotBase, AddAttachedSensor)
+                  );
+#else
+        robot.def("AddAttachedSensor",&PyRobotBase::AddAttachedSensor, AddAttachedSensor_overloads(PY_ARGS("attachedsensorinfo", "removeduplicate") DOXY_FN(RobotBase,AddAttachedSensor)));
+#endif
+        robot.def("RemoveAttachedSensor",&PyRobotBase::RemoveAttachedSensor, PY_ARGS("attsensor") DOXY_FN(RobotBase,RemoveAttachedSensor));
+        robot.def("RemoveManipulator",&PyRobotBase::RemoveManipulator, PY_ARGS("manip") DOXY_FN(RobotBase,RemoveManipulator));
+        robot.def("GetAttachedSensors",&PyRobotBase::GetAttachedSensors, DOXY_FN(RobotBase,GetAttachedSensors));
+        robot.def("GetAttachedSensor",&PyRobotBase::GetAttachedSensor,PY_ARGS("sensorname") "Return the attached sensor whose name matches");
+        robot.def("GetSensors",&PyRobotBase::GetSensors);
+        robot.def("GetSensor",&PyRobotBase::GetSensor,PY_ARGS("sensorname") DOXY_FN(RobotBase, GetSensor));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("AddConnectedBody",&PyRobotBase::AddConnectedBody,
+                  "connectedbodyinfo"_a,
+                  "removeduplicate"_a = false,
+                  DOXY_FN(RobotBase, AddConnectedBody)
+                  );
+#else
+        robot.def("AddConnectedBody",&PyRobotBase::AddConnectedBody, AddConnectedBody_overloads(PY_ARGS("connectedbodyinfo", "removeduplicate") DOXY_FN(RobotBase,AddConnectedBody)));
+#endif
+        robot.def("RemoveConnectedBody",&PyRobotBase::RemoveConnectedBody, PY_ARGS("connectedbody") DOXY_FN(RobotBase,RemoveConnectedBody));
+        robot.def("GetConnectedBodies",&PyRobotBase::GetConnectedBodies, DOXY_FN(RobotBase,GetConnectedBodies));
+        robot.def("GetConnectedBody",&PyRobotBase::GetConnectedBody, PY_ARGS("bodyname") DOXY_FN(RobotBase,GetConnectedBody));
+        robot.def("GetConnectedBodyActiveStates",&PyRobotBase::GetConnectedBodyActiveStates, DOXY_FN(RobotBase,GetConnectedBodyActiveStates));
+        robot.def("SetConnectedBodyActiveStates",&PyRobotBase::SetConnectedBodyActiveStates, DOXY_FN(RobotBase,SetConnectedBodyActiveStates));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("AddGripperInfo",&PyRobotBase::AddGripperInfo,
+                  "gripperInfo"_a,
+                  "removeduplicate"_a = false,
+                  DOXY_FN(RobotBase, AddGripperInfo)
+                  );
+#else
+        robot.def("AddGripperInfo",&PyRobotBase::AddGripperInfo, AddGripperInfo_overloads(PY_ARGS("gripperInfo", "removeduplicate") DOXY_FN(RobotBase,AddGripperInfo)));
+#endif
+        robot.def("RemoveGripperInfo",&PyRobotBase::RemoveGripperInfo, PY_ARGS("name") DOXY_FN(RobotBase,RemoveGripperInfo));
+        robot.def("GetGripperInfo",&PyRobotBase::GetGripperInfo, PY_ARGS("name") DOXY_FN(RobotBase,GetGripperInfo));
+        robot.def("GetGripperInfos",&PyRobotBase::GetGripperInfos, DOXY_FN(RobotBase,GetGripperInfos));
+        robot.def("GetController",&PyRobotBase::GetController, DOXY_FN(RobotBase,GetController));
+        robot.def("SetController",setcontroller1,DOXY_FN(RobotBase,SetController));
+        robot.def("SetController",setcontroller2, PY_ARGS("robot","dofindices","controltransform") DOXY_FN(RobotBase,SetController));
+        robot.def("SetController",setcontroller3,DOXY_FN(RobotBase,SetController));
+        robot.def("SetActiveDOFs",psetactivedofs1, PY_ARGS("dofindices") DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int"));
+        robot.def("SetActiveDOFs",psetactivedofs2, PY_ARGS("dofindices","affine") DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int"));
+        robot.def("SetActiveDOFs",psetactivedofs3, PY_ARGS("dofindices","affine","rotationaxis") DOXY_FN(RobotBase,SetActiveDOFs "const std::vector; int; const Vector"));
+        robot.def("GetActiveDOF",&PyRobotBase::GetActiveDOF, DOXY_FN(RobotBase,GetActiveDOF));
+        robot.def("GetAffineDOF",&PyRobotBase::GetAffineDOF, DOXY_FN(RobotBase,GetAffineDOF));
+        robot.def("GetAffineDOFIndex",&PyRobotBase::GetAffineDOFIndex, PY_ARGS("index") DOXY_FN(RobotBase,GetAffineDOFIndex));
+        robot.def("GetAffineRotationAxis",&PyRobotBase::GetAffineRotationAxis, DOXY_FN(RobotBase,GetAffineRotationAxis));
+        robot.def("SetAffineTranslationLimits",&PyRobotBase::SetAffineTranslationLimits, PY_ARGS("lower","upper") DOXY_FN(RobotBase,SetAffineTranslationLimits));
+        robot.def("SetAffineRotationAxisLimits",&PyRobotBase::SetAffineRotationAxisLimits, PY_ARGS("lower","upper") DOXY_FN(RobotBase,SetAffineRotationAxisLimits));
+        robot.def("SetAffineRotation3DLimits",&PyRobotBase::SetAffineRotation3DLimits, PY_ARGS("lower","upper") DOXY_FN(RobotBase,SetAffineRotation3DLimits));
+        robot.def("SetAffineRotationQuatLimits",&PyRobotBase::SetAffineRotationQuatLimits, PY_ARGS("quatangle") DOXY_FN(RobotBase,SetAffineRotationQuatLimits));
+        robot.def("SetAffineTranslationMaxVels",&PyRobotBase::SetAffineTranslationMaxVels, PY_ARGS("vels") DOXY_FN(RobotBase,SetAffineTranslationMaxVels));
+        robot.def("SetAffineRotationAxisMaxVels",&PyRobotBase::SetAffineRotationAxisMaxVels, PY_ARGS("velocity") DOXY_FN(RobotBase,SetAffineRotationAxisMaxVels));
+        robot.def("SetAffineRotation3DMaxVels",&PyRobotBase::SetAffineRotation3DMaxVels, PY_ARGS("velocity") DOXY_FN(RobotBase,SetAffineRotation3DMaxVels));
+        robot.def("SetAffineRotationQuatMaxVels",&PyRobotBase::SetAffineRotationQuatMaxVels, PY_ARGS("velocity") DOXY_FN(RobotBase,SetAffineRotationQuatMaxVels));
+        robot.def("SetAffineTranslationResolution",&PyRobotBase::SetAffineTranslationResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineTranslationResolution));
+        robot.def("SetAffineRotationAxisResolution",&PyRobotBase::SetAffineRotationAxisResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineRotationAxisResolution));
+        robot.def("SetAffineRotation3DResolution",&PyRobotBase::SetAffineRotation3DResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineRotation3DResolution));
+        robot.def("SetAffineRotationQuatResolution",&PyRobotBase::SetAffineRotationQuatResolution, PY_ARGS("resolution") DOXY_FN(RobotBase,SetAffineRotationQuatResolution));
+        robot.def("SetAffineTranslationWeights",&PyRobotBase::SetAffineTranslationWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineTranslationWeights));
+        robot.def("SetAffineRotationAxisWeights",&PyRobotBase::SetAffineRotationAxisWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineRotationAxisWeights));
+        robot.def("SetAffineRotation3DWeights",&PyRobotBase::SetAffineRotation3DWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineRotation3DWeights));
+        robot.def("SetAffineRotationQuatWeights",&PyRobotBase::SetAffineRotationQuatWeights, PY_ARGS("weights") DOXY_FN(RobotBase,SetAffineRotationQuatWeights));
+        robot.def("GetAffineTranslationLimits",&PyRobotBase::GetAffineTranslationLimits, DOXY_FN(RobotBase,GetAffineTranslationLimits));
+        robot.def("GetAffineRotationAxisLimits",&PyRobotBase::GetAffineRotationAxisLimits, DOXY_FN(RobotBase,GetAffineRotationAxisLimits));
+        robot.def("GetAffineRotation3DLimits",&PyRobotBase::GetAffineRotation3DLimits, DOXY_FN(RobotBase,GetAffineRotation3DLimits));
+        robot.def("GetAffineRotationQuatLimits",&PyRobotBase::GetAffineRotationQuatLimits, DOXY_FN(RobotBase,GetAffineRotationQuatLimits));
+        robot.def("GetAffineTranslationMaxVels",&PyRobotBase::GetAffineTranslationMaxVels, DOXY_FN(RobotBase,GetAffineTranslationMaxVels));
+        robot.def("GetAffineRotationAxisMaxVels",&PyRobotBase::GetAffineRotationAxisMaxVels, DOXY_FN(RobotBase,GetAffineRotationAxisMaxVels));
+        robot.def("GetAffineRotation3DMaxVels",&PyRobotBase::GetAffineRotation3DMaxVels, DOXY_FN(RobotBase,GetAffineRotation3DMaxVels));
+        robot.def("GetAffineRotationQuatMaxVels",&PyRobotBase::GetAffineRotationQuatMaxVels, DOXY_FN(RobotBase,GetAffineRotationQuatMaxVels));
+        robot.def("GetAffineTranslationResolution",&PyRobotBase::GetAffineTranslationResolution, DOXY_FN(RobotBase,GetAffineTranslationResolution));
+        robot.def("GetAffineRotationAxisResolution",&PyRobotBase::GetAffineRotationAxisResolution, DOXY_FN(RobotBase,GetAffineRotationAxisResolution));
+        robot.def("GetAffineRotation3DResolution",&PyRobotBase::GetAffineRotation3DResolution, DOXY_FN(RobotBase,GetAffineRotation3DResolution));
+        robot.def("GetAffineRotationQuatResolution",&PyRobotBase::GetAffineRotationQuatResolution, DOXY_FN(RobotBase,GetAffineRotationQuatResolution));
+        robot.def("GetAffineTranslationWeights",&PyRobotBase::GetAffineTranslationWeights, DOXY_FN(RobotBase,GetAffineTranslationWeights));
+        robot.def("GetAffineRotationAxisWeights",&PyRobotBase::GetAffineRotationAxisWeights, DOXY_FN(RobotBase,GetAffineRotationAxisWeights));
+        robot.def("GetAffineRotation3DWeights",&PyRobotBase::GetAffineRotation3DWeights, DOXY_FN(RobotBase,GetAffineRotation3DWeights));
+        robot.def("GetAffineRotationQuatWeights",&PyRobotBase::GetAffineRotationQuatWeights, DOXY_FN(RobotBase,GetAffineRotationQuatWeights));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("SetActiveDOFValues", &PyRobotBase::SetActiveDOFValues,
+                  "values"_a,
+                  "checklimits"_a = (int) KinBody::CLA_CheckLimits,
+                  DOXY_FN(RobotBase, SetActiveDOFValues)
+                  );
+#else
+        robot.def("SetActiveDOFValues",&PyRobotBase::SetActiveDOFValues,SetActiveDOFValues_overloads(PY_ARGS("values","checklimits") DOXY_FN(RobotBase,SetActiveDOFValues)));
+#endif
+        robot.def("GetActiveDOFValues",&PyRobotBase::GetActiveDOFValues, DOXY_FN(RobotBase,GetActiveDOFValues));
+        robot.def("GetActiveDOFWeights",&PyRobotBase::GetActiveDOFWeights, DOXY_FN(RobotBase,GetActiveDOFWeights));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("SetActiveDOFVelocities", &PyRobotBase::SetActiveDOFVelocities,
+                  "velocities"_a,
+                  "checklimits"_a = (int) KinBody::CLA_CheckLimits,
+                  DOXY_FN(RobotBase, SetActiveDOFVelocities));
+#else
+        robot.def("SetActiveDOFVelocities",&PyRobotBase::SetActiveDOFVelocities, SetActiveDOFVelocities_overloads(PY_ARGS("velocities","checklimits") DOXY_FN(RobotBase,SetActiveDOFVelocities)));
+#endif
+        robot.def("GetActiveDOFVelocities",&PyRobotBase::GetActiveDOFVelocities, DOXY_FN(RobotBase,GetActiveDOFVelocities));
+        robot.def("GetActiveDOFLimits",&PyRobotBase::GetActiveDOFLimits, DOXY_FN(RobotBase,GetActiveDOFLimits));
+        robot.def("GetActiveDOFMaxVel",&PyRobotBase::GetActiveDOFMaxVel, DOXY_FN(RobotBase,GetActiveDOFMaxVel));
+        robot.def("GetActiveDOFMaxAccel",&PyRobotBase::GetActiveDOFMaxAccel, DOXY_FN(RobotBase,GetActiveDOFMaxAccel));
+        robot.def("GetActiveDOFMaxJerk",&PyRobotBase::GetActiveDOFMaxJerk, DOXY_FN(RobotBase,GetActiveDOFMaxJerk));
+        robot.def("GetActiveDOFHardMaxVel",&PyRobotBase::GetActiveDOFHardMaxVel, DOXY_FN(RobotBase,GetActiveDOFHardMaxVel));
+        robot.def("GetActiveDOFHardMaxAccel",&PyRobotBase::GetActiveDOFHardMaxAccel, DOXY_FN(RobotBase,GetActiveDOFHardMaxAccel));
+        robot.def("GetActiveDOFHardMaxJerk",&PyRobotBase::GetActiveDOFHardMaxJerk, DOXY_FN(RobotBase,GetActiveDOFHardMaxJerk));
+        robot.def("GetActiveDOFResolutions",&PyRobotBase::GetActiveDOFResolutions, DOXY_FN(RobotBase,GetActiveDOFResolutions));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("GetActiveConfigurationSpecification", &PyRobotBase::GetActiveConfigurationSpecification,
+                  "interpolation"_a = "",
+                  DOXY_FN(RobotBase, GetActiveConfigurationSpecification)
+                  );
+#else
+        robot.def("GetActiveConfigurationSpecification",&PyRobotBase::GetActiveConfigurationSpecification, GetActiveConfigurationSpecification_overloads(PY_ARGS("interpolation") DOXY_FN(RobotBase,GetActiveConfigurationSpecification)));
+#endif
+        robot.def("GetActiveJointIndices",&PyRobotBase::GetActiveJointIndices);
+        robot.def("GetActiveDOFIndices",&PyRobotBase::GetActiveDOFIndices, DOXY_FN(RobotBase,GetActiveDOFIndices));
+        robot.def("SubtractActiveDOFValues",&PyRobotBase::SubtractActiveDOFValues, PY_ARGS("values0","values1") DOXY_FN(RobotBase,SubtractActiveDOFValues));
+        robot.def("CalculateActiveJacobian",&PyRobotBase::CalculateActiveJacobian, PY_ARGS("linkindex","offset") DOXY_FN(RobotBase,CalculateActiveJacobian "int; const Vector; std::vector"));
+        robot.def("CalculateActiveRotationJacobian",&PyRobotBase::CalculateActiveRotationJacobian, PY_ARGS("linkindex","quat") DOXY_FN(RobotBase,CalculateActiveRotationJacobian "int; const Vector; std::vector"));
+        robot.def("CalculateActiveAngularVelocityJacobian",&PyRobotBase::CalculateActiveAngularVelocityJacobian, PY_ARGS("linkindex") DOXY_FN(RobotBase,CalculateActiveAngularVelocityJacobian "int; std::vector"));
+        robot.def("Grab",pgrab1, PY_ARGS("body") DOXY_FN(RobotBase,Grab "KinBodyPtr"));
+        robot.def("Grab",pgrab3, PY_ARGS("body","grablink") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr"));
+        robot.def("Grab",pgrab5, PY_ARGS("body","grablink","linkstoignore","grabbedUserData") DOXY_FN(RobotBase,Grab "KinBodyPtr; LinkPtr; Linkptr; rapidjson::Document"));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision,
+                  "linkindex"_a,
+                  "linktrans"_a,
+                  "report"_a = py::none_(), // PyCollisionReportPtr(),
+                  DOXY_FN(RobotBase,CheckLinkSelfCollision)
+                  );
+#else
+        robot.def("CheckLinkSelfCollision", &PyRobotBase::CheckLinkSelfCollision, CheckLinkSelfCollision_overloads(PY_ARGS("linkindex", "linktrans", "report") DOXY_FN(RobotBase,CheckLinkSelfCollision)));
+#endif
+        robot.def("WaitForController",&PyRobotBase::WaitForController,PY_ARGS("timeout") "Wait until the robot controller is done");
+        robot.def("GetRobotStructureHash",&PyRobotBase::GetRobotStructureHash, DOXY_FN(RobotBase,GetRobotStructureHash));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        robot.def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver,
+                  "options"_a = py::none_(),
+                  "Creates an object that can be entered using 'with' and returns a RobotStateSaver"
+                  );
+#else
+        robot.def("CreateRobotStateSaver",&PyRobotBase::CreateRobotStateSaver, CreateRobotStateSaver_overloads(PY_ARGS("options") "Creates an object that can be entered using 'with' and returns a RobotStateSaver")[return_value_policy<manage_new_object>()]);
+#endif
+        robot.def("__repr__", &PyRobotBase::__repr__);
+        robot.def("__str__", &PyRobotBase::__str__);
+        robot.def("__unicode__", &PyRobotBase::__unicode__);
+
+        robot.attr("DOFAffine") = dofaffine; // deprecated (11/10/04)
+        robot.attr("ManipulatorInfo") = manipulatorinfo;
+        robot.attr("AttachedSensorInfo") = attachedsensorinfo;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<PyRobotBase::PyRobotStateSaver, OPENRAVE_SHARED_PTR<PyRobotBase::PyRobotStateSaver> >(m, "RobotStateSaver", DOXY_CLASS(Robot::RobotStateSaver))

@@ -3276,6 +3276,7 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
+    init_python_bindings(m);
 #else // USE_PYBIND11_PYTHON_BINDINGS
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
@@ -3469,6 +3470,47 @@ Because race conditions can pop up when trying to lock the openrave environment 
         ;
     }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    openravepy::init_openravepy_global(m);
+    openravepy::init_openravepy_controller(m);
+    openravepy::init_openravepy_ikparameterization(m);
+    openravepy::init_openravepy_iksolver(m);
+    openravepy::init_openravepy_kinbody(m);
+    openravepy::init_openravepy_collisionchecker(m);
+    openravepy::init_openravepy_sensor(m);
+    openravepy::init_openravepy_sensorsystem(m);
+    openravepy::init_openravepy_robot(m);
+
+    openravepy::init_openravepy_module(m);
+    openravepy::init_openravepy_physicsengine(m);
+    openravepy::init_openravepy_trajectory(m);
+    openravepy::init_openravepy_planner(m);
+
+
+    openravepy::init_openravepy_spacesampler(m);
+    openravepy::init_openravepy_viewer(m);
+
+    openravepy::InitPlanningUtils(m);
+    openravepy::init_openravepy_global_functions(m);
+#else
+    openravepy::init_openravepy_global();
+    openravepy::InitPlanningUtils();
+
+    openravepy::init_openravepy_collisionchecker();
+    openravepy::init_openravepy_controller();
+    openravepy::init_openravepy_ikparameterization();
+    openravepy::init_openravepy_iksolver();
+    openravepy::init_openravepy_kinbody();
+    openravepy::init_openravepy_robot();
+    openravepy::init_openravepy_module();
+    openravepy::init_openravepy_physicsengine();
+    openravepy::init_openravepy_planner();
+    openravepy::init_openravepy_trajectory();
+    openravepy::init_openravepy_sensor();
+    openravepy::init_openravepy_sensorsystem();
+    openravepy::init_openravepy_spacesampler();
+    openravepy::init_openravepy_viewer();
+#endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >(m, "EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
@@ -4196,44 +4238,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
     scope().attr("__docformat__") = "restructuredtext";
     scope().attr("__pythonbinding__") = "Boost.Python." + std::to_string(BOOST_VERSION);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    openravepy::init_openravepy_global(m);
-    openravepy::InitPlanningUtils(m);
-
-    openravepy::init_openravepy_collisionchecker(m);
-    openravepy::init_openravepy_controller(m);
-    openravepy::init_openravepy_ikparameterization(m);
-    openravepy::init_openravepy_iksolver(m);
-    openravepy::init_openravepy_kinbody(m);
-    openravepy::init_openravepy_robot(m);
-    openravepy::init_openravepy_module(m);
-    openravepy::init_openravepy_physicsengine(m);
-    openravepy::init_openravepy_planner(m);
-    openravepy::init_openravepy_trajectory(m);
-    openravepy::init_openravepy_sensor(m);
-    openravepy::init_openravepy_sensorsystem(m);
-    openravepy::init_openravepy_spacesampler(m);
-    openravepy::init_openravepy_viewer(m);
-#else
-    openravepy::init_openravepy_global();
-    openravepy::InitPlanningUtils();
-
-    openravepy::init_openravepy_collisionchecker();
-    openravepy::init_openravepy_controller();
-    openravepy::init_openravepy_ikparameterization();
-    openravepy::init_openravepy_iksolver();
-    openravepy::init_openravepy_kinbody();
-    openravepy::init_openravepy_robot();
-    openravepy::init_openravepy_module();
-    openravepy::init_openravepy_physicsengine();
-    openravepy::init_openravepy_planner();
-    openravepy::init_openravepy_trajectory();
-    openravepy::init_openravepy_sensor();
-    openravepy::init_openravepy_sensorsystem();
-    openravepy::init_openravepy_spacesampler();
-    openravepy::init_openravepy_viewer();
-#endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveGetEnvironmentId", openravepy::RaveGetEnvironmentId, DOXY_FN1(RaveGetEnvironmentId));
