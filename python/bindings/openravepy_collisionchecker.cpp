@@ -647,36 +647,39 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     PyObject* pycollision = PyArray_SimpleNew(1, dims, PyArray_BOOL);
     bool* pcollision = (bool*)PyArray_DATA(pycollision);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-    for(int i = 0; i < num; ++i, ppos += 6) {
-        if( bHasPreempt && (i&0x3ff) == 0x3ff ) { // should be around 10ms
-            oCheckPreemptFn();
-        }
-        std::vector<dReal> ray = ExtractArray<dReal>(rays[py::to_object(i)]);
-        r.pos.x = ray[0];
-        r.pos.y = ray[1];
-        r.pos.z = ray[2];
-        r.dir.x = ray[3];
-        r.dir.y = ray[4];
-        r.dir.z = ray[5];
-        bool bCollision;
-        if( !pbody ) {
-            bCollision = _pCollisionChecker->CheckCollision(r, preport);
-        }
-        else {
-            bCollision = _pCollisionChecker->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
-        }
-        pcollision[i] = false;
-        ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
-        if( bCollision && report.IsValid() && report.vCollisionInfos.at(0).contacts.size() > 0 ) {
-            const OpenRAVE::CONTACT& contact = report.vCollisionInfos.at(0).contacts.at(0);
-            if( !bFrontFacingOnly || contact.norm.dot3(r.dir)<0 ) {
-                pcollision[i] = true;
-                ppos[0] = contact.pos.x;
-                ppos[1] = contact.pos.y;
-                ppos[2] = contact.pos.z;
-                ppos[3] = contact.norm.x;
-                ppos[4] = contact.norm.y;
-                ppos[5] = contact.norm.z;
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        for(int i = 0; i < num; ++i, ppos += 6) {
+            if( bHasPreempt && (i&0x3ff) == 0x3ff ) { // should be around 10ms
+                oCheckPreemptFn();
+            }
+            std::vector<dReal> ray = ExtractArray<dReal>(rays[py::to_object(i)]);
+            r.pos.x = ray[0];
+            r.pos.y = ray[1];
+            r.pos.z = ray[2];
+            r.dir.x = ray[3];
+            r.dir.y = ray[4];
+            r.dir.z = ray[5];
+            bool bCollision;
+            if( !pbody ) {
+                bCollision = _pCollisionChecker->CheckCollision(r, preport);
+            }
+            else {
+                bCollision = _pCollisionChecker->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
+            }
+            pcollision[i] = false;
+            ppos[0] = 0; ppos[1] = 0; ppos[2] = 0; ppos[3] = 0; ppos[4] = 0; ppos[5] = 0;
+            if( bCollision && report.IsValid() && report.vCollisionInfos.at(0).contacts.size() > 0 ) {
+                const OpenRAVE::CONTACT& contact = report.vCollisionInfos.at(0).contacts.at(0);
+                if( !bFrontFacingOnly || contact.norm.dot3(r.dir)<0 ) {
+                    pcollision[i] = true;
+                    ppos[0] = contact.pos.x;
+                    ppos[1] = contact.pos.y;
+                    ppos[2] = contact.pos.z;
+                    ppos[3] = contact.norm.x;
+                    ppos[4] = contact.norm.y;
+                    ppos[5] = contact.norm.z;
+                }
             }
         }
     }
