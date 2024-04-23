@@ -72,12 +72,11 @@ public:
         switch( ea.getEventType() )
         {
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -333,12 +332,11 @@ public:
             return handleMouseDoubleClick( ea, us );
 
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -828,7 +826,11 @@ void QOSGViewerWidget::SetHome()
 {
     if (!!_osgLightsGroup) {
         const osg::BoundingSphere& bs = _osgSceneRoot->getBound();
-        _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(1.5*bs.radius(),0,1.5*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
+        _osgview->getCameraManipulator()->setHomePosition(
+            osg::Vec3d(ClampDistance(1.5*bs.radius()), 0, ClampDistance(1.5*bs.radius())),
+            bs.center(),
+            osg::Vec3d(0.0, 0.0, 1.0)
+        );
         _osgview->home();
     }
 }
@@ -1358,7 +1360,7 @@ void QOSGViewerWidget::Zoom(float factor)
         _SetCameraViewOrthoProjectionPlaneSize(_currentOrthoFrustumSize);
         return;
     }
-    SetCameraDistanceToFocus(GetCameraDistanceToFocus() / factor);
+    SetCameraDistanceToFocus(ClampDistance(GetCameraDistanceToFocus() / factor));
 }
 
 
