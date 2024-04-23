@@ -632,6 +632,18 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     CollisionReportPtr preport(&report,null_deleter());
     bool bHasPreempt = !IS_PYTHONOBJECT_NONE(oCheckPreemptFn);
     RAY r;
+
+    PyArrayObject *pPyRays = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(rays.ptr()));
+    AutoPyArrayObjectDereferencer pyderef(pPyRays);
+
+    if( !PyArray_ISFLOAT(pPyRays) ) {
+        throw OpenRAVEException(_("rays has to be a float array\n"));
+    }
+
+    const bool isFloat = PyArray_ITEMSIZE(pPyRays) == sizeof(float); // or double
+    const float *pRaysFloat = isFloat ? reinterpret_cast<const float*>(PyArray_DATA(pPyRays)) : NULL;
+    const double *pRaysDouble = isFloat ? NULL : reinterpret_cast<const double*>(PyArray_DATA(pPyRays));
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pypos({num, 6});
     py::buffer_info bufpos = pypos.request();
@@ -648,18 +660,33 @@ object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbod
     bool* pcollision = (bool*)PyArray_DATA(pycollision);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
     {
-        openravepy::PythonThreadSaver threadsaver;
+        boost::shared_ptr<openravepy::PythonThreadSaver> pthreadsaver(new openravepy::PythonThreadSaver());
         for(int i = 0; i < num; ++i, ppos += 6) {
-            if( bHasPreempt && (i&0x3ff) == 0x3ff ) { // should be around 10ms
+            if( bHasPreempt && (i&0x7ff) == 0x7ff ) { // should be around 20ms
+                pthreadsaver.reset();
                 oCheckPreemptFn();
+                pthreadsaver.reset(new openravepy::PythonThreadSaver());
             }
-            std::vector<dReal> ray = ExtractArray<dReal>(rays[py::to_object(i)]);
-            r.pos.x = ray[0];
-            r.pos.y = ray[1];
-            r.pos.z = ray[2];
-            r.dir.x = ray[3];
-            r.dir.y = ray[4];
-            r.dir.z = ray[5];
+
+            if (isFloat) {
+                r.pos.x = pRaysFloat[0];
+                r.pos.y = pRaysFloat[1];
+                r.pos.z = pRaysFloat[2];
+                r.dir.x = pRaysFloat[3];
+                r.dir.y = pRaysFloat[4];
+                r.dir.z = pRaysFloat[5];
+                pRaysFloat += 6;
+            }
+            else {
+                r.pos.x = pRaysDouble[0];
+                r.pos.y = pRaysDouble[1];
+                r.pos.z = pRaysDouble[2];
+                r.dir.x = pRaysDouble[3];
+                r.dir.y = pRaysDouble[4];
+                r.dir.z = pRaysDouble[5];
+                pRaysDouble += 6;
+            }
+
             bool bCollision;
             if( !pbody ) {
                 bCollision = _pCollisionChecker->CheckCollision(r, preport);
