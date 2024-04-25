@@ -1336,8 +1336,9 @@ py::object poseTransformPoints2(py::object opose, py::object opoints)
     py::buffer_info buf = pytrans.request();
     dReal* ptrans = (dReal*) buf.ptr;
 
-    Transform t;
-    {
+    // Extract pose data
+    dReal rotx, roty, rotz, rotw, transx, transy, transz;
+    else {
         boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpose;
         PyArrayObject* poseArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opose.ptr());
         if( !poseArrPtr || !poseArrPtr->data ) {
@@ -1349,14 +1350,24 @@ py::object poseTransformPoints2(py::object opose, py::object opoints)
             throw OPENRAVE_EXCEPTION_FORMAT0("Got invalid pose element", ORE_InvalidArguments);
         }
         dReal* pPoseData = (dReal*)PyArray_DATA(poseArrPtr);
-        t.rot.x = *pPoseData++;
-        t.rot.y = *pPoseData++;
-        t.rot.z = *pPoseData++;
-        t.rot.w = *pPoseData++;
-        t.trans.x = *pPoseData++;
-        t.trans.y = *pPoseData++;
-        t.trans.z = *pPoseData++;
+        rotx = *pPoseData++;
+        roty = *pPoseData++;
+        rotz = *pPoseData++;
+        rotw = *pPoseData++;
+        transx = *pPoseData++;
+        transy = *pPoseData++;
+        transz = *pPoseData++;
     }
+    // See also RaveTransform::rotate
+    const dReal xx = 2 * roty * roty;
+    const dReal xy = 2 * roty * rotz;
+    const dReal xz = 2 * roty * rotw;
+    const dReal xw = 2 * roty * rotx;
+    const dReal yy = 2 * rotz * rotz;
+    const dReal yz = 2 * rotz * rotw;
+    const dReal yw = 2 * rotz * rotx;
+    const dReal zz = 2 * rotw * rotw;
+    const dReal zw = 2 * rotw * rotx;
     {
         boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpoints;
         PyArrayObject* pointsArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opoints.ptr());
@@ -1373,17 +1384,15 @@ py::object poseTransformPoints2(py::object opose, py::object opoints)
         if( numElements % 3 != 0 ) {
             throw OPENRAVE_EXCEPTION_FORMAT("Number of elements in points array (%d) is not a multiple of 3", numElements, ORE_InvalidArguments);
         }
-        Vector point;
-        Vector transformedPoint;
+        dReal pointx, pointy, pointz;
         for( int ipoint = 0; ipoint < numElements/3; ++ipoint, ptrans += 3 ) {
-            point.x = *pPointsData++;
-            point.y = *pPointsData++;
-            point.z = *pPointsData++;
-            transformedPoint = t*point;
-
-            ptrans[0] = transformedPoint.x;
-            ptrans[1] = transformedPoint.y;
-            ptrans[2] = transformedPoint.z;
+            pointx = *pPointsData++;
+            pointy = *pPointsData++;
+            pointz = *pPointsData++;
+            // newpoint = t.trans + t.rotate(point)
+            ptrans[0] = transx + (1 - yy - zz)*pointx + (xy - zw)*pointy + (xz + yw)*pointz;
+            ptrans[1] = transy + (xy + zw)*pointx + (1 - xx - zz)*pointy + (yz - xw)*pointz;
+            ptrans[2] = transz + (xz - yw)*pointx + (yz + xw)*pointy + (1 - xx - yy)*pointz;
         }
     }
     return pytrans;
@@ -2625,7 +2634,7 @@ void init_openravepy_global()
 #else
     def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #endif
-    m.def("poseTransformPoints2",openravepy::poseTransformPoints2, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
+    m.def("poseTransformPoints2", openravepy::poseTransformPoints2, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("TransformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
 #else
