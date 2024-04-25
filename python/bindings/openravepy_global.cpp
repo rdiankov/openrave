@@ -1326,6 +1326,69 @@ object poseTransformPoints(object opose, object opoints)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
+py::object poseTransformPoints2(py::object opose, py::object opoints)
+{
+    if( len(opose) != 7 ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Got invalid pose of size %d", len(opose), ORE_InvalidArguments);
+    }
+    const int numPoints = len(opoints);
+    py::array_t<dReal> pytrans({numPoints, 3});
+    py::buffer_info buf = pytrans.request();
+    dReal* ptrans = (dReal*) buf.ptr;
+
+    Transform t;
+    {
+        boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpose;
+        PyArrayObject* poseArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opose.ptr());
+        if( !poseArrPtr || !poseArrPtr->data ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("Could not get contiguous pose array", ORE_InvalidArguments);
+        }
+        psaverpose.reset(new AutoPyArrayObjectDereferencer(poseArrPtr));
+        const int poseItemSize = PyArray_ITEMSIZE(poseArrPtr);
+        if( poseItemSize != sizeof(dReal) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("Got invalid pose element", ORE_InvalidArguments);
+        }
+        dReal* pPoseData = (dReal*)PyArray_DATA(poseArrPtr);
+        t.rot.x = *pPoseData++;
+        t.rot.y = *pPoseData++;
+        t.rot.z = *pPoseData++;
+        t.rot.w = *pPoseData++;
+        t.trans.x = *pPoseData++;
+        t.trans.y = *pPoseData++;
+        t.trans.z = *pPoseData++;
+    }
+    {
+        boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpoints;
+        PyArrayObject* pointsArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opoints.ptr());
+        if( !pointsArrPtr || !pointsArrPtr->data ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("Could not get contiguous points array", ORE_InvalidArguments);
+        }
+        psaverpoints.reset(new AutoPyArrayObjectDereferencer(pointsArrPtr));
+        const int pointsItemSize = PyArray_ITEMSIZE(pointsArrPtr);
+        if( pointsItemSize != sizeof(dReal) ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("Got invalid points element", ORE_InvalidArguments);
+        }
+        dReal* pPointsData = (dReal*)PyArray_DATA(pointsArrPtr);
+        const int numElements = PyArray_SIZE(pointsArrPtr);
+        if( numElements % 3 != 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT("Number of elements in points array (%d) is not a multiple of 3", numElements, ORE_InvalidArguments);
+        }
+        Vector point;
+        Vector transformedPoint;
+        for( int ipoint = 0; ipoint < numElements/3; ++ipoint, ptrans += 3 ) {
+            point.x = *pPointsData++;
+            point.y = *pPointsData++;
+            point.z = *pPointsData++;
+            transformedPoint = t*point;
+
+            ptrans[0] = transformedPoint.x;
+            ptrans[1] = transformedPoint.y;
+            ptrans[2] = transformedPoint.z;
+        }
+    }
+    return pytrans;
+}
+
 object TransformLookat(object olookat, object ocamerapos, object ocameraup)
 {
     return toPyArray(transformLookat(ExtractVector3(olookat),ExtractVector3(ocamerapos),ExtractVector3(ocameraup)));
@@ -2562,6 +2625,7 @@ void init_openravepy_global()
 #else
     def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #endif
+    m.def("poseTransformPoints2",openravepy::poseTransformPoints2, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("TransformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
 #else
