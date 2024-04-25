@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.142.2
+Version 0.143.1
 ===============
 
 - Cache the absence of collision bodies for a kinbody in the FCL collision manager, improving collision checking performance
+
+Version 0.143.0
+===============
+
+- Allow env.drawlabel to specify size of characters.
 
 Version 0.142.1
 ===============

@@ -10,7 +10,7 @@ namespace qtosgrave {
 	class OSGLODLabel : public osg::LOD
 	{
 	public:
-	    OSGLODLabel(const std::string& label, const RaveVector<float>& color=RaveVector<float>(0,0,0,1), osg::ref_ptr<osgText::Font> font=0);
+	    OSGLODLabel(const std::string& label, const RaveVector<float>& color=RaveVector<float>(0,0,0,1), float height=0.05, osg::ref_ptr<osgText::Font> font=0);
 	    ~OSGLODLabel();
 	    void traverse(osg::NodeVisitor& nv);
         static void SetFont(osgText::Font* font);
