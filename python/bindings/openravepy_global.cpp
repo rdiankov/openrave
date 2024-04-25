@@ -1328,26 +1328,27 @@ object poseTransformPoints(object opose, object opoints)
 
 py::object poseTransformPoints2(py::object opose, py::object opoints)
 {
-    if( len(opose) != 7 ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("Got invalid pose of size %d", len(opose), ORE_InvalidArguments);
-    }
-    const int numPoints = len(opoints);
-    py::array_t<dReal> pytrans({numPoints, 3});
-    py::buffer_info buf = pytrans.request();
-    dReal* ptrans = (dReal*) buf.ptr;
-
-    // Extract pose data
+    // Extract pose data from opose
     dReal rotx, roty, rotz, rotw, transx, transy, transz;
-    else {
+
+    bool useFallbackForPoseExtraction = true;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    do {
+        if( len(opose) != 7 ) {
+            break;
+        }
+        if( !py::isinstance<py::array_t<dReal> >(opose) ) {
+            break;
+        }
         boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpose;
         PyArrayObject* poseArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opose.ptr());
         if( !poseArrPtr || !poseArrPtr->data ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("Could not get contiguous pose array", ORE_InvalidArguments);
+            break;
         }
         psaverpose.reset(new AutoPyArrayObjectDereferencer(poseArrPtr));
         const int poseItemSize = PyArray_ITEMSIZE(poseArrPtr);
         if( poseItemSize != sizeof(dReal) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("Got invalid pose element", ORE_InvalidArguments);
+            break;
         }
         dReal* pPoseData = (dReal*)PyArray_DATA(poseArrPtr);
         rotx = *pPoseData++;
@@ -1357,7 +1358,21 @@ py::object poseTransformPoints2(py::object opose, py::object opoints)
         transx = *pPoseData++;
         transy = *pPoseData++;
         transz = *pPoseData++;
+        useFallbackForPoseExtraction = false;
+        break;
+    } while(false);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    if( useFallbackForPoseExtraction ) {
+        const Transform t = ExtractTransformType<dReal>(opose);
+        rotx = t.rot.x;
+        roty = t.rot.y;
+        rotz = t.rot.z;
+        rotw = t.rot.w;
+        transx = t.trans.x;
+        transy = t.trans.y;
+        transz = t.trans.z;
     }
+
     // See also RaveTransform::rotate
     const dReal xx = 2 * roty * roty;
     const dReal xy = 2 * roty * rotz;
@@ -1368,21 +1383,42 @@ py::object poseTransformPoints2(py::object opose, py::object opoints)
     const dReal yw = 2 * rotz * rotx;
     const dReal zz = 2 * rotw * rotw;
     const dReal zw = 2 * rotw * rotx;
-    {
+
+    const int numPoints = len(opoints);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pytrans({numPoints, 3});
+    py::buffer_info buf = pytrans.request();
+    dReal* ptrans = (dReal*) buf.ptr;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    npy_intp dims[] = {numPoints, 3};
+    PyObject *pytrans = PyArray_SimpleNew(2, dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+    bool useFallbackForPointsExtraction = true;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    do {
+        if( !py::isinstance<py::array_t<dReal> >(opoints) ) {
+            RAVELOG_WARN("The given points are not numpy array so have to use slow generic conversion. Pass in numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+            break;
+        }
         boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpoints;
         PyArrayObject* pointsArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opoints.ptr());
         if( !pointsArrPtr || !pointsArrPtr->data ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("Could not get contiguous points array", ORE_InvalidArguments);
+            RAVELOG_WARN("Could not get contiguous points array");
+            break;
         }
         psaverpoints.reset(new AutoPyArrayObjectDereferencer(pointsArrPtr));
         const int pointsItemSize = PyArray_ITEMSIZE(pointsArrPtr);
         if( pointsItemSize != sizeof(dReal) ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("Got invalid points element", ORE_InvalidArguments);
+            RAVELOG_WARN("Got invalid points array element");
+            break;
         }
         dReal* pPointsData = (dReal*)PyArray_DATA(pointsArrPtr);
         const int numElements = PyArray_SIZE(pointsArrPtr);
         if( numElements % 3 != 0 ) {
-            throw OPENRAVE_EXCEPTION_FORMAT("Number of elements in points array (%d) is not a multiple of 3", numElements, ORE_InvalidArguments);
+            RAVELOG_WARN("Number of elements in points array is not a multiple of 3");
+            break;
         }
         dReal pointx, pointy, pointz;
         for( int ipoint = 0; ipoint < numElements/3; ++ipoint, ptrans += 3 ) {
@@ -1394,8 +1430,25 @@ py::object poseTransformPoints2(py::object opose, py::object opoints)
             ptrans[1] = transy + (xy + zw)*pointx + (1 - xx - zz)*pointy + (yz - xw)*pointz;
             ptrans[2] = transz + (xz - yw)*pointx + (yz + xw)*pointy + (1 - xx - yy)*pointz;
         }
+        useFallbackForPointsExtraction = false;
+    } while(false);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+    if( useFallbackForPointsExtraction ) {
+        Vector point;
+        for( int i = 0; i < numPoints; ++i, ptrans += 3) {
+            point = ExtractVector3(opoints[py::to_object(i)]);
+            ptrans[0] = transx + (1 - yy - zz)*point.x + (xy - zw)*point.y + (xz + yw)*point.z;
+            ptrans[1] = transy + (xy + zw)*point.x + (1 - xx - zz)*point.y + (yz - xw)*point.z;
+            ptrans[2] = transz + (xz - yw)*point.x + (yz + xw)*point.y + (1 - xx - yy)*point.z;
+        }
     }
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     return pytrans;
+#else // USE_PYBIND11_PYTHON_BINDINGS
+    return py::to_array_astype<dReal>(pytrans);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
 object TransformLookat(object olookat, object ocamerapos, object ocameraup)
