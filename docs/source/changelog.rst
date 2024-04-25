@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.143.1
+===============
+
+- Cache the absence of collision bodies for a kinbody in the FCL collision manager, improving collision checking performance
+
 Version 0.143.0
 ===============
 
