@@ -215,6 +215,9 @@ private:
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
 
+    /// Scratch buffer for use in EnsureBodies. Cached to reduce allocations on repeat calls.
+    std::vector<CollisionObjectPtr> _ensureBodiesCollisionObjectsCache;
+
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
     void SaveCollisionObjectDebugInfos() {
         FOREACH(itpcollobj, _tmpSortedBuffer) {

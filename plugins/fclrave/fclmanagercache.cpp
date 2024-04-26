@@ -232,41 +232,64 @@ void FCLCollisionManagerInstance::InitEnvironment(const std::vector<int8_t>& exc
     pmanager->setup();
 }
 
-void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr>& vbodies) {
-    _tmpSortedBuffer.resize(0);
+void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr>& vbodies)
+{
+    // If there are no bodies to ensure, short-circuit.
     if (vbodies.empty()) {
         return;
     }
+
+    // Clear our scratch buffer
+    _tmpSortedBuffer.resize(0);
+
+    // We need to make sure we resize _vecCachedBodies to allow direct lookup by body index, which we can do the first time we encounter a non-null body.
     bool ensuredVecCachedBodies = false;
-    std::vector<CollisionObjectPtr> vcolobjs;
+
+    // For each tracked body, ensure that we have all necessary collision info
     for (const KinBodyConstPtr& pbody : vbodies) {
+        // Null bodies can be ignored
         if (!pbody) {
             continue;
         }
         const KinBody& body = *pbody;
+
+        // If this is our first real body, use it to get the max body index from the env and resize our body cache
         if (!ensuredVecCachedBodies) {
             EnsureVectorSize(_vecCachedBodies, body.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
             ensuredVecCachedBodies = true;
         }
-        int bodyIndex = body.GetEnvironmentBodyIndex();
-        if (bodyIndex >= (int)_vecExcludeBodyIndices.size() || !_vecExcludeBodyIndices[bodyIndex]) {
-            bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
-            if (!bIsValid) {
-                const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
-                if (_AddBody(body, pinfo, vcolobjs, _linkEnableStatesBitmasks, false)) { // new collision objects are already added to _tmpSortedBuffer
-                    KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-                    cache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
-                    cache.vcolobjs.swap(vcolobjs);
-                }
-            }
+
+        // If this body index is excluded, skip it.
+        const int bodyIndex = body.GetEnvironmentBodyIndex();
+        if (bodyIndex < _vecExcludeBodyIndices.size() && _vecExcludeBodyIndices[bodyIndex]) {
+            continue;
         }
+
+        // If our cache of this body is still valid, then we don't need to recompute.
+        const bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
+        if (bIsValid) {
+            continue;
+        }
+
+        // Calculate the collision objects for this body.
+        // Note that if there are no collision volumes for an entity, _AddBody will return false.
+        // We still want to cache the _absence_ of collision data however, to avoid expensive recomputes on non-colliding bodies, so cache the returned data even if it's empty.
+        const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
+        _AddBody(body, pinfo, _ensureBodiesCollisionObjectsCache, _linkEnableStatesBitmasks, false);
+        KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
+        cache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
+        cache.vcolobjs.swap(_ensureBodiesCollisionObjectsCache);
     }
+
     if (_tmpSortedBuffer.size() > 0) {
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
         SaveCollisionObjectDebugInfos();
 #endif
         pmanager->registerObjects(_tmpSortedBuffer); // bulk update
     }
+
+    // Clear our cached collision body vector to ensure we don't prolong the lifetime of any collision objects
+    _ensureBodiesCollisionObjectsCache.clear();
 }
 
 bool FCLCollisionManagerInstance::RemoveBody(const KinBody& body) {
@@ -786,7 +809,7 @@ bool FCLCollisionManagerInstance::_AddBody(
                 } else {
                     RAVELOG_WARN_FORMAT("env=%s body %s link %s is added multiple times", body.GetEnv()->GetNameId() % body.GetName() % link.GetName());
                 }
-                vcolobjs[linkIndex] = pcol;
+                vcolobjs[linkIndex] = std::move(pcol);
                 bsetUpdateStamp = true;
             }
         }

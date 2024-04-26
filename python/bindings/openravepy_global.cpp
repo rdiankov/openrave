@@ -1643,6 +1643,7 @@ void init_openravepy_global()
 #endif
                        .value(GetAngleUnitString(AU_Radian), AU_Radian)
                        .value(GetAngleUnitString(AU_Degree), AU_Degree)
+                       .value(GetAngleUnitString(AU_Centidegree), AU_Centidegree)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
