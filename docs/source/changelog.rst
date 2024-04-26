@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.143.2
+===============
+
+* Speed up `poseTransformPoints` by taking advantage of contiguous numpy array when extracting values from inputs as well as caching intermediate values for transform computation.
+
 Version 0.143.1
 ===============
 
