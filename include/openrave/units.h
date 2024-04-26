@@ -80,7 +80,8 @@ OPENRAVE_API TimeUnit GetTimeUnitFromString(const std::string& pTimeUnit, TimeUn
 enum AngleUnit : int8_t
 {
     AU_Radian = 0,
-    AU_Degree = 1
+    AU_Degree = 1,
+    AU_Centidegree = -2,
 };
 
 OPENRAVE_API const char* GetAngleUnitString(AngleUnit unit);
@@ -369,6 +370,9 @@ inline T GetAngleUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "deg") == 0 ) {
         return T(57.29577951308232);
     }
+    if (strcmp(pUnit, "cdeg") == 0 ) {
+        return T(5729.577951308232);
+    }
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_LengthUnitInvalid);
 }
 
@@ -386,6 +390,9 @@ constexpr inline T GetAngleUnitStandardValue(const AngleUnit unit)
     }
     if( unit == OpenRAVE::AU_Degree ) {
         return T(57.29577951308232);
+    }
+    if( unit == OpenRAVE::AU_Centidegree ) {
+        return T(5729.577951308232);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_LengthUnitInvalid);

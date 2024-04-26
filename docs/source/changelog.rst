@@ -3,6 +3,18 @@
 ChangeLog
 #########
 
+Version 0.143.2
+===============
+
+* Speed up `poseTransformPoints` by taking advantage of contiguous numpy array when extracting values from inputs as well as caching intermediate values for transform computation.
+
+Version 0.143.1
+===============
+
+- Instead of unconditionally resetting BodyState in _UpdatePublishedBodies, first test whether the state has already been initialized from the given body / update stamp. If it has, skip re-extracting all data. Since bodies are in a relatively stable order, this significantly improves average-case performance.
+- Add centidegree unit definition.
+- Cache the absence of collision bodies for a kinbody in the FCL collision manager, improving collision checking performance
+
 Version 0.143.0
 ===============
 
