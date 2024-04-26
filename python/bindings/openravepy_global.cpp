@@ -1302,31 +1302,7 @@ object poseTransformPoint(object opose, object opoint)
     return toPyVector3(newpoint);
 }
 
-object poseTransformPoints(object opose, object opoints)
-{
-    const Transform t = ExtractTransformType<dReal>(opose);
-    const int N = len(opoints);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pytrans({N, 3});
-    py::buffer_info buf = pytrans.request();
-    dReal* ptrans = (dReal*) buf.ptr;
-#else // USE_PYBIND11_PYTHON_BINDINGS
-    npy_intp dims[] = { N,3};
-    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
-    dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
-#endif // USE_PYBIND11_PYTHON_BINDINGS
-    for(int i = 0; i < N; ++i, ptrans += 3) {
-        Vector newpoint = t*ExtractVector3(opoints[py::to_object(i)]);
-        ptrans[0] = newpoint.x; ptrans[1] = newpoint.y; ptrans[2] = newpoint.z;
-    }
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    return pytrans;
-#else
-    return py::to_array_astype<dReal>(pytrans);
-#endif // USE_PYBIND11_PYTHON_BINDINGS
-}
-
-py::object poseTransformPoints2(py::object opose, py::object opoints)
+py::object poseTransformPoints(py::object opose, py::object opoints)
 {
     // Extract pose data from opose
     dReal rotx, roty, rotz, rotw, transx, transy, transz;
@@ -2683,11 +2659,10 @@ void init_openravepy_global()
     def("poseTransformPoint",openravepy::poseTransformPoint,PY_ARGS("pose","point") "left-transforms a 3D point by a pose transformation.\n\n:param pose: 7 values\n\n:param points: 3 values");
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
+    m.def("poseTransformPoints", openravepy::poseTransformPoints, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #else
-    def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
+    def("poseTransformPoints", openravepy::poseTransformPoints, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #endif
-    m.def("poseTransformPoints2", openravepy::poseTransformPoints2, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("TransformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");
 #else
