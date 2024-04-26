@@ -157,7 +157,8 @@ public:
     boost::array<int16_t, 3> robotControllerAxisIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis (up to the DOF of the joint). -1 if not specified/not valid.
     boost::array<dReal, 3> robotControllerAxisMult = {1.0, 1.0, 1.0}; ///< indicates the multiplier to convert the joint values from the environment units to the robot controller units, per joint axis. (valueInRobotControllerUnits - robotControllerAxisOffset) / robotControllerAxisMult = valueInEnvUnits
     boost::array<dReal, 3> robotControllerAxisOffset = {0.0, 0.0, 0.0}; ///< indicates the offset, in the robot controller units, that should be applied to the joint values, per joint axis.
-    boost::array<std::string, 3> robotControllerAxisProductCode = {"", "", ""}; ///< indicates the product codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices. it is different from ElectricMotorActuatorInfo::model_type, which is the name of the motor type attached to the servo devices.
+    boost::array<std::string, 3> robotControllerAxisManufacturerCode = {"", "", ""}; ///< indicates the manufacturer (vendor) codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices.
+    boost::array<std::string, 3> robotControllerAxisProductCode = {"", "", ""}; ///< indicates the product codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices. This is usually determined by each manufacturer. Manufacturer code and product code together makes a globally unique identification in the protocol. This is different from ElectricMotorActuatorInfo::model_type, which is the name of the motor type attached to the servo devices.
 };
 typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
 
@@ -1267,7 +1268,9 @@ public:
         inline const std::vector<GeometryPtr>& GetGeometries() const {
             return _vGeometries;
         }
-        GeometryPtr GetGeometry(int index);
+        GeometryPtr GetGeometry(int index) const;
+
+        GeometryPtr GetGeometry(const string_view geomame) const;
 
         /// \brief inits the current geometries with the new geometry info.
         ///
@@ -1277,6 +1280,13 @@ public:
         void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
         void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
+private:
+        /// \brief _vGeometries is expected to be filled with the new Geometries already. This will initialize them.
+        ///
+        /// This is an internal method to provide a common implementation to the public InitGeometries API.
+        void _InitGeometriesInternal(bool bForceRecomputeMeshCollision);
+
+public:
         /// \brief adds geometry info to all the current geometries and possibly stored extra group geometries
         ///
         /// Will store the geometry pointer to use for later, so do not modify after this.
@@ -1312,6 +1322,13 @@ public:
         /// any be careful not to modify the geometries afterwards
         void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
+private:
+        /// \brief stores geometries for later retrieval
+        ///
+        /// This call is identical to SetGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
+        void _SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+
+public:
         /// \brief returns the number of geometries stored from a particular key
         ///
         /// \return if -1, then the geometries are not in _mapExtraGeometries, otherwise the number
@@ -1326,11 +1343,17 @@ public:
         /// \return true if the normal is changed to face outside of the shape
         bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
-        /// \brief returns true if plink is rigidily attahced to this link.
         bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
             return IsRigidlyAttached(*plink);
         }
+
+        /// \brief returns true if link is rigidily attahced to this link.
+        ///
+        /// \param link Assumes link shares the same parent as this link.
         bool IsRigidlyAttached(const Link &link) const;
+
+        /// \brief returns true if linkIndex (index into the parent's _veclinks) is rigidily attahced to this link.
+        bool IsRigidlyAttached(const int linkIndex) const;
 
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
         ///
@@ -2400,7 +2423,7 @@ protected:
 public:
         KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
         virtual ~KinBodyStateSaver();
-        inline KinBodyPtr GetBody() const {
+        inline const KinBodyPtr& GetBody() const {
             return _pbody;
         }
 
@@ -2522,8 +2545,6 @@ private:
     /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
     /// \param visible if true, will be rendered in the scene
     /// \param uri the new URI to set for the interface
-    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri=std::string());
-    virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
     virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
 
     /// \brief initializes an complex kinematics body with links and joints
@@ -2545,10 +2566,11 @@ private:
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
     /// \param name The name of the extra geometries group stored in each link.
+    /// \param propagateGroupNameToSelfCollisionChecker It true, propagate this geometry group change to self collision checker. It is always propagated to env collision checker.
     /// The geometries can be set while the body is added to the environment. No other information will be touched.
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     /// \throw If any links do not have the particular geometry, an exception will be raised.
-    virtual void SetLinkGeometriesFromGroup(const std::string& name);
+    virtual void SetLinkGeometriesFromGroup(const std::string& name, const bool propagateGroupNameToSelfCollisionChecker);
 
     /// \brief Stores geometries for later retrieval for all the links at the same time.
     ///
@@ -2795,8 +2817,15 @@ private:
     /// \param dofindex the degree of freedom index
     bool IsDOFPrismatic(int dofindex) const;
 
-    /// return a pointer to the link with the given name
-    LinkPtr GetLink(const std::string& name) const;
+    /// \brief return a pointer to the link with the given name
+    LinkPtr GetLink(const std::string& linkname) const;
+
+    LinkPtr GetLink(const string_view linkname) const;
+
+    LinkPtr GetLink(const char* plinkname) const;
+
+    /// \brief return the link index that matches the name. -1 if did not find
+    int GetLinkIndex(const string_view name) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);

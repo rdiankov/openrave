@@ -199,6 +199,8 @@ public:
 template<class T> inline std::string GetJsonString(const T& t);
 
 template<class T> inline void LoadJsonValue(const rapidjson::Value& v, std::vector<T>& t); // forward decl
+template<class T> inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveAxisAlignedBox<T>& t, rapidjson::Document::AllocatorType& alloc); // forward decl
+template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveAxisAlignedBox<T>& t); // forward decl
 template<class T> inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc); // forward decl
 template<class T> inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveOrientedBox<T>& t); // forward decl
 inline void SaveJsonValue(rapidjson::Value &rTriMesh, const OpenRAVE::TriMesh& t, rapidjson::Document::AllocatorType& alloc); // forward decl
@@ -278,6 +280,8 @@ inline void LoadJsonValue(const rapidjson::Value& v, uint8_t& t) {
 inline void LoadJsonValue(const rapidjson::Value& v, unsigned long long& t) {
     if (v.IsUint64()) {
         t = v.GetUint64();
+    } else if (v.IsInt64()) {
+        t = v.GetInt64();
     } else if (v.IsString()) {
         t = boost::lexical_cast<unsigned long long>(v.GetString());
     } else if (v.IsBool()) {
@@ -290,6 +294,8 @@ inline void LoadJsonValue(const rapidjson::Value& v, unsigned long long& t) {
 inline void LoadJsonValue(const rapidjson::Value& v, uint64_t& t) {
     if (v.IsUint64()) {
         t = v.GetUint64();
+    } else if (v.IsInt64()) {
+        t = v.GetInt64();
     } else if (v.IsString()) {
         t = boost::lexical_cast<uint64_t>(v.GetString());
     } else if (v.IsBool()) {
@@ -517,6 +523,22 @@ inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::TriMesh& t)
         t.vertices.push_back(vertex);
     }
     LoadJsonValue(v["indices"], t.indices);
+}
+
+template<class T>
+inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::geometry::RaveAxisAlignedBox<T>& t) {
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load RaveOrientedBox of non-object.", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("extents") || !v["extents"].IsArray() || v["extents"].Size() != 3) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveAxisAlignedBox, \"extents\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+    if (!v.HasMember("pos") || !v["pos"].IsArray() || v["pos"].Size() != 3) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("failed to deserialize json, value cannot be decoded as a RaveAxisAlignedBox, \"pos\" malformatted", OpenRAVE::ORE_InvalidArguments);
+    }
+
+    LoadJsonValue(v["extents"], t.extents);
+    LoadJsonValue(v["pos"], t.pos);
 }
 
 template<class T>
@@ -991,6 +1013,13 @@ inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::SensorBase::Camer
 }
 
 template<class T>
+inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveAxisAlignedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetObject();
+    SetJsonValueByKey(v, "extents", t.extents, alloc);
+    SetJsonValueByKey(v, "pos", t.pos, alloc);
+}
+
+template<class T>
 inline void SaveJsonValue(rapidjson::Value& v, const OpenRAVE::geometry::RaveOrientedBox<T>& t, rapidjson::Document::AllocatorType& alloc) {
     v.SetObject();
     SetJsonValueByKey(v, "halfExtents", t.extents, alloc);
@@ -1087,6 +1116,23 @@ inline void UpdateJson(rapidjson::Document& a, const rapidjson::Value& b) {
     }
     for (rapidjson::Value::ConstMemberIterator it = b.MemberBegin(); it != b.MemberEnd(); ++it) {
         SetJsonValueByKey(a, it->name.GetString(), it->value);
+    }
+}
+
+/** update a json object by key with another one, new key-value pair will be added, existing ones will be updated recursively
+ */
+inline void UpdateJsonByKey(rapidjson::Value& a, const char* key, const rapidjson::Value& b, rapidjson::Document::AllocatorType& alloc)
+{
+    if (!a.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT("json object should be a dict to be updated: %s", GetJsonString(a), OpenRAVE::ORE_InvalidArguments);
+    }
+    if (b.IsObject() && a.HasMember(key) && a[key].IsObject()) {
+        for (rapidjson::Value::ConstMemberIterator it = b.MemberBegin(); it != b.MemberEnd(); ++it) {
+            UpdateJsonByKey(a[key], it->name.GetString(), it->value, alloc);
+        }
+    }
+    else {
+        SetJsonValueByKey(a, key, b, alloc);
     }
 }
 

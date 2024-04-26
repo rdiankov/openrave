@@ -611,12 +611,12 @@ private:
         if( _listcallbacks.size() > 0 ) {
             // fill the collision report
             _report->Reset(OpenRAVE::CO_Contacts);
-            _report->plink1 = pkb1;
-            _report->plink2 = pkb2;
+            int icollision = _report->AddLinkCollision(*pkb1, *pkb2);
 
+            OpenRAVE::CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
             dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
             for(int i = 0; i < n; ++i) {
-                _report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
+                cpinfo.contacts.push_back(OpenRAVE::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
             }
 
             FOREACH(itfn, _listcallbacks) {

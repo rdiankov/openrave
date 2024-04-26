@@ -3,8 +3,98 @@
 ChangeLog
 #########
 
-Unreleased
-==========
+Version 0.143.1
+===============
+
+- Instead of unconditionally resetting BodyState in _UpdatePublishedBodies, first test whether the state has already been initialized from the given body / update stamp. If it has, skip re-extracting all data. Since bodies are in a relatively stable order, this significantly improves average-case performance.
+- Add centidegree unit definition.
+- Cache the absence of collision bodies for a kinbody in the FCL collision manager, improving collision checking performance
+
+Version 0.143.0
+===============
+
+- Allow env.drawlabel to specify size of characters.
+
+Version 0.142.1
+===============
+
+* Clamp camera distance in the viewer to prevent invalid values in the published state
+
+Version 0.142.0
+===============
+
+- Add robotControllerAxisManufacturerCode so that servo drives from different manufacturer connected to daisy chain can be handled.
+- Fix unbounded growth of _vmimic
+* Add ViewerBase::SetUserText to customize HUD text size
+
+Version 0.141.2
+===============
+
+* Fix the issue that second-to-last configuration along the given path segment may not be checked in `Check` function.
+
+Version 0.141.1
+===============
+
+* Fix the issue that some robot configurations might not be checked in `Check` function.
+
+Version 0.141.0
+===============
+
+- Add IkFailureAccumulatorBase to allow for cache of IK failure data and statistics gathering.
+
+Version 0.140.0
+===============
+
+- Cleanup CollisionReport to be more memory efficient and unify single collision vs all collisions.
+
+- Add IkFilterInfo and IkFailureAccumulator to allow for fast accumulation of IK failures.
+
+Version 0.139.2
+===============
+
+* Fix link traversal order when calculating internal shortest path information
+
+Version 0.139.1
+===============
+
+* Add new interpolation type of "max"
+* Ignore NaN in joint values to preserve the old joint value
+* Support NaN in xml deserialization
+
+Version 0.139.0
+===============
+
+* Initialization of internal costs in KinBodies now only considers links that are part of a joint
+* Trimesh construction in KinBodies optimized to reduce reallocs
+* FCLRave no longer re-initializes all callbacks on link state change
+* Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
+* FCLRave geometry callbacks now only update when the link has actually changed
+* Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with scoped cleanup classes
+
+Version 0.138.0
+===============
+
+* Added new apis efficient sampling of trajectory range
+Version 0.137.0
+===============
+
+* Add `GetId` to python bindings
+
+Version 0.136.0
+===============
+
+* Set correct geometry group name for fclspace
+
+Version 0.135.2
+===============
+
+* Fix the issue that grabbed bodies are not checked for collision when their grabbing links are not collision-enabled.
+
+Version 0.135.1
+===============
+
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
+* Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
 
 Version 0.135.0
 ===============

@@ -40,6 +40,12 @@ using namespace OpenRAVE;
 class OpenRAVETracker;
 class OpenRAVETrackball;
 
+const float MAX_CAMERA_DISTANCE = 1e10;
+
+inline float ClampDistance(float distance) {
+    return (distance > MAX_CAMERA_DISTANCE) ? MAX_CAMERA_DISTANCE : distance;
+}
+
 /// \brief  Class of the openscene graph 3d viewer
 class QOSGViewerWidget : public QOpenGLWidget
 {
@@ -127,6 +133,9 @@ public:
 
     /// \brief called when the qt window size changes
     void SetViewport(int width, int height);
+
+    /// \brief sets the HUD text size, scaled off of devicePixelRatio
+    void SetHUDTextSize(double size);
 
     /// \brief gets the screen offset of HUD text (default with no control buttons is (10.0, 0.0))
     osg::Vec2 GetHUDTextOffset();
@@ -345,6 +354,7 @@ protected:
                    ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
     double _currentOrthoFrustumSize; ///< coordinate for the right vertical clipping plane 
+    double _hudTextSize; ///< size of HUD text, scaled off of devicePixelRatio
 
     void GetSwitchedButtonValue(unsigned int &button);
 

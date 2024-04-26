@@ -928,8 +928,9 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
                 _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
             }
 
-            kinbody = GetEnv()->GetKinBody(item->parent()->parent()->text(0).toLatin1().data());
-            link  = kinbody->GetLink(item->text(0).toLatin1().data());
+            const char* pbodyname = item->parent()->parent()->text(0).toLatin1().data();
+            kinbody = GetEnv()->GetKinBody(string_view(pbodyname));
+            link  = kinbody->GetLink(string_view(item->text(0).toLatin1().data()));
 
             //  Clears output string
             strs.clear();
@@ -952,7 +953,7 @@ void QtOSGViewer::_OnObjectTreeClick(QTreeWidgetItem* item,int num)
         if (!!_qdetailsTree) {
             _qdetailsTree->setHeaderLabel(item->text(0).toLatin1().data());
         }
-        kinbody = GetEnv()->GetKinBody(item->text(0).toLatin1().data());
+        kinbody = GetEnv()->GetKinBody(string_view(item->text(0).toLatin1().data()));
         for (size_t i=0; i<kinbody->GetLinks().size(); i++) {
             std::ostringstream strs;
             link = kinbody->GetLinks()[i];
@@ -1662,23 +1663,23 @@ GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVec
     return GraphHandlePtr();
 }
 
-void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
+void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color, float height)
 {
     // Set up offset node for label
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
     osg::Matrix offsetMatrix;
     offsetMatrix.makeTranslate(osg::Vec3(worldPosition.x, worldPosition.y, worldPosition.z));
     trans->setMatrix(offsetMatrix);
-    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label, color);
+    osg::ref_ptr<OSGLODLabel> labelTrans = new OSGLODLabel(label, color, height);
     trans->addChild(labelTrans);
     handle->addChild(trans);
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
-GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color)
+GraphHandlePtr QtOSGViewer::drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color, float height)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition, color), ViewerCommandPriority::MEDIUM); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawLabel, this, handle, label, worldPosition, color, height), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
@@ -2018,6 +2019,11 @@ void QtOSGViewer::_SetName(const string& name)
 void QtOSGViewer::SetUserText(const string& userText)
 {
     _posgWidget->SetUserHUDText(userText);
+}
+
+void QtOSGViewer::SetTextSize(double size)
+{
+    _posgWidget->SetHUDTextSize(size);
 }
 
 bool QtOSGViewer::LoadModel(const string& filename)

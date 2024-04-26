@@ -1139,7 +1139,7 @@ CollisionAction PyEnvironmentBase::_CollisionCallback(object fncallback, Collisi
     object res;
     PyGILState_STATE gstate = PyGILState_Ensure();
     try {
-        res = fncallback(openravepy::toPyCollisionReport(preport,shared_from_this()),bFromPhysics);
+        res = fncallback(openravepy::toPyCollisionReport(preport),bFromPhysics);
     }
     catch(...) {
         RAVELOG_ERROR("exception occured in python collision callback:\n");
@@ -1272,11 +1272,19 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1)
     CHECK_POINTER(pbody1);
     return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)));
 }
-bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pyreport)
 {
     CHECK_POINTER(pbody1);
-    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), openravepy::GetCollisionReport(pReport));
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -1287,12 +1295,20 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2)
     return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), KinBodyConstPtr(openravepy::GetKinBody(pbody2)));
 }
 
-bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1, PyKinBodyPtr pbody2, PyCollisionReportPtr pyreport)
 {
     CHECK_POINTER(pbody1);
     CHECK_POINTER(pbody2);
-    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), KinBodyConstPtr(openravepy::GetKinBody(pbody2)), openravepy::GetCollisionReport(pReport));
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody1)), KinBodyConstPtr(openravepy::GetKinBody(pbody2)), preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -1310,24 +1326,32 @@ bool PyEnvironmentBase::CheckCollision(object o1)
     throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
 }
 
-bool PyEnvironmentBase::CheckCollision(object o1, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(object o1, PyCollisionReportPtr pyreport)
 {
     CHECK_POINTER(o1);
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
     KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
     bool bCollision;
     if( !!plink ) {
-        bCollision = _penv->CheckCollision(plink,openravepy::GetCollisionReport(pReport));
+        bCollision = _penv->CheckCollision(plink,preport);
     }
     else {
         KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
         if( !!pbody ) {
-            bCollision = _penv->CheckCollision(pbody,openravepy::GetCollisionReport(pReport));
+            bCollision = _penv->CheckCollision(pbody,preport);
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument"),ORE_InvalidArguments);
         }
     }
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -1345,12 +1369,18 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2)
         if( !!pbody2 ) {
             return _penv->CheckCollision(plink,pbody2);
         }
-        CollisionReportPtr preport2 = openravepy::GetCollisionReport(o2);
-        if( !!preport2 ) {
-            bool bCollision = _penv->CheckCollision(plink,preport2);
-            openravepy::UpdateCollisionReport(o2,shared_from_this());
-            return bCollision;
+
+        if( !IS_PYTHONOBJECT_NONE(o2) ) {
+            extract_<PyCollisionReportPtr> epyreport2(o2);
+            if( epyreport2.check() ) {
+                CollisionReport report;
+                CollisionReportPtr preport(&report,utils::null_deleter());
+                bool bCollision = _penv->CheckCollision(plink,preport);
+                ((PyCollisionReportPtr)epyreport2)->Init(report);
+                return bCollision;
+            }
         }
+        
         throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
     }
     KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
@@ -1363,31 +1393,44 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2)
         if( !!pbody2 ) {
             return _penv->CheckCollision(pbody,pbody2);
         }
-        CollisionReportPtr preport2 = openravepy::GetCollisionReport(o2);
-        if( !!preport2 ) {
-            bool bCollision = _penv->CheckCollision(pbody,preport2);
-            openravepy::UpdateCollisionReport(o2,shared_from_this());
-            return bCollision;
+
+        if( !IS_PYTHONOBJECT_NONE(o2) ) {
+            extract_<PyCollisionReportPtr> epyreport2(o2);
+            if( epyreport2.check() ) {
+                CollisionReport report;
+                CollisionReportPtr preport(&report,utils::null_deleter());
+                bool bCollision = _penv->CheckCollision(pbody,preport);
+                ((PyCollisionReportPtr)epyreport2)->Init(report);
+                return bCollision;
+            }
         }
+        
         throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
     }
     throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
 }
-bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPtr pReport)
+
+bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPtr pyreport)
 {
     CHECK_POINTER(o1);
     CHECK_POINTER(o2);
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
     bool bCollision = false;
     KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
     if( !!plink ) {
         KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
         if( !!plink2 ) {
-            bCollision = _penv->CheckCollision(plink,plink2, openravepy::GetCollisionReport(pReport));
+            bCollision = _penv->CheckCollision(plink,plink2, preport);
         }
         else {
             KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
             if( !!pbody2 ) {
-                bCollision = _penv->CheckCollision(plink,pbody2, openravepy::GetCollisionReport(pReport));
+                bCollision = _penv->CheckCollision(plink,pbody2, preport);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
@@ -1398,12 +1441,12 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPt
         if( !!pbody ) {
             KinBody::LinkConstPtr plink2 = openravepy::GetKinBodyLinkConst(o2);
             if( !!plink2 ) {
-                bCollision = _penv->CheckCollision(plink2,pbody, openravepy::GetCollisionReport(pReport));
+                bCollision = _penv->CheckCollision(plink2,pbody, preport);
             }
             else {
                 KinBodyConstPtr pbody2 = openravepy::GetKinBody(o2);
                 if( !!pbody2 ) {
-                    bCollision = _penv->CheckCollision(pbody,pbody2, openravepy::GetCollisionReport(pReport));
+                    bCollision = _penv->CheckCollision(pbody,pbody2, preport);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
@@ -1414,7 +1457,10 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2, PyCollisionReportPt
             throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
         }
     }
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -1434,33 +1480,40 @@ bool PyEnvironmentBase::CheckCollision(object o1, PyKinBodyPtr pybody2)
     throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
 }
 
-bool PyEnvironmentBase::CheckCollision(object o1, PyKinBodyPtr pybody2, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(object o1, PyKinBodyPtr pybody2, PyCollisionReportPtr pyreport)
 {
     CHECK_POINTER(o1);
     CHECK_POINTER(pybody2);
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
     KinBodyConstPtr pbody2 = openravepy::GetKinBody(pybody2);
     KinBody::LinkConstPtr plink = openravepy::GetKinBodyLinkConst(o1);
     bool bCollision = false;
     if( !!plink ) {
-        bCollision = _penv->CheckCollision(plink,pbody2,openravepy::GetCollisionReport(pReport));
+        bCollision = _penv->CheckCollision(plink,pbody2,preport);
     }
     else {
         KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
         if( !!pbody1 ) {
-            bCollision = _penv->CheckCollision(pbody1,pbody2,openravepy::GetCollisionReport(pReport));
+            bCollision = _penv->CheckCollision(pbody1,pbody2,preport);
         }
         else {
             throw OPENRAVE_EXCEPTION_FORMAT0(_("CheckCollision(object) invalid argument"),ORE_InvalidArguments);
         }
     }
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
 bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object linkexcluded)
 {
-    CollisionReportPtr preport = openravepy::GetCollisionReport(linkexcluded);
-    if( !!preport ) {
+    if( openravepy::IsCollisionReport(linkexcluded) ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("3rd argument should be linkexcluded, rather than CollisionReport! Try report="),ORE_InvalidArguments);
     }
 
@@ -1498,8 +1551,14 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
     }
 }
 
-bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pyreport)
 {
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
     std::vector<KinBodyConstPtr> vbodyexcluded;
     KinBody::LinkConstPtr plink1 = openravepy::GetKinBodyLinkConst(o1);
     KinBodyConstPtr pbody1 = openravepy::GetKinBody(o1);
@@ -1526,16 +1585,18 @@ bool PyEnvironmentBase::CheckCollision(object o1, object bodyexcluded, object li
 
     bool bCollision=false;
     if( !!plink1 ) {
-        bCollision = _penv->CheckCollision(plink1, vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
+        bCollision = _penv->CheckCollision(plink1, vbodyexcluded, vlinkexcluded, preport);
     }
     else if( !!pbody1 ) {
-        bCollision = _penv->CheckCollision(pbody1, vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
+        bCollision = _penv->CheckCollision(pbody1, vbodyexcluded, vlinkexcluded, preport);
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
     }
 
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -1564,8 +1625,14 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
     return _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody)),vbodyexcluded,vlinkexcluded);
 }
 
-bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, object linkexcluded, PyCollisionReportPtr pyreport)
 {
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
     std::vector<KinBodyConstPtr> vbodyexcluded;
     for(size_t i = 0; i < (size_t)len(bodyexcluded); ++i) {
         PyKinBodyPtr pkinbody = extract<PyKinBodyPtr>(bodyexcluded[py::to_object(i)]);
@@ -1587,8 +1654,10 @@ bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody, object bodyexcluded, 
         }
     }
 
-    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody)), vbodyexcluded, vlinkexcluded, openravepy::GetCollisionReport(pReport));
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    bool bCollision = _penv->CheckCollision(KinBodyConstPtr(openravepy::GetKinBody(pbody)), vbodyexcluded, vlinkexcluded, preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -1597,10 +1666,18 @@ bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBo
     return _penv->CheckCollision(pyray->r,KinBodyConstPtr(openravepy::GetKinBody(pbody)));
 }
 
-bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pyreport)
 {
-    bool bCollision = _penv->CheckCollision(pyray->r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), openravepy::GetCollisionReport(pReport));
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bCollision = _penv->CheckCollision(pyray->r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -1676,15 +1753,18 @@ object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyP
 
             const bool bCollision = pbody ? _penv->CheckCollision(r, KinBodyConstPtr(openravepy::GetKinBody(pbody)), preport) : _penv->CheckCollision(r, preport);
 
-            if( bCollision &&( report.contacts.size() > 0) ) {
-                if( !bFrontFacingOnly ||( report.contacts[0].norm.dot3(r.dir)<0) ) {
-                    pcollision[i] = true;
-                    ppos[0] = report.contacts[0].pos.x;
-                    ppos[1] = report.contacts[0].pos.y;
-                    ppos[2] = report.contacts[0].pos.z;
-                    ppos[3] = report.contacts[0].norm.x;
-                    ppos[4] = report.contacts[0].norm.y;
-                    ppos[5] = report.contacts[0].norm.z;
+            if( bCollision && report.nNumValidCollisions > 0 ) {
+                const CollisionPairInfo& cpinfo = report.vCollisionInfos[0];
+                if( cpinfo.contacts.size() > 0 ) {
+                    if( !bFrontFacingOnly || cpinfo.contacts[0].norm.dot3(r.dir)<0 ) {
+                        pcollision[i] = true;
+                        ppos[0] = cpinfo.contacts[0].pos.x;
+                        ppos[1] = cpinfo.contacts[0].pos.y;
+                        ppos[2] = cpinfo.contacts[0].pos.z;
+                        ppos[3] = cpinfo.contacts[0].norm.x;
+                        ppos[4] = cpinfo.contacts[0].norm.y;
+                        ppos[5] = cpinfo.contacts[0].norm.z;
+                    }
                 }
             }
         }
@@ -1701,10 +1781,18 @@ bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray)
     return _penv->CheckCollision(pyray->r);
 }
 
-bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyCollisionReportPtr pReport)
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyCollisionReportPtr pyreport)
 {
-    bool bCollision = _penv->CheckCollision(pyray->r, openravepy::GetCollisionReport(pReport));
-    openravepy::UpdateCollisionReport(pReport,shared_from_this());
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bCollision = _penv->CheckCollision(pyray->r, preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
     return bCollision;
 }
 
@@ -2001,6 +2089,7 @@ void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, 
             addMode = py::extract<InterfaceAddMode>(oAddMode);
         }
     }
+    PythonThreadSaver threadsaver;
     _penv->Add(pinterface->GetInterfaceBase(), addMode, cmdargs);
 }
 
@@ -2463,14 +2552,24 @@ object PyEnvironmentBase::plot3(object opoints,float pointsize,object ocolors, i
     pair<size_t,size_t> sizes = _getGraphPointsColors(opoints,ocolors,vpoints,vcolors);
     bool bhasalpha = vcolors.size() == 4*sizes.second;
     if( sizes.first == sizes.second ) {
-        return toPyGraphHandle(_penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolors.data(),drawstyle,bhasalpha));
+        GraphHandlePtr phandle;
+        {
+            PythonThreadSaver saver;
+            phandle = _penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolors.data(),drawstyle,bhasalpha);
+        }
+        return toPyGraphHandle(phandle);
     }
     BOOST_ASSERT(vcolors.size()<=4);
-    RaveVector<float> vcolor;
-    for(int i = 0; i < (int)vcolors.size(); ++i) {
-        vcolor[i] = vcolors[i];
+    GraphHandlePtr phandle;
+    {
+        PythonThreadSaver saver;
+        RaveVector<float> vcolor;
+        for(int i = 0; i < (int)vcolors.size(); ++i) {
+            vcolor[i] = vcolors[i];
+        }
+        phandle = _penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle);
     }
-    return toPyGraphHandle(_penv->plot3(vpoints.data(),sizes.first,sizeof(float)*3,pointsize,vcolor,drawstyle));
+    return toPyGraphHandle(phandle);
 }
 
 object PyEnvironmentBase::drawlinestrip(object opoints,float linewidth,object ocolors, int drawstyle)
@@ -2514,9 +2613,13 @@ object PyEnvironmentBase::drawarrow(object op1, object op2, float linewidth, obj
     return toPyGraphHandle(_penv->drawarrow(ExtractVector3(op1),ExtractVector3(op2),linewidth,vcolor));
 }
 
-object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition, object ocolor)
+object PyEnvironmentBase::drawlabel(const std::string &label, object worldPosition, object ocolor, float height)
 {
-    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition), ExtractVector4(ocolor)));
+    RaveVector<float> vcolor(0,0,0,1);
+    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
+        vcolor = ExtractVector34(ocolor,1.0f);
+    }
+    return toPyGraphHandle(_penv->drawlabel(label, ExtractVector3(worldPosition), vcolor, height));
 }
 
 object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
@@ -2574,11 +2677,11 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
         throw OpenRAVEException(_("_vtexture[0] is empty"), ORE_InvalidArguments);
     }
     boost::multi_array<float,3> vtexture(boost::extents[x][y][1]);
-    for(int i=0; i<x; i++) {
+    for(size_t i=0; i<x; i++) {
         if(_vtexture[i].size() != y) {
             throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
         }
-        for(int j=0; j<y; j++) {
+        for(size_t j=0; j<y; j++) {
             vtexture[i][j][0] = _vtexture[i][j];
         }
     }
@@ -2598,15 +2701,15 @@ object PyEnvironmentBase::drawplane(object otransform, object oextents, const st
         throw OpenRAVEException(_("_vtexture[0][0] is empty"), ORE_InvalidArguments);
     }
     boost::multi_array<float,3> vtexture(boost::extents[x][y][z]);
-    for(int i=0; i<x; i++) {
+    for(size_t i=0; i<x; i++) {
         if(_vtexture[i].size() != y) {
             throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d] size is different"))%i), ORE_InvalidArguments);
         }
-        for(int j=0; j<y; j++) {
+        for(size_t j=0; j<y; j++) {
             if(_vtexture[i][j].size() != z) {
                 throw OpenRAVEException(boost::str(boost::format(_("_vtexture[%d][%d] size is different"))%i%j), ORE_InvalidArguments);
             }
-            for(int k=0; k<z; k++) {
+            for(size_t k=0; k<z; k++) {
                 vtexture[i][j][k] = _vtexture[i][j][k];
             }
         }
@@ -3726,6 +3829,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                           "label"_a,
                           "worldPosition"_a,
                           "color"_a = py::none_(),
+                          "height"_a = 0.05,
                           DOXY_FN(EnvironmentBase,drawlabel)
                           )
 #else

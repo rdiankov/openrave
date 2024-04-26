@@ -355,11 +355,10 @@ protected:
 
     void _InitFromMeshes(KinBodyPtr pbody, const std::vector<Assimp::XFile::Mesh*>& meshes)
     {
-        std::vector<KinBody::GeometryInfoConstPtr> vgeometries(meshes.size());
-        for(size_t i = 0; i < meshes.size(); ++i) {
+        std::vector<KinBody::GeometryInfo> vgeometries(meshes.size());
+        for (size_t i = 0; i < meshes.size(); ++i) {
             KinBody::GeometryInfoPtr geominfo(new KinBody::GeometryInfo());
-            _ExtractGeometry(meshes[i],*geominfo);
-            vgeometries[i] = geominfo;
+            _ExtractGeometry(meshes[i], vgeometries[i]);
         }
         pbody->InitFromGeometries(vgeometries);
     }

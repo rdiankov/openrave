@@ -365,7 +365,7 @@ Some python code to display data::\n\
 
         EnvironmentLock lock(GetEnv()->GetMutex());
         uint64_t basetimeus = utils::GetMonotonicTime();
-        
+
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
         if (planningoptions & PO_AddCollisionStatistics) {
             constraintFilterOptions = constraintFilterOptions|CFO_FillCollisionReport;
@@ -657,14 +657,15 @@ Some python code to display data::\n\
     }
 
     virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
-        std::string filename = RaveGetHomeDirectory() + string("/birrtdump.txt");
+        std::string filename = RaveGetHomeDirectory() + boost::str(boost::format("/birrtdump_%d.txt")%utils::GetMilliTime());
         getline(is, filename);
         boost::trim(filename);
-        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        RAVELOG_INFO_FORMAT("env=%s, dumping RRT trees to %s", GetEnv()->GetNameId()%filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _treeForward.DumpTree(f);
         _treeBackward.DumpTree(f);
+        os << filename;
         return true;
     }
 
@@ -927,13 +928,14 @@ public:
     }
 
     virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
-        std::string filename = RaveGetHomeDirectory() + string("/basicrrtdump.txt");
+        std::string filename = RaveGetHomeDirectory() + boost::str(boost::format("/basicrrtdump_%d.txt")%utils::GetMilliTime());
         getline(is, filename);
         boost::trim(filename);
-        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        RAVELOG_INFO_FORMAT("env=%s, dumping BasicRRT tree to %s", GetEnv()->GetNameId()%filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _treeForward.DumpTree(f);
+        os << filename;
         return true;
     }
 protected:

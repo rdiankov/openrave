@@ -75,7 +75,7 @@ PyPlannerStatus::PyPlannerStatus(const PlannerStatus& status) {
     }
     else {
         //_report = status._report->__str__();
-        report = py::to_object(openravepy::toPyCollisionReport(status.report, NULL));
+        report = py::to_object(openravepy::toPyCollisionReport(*status.report));
     }
 
     ikparam = toPyIkParameterization(status.ikparam);
