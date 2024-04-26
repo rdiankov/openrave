@@ -1702,7 +1702,6 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
 
-    std::vector<int> vChuckingDirection;
 
     GripperInfoPtr pGripperInfo;
     if( !_info._grippername.empty() ) {
@@ -1725,6 +1724,8 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     }
 
     // init the gripper dof indices
+    std::vector<int> vValidChuckingDirections;
+    std::vector<std::string> vValidGripperJointNames;
     size_t ichuckingdirection = 0;
     FOREACHC(itjointname,_info._vGripperJointNames) {
         JointPtr pjoint = probot->GetJoint(*itjointname);
@@ -1745,11 +1746,12 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
                     }
                     else {
                         __vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
+                        vValidGripperJointNames.push_back(*itjointname);
                         if( ichuckingdirection < _info._vChuckingDirection.size() ) {
-                            vChuckingDirection.push_back(_info._vChuckingDirection[ichuckingdirection++]);
+                            vValidChuckingDirections.push_back(_info._vChuckingDirection[ichuckingdirection++]);
                         }
                         else {
-                            vChuckingDirection.push_back(0);
+                            vValidChuckingDirections.push_back(0);
                             RAVELOG_WARN_FORMAT("manipulator %s chucking direction not correct length, might get bad chucking/release grasping", GetName());
                         }
                     }
@@ -1761,7 +1763,33 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
             }
         }
     }
-    _info._vChuckingDirection.swap(vChuckingDirection);
+
+    // If the above validated chuckingDirections/gripperJointNames are different from those in gripperInfo, show warin.
+    if( !!pGripperInfo ) {
+        if( (pGripperInfo->vChuckingDirections != vValidChuckingDirections) || (pGripperInfo->gripperJointNames != vValidGripperJointNames ) ) {
+            std::stringstream ss;
+            ss << "'chuckingDirection' in gripperInfo [";
+            FOREACH(itdir, pGripperInfo->vChuckingDirections) {
+                ss << *itdir << ", ";
+            }
+            ss << "], 'gripperJointNames' in gripperInfo [";
+            FOREACH(itname, pGripperInfo->gripperJointNames) {
+                ss << *itname << ", ";
+            }
+            ss << "], 'chuckingDirection' validated in tool [";
+            FOREACH(itdir, vValidChuckingDirections) {
+                ss << *itdir << ", ";
+            }
+            ss << "], 'gripperJointNames' validated in tool [";
+            FOREACH(itname, vValidGripperJointNames) {
+                ss << *itname << ", ";
+            }
+            ss << "]";
+            RAVELOG_WARN_FORMAT("'chuckingDirection' and/or 'gripperJointNames' in gripperInfo '%s' is inconsistent with that in manipulator '%s'. %s", _info._grippername % GetName()%ss.str());
+        }
+    }
+
+    _info._vChuckingDirection.swap(vValidChuckingDirections);
 }
 
 }
