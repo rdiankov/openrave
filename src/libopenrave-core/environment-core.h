@@ -2562,7 +2562,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1))
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1), float height=0.05)
     {
         SharedLock lock777(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -2570,7 +2570,7 @@ public:
         }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
-            handles->Add((*itviewer)->drawlabel(label, worldPosition, color));
+            handles->Add((*itviewer)->drawlabel(label, worldPosition, color, height));
         }
         return handles;
     }
@@ -2813,27 +2813,35 @@ public:
             }
 
             KinBody::BodyState& state = _vPublishedBodies.at(iwritten);
-            state.Reset();
-            state.pbody = pbody;
-            pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
-            pbody->GetLinkEnableStates(state.vLinkEnableStates);
-            pbody->GetDOFValues(state.jointvalues);
-            pbody->GetGrabbedInfo(state.vGrabbedInfos);
-            state.strname =pbody->GetName();
-            state.uri = pbody->GetURI();
-            state.updatestamp = pbody->GetUpdateStamp();
-            state.environmentid = pbody->GetEnvironmentBodyIndex();
-            if( pbody->IsRobot() ) {
-                RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
-                if( !!probot ) {
-                    RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
-                    if( !!pmanip ) {
-                        state.activeManipulatorName = pmanip->GetName();
-                        state.activeManipulatorTransform = pmanip->GetTransform();
+
+            // If this state was already inititalized from this body, we might be able to skip updating it if the body itself hasn't changed.
+            const bool canSkipUpdate = state.pbody == pbody && state.updatestamp == pbody->GetUpdateStamp();
+
+            // Only if the body is mismatched with the state do we need to do a full update
+            if (!canSkipUpdate) {
+                state.Reset();
+                state.pbody = pbody;
+                pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
+                pbody->GetLinkEnableStates(state.vLinkEnableStates);
+                pbody->GetDOFValues(state.jointvalues);
+                pbody->GetGrabbedInfo(state.vGrabbedInfos);
+                state.strname = pbody->GetName();
+                state.uri = pbody->GetURI();
+                state.updatestamp = pbody->GetUpdateStamp();
+                state.environmentid = pbody->GetEnvironmentBodyIndex();
+                if (pbody->IsRobot()) {
+                    RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+                    if (!!probot) {
+                        RobotBase::ManipulatorPtr pmanip = probot->GetActiveManipulator();
+                        if (!!pmanip) {
+                            state.activeManipulatorName = pmanip->GetName();
+                            state.activeManipulatorTransform = pmanip->GetTransform();
+                        }
+                        probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                     }
-                    probot->GetConnectedBodyActiveStates(state.vConnectedBodyActiveStates);
                 }
             }
+
             ++iwritten;
         }
 
@@ -4138,7 +4146,7 @@ protected:
             std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
             envBodyIndex = *smallestIt;
             _environmentIndexRecyclePool.erase(smallestIt);
-            RAVELOG_DEBUG_FORMAT("env=%s, recycled body envBodyIndex=%d for '%s'. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+            RAVELOG_VERBOSE_FORMAT("env=%s, recycled body envBodyIndex=%d for '%s'. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
         }
         else {
             envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0

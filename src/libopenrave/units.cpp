@@ -165,6 +165,7 @@ const char* GetAngleUnitString(AngleUnit unit)
     switch(unit) {
     case AU_Radian: return "rad";
     case AU_Degree: return "deg";
+    case AU_Centidegree: return "cdeg";
     }
     return "(unknown)";
 }
@@ -179,6 +180,9 @@ AngleUnit GetAngleUnitFromString(const char* pAngleUnit, AngleUnit defaultAngleU
     }
     if( strcmp(pAngleUnit, "deg") == 0 ) {
         return AU_Degree;
+    }
+    if( strcmp(pAngleUnit, "cdeg") == 0 ) {
+        return AU_Centidegree;
     }
     throw OpenRAVEException(str(boost::format("Do not support AngleUnit '%s'")%pAngleUnit), ORE_AngleUnitInvalid);
 }

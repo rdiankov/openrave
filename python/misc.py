@@ -318,15 +318,16 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
         colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)
 
-def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0]),color=numpy.array([0,0,0,1])):
+def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0]),color=numpy.array([0,0,0,1]),height=0.05):
     """draws a string label at position specified by worldPosition.
     
     :param env: Environment
     :param label: string to be used in the label
     :param worldPosition: a 3-element vector for positional offset relative to the root world transform
     :param color: a 4-element vector defining the color of the label
+    :param height: height of characters
     """
-    return env.drawlabel(label, worldPosition, color)
+    return env.drawlabel(label, worldPosition, color, height)
 
 def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     """draws an IkParameterization
