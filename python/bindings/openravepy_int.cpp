@@ -873,7 +873,7 @@ void ViewerManager::_RunViewerThread()
         }
 
         vActiveViewers.clear();
- 
+
         if( !!puseviewer ) {
             _bInMain = true;
             try {
@@ -884,6 +884,14 @@ void ViewerManager::_RunViewerThread()
             }
             catch(...) {
                 RAVELOG_FATAL_FORMAT("env=%s, got unknown exception in viewer main thread", puseviewer->GetEnv()->GetNameId());
+            }
+
+            // just in case remove
+            try {
+                puseviewer->GetEnv()->Remove(puseviewer);
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%s, failed to remove viewer '%s': %s", puseviewer->GetEnv()->GetNameId()%puseviewer->GetXMLId()%ex.what());
             }
 
             _bInMain = false;
@@ -897,7 +905,14 @@ void ViewerManager::_RunViewerThread()
                     }
                 }
             }
-            puseviewer.reset();
+
+            try {
+                // potentially calls destructor
+                puseviewer.reset();
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%s, failed to remove viewer '%s': %s", puseviewer->GetEnv()->GetNameId()%puseviewer->GetXMLId()%ex.what());
+            }
         }
         // just go and run the next viewer's loop, don't exit here!
     }
@@ -918,7 +933,7 @@ void ViewerManager::_RunViewerThread()
         }
     }
 
-    RAVELOG_DEBUG("shutting down viewer manager thread\n");
+    RAVELOG_DEBUG_FORMAT("shutting down viewer manager thread of %d viewers", _listviewerinfos.size());
 }
 
 void ViewerManager::_InitializeSingleton()
@@ -2549,8 +2564,8 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
             return n/3;
         }
         case 2: {
-            const int num = py::extract<int>(datashape[py::to_object(0)]);
-            const int dim = py::extract<int>(datashape[py::to_object(1)]);
+            const size_t num = py::extract<size_t>(datashape[py::to_object(0)]);
+            const size_t dim = py::extract<size_t>(datashape[py::to_object(1)]);
             if(dim != 3) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%dim,ORE_InvalidArguments);
             }
