@@ -206,7 +206,7 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput) : QMainW
 
 QtOSGViewer::~QtOSGViewer()
 {
-    RAVELOG_DEBUG("destroying qtosg viewer\n");
+    RAVELOG_DEBUG_FORMAT("env=%s, destroying qtosg viewer", GetEnv()->GetNameId());
     // _notifyGUIFunctionComplete can still be waiting. Code will crash when
     // the mutex is destroyed in that state. SetEnvironmentSync will release
     // _notifyGUIFunctionComplete

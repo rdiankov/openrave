@@ -363,7 +363,7 @@ public:
         FOREACH(itviewer, listViewers) {
             // don't reset the viewer since it can already be dead
             // todo: this call could lead into a deadlock if a SIGINT got called from the viewer thread
-            RAVELOG_DEBUG_FORMAT("quitting viewer '%s'", (*itviewer)->GetXMLId());
+            RAVELOG_DEBUG_FORMAT("env=%s, quitting viewer '%s'", GetNameId()%(*itviewer)->GetXMLId());
             (*itviewer)->quitmainloop();
         }
         listViewers.clear();

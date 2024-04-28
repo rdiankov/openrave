@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Unreleased
+==========
+
+- Fix python management of environment viewers to be safe. All resources will remain used solely by the viewer thread.
+
 Version 0.143.2
 ===============
 

@@ -19,9 +19,64 @@
 
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
+#include <boost/scoped_ptr.hpp>
+
+#include <condition_variable>
 
 namespace openravepy {
 using py::object;
+
+/// \brief manages all the viewers created through SetViewer into a single thread
+class ViewerManager
+{
+    /// \brief info about the viewer to create or that is created
+    struct ViewerInfo
+    {
+        EnvironmentBasePtr _penv;
+        std::string _viewername;
+        ViewerBasePtr _pviewer; /// the created viewer, managed by _RunViewerThread
+        std::condition_variable _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+        bool _bShowViewer = false; ///< true if should show the viewer when initially created
+        bool _bFailed = false; ///< if true, failed adding the viewer once, so do not try again
+        bool _bDestroyed = false; ///< if true, then viewer is already destroyed
+    };
+    typedef OPENRAVE_SHARED_PTR<ViewerInfo> ViewerInfoPtr;
+public:
+    ViewerManager();
+
+    virtual ~ViewerManager();
+
+    static ViewerManager& GetInstance();
+
+    /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread
+    ///
+    /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
+    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists);
+
+    /// \brief if removed, returns true
+    bool RemoveViewer(ViewerBasePtr pviewer);
+
+    /// \brief if anything removed, returns true
+    bool RemoveViewersOfEnvironment(EnvironmentBasePtr penv);
+
+    void Destroy();
+
+protected:
+    void _RunViewerThread();
+
+    static void _InitializeSingleton();
+
+    OPENRAVE_SHARED_PTR<std::thread> _threadviewer;
+    std::mutex _mutexViewer;
+    std::condition_variable _conditionViewer;
+    std::list<ViewerInfoPtr> _listviewerinfos;
+
+    bool _bShutdown; ///< if true, shutdown everything
+    bool _bInMain; ///< if true, viewer thread is running a main function
+
+    static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
+    static std::once_flag _onceInitialize; ///< makes sure initialization is atomic
+};
 
 class OPENRAVEPY_API PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentBase>
 {
@@ -177,7 +232,7 @@ public:
     object GetBodyFromEnvironmentId(int id);
     object GetBodyFromEnvironmentBodyIndex(int id);
     object GetBodiesFromEnvironmentBodyIndices(object bodyIndices);
-    
+
     int GetMaxEnvironmentBodyIndex();
 
     int AddModule(PyModuleBasePtr prob, const std::string &args);
@@ -235,7 +290,7 @@ public:
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
     /// returns the number of vectors
-    static size_t _getListVector(object odata, std::vector<RaveVector<float>>& vvectors);
+    static size_t _getListVector(object odata, std::vector<RaveVector<float> >& vvectors);
 
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 

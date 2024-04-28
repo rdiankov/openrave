@@ -1031,6 +1031,12 @@ object pyRaveInvertFileLookup(const std::string& filename)
     return py::none_();
 }
 
+void pyRaveDestroy()
+{
+    ViewerManager::GetInstance().Destroy(); // destroy the active viewers
+    OpenRAVE::RaveDestroy();
+}
+
 object RaveGetPluginInfo()
 {
     py::list plugins;
@@ -2358,9 +2364,9 @@ void init_openravepy_global()
     def("RaveInitialize",openravepy::pyRaveInitialize,RaveInitialize_overloads(PY_ARGS("load_all_plugins","level") DOXY_FN1(RaveInitialize)));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
+    m.def("RaveDestroy",openravepy::pyRaveDestroy,DOXY_FN1(OpenRAVE::));
 #else
-    def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
+    def("RaveDestroy",openravepy::pyRaveDestroy,DOXY_FN1(OpenRAVE::RaveDestroy));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
