@@ -1398,12 +1398,12 @@ void QtOSGViewer::quitmainloop()
         return;
     }
     _nQuitMainLoop = 1;
-    bool bGuiThread = QThread::currentThread() == _pQtApp->thread();
-    if( !bGuiThread ) {
-        SetEnvironmentSync(false);
-    }
+//    bool bGuiThread = QThread::currentThread() == _pQtApp->thread();
+//    if( !bGuiThread ) {
+//        SetEnvironmentSync(false);
+//    }
     if (!_bExternalLoop) {
-        _pQtApp->exit(0);
+        _pQtApp->quit();//exit(0);
     }
     _nQuitMainLoop = 2;
 }
