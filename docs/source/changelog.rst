@@ -3,10 +3,11 @@
 ChangeLog
 #########
 
-Unreleased
-==========
+Version 0.143.3
+===============
 
 - Fix python management of environment viewers to be safe. All resources will remain used solely by the viewer thread.
+- Fix Manipulator's `GetArmDOFValues` and `GetGripperDOFValues` so that they return an empty vector when the respective vindices is empty instead of returning the entire robot dof values.
 
 Version 0.143.2
 ===============
