@@ -42,6 +42,7 @@ void IkFailureInfo::Reset()
     _rCustomData.SetObject();
     //_mapdata.clear();
     _bIkParamValid = false;
+    _ikparam.Reset();
     // don't reset _memoryPoolIndex
 }
 
@@ -106,6 +107,7 @@ void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
         _action = (IkReturnAction) actionInt;
     }
     orjson::LoadJsonValueByKey(rIkFailureInfo, "config", _vconfig);
+
     _bIkParamValid = orjson::LoadJsonValueByKey(rIkFailureInfo, "ikparam", _ikparam);
     if( rIkFailureInfo.HasMember("collisionReportInfo") ) {
         _report.LoadFromJson(rIkFailureInfo["collisionReportInfo"]);

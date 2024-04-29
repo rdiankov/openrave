@@ -603,285 +603,324 @@ AttributesList toAttributesList(object oattributes)
     return AttributesList();
 }
 
-/// \brief manages all the viewers created through SetViewer into a single thread
-class ViewerManager
+ViewerManager::ViewerManager() {
+    _bShutdown = false;
+    _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+}
+
+ViewerManager::~ViewerManager() {
+    Destroy();
+}
+
+ViewerManager& ViewerManager::GetInstance()
 {
-    /// \brief info about the viewer to create or that is created
-    struct ViewerInfo
-    {
-        EnvironmentBasePtr _penv;
-        std::string _viewername;
-        ViewerBasePtr _pviewer; /// the created viewer
-        std::condition_variable _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
-        bool _bShowViewer; ///< true if should show the viewer when initially created
-    };
-    typedef OPENRAVE_SHARED_PTR<ViewerInfo> ViewerInfoPtr;
-public:
-    ViewerManager() {
-        _bShutdown = false;
-        _bInMain = false;
-        _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
-    }
+    std::call_once(_onceInitialize, _InitializeSingleton);
+    // Return reference to object.
+    return *_singleton;
+}
 
-    virtual ~ViewerManager() {
-        Destroy();
-    }
-
-    static ViewerManager& GetInstance() {
-        std::call_once(_onceInitialize, _InitializeSingleton);
-        // Return reference to object.
-        return *_singleton;
-    }
-
-    /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread
-    ///
-    /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
-    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists=true)
-    {
-        ViewerBasePtr pviewer;
-        if( strviewer.size() > 0 ) {
-
-            if( bDoNotAddIfExists ) {
-                // check all existing viewers
-                std::lock_guard<std::mutex> lock(_mutexViewer);
-                std::list<ViewerInfoPtr>::iterator itviewer = _listviewerinfos.begin();
-                while(itviewer != _listviewerinfos.end() ) {
-                    if( (*itviewer)->_penv == penv ) {
-                        if( (*itviewer)->_viewername == strviewer ) {
-                            if( !!(*itviewer)->_pviewer ) {
-                                (*itviewer)->_pviewer->Show(bShowViewer);
-                            }
-                            return (*itviewer)->_pviewer;
-                        }
-
-                        // should remove the viewer so can re-add a new one
-                        if( !!(*itviewer)->_pviewer ) {
-                            (*itviewer)->_penv->Remove((*itviewer)->_pviewer);
-                        }
-                        itviewer = _listviewerinfos.erase(itviewer);
-                    }
-                    else {
-                        ++itviewer;
-                    }
-                }
-            }
-
-            ViewerInfoPtr pinfo(new ViewerInfo());
-            pinfo->_penv = penv;
-            pinfo->_viewername = strviewer;
-            pinfo->_bShowViewer = bShowViewer;
-            if( _bInMain ) {
-                // create in this thread since viewer thread is already waiting on another viewer
-                pviewer = RaveCreateViewer(penv, strviewer);
-                if( !!pviewer ) {
-                    penv->Add(pviewer, IAM_AllowRenaming, std::string());
-                    // TODO uncomment once Show posts to queue
-                    if( bShowViewer ) {
-                        pviewer->Show(1);
-                    }
-                    pinfo->_pviewer = pviewer;
-                    std::lock_guard<std::mutex> lock(_mutexViewer);
-                    _listviewerinfos.push_back(pinfo);
-                    _conditionViewer.notify_all();
-                }
-            }
-            else {
-                // no viewer has been created yet, so let the viewer thread create it (if using Qt, this initializes the QApplication in the right thread
-                std::unique_lock<std::mutex> lock(_mutexViewer);
-                _listviewerinfos.push_back(pinfo);
-                _conditionViewer.notify_all();
-
-                /// wait until viewer thread process it
-                pinfo->_cond.wait(lock);
-                pviewer = pinfo->_pviewer;
-            }
-        }
-        return pviewer;
-    }
-
-    /// \brief if removed, returns true
-    bool RemoveViewer(ViewerBasePtr pviewer)
-    {
-        if( !pviewer ) {
-            return false;
-        }
-        {
+void ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists)
+{
+    ViewerBasePtr pviewer;
+    if( strviewer.size() > 0 ) {
+        if( bDoNotAddIfExists ) {
+            // check all existing viewers
             std::lock_guard<std::mutex> lock(_mutexViewer);
-            FOREACH(itviewer, _listviewerinfos) {
-                ViewerBasePtr ptestviewer = (*itviewer)->_pviewer;
-                if(ptestviewer == pviewer ) {
-                    pviewer->quitmainloop();
-                    _listviewerinfos.erase(itviewer);
-                    return true;
+            std::list<ViewerInfoPtr>::iterator itviewer = _listviewerinfos.begin();
+            while(itviewer != _listviewerinfos.end() ) {
+                if( (*itviewer)->_penv == penv ) {
+                    if( (*itviewer)->_viewername == strviewer ) {
+                        if( !!(*itviewer)->_pviewer ) {
+                            (*itviewer)->_pviewer->Show(bShowViewer);
+                        }
+                        return;
+                    }
+
+                    // should remove the viewer so can re-add a new one
+                    if( !!(*itviewer)->_pviewer ) {
+                        (*itviewer)->_penv->Remove((*itviewer)->_pviewer);
+                    }
+                    itviewer = _listviewerinfos.erase(itviewer);
+                }
+                else {
+                    ++itviewer;
                 }
             }
         }
+
+        ViewerInfoPtr pinfo(new ViewerInfo());
+        pinfo->_penv = penv;
+        pinfo->_viewername = strviewer;
+        pinfo->_bShowViewer = bShowViewer;
+        {
+            // no viewer has been created yet, so let the viewer thread create it (if using Qt, this initializes the QApplication in the right thread
+            std::unique_lock<std::mutex> lock(_mutexViewer);
+            _listviewerinfos.push_back(pinfo);
+            _conditionViewer.notify_all();
+        }
+    }
+}
+
+bool ViewerManager::RemoveViewer(ViewerBasePtr pviewer)
+{
+    if( !pviewer ) {
         return false;
     }
-
-    /// \brief if anything removed, returns true
-    bool RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
     {
-        if( !penv ) {
-            return false;
+        std::lock_guard<std::mutex> lock(_mutexViewer);
+        FOREACH(itviewer, _listviewerinfos) {
+            ViewerBasePtr ptestviewer = (*itviewer)->_pviewer;
+            if(ptestviewer == pviewer ) {
+                pviewer->GetEnv()->Remove(pviewer);
+                _listviewerinfos.erase(itviewer);
+                return true;
+            }
         }
-        bool bremoved = false;
+    }
+    return false;
+}
+
+bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
+{
+    if( !penv ) {
+        return false;
+    }
+    bool bremoved = false;
+    {
+        std::lock_guard<std::mutex> lock(_mutexViewer);
+        std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
+        while(itinfo != _listviewerinfos.end() ) {
+            if( (*itinfo)->_penv == penv ) {
+                if( !!(*itinfo)->_pviewer ) {
+                    penv->Remove((*itinfo)->_pviewer);
+                }
+                (*itinfo)->_cond.notify_all();
+                itinfo = _listviewerinfos.erase(itinfo);
+                RAVELOG_DEBUG_FORMAT("env=%s, removing viewer '%s'", penv->GetNameId()%(*itinfo)->_viewername);
+                bremoved = true;
+            }
+            else {
+                ++itinfo;
+            }
+        }
+    }
+    return bremoved;
+}
+
+void ViewerManager::Destroy()
+{
+    _bShutdown = true;
+    {
+        std::lock_guard<std::mutex> lock(_mutexViewer);
+        // have to notify everyone
+        for(ViewerInfoPtr& pinfo : _listviewerinfos) {
+            if( !!pinfo->_pviewer ) {
+                pinfo->_pviewer->GetEnv()->Remove(pinfo->_pviewer);
+            }
+            pinfo->_cond.notify_all();
+        }
+        _conditionViewer.notify_all();
+    }
+    if( !!_threadviewer ) {
+        _threadviewer->join();
+    }
+    _threadviewer.reset();
+    _listviewerinfos.clear();
+}
+
+void ViewerManager::_RunViewerThread()
+{
+    std::vector<ViewerBasePtr> vActiveViewers;
+    std::vector<ViewerBasePtr> vAddViewers; // viewers to add to env once lock is released
+    std::list<ViewerBasePtr> listTempViewers;
+    while(!_bShutdown) {
+        bool bShowViewer = true;
         {
-            std::lock_guard<std::mutex> lock(_mutexViewer);
+            std::unique_lock<std::mutex> lock(_mutexViewer);
+            if( _listviewerinfos.size() == 0 ) {
+                _conditionViewer.wait(lock);
+                if( _listviewerinfos.size() == 0 ) {
+                    continue;
+                }
+            }
+
+            vAddViewers.clear();
+            vActiveViewers.clear();
             std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
             while(itinfo != _listviewerinfos.end() ) {
-                if( (*itinfo)->_penv == penv ) {
-                    itinfo = _listviewerinfos.erase(itinfo);
-                    bremoved = true;
+                const ViewerInfoPtr& pinfo = *itinfo;
+                if( !pinfo->_pviewer && !pinfo->_bFailed ) {
+
+                    try{
+                        pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
+                    }
+                    catch(const std::exception& ex) {
+                        RAVELOG_WARN_FORMAT("env=%s, failed to create viewer '%s': %s", pinfo->_pviewer->GetEnv()->GetNameId()%pinfo->_viewername%ex.what());
+                        pinfo->_bFailed = true;
+                    }
+
+                    // have to notify other thread that viewer is present before the environment lock happens! otherwise we can get into deadlock between c++ and python
+                    pinfo->_cond.notify_all();
+                    if( !!pinfo->_pviewer ) {
+                        vAddViewers.push_back(pinfo->_pviewer);
+                        ++itinfo;
+                    }
+                    else {
+                        // erase from _listviewerinfos
+                        itinfo = _listviewerinfos.erase(itinfo);
+                        continue;
+                    }
                 }
                 else {
                     ++itinfo;
                 }
-            }
-        }
-        return bremoved;
-    }
 
-    void Destroy() {
-        _bShutdown = true;
-        {
-            std::lock_guard<std::mutex> lock(_mutexViewer);
-            // have to notify everyone
-            FOREACH(itinfo, _listviewerinfos) {
-                (*itinfo)->_cond.notify_all();
-            }
-            _listviewerinfos.clear();
-            _conditionViewer.notify_all();
-        }
-        if( !!_threadviewer ) {
-            _threadviewer->join();
-        }
-        _threadviewer.reset();
-    }
-
-protected:
-    void _RunViewerThread()
-    {
-        while(!_bShutdown) {
-            std::list<ViewerBasePtr> listviewers, listtempviewers;
-            bool bShowViewer = true;
-            {
-                std::unique_lock<std::mutex> lock(_mutexViewer);
-                if( _listviewerinfos.size() == 0 ) {
-                    _conditionViewer.wait(lock);
-                    if( _listviewerinfos.size() == 0 ) {
-                        continue;
+                if( !!pinfo->_pviewer ) {
+                    if( vActiveViewers.size() == 0 ) {
+                        bShowViewer = pinfo->_bShowViewer;
                     }
+                    vActiveViewers.push_back(pinfo->_pviewer);
                 }
+            }
+        }
 
-                listtempviewers.clear(); // viewers to add to env once lock is released
-                listviewers.clear();
-                std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
-                while(itinfo != _listviewerinfos.end() ) {
-                    ViewerInfoPtr pinfo = *itinfo;
-                    if( !pinfo->_pviewer ) {
-                        pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
-                        // have to notify other thread that viewer is present before the environment lock happens! otherwise we can get into deadlock between c++ and python
-                        pinfo->_cond.notify_all();
-                        if( !!pinfo->_pviewer ) {
-                            listtempviewers.push_back(pinfo->_pviewer);
-                            ++itinfo;
+        for(ViewerBasePtr& pAddViewer : vAddViewers) {
+            try{
+                pAddViewer->GetEnv()->Add(pAddViewer, IAM_AllowRenaming, std::string());
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%s, failed to add viewer '%s' to the env: %s", pAddViewer->GetEnv()->GetNameId()%pAddViewer->GetXMLId()%ex.what());
+                // find the info to write the failure to
+                {
+                    std::unique_lock<std::mutex> lock(_mutexViewer);
+                    for(ViewerInfoPtr& pinfo : _listviewerinfos) {
+                        if( pinfo->_pviewer == pAddViewer ) {
+                            pinfo->_bFailed = true;
                         }
-                        else {
-                            // erase from _listviewerinfos
-                            itinfo = _listviewerinfos.erase(itinfo);
-                        }
-                    }
-                    else {
-                        ++itinfo;
-                    }
-
-                    if( !!pinfo->_pviewer ) {
-                        if( listviewers.size() == 0 ) {
-                            bShowViewer = pinfo->_bShowViewer;
-                        }
-                        listviewers.push_back(pinfo->_pviewer);
                     }
                 }
             }
+        }
+        vAddViewers.clear(); // do not hold pointers
 
-            FOREACH(itaddviewer, listtempviewers) {
-                (*itaddviewer)->GetEnv()->Add(*itaddviewer, IAM_AllowRenaming, std::string());
-            }
+        ViewerBasePtr puseviewer; // viewer currently in use
+        for(std::vector<ViewerBasePtr>::iterator itActiveViewer = vActiveViewers.begin(); itActiveViewer != vActiveViewers.end(); ++itActiveViewer) {
+            ViewerBasePtr& pActiveViewer = *itActiveViewer;
 
-            ViewerBasePtr puseviewer;
-            FOREACH(itviewer, listviewers) {
-                // double check if viewer is added to env
-                bool bfound = false;
-                listtempviewers.clear();
-                (*itviewer)->GetEnv()->GetViewers(listtempviewers);
-                FOREACH(itviewer2, listtempviewers) {
-                    if( *itviewer == *itviewer2 ) {
-                        bfound = true;
-                        break;
-                    }
-                }
-                if( bfound ) {
-                    puseviewer = *itviewer;
+            // double check if viewer is added to env
+            bool bfound = false;
+            listTempViewers.clear();
+            pActiveViewer->GetEnv()->GetViewers(listTempViewers);
+            for(ViewerBasePtr& pTempViewer : listTempViewers) {
+                if( pActiveViewer == pTempViewer ) {
+                    bfound = true;
                     break;
                 }
-                else {
-                    // viewer is not in environment any more, so erase from list
-                    listviewers.erase(itviewer);
-                    break; // break since modifying list
-                }
             }
+            listTempViewers.clear();
 
-            listtempviewers.clear();
+            if( bfound ) {
+                puseviewer = pActiveViewer;
+                break;
+            }
+            else {
+                RAVELOG_DEBUG_FORMAT("env=%s, viewer '%s' is not active anymore, so destroying it.", pActiveViewer->GetEnv()->GetNameId()%pActiveViewer->GetXMLId());
+                // viewer is not in environment any more, so erase from list, which will call its destructor
+                ViewerInfoPtr pActiveInfo;
 
-            if( !!puseviewer ) {
-                _bInMain = true;
-                try {
-                    puseviewer->main(bShowViewer);
-                }
-                catch(const std::exception& ex) {
-                    RAVELOG_ERROR_FORMAT("got exception in viewer main thread %s", ex.what());
-                }
-                catch(...) {
-                    RAVELOG_ERROR("got unknown exception in viewer main thread\n");
-                }
-
-                _bInMain = false;
-                // remove from _listviewerinfos in order to avoid running the main loop again
+                // find the info to write the failure to, do not destroy inside the lock
                 {
-                    std::lock_guard<std::mutex> lock(_mutexViewer);
-                    FOREACH(itinfo, _listviewerinfos) {
-                        if( (*itinfo)->_pviewer == puseviewer ) {
+                    std::unique_lock<std::mutex> lock(_mutexViewer);
+                    for(std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin(); itinfo != _listviewerinfos.end(); ++itinfo) {
+                        ViewerInfoPtr& pinfo = *itinfo;
+                        if( pinfo->_pviewer == pActiveViewer ) {
+                            pinfo->_bDestroyed = true;
+                            pActiveInfo = pinfo;
                             _listviewerinfos.erase(itinfo);
                             break;
                         }
                     }
                 }
+
+                std::string nameId = pActiveViewer->GetEnv()->GetNameId();
+                try {
+                    // destroy should be called here
+                    pActiveViewer.reset();
+                    pActiveInfo->_pviewer.reset();
+                }
+                catch(const std::exception& ex) {
+                    RAVELOG_WARN_FORMAT("env=%s, failed to destroy viewer '%s': %s", nameId%pActiveInfo->_viewername%ex.what());
+                }
+            }
+        }
+
+        vActiveViewers.clear();
+
+        if( !!puseviewer ) {
+            try {
+                puseviewer->main(bShowViewer);
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_ERROR_FORMAT("env=%s, got exception in viewer main thread %s", puseviewer->GetEnv()->GetNameId()%ex.what());
+            }
+            catch(...) {
+                RAVELOG_FATAL_FORMAT("env=%s, got unknown exception in viewer main thread", puseviewer->GetEnv()->GetNameId());
+            }
+
+            // just in case remove
+            try {
+                puseviewer->GetEnv()->Remove(puseviewer);
+            }
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%s, failed to remove viewer '%s': %s", puseviewer->GetEnv()->GetNameId()%puseviewer->GetXMLId()%ex.what());
+            }
+
+            // remove from _listviewerinfos in order to avoid running the main loop again
+            {
+                std::lock_guard<std::mutex> lock(_mutexViewer);
+                FOREACH(itinfo, _listviewerinfos) {
+                    if( (*itinfo)->_pviewer == puseviewer ) {
+                        _listviewerinfos.erase(itinfo);
+                        break;
+                    }
+                }
+            }
+
+            try {
+                // potentially calls destructor
                 puseviewer.reset();
             }
-            // just go and run the next viewer's loop, don't exit here!
+            catch(const std::exception& ex) {
+                RAVELOG_WARN_FORMAT("env=%s, failed to remove viewer '%s': %s", puseviewer->GetEnv()->GetNameId()%puseviewer->GetXMLId()%ex.what());
+            }
         }
-        RAVELOG_DEBUG("shutting down viewer manager thread\n");
+        // just go and run the next viewer's loop, don't exit here!
     }
 
-    static void _InitializeSingleton()
-    {
-        _singleton.reset(new ViewerManager());
-
+    vActiveViewers.clear();
+    vAddViewers.clear();
+    listTempViewers.clear();
+    // have to free up the viewer resources in the same thread
+    for(ViewerInfoPtr& pinfo : _listviewerinfos) {
+        try {
+            if( !!pinfo->_pviewer ) {
+                pinfo->_pviewer->GetEnv()->Remove(pinfo->_pviewer);
+                pinfo->_pviewer.reset();
+            }
+        }
+        catch(const std::exception& ex) {
+            RAVELOG_WARN_FORMAT("env=%s, failed to remove and destroy viewer '%s': %s", pinfo->_pviewer->GetEnv()->GetNameId()%pinfo->_pviewer->GetXMLId()%ex.what());
+        }
     }
 
-    OPENRAVE_SHARED_PTR<std::thread> _threadviewer;
-    std::mutex _mutexViewer;
-    std::condition_variable _conditionViewer;
-    std::list<ViewerInfoPtr> _listviewerinfos;
+    RAVELOG_DEBUG_FORMAT("shutting down viewer manager thread of %d viewers", _listviewerinfos.size());
+}
 
-    bool _bShutdown; ///< if true, shutdown everything
-    bool _bInMain; ///< if true, viewer thread is running a main function
+void ViewerManager::_InitializeSingleton()
+{
+    _singleton.reset(new ViewerManager());
 
-    static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
-    static std::once_flag _onceInitialize; ///< makes sure initialization is atomic
-
-};
+}
 
 boost::scoped_ptr<ViewerManager> ViewerManager::_singleton(0);
 std::once_flag ViewerManager::_onceInitialize;
@@ -1380,7 +1419,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2)
                 return bCollision;
             }
         }
-        
+
         throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
     }
     KinBodyConstPtr pbody = openravepy::GetKinBody(o1);
@@ -1404,7 +1443,7 @@ bool PyEnvironmentBase::CheckCollision(object o1, object o2)
                 return bCollision;
             }
         }
-        
+
         throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 2"),ORE_InvalidArguments);
     }
     throw OPENRAVE_EXCEPTION_FORMAT0(_("invalid argument 1"),ORE_InvalidArguments);
@@ -2396,8 +2435,8 @@ void PyEnvironmentBase::__exit__(object type, object value, object traceback)
 
 bool PyEnvironmentBase::SetViewer(const string &viewername, bool showviewer)
 {
-    ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
-    return !(pviewer == NULL);
+    ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
+    return !viewername.empty();
 }
 
 /// \brief sets the default viewer
@@ -2405,8 +2444,8 @@ bool PyEnvironmentBase::SetDefaultViewer(bool showviewer)
 {
     std::string viewername = RaveGetDefaultViewerType();
     if( viewername.size() > 0 ) {
-        ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
-        return !!pviewer;
+        ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
+        return !viewername.empty();
     }
 
     return false;
@@ -2505,8 +2544,8 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
             return n/3;
         }
         case 2: {
-            const int num = py::extract<int>(datashape[py::to_object(0)]);
-            const int dim = py::extract<int>(datashape[py::to_object(1)]);
+            const size_t num = py::extract<size_t>(datashape[py::to_object(0)]);
+            const size_t dim = py::extract<size_t>(datashape[py::to_object(1)]);
             if(dim != 3) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%dim,ORE_InvalidArguments);
             }
@@ -2754,8 +2793,8 @@ object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object oc
         else {
             const py::numeric::array array = extract<py::numeric::array>(ocolors);
             BOOST_ASSERT(array.ndim() == 2);
-            BOOST_ASSERT(array.shape(0) == vpoints.size() / 3);
-            BOOST_ASSERT(array.shape(1) == 3 || array.shape(1) == 4);
+            BOOST_ASSERT((size_t)array.shape(0) == vpoints.size() / 3);
+            BOOST_ASSERT((size_t)array.shape(1) == 3 || (size_t)array.shape(1) == 4);
             boost::multi_array<float, 2> colors(std::vector<size_t>({static_cast<unsigned long>(array.shape(0)), static_cast<unsigned long>(array.shape(1))}));
             colors.assign(array.data(), array.data() + array.size());
             return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,std::move(colors)));
