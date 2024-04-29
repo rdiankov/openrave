@@ -357,12 +357,22 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 
 void RobotBase::Manipulator::GetArmDOFValues(std::vector<dReal>& v) const
 {
-    GetRobot()->GetDOFValues(v, __varmdofindices);
+    if( __varmdofindices.empty() ) {
+        v.resize(0);
+    }
+    else {
+        GetRobot()->GetDOFValues(v, __varmdofindices);
+    }
 }
 
 void RobotBase::Manipulator::GetGripperDOFValues(std::vector<dReal>& v) const
 {
-    GetRobot()->GetDOFValues(v, __vgripperdofindices);
+    if( __vgripperdofindices.empty() ) {
+        v.resize(0);
+    }
+    else {
+        GetRobot()->GetDOFValues(v, __vgripperdofindices);
+    }
 }
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, int filteroptions) const
