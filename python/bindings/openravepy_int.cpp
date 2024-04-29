@@ -605,7 +605,6 @@ AttributesList toAttributesList(object oattributes)
 
 ViewerManager::ViewerManager() {
     _bShutdown = false;
-    _bInMain = false;
     _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
 }
 
@@ -620,11 +619,10 @@ ViewerManager& ViewerManager::GetInstance()
     return *_singleton;
 }
 
-ViewerBasePtr ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists)
+void ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists)
 {
     ViewerBasePtr pviewer;
     if( strviewer.size() > 0 ) {
-
         if( bDoNotAddIfExists ) {
             // check all existing viewers
             std::lock_guard<std::mutex> lock(_mutexViewer);
@@ -635,7 +633,7 @@ ViewerBasePtr ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &st
                         if( !!(*itviewer)->_pviewer ) {
                             (*itviewer)->_pviewer->Show(bShowViewer);
                         }
-                        return (*itviewer)->_pviewer;
+                        return;
                     }
 
                     // should remove the viewer so can re-add a new one
@@ -654,33 +652,13 @@ ViewerBasePtr ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &st
         pinfo->_penv = penv;
         pinfo->_viewername = strviewer;
         pinfo->_bShowViewer = bShowViewer;
-        if( _bInMain ) {
-            // create in this thread since viewer thread is already waiting on another viewer
-            pviewer = RaveCreateViewer(penv, strviewer);
-            if( !!pviewer ) {
-                penv->Add(pviewer, IAM_AllowRenaming, std::string());
-                // TODO uncomment once Show posts to queue
-                if( bShowViewer ) {
-                    pviewer->Show(1);
-                }
-                pinfo->_pviewer = pviewer;
-                std::lock_guard<std::mutex> lock(_mutexViewer);
-                _listviewerinfos.push_back(pinfo);
-                _conditionViewer.notify_all();
-            }
-        }
-        else {
+        {
             // no viewer has been created yet, so let the viewer thread create it (if using Qt, this initializes the QApplication in the right thread
             std::unique_lock<std::mutex> lock(_mutexViewer);
             _listviewerinfos.push_back(pinfo);
             _conditionViewer.notify_all();
-
-            /// wait until viewer thread process it
-            pinfo->_cond.wait(lock);
-            pviewer = pinfo->_pviewer;
         }
     }
-    return pviewer;
 }
 
 bool ViewerManager::RemoveViewer(ViewerBasePtr pviewer)
@@ -693,7 +671,7 @@ bool ViewerManager::RemoveViewer(ViewerBasePtr pviewer)
         FOREACH(itviewer, _listviewerinfos) {
             ViewerBasePtr ptestviewer = (*itviewer)->_pviewer;
             if(ptestviewer == pviewer ) {
-                pviewer->quitmainloop();
+                pviewer->GetEnv()->Remove(pviewer);
                 _listviewerinfos.erase(itviewer);
                 return true;
             }
@@ -713,6 +691,10 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
         std::list<ViewerInfoPtr>::iterator itinfo = _listviewerinfos.begin();
         while(itinfo != _listviewerinfos.end() ) {
             if( (*itinfo)->_penv == penv ) {
+                if( !!(*itinfo)->_pviewer ) {
+                    penv->Remove((*itinfo)->_pviewer);
+                }
+                (*itinfo)->_cond.notify_all();
                 itinfo = _listviewerinfos.erase(itinfo);
                 RAVELOG_DEBUG_FORMAT("env=%s, removing viewer '%s'", penv->GetNameId()%(*itinfo)->_viewername);
                 bremoved = true;
@@ -875,7 +857,6 @@ void ViewerManager::_RunViewerThread()
         vActiveViewers.clear();
 
         if( !!puseviewer ) {
-            _bInMain = true;
             try {
                 puseviewer->main(bShowViewer);
             }
@@ -894,7 +875,6 @@ void ViewerManager::_RunViewerThread()
                 RAVELOG_WARN_FORMAT("env=%s, failed to remove viewer '%s': %s", puseviewer->GetEnv()->GetNameId()%puseviewer->GetXMLId()%ex.what());
             }
 
-            _bInMain = false;
             // remove from _listviewerinfos in order to avoid running the main loop again
             {
                 std::lock_guard<std::mutex> lock(_mutexViewer);
@@ -2455,8 +2435,8 @@ void PyEnvironmentBase::__exit__(object type, object value, object traceback)
 
 bool PyEnvironmentBase::SetViewer(const string &viewername, bool showviewer)
 {
-    ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
-    return !(pviewer == NULL);
+    ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
+    return !viewername.empty();
 }
 
 /// \brief sets the default viewer
@@ -2464,8 +2444,8 @@ bool PyEnvironmentBase::SetDefaultViewer(bool showviewer)
 {
     std::string viewername = RaveGetDefaultViewerType();
     if( viewername.size() > 0 ) {
-        ViewerBasePtr pviewer = ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
-        return !!pviewer;
+        ViewerManager::GetInstance().AddViewer(_penv, viewername, showviewer, true);
+        return !viewername.empty();
     }
 
     return false;

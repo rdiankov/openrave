@@ -51,7 +51,7 @@ public:
     /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread
     ///
     /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
-    ViewerBasePtr AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists);
+    void AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists);
 
     /// \brief if removed, returns true
     bool RemoveViewer(ViewerBasePtr pviewer);
@@ -72,7 +72,6 @@ protected:
     std::list<ViewerInfoPtr> _listviewerinfos;
 
     bool _bShutdown; ///< if true, shutdown everything
-    bool _bInMain; ///< if true, viewer thread is running a main function
 
     static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
     static std::once_flag _onceInitialize; ///< makes sure initialization is atomic
