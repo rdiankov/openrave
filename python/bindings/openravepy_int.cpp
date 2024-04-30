@@ -623,6 +623,11 @@ void ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, 
 {
     ViewerBasePtr pviewer;
     if( strviewer.size() > 0 ) {
+        if( !_threadviewer ) {
+            RAVELOG_DEBUG_FORMAT("env=%s, reinitializing a viewer thread for '%s'", penv->GetNameId()%strviewer);
+            Destroy(); // just in case
+            Initialize();
+        }
         if( bDoNotAddIfExists ) {
             // check all existing viewers
             std::lock_guard<std::mutex> lock(_mutexViewer);
