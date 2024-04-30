@@ -761,7 +761,7 @@ void ViewerManager::_RunViewerThread()
                         pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
                     }
                     catch(const std::exception& ex) {
-                        RAVELOG_WARN_FORMAT("env=%s, failed to create viewer '%s': %s", pinfo->_pviewer->GetEnv()->GetNameId()%pinfo->_viewername%ex.what());
+                        RAVELOG_WARN_FORMAT("env=%s, failed to create viewer '%s': %s", pinfo->_penv->GetNameId()%pinfo->_viewername%ex.what());
                         pinfo->_bFailed = true;
                     }
 
