@@ -605,7 +605,7 @@ AttributesList toAttributesList(object oattributes)
 
 ViewerManager::ViewerManager()
 {
-    _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+    Initialize();
 }
 
 ViewerManager::~ViewerManager() {
@@ -711,6 +711,12 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
         }
     }
     return bremoved;
+}
+
+void ViewerManager::Initialize()
+{
+    _bShutdown = false;
+    _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
 }
 
 void ViewerManager::Destroy()
