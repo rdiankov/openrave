@@ -721,7 +721,9 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
 void ViewerManager::Initialize()
 {
     _bShutdown = false;
-    _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+    if( !_threadviewer ) {
+        _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+    }
 }
 
 void ViewerManager::Destroy()
