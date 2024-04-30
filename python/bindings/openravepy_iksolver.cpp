@@ -78,15 +78,19 @@ std::string PyIkFailureInfo::GetDescription() {
     return _ikFailureInfo._description;
 }
 object PyIkFailureInfo::GetMapData(const std::string& key) {
-    rapidjson::Value::ConstMemberIterator it = _ikFailureInfo._rCustomData.FindMember(key.c_str());
-    if( it != _ikFailureInfo._rCustomData.MemberEnd() ) {
-        return toPyObject(it->value);
+    IkFailureInfo::CustomData::const_iterator it = _ikFailureInfo._mapCustomData.find(key);
+    if( it != _ikFailureInfo._mapCustomData.end() ) {
+        return toPyArray(it->second);
     }
     return py::none_();
 }
 
 object PyIkFailureInfo::GetMapDataDict() {
-    return toPyObject(_ikFailureInfo._rCustomData);
+    py::dict odata;
+    for (const std::pair<std::string, std::vector<dReal>>& elem : _ikFailureInfo._mapCustomData) {
+        odata[elem.first.c_str()] = toPyArray(elem.second);
+    }
+    return odata;
 }
 object PyIkFailureInfo::SerializeJSON() {
     rapidjson::Document rIkFailureInfo(rapidjson::kObjectType);
