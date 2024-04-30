@@ -701,8 +701,8 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
                     penv->Remove((*itinfo)->_pviewer);
                 }
                 (*itinfo)->_cond.notify_all();
-                itinfo = _listviewerinfos.erase(itinfo);
                 RAVELOG_DEBUG_FORMAT("env=%s, removing viewer '%s'", penv->GetNameId()%(*itinfo)->_viewername);
+                itinfo = _listviewerinfos.erase(itinfo);
                 bremoved = true;
             }
             else {
