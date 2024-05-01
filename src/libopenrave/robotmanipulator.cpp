@@ -1790,6 +1790,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     }
 
     _info._vChuckingDirection.swap(vValidChuckingDirections);
+    _info._vGripperJointNames.swap(vValidGripperJointNames);
 }
 
 }
