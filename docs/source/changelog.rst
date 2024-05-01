@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.144.0
+===============
+
+- Reduce memory usage by `IkFailureInfo`.
+
 Version 0.143.3
 ===============
 
