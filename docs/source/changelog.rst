@@ -8,6 +8,11 @@ Version 0.144.0
 
 - Reduce memory usage by `IkFailureInfo`.
 
+Version 0.143.4
+===============
+
+- Fix environment viewers did not start because RaveDestroy() stopped the thread for viewers and RaveInitialize() did not restart it.
+
 Version 0.143.3
 ===============
 
