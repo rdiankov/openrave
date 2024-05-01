@@ -605,7 +605,7 @@ AttributesList toAttributesList(object oattributes)
 
 ViewerManager::ViewerManager()
 {
-    _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+    Initialize();
 }
 
 ViewerManager::~ViewerManager() {
@@ -623,6 +623,11 @@ void ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, 
 {
     ViewerBasePtr pviewer;
     if( strviewer.size() > 0 ) {
+        if( !_threadviewer ) {
+            RAVELOG_DEBUG_FORMAT("env=%s, reinitializing a viewer thread for '%s'", penv->GetNameId()%strviewer);
+            Destroy(); // just in case
+            Initialize();
+        }
         if( bDoNotAddIfExists ) {
             // check all existing viewers
             std::lock_guard<std::mutex> lock(_mutexViewer);
@@ -701,8 +706,8 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
                     penv->Remove((*itinfo)->_pviewer);
                 }
                 (*itinfo)->_cond.notify_all();
-                itinfo = _listviewerinfos.erase(itinfo);
                 RAVELOG_DEBUG_FORMAT("env=%s, removing viewer '%s'", penv->GetNameId()%(*itinfo)->_viewername);
+                itinfo = _listviewerinfos.erase(itinfo);
                 bremoved = true;
             }
             else {
@@ -711,6 +716,14 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
         }
     }
     return bremoved;
+}
+
+void ViewerManager::Initialize()
+{
+    _bShutdown = false;
+    if( !_threadviewer ) {
+        _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+    }
 }
 
 void ViewerManager::Destroy()

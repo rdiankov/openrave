@@ -60,6 +60,7 @@ public:
     /// \brief if anything removed, returns true
     bool RemoveViewersOfEnvironment(EnvironmentBasePtr penv);
 
+    void Initialize();
     void Destroy();
 
 protected:
