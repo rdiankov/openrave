@@ -611,12 +611,12 @@ inline void LoadJsonValue(const rapidjson::Value& rUnitInfo, OpenRAVE::UnitInfo&
         unitInfo.massUnit = OpenRAVE::GetMassUnitFromString(it->value.GetString(), unitInfo.massUnit);
     }
 
-    it = rUnitInfo.FindMember("timeUnit");
+    it = rUnitInfo.FindMember("durationUnit");
     if( it != rUnitInfo.MemberEnd() ) {
         if( !it->value.IsString() ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/timeUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/durationUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
         }
-        unitInfo.timeUnit = OpenRAVE::GetTimeUnitFromString(it->value.GetString(), unitInfo.timeUnit);
+        unitInfo.durationUnit = OpenRAVE::GetDurationUnitFromString(it->value.GetString(), unitInfo.durationUnit);
     }
 
     it = rUnitInfo.FindMember("angleUnit");
@@ -625,6 +625,14 @@ inline void LoadJsonValue(const rapidjson::Value& rUnitInfo, OpenRAVE::UnitInfo&
             throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/angleUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
         }
         unitInfo.angleUnit = OpenRAVE::GetAngleUnitFromString(it->value.GetString(), unitInfo.angleUnit);
+    }
+
+    it = rUnitInfo.FindMember("stampUnit");
+    if( it != rUnitInfo.MemberEnd() ) {
+        if( !it->value.IsString() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("UnitInfo/stampUnit is not a String object.", OpenRAVE::ORE_InvalidArguments);
+        }
+        unitInfo.stampUnit = OpenRAVE::GetStampUnitFromString(it->value.GetString(), unitInfo.stampUnit);
     }
 }
 
@@ -746,8 +754,9 @@ inline void SaveJsonValue(rapidjson::Value& rUnitInfo, const OpenRAVE::UnitInfo&
     rUnitInfo.SetObject();
     rUnitInfo.AddMember(rapidjson::Document::StringRefType("lengthUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit)), alloc);
     rUnitInfo.AddMember(rapidjson::Document::StringRefType("massUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetMassUnitString(unitInfo.massUnit)), alloc);
-    rUnitInfo.AddMember(rapidjson::Document::StringRefType("timeUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetTimeUnitString(unitInfo.timeUnit)), alloc);
+    rUnitInfo.AddMember(rapidjson::Document::StringRefType("durationUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetDurationUnitString(unitInfo.durationUnit)), alloc);
     rUnitInfo.AddMember(rapidjson::Document::StringRefType("angleUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetAngleUnitString(unitInfo.angleUnit)), alloc);
+    rUnitInfo.AddMember(rapidjson::Document::StringRefType("stampUnit"), rapidjson::Document::StringRefType(OpenRAVE::GetStampUnitString(unitInfo.stampUnit)), alloc);
 }
 
 template<class T>

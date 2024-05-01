@@ -61,20 +61,20 @@ OPENRAVE_API const char* GetMassUnitString(MassUnit unit);
 OPENRAVE_API MassUnit GetMassUnitFromString(const char* pMassUnit, MassUnit defaultMassUnit);
 OPENRAVE_API MassUnit GetMassUnitFromString(const std::string& pMassUnit, MassUnit defaultMassUnit);
 
-/// \brief time unit
-enum TimeUnit : int8_t
+/// \brief time duration unit
+enum DurationUnit : int8_t
 {
-    TU_Second = 0,
-    TU_Millisecond = -3,
-    TU_Microsecond = -6,
-    TU_Nanosecond = -9,
-    TU_Picosecond = -12,
+    DU_Second = 0,
+    DU_Millisecond = -3,
+    DU_Microsecond = -6,
+    DU_Nanosecond = -9,
+    DU_Picosecond = -12,
 };
 
-OPENRAVE_API const char* GetTimeUnitString(TimeUnit unit);
+OPENRAVE_API const char* GetDurationUnitString(DurationUnit unit);
 
-OPENRAVE_API TimeUnit GetTimeUnitFromString(const char* pTimeUnit, TimeUnit defaultTimeUnit);
-OPENRAVE_API TimeUnit GetTimeUnitFromString(const std::string& pTimeUnit, TimeUnit defaultTimeUnit);
+OPENRAVE_API DurationUnit GetDurationUnitFromString(const char* pDurationUnit, DurationUnit defaultDurationUnit);
+OPENRAVE_API DurationUnit GetDurationUnitFromString(const std::string& pDurationUnit, DurationUnit defaultDurationUnit);
 
 /// \brief angle unit
 enum AngleUnit : int8_t
@@ -89,23 +89,38 @@ OPENRAVE_API const char* GetAngleUnitString(AngleUnit unit);
 OPENRAVE_API AngleUnit GetAngleUnitFromString(const char* pAngleUnit, AngleUnit defaultAngleUnit);
 OPENRAVE_API AngleUnit GetAngleUnitFromString(const std::string& pAngleUnit, AngleUnit defaultAngleUnit);
 
+/// \brief time stamp unit
+enum StampUnit : int8_t
+{
+    SU_Second = 0,
+    SU_Millisecond = -3,
+    SU_Microsecond = -6,
+    SU_ISO = 0x10,
+};
+
+OPENRAVE_API const char* GetStampUnitString(StampUnit unit);
+
+OPENRAVE_API StampUnit GetStampUnitFromString(const char* pStampUnit, StampUnit defaultStampUnit);
+OPENRAVE_API StampUnit GetStampUnitFromString(const std::string& pStampUnit, StampUnit defaultStampUnit);
+
 /// \brief holds a struct of unit of the fundamental types so users know which they are working with.
-class OPENRAVE_API UnitInfo
+class __attribute__((aligned(8))) OPENRAVE_API UnitInfo
 {
 public:
     inline bool operator==(const UnitInfo& rhs) const {
-        return lengthUnit == rhs.lengthUnit && massUnit == rhs.massUnit && timeUnit == rhs.timeUnit && angleUnit == rhs.angleUnit;
+        return *reinterpret_cast<const uint64_t*>(this) == *reinterpret_cast<const uint64_t*>(&rhs);
     }
     inline bool operator!=(const UnitInfo& rhs) const {
-        return lengthUnit != rhs.lengthUnit || massUnit != rhs.massUnit || timeUnit != rhs.timeUnit || angleUnit != rhs.angleUnit;
+        return *reinterpret_cast<const uint64_t*>(this) != *reinterpret_cast<const uint64_t*>(&rhs);
     }
 
     LengthUnit lengthUnit = LU_Millimeter; ///< standard in industrial applications
     MassUnit massUnit = MU_Kilogram; ///< SI unit
-    TimeUnit timeUnit = TU_Second; ///< SI unit
+    DurationUnit durationUnit = DU_Second; ///< SI unit
     AngleUnit angleUnit = AU_Degree; ///< easier to set for users
+    StampUnit stampUnit = SU_Microsecond; ///< accurate enough for integer storage
 };
-BOOST_STATIC_ASSERT(sizeof(UnitInfo)==4);
+BOOST_STATIC_ASSERT(sizeof(UnitInfo) == sizeof(uint64_t));
 
 //
 // Length
@@ -231,7 +246,7 @@ inline T GetMassUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "lb") == 0 ) {
         return T(0.002204622621848776);
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", pUnit, ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", pUnit, ORE_MassUnitInvalid);
 }
 
 template <typename T>
@@ -256,7 +271,7 @@ constexpr inline T GetMassUnitStandardValue(const MassUnit unit)
         return T(0.002204622621848776);
     }
 
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", GetMassUnitString(unit), ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", GetMassUnitString(unit), ORE_MassUnitInvalid);
     return T{};
 }
 
@@ -280,12 +295,12 @@ inline T GetMassUnitConversionScale(const MassUnit sourceMassUnit, const MassUni
 }
 
 //
-// Time
+// Time Duration
 //
 
 // \brief how many units in a second
 template <typename T>
-inline T GetTimeUnitStandardValue(const char* pUnit)
+inline T GetDurationUnitStandardValue(const char* pUnit)
 {
     // ordered from most likely
     if (strcmp(pUnit, "s") == 0 ) {
@@ -303,57 +318,56 @@ inline T GetTimeUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "ps") == 0 ) {
         return T(1e12);
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time unit '%s'", pUnit, ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time duration unit '%s'", pUnit, ORE_DurationUnitInvalid);
 }
 
 template <typename T>
-inline T GetTimeUnitStandardValue(const std::string& s) {
-    return GetTimeUnitStandardValue<T>(s.c_str());
+inline T GetDurationUnitStandardValue(const std::string& s) {
+    return GetDurationUnitStandardValue<T>(s.c_str());
 }
 
 // \brief how many units in a second
 template <typename T>
-constexpr inline T GetTimeUnitStandardValue(const TimeUnit unit)
+constexpr inline T GetDurationUnitStandardValue(const DurationUnit unit)
 {
-    if( unit == OpenRAVE::TU_Second ) {
+    if( unit == OpenRAVE::DU_Second ) {
         return T(1.0);
     }
-    if( unit == OpenRAVE::TU_Millisecond ) {
+    if( unit == OpenRAVE::DU_Millisecond ) {
         return T(1e3);
     }
-    if( unit == OpenRAVE::TU_Microsecond ) {
+    if( unit == OpenRAVE::DU_Microsecond ) {
         return T(1e6);
     }
-    if( unit == OpenRAVE::TU_Nanosecond ) {
+    if( unit == OpenRAVE::DU_Nanosecond ) {
         return T(1e9);
     }
-    if( unit == OpenRAVE::TU_Picosecond ) {
+    if( unit == OpenRAVE::DU_Picosecond ) {
         return T(1e12);
     }
 
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time unit '%s'", GetTimeUnitString(unit), ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time duration unit '%s'", GetDurationUnitString(unit), ORE_DurationUnitInvalid);
     return T{};
 }
 
 template <typename T>
-inline T GetTimeUnitConversionScale(const std::string &sourceTimeUnit, const std::string &targetTimeUnit)
+inline T GetDurationUnitConversionScale(const std::string &sourceDurationUnit, const std::string &targetDurationUnit)
 {
-    if( sourceTimeUnit == targetTimeUnit ) {
+    if( sourceDurationUnit == targetDurationUnit ) {
         return T(1.0);
     }
-    return GetTimeUnitStandardValue<T>(targetTimeUnit) / GetTimeUnitStandardValue<T>(sourceTimeUnit);
+    return GetDurationUnitStandardValue<T>(targetDurationUnit) / GetDurationUnitStandardValue<T>(sourceDurationUnit);
 }
 
 template <typename T>
-inline T GetTimeUnitConversionScale(const TimeUnit sourceTimeUnit, const TimeUnit targetTimeUnit)
+inline T GetDurationUnitConversionScale(const DurationUnit sourceDurationUnit, const DurationUnit targetDurationUnit)
 {
-    if( sourceTimeUnit == targetTimeUnit ) {
+    if( sourceDurationUnit == targetDurationUnit ) {
         return T(1.0);
     }
 
-    return GetTimeUnitStandardValue<T>(targetTimeUnit) / GetTimeUnitStandardValue<T>(sourceTimeUnit);
+    return GetDurationUnitStandardValue<T>(targetDurationUnit) / GetDurationUnitStandardValue<T>(sourceDurationUnit);
 }
-
 
 //
 // Angle
@@ -373,7 +387,7 @@ inline T GetAngleUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "cdeg") == 0 ) {
         return T(5729.577951308232);
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_AngleUnitInvalid);
 }
 
 template <typename T>
@@ -395,7 +409,7 @@ constexpr inline T GetAngleUnitStandardValue(const AngleUnit unit)
         return T(5729.577951308232);
     }
 
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_AngleUnitInvalid);
     return T{};
 }
 
@@ -418,6 +432,68 @@ inline T GetAngleUnitConversionScale(const AngleUnit sourceAngleUnit, const Angl
     return GetAngleUnitStandardValue<T>(targetAngleUnit) / GetAngleUnitStandardValue<T>(sourceAngleUnit);
 }
 
+//
+// Time Stamp
+//
+
+// \brief how many units in a second
+template <typename T>
+inline T GetStampUnitStandardValue(const char* pUnit)
+{
+    // ordered from most likely
+    if (strcmp(pUnit, "s") == 0 ) {
+        return T(1.0);
+    }
+    if (strcmp(pUnit, "ms") == 0 ) {
+        return T(1e3);
+    }
+    if (strcmp(pUnit, "us") == 0 ) {
+        return T(1e6);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time stamp unit '%s'", pUnit, ORE_StampUnitInvalid);
+}
+
+template <typename T>
+inline T GetStampUnitStandardValue(const std::string& s) {
+    return GetStampUnitStandardValue<T>(s.c_str());
+}
+
+// \brief how many units in a second
+template <typename T>
+constexpr inline T GetStampUnitStandardValue(const StampUnit unit)
+{
+    if( unit == OpenRAVE::SU_Second ) {
+        return T(1.0);
+    }
+    if( unit == OpenRAVE::SU_Millisecond ) {
+        return T(1e3);
+    }
+    if( unit == OpenRAVE::SU_Microsecond ) {
+        return T(1e6);
+    }
+
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time stamp unit '%s'", GetStampUnitString(unit), ORE_StampUnitInvalid);
+    return T{};
+}
+
+template <typename T>
+inline T GetStampUnitConversionScale(const std::string &sourceStampUnit, const std::string &targetStampUnit)
+{
+    if( sourceStampUnit == targetStampUnit ) {
+        return T(1.0);
+    }
+    return GetStampUnitStandardValue<T>(targetStampUnit) / GetStampUnitStandardValue<T>(sourceStampUnit);
+}
+
+template <typename T>
+inline T GetStampUnitConversionScale(const StampUnit sourceStampUnit, const StampUnit targetStampUnit)
+{
+    if( sourceStampUnit == targetStampUnit ) {
+        return T(1.0);
+    }
+
+    return GetStampUnitStandardValue<T>(targetStampUnit) / GetStampUnitStandardValue<T>(sourceStampUnit);
+}
 
 } // end namespace OpenRAVE
 

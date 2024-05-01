@@ -1732,15 +1732,15 @@ void init_openravepy_global()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object timeUnit = enum_<TimeUnit>(m, "TimeUnit" DOXY_ENUM(TimeUnit))
+    object durationUnit = enum_<DurationUnit>(m, "DurationUnit" DOXY_ENUM(DurationUnit))
 #else
-    object timeUnit = enum_<TimeUnit>("TimeUnit" DOXY_ENUM(TimeUnit))
+    object durationUnit = enum_<DurationUnit>("DurationUnit" DOXY_ENUM(DurationUnit))
 #endif
-                      .value(GetTimeUnitString(TU_Second), TU_Second)
-                      .value(GetTimeUnitString(TU_Millisecond), TU_Millisecond)
-                      .value(GetTimeUnitString(TU_Microsecond), TU_Microsecond)
-                      .value(GetTimeUnitString(TU_Nanosecond), TU_Nanosecond)
-                      .value(GetTimeUnitString(TU_Picosecond), TU_Picosecond)
+                      .value(GetDurationUnitString(DU_Second), DU_Second)
+                      .value(GetDurationUnitString(DU_Millisecond), DU_Millisecond)
+                      .value(GetDurationUnitString(DU_Microsecond), DU_Microsecond)
+                      .value(GetDurationUnitString(DU_Nanosecond), DU_Nanosecond)
+                      .value(GetDurationUnitString(DU_Picosecond), DU_Picosecond)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1751,6 +1751,17 @@ void init_openravepy_global()
                        .value(GetAngleUnitString(AU_Radian), AU_Radian)
                        .value(GetAngleUnitString(AU_Degree), AU_Degree)
                        .value(GetAngleUnitString(AU_Centidegree), AU_Centidegree)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object stampUnit = enum_<StampUnit>(m, "StampUnit" DOXY_ENUM(StampUnit))
+#else
+    object stampUnit = enum_<StampUnit>("StampUnit" DOXY_ENUM(StampUnit))
+#endif
+                      .value(GetStampUnitString(SU_Second), SU_Second)
+                      .value(GetStampUnitString(SU_Millisecond), SU_Millisecond)
+                      .value(GetStampUnitString(SU_Microsecond), SU_Microsecond)
+                      .value(GetStampUnitString(SU_ISO), SU_ISO)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1792,8 +1803,9 @@ void init_openravepy_global()
         })
     .def_readwrite("lengthUnit",&UnitInfo::lengthUnit)
     .def_readwrite("massUnit",&UnitInfo::massUnit)
-    .def_readwrite("timeUnit",&UnitInfo::timeUnit)
+    .def_readwrite("durationUnit",&UnitInfo::durationUnit)
     .def_readwrite("angleUnit",&UnitInfo::angleUnit)
+    .def_readwrite("stampUnit",&UnitInfo::stampUnit)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

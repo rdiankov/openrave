@@ -4037,18 +4037,18 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("GetTimeUnitStandardValue",
-          [](const TimeUnit unit){
-        return OpenRAVE::GetTimeUnitStandardValue<dReal>(unit);
+    m.def("GetDurationUnitStandardValue",
+          [](const DurationUnit unit){
+        return OpenRAVE::GetDurationUnitStandardValue<dReal>(unit);
     },
-          DOXY_FN1(OpenRAVE::GetTimeUnitStandardValue)
+          DOXY_FN1(OpenRAVE::GetDurationUnitStandardValue)
           );
 #else
-    def("GetTimeUnitStandardValue",
-        [](const TimeUnit unit){
-        return OpenRAVE::GetTimeUnitStandardValue<dReal>(unit);
+    def("GetDurationUnitStandardValue",
+        [](const DurationUnit unit){
+        return OpenRAVE::GetDurationUnitStandardValue<dReal>(unit);
     },
-        DOXY_FN1(OpenRAVE::GetTimeUnitStandardValue)
+        DOXY_FN1(OpenRAVE::GetDurationUnitStandardValue)
         );
 #endif
 
@@ -4065,6 +4065,22 @@ Because race conditions can pop up when trying to lock the openrave environment 
         return OpenRAVE::GetAngleUnitStandardValue<dReal>(unit);
     },
         DOXY_FN1(OpenRAVE::GetAngleUnitStandardValue)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetStampUnitStandardValue",
+          [](const StampUnit unit){
+        return OpenRAVE::GetStampUnitStandardValue<dReal>(unit);
+    },
+          DOXY_FN1(OpenRAVE::GetStampUnitStandardValue)
+          );
+#else
+    def("GetStampUnitStandardValue",
+        [](const StampUnit unit){
+        return OpenRAVE::GetStampUnitStandardValue<dReal>(unit);
+    },
+        DOXY_FN1(OpenRAVE::GetStampUnitStandardValue)
         );
 #endif
 
@@ -4101,18 +4117,18 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("GetTimeUnitFromString",
-          [](const std::string& pTimeUnit, TimeUnit defaultTimeUnit){
-        return OpenRAVE::GetTimeUnitFromString(pTimeUnit, defaultTimeUnit);
+    m.def("GetDurationUnitFromString",
+          [](const std::string& pDurationUnit, DurationUnit defaultDurationUnit){
+        return OpenRAVE::GetDurationUnitFromString(pDurationUnit, defaultDurationUnit);
     },
-          DOXY_FN1(OpenRAVE::GetTimeUnitFromString)
+          DOXY_FN1(OpenRAVE::GetDurationUnitFromString)
           );
 #else
-    def("GetTimeUnitFromString",
-        [](const std::string& pTimeUnit, TimeUnit defaultTimeUnit){
-        return OpenRAVE::GetTimeUnitFromString(pTimeUnit, defaultTimeUnit);
+    def("GetDurationUnitFromString",
+        [](const std::string& pDurationUnit, DurationUnit defaultDurationUnit){
+        return OpenRAVE::GetDurationUnitFromString(pDurationUnit, defaultDurationUnit);
     },
-        DOXY_FN1(OpenRAVE::GetTimeUnitFromString)
+        DOXY_FN1(OpenRAVE::GetDurationUnitFromString)
         );
 #endif
 
@@ -4129,6 +4145,22 @@ Because race conditions can pop up when trying to lock the openrave environment 
         return OpenRAVE::GetAngleUnitFromString(pAngleUnit, defaultAngleUnit);
     },
         DOXY_FN1(OpenRAVE::GetAngleUnitFromString)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetStampUnitFromString",
+          [](const std::string& pStampUnit, StampUnit defaultStampUnit){
+        return OpenRAVE::GetStampUnitFromString(pStampUnit, defaultStampUnit);
+    },
+          DOXY_FN1(OpenRAVE::GetStampUnitFromString)
+          );
+#else
+    def("GetStampUnitFromString",
+        [](const std::string& pStampUnit, StampUnit defaultStampUnit){
+        return OpenRAVE::GetStampUnitFromString(pStampUnit, defaultStampUnit);
+    },
+        DOXY_FN1(OpenRAVE::GetStampUnitFromString)
         );
 #endif
 
@@ -4165,18 +4197,18 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("GetTimeUnitConversionScale",
-          [](const TimeUnit sourceUnit, const TimeUnit targetUnit){
-        return OpenRAVE::GetTimeUnitConversionScale<dReal>(sourceUnit, targetUnit);
+    m.def("GetDurationUnitConversionScale",
+          [](const DurationUnit sourceUnit, const DurationUnit targetUnit){
+        return OpenRAVE::GetDurationUnitConversionScale<dReal>(sourceUnit, targetUnit);
     },
-          DOXY_FN1(OpenRAVE::GetTimeUnitConversionScale)
+          DOXY_FN1(OpenRAVE::GetDurationUnitConversionScale)
           );
 #else
-    def("GetTimeUnitConversionScale",
-        [](const TimeUnit sourceUnit, const TimeUnit targetUnit){
-        return OpenRAVE::GetTimeUnitConversionScale<dReal>(sourceUnit, targetUnit);
+    def("GetDurationUnitConversionScale",
+        [](const DurationUnit sourceUnit, const DurationUnit targetUnit){
+        return OpenRAVE::GetDurationUnitConversionScale<dReal>(sourceUnit, targetUnit);
     },
-        DOXY_FN1(OpenRAVE::GetTimeUnitConversionScale)
+        DOXY_FN1(OpenRAVE::GetDurationUnitConversionScale)
         );
 #endif
 
@@ -4197,6 +4229,22 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetStampUnitConversionScale",
+          [](const StampUnit sourceUnit, const StampUnit targetUnit){
+        return OpenRAVE::GetStampUnitConversionScale<dReal>(sourceUnit, targetUnit);
+    },
+          DOXY_FN1(OpenRAVE::GetStampUnitConversionScale)
+          );
+#else
+    def("GetStampUnitConversionScale",
+        [](const StampUnit sourceUnit, const StampUnit targetUnit){
+        return OpenRAVE::GetStampUnitConversionScale<dReal>(sourceUnit, targetUnit);
+    },
+        DOXY_FN1(OpenRAVE::GetStampUnitConversionScale)
+        );
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GetLengthUnitString", OpenRAVE::GetLengthUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetLengthUnitString));
 #else
     def("GetLengthUnitString", OpenRAVE::GetLengthUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetLengthUnitString));
@@ -4209,15 +4257,21 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("GetTimeUnitString", OpenRAVE::GetTimeUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetTimeUnitString));
+    m.def("GetDurationUnitString", OpenRAVE::GetDurationUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetDurationUnitString));
 #else
-    def("GetTimeUnitString", OpenRAVE::GetTimeUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetTimeUnitString));
+    def("GetDurationUnitString", OpenRAVE::GetDurationUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetDurationUnitString));
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("GetAngleUnitString", OpenRAVE::GetAngleUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetAngleUnitString));
 #else
     def("GetAngleUnitString", OpenRAVE::GetAngleUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetAngleUnitString));
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    m.def("GetStampUnitString", OpenRAVE::GetStampUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetStampUnitString));
+#else
+    def("GetStampUnitString", OpenRAVE::GetStampUnitString, PY_ARGS("unit") DOXY_FN1(OpenRAVE::GetStampUnitString));
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
