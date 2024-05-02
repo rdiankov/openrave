@@ -59,8 +59,10 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
 
+    // Now recommended to use chuckingDirection in GripperInfo. However, we still read it from ManipulatorInfo for backward compatibility, e.g. the saved scene is not migrated.
     rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirections");
     if( itChuckingDirections != value.MemberEnd() ) {
+        RAVELOG_WARN_FORMAT("For manipulator '%s', read 'chuckingDirections' (size=%d) in tools' setting. But, since it's deprecated, using 'gripperInfos' is recommended.", _name%_vChuckingDirection.size());
         const rapidjson::Value& rChuckingDirections = itChuckingDirections->value;
         if( !rChuckingDirections.IsArray() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("When loading tool '%s' with id '%s', 'chuckingDirections' needs to be an array, currently it is '%s'"), _name%_id%orjson::DumpJson(rChuckingDirections), ORE_InvalidArguments);
@@ -98,6 +100,10 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
     orjson::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
+    // Now recommended to use gripperJointNames in GripperInfo. However, we still read it from ManipulatorInfo for backward compatibility, e.g. the saved scene is not migrated.
+    if( value.HasMember("gripperJointNames") ) {
+        RAVELOG_WARN_FORMAT("For manipulator '%s', read 'gripperJointNames' (size=%d) in 'tools' setting. But, since it's deprecated, using 'gripperInfos is recommended.", _name%_vGripperJointNames.size());
+    }
     orjson::LoadJsonValueByKey(value, "grippername", _grippername);
     orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
     orjson::LoadJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName);
@@ -1502,11 +1508,11 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
     if( options & SO_RobotManipulators ) {
         o << (!__pBase ? -1 : __pBase->GetIndex()) << " " << (!__pEffector ? -1 : __pEffector->GetIndex()) << " ";
         // don't include __varmdofindices and __vgripperdofindices since they are generated from the data
-        o << _info._vGripperJointNames.size() << " ";
-        FOREACHC(it,_info._vGripperJointNames) {
+        o << __vGripperJointNames.size() << " ";
+        FOREACHC(it, __vGripperJointNames) {
             o << *it << " ";
         }
-        FOREACHC(it,_info._vChuckingDirection) {
+        FOREACHC(it, __vChuckingDirection) {
             o << *it << " ";
         }
         SerializeRound(o,_info._tLocalTool);
@@ -1697,22 +1703,21 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     }
 
 
+    // Initialize __vGripperJointNames and __vChuckingDirection, both based on ManipulatorInfo and GripperInfo.
+    // In the latest way, recommended to use GripperInfo. But, for backward compatibility, prioritize those in ManipulatorInfo.
+    // - The usual robot model files do not need the backward compatibility since they should be properly migrated, e.g. GripperInfo should only have settings. However, the saved scene from the old openrave is not migrated. When we load such scene from the new openrave, it requires this backward compatibility code like this.
+    // - Some of the user code call "AddManipulator" to temporarily define the manipulator with newer chuckingDirections/gripperJointNames setting. To support this, still need to read those from ManipulatorInfo.
     GripperInfoPtr pGripperInfo;
+    __vGripperJointNames = _info._vGripperJointNames;
+    __vChuckingDirection = _info._vChuckingDirection;
     if( !_info._grippername.empty() ) {
         pGripperInfo = probot->GetGripperInfo(_info._grippername);
         if( !!pGripperInfo ) {
-
             if( _info._vGripperJointNames.empty() ) {
-                _info._vGripperJointNames = pGripperInfo->gripperJointNames;
-                if( !_info._vGripperJointNames.empty() ) {
-                    RAVELOG_VERBOSE_FORMAT("For manipulator '%s', using %d gripperJointNames from gripperInfo '%s'", _info._name%_info._vGripperJointNames.size()%_info._grippername);
-                }
+                __vGripperJointNames = pGripperInfo->gripperJointNames;
             }
-
             if( _info._vChuckingDirection.empty() ) {
-                if( pGripperInfo->_docGripperInfo.IsObject() ) {
-                    orjson::LoadJsonValueByKey(pGripperInfo->_docGripperInfo, "chuckingDirection", _info._vChuckingDirection);
-                }
+                __vChuckingDirection = pGripperInfo->vChuckingDirections;
             }
         }
     }
@@ -1721,7 +1726,7 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
     std::vector<int> vValidChuckingDirections;
     std::vector<std::string> vValidGripperJointNames;
     size_t ichuckingdirection = 0;
-    FOREACHC(itjointname,_info._vGripperJointNames) {
+    FOREACHC(itjointname,__vGripperJointNames) {
         JointPtr pjoint = probot->GetJoint(*itjointname);
         if( !pjoint ) {
             RAVELOG_WARN(str(boost::format("could not find gripper joint %s for manipulator %s")%*itjointname%GetName()));
@@ -1741,8 +1746,8 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
                     else {
                         __vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
                         vValidGripperJointNames.push_back(*itjointname);
-                        if( ichuckingdirection < _info._vChuckingDirection.size() ) {
-                            vValidChuckingDirections.push_back(_info._vChuckingDirection[ichuckingdirection++]);
+                        if( ichuckingdirection < __vChuckingDirection.size() ) {
+                            vValidChuckingDirections.push_back(__vChuckingDirection[ichuckingdirection++]);
                         }
                         else {
                             vValidChuckingDirections.push_back(0);
@@ -1783,8 +1788,8 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
         }
     }
 
-    _info._vChuckingDirection.swap(vValidChuckingDirections);
-    _info._vGripperJointNames.swap(vValidGripperJointNames);
+    __vChuckingDirection.swap(vValidChuckingDirections);
+    __vGripperJointNames.swap(vValidGripperJointNames);
 }
 
 }
