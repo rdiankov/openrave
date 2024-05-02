@@ -133,8 +133,23 @@ UpdateFromInfoResult RobotBase::GripperInfo::UpdateFromInfo(const RobotBase::Gri
     if (info == *this) {
         return UFIR_NoChange;
     }
+
+    UpdateFromInfoResult updateFromInfoResult = UFIR_Success;
+    // In the following, if necessary, set UFIR_RequireReinitialize for members referred by Manipulator since these need to update internal information of Manipulator.
+    if( info.name != name ) {
+        RAVELOG_VERBOSE_FORMAT("gripper %s name changed", name);
+        updateFromInfoResult = UFIR_RequireReinitialize;
+    }
+    if( info.gripperJointNames != gripperJointNames ) {
+        RAVELOG_VERBOSE_FORMAT("gripper %s gripperJointNames changed", name);
+        updateFromInfoResult = UFIR_RequireReinitialize;
+    }
+    if( info.vChuckingDirections != vChuckingDirections ) {
+        RAVELOG_VERBOSE_FORMAT("gripper %s chuckingDirection changed", name);
+        updateFromInfoResult = UFIR_RequireReinitialize;
+    }
     *this = info;
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 void RobotBase::AttachedSensorInfo::Reset()
