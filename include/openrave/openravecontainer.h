@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /** \file openravecontainer.h
-    \brief 
+    \brief Collection of high performance containers
  */
 #ifndef OPENRAVE_CONTAINER_H
 #define OPENRAVE_CONTAINER_H
@@ -158,11 +158,11 @@ template<typename DataType> struct Map
     void Insert(uint64_t nameId, const DataType& data)
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
-        
+
         int64_t invalidIndex = -1;
         for (size_t index = 0; index < _vNamedDatas.size(); ++index) {
             NamedData<DataType>& customData = _vNamedDatas[index];
-                
+
             if (customData.nameId == nameId) {
                 // overwrite existing
                 customData.data = data;
@@ -214,7 +214,7 @@ template<typename DataType> struct Map
             do {
                 ++_dataIndex;
             } while (_dataIndex < _endIndex && !_data[_dataIndex].IsValid());
-                
+
             return *this;
         }
 
@@ -257,7 +257,7 @@ private:
     size_t _beginValidElementsIndex = 0; ///< index to the first element
     size_t _endValidElementsIndex = 0; ///< index to the end element (last + 1)
 };
-    
+
 } // namespace orcontainer
 
 } // namespace OpenRAVE
