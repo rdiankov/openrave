@@ -3,7 +3,12 @@
 ChangeLog
 #########
 
-Version 0.144.0
+Version 0.143.5
+===============
+
+- Fix the issue that saved json scene cannot be loaded on non-openrave software. To do so, save json file with referenceUriHint by default.
+
+Version 0.143.4
 ===============
 
 - Fix environment viewers did not start because RaveDestroy() stopped the thread for viewers and RaveInitialize() did not restart it.
