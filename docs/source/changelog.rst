@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.143.5
+Version 0.144.1
 ===============
 
 - Fix the issue that saved json scene cannot be loaded on non-openrave software. To do so, save json file with referenceUriHint by default.
+
+Version 0.144.0
+===============
+
+- Reduce memory usage by `IkFailureInfo`.
 
 Version 0.143.4
 ===============
@@ -100,6 +105,11 @@ Version 0.137.0
 ===============
 
 * Add `GetId` to python bindings
+
+Version 0.136.1
+===============
+
+* Exclude virtual links (links with no geometries) from jittering computation
 
 Version 0.136.0
 ===============
