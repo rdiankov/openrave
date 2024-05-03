@@ -28,7 +28,7 @@ namespace OpenRAVE {
 
 namespace orcontainer {
 
-inline void Clear(uint64_t& nameId)
+inline void ClearNameId(uint64_t& nameId)
 {
     if (nameId == 0) {
         return;
@@ -36,7 +36,7 @@ inline void Clear(uint64_t& nameId)
     nameId = 0;
 }
 
-inline bool IsValid(uint64_t nameId)
+inline bool IsValidNameId(uint64_t nameId)
 {
     return nameId != 0;
 }
@@ -48,14 +48,16 @@ template<typename DataType> class VectorBackedMap
 public:
     /// \brief gets number of valid entries
     /// \return number of valid entries
-    inline size_t GetSize() const { return _numValidElements; }
+    inline size_t GetSize() const {
+        return _numValidElements;
+    }
 
     /// \brief invalidates all entries while preserving memory
-    void Clear()
+    inline void Clear()
     {
         // Just invalidate each element, but keep memory allocated
         for (size_t index = _beginValidElementsIndex; index < _endValidElementsIndex; ++index) {
-            OpenRAVE::orcontainer::Clear(_vNameIds[index]);
+            OpenRAVE::orcontainer::ClearNameId(_vNameIds[index]);
         }
         _numValidElements = 0;
         _beginValidElementsIndex = 0;
@@ -65,14 +67,14 @@ public:
     /// \brief erases element for name id.
     /// internally invalidates entry so not observable from outside but memory is kept allocated.
     /// \param nameId key to erase value of.
-    void Erase(uint64_t nameId)
+    inline void Erase(uint64_t nameId)
     {
         for (int64_t index = 0; index < _vNameIds.size(); ++index) {
             uint64_t& _nameId =  _vNameIds[index];
             if (_nameId != nameId) {
                 continue;
             }
-            OpenRAVE::orcontainer::Clear(_nameId);
+            OpenRAVE::orcontainer::ClearNameId(_nameId);
 
             _numValidElements--;
             if (_numValidElements == 0) {
@@ -87,7 +89,7 @@ public:
                     }
                     else {
                         for (size_t newBeginIndex = index + 1; newBeginIndex < _endValidElementsIndex; ++newBeginIndex) {
-                            if (!IsValid(_vNameIds[newBeginIndex])) {
+                            if (!IsValidNameId(_vNameIds[newBeginIndex])) {
                                 continue;
                             }
                             _beginValidElementsIndex = newBeginIndex;
@@ -101,7 +103,7 @@ public:
                     }
                     else {
                         for (size_t newEndIndex = _endValidElementsIndex - 1; newEndIndex > _beginValidElementsIndex; --newEndIndex) {
-                            if (!IsValid(_vNameIds[newEndIndex - 1])) {
+                            if (!IsValidNameId(_vNameIds[newEndIndex - 1])) {
                                 continue;
                             }
                             _endValidElementsIndex = newEndIndex;
@@ -110,7 +112,7 @@ public:
                     }
                 }
             }
-            OPENRAVE_ASSERT_OP(_numValidElements, <= ,(_endValidElementsIndex - _beginValidElementsIndex));
+            OPENRAVE_ASSERT_OP(_numValidElements, <=,(_endValidElementsIndex - _beginValidElementsIndex));
             return;
         }
         OPENRAVE_ASSERT_FORMAT(false, "nameId=%d is not found", nameId, OpenRAVE::ORE_InvalidArguments);
@@ -120,7 +122,7 @@ public:
     /// \param nameId key to find value for
     /// \param value value for key.
     /// \return whether key is found.
-    bool Find(uint64_t nameId, DataType& value) const
+    inline bool Find(uint64_t nameId, DataType& value) const
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
 
@@ -137,7 +139,7 @@ public:
     /// \param nameId key to insert value for
     /// \param data value for key.
     /// \return true if nameId did not exist, false if nameId existed and its value is overwritten
-    bool Insert(uint64_t nameId, const DataType& data)
+    inline bool Insert(uint64_t nameId, const DataType& data)
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
 
@@ -152,7 +154,7 @@ public:
             if (invalidIndex >= 0) {
                 continue;
             }
-            if (!IsValid(_vNameIds[index])) {
+            if (!IsValidNameId(_vNameIds[index])) {
                 invalidIndex = index;
             }
         }
@@ -177,14 +179,14 @@ public:
             _endValidElementsIndex++;
         }
         _numValidElements++;
-        OPENRAVE_ASSERT_OP(_numValidElements, <= ,(_endValidElementsIndex - _beginValidElementsIndex));
+        OPENRAVE_ASSERT_OP(_numValidElements, <=,(_endValidElementsIndex - _beginValidElementsIndex));
         return true;
     }
 
     /// \brief Iterator class to be used for Map class
     class Iterator
     {
-    public:
+public:
         Iterator() = delete;
         Iterator(const VectorBackedMap& map, size_t dataIndex, size_t endIndex)
             : _map(map), _dataIndex(dataIndex), _endIndex(endIndex)
@@ -193,35 +195,39 @@ public:
 
         /// \brief Pre-increment
         /// iterate to next valid data or to end index. Even when iterator is beyond end index, iterates to the next index once.
-        Iterator& operator++()
+        inline Iterator& operator++()
         {
             do {
                 ++_dataIndex;
-            } while (_dataIndex < _endIndex && !IsValid(_map._vNameIds[_dataIndex]));
+            } while (_dataIndex < _endIndex && !IsValidNameId(_map._vNameIds[_dataIndex]));
 
             return *this;
         }
 
         /// \brief compares for equality
         /// \param other the other object to compare against
-        bool operator==(const Iterator& other) const { return _dataIndex == other._dataIndex && &(*this)._map == &(other._map); }
+        inline bool operator==(const Iterator& other) const {
+            return _dataIndex == other._dataIndex && &(*this)._map == &(other._map);
+        }
 
         /// \brief compares for inequality
         /// \param other the other object to compare against
-        bool operator!=(const Iterator& other) const { return !(*this == other); }
+        inline bool operator!=(const Iterator& other) const {
+            return !(*this == other);
+        }
 
         /// \brief dereference operator
-        uint64_t GetNameId() const
+        inline uint64_t GetNameId() const
         {
             return _map._vNameIds[_dataIndex];
         }
 
-        const DataType& GetValue() const
+        inline const DataType& GetValue() const
         {
             return _map._vDatas[_dataIndex];
         }
 
-    private:
+private:
         const VectorBackedMap& _map; ///< Underlying data
         size_t _dataIndex; ///< current position
         const size_t _endIndex; ///< end position
@@ -229,14 +235,14 @@ public:
 
     /// \brief gets iterator to the first element
     /// \return iterator to first element
-    Iterator GetBegin() const
+    inline Iterator GetBegin() const
     {
         return Iterator(*this, _beginValidElementsIndex, _endValidElementsIndex);
     }
 
     /// \brief gets iterator to the element after last element
     /// \return iterator to the element after last element
-    Iterator GetEnd() const
+    inline Iterator GetEnd() const
     {
         return Iterator(*this, _endValidElementsIndex, _endValidElementsIndex);
     }
