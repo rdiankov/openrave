@@ -77,18 +77,20 @@ object PyIkFailureInfo::GetCollisionReport() {
 std::string PyIkFailureInfo::GetDescription() {
     return _ikFailureInfo._description;
 }
-object PyIkFailureInfo::GetMapData(const std::string& key) {
-    IkFailureInfo::CustomData::const_iterator it = _ikFailureInfo._mapCustomData.find(key);
-    if( it != _ikFailureInfo._mapCustomData.end() ) {
-        return toPyArray(it->second);
+
+object PyIkFailureInfo::GetMapData(uint64_t key) {
+    std::vector<dReal> data;
+    if( _ikFailureInfo._vCustomData.Find(key, data) ) {
+        return toPyArray(data);
     }
     return py::none_();
 }
 
 object PyIkFailureInfo::GetMapDataDict() {
     py::dict odata;
-    for (const std::pair<std::string, std::vector<dReal>>& elem : _ikFailureInfo._mapCustomData) {
-        odata[elem.first.c_str()] = toPyArray(elem.second);
+    const orcontainer::NamedDatas<std::vector<dReal>>& vCustomData = _ikFailureInfo._vCustomData;
+    for (orcontainer::NamedDatas<std::vector<dReal>>::Iterator it = vCustomData.GetBegin(); it != vCustomData.GetEnd(); ++it) {
+        odata[(*it).nameId] = toPyArray((*it).data);
     }
     return odata;
 }

@@ -22,7 +22,6 @@
 #include <openrave/openraveexception.h>
 
 #include <stdint.h>
-#include <string>
 #include <stdexcept>
 #include <vector>
 
@@ -132,7 +131,7 @@ template<typename DataType> struct NamedDatas
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
         
         int64_t invalidIndex = -1;
-        for (int64_t index = 0; index < _vNamedDatas.size(); ++index) {
+        for (size_t index = 0; index < _vNamedDatas.size(); ++index) {
             NamedData<DataType>& customData = _vNamedDatas[index];
                 
             if (customData.nameId == nameId) {

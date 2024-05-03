@@ -32,7 +32,7 @@ public:
     object GetIkParam();
     object GetCollisionReport();
     std::string GetDescription();
-    object GetMapData(const std::string& key);
+    object GetMapData(uint64_t key);
     object GetMapDataDict();
 
     py::object SerializeJSON();
