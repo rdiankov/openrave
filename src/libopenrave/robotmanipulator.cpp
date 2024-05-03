@@ -207,7 +207,7 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
         return UFIR_RequireReinitialize;
     }
 
-    if (info._sIkSolverXMLId != info._sIkSolverXMLId) {
+    if (_info._sIkSolverXMLId != info._sIkSolverXMLId) {
         RAVELOG_VERBOSE_FORMAT("manipulator %s ik solver xml id changed", _info._id);
         return UFIR_RequireReinitialize;
     }
