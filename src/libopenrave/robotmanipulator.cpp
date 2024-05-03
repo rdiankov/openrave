@@ -219,7 +219,7 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
         updateFromInfoResult = UFIR_Success;
     }
 
-    if (GetChuckingDirection() != info._vChuckingDirection) {
+    if (_info._vChuckingDirection != info._vChuckingDirection) {
         _info._vChuckingDirection = info._vChuckingDirection;
         GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
         RAVELOG_VERBOSE_FORMAT("manipulator %s chucking direction changed", _info._id);
