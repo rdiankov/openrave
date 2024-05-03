@@ -88,8 +88,8 @@ object PyIkFailureInfo::GetMapData(uint64_t key) {
 
 object PyIkFailureInfo::GetMapDataDict() {
     py::dict odata;
-    const orcontainer::Map<std::vector<dReal>>& vCustomData = _ikFailureInfo._mapCustomData;
-    for (orcontainer::Map<std::vector<dReal>>::Iterator it = vCustomData.GetBegin(); it != vCustomData.GetEnd(); ++it) {
+    const orcontainer::VectorBackedMap<std::vector<dReal>>& vCustomData = _ikFailureInfo._mapCustomData;
+    for (orcontainer::VectorBackedMap<std::vector<dReal>>::Iterator it = vCustomData.GetBegin(); it != vCustomData.GetEnd(); ++it) {
         odata[(*it).nameId] = toPyArray((*it).data);
     }
     return odata;

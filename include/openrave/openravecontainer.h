@@ -60,8 +60,8 @@ template<typename DataType> struct NamedData
 };
 
 /// \brief Associative data structure similar to map, optimized to avoid memory allocation. More suitable for relatively small number of elements.
-/// Similar to map, nameId(key) is unique. However, there can be multiple invalid nameIds.
-template<typename DataType> struct Map
+/// Similar to map, nameId (key) is unique. However, there can be multiple invalid nameIds.
+template<typename DataType> struct VectorBackedMap
 {
     /// \brief gets number of valid entries
     /// \return number of valid entries
@@ -155,10 +155,12 @@ template<typename DataType> struct Map
     /// \brief inserts element
     /// \param nameId key to insert value for
     /// \param data value for key.
-    void Insert(uint64_t nameId, const DataType& data)
+    /// \return true if nameId did not exist, false if nameId existed and its value is overwritten
+    bool Insert(uint64_t nameId, const DataType& data)
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
 
+        // if nameId currently does not exist, try to reclaim invalidated cache
         int64_t invalidIndex = -1;
         for (size_t index = 0; index < _vNamedDatas.size(); ++index) {
             NamedData<DataType>& customData = _vNamedDatas[index];
@@ -166,7 +168,7 @@ template<typename DataType> struct Map
             if (customData.nameId == nameId) {
                 // overwrite existing
                 customData.data = data;
-                return;
+                return false;
             }
             if (invalidIndex >= 0) {
                 continue;
@@ -195,6 +197,7 @@ template<typename DataType> struct Map
         }
         _numValidElements++;
         OPENRAVE_ASSERT_OP(_numValidElements, <= ,(_endValidElementsIndex - _beginValidElementsIndex));
+        return true;
     }
 
     /// \brief Iterator class to be used for Map class

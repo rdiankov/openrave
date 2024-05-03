@@ -87,7 +87,7 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     if (_mapCustomData.GetSize() > 0) {
         rapidjson::Value rCustomData(rapidjson::kArrayType);
         rCustomData.Reserve(_mapCustomData.GetSize(), alloc);
-        for( orcontainer::Map<std::vector<dReal>>::Iterator it = _mapCustomData.GetBegin(); it != _mapCustomData.GetEnd(); ++it ) {
+        for( orcontainer::VectorBackedMap<std::vector<dReal>>::Iterator it = _mapCustomData.GetBegin(); it != _mapCustomData.GetEnd(); ++it ) {
 
             rapidjson::Value rValues(rapidjson::kArrayType);
             rValues.Reserve(2, alloc);
