@@ -59,7 +59,7 @@ template<typename DataType> struct NamedData
     DataType data; ///< user-defined data. If nameId is 0, invalid
 };
 
-/// \brief Associative data structure similar to map, optimized to avoid memory allocation.
+/// \brief Associative data structure similar to map, optimized to avoid memory allocation. More suitable for relatively small number of elements.
 /// Similar to map, nameId(key) is unique. However, there can be multiple invalid nameIds.
 template<typename DataType> struct Map
 {
