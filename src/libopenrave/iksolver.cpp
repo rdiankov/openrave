@@ -24,7 +24,7 @@ IkFailureInfo::IkFailureInfo(const IkFailureInfo& rhs)
     _vconfig = rhs._vconfig;
     _report = rhs._report;
     _description = rhs._description;
-    _rCustomData.CopyFrom(rhs._rCustomData, _rCustomData.GetAllocator());
+    _mapCustomData = rhs._mapCustomData;
     _bIkParamValid = rhs._bIkParamValid;
     if( _bIkParamValid ) {
         _ikparam = rhs._ikparam;
@@ -38,11 +38,11 @@ void IkFailureInfo::Reset()
     _vconfig.clear();
     _report.Reset();
     _description.clear();
-    _rCustomData = rapidjson::Document(); // start a new document to prevent memory leaks
-    _rCustomData.SetObject();
-    //_mapdata.clear();
     _bIkParamValid = false;
     _ikparam.Reset();
+
+    _mapCustomData.Clear();
+
     // don't reset _memoryPoolIndex
 }
 
@@ -84,18 +84,25 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
     }
-    if( !_rCustomData.IsNull() && _rCustomData.MemberCount() > 0 ) {
-        rapidjson::Value rCustomDataCopy;
-        rCustomDataCopy.CopyFrom(_rCustomData, alloc);
-        rIkFailureInfo.AddMember("mapdata", rCustomDataCopy, alloc);
+    if (_mapCustomData.GetSize() > 0) {
+        rapidjson::Value rCustomData(rapidjson::kArrayType);
+        rCustomData.Reserve(_mapCustomData.GetSize(), alloc);
+        for( orcontainer::VectorBackedMap<std::vector<dReal>>::Iterator it = _mapCustomData.GetBegin(); it != _mapCustomData.GetEnd(); ++it ) {
+
+            rapidjson::Value rValues(rapidjson::kArrayType);
+            rValues.Reserve(2, alloc);
+            {
+                rapidjson::Value rNameId, rData;
+                orjson::SaveJsonValue(rNameId, it.GetNameId(), alloc);
+                orjson::SaveJsonValue(rData, it.GetValue(), alloc);
+
+                rValues.PushBack(rNameId, alloc);
+                rValues.PushBack(rData, alloc);
+            }
+            rCustomData.PushBack(rValues, alloc);
+        }
+        orjson::SetJsonValueByKey(rIkFailureInfo, "customData", rCustomData, alloc);
     }
-//    if( _mapdata.size() > 0 ) {
-//        rapidjson::Value mapdatajson(rapidjson::kObjectType);
-//        FOREACHC(itKeyValue, _mapdata) {
-//            orjson::SetJsonValueByKey(mapdatajson, itKeyValue->first.c_str(), itKeyValue->second, alloc);
-//        }
-//        orjson::SetJsonValueByKey(rIkFailureInfo, "mapdata", mapdatajson, alloc);
-//    }
 }
 
 void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
@@ -113,9 +120,6 @@ void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
         _report.LoadFromJson(rIkFailureInfo["collisionReportInfo"]);
     }
     orjson::LoadJsonValueByKey(rIkFailureInfo, "description", _description);
-    if( rIkFailureInfo.HasMember("mapdata") ) {
-        _rCustomData.CopyFrom(rIkFailureInfo["mapdata"], _rCustomData.GetAllocator());
-    }
 }
 
 bool IkReturn::Append(const IkReturn& r)
