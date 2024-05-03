@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_IKSOLVER_H
 #define OPENRAVE_IKSOLVER_H
 
+#include <openrave/openravecontainer.h>
+
 namespace OpenRAVE {
 
 /// \brief Controls what information gets validated when searching for an inverse kinematics solution.
@@ -110,13 +112,11 @@ public:
         return _memoryPoolIndex;
     }
 
-    typedef std::map<std::string, std::vector<dReal> > CustomData;
     IkReturnAction _action = IKRA_Reject; ///< the IkReturnAction corresponding to this failure
     std::vector<dReal> _vconfig; ///< the robot configuration that does not pass the checks. full dof?
     CollisionReport _report; ///< the collision report info from when some collisions were detected.
-    std::string _description;      ///< a string describing the failure
-    //CustomData _mapdata;           ///< stored additional information that does not fit elsewhere
-    rapidjson::Document _rCustomData; ///< stored additional information that does not fit elsewhere
+    std::string _description; ///< a string describing the failure
+    orcontainer::VectorBackedMap<std::vector<dReal>> _mapCustomData; ///< stored additional information that does not fit elsewhere
 
     AccumulatorIndex _memoryPoolIndex = -1; // index into the memory pool, managed by IkFailureAccumulatorBase
 
