@@ -24,7 +24,7 @@ IkFailureInfo::IkFailureInfo(const IkFailureInfo& rhs)
     _vconfig = rhs._vconfig;
     _report = rhs._report;
     _description = rhs._description;
-    _mapCustomData = rhs._mapCustomData;
+    _vCustomData = rhs._vCustomData;
     _bIkParamValid = rhs._bIkParamValid;
     if( _bIkParamValid ) {
         _ikparam = rhs._ikparam;
@@ -38,9 +38,14 @@ void IkFailureInfo::Reset()
     _vconfig.clear();
     _report.Reset();
     _description.clear();
-    _mapCustomData.clear();
     _bIkParamValid = false;
     _ikparam.Reset();
+
+    _vCustomData.Clear();
+    _vCustomData.Insert(1, std::vector<dReal>());
+    std::vector<dReal> temp;
+    _vCustomData.Find(1, temp);
+
     // don't reset _memoryPoolIndex
 }
 
@@ -82,8 +87,24 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
     }
-    if( !_mapCustomData.empty() ) {
-        orjson::SetJsonValueByKey(rIkFailureInfo, "mapdata", _mapCustomData, alloc);
+    if (_vCustomData.GetSize() > 0) {
+        rapidjson::Value rCustomData(rapidjson::kArrayType);
+        rCustomData.Reserve(_vCustomData.GetSize(), alloc);
+        for( orcontainer::NamedDatas<std::vector<dReal>>::Iterator it = _vCustomData.GetBegin(); it != _vCustomData.GetEnd(); ++it ) {
+
+            rapidjson::Value rValues(rapidjson::kArrayType);
+            rValues.Reserve(2, alloc);
+            {
+                rapidjson::Value rNameId, rData;
+                orjson::SaveJsonValue(rNameId, (*it).nameId, alloc);
+                orjson::SaveJsonValue(rData, (*it).data, alloc);
+
+                rValues.PushBack(rNameId, alloc);
+                rValues.PushBack(rData, alloc);
+            }
+            rCustomData.PushBack(rValues, alloc);
+        }
+        orjson::SetJsonValueByKey(rIkFailureInfo, "customData", rCustomData, alloc);
     }
 }
 
@@ -102,9 +123,6 @@ void IkFailureInfo::LoadFromJson(const rapidjson::Value& rIkFailureInfo)
         _report.LoadFromJson(rIkFailureInfo["collisionReportInfo"]);
     }
     orjson::LoadJsonValueByKey(rIkFailureInfo, "description", _description);
-    if( rIkFailureInfo.HasMember("mapdata") ) {
-        orjson::LoadJsonValueByKey(rIkFailureInfo, "mapdata", _mapCustomData);
-    }
 }
 
 bool IkReturn::Append(const IkReturn& r)
