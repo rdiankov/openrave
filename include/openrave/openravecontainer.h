@@ -28,41 +28,24 @@ namespace OpenRAVE {
 
 namespace orcontainer {
 
-/// \brief Represents Key-value pair.
-template<typename DataType> struct NamedData
+inline void Clear(uint64_t& nameId)
 {
-    NamedData(uint64_t nameId_, const DataType& data_) : nameId(nameId_), data(data_) {}
-
-    ///\brief invalidates this object
-    inline void Invalidate() { nameId = 0; }
-
-    ///\brief Checks validity of this object
-    ///\return whether valid
-    inline bool IsValid() const { return nameId > 0; }
-
-    ///\brief gets value
-    inline const DataType& GetValue() const { return data; }
-
-    ///\brief gets key
-    inline uint64_t GetKey() const { return nameId; }
-
-    ///\brief sets value for key
-    ///\param nameId_ key for the value
-    ///\param data_ value for the key
-    inline void Set(uint64_t nameId_, const DataType& data_)
-    {
-        nameId = nameId_;
-        data = data_;
+    if (nameId == 0) {
+        return;
     }
+    nameId = 0;
+}
 
-    uint64_t nameId = 0; ///< id for the semantic meaning of data. 0 means data is not valid.
-    DataType data; ///< user-defined data. If nameId is 0, invalid
-};
+inline bool IsValid(uint64_t nameId)
+{
+    return nameId != 0;
+}
 
 /// \brief Associative data structure similar to map, optimized to avoid memory allocation. More suitable for relatively small number of elements.
 /// Similar to map, nameId (key) is unique. However, there can be multiple invalid nameIds.
-template<typename DataType> struct VectorBackedMap
+template<typename DataType> class VectorBackedMap
 {
+public:
     /// \brief gets number of valid entries
     /// \return number of valid entries
     inline size_t GetSize() const { return _numValidElements; }
@@ -71,8 +54,8 @@ template<typename DataType> struct VectorBackedMap
     void Clear()
     {
         // Just invalidate each element, but keep memory allocated
-        for (NamedData<DataType>& customData : _vNamedDatas) {
-            customData.Invalidate();
+        for (size_t index = _beginValidElementsIndex; index < _endValidElementsIndex; ++index) {
+            OpenRAVE::orcontainer::Clear(_vNameIds[index]);
         }
         _numValidElements = 0;
         _beginValidElementsIndex = 0;
@@ -84,12 +67,12 @@ template<typename DataType> struct VectorBackedMap
     /// \param nameId key to erase value of.
     void Erase(uint64_t nameId)
     {
-        for (int64_t index = 0; index < _vNamedDatas.size(); ++index) {
-            NamedData<DataType>& customData = _vNamedDatas[index];
-            if (customData.nameId != nameId) {
+        for (int64_t index = 0; index < _vNameIds.size(); ++index) {
+            uint64_t& _nameId =  _vNameIds[index];
+            if (_nameId != nameId) {
                 continue;
             }
-            customData.Invalidate();
+            OpenRAVE::orcontainer::Clear(_nameId);
 
             _numValidElements--;
             if (_numValidElements == 0) {
@@ -104,8 +87,7 @@ template<typename DataType> struct VectorBackedMap
                     }
                     else {
                         for (size_t newBeginIndex = index + 1; newBeginIndex < _endValidElementsIndex; ++newBeginIndex) {
-                            const NamedData<DataType>& data = _vNamedDatas[newBeginIndex];
-                            if (!data.IsValid()) {
+                            if (!IsValid(_vNameIds[newBeginIndex])) {
                                 continue;
                             }
                             _beginValidElementsIndex = newBeginIndex;
@@ -119,8 +101,7 @@ template<typename DataType> struct VectorBackedMap
                     }
                     else {
                         for (size_t newEndIndex = _endValidElementsIndex - 1; newEndIndex > _beginValidElementsIndex; --newEndIndex) {
-                            const NamedData<DataType>& data = _vNamedDatas[newEndIndex - 1];
-                            if (!data.IsValid()) {
+                            if (!IsValid(_vNameIds[newEndIndex - 1])) {
                                 continue;
                             }
                             _endValidElementsIndex = newEndIndex;
@@ -143,9 +124,9 @@ template<typename DataType> struct VectorBackedMap
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
 
-        for (const NamedData<DataType>& customData : _vNamedDatas) {
-            if (customData.nameId == nameId) {
-                value = customData.data;
+        for (size_t index = _beginValidElementsIndex; index < _endValidElementsIndex; ++index) {
+            if (_vNameIds[index] == nameId) {
+                value = _vDatas[index];
                 return true;
             }
         }
@@ -162,25 +143,24 @@ template<typename DataType> struct VectorBackedMap
 
         // if nameId currently does not exist, try to reclaim invalidated cache
         int64_t invalidIndex = -1;
-        for (size_t index = 0; index < _vNamedDatas.size(); ++index) {
-            NamedData<DataType>& customData = _vNamedDatas[index];
-
-            if (customData.nameId == nameId) {
+        for (size_t index = _beginValidElementsIndex; index < _endValidElementsIndex; ++index) {
+            if (_vNameIds[index] == nameId) {
                 // overwrite existing
-                customData.data = data;
+                _vDatas[index] = data;
                 return false;
             }
             if (invalidIndex >= 0) {
                 continue;
             }
-            if (!customData.IsValid()) {
+            if (!IsValid(_vNameIds[index])) {
                 invalidIndex = index;
             }
         }
 
         if (invalidIndex >= 0) {
             // reclaim existing invalid data
-            _vNamedDatas[invalidIndex].Set(nameId, data);
+            _vNameIds[invalidIndex] = nameId;
+            _vDatas[invalidIndex] = data;
 
             // update begin and end index
             if (invalidIndex < _beginValidElementsIndex) {
@@ -192,7 +172,8 @@ template<typename DataType> struct VectorBackedMap
         }
         else {
             // cannot reclaim, insert new data.
-            _vNamedDatas.push_back(NamedData<DataType>(nameId, data));
+            _vNameIds.push_back(nameId);
+            _vDatas.push_back(data);
             _endValidElementsIndex++;
         }
         _numValidElements++;
@@ -205,8 +186,8 @@ template<typename DataType> struct VectorBackedMap
     {
     public:
         Iterator() = delete;
-        Iterator(const std::vector<NamedData<DataType>>& data, size_t dataIndex, size_t endIndex)
-            : _data(data), _dataIndex(dataIndex), _endIndex(endIndex)
+        Iterator(const VectorBackedMap& map, size_t dataIndex, size_t endIndex)
+            : _map(map), _dataIndex(dataIndex), _endIndex(endIndex)
         {
         }
 
@@ -216,26 +197,32 @@ template<typename DataType> struct VectorBackedMap
         {
             do {
                 ++_dataIndex;
-            } while (_dataIndex < _endIndex && !_data[_dataIndex].IsValid());
+            } while (_dataIndex < _endIndex && !IsValid(_map._vNameIds[_dataIndex]));
 
             return *this;
         }
 
         /// \brief compares for equality
         /// \param other the other object to compare against
-        bool operator==(const Iterator& other) const { return _dataIndex == other._dataIndex && this == &other; }
+        bool operator==(const Iterator& other) const { return _dataIndex == other._dataIndex && &(*this)._map == &(other._map); }
 
         /// \brief compares for inequality
         /// \param other the other object to compare against
         bool operator!=(const Iterator& other) const { return !(*this == other); }
 
         /// \brief dereference operator
-        const NamedData<DataType>& operator*() const
+        uint64_t GetNameId() const
         {
-            return _data[_dataIndex];
+            return _map._vNameIds[_dataIndex];
         }
+
+        const DataType& GetValue() const
+        {
+            return _map._vDatas[_dataIndex];
+        }
+
     private:
-        const std::vector<NamedData<DataType>>& _data; ///< underlying data to iterate over
+        const VectorBackedMap& _map; ///< Underlying data
         size_t _dataIndex; ///< current position
         const size_t _endIndex; ///< end position
     };
@@ -244,18 +231,19 @@ template<typename DataType> struct VectorBackedMap
     /// \return iterator to first element
     Iterator GetBegin() const
     {
-        return Iterator(_vNamedDatas, _beginValidElementsIndex, _endValidElementsIndex);
+        return Iterator(*this, _beginValidElementsIndex, _endValidElementsIndex);
     }
 
     /// \brief gets iterator to the element after last element
     /// \return iterator to the element after last element
     Iterator GetEnd() const
     {
-        return Iterator(_vNamedDatas, _endValidElementsIndex, _endValidElementsIndex);
+        return Iterator(*this, _endValidElementsIndex, _endValidElementsIndex);
     }
 
 private:
-    std::vector<NamedData<DataType>> _vNamedDatas; ///< Vector of elements. Vector is not sorted. For small size, faster to keep it unsorted and do brute-force search.
+    std::vector<uint64_t> _vNameIds; ///< Vector of name ids (keys). Vector is not sorted. For small size, faster to keep it unsorted and do brute-force search.
+    std::vector<DataType> _vDatas; ///< Vector of values. Vector is not sorted. For small size, faster to keep it unsorted and do brute-force search.
     size_t _numValidElements = 0; ///< number of valid elements, at most _vNamedDatas.size()
     size_t _beginValidElementsIndex = 0; ///< index to the first element
     size_t _endValidElementsIndex = 0; ///< index to the end element (last + 1)

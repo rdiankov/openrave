@@ -93,8 +93,8 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
             rValues.Reserve(2, alloc);
             {
                 rapidjson::Value rNameId, rData;
-                orjson::SaveJsonValue(rNameId, (*it).nameId, alloc);
-                orjson::SaveJsonValue(rData, (*it).data, alloc);
+                orjson::SaveJsonValue(rNameId, it.GetNameId(), alloc);
+                orjson::SaveJsonValue(rData, it.GetValue(), alloc);
 
                 rValues.PushBack(rNameId, alloc);
                 rValues.PushBack(rData, alloc);
