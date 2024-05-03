@@ -90,7 +90,7 @@ object PyIkFailureInfo::GetMapDataDict() {
     py::dict odata;
     const orcontainer::VectorBackedMap<std::vector<dReal>>& vCustomData = _ikFailureInfo._mapCustomData;
     for (orcontainer::VectorBackedMap<std::vector<dReal>>::Iterator it = vCustomData.GetBegin(); it != vCustomData.GetEnd(); ++it) {
-        odata[(*it).nameId] = toPyArray((*it).data);
+        odata[it.GetNameId()] = toPyArray(it.GetValue());
     }
     return odata;
 }
