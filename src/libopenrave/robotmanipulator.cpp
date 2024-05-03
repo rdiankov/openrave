@@ -40,13 +40,17 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "id", _id, allocator);
     orjson::SetJsonValueByKey(value, "name", _name, allocator);
     orjson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
-    orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    if( _vChuckingDirection.size() > 0 ) {
+        orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    }
     orjson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
     orjson::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
     orjson::SetJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName, allocator); //optional;
     orjson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
     orjson::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
-    orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
+    if( _vGripperJointNames.size() > 0 ) {
+        orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
+    }
     orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName, allocator);
