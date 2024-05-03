@@ -28,7 +28,8 @@ namespace OpenRAVE {
 
 namespace orcontainer {
 
-inline void ClearNameId(uint64_t& nameId)
+typedef uint32_t VectorBackedNameId;
+inline void ClearNameId(VectorBackedNameId& nameId)
 {
     if (nameId == 0) {
         return;
@@ -36,7 +37,7 @@ inline void ClearNameId(uint64_t& nameId)
     nameId = 0;
 }
 
-inline bool IsValidNameId(uint64_t nameId)
+inline bool IsValidNameId(VectorBackedNameId nameId)
 {
     return nameId != 0;
 }
@@ -67,10 +68,10 @@ public:
     /// \brief erases element for name id.
     /// internally invalidates entry so not observable from outside but memory is kept allocated.
     /// \param nameId key to erase value of.
-    inline void Erase(uint64_t nameId)
+    inline void Erase(VectorBackedNameId nameId)
     {
         for (int64_t index = 0; index < _vNameIds.size(); ++index) {
-            uint64_t& _nameId =  _vNameIds[index];
+            VectorBackedNameId& _nameId =  _vNameIds[index];
             if (_nameId != nameId) {
                 continue;
             }
@@ -122,7 +123,7 @@ public:
     /// \param nameId key to find value for
     /// \param value value for key.
     /// \return whether key is found.
-    inline bool Find(uint64_t nameId, DataType& value) const
+    inline bool Find(VectorBackedNameId nameId, DataType& value) const
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
 
@@ -139,7 +140,7 @@ public:
     /// \param nameId key to insert value for
     /// \param data value for key.
     /// \return true if nameId did not exist, false if nameId existed and its value is overwritten
-    inline bool Insert(uint64_t nameId, const DataType& data)
+    inline bool Insert(VectorBackedNameId nameId, const DataType& data)
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
 
@@ -217,7 +218,7 @@ public:
         }
 
         /// \brief dereference operator
-        inline uint64_t GetNameId() const
+        inline VectorBackedNameId GetNameId() const
         {
             return _map._vNameIds[_dataIndex];
         }
@@ -248,7 +249,7 @@ private:
     }
 
 private:
-    std::vector<uint64_t> _vNameIds; ///< Vector of name ids (keys). Vector is not sorted. For small size, faster to keep it unsorted and do brute-force search.
+    std::vector<VectorBackedNameId> _vNameIds; ///< Vector of name ids (keys). Vector is not sorted. For small size, faster to keep it unsorted and do brute-force search.
     std::vector<DataType> _vDatas; ///< Vector of values. Vector is not sorted. For small size, faster to keep it unsorted and do brute-force search.
     size_t _numValidElements = 0; ///< number of valid elements, at most _vNamedDatas.size()
     size_t _beginValidElementsIndex = 0; ///< index to the first element
