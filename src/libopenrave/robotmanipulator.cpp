@@ -66,13 +66,15 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     // Now recommended to use chuckingDirection in GripperInfo. However, we still read it from ManipulatorInfo for backward compatibility, e.g. the saved scene is not migrated.
     rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirections");
     if( itChuckingDirections != value.MemberEnd() ) {
-        RAVELOG_WARN_FORMAT("For manipulator '%s', read 'chuckingDirections' (size=%d) in tools' setting. But, since it's deprecated, using 'gripperInfos' is recommended.", _name%_vChuckingDirection.size());
         const rapidjson::Value& rChuckingDirections = itChuckingDirections->value;
         if( !rChuckingDirections.IsArray() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("When loading tool '%s' with id '%s', 'chuckingDirections' needs to be an array, currently it is '%s'"), _name%_id%orjson::DumpJson(rChuckingDirections), ORE_InvalidArguments);
         }
 
         _vChuckingDirection.resize(rChuckingDirections.Size());
+        if( rChuckingDirections.Size() > 0 ) {
+            RAVELOG_WARN_FORMAT("For manipulator '%s', read 'chuckingDirections' (size=%d) in tools' setting. But, since it's deprecated, using 'gripperInfos' is recommended.", _name%_vChuckingDirection.size());
+        }
         for(int index = 0; index < (int)_vChuckingDirection.size(); ++index) {
             int direction = 0;
             if( rChuckingDirections[index].IsFloat() || rChuckingDirections[index].IsDouble() ) {
@@ -105,7 +107,8 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
     // Now recommended to use gripperJointNames in GripperInfo. However, we still read it from ManipulatorInfo for backward compatibility, e.g. the saved scene is not migrated.
-    if( value.HasMember("gripperJointNames") ) {
+    rapidjson::Value::ConstMemberIterator itGripperJointNames = value.FindMember("gripperJointNames");
+    if( (itGripperJointNames != value.MemberEnd()) && itGripperJointNames->value.IsArray() && (itGripperJointNames->value.Size() > 0) ) {
         RAVELOG_WARN_FORMAT("For manipulator '%s', read 'gripperJointNames' (size=%d) in 'tools' setting. But, since it's deprecated, using 'gripperInfos is recommended.", _name%_vGripperJointNames.size());
     }
     orjson::LoadJsonValueByKey(value, "grippername", _grippername);
