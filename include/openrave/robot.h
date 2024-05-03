@@ -267,9 +267,6 @@ public:
             return _info._vChuckingDirection;
         }
 
-        /// \brief sets the normal gripper direction to move joints to close/chuck the hand
-        void SetChuckingDirection(const std::vector<int>& chuckingdirection);
-
         /// \brief Sets the local tool direction with respect to the end effector link.
         ///
         /// Because this call will change manipulator hash, it resets the loaded IK and sends the Prop_RobotManipulatorTool message.

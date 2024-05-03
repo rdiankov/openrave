@@ -210,7 +210,8 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
     }
 
     if (GetChuckingDirection() != info._vChuckingDirection) {
-        SetChuckingDirection(info._vChuckingDirection);
+        _info._vChuckingDirection = info._vChuckingDirection;
+        GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
         RAVELOG_VERBOSE_FORMAT("manipulator %s chucking direction changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
@@ -238,13 +239,6 @@ int RobotBase::Manipulator::GetArmDOF() const
 int RobotBase::Manipulator::GetGripperDOF() const
 {
     return static_cast<int>(__vgripperdofindices.size());
-}
-
-void RobotBase::Manipulator::SetChuckingDirection(const std::vector<int>& chuckingdirection)
-{
-    OPENRAVE_ASSERT_OP((int)chuckingdirection.size(),==,GetGripperDOF());
-    _info._vChuckingDirection = chuckingdirection;
-    GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
