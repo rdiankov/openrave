@@ -116,7 +116,7 @@ public:
     std::vector<dReal> _vconfig; ///< the robot configuration that does not pass the checks. full dof?
     CollisionReport _report; ///< the collision report info from when some collisions were detected.
     std::string _description; ///< a string describing the failure
-    orcontainer::NamedDatas<std::vector<dReal>> _vCustomData; ///< stored additional information that does not fit elsewhere
+    orcontainer::Map<std::vector<dReal>> _mapCustomData; ///< stored additional information that does not fit elsewhere
 
     AccumulatorIndex _memoryPoolIndex = -1; // index into the memory pool, managed by IkFailureAccumulatorBase
 

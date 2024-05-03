@@ -24,7 +24,7 @@ IkFailureInfo::IkFailureInfo(const IkFailureInfo& rhs)
     _vconfig = rhs._vconfig;
     _report = rhs._report;
     _description = rhs._description;
-    _vCustomData = rhs._vCustomData;
+    _mapCustomData = rhs._mapCustomData;
     _bIkParamValid = rhs._bIkParamValid;
     if( _bIkParamValid ) {
         _ikparam = rhs._ikparam;
@@ -41,10 +41,7 @@ void IkFailureInfo::Reset()
     _bIkParamValid = false;
     _ikparam.Reset();
 
-    _vCustomData.Clear();
-    _vCustomData.Insert(1, std::vector<dReal>());
-    std::vector<dReal> temp;
-    _vCustomData.Find(1, temp);
+    _mapCustomData.Clear();
 
     // don't reset _memoryPoolIndex
 }
@@ -87,10 +84,10 @@ void IkFailureInfo::SaveToJson(rapidjson::Value& rIkFailureInfo, rapidjson::Docu
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rIkFailureInfo, "description", _description, alloc);
     }
-    if (_vCustomData.GetSize() > 0) {
+    if (_mapCustomData.GetSize() > 0) {
         rapidjson::Value rCustomData(rapidjson::kArrayType);
-        rCustomData.Reserve(_vCustomData.GetSize(), alloc);
-        for( orcontainer::NamedDatas<std::vector<dReal>>::Iterator it = _vCustomData.GetBegin(); it != _vCustomData.GetEnd(); ++it ) {
+        rCustomData.Reserve(_mapCustomData.GetSize(), alloc);
+        for( orcontainer::Map<std::vector<dReal>>::Iterator it = _mapCustomData.GetBegin(); it != _mapCustomData.GetEnd(); ++it ) {
 
             rapidjson::Value rValues(rapidjson::kArrayType);
             rValues.Reserve(2, alloc);

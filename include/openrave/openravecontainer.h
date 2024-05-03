@@ -22,19 +22,33 @@
 #include <openrave/openraveexception.h>
 
 #include <stdint.h>
-#include <stdexcept>
 #include <vector>
 
 namespace OpenRAVE {
 
 namespace orcontainer {
 
+/// \brief Represents Key-value pair.
 template<typename DataType> struct NamedData
 {
     NamedData(uint64_t nameId_, const DataType& data_) : nameId(nameId_), data(data_) {}
+
+    ///\brief invalidates this object
     inline void Invalidate() { nameId = 0; }
+
+    ///\brief Checks validity of this object
+    ///\return whether valid
     inline bool IsValid() const { return nameId > 0; }
-    inline const DataType& Get() const { return data; }
+
+    ///\brief gets value
+    inline const DataType& GetValue() const { return data; }
+
+    ///\brief gets key
+    inline uint64_t GetKey() const { return nameId; }
+
+    ///\brief sets value for key
+    ///\param nameId_ key for the value
+    ///\param data_ value for the key
     inline void Set(uint64_t nameId_, const DataType& data_)
     {
         nameId = nameId_;
@@ -47,10 +61,13 @@ template<typename DataType> struct NamedData
 
 /// \brief Associative data structure similar to map, optimized to avoid memory allocation.
 /// Similar to map, nameId(key) is unique. However, there can be multiple invalid nameIds.
-template<typename DataType> struct NamedDatas
+template<typename DataType> struct Map
 {
+    /// \brief gets number of valid entries
+    /// \return number of valid entries
     inline size_t GetSize() const { return _numValidElements; }
 
+    /// \brief invalidates all entries while preserving memory
     void Clear()
     {
         // Just invalidate each element, but keep memory allocated
@@ -62,6 +79,9 @@ template<typename DataType> struct NamedDatas
         _endValidElementsIndex = 0;
     }
 
+    /// \brief erases element for name id.
+    /// internally invalidates entry so not observable from outside but memory is kept allocated.
+    /// \param nameId key to erase value of.
     void Erase(uint64_t nameId)
     {
         for (int64_t index = 0; index < _vNamedDatas.size(); ++index) {
@@ -114,18 +134,27 @@ template<typename DataType> struct NamedDatas
         }
         OPENRAVE_ASSERT_FORMAT(false, "nameId=%d is not found", nameId, OpenRAVE::ORE_InvalidArguments);
     }
-        
-    bool Find(uint64_t nameId, DataType& found) const
+
+    /// \brief finds element for key
+    /// \param nameId key to find value for
+    /// \param value value for key.
+    /// \return whether key is found.
+    bool Find(uint64_t nameId, DataType& value) const
     {
+        OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
+
         for (const NamedData<DataType>& customData : _vNamedDatas) {
             if (customData.nameId == nameId) {
-                found = customData.data;
+                value = customData.data;
                 return true;
             }
         }
         return false;
     }
 
+    /// \brief inserts element
+    /// \param nameId key to insert value for
+    /// \param data value for key.
     void Insert(uint64_t nameId, const DataType& data)
     {
         OPENRAVE_ASSERT_FORMAT0(nameId != 0, "nameId cannot be 0. 0 is reserved for invalid", OpenRAVE::ORE_InvalidArguments);
@@ -168,6 +197,7 @@ template<typename DataType> struct NamedDatas
         OPENRAVE_ASSERT_OP(_numValidElements, <= ,(_endValidElementsIndex - _beginValidElementsIndex));
     }
 
+    /// \brief Iterator class to be used for Map class
     class Iterator
     {
     public:
@@ -177,34 +207,45 @@ template<typename DataType> struct NamedDatas
         {
         }
 
-        // iterate to next valid data or to end index. Even when iterator is beyond end index, iterates to the next index once.
+        /// \brief Pre-increment
+        /// iterate to next valid data or to end index. Even when iterator is beyond end index, iterates to the next index once.
         Iterator& operator++()
         {
             do {
-                _dataIndex++;
+                ++_dataIndex;
             } while (_dataIndex < _endIndex && !_data[_dataIndex].IsValid());
                 
             return *this;
         }
 
-        bool operator==(const Iterator& other) const { return _dataIndex == other._dataIndex; }
+        /// \brief compares for equality
+        /// \param other the other object to compare against
+        bool operator==(const Iterator& other) const { return _dataIndex == other._dataIndex && this == &other; }
+
+        /// \brief compares for inequality
+        /// \param other the other object to compare against
         bool operator!=(const Iterator& other) const { return !(*this == other); }
 
+        /// \brief dereference operator
         const NamedData<DataType>& operator*() const
         {
             return _data[_dataIndex];
         }
-
-        const std::vector<NamedData<DataType>>& _data;
-        size_t _dataIndex;
-        const size_t _endIndex;
+    private:
+        const std::vector<NamedData<DataType>>& _data; ///< underlying data to iterate over
+        size_t _dataIndex; ///< current position
+        const size_t _endIndex; ///< end position
     };
 
+    /// \brief gets iterator to the first element
+    /// \return iterator to first element
     Iterator GetBegin() const
     {
         return Iterator(_vNamedDatas, _beginValidElementsIndex, _endValidElementsIndex);
     }
 
+    /// \brief gets iterator to the element after last element
+    /// \return iterator to the element after last element
     Iterator GetEnd() const
     {
         return Iterator(_vNamedDatas, _endValidElementsIndex, _endValidElementsIndex);
@@ -213,8 +254,8 @@ template<typename DataType> struct NamedDatas
 private:
     std::vector<NamedData<DataType>> _vNamedDatas; ///< Vector of elements. Vector is not sorted. For small size, faster to keep it unsorted and do brute-force search.
     size_t _numValidElements = 0; ///< number of valid elements, at most _vNamedDatas.size()
-    size_t _beginValidElementsIndex = 0;
-    size_t _endValidElementsIndex = 0;
+    size_t _beginValidElementsIndex = 0; ///< index to the first element
+    size_t _endValidElementsIndex = 0; ///< index to the end element (last + 1)
 };
     
 } // namespace orcontainer
