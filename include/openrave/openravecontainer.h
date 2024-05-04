@@ -160,6 +160,24 @@ public:
             }
         }
 
+        // always check the beginning for an invalid index regardless of current invalidIndex value
+        for (size_t index = 0; index < _beginValidElementsIndex; ++index) {
+            if (!IsValidNameId(_vNameIds[index])) {
+                invalidIndex = index;
+                break;
+            }
+        }
+
+        if (invalidIndex < 0) {
+            // not found, now check the end
+            for (size_t index = _endValidElementsIndex; index < _vNameIds.size(); ++index) {
+                if (!IsValidNameId(_vNameIds[index])) {
+                    invalidIndex = index;
+                    break;
+                }
+            }
+        }
+
         if (invalidIndex >= 0) {
             // reclaim existing invalid data
             _vNameIds[invalidIndex] = nameId;
@@ -178,9 +196,11 @@ public:
             _vNameIds.push_back(nameId);
             _vDatas.push_back(data);
             _endValidElementsIndex++;
+            // at this point _endValidElementsIndex == _vDatas.size()
+            //OPENRAVE_ASSERT_OP(_endValidElementsIndex, ==, _vNameIds.size());
         }
         _numValidElements++;
-        OPENRAVE_ASSERT_OP(_numValidElements, <=,(_endValidElementsIndex - _beginValidElementsIndex));
+        OPENRAVE_ASSERT_OP_FORMAT(_numValidElements, <=,(_endValidElementsIndex - _beginValidElementsIndex), "Where nameId=%s, _numValidElements=%d, _beginValidElementsIndex=%u, _endValidElementsIndex=%u", _numValidElements%_beginValidElementsIndex%_endValidElementsIndex, ORE_InvalidState);
         return true;
     }
 
