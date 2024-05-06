@@ -120,44 +120,44 @@ MassUnit GetMassUnitFromString(const std::string& pMassUnit, MassUnit defaultMas
     return GetMassUnitFromString(pMassUnit.c_str(), defaultMassUnit);
 }
 
-const char* GetDurationUnitString(DurationUnit unit)
+const char* GetTimeDurationUnitString(TimeDurationUnit unit)
 {
     switch(unit) {
-    case DU_Second: return "s";
-    case DU_Millisecond: return "ms";
-    case DU_Microsecond: return "us";
-    case DU_Nanosecond: return "ns";
-    case DU_Picosecond: return "ps";
+    case TDU_Second: return "s";
+    case TDU_Millisecond: return "ms";
+    case TDU_Microsecond: return "us";
+    case TDU_Nanosecond: return "ns";
+    case TDU_Picosecond: return "ps";
     }
     return "(unknown)";
 }
 
-DurationUnit GetDurationUnitFromString(const char* pDurationUnit, DurationUnit defaultDurationUnit)
+TimeDurationUnit GetTimeDurationUnitFromString(const char* pTimeDurationUnit, TimeDurationUnit defaultTimeDurationUnit)
 {
-    if( pDurationUnit[0] == 0 ) {
-        return defaultDurationUnit;
+    if( pTimeDurationUnit[0] == 0 ) {
+        return defaultTimeDurationUnit;
     }
-    if( strcmp(pDurationUnit, "s") == 0 ) {
-        return DU_Second;
+    if( strcmp(pTimeDurationUnit, "s") == 0 ) {
+        return TDU_Second;
     }
-    if( strcmp(pDurationUnit, "ms") == 0 ) {
-        return DU_Millisecond;
+    if( strcmp(pTimeDurationUnit, "ms") == 0 ) {
+        return TDU_Millisecond;
     }
-    if( strcmp(pDurationUnit, "us") == 0 ) {
-        return DU_Microsecond;
+    if( strcmp(pTimeDurationUnit, "us") == 0 ) {
+        return TDU_Microsecond;
     }
-    if( strcmp(pDurationUnit, "ns") == 0 ) {
-        return DU_Nanosecond;
+    if( strcmp(pTimeDurationUnit, "ns") == 0 ) {
+        return TDU_Nanosecond;
     }
-    if( strcmp(pDurationUnit, "ps") == 0 ) {
-        return DU_Picosecond;
+    if( strcmp(pTimeDurationUnit, "ps") == 0 ) {
+        return TDU_Picosecond;
     }
-    throw OpenRAVEException(str(boost::format("Do not support DurationUnit '%s'")%pDurationUnit), ORE_DurationUnitInvalid);
+    throw OpenRAVEException(str(boost::format("Do not support TimeDurationUnit '%s'")%pTimeDurationUnit), ORE_TimeDurationUnitInvalid);
 }
 
-DurationUnit GetDurationUnitFromString(const std::string& pDurationUnit, DurationUnit defaultDurationUnit)
+TimeDurationUnit GetTimeDurationUnitFromString(const std::string& pTimeDurationUnit, TimeDurationUnit defaultTimeDurationUnit)
 {
-    return GetDurationUnitFromString(pDurationUnit.c_str(), defaultDurationUnit);
+    return GetTimeDurationUnitFromString(pTimeDurationUnit.c_str(), defaultTimeDurationUnit);
 }
 
 const char* GetAngleUnitString(AngleUnit unit)
@@ -192,40 +192,40 @@ AngleUnit GetAngleUnitFromString(const std::string& pAngleUnit, AngleUnit defaul
     return GetAngleUnitFromString(pAngleUnit.c_str(), defaultAngleUnit);
 }
 
-const char* GetStampUnitString(StampUnit unit)
+const char* GetTimeStampUnitString(TimeStampUnit unit)
 {
     switch(unit) {
-    case SU_Second: return "s";
-    case SU_Millisecond: return "ms";
-    case SU_Microsecond: return "us";
-    case SU_ISO: return "iso";
+    case TSU_SecondsFromLinuxEpoch: return "s";
+    case TSU_MillisecondsFromLinuxEpoch: return "ms";
+    case TSU_MicrosecondsFromLinuxEpoch: return "us";
+    case TSU_ISO8601: return "iso8601";
     }
     return "(unknown)";
 }
 
-StampUnit GetStampUnitFromString(const char* pStampUnit, StampUnit defaultStampUnit)
+TimeStampUnit GetTimeStampUnitFromString(const char* pTimeStampUnit, TimeStampUnit defaultTimeStampUnit)
 {
-    if( pStampUnit[0] == 0 ) {
-        return defaultStampUnit;
+    if( pTimeStampUnit[0] == 0 ) {
+        return defaultTimeStampUnit;
     }
-    if( strcmp(pStampUnit, "s") == 0 ) {
-        return SU_Second;
+    if( strcmp(pTimeStampUnit, "s") == 0 ) {
+        return TSU_SecondsFromLinuxEpoch;
     }
-    if( strcmp(pStampUnit, "ms") == 0 ) {
-        return SU_Millisecond;
+    if( strcmp(pTimeStampUnit, "ms") == 0 ) {
+        return TSU_MillisecondsFromLinuxEpoch;
     }
-    if( strcmp(pStampUnit, "us") == 0 ) {
-        return SU_Microsecond;
+    if( strcmp(pTimeStampUnit, "us") == 0 ) {
+        return TSU_MicrosecondsFromLinuxEpoch;
     }
-    if( strcmp(pStampUnit, "iso") == 0 ) {
-        return SU_ISO;
+    if( strcmp(pTimeStampUnit, "iso8601") == 0 ) {
+        return TSU_ISO8601;
     }
-    throw OpenRAVEException(str(boost::format("Do not support StampUnit '%s'")%pStampUnit), ORE_StampUnitInvalid);
+    throw OpenRAVEException(str(boost::format("Do not support TimeStampUnit '%s'")%pTimeStampUnit), ORE_TimeStampUnitInvalid);
 }
 
-StampUnit GetStampUnitFromString(const std::string& pStampUnit, StampUnit defaultStampUnit)
+TimeStampUnit GetTimeStampUnitFromString(const std::string& pTimeStampUnit, TimeStampUnit defaultTimeStampUnit)
 {
-    return GetStampUnitFromString(pStampUnit.c_str(), defaultStampUnit);
+    return GetTimeStampUnitFromString(pTimeStampUnit.c_str(), defaultTimeStampUnit);
 }
 
 } // end namespace OpenRAVE
