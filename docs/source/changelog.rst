@@ -6,6 +6,11 @@ ChangeLog
 Version 0.144.0
 ===============
 
+- Reduce memory usage by `IkFailureInfo`.
+
+Version 0.143.4
+===============
+
 - Fix environment viewers did not start because RaveDestroy() stopped the thread for viewers and RaveInitialize() did not restart it.
 
 Version 0.143.3
@@ -95,6 +100,11 @@ Version 0.137.0
 ===============
 
 * Add `GetId` to python bindings
+
+Version 0.136.1
+===============
+
+* Exclude virtual links (links with no geometries) from jittering computation
 
 Version 0.136.0
 ===============
