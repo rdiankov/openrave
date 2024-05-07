@@ -3105,7 +3105,7 @@ public:
                 } else {
                     updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%s, update body '%s' from info result %d", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
+                RAVELOG_VERBOSE_FORMAT("env=%s, update body '%s' from info result %u", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }
@@ -3123,7 +3123,7 @@ public:
                     ExclusiveLock lock253(_mutexInterfaces);
                     vector<KinBodyPtr>::iterator itExisting = std::find(_vecbodies.begin(), _vecbodies.end(), pMatchExistingBody);
                     if( itExisting != _vecbodies.end() ) {
-                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex()); // essentially removes the entry from the environment
+                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex(), false); // essentially removes the entry from the environment
                     }
                 }
 
@@ -3450,8 +3450,9 @@ protected:
 
     /// \brief invalidates a kinbody from _vecbodies
     /// \param[in] bodyIndex environment body index of kin body to be invalidated
+    /// \param[in] releaseBeforeDeleting if true, make sure no other bodies are grabbing it before deleting the body
     /// assumes environment and _mutexInterfaces are exclusively locked
-    KinBodyPtr _InvalidateKinBodyFromEnvBodyIndex(int bodyIndex)
+    KinBodyPtr _InvalidateKinBodyFromEnvBodyIndex(int bodyIndex, bool releaseBeforeDeleting = true)
     {
         KinBodyPtr& pbodyref = _vecbodies.at(bodyIndex);
         if (!pbodyref) {
@@ -3461,7 +3462,7 @@ protected:
         const std::string& name = body.GetName();
         // before deleting, make sure no other bodies are grabbing it!!
         for (KinBodyPtr& potherbody : _vecbodies) {
-            if( !!potherbody && potherbody->IsGrabbing(body) ) {
+            if( releaseBeforeDeleting && !!potherbody && potherbody->IsGrabbing(body) ) {
                 RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%potherbody->GetName());
                 potherbody->Release(body);
             }
