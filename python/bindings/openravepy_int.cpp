@@ -603,9 +603,9 @@ AttributesList toAttributesList(object oattributes)
     return AttributesList();
 }
 
-ViewerManager::ViewerManager() {
-    _bShutdown = false;
-    _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+ViewerManager::ViewerManager()
+{
+    Initialize();
 }
 
 ViewerManager::~ViewerManager() {
@@ -623,6 +623,11 @@ void ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, 
 {
     ViewerBasePtr pviewer;
     if( strviewer.size() > 0 ) {
+        if( !_threadviewer ) {
+            RAVELOG_DEBUG_FORMAT("env=%s, reinitializing a viewer thread for '%s'", penv->GetNameId()%strviewer);
+            Destroy(); // just in case
+            Initialize();
+        }
         if( bDoNotAddIfExists ) {
             // check all existing viewers
             std::lock_guard<std::mutex> lock(_mutexViewer);
@@ -657,6 +662,12 @@ void ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, 
             std::unique_lock<std::mutex> lock(_mutexViewer);
             _listviewerinfos.push_back(pinfo);
             _conditionViewer.notify_all();
+
+            if( !_bInMain ) {
+                /// wait until viewer thread process it
+                pinfo->_cond.wait(lock);
+                pviewer = pinfo->_pviewer;
+            }
         }
     }
 }
@@ -695,8 +706,8 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
                     penv->Remove((*itinfo)->_pviewer);
                 }
                 (*itinfo)->_cond.notify_all();
-                itinfo = _listviewerinfos.erase(itinfo);
                 RAVELOG_DEBUG_FORMAT("env=%s, removing viewer '%s'", penv->GetNameId()%(*itinfo)->_viewername);
+                itinfo = _listviewerinfos.erase(itinfo);
                 bremoved = true;
             }
             else {
@@ -705,6 +716,14 @@ bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
         }
     }
     return bremoved;
+}
+
+void ViewerManager::Initialize()
+{
+    _bShutdown = false;
+    if( !_threadviewer ) {
+        _threadviewer = boost::make_shared<std::thread>(std::bind(&ViewerManager::_RunViewerThread, this));
+    }
 }
 
 void ViewerManager::Destroy()
@@ -755,7 +774,7 @@ void ViewerManager::_RunViewerThread()
                         pinfo->_pviewer = RaveCreateViewer(pinfo->_penv, pinfo->_viewername);
                     }
                     catch(const std::exception& ex) {
-                        RAVELOG_WARN_FORMAT("env=%s, failed to create viewer '%s': %s", pinfo->_pviewer->GetEnv()->GetNameId()%pinfo->_viewername%ex.what());
+                        RAVELOG_WARN_FORMAT("env=%s, failed to create viewer '%s': %s", pinfo->_penv->GetNameId()%pinfo->_viewername%ex.what());
                         pinfo->_bFailed = true;
                     }
 
@@ -857,6 +876,16 @@ void ViewerManager::_RunViewerThread()
         vActiveViewers.clear();
 
         if( !!puseviewer ) {
+            // need to lock the mutex to prevent AddViewer from blocking indefinitely
+            {
+                std::unique_lock<std::mutex> lock(_mutexViewer);
+                _bInMain = true;
+                // have to notify anyone in AddViewer to stop waiting
+                for(ViewerInfoPtr& pinfo : _listviewerinfos ) {
+                    pinfo->_cond.notify_all();
+                }
+            }
+
             try {
                 puseviewer->main(bShowViewer);
             }
@@ -866,6 +895,8 @@ void ViewerManager::_RunViewerThread()
             catch(...) {
                 RAVELOG_FATAL_FORMAT("env=%s, got unknown exception in viewer main thread", puseviewer->GetEnv()->GetNameId());
             }
+
+            _bInMain = false;
 
             // just in case remove
             try {

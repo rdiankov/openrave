@@ -1012,7 +1012,7 @@ void pyRaveSetDebugLevel(object olevel)
 
 int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=py::none_())
 {
-
+    ViewerManager::GetInstance().Initialize(); // start thread for viewers
     return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetIntFromPy(olevel, Level_Info));
 }
 
