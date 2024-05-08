@@ -3122,6 +3122,7 @@ public:
                 std::vector<KinBodyPtr> pGrabbingBodies;
                 std::vector<KinBody::LinkPtr> pGrabbingLinks;
                 std::vector<rapidjson::Document> rGrabbedUserDataDocuments;
+                std::vector<std::set<int>> linkIndicesToIgnore;
                 for (KinBodyPtr& pOtherbody : _vecbodies) {
                     if (!pOtherbody) {
                         continue;
@@ -3134,6 +3135,7 @@ public:
                             rapidjson::Document rGrabbedUserData;
                             rGrabbedUserData.CopyFrom(pGrabbed->_rGrabbedUserData, rGrabbedUserData.GetAllocator());
                             rGrabbedUserDataDocuments.push_back(std::move(rGrabbedUserData));
+                            linkIndicesToIgnore.push_back(pGrabbed->_setGrabberLinkIndicesToIgnore);
                         }
                     }
                 }
@@ -3189,7 +3191,7 @@ public:
 
                 // re-grab after add this body back to the environment
                 for (int grabbingBodyIndex = 0; grabbingBodyIndex<pGrabbingBodies.size(); grabbingBodyIndex++) {
-                    pGrabbingBodies[grabbingBodyIndex]->Grab(pMatchExistingBody, pGrabbingLinks[grabbingBodyIndex], rGrabbedUserDataDocuments[grabbingBodyIndex]);
+                    pGrabbingBodies[grabbingBodyIndex]->Grab(pMatchExistingBody, pGrabbingLinks[grabbingBodyIndex], linkIndicesToIgnore[grabbingBodyIndex], rGrabbedUserDataDocuments[grabbingBodyIndex]);
                 }
             }
             else {
