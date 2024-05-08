@@ -3118,12 +3118,32 @@ public:
                     continue;
                 }
 
+                // if this body is grabbed by another bodies, save the grabbing link and user data
+                std::vector<KinBodyPtr> pGrabbingBodies;
+                std::vector<KinBody::LinkPtr> pGrabbingLinks;
+                std::vector<rapidjson::Document> rGrabbedUserDataDocuments;
+                for (KinBodyPtr& pOtherbody : _vecbodies) {
+                    if (!pOtherbody) {
+                        continue;
+                    }
+                    for (const GrabbedPtr& pGrabbed : pOtherbody->_vGrabbedBodies) {
+                        KinBodyConstPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+                        if( !!pGrabbedBody && pGrabbedBody.get() == &*pMatchExistingBody ) {
+                            pGrabbingBodies.push_back(pOtherbody);
+                            pGrabbingLinks.push_back(pGrabbed->_pGrabbingLink);
+                            rapidjson::Document rGrabbedUserData;
+                            rGrabbedUserData.CopyFrom(pGrabbed->_rGrabbedUserData, rGrabbedUserData.GetAllocator());
+                            rGrabbedUserDataDocuments.push_back(std::move(rGrabbedUserData));
+                        }
+                    }
+                }
+
                 // updating this body requires removing it and re-adding it to env
                 {
                     ExclusiveLock lock253(_mutexInterfaces);
                     vector<KinBodyPtr>::iterator itExisting = std::find(_vecbodies.begin(), _vecbodies.end(), pMatchExistingBody);
                     if( itExisting != _vecbodies.end() ) {
-                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex(), false); // essentially removes the entry from the environment
+                        _InvalidateKinBodyFromEnvBodyIndex(pMatchExistingBody->GetEnvironmentBodyIndex()); // essentially removes the entry from the environment
                     }
                 }
 
@@ -3165,6 +3185,11 @@ public:
 
                     pInitBody = pMatchExistingBody;
                     _AddKinBody(pMatchExistingBody, IAM_StrictNameChecking); // internally locks _mutexInterfaces, name guarnateed to be unique
+                }
+
+                // re-grab after add this body back to the environment
+                for (int grabbingBodyIndex = 0; grabbingBodyIndex<pGrabbingBodies.size(); grabbingBodyIndex++) {
+                    pGrabbingBodies[grabbingBodyIndex]->Grab(pMatchExistingBody, pGrabbingLinks[grabbingBodyIndex], rGrabbedUserDataDocuments[grabbingBodyIndex]);
                 }
             }
             else {
@@ -3450,9 +3475,8 @@ protected:
 
     /// \brief invalidates a kinbody from _vecbodies
     /// \param[in] bodyIndex environment body index of kin body to be invalidated
-    /// \param[in] releaseBeforeDeleting if true, make sure no other bodies are grabbing it before deleting the body
     /// assumes environment and _mutexInterfaces are exclusively locked
-    KinBodyPtr _InvalidateKinBodyFromEnvBodyIndex(int bodyIndex, bool releaseBeforeDeleting = true)
+    KinBodyPtr _InvalidateKinBodyFromEnvBodyIndex(int bodyIndex)
     {
         KinBodyPtr& pbodyref = _vecbodies.at(bodyIndex);
         if (!pbodyref) {
@@ -3462,7 +3486,7 @@ protected:
         const std::string& name = body.GetName();
         // before deleting, make sure no other bodies are grabbing it!!
         for (KinBodyPtr& potherbody : _vecbodies) {
-            if( releaseBeforeDeleting && !!potherbody && potherbody->IsGrabbing(body) ) {
+            if( !!potherbody && potherbody->IsGrabbing(body) ) {
                 RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%potherbody->GetName());
                 potherbody->Release(body);
             }
