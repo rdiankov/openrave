@@ -594,7 +594,12 @@ protected:
             // ensure uri is set
             if (pKinBodyInfo->_uri.empty() && !pKinBodyInfo->_id.empty() ) {
                 // only set the URI if the current uri or current filename are not empty. Otherwise will get a fragment "#???", which cannot be loaded
-                pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, pCurrentUri, currentFilename);
+                if (!*pCurrentUri && currentFilename.empty()) {
+                    RAVELOG_WARN_FORMAT("Body '%s' has no URI and no ID, but cannot initialize URI fragment with empty context URI / filename", pKinBodyInfo->_name);
+                }
+                else {
+                    pKinBodyInfo->_uri = CanonicalizeURI("#" + pKinBodyInfo->_id, pCurrentUri, currentFilename);
+                }
             }
             if (pKinBodyInfo->_uri.empty() ) {
                 pKinBodyInfo->_uri = _uri;
