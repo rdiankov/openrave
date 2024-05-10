@@ -818,7 +818,7 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(groupname);
     if( it == _info._mapExtraGeometries.end() ) {
         std::stringstream ssGroupNames;
-        for(const std::pair< std::string, std::vector<KinBody::GeometryInfoPtr> >& grouppair : _info._mapExtraGeometries) {
+        for(const std::pair< const std::string, std::vector<KinBody::GeometryInfoPtr> >& grouppair : _info._mapExtraGeometries) {
             ssGroupNames << grouppair.first << ", ";
         }
         throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, geometry group '%s' does not exist for body '%s' link '%s', current number of geometries=%d, extra groups=[%s], isEnabled=%d."), GetParent()->GetEnv()->GetNameId()%groupname%GetParent()->GetName()%GetName()%_vGeometries.size()%ssGroupNames.str()%_info._bIsEnabled, ORE_InvalidArguments);
