@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #ifndef OPENRAVE_PLUGIN_QTOSGRAVE_H
-#define OPENRAVE_PLUGIN_QTCOINRAVE_H
+#define OPENRAVE_PLUGIN_QTOSGRAVE_H
 
 #include <openrave/plugin.h>
 
@@ -29,4 +29,4 @@ private:
     InterfaceMap _interfaces;
 };
 
-#endif // OPENRAVE_PLUGIN_QTCOINRAVE_H
+#endif // OPENRAVE_PLUGIN_QTOSGRAVE_H

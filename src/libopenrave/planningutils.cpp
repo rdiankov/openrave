@@ -2059,15 +2059,15 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
     ConfigurationSpecification spec;
     vector<dReal> vpointdata;
     vector<dReal> vtimes; vtimes.reserve(listtrajectories.front()->GetNumWaypoints());
-    int totaldof = 1; // for delta time
+    // int totaldof = 1; // for delta time
     FOREACHC(ittraj,listtrajectories) {
         const ConfigurationSpecification& trajspec = (*ittraj)->GetConfigurationSpecification();
         ConfigurationSpecification::Group gtime = trajspec.GetGroupFromName("deltatime");
         spec += trajspec;
-        totaldof += trajspec.GetDOF()-1;
-        if( trajspec.FindCompatibleGroup("iswaypoint",true) != trajspec._vgroups.end() ) {
-            totaldof -= 1;
-        }
+        // totaldof += trajspec.GetDOF()-1;
+        // if( trajspec.FindCompatibleGroup("iswaypoint",true) != trajspec._vgroups.end() ) {
+        //     totaldof -= 1;
+        // }
         dReal curtime = 0;
         for(size_t ipoint = 0; ipoint < (*ittraj)->GetNumWaypoints(); ++ipoint) {
             (*ittraj)->GetWaypoint(ipoint,vpointdata);
@@ -2082,7 +2082,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
     vector<ConfigurationSpecification::Group>::const_iterator itwaypointgroup = spec.FindCompatibleGroup("iswaypoint",true);
     vector<dReal> vwaypoints;
     if( itwaypointgroup != spec._vgroups.end() ) {
-        totaldof += 1;
+        // totaldof += 1;
         vwaypoints.resize(vtimes.size(),0);
     }
 
