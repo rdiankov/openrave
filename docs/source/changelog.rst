@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.144.1
+===============
+
+- Fix the issue that saved json scene cannot be loaded on non-openrave software. To do so, save json file with referenceUriHint by default.
+
 Version 0.144.0
 ===============
 

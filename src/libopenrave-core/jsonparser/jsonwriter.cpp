@@ -30,14 +30,14 @@ class EnvironmentJSONWriter
 {
 public:
     EnvironmentJSONWriter(const AttributesList& atts, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator) : _rEnvironment(rEnvironment), _allocator(allocator) {
-        _serializeOptions = 0;
+        _serializeOptions = ISO_ReferenceUriHint;
         FOREACHC(itatt,atts) {
             if( itatt->first == "openravescheme" ) {
                 _vForceResolveOpenRAVEScheme = itatt->second;
             }
-            else if( itatt->first == "uriHint" ) {
+            else if( itatt->first == "noUriHint" ) {
                 if( itatt->second == "1" ) {
-                    _serializeOptions = ISO_ReferenceUriHint;
+                    _serializeOptions = 0;
                 }
             }
         }
