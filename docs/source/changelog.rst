@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.144.2
+===============
+
+- Implement `env.drawarrow` for the qtosg viewer.
+
+Version 0.144.1
+===============
+
+- bug fix in `VectorBackedMap::Insert`.
+
 Version 0.144.0
 ===============
 
