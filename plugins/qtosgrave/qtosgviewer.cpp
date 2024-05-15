@@ -1669,10 +1669,53 @@ GraphHandlePtr QtOSGViewer::drawlinelist(const float* ppoints, int numPoints, in
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
+void QtOSGViewer::_DrawArrow(OSGSwitchPtr handle, const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
+{
+    RaveVector<float> direction = p2 - p1;
+    const float fheight = RaveSqrt(direction.lengthsqr3());
+    direction.normalize3();
+    RaveTransform<float> pose;
+    pose.trans = p1;
+    pose.rot = quatRotateDirection(RaveVector<dReal>(0,0,1),RaveVector<dReal>(direction));
+
+    OSGMatrixTransformPtr trans(new osg::MatrixTransform());
+    SetMatrixTransform(*trans, pose);
+    osg::ref_ptr<osg::Geode> geode(new osg::Geode());
+
+    const float transparency = 0.0;
+    const float alpha = std::max<float>(0.0, std::min<float>(1.0f, 1.0f - transparency));
+    const osg::Vec4f osgcolor(color.x, color.y, color.z, alpha);
+
+    osg::ref_ptr<osg::Cone> cone = new osg::Cone();
+    cone->setRadius(fwidth);
+    cone->setHeight(fwidth);
+    cone->setCenter(osg::Vec3(0, 0, fheight - (0.5 + cone->getBaseOffsetFactor())*fwidth));
+    osg::ref_ptr<osg::ShapeDrawable> conesd = new osg::ShapeDrawable(cone.get());
+    conesd->setColor(osgcolor);
+    geode->addDrawable(conesd);
+
+    osg::ref_ptr<osg::Cylinder> cylinder = new osg::Cylinder();
+    cylinder->setRadius(0.5*fwidth);
+    cylinder->setHeight(fheight - fwidth);
+    cylinder->setCenter(osg::Vec3(0, 0, 0.5*fheight - 0.5*fwidth));
+    osg::ref_ptr<osg::ShapeDrawable> cylsd = new osg::ShapeDrawable(cylinder.get());
+    cylsd->setColor(osgcolor);
+    geode->addDrawable(cylsd);
+
+    // don't do transparent bin since that is too slow for big point clouds...
+    //geometry->getOrCreateStateSet()->setRenderBinDetails(0, "transparent");
+    handle->getOrCreateStateSet()->setRenderingHint(alpha < 1.0f ? osg::StateSet::TRANSPARENT_BIN : osg::StateSet::OPAQUE_BIN);
+
+    trans->addChild(geode);
+    handle->addChild(trans);
+    _posgWidget->GetFigureRoot()->insertChild(0, handle);
+}
+
 GraphHandlePtr QtOSGViewer::drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color)
 {
-    RAVELOG_WARN("drawarrow not implemented\n");
-    return GraphHandlePtr();
+    OSGSwitchPtr handle = _CreateGraphHandle();
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawArrow, this, handle, p1, p2, fwidth, color), ViewerCommandPriority::MEDIUM); // copies ref counts
+    return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
 void QtOSGViewer::_DrawLabel(OSGSwitchPtr handle, const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color, float height)
