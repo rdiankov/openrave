@@ -3123,14 +3123,15 @@ public:
                 std::vector<KinBody::LinkPtr> pGrabbingLinks;
                 std::vector<rapidjson::Document> rGrabbedUserDataDocuments;
                 std::vector<std::set<int>> linkIndicesToIgnore;
-                for (KinBodyPtr& pOtherbody : _vecbodies) {
-                    if (!pOtherbody) {
+                for (const KinBodyWeakPtr& pBody : pMatchExistingBody->_listAttachedBodies) {
+                    KinBodyPtr pAttached = pBody.lock();
+                    if (!pAttached) {
                         continue;
                     }
-                    for (const GrabbedPtr& pGrabbed : pOtherbody->_vGrabbedBodies) {
+                    for (const GrabbedPtr& pGrabbed : pAttached->_vGrabbedBodies) {
                         KinBodyConstPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
                         if( !!pGrabbedBody && pGrabbedBody.get() == &*pMatchExistingBody ) {
-                            pGrabbingBodies.push_back(pOtherbody);
+                            pGrabbingBodies.push_back(pAttached);
                             pGrabbingLinks.push_back(pGrabbed->_pGrabbingLink);
                             rapidjson::Document rGrabbedUserData;
                             rGrabbedUserData.CopyFrom(pGrabbed->_rGrabbedUserData, rGrabbedUserData.GetAllocator());
