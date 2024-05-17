@@ -3,10 +3,20 @@
 ChangeLog
 #########
 
-Version 0.144.2
+Version 0.144.3
 ===============
 
 - Maintain the grabbing state while updating environment through notifier.
+
+Version 0.144.2
+===============
+
+- Implement `env.drawarrow` for the qtosg viewer.
+
+Version 0.144.1
+===============
+
+- bug fix in `VectorBackedMap::Insert`.
 
 Version 0.144.0
 ===============

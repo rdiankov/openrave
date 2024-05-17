@@ -340,6 +340,7 @@ public:
     virtual void _DrawBox(OSGSwitchPtr handle, const RaveVector<float>& vextents, const RaveTransform<float>& pose, const RaveVector<float>& color, float transparency);
     virtual void _DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents, bool bUsingTransparency);
     virtual void _DrawPlane(OSGSwitchPtr handle, const RaveTransform<float>& tplane, const RaveVector<float>& vextents, const boost::multi_array<float,3>& vtexture);
+    virtual void _DrawArrow(OSGSwitchPtr handle, const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color);
 
     virtual void _SetCamera(RaveTransform<float> trans, float focalDistance);
     virtual void _SetCameraTransform(const RaveTransform<float>& transform);
