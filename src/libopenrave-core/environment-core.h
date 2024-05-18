@@ -3105,7 +3105,7 @@ public:
                 } else {
                     updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%s, update body '%s' from info result %d", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
+                RAVELOG_VERBOSE_FORMAT("env=%s, update body '%s' from info result %u", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }
@@ -3116,6 +3116,29 @@ public:
                 vModifiedBodies.push_back(pMatchExistingBody);
                 if (updateFromInfoResult == UFIR_Success) {
                     continue;
+                }
+
+                // if this body is grabbed by another bodies, save the grabbing link and user data
+                std::vector<KinBodyPtr> pGrabbingBodies;
+                std::vector<KinBody::LinkPtr> pGrabbingLinks;
+                std::vector<rapidjson::Document> rGrabbedUserDataDocuments;
+                std::vector<std::set<int>> linkIndicesToIgnore;
+                for (const KinBodyWeakPtr& pBody : pMatchExistingBody->_listAttachedBodies) {
+                    KinBodyPtr pAttached = pBody.lock();
+                    if (!pAttached) {
+                        continue;
+                    }
+                    for (const GrabbedPtr& pGrabbed : pAttached->_vGrabbedBodies) {
+                        KinBodyConstPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+                        if( !!pGrabbedBody && pGrabbedBody.get() == &*pMatchExistingBody ) {
+                            pGrabbingBodies.push_back(pAttached);
+                            pGrabbingLinks.push_back(pGrabbed->_pGrabbingLink);
+                            rapidjson::Document rGrabbedUserData;
+                            rGrabbedUserData.CopyFrom(pGrabbed->_rGrabbedUserData, rGrabbedUserData.GetAllocator());
+                            rGrabbedUserDataDocuments.push_back(std::move(rGrabbedUserData));
+                            linkIndicesToIgnore.push_back(pGrabbed->_setGrabberLinkIndicesToIgnore);
+                        }
+                    }
                 }
 
                 // updating this body requires removing it and re-adding it to env
@@ -3165,6 +3188,11 @@ public:
 
                     pInitBody = pMatchExistingBody;
                     _AddKinBody(pMatchExistingBody, IAM_StrictNameChecking); // internally locks _mutexInterfaces, name guarnateed to be unique
+                }
+
+                // re-grab after add this body back to the environment
+                for (int grabbingBodyIndex = 0; grabbingBodyIndex<pGrabbingBodies.size(); grabbingBodyIndex++) {
+                    pGrabbingBodies[grabbingBodyIndex]->Grab(pMatchExistingBody, pGrabbingLinks[grabbingBodyIndex], linkIndicesToIgnore[grabbingBodyIndex], rGrabbedUserDataDocuments[grabbingBodyIndex]);
                 }
             }
             else {
