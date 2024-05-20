@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.145.0
+===============
+
+- Add `Reserve` API to `TrajectoryBase` and implement it in `GenericTrajectory`.
+
 Version 0.144.3
 ===============
 
