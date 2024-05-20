@@ -499,17 +499,16 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
-        for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end();
+        for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+            const bool isLinkIgnored = 0 <= linkIndex && linkIndex < (int)_veclinks.size();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
-            if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetIndex()) > 0) ) {
+            if( isLinkIgnored != (setGrabberLinksToIgnore.count(linkIndex) > 0) ) {
                 ignoringLinksMatch = false;
                 break;
             }
         }
-
         if( !ignoringLinksMatch || numIgnoredLinks != setGrabberLinksToIgnore.size() ) {
             continue;
         }
@@ -543,12 +542,12 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
-        for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end();
+        for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+            const bool isLinkIgnored = 0 <= linkIndex && linkIndex < (int)_veclinks.size();
             if( isLinkIgnored ) {
                 ++numIgnoredLinks;
             }
-            if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetName()) > 0) ) {
+            if( isLinkIgnored != (setGrabberLinksToIgnore.count(_veclinks.at(linkIndex)->GetName()) > 0) ) {
                 ignoringLinksMatch = false;
                 break;
             }
@@ -604,10 +603,8 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
             poutputinfo->_setIgnoreRobotLinkNames.clear();
             CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, poutputinfo->_rGrabbedUserData);
 
-            FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
-                    poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                }
+            for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+                poutputinfo->_setIgnoreRobotLinkNames.insert(_veclinks.at(linkIndex)->GetName());
             }
             vGrabbedInfos.emplace_back(std::move(poutputinfo));
         }
@@ -631,10 +628,8 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
             outputinfo._setIgnoreRobotLinkNames.clear();
             CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, outputinfo._rGrabbedUserData);
 
-            FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
-                    outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                }
+            for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+                outputinfo._setIgnoreRobotLinkNames.insert(_veclinks.at(linkIndex)->GetName());
             }
         }
     }
@@ -654,10 +649,8 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
                 CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, grabbedInfo._rGrabbedUserData);
 
-                FOREACHC(itlink, _veclinks) {
-                    if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
-                        grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
-                    }
+                for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+                    grabbedInfo._setIgnoreRobotLinkNames.insert(_veclinks.at(linkIndex)->GetName());
                 }
                 return true;
             }
