@@ -236,6 +236,12 @@ public:
     /// This function is meant to be extremely fast with as few memory copies as possible.
     virtual void Swap(TrajectoryBasePtr traj) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief reserve the internal memory used for trajectory data.
+    ///        since memories mostly for ConfigurationSpecification are initialized in Init, this API does not cover them. In addition, Init needs to be called before Reserve API.
+    /// \param[in] nWayPoints : number of reserved way points.
+    /// \param[in] options : options for the reserve.
+    virtual void Reserve(const int nWayPoints, const int options=0) OPENRAVE_DUMMY_IMPLEMENTATION;
+
 protected:
     inline TrajectoryBasePtr shared_trajectory() {
         return boost::static_pointer_cast<TrajectoryBase>(shared_from_this());
