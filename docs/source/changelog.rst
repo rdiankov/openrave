@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.144.4
+===============
+
+- Optimize processing of ignore links for grabbed bodies.
+
 Version 0.144.3
 ===============
 
