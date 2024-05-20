@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.144.3
+===============
+
+- Maintain the grabbing state while updating environment through notifier.
+
 Version 0.144.2
 ===============
 
