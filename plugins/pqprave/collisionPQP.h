@@ -41,7 +41,7 @@ public:
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
 
-    CollisionCheckerPQP(EnvironmentBasePtr penv) : CollisionCheckerBase(penv)
+    CollisionCheckerPQP(const EnvironmentBasePtr& penv) : CollisionCheckerBase(penv)
     {
         __description = ":Interface Authors: Dmitry Berenson, Rosen Diankov\n\nPQP collision checker, slow but allows distance queries to objects.";
         _userdatakey = std::string("pqpcollision") + boost::lexical_cast<std::string>(this);
@@ -81,12 +81,12 @@ public:
         }
     }
 
-    virtual bool InitKinBody(KinBodyPtr pbody)
+    virtual bool InitKinBody(const KinBodyPtr&pbody)
     {
         return _InitKinBody(pbody);
     }
 
-    virtual bool _InitKinBody(KinBodyConstPtr pbody)
+    virtual bool _InitKinBody(const KinBodyConstPtr& pbody)
     {
         KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
@@ -130,7 +130,7 @@ public:
         }
     }
 
-    virtual void RemoveKinBody(KinBodyPtr pbody)
+    virtual void RemoveKinBody(const KinBodyPtr&pbody)
     {
         if( !!pbody ) {
             pbody->RemoveUserData(_userdatakey);
@@ -169,7 +169,7 @@ public:
         return _options;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody1, const CollisionReportPtr& report)
     {
         if(!!report) {
             report->Reset(_options);
@@ -180,7 +180,7 @@ public:
         return CheckCollision(pbody1,vexcluded,std::vector<KinBody::LinkConstPtr>(),report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody1, const KinBodyConstPtr& pbody2, const CollisionReportPtr& report)
     {
         if(!!report) {
             report->Reset(_options);
@@ -200,13 +200,13 @@ public:
         return false;
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report)
     {
         _pactiverobot.reset();
         return CheckCollision(plink, vector<KinBodyConstPtr>(), vector<KinBody::LinkConstPtr>(),report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink1, const KinBody::LinkConstPtr& plink2, const CollisionReportPtr& report)
     {
         if(!!report) {
             report->Reset(_options);
@@ -220,7 +220,7 @@ public:
         return DoPQP(plink1,R1,T1,plink2,R2,T2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         if(!!report ) {
             report->Reset(_options);
@@ -239,7 +239,7 @@ public:
         return false;
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report)
     {
         if(!!report) {
             report->Reset(_options);
@@ -311,7 +311,7 @@ public:
         return tmpnumcols>0;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report)
     {
         if(!!report ) {
             report->Reset(_options);
@@ -328,7 +328,7 @@ public:
         return false;
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report = CollisionReportPtr())
     {
         if(!!report ) {
             report->Reset(_options);
@@ -337,7 +337,7 @@ public:
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr())
     {
         if(!!report ) {
             report->Reset(_options);
@@ -346,7 +346,7 @@ public:
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
 
-    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const RAY& ray, const CollisionReportPtr& report = CollisionReportPtr())
     {
         if(!!report ) {
             report->Reset(_options);
@@ -355,13 +355,13 @@ public:
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
 
-    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    virtual bool CheckCollision(const TriMesh& trimesh, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr())
     {
         RAVELOG_WARN("pqp does not support trimesh/body check\n");
         return false;
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         if( pbody->GetLinks().size() <= 1 ) {
             return false;
@@ -385,7 +385,7 @@ public:
         return false;
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report)
     {
         KinBodyPtr pbody = plink->GetParent();
         if( pbody->GetLinks().size() <= 1 ) {
@@ -416,7 +416,7 @@ public:
         return false;
     }
 
-    boost::shared_ptr<PQP_Model> GetLinkModel(KinBody::LinkConstPtr plink)
+    boost::shared_ptr<PQP_Model> GetLinkModel(const KinBody::LinkConstPtr& plink)
     {
         KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(plink->GetParent()->GetUserData(_userdatakey));
         BOOST_ASSERT( pinfo->GetBody() == plink->GetParent());
@@ -429,7 +429,7 @@ public:
 
 private:
     // does not check attached
-    bool CheckCollisionP(KinBodyConstPtr pbody1, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
+    bool CheckCollisionP(const KinBodyConstPtr& pbody1, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report)
     {
         int tmpnumcols = 0;
         int tmpnumwithintol = 0;
@@ -498,7 +498,7 @@ private:
     }
 
     // does not check attached
-    bool CheckCollisionP(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
+    bool CheckCollisionP(const KinBodyConstPtr& pbody1, const KinBodyConstPtr& pbody2, const CollisionReportPtr& report)
     {
         _InitKinBody(pbody1);
         _InitKinBody(pbody2);
@@ -522,7 +522,7 @@ private:
     }
 
     // does not check attached
-    bool CheckCollisionP(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
+    bool CheckCollisionP(const KinBody::LinkConstPtr& plink, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         _InitKinBody(plink->GetParent());
         _InitKinBody(pbody);
@@ -550,7 +550,7 @@ private:
         return Vector(in.x*R[0][0]+in.y*R[0][1]+in.z*R[0][2]+T[0], in.x*R[1][0]+in.y*R[1][1]+in.z*R[1][2]+T[1], in.x*R[2][0]+in.y*R[2][1]+in.z*R[2][2]+T[2]);
     }
 
-    bool DoPQP(KinBody::LinkConstPtr link1, PQP_REAL R1[3][3], PQP_REAL T1[3], KinBody::LinkConstPtr link2, PQP_REAL R2[3][3], PQP_REAL T2[3], CollisionReportPtr report)
+    bool DoPQP(const KinBody::LinkConstPtr& link1, PQP_REAL R1[3][3], PQP_REAL T1[3], const KinBody::LinkConstPtr& link2, PQP_REAL R2[3][3], PQP_REAL T2[3], const CollisionReportPtr& report)
     {
         if( !link1->IsEnabled() || !link2->IsEnabled() ) {
             return false;
@@ -568,8 +568,7 @@ private:
         if(_benablecol) {
             const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
             if( bUseCallbacks && !report ) {
-                report.reset(new CollisionReport());
-                report->Reset(_options);
+                throw openrave_exception("PQPCollision - ERROR: YOU MUST PASS IN A CollisionReport STRUCT TO use call back!");
             }
 
             if(!report) {
@@ -695,7 +694,7 @@ private:
     vector<uint8_t> _vactivelinks;
     std::string _userdatakey;
 
-    void _SetActiveBody(KinBodyConstPtr pbody) {
+    void _SetActiveBody(const KinBodyConstPtr& pbody) {
         if( _options & CO_ActiveDOFs ) {
             _pactiverobot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(pbody);
             _vactivelinks.resize(0);
@@ -707,7 +706,7 @@ private:
         _InitKinBody(pbody);
     }
 
-    bool _IsActiveLink(KinBodyConstPtr pbody, int linkindex)
+    bool _IsActiveLink(const KinBodyConstPtr& pbody, int linkindex)
     {
         if( !(_options & CO_ActiveDOFs) || !_pactiverobot ||( pbody != _pactiverobot) ) {
             return true;

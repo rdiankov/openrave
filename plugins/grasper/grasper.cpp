@@ -16,8 +16,8 @@
 #include "grasper.h"
 #include "plugindefs.h"
 
-OpenRAVE::PlannerBasePtr CreateGrasperPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::ModuleBasePtr CreateGrasperModule(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateGrasperPlanner(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::ModuleBasePtr CreateGrasperModule(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
 const std::string GrasperPlugin::_pluginname = "GrasperPlugin";
 
@@ -29,7 +29,7 @@ GrasperPlugin::GrasperPlugin()
 
 GrasperPlugin::~GrasperPlugin() {}
 
-OpenRAVE::InterfaceBasePtr GrasperPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr GrasperPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case OpenRAVE::PT_Planner:

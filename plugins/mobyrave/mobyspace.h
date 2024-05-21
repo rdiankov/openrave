@@ -93,7 +93,7 @@ private:
     typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
-    MobySpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) 
+    MobySpace(const EnvironmentBasePtr& penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) 
     {
 
     }
@@ -163,7 +163,7 @@ private:
         return link;
     }
 
-    inline Moby::JointPtr DeriveJoint(KinBodyInfoPtr pinfo, boost::shared_ptr<KinBody::Joint> pjoint) {
+    inline Moby::JointPtr DeriveJoint(const KinBodyInfoPtr& pinfo, boost::shared_ptr<KinBody::Joint> pjoint) {
         Moby::RigidBodyPtr inboard, outboard; // inboard=parent, outboard=child
         Moby::JointPtr joint;
    
@@ -286,7 +286,7 @@ private:
         return joint;
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), double fmargin=0.0005)
+    KinBodyInfoPtr InitKinBody(const KinBodyPtr& pbody, const KinBodyInfoPtr& pinfo = KinBodyInfoPtr(), double fmargin=0.0005)
     {
 	vector<dReal> vzeros(pbody->GetDOF(), 0);
 	pbody->SetDOFValues(vzeros);
@@ -432,7 +432,7 @@ private:
         }
     }
 
-    void Synchronize(KinBodyConstPtr pbody)
+    void Synchronize(const KinBodyConstPtr& pbody)
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT( pinfo->pbody == pbody );
@@ -442,7 +442,7 @@ private:
         }
     }
 
-    Moby::RigidBodyPtr GetLinkBody(KinBody::LinkConstPtr plink)
+    Moby::RigidBodyPtr GetLinkBody(const KinBody::LinkConstPtr& plink)
     {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());                
         BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
@@ -460,7 +460,7 @@ private:
         return GetJoint(it->second);
     }
 
-    Moby::JointPtr GetJoint(KinBody::JointConstPtr pjoint)
+    Moby::JointPtr GetJoint(const KinBody::JointConstPtr& pjoint)
     {
         map<KinBody::JointConstPtr, Moby::JointPtr>::iterator it;
         it = _mapJoint.find(pjoint);
@@ -472,7 +472,7 @@ private:
     }
 
 /*
-    dReal GetPosition(Moby::JointPtr joint, unsigned axis)
+    dReal GetPosition(const Moby::JointPtr& joint, unsigned axis)
     {
         if(!joint || axis >= joint->num_dof())
         {
@@ -481,7 +481,7 @@ private:
         return joint->q[axis];
     }
 */
-    void SetPosition(Moby::JointPtr joint, unsigned axis, dReal value)
+    void SetPosition(const Moby::JointPtr& joint, unsigned axis, dReal value)
     {
         if(!joint || axis >= joint->num_dof())
         {
@@ -490,7 +490,7 @@ private:
         joint->q[axis] = value;
     }
 
-    void AddControl(Moby::JointPtr joint, Ravelin::VectorNd u)
+    void AddControl(const Moby::JointPtr& joint, Ravelin::VectorNd u)
     {
         if(!joint) 
         {
@@ -505,7 +505,7 @@ private:
         }
     }
 
-    void AddImpulse(Moby::RigidBodyPtr body, Ravelin::SForced force)
+    void AddImpulse(const Moby::RigidBodyPtr& body, Ravelin::SForced force)
     {
         if(!body) 
         {
@@ -521,7 +521,7 @@ private:
     }
 
     // not validated and probably not valid
-    void SetVelocity(Moby::RigidBodyPtr body, Ravelin::SVelocityd velocity)
+    void SetVelocity(const Moby::RigidBodyPtr& body, Ravelin::SVelocityd velocity)
     {
         if(!body) 
         {
@@ -587,7 +587,7 @@ private:
 
 private:
 
-    void _Synchronize(KinBodyInfoPtr pinfo)
+    void _Synchronize(const KinBodyInfoPtr& pinfo)
     {
         vector<Transform> vtrans;
         vector<int> dofbranches;

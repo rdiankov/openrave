@@ -158,11 +158,11 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
     }
 }
 
-RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot) : _probot(probot)
+RobotBase::AttachedSensor::AttachedSensor(const RobotBasePtr& probot) : _probot(probot)
 {
 }
 
-RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSensor& sensor,int cloningoptions)
+RobotBase::AttachedSensor::AttachedSensor(const RobotBasePtr& probot, const AttachedSensor& sensor,int cloningoptions)
 {
     *this = sensor;
     _probot = probot;
@@ -185,7 +185,7 @@ RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const AttachedSen
     }
 }
 
-RobotBase::AttachedSensor::AttachedSensor(RobotBasePtr probot, const RobotBase::AttachedSensorInfo& info)
+RobotBase::AttachedSensor::AttachedSensor(const RobotBasePtr& probot, const RobotBase::AttachedSensorInfo& info)
 {
     _info = info;
     _probot = probot;
@@ -386,7 +386,7 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
     return __hashstructure;
 }
 
-RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
+RobotBase::RobotStateSaver::RobotStateSaver(const RobotBasePtr& probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
         vactivedofs = _probot->GetActiveDOFIndices();
@@ -451,7 +451,7 @@ void RobotBase::RobotStateSaver::Release()
 class EnvironmentBodyRemover
 {
 public:
-    EnvironmentBodyRemover(OpenRAVE::KinBodyPtr pBody) : _pBody(pBody), _grabbedStateSaver(pBody, OpenRAVE::KinBody::Save_GrabbedBodies) {
+    EnvironmentBodyRemover(const OpenRAVE::KinBodyPtr& pBody) : _pBody(pBody), _grabbedStateSaver(pBody, OpenRAVE::KinBody::Save_GrabbedBodies) {
         if( _pBody->IsRobot() ) {
             // If the manip comes from a connected body, the information of which manip is active is lost once the robot
             // is removed from env. Need to save the active manip name so that we can set it back later when the robot
@@ -738,7 +738,7 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
     RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
 }
 
-RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
+RobotBase::RobotBase(const EnvironmentBasePtr& penv) : KinBody(PT_Robot, penv)
 {
     _nAffineDOFs = 0;
     _nActiveDOF = -1;
@@ -2031,7 +2031,7 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(const KinBodyPtr& pbody, const rapidjson::Value& rGrabbedUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
@@ -2040,7 +2040,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData)
     return Grab(pbody, pmanip->GetEndEffector(), rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(const KinBodyPtr& pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
@@ -2049,7 +2049,7 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnor
     return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(const KinBodyPtr& pbody, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
@@ -2058,17 +2058,17 @@ bool RobotBase::Grab(KinBodyPtr pbody, const std::set<std::string>& setIgnoreBod
     return Grab(pbody, pmanip->GetEndEffector(), setIgnoreBodyLinkNames, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(const KinBodyPtr& body, const LinkPtr& pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData)
 {
     return KinBody::Grab(body, pRobotLinkToGrabWith, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(const KinBodyPtr& body, const LinkPtr& pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
     return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(const KinBodyPtr& body, const LinkPtr& pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
 {
     return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rGrabbedUserData);
 }
@@ -2387,6 +2387,8 @@ void RobotBase::_ComputeInternalInformation()
     if( !GetController() || (int)GetController()->GetControlDOFIndices().size() != GetDOF() ) {
         RAVELOG_VERBOSE(str(boost::format("no default controller set on robot %s\n")%GetName()));
         std::vector<int> dofindices;
+        dofindices.reserve(GetDOF());
+
         for(int i = 0; i < GetDOF(); ++i) {
             dofindices.push_back(i);
         }
@@ -2443,7 +2445,7 @@ RobotBase::ManipulatorPtr RobotBase::GetManipulator(const std::string& name) con
     return RobotBase::ManipulatorPtr();
 }
 
-void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+void RobotBase::Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
 {
     KinBody::Clone(preference,cloningoptions);
     RobotBaseConstPtr r = RaveInterfaceConstCast<RobotBase>(preference);
@@ -2509,6 +2511,8 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     if( !GetController() ) {
         std::vector<int> dofindices;
+        dofindices.reserve(GetDOF());
+
         for(int i = 0; i < GetDOF(); ++i) {
             dofindices.push_back(i);
         }

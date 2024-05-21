@@ -101,7 +101,7 @@ public:
     class ConveyorXMLReader : public BaseXMLReader
     {
 public:
-        ConveyorXMLReader(ConveyorInfoPtr cmdata, RobotBasePtr probot, const AttributesList& atts) {
+        ConveyorXMLReader(ConveyorInfoPtr cmdata, const RobotBasePtr& probot, const AttributesList& atts) {
             _probot = probot;
             _cmdata = cmdata;
             if( !_cmdata ) {
@@ -212,13 +212,13 @@ protected:
         stringstream _ss;
     };
 
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
         return BaseXMLReaderPtr(new ConveyorXMLReader(ConveyorInfoPtr(),RaveInterfaceCast<RobotBase>(ptr), atts));
     }
 
-    Conveyor(EnvironmentBasePtr penv, std::istream& is) : RobotBase(penv) {
+    Conveyor(const EnvironmentBasePtr& penv, std::istream& is) : RobotBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nParses conveyor joints as a trajectory and adds child links to form a full conveyor system. Use the <conveyorjoint> tag to specify the conveyor properties.";
     }
     virtual ~Conveyor() {
@@ -296,7 +296,7 @@ protected:
     static UserDataPtr s_registeredhandle;
 };
 
-RobotBasePtr CreateConveyorRobot(EnvironmentBasePtr penv, std::istream& sinput)
+RobotBasePtr CreateConveyorRobot(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return RobotBasePtr(new Conveyor(penv,sinput));
 }

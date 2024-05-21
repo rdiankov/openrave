@@ -21,7 +21,7 @@ struct MobyRavePlugin : public RavePlugin {
     MobyRavePlugin();
     ~MobyRavePlugin() override;
 
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv) override;
     const InterfaceMap& GetInterfaces() const override;
     const std::string& GetPluginName() const override;
 

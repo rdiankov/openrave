@@ -408,65 +408,65 @@ int PlannerParameters::SetStateValues(const std::vector<dReal>& values, int opti
 
 bool PlannerParameters::serialize(std::ostream& O, int options) const
 {
-    O << _configurationspecification << endl;
+    O << _configurationspecification << '\n';
     O << "<_vinitialconfig>";
     FOREACHC(it, vinitialconfig) {
         O << *it << " ";
     }
-    O << "</_vinitialconfig>" << endl;
+    O << "</_vinitialconfig>" << '\n';
     O << "<_vinitialconfigvelocities>";
     FOREACHC(it, _vInitialConfigVelocities) {
         O << *it << " ";
     }
-    O << "</_vinitialconfigvelocities>" << endl;
+    O << "</_vinitialconfigvelocities>" << '\n';
     O << "<_vgoalconfig>";
     FOREACHC(it, vgoalconfig) {
         O << *it << " ";
     }
-    O << "</_vgoalconfig>" << endl;
+    O << "</_vgoalconfig>" << '\n';
     O << "<_vgoalconfigvelocities>";
     FOREACHC(it, _vGoalConfigVelocities) {
         O << *it << " ";
     }
-    O << "</_vgoalconfigvelocities>" << endl;
+    O << "</_vgoalconfigvelocities>" << '\n';
     O << "<_vconfiglowerlimit>";
     FOREACHC(it, _vConfigLowerLimit) {
         O << *it << " ";
     }
-    O << "</_vconfiglowerlimit>" << endl;
+    O << "</_vconfiglowerlimit>" << '\n';
     O << "<_vconfigupperlimit>";
     FOREACHC(it, _vConfigUpperLimit) {
         O << *it << " ";
     }
-    O << "</_vconfigupperlimit>" << endl;
+    O << "</_vconfigupperlimit>" << '\n';
     O << "<_vconfigvelocitylimit>";
     FOREACHC(it, _vConfigVelocityLimit) {
         O << *it << " ";
     }
-    O << "</_vconfigvelocitylimit>" << endl;
+    O << "</_vconfigvelocitylimit>" << '\n';
     O << "<_vconfigaccelerationlimit>";
     FOREACHC(it, _vConfigAccelerationLimit) {
         O << *it << " ";
     }
-    O << "</_vconfigaccelerationlimit>" << endl;
+    O << "</_vconfigaccelerationlimit>" << '\n';
     O << "<_vconfigjerklimit>";
     FOREACHC(it, _vConfigJerkLimit) {
         O << *it << " ";
     }
-    O << "</_vconfigjerklimit>" << endl;
+    O << "</_vconfigjerklimit>" << '\n';
     O << "<_vconfigresolution>";
     FOREACHC(it, _vConfigResolution) {
         O << *it << " ";
     }
-    O << "</_vconfigresolution>" << endl;
+    O << "</_vconfigresolution>" << '\n';
 
-    O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << endl;
-    O << "<_nmaxplanningtime>" << _nMaxPlanningTime << "</_nmaxplanningtime>" << endl;
-    O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << endl;
-    O << "<_nrandomgeneratorseed>" << _nRandomGeneratorSeed << "</_nrandomgeneratorseed>" << endl;
-    O << "<_postprocessing planner=\"" << _sPostProcessingPlanner << "\">" << _sPostProcessingParameters << "</_postprocessing>" << endl;
+    O << "<_nmaxiterations>" << _nMaxIterations << "</_nmaxiterations>" << '\n';
+    O << "<_nmaxplanningtime>" << _nMaxPlanningTime << "</_nmaxplanningtime>" << '\n';
+    O << "<_fsteplength>" << _fStepLength << "</_fsteplength>" << '\n';
+    O << "<_nrandomgeneratorseed>" << _nRandomGeneratorSeed << "</_nrandomgeneratorseed>" << '\n';
+    O << "<_postprocessing planner=\"" << _sPostProcessingPlanner << "\">" << _sPostProcessingParameters << "</_postprocessing>" << '\n';
     if( !(options & 1) ) {
-        O << _sExtraParameters << endl;
+        O << _sExtraParameters << '\n';
     }
     return !!O;
 }
@@ -508,7 +508,7 @@ BaseXMLReader::ProcessElement PlannerParameters::startElement(const std::string&
         FOREACHC(itatt, atts) {
             *_sslocal << itatt->first << "=\"" << itatt->second << "\" ";
         }
-        *_sslocal << ">" << endl;
+        *_sslocal << ">" << '\n';
         __pcurreader.reset(new DummyXMLReader(name,GetXMLId(),_sslocal));
         return PE_Support;
     }
@@ -537,7 +537,7 @@ bool PlannerParameters::endElement(const std::string& name)
                     _sslocal.reset();
                 }
                 else {
-                    *_sslocal << "</" << name << ">" << endl;
+                    *_sslocal << "</" << name << ">" << '\n';
                     _sExtraParameters += _sslocal->str();
                     _sslocal.reset();
                 }
@@ -614,34 +614,34 @@ void PlannerParameters::characters(const std::string& ch)
 
 std::ostream& operator<<(std::ostream& O, const PlannerParameters& v)
 {
-    O << "<" << v.GetXMLId() << ">" << endl;
+    O << "<" << v.GetXMLId() << ">" << '\n';
     v.serialize(O);
-    O << "</" << v.GetXMLId() << ">" << endl;
+    O << "</" << v.GetXMLId() << ">" << '\n';
     return O;
 }
 
-int SetActiveDOFValuesParameters(RobotBasePtr probot, const std::vector<dReal>& values, int options)
+int SetActiveDOFValuesParameters(const RobotBasePtr& probot, const std::vector<dReal>& values, int options)
 {
     // should setstatefn check limits?
     probot->SetActiveDOFValues(values, KinBody::CLA_CheckLimits);
     return 0;
 }
 
-int SetDOFValuesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>& values, const std::vector<int>& vindices, int options)
+int SetDOFValuesIndicesParameters(const KinBodyPtr& pbody, const std::vector<dReal>& values, const std::vector<int>& vindices, int options)
 {
     // should setstatefn check limits?
     pbody->SetDOFValues(values, KinBody::CLA_CheckLimits, vindices);
     return 0;
 }
 
-int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>& velocities, const std::vector<int>& vindices, int options)
+int SetDOFVelocitiesIndicesParameters(const KinBodyPtr& pbody, const std::vector<dReal>& velocities, const std::vector<int>& vindices, int options)
 {
     // should setstatefn check limits?
     pbody->SetDOFVelocities(velocities, KinBody::CLA_CheckLimits, vindices);
     return 0;
 }
 
-void PlannerParameters::SetRobotActiveJoints(RobotBasePtr& robot)
+void PlannerParameters::SetRobotActiveJoints(const RobotBasePtr& robot)
 {
     // check if any of the links affected by the dofs beside the base link are static
     FOREACHC(itlink, robot->GetLinks()) {
@@ -691,11 +691,11 @@ void PlannerParameters::SetRobotActiveJoints(RobotBasePtr& robot)
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 
-    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, const ConstraintFilterReturnPtr&) = &DynamicsCollisionConstraint::Check;
     _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckWithAccelerations, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 }
 
-void PlannerParameters::SetRobotDOFIndices(RobotBasePtr& probot, const std::vector<int>& dofindices)
+void PlannerParameters::SetRobotDOFIndices(const RobotBasePtr& probot, const std::vector<int>& dofindices)
 {
     const RobotBase& robot = *probot;
     // check if any of the links affected by the dofs beside the base link are static
@@ -739,7 +739,7 @@ void PlannerParameters::SetRobotDOFIndices(RobotBasePtr& probot, const std::vect
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 
-    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, const ConstraintFilterReturnPtr&) = &DynamicsCollisionConstraint::Check;
     _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckWithAccelerations, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 }
 
@@ -927,7 +927,7 @@ int _CallNeighStateFns(const std::vector< std::pair<PlannerParameters::NeighStat
     }
 }
 
-void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, const ConfigurationSpecification& spec)
+void PlannerParameters::SetConfigurationSpecification(const EnvironmentBasePtr& penv, const ConfigurationSpecification& spec)
 {
     using namespace planningutils;
     spec.Validate();
@@ -1045,7 +1045,7 @@ void PlannerParameters::SetConfigurationSpecification(EnvironmentBasePtr penv, c
     boost::shared_ptr<DynamicsCollisionConstraint> pcollision(new DynamicsCollisionConstraint(shared_parameters(), listCheckCollisions,0xffffffff&~CFO_CheckTimeBasedConstraints));
     _checkpathvelocityconstraintsfn = boost::bind(&DynamicsCollisionConstraint::Check,pcollision,_1, _2, _3, _4, _5, _6, _7, _8);
 
-    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, ConstraintFilterReturnPtr) = &DynamicsCollisionConstraint::Check;
+    int (DynamicsCollisionConstraint::*CheckWithAccelerations)(const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, const std::vector<dReal>&, dReal, IntervalType, int, const ConstraintFilterReturnPtr&) = &DynamicsCollisionConstraint::Check;
     _checkpathvelocityaccelerationconstraintsfn = std::bind(CheckWithAccelerations, pcollision, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7, std::placeholders::_8, std::placeholders::_9, std::placeholders::_10);
 }
 
@@ -1134,7 +1134,7 @@ PlannerBase::PlannerProgress::PlannerProgress() : _iteration(0)
 class CustomPlannerCallbackData : public boost::enable_shared_from_this<CustomPlannerCallbackData>, public UserData
 {
 public:
-    CustomPlannerCallbackData(const PlannerBase::PlanCallbackFn& callbackfn, PlannerBasePtr planner) : _callbackfn(callbackfn), _plannerweak(planner) {
+    CustomPlannerCallbackData(const PlannerBase::PlanCallbackFn& callbackfn, const PlannerBasePtr& planner) : _callbackfn(callbackfn), _plannerweak(planner) {
     }
     virtual ~CustomPlannerCallbackData() {
         PlannerBasePtr planner = _plannerweak.lock();
@@ -1150,11 +1150,11 @@ public:
 
 typedef boost::shared_ptr<CustomPlannerCallbackData> CustomPlannerCallbackDataPtr;
 
-PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, penv)
+PlannerBase::PlannerBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_Planner, penv)
 {
 }
 
-bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+bool PlannerBase::InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
 {
     RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
@@ -1174,7 +1174,7 @@ void PlannerBase::SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailur
 {
 }
 
-PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
+PlannerStatus PlannerBase::_ProcessPostPlanners(const RobotBasePtr& probot, TrajectoryBasePtr ptraj)
 {
     if( GetParameters()->_sPostProcessingPlanner.size() == 0 ) {
         __cachePostProcessPlanner.reset();

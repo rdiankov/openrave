@@ -76,7 +76,7 @@ public:
     virtual void Reset()=0;
 
     /// \brief set user data
-    virtual void SetUserData(UserDataPtr data) {
+    virtual void SetUserData(const UserDataPtr& data) {
         __pUserData = data;
     }
     /// \brief return the user custom data
@@ -88,10 +88,10 @@ public:
     virtual UserDataPtr GlobalState() = 0;
 
     /// \brief Environment will own the interface until EnvironmentBase::Destroy is called.
-    virtual void OwnInterface(InterfaceBasePtr pinterface) = 0;
+    virtual void OwnInterface(const InterfaceBasePtr& pinterface) = 0;
 
     /// \brief Remove ownership of the interface.
-    virtual void DisownInterface(InterfaceBasePtr pinterface) = 0;
+    virtual void DisownInterface(const InterfaceBasePtr& pinterface) = 0;
 
     /// \brief Create and return a clone of the current environment.
     ///
@@ -120,14 +120,14 @@ public:
     ///
     /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
     /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
-    virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) = 0;
+    virtual void Clone(const EnvironmentBaseConstPtr& preference, int cloningoptions) = 0;
 
     /// \brief Clones the reference environment into the current environment
     ///
     /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
     /// \param[in] clonedEnvName The name of the cloned environment
     /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
-    virtual void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) = 0;
+    virtual void Clone(const EnvironmentBaseConstPtr& preference, const std::string& clonedEnvName, int cloningoptions) = 0;
 
     /// \brief Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs. <b>[multi-thread safe]</b>
     ///
@@ -139,43 +139,43 @@ public:
     virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,CollisionReportPtr)
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody1, const CollisionReportPtr& report = CollisionReportPtr())=0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,KinBodyConstPtr,CollisionReportPtr)
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody1, const KinBodyConstPtr& pbody2, const CollisionReportPtr& report = CollisionReportPtr())=0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,CollisionReportPtr)
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report = CollisionReportPtr())=0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,KinBody::LinkConstPtr,CollisionReportPtr)
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink1, const KinBody::LinkConstPtr& plink2, const CollisionReportPtr& report = CollisionReportPtr())=0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,KinBodyConstPtr,CollisionReportPtr)
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr())=0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBody::LinkConstPtr,const std::vector<KinBodyConstPtr>&,const std::vector<KinBody::LinkConstPtr>&,CollisionReportPtr)
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report = CollisionReportPtr())=0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,const std::vector<KinBodyConstPtr>&,const std::vector<KinBody::LinkConstPtr>&,CollisionReportPtr)
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report = CollisionReportPtr())=0;
 
     /// \see CollisionCheckerBase::CheckCollision(const RAY&,KinBody::LinkConstPtr,CollisionReportPtr)
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    virtual bool CheckCollision(const RAY& ray, const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report = CollisionReportPtr()) = 0;
 
     /// \see CollisionCheckerBase::CheckCollision(const RAY&,KinBodyConstPtr,CollisionReportPtr)
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    virtual bool CheckCollision(const RAY& ray, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) = 0;
 
     /// \see CollisionCheckerBase::CheckCollision(const RAY&,CollisionReportPtr)
-    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    virtual bool CheckCollision(const RAY& ray, const CollisionReportPtr& report = CollisionReportPtr()) = 0;
 
-    /// \see CollisionCheckerBase::CheckCollision(const TriMesh&,KinBodyConstPtr, CollisionReportPtr)
-    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    /// \see CollisionCheckerBase::CheckCollision(const TriMesh&,KinBodyConstPtr, const CollisionReportPtr&)
+    virtual bool CheckCollision(const TriMesh& trimesh, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) = 0;
 
     /// \see CollisionCheckerBase::CheckSelfCollision
-    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    virtual bool CheckStandaloneSelfCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) = 0;
 
     /// \deprecated (13/04/09)
-    virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) RAVE_DEPRECATED
+    virtual bool CheckSelfCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) RAVE_DEPRECATED
     {
         //RAVELOG_WARN("CollisionCheckerBase::CheckSelfCollision has been deprecated, please use CollisionCheckerBase::CheckStandaloneSelfCollision\n");
         return CheckStandaloneSelfCollision(pbody, report);
@@ -438,8 +438,8 @@ public:
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
         \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
+    virtual InterfaceBasePtr ReadInterfaceData(const InterfaceBasePtr& pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLData(const InterfaceBasePtr& pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadInterfaceData(pinterface,type,data,atts);
     }
 
@@ -476,9 +476,9 @@ public:
         \param[in] cmdargs The command-line arguments for the module.
         \throw openrave_exception Throw if interface is invalid or already added
      */
-    virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs=std::string()) = 0;
+    virtual void Add(const InterfaceBasePtr& pinterface, InterfaceAddMode addMode, const std::string& cmdargs=std::string()) = 0;
 
-    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs=std::string()) RAVE_DEPRECATED;
+    virtual void Add(const InterfaceBasePtr& pinterface, bool bAnonymous, const std::string& cmdargs=std::string()) RAVE_DEPRECATED;
 
     /// \brief bodycallback(body, action)
     ///
@@ -502,7 +502,7 @@ public:
     /// unloading. Note that the active interfaces are different from the owned interfaces.
     /// \param[in] obj interface to remove
     /// \return true if the interface was successfully removed from the environment.
-    virtual bool Remove(InterfaceBasePtr obj) = 0;
+    virtual bool Remove(const InterfaceBasePtr& obj) = 0;
 
     /// \brief Removes all kinbodies that match the name
     ///
@@ -623,7 +623,7 @@ public:
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
     /// \throw openrave_exception Throw if failed to add anything
-    void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody) RAVE_DEPRECATED {
+    void Triangulate(TriMesh& trimesh, const KinBodyConstPtr& pbody) RAVE_DEPRECATED {
         return Triangulate(trimesh, *pbody);
     }
     virtual void Triangulate(TriMesh& trimesh, const KinBody &body) = 0;

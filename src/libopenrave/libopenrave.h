@@ -145,7 +145,7 @@ template <typename T>
 class TransformSaver
 {
 public:
-    TransformSaver(T plink) : _plink(plink) {
+    TransformSaver(const T& plink) : _plink(plink) {
         _t = _plink->GetTransform();
     }
     virtual ~TransformSaver() {
@@ -162,7 +162,7 @@ private:
 class LinkEnableSaver
 {
 public:
-    LinkEnableSaver(KinBody::LinkPtr plink) : _plink(plink) {
+    LinkEnableSaver(const KinBody::LinkPtr& plink) : _plink(plink) {
         _bIsEnabled = _plink->IsEnabled();
     }
     virtual ~LinkEnableSaver()
@@ -301,8 +301,8 @@ inline dReal TransformDistance2(const Transform& t1, const Transform& t2, dReal 
     return (t1.trans-t2.trans).lengthsqr3() + frotweight*fcos; //*fcos;
 }
 
-int SetDOFValuesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>& values, const std::vector<int>& vindices, int options);
-int SetDOFVelocitiesIndicesParameters(KinBodyPtr pbody, const std::vector<dReal>& velocities, const std::vector<int>& vindices, int options);
+int SetDOFValuesIndicesParameters(const KinBodyPtr& pbody, const std::vector<dReal>& values, const std::vector<int>& vindices, int options);
+int SetDOFVelocitiesIndicesParameters(const KinBodyPtr& pbody, const std::vector<dReal>& velocities, const std::vector<int>& vindices, int options);
 int CallSetStateValuesFns(const std::vector< std::pair<PlannerBase::PlannerParameters::SetStateValuesFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, const std::vector<dReal>& v, int options);
 
 void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters::GetStateFn, int> >& vfunctions, int nDOF, int nMaxDOFForGroup, std::vector<dReal>& v);

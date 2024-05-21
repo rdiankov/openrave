@@ -619,7 +619,7 @@ ViewerManager& ViewerManager::GetInstance()
     return *_singleton;
 }
 
-void ViewerManager::AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists)
+void ViewerManager::AddViewer(const EnvironmentBasePtr& penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists)
 {
     ViewerBasePtr pviewer;
     if( strviewer.size() > 0 ) {
@@ -691,7 +691,7 @@ bool ViewerManager::RemoveViewer(ViewerBasePtr pviewer)
     return false;
 }
 
-bool ViewerManager::RemoveViewersOfEnvironment(EnvironmentBasePtr penv)
+bool ViewerManager::RemoveViewersOfEnvironment(const EnvironmentBasePtr& penv)
 {
     if( !penv ) {
         return false;
@@ -1249,7 +1249,7 @@ PyEnvironmentBase::PyEnvironmentBase(const std::string& name, int options)
     _penv = RaveCreateEnvironment(name, options);
 }
 
-PyEnvironmentBase::PyEnvironmentBase(EnvironmentBasePtr penv) : _penv(penv) {
+PyEnvironmentBase::PyEnvironmentBase(const EnvironmentBasePtr& penv) : _penv(penv) {
 }
 
 PyEnvironmentBase::PyEnvironmentBase(const PyEnvironmentBase &pyenv)
@@ -3178,12 +3178,12 @@ EnvironmentBasePtr GetEnvironment(object o)
     return EnvironmentBasePtr();
 }
 
-PyEnvironmentBasePtr GetPyEnvironment(EnvironmentBasePtr penv)
+PyEnvironmentBasePtr GetPyEnvironment(const EnvironmentBasePtr& penv)
 {
     return PyEnvironmentBasePtr(new PyEnvironmentBase(penv));
 }
 
-py::object GetPyEnvironmentObject(EnvironmentBasePtr penv)
+py::object GetPyEnvironmentObject(const EnvironmentBasePtr& penv)
 {
     return py::to_object(PyEnvironmentBasePtr(new PyEnvironmentBase(penv)));
 }

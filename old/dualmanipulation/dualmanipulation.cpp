@@ -16,7 +16,7 @@
 #include "dualmanipulation.h"
 #include <openrave/plugin.h>
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, const EnvironmentBasePtr& penv)
 {
     switch(type) {
     case PT_Module:

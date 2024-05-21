@@ -312,7 +312,7 @@ Any type of boost error, or null pointer access throws an openrave_exception. Th
 the amount of error checking code people do. For example, C code usually has this pattern:
 
 \code
-bool somefun(KinBodyPtr pbody)
+bool somefun(const KinBodyPtr& pbody)
 {
     if( !pbody )
         return false;
@@ -324,7 +324,7 @@ bool somefun(KinBodyPtr pbody)
 or
 
 \code
-bool somefun(KinBodyPtr pbody)
+bool somefun(const KinBodyPtr& pbody)
 {
     assert( !!pbody );
     pbody->GetTransform();
@@ -336,7 +336,7 @@ If these checks are not done, the code would segfault. However, these checks can
 code. In openrave, it is safe to get away with:
 
 \code
-bool somefun(KinBodyPtr pbody)
+bool somefun(const KinBodyPtr& pbody)
 {
     pbody->GetTransform();
     ...
@@ -368,7 +368,7 @@ safely caught and processed there.
 全てのboostエラー，nullポインタアクセスはopenrave_exceptionを投げます．これによって人々が行っているエラーをチェックするコードの量を大幅に減らすことができます．例えば，Cのコードにはよくこのパターンがあります．</br>
 
 \code
-bool somefun(KinBodyPtr pbody)
+bool somefun(const KinBodyPtr& pbody)
 {
     if( !pbody )
         return false;
@@ -380,7 +380,7 @@ bool somefun(KinBodyPtr pbody)
 もしくは，</br>
 
 \code
-bool somefun(KinBodyPtr pbody)
+bool somefun(const KinBodyPtr& pbody)
 {
     assert( !!pbody );
     pbody->GetTransform();
@@ -391,7 +391,7 @@ bool somefun(KinBodyPtr pbody)
 もしこれらがチェックされなければ，コードはセグメンテーション違反となるでしょう．しかしながら，これらのチェックはコードを乱雑にするだけです．openraveでは，安全にエラー免れることができます．例えば，
 
 \code
-bool somefun(KinBodyPtr pbody)
+bool somefun(const KinBodyPtr& pbody)
 {
     pbody->GetTransform();
     ...

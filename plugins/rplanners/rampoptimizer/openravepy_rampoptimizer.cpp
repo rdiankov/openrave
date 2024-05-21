@@ -128,13 +128,13 @@ public:
         _PostProcess();
     }
 
-    void Copy(PyRampPtr inputRamp)
+    void Copy(const PyRampPtr& inputRamp)
     {
         _pramp->Copy(*(inputRamp->_pramp));
         _PostProcess();
     }
 
-    void Cut(dReal t, PyRampPtr remRamp)
+    void Cut(dReal t, const PyRampPtr& remRamp)
     {
         _pramp->Cut(t, *(remRamp->_pramp));
         _PostProcess();

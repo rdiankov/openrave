@@ -38,7 +38,7 @@ public:
     typedef boost::shared_ptr<CubicGroupInfo> CubicGroupInfoPtr;
     typedef boost::shared_ptr<CubicGroupInfo const> CubicGroupInfoConstPtr;
 
-    CubicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer3(penv, sinput)
+    CubicTrajectoryRetimer2(const EnvironmentBasePtr& penv, std::istream& sinput) : TrajectoryRetimer3(penv, sinput)
     {
         __description = ":Interface Author: Puttichai Lertkultanon and Rosen Diankov\n\nSimple cubic trajectory retiming while passing through all the waypoints. Waypoints will not be modified. This assumes that all waypoints have zero velocity and acceleration (unless the start and final points are forced). Overwrites the velocities, accelerations, and timestamps of the input trajectory.";
     }
@@ -1061,7 +1061,7 @@ protected:
 
 }; // end class CubicTrajectoryRetimer2
 
-PlannerBasePtr CreateCubicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateCubicTrajectoryRetimer2(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new CubicTrajectoryRetimer2(penv, sinput));
 }

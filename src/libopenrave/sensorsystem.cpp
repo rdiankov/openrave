@@ -93,12 +93,12 @@ void SimpleSensorSystem::SimpleXMLReader::characters(const std::string& ch)
     ss << ch;
 }
 
-BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, InterfaceBasePtr ptr, const AttributesList& atts)
+BaseXMLReaderPtr SimpleSensorSystem::CreateXMLReaderId(const string& xmlid, const InterfaceBasePtr& ptr, const AttributesList& atts)
 {
     return BaseXMLReaderPtr(new SimpleXMLReader(boost::shared_ptr<XMLData>(new XMLData(xmlid))));
 }
 
-UserDataPtr SimpleSensorSystem::RegisterXMLReaderId(EnvironmentBasePtr penv, const string& xmlid)
+UserDataPtr SimpleSensorSystem::RegisterXMLReaderId(const EnvironmentBasePtr& penv, const string& xmlid)
 {
     return RaveRegisterXMLReader(PT_KinBody,xmlid, boost::bind(&SimpleSensorSystem::CreateXMLReaderId,xmlid, _1,_2));
 }
@@ -136,7 +136,7 @@ void SimpleSensorSystem::AddRegisteredBodies(const std::vector<KinBodyPtr>& vbod
     }
 }
 
-KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, ReadableConstPtr _pdata)
+KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(const KinBodyPtr& pbody, ReadableConstPtr _pdata)
 {
     BOOST_ASSERT(pbody->GetEnv()==GetEnv());
     boost::shared_ptr<XMLData const> pdata = boost::static_pointer_cast<XMLData const>(_pdata);
@@ -162,7 +162,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, Readable
     return b;
 }
 
-bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
+bool SimpleSensorSystem::RemoveKinBody(const KinBodyPtr& pbody)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     bool bSuccess = _mapbodies.erase(pbody->GetEnvironmentBodyIndex())>0;
@@ -170,13 +170,13 @@ bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
     return bSuccess;
 }
 
-bool SimpleSensorSystem::IsBodyPresent(KinBodyPtr pbody)
+bool SimpleSensorSystem::IsBodyPresent(const KinBodyPtr& pbody)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     return _mapbodies.find(pbody->GetEnvironmentBodyIndex()) != _mapbodies.end();
 }
 
-bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
+bool SimpleSensorSystem::EnableBody(const KinBodyPtr& pbody, bool bEnable)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     BODIES::iterator it = _mapbodies.find(pbody->GetEnvironmentBodyIndex());
@@ -189,7 +189,7 @@ bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
     return true;
 }
 
-bool SimpleSensorSystem::SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2)
+bool SimpleSensorSystem::SwitchBody(const KinBodyPtr& pbody1, KinBodyPtr pbody2)
 {
     //std::lock_guard<std::mutex> lock(_mutex);
     BODIES::iterator it = _mapbodies.find(pbody1->GetEnvironmentBodyIndex());
@@ -213,7 +213,7 @@ bool SimpleSensorSystem::SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2)
     return true;
 }
 
-boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyData(KinBodyPtr pbody, boost::shared_ptr<XMLData const> pdata)
+boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyData(const KinBodyPtr& pbody, boost::shared_ptr<XMLData const> pdata)
 {
     boost::shared_ptr<XMLData> pnewdata(new XMLData(_xmlid));
     pnewdata->copy(pdata);

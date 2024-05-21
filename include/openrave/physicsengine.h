@@ -36,7 +36,7 @@ enum PhysicsEngineOptions
 class OPENRAVE_API PhysicsEngineBase : public InterfaceBase
 {
 public:
-    PhysicsEngineBase(EnvironmentBasePtr penv) : InterfaceBase(PT_PhysicsEngine, penv) {
+    PhysicsEngineBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_PhysicsEngine, penv) {
     }
     virtual ~PhysicsEngineBase() {
     }
@@ -61,58 +61,58 @@ public:
     virtual void DestroyEnvironment() = 0;
 
     /// \brief notified when a new body has been initialized in the environment. Return
-    virtual bool InitKinBody(KinBodyPtr body) = 0;
+    virtual bool InitKinBody(const KinBodyPtr& body) = 0;
 
     /// \brief notified when a body has been removed from the environment.
-    virtual void RemoveKinBody(KinBodyPtr body) = 0;
+    virtual void RemoveKinBody(const KinBodyPtr& body) = 0;
 
     /// \brief Force the body velocity of a link, velocities correspond to the link's coordinate system origin.
     ///
     /// \param[in] link link to set velocities.
     /// \param[in] linearvel linear velocity of base link
     /// \param[in] angularvel angular velocity rotation_axis*theta_dot
-    virtual bool SetLinkVelocity(KinBody::LinkPtr link, const Vector& linearvel, const Vector& angularvel) = 0;
+    virtual bool SetLinkVelocity(const KinBody::LinkPtr& link, const Vector& linearvel, const Vector& angularvel) = 0;
 
     /// \brief Sets the velocities for each link, velocities correspond to the link's coordinate system origin.
     ///
     /// \param[in] body the body to query velocities from.
     /// \param[in] velocities sets the linear and angular (axis * angular_speed) velocities for each link
-    virtual bool SetLinkVelocities(KinBodyPtr body, const std::vector<std::pair<Vector,Vector> >& velocities) = 0;
+    virtual bool SetLinkVelocities(const KinBodyPtr& body, const std::vector<std::pair<Vector,Vector> >& velocities) = 0;
 
     /// \brief Gets the velocity of a link, velocities correspond to the link's coordinate system origin.
     /// \param[out] linearvel - linear velocity of base link
     /// \param[out] angularvel - angular velocity rotation_axis*theta_dot
-    virtual bool GetLinkVelocity(KinBody::LinkConstPtr link, Vector& linearvel, Vector& angularvel) = 0;
+    virtual bool GetLinkVelocity(const KinBody::LinkConstPtr& link, Vector& linearvel, Vector& angularvel) = 0;
 
     /// \brief Sets the velocities for each link, velocities correspond to the link's coordinate system origin.
     /// \param[out] velocities the linear and angular (axis * angular_speed) velocities for each link.
-    virtual bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) = 0;
+    virtual bool GetLinkVelocities(const KinBodyConstPtr& body, std::vector<std::pair<Vector,Vector> >& velocities) = 0;
 
     /// add a force at a particular position in a link
     /// \param force the direction and magnitude of the force
     /// \param position in the world where the force is getting applied
     /// \param bAdd if true, force is added to previous forces, otherwise it is set
-    virtual bool SetBodyForce(KinBody::LinkPtr link, const Vector& force, const Vector& position, bool bAdd) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual bool SetBodyForce(const KinBody::LinkPtr& link, const Vector& force, const Vector& position, bool bAdd) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// adds torque to a body (absolute coords)
     /// \param link the link to add a torque to
     /// \param torque torque vector
     /// \param bAdd if true, torque is added to previous torques, otherwise it is set
-    virtual bool SetBodyTorque(KinBody::LinkPtr link, const Vector& torque, bool bAdd) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual bool SetBodyTorque(const KinBody::LinkPtr& link, const Vector& torque, bool bAdd) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// adds torque to a joint
     /// \param pjoint - the joint the torque is added to
     /// \param pTorques - the torques added to the joint. Pointer because the joint dof can be greater than 1.
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual bool AddJointTorque(const KinBody::JointPtr& pjoint, const std::vector<dReal>& pTorques) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \deprecated (13/03/25)
-    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr link, Vector& force, Vector& torque);
+    virtual bool GetLinkForceTorque(const KinBody::LinkConstPtr& link, Vector& force, Vector& torque);
 
     /// Return forces and torques exerted by a joint wrt the joint anchor frame.
     /// \param[in] joint a constant pointer to a joint
     /// \param[out] force current overall force exerted by the joint
     /// \param[out] torque current overall torque exerted by the joint
-    virtual bool GetJointForceTorque(KinBody::JointConstPtr joint, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual bool GetJointForceTorque(const KinBody::JointConstPtr& joint, Vector& force, Vector& torque) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// set the gravity direction
     virtual void SetGravity(const Vector& gravity) OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -123,7 +123,7 @@ public:
     virtual void SimulateStep(dReal fTimeElapsed)=0;
 
     /// \deprecated (10/11/18)
-    virtual bool GetBodyVelocity(KinBodyConstPtr body, std::vector<Vector>& vLinearVelocities, std::vector<Vector>& vAngularVelocities) RAVE_DEPRECATED {
+    virtual bool GetBodyVelocity(const KinBodyConstPtr& body, std::vector<Vector>& vLinearVelocities, std::vector<Vector>& vAngularVelocities) RAVE_DEPRECATED {
         std::vector<std::pair<Vector,Vector> > velocities;
         if( !GetLinkVelocities(body, velocities) ) {
             return false;
@@ -137,7 +137,7 @@ public:
         return true;
     }
 
-    virtual bool SetBodyVelocity(KinBodyPtr body, const std::vector<Vector>& vLinearVelocities, const std::vector<Vector>& vAngularVelocities) RAVE_DEPRECATED {
+    virtual bool SetBodyVelocity(const KinBodyPtr& body, const std::vector<Vector>& vLinearVelocities, const std::vector<Vector>& vAngularVelocities) RAVE_DEPRECATED {
         BOOST_ASSERT(vLinearVelocities.size()==vAngularVelocities.size());
         std::vector<std::pair<Vector,Vector> > velocities(vLinearVelocities.size());
         for(size_t i = 0; i < velocities.size(); ++i) {
@@ -149,7 +149,7 @@ public:
 
 protected:
     /// \deprecated (12/12/11)
-    virtual void SetPhysicsData(KinBodyPtr body, UserDataPtr data) RAVE_DEPRECATED {
+    virtual void SetPhysicsData(const KinBodyPtr& body, UserDataPtr data) RAVE_DEPRECATED {
         body->SetUserData(GetXMLId(), data);
     }
 

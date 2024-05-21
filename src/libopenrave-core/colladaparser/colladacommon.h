@@ -170,21 +170,21 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaXMLReadable::Binding)
 #endif
 
 
-bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts);
-bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
-bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
-bool RaveParseColladaData(EnvironmentBasePtr penv, const std::string& data,const AttributesList& atts);
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts);
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts);
+bool RaveParseColladaURI(const EnvironmentBasePtr& penv, const std::string& uri,const AttributesList& atts);
+bool RaveParseColladaURI(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts);
+bool RaveParseColladaURI(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts);
+bool RaveParseColladaFile(const EnvironmentBasePtr& penv, const std::string& filename,const AttributesList& atts);
+bool RaveParseColladaFile(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
+bool RaveParseColladaFile(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
+bool RaveParseColladaData(const EnvironmentBasePtr& penv, const std::string& data,const AttributesList& atts);
+bool RaveParseColladaData(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& data,const AttributesList& atts);
+bool RaveParseColladaData(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& data,const AttributesList& atts);
 
-void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts);
-void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,const AttributesList& atts);
+void RaveWriteColladaFile(const EnvironmentBasePtr& penv, const std::string& filename,const AttributesList& atts);
+void RaveWriteColladaFile(const KinBodyPtr& pbody, const std::string& filename,const AttributesList& atts);
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts);
-void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts);
-void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts);
+void RaveWriteColladaMemory(const EnvironmentBasePtr& penv, std::vector<char>& output,const AttributesList& atts);
+void RaveWriteColladaMemory(const KinBodyPtr& pbody, std::vector<char>& output, const AttributesList& atts);
 void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts);
 
 } // end OpenRAVE namespace
@@ -194,67 +194,67 @@ void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector
 namespace OpenRAVE
 {
 
-inline bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
+inline bool RaveParseColladaURI(const EnvironmentBasePtr& penv, const std::string& uri,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
+inline bool RaveParseColladaURI(const EnvironmentBasePtr& penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
+inline bool RaveParseColladaURI(const EnvironmentBasePtr& penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename,const AttributesList& atts)
+inline bool RaveParseColladaFile(const EnvironmentBasePtr& penv, const string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
+inline bool RaveParseColladaFile(const EnvironmentBasePtr& penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
+inline bool RaveParseColladaFile(const EnvironmentBasePtr& penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts)
+inline bool RaveParseColladaData(const EnvironmentBasePtr& penv, const string& pdata,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
+inline bool RaveParseColladaData(const EnvironmentBasePtr& penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
-inline bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
+inline bool RaveParseColladaData(const EnvironmentBasePtr& penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
     return false;
 }
 
 
-inline void RaveWriteColladaFile(EnvironmentBasePtr penv, const std::string& filename,const AttributesList& atts)
+inline void RaveWriteColladaFile(const EnvironmentBasePtr& penv, const std::string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
 }
 
-inline void RaveWriteColladaFile(KinBodyPtr pbody, const std::string& filename,const AttributesList& atts)
+inline void RaveWriteColladaFile(const KinBodyPtr& pbody, const std::string& filename,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
 }
@@ -264,12 +264,12 @@ inline void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const 
     RAVELOG_ERROR("collada files not supported\n");
 }
 
-inline void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output,const AttributesList& atts)
+inline void RaveWriteColladaMemory(const EnvironmentBasePtr& penv, std::vector<char>& output,const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
 }
 
-inline void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+inline void RaveWriteColladaMemory(const KinBodyPtr& pbody, std::vector<char>& output, const AttributesList& atts)
 {
     RAVELOG_ERROR("collada files not supported\n");
 }

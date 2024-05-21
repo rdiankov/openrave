@@ -535,7 +535,7 @@ public:
         dReal viscousfriction;         ///< friction depending on the velocity of the actuator
     };
 
-    SensorBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Sensor, penv) {
+    SensorBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_Sensor, penv) {
     }
     virtual ~SensorBase() {
     }
@@ -620,7 +620,7 @@ public:
     }
 
     /// \brief serialize the sensor geometry and other attributes.
-    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const override;
+    virtual void Serialize(const BaseXMLWriterPtr& writer, int options=0) const override;
 
 protected:
     std::string _name;     ///< name of the sensor

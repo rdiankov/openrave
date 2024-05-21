@@ -30,7 +30,7 @@ public:
 
     virtual void Init() = 0;
     virtual void Destroy();
-    virtual InterfaceBasePtr Create(EnvironmentBasePtr penv, InterfaceType type, std::string name);
+    virtual InterfaceBasePtr Create(const EnvironmentBasePtr& penv, InterfaceType type, std::string name);
     virtual void OnRaveInitialized();
     virtual void OnRavePreDestroy();
     virtual bool HasInterface(InterfaceType type, const std::string& interfacename) const;
@@ -75,7 +75,7 @@ struct VirtualPlugin final : public RavePlugin, public boost::enable_shared_from
     }
 
 protected:
-    virtual InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override
+    virtual InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv) override
     {
         //std::istringstream sinput(_pluginname);
         //std::string interfacename;

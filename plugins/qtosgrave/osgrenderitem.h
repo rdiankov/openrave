@@ -253,7 +253,7 @@ public:
         OSGSwitchPtr _pswitch;
     };
 
-    RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, RobotBasePtr robot, ViewGeometry viewmode);
+    RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, const RobotBasePtr& robot, ViewGeometry viewmode);
     virtual ~RobotItem();
 
     virtual void Load();

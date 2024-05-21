@@ -19,24 +19,24 @@
 #include "openraveplugindefs.h"
 #include "rrt.h"
 
-OpenRAVE::PlannerBasePtr CreateShortcutLinearPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-//OpenRAVE::PlannerBasePtr CreateGraspGradientPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateRandomizedAStarPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateWorkspaceTrajectoryTracker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateLinearSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateConstraintParabolicSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateShortcutLinearPlanner(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+//OpenRAVE::PlannerBasePtr CreateGraspGradientPlanner(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateRandomizedAStarPlanner(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateWorkspaceTrajectoryTracker(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateLinearSmoother(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateConstraintParabolicSmoother(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
 namespace rplanners {
-OpenRAVE::PlannerBasePtr CreateParabolicSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateParabolicSmoother2(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateLinearTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateParabolicTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateParabolicTrajectoryRetimer2(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateCubicTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateCubicTrajectoryRetimer2(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateCubicSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateQuinticSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::PlannerBasePtr CreateQuinticTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicSmoother(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicSmoother2(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateLinearTrajectoryRetimer(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicTrajectoryRetimer(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicTrajectoryRetimer2(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateCubicTrajectoryRetimer(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateCubicTrajectoryRetimer2(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateCubicSmoother(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateQuinticSmoother(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateQuinticTrajectoryRetimer(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 }
 
 const std::string RPlannersPlugin::_pluginname = "RPlannersPlugin";
@@ -66,7 +66,7 @@ RPlannersPlugin::RPlannersPlugin()
 
 RPlannersPlugin::~RPlannersPlugin() {}
 
-OpenRAVE::InterfaceBasePtr RPlannersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr RPlannersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case PT_Planner:

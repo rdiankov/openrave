@@ -20,7 +20,7 @@ namespace rplanners {
 class LinearTrajectoryRetimer : public TrajectoryRetimer
 {
 public:
-    LinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
+    LinearTrajectoryRetimer(const EnvironmentBasePtr& penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
         __description = ":Interface Author: Rosen Diankov\n\nLinear trajectory re-timing without modifying any of the points. Overwrites the velocities and timestamps.";
     }
@@ -242,7 +242,7 @@ protected:
 };
 
 
-PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
+PlannerBasePtr CreateLinearTrajectoryRetimer(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return PlannerBasePtr(new LinearTrajectoryRetimer(penv, sinput));
 }
 

@@ -43,7 +43,7 @@ public:
     typedef boost::shared_ptr<CubicGroupInfo> CubicGroupInfoPtr;
     typedef boost::shared_ptr<CubicGroupInfo const> CubicGroupInfoConstPtr;
 
-    CubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
+    CubicTrajectoryRetimer(const EnvironmentBasePtr& penv, std::istream& sinput) : TrajectoryRetimer(penv,sinput)
     {
         __description = ":Interface Author: Rosen Diankov\n\nSingle cubic trajectory re-timing while passing through the waypoints, waypoints will not be modified. Computing fastest time is slow";
     }
@@ -311,7 +311,7 @@ protected:
     std::vector<dReal> _v0pos, _v0vel, _v1pos, _v1vel;
 };
 
-PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
+PlannerBasePtr CreateCubicTrajectoryRetimer(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return PlannerBasePtr(new CubicTrajectoryRetimer(penv, sinput));
 }
 

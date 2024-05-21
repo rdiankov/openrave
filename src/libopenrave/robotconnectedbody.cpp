@@ -223,11 +223,11 @@ bool RobotBase::ConnectedBodyInfo::operator==(const RobotBase::ConnectedBodyInfo
            && AreVectorsDeepEqual(_vGripperInfos, other._vGripperInfos);
 }
 
-RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot) : _pattachedrobot(probot)
+RobotBase::ConnectedBody::ConnectedBody(const RobotBasePtr& probot) : _pattachedrobot(probot)
 {
 }
 
-RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot, const RobotBase::ConnectedBodyInfo &info)
+RobotBase::ConnectedBody::ConnectedBody(const RobotBasePtr& probot, const RobotBase::ConnectedBodyInfo &info)
     : _info(info), _pattachedrobot(probot)
 {
     if (!!probot) {
@@ -243,7 +243,7 @@ RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot, const RobotBase::Co
 }
 
 
-RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot, const ConnectedBody &connectedBody, int cloningoptions)
+RobotBase::ConnectedBody::ConnectedBody(const RobotBasePtr& probot, const ConnectedBody &connectedBody, int cloningoptions)
 {
     *this = connectedBody;
     _pDummyJointCache = probot->GetJoint(_dummyPassiveJointName);

@@ -22,7 +22,7 @@
 using namespace boost::placeholders;
 using namespace OpenRAVE;
 
-RobotConfigurationSampler::RobotConfigurationSampler(EnvironmentBasePtr penv, std::istream& sinput) : SpaceSamplerBase(penv)
+RobotConfigurationSampler::RobotConfigurationSampler(const EnvironmentBasePtr& penv, std::istream& sinput) : SpaceSamplerBase(penv)
 {
         __description = ":Interface Author: Rosen Diankov\n\n\
 Samples the robot active configuration space, treats revolute and circular joints appropriately. When creating pass the following parameters::\n\n\

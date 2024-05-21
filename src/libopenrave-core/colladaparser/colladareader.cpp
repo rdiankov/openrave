@@ -256,7 +256,7 @@ public:
     };
 
 public:
-    ColladaReader(EnvironmentBasePtr penv, bool bResetGlobalDae=true, bool bExtractConnectedBodies=true) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0), _nGlobalGripperInfoId(0),
+    ColladaReader(const EnvironmentBasePtr& penv, bool bResetGlobalDae=true, bool bExtractConnectedBodies=true) : _dom(NULL), _penv(penv), _nGlobalSensorId(0), _nGlobalManipulatorId(0), _nGlobalIndex(0), _nGlobalGripperInfoId(0),
         _bResetGlobalDae(bResetGlobalDae)
     {
         daeErrorHandler::setErrorHandler(this);
@@ -776,7 +776,7 @@ public:
     }
 
     /// \brief sets the dof values of the body given the scene bindings. in the future might also set the body transformation?
-    void _SetDOFValues(KinBodyPtr pbody, KinematicsSceneBindings& bindings)
+    void _SetDOFValues(const KinBodyPtr& pbody, KinematicsSceneBindings& bindings)
     {
         vector<dReal> values;
         pbody->GetDOFValues(values);
@@ -1003,7 +1003,7 @@ public:
         return bSuccess;
     }
 
-    void _AddPrefixForKinBody(KinBodyPtr pbody, const std::string& prefix)
+    void _AddPrefixForKinBody(const KinBodyPtr& pbody, const std::string& prefix)
     {
         FOREACH(itlink,pbody->_veclinks) {
             if( _setInitialLinks.find(*itlink) == _setInitialLinks.end()) {
@@ -1869,7 +1869,7 @@ public:
     }
 
     ///  \brief Extract Link info and add it to an existing body
-    KinBody::LinkPtr ExtractLink(KinBodyPtr pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, const Transform& tParentLink, const std::vector<domJointRef>& vdomjoints, KinematicsSceneBindings& bindings)
+    KinBody::LinkPtr ExtractLink(const KinBodyPtr& pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, const Transform& tParentLink, const std::vector<domJointRef>& vdomjoints, KinematicsSceneBindings& bindings)
     {
         //  Set link name with the name of the COLLADA's Link
         std::string linkname;
@@ -4867,7 +4867,7 @@ private:
     }
 
     /// \brief extract kinematics/geometry independent parameters from instance_articulated_system extra fields
-    void _ExtractExtraData(KinBodyPtr pbody, const domExtra_Array& arr) {
+    void _ExtractExtraData(const KinBodyPtr& pbody, const domExtra_Array& arr) {
         AttributesList atts;
         for(size_t i = 0; i < arr.getCount(); ++i) {
             domExtraRef pextra = arr[i];
@@ -4963,7 +4963,7 @@ private:
     /// \brief extracts collision-specific data infoe
     ///
     /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
-    InterfaceTypePtr _ExtractCollisionData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
+    InterfaceTypePtr _ExtractCollisionData(const KinBodyPtr& pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -5092,7 +5092,7 @@ private:
     /// \brief extracts visible-specific data infoe
     ///
     /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
-    InterfaceTypePtr _ExtractVisibleData(KinBodyPtr pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
+    InterfaceTypePtr _ExtractVisibleData(const KinBodyPtr& pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"visible") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -5921,7 +5921,7 @@ private:
     bool _bMustResolveURI; ///< if true, throw exception if uri does not resolve
 };
 
-bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const AttributesList& atts)
+bool RaveParseColladaURI(const EnvironmentBasePtr& penv, const std::string& uri,const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -5931,7 +5931,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, const std::string& uri,const A
     return reader.Extract();
 }
 
-bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
+bool RaveParseColladaURI(const EnvironmentBasePtr& penv, KinBodyPtr& pbody, const string& uri, const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -5944,7 +5944,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, KinBodyPtr& pbody, const strin
     return reader.Extract(pbody, fragment);
 }
 
-bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
+bool RaveParseColladaURI(const EnvironmentBasePtr& penv, RobotBasePtr& probot, const string& uri, const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -5957,7 +5957,7 @@ bool RaveParseColladaURI(EnvironmentBasePtr penv, RobotBasePtr& probot, const st
     return reader.Extract(probot, fragment);
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
+bool RaveParseColladaFile(const EnvironmentBasePtr& penv, const string& filename, const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -5968,7 +5968,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, const string& filename, const
     return reader.Extract();
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
+bool RaveParseColladaFile(const EnvironmentBasePtr& penv, KinBodyPtr& pbody, const string& filename,const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -5979,7 +5979,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
     return reader.Extract(pbody);
 }
 
-bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
+bool RaveParseColladaFile(const EnvironmentBasePtr& penv, RobotBasePtr& probot, const string& filename,const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -5990,7 +5990,7 @@ bool RaveParseColladaFile(EnvironmentBasePtr penv, RobotBasePtr& probot, const s
     return reader.Extract(probot);
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const AttributesList& atts)
+bool RaveParseColladaData(const EnvironmentBasePtr& penv, const string& pdata,const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -6000,7 +6000,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, const string& pdata,const Att
     return reader.Extract();
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
+bool RaveParseColladaData(const EnvironmentBasePtr& penv, KinBodyPtr& pbody, const string& pdata,const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);
@@ -6018,7 +6018,7 @@ bool RaveParseColladaData(EnvironmentBasePtr penv, KinBodyPtr& pbody, const stri
     return reader.Extract(pbody, articulatedSystemId);
 }
 
-bool RaveParseColladaData(EnvironmentBasePtr penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
+bool RaveParseColladaData(const EnvironmentBasePtr& penv, RobotBasePtr& probot, const string& pdata,const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaReader reader(penv);

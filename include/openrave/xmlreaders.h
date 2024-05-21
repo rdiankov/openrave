@@ -75,7 +75,7 @@ public:
     /// \param env the environment used to create the trajectory
     /// \param traj can optionally pass a trajectory to initialize if need to read into an existing trajectory, but the pointer can be empty
     /// \param atts attributes passed from <trajectory> tag
-    TrajectoryReader(EnvironmentBasePtr env, TrajectoryBasePtr traj = TrajectoryBasePtr(), const AttributesList& atts=AttributesList());
+    TrajectoryReader(const EnvironmentBasePtr& env, TrajectoryBasePtr traj = TrajectoryBasePtr(), const AttributesList& atts=AttributesList());
     ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
     bool endElement(const std::string& name) override;
     void characters(const std::string& ch) override;

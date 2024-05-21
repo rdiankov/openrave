@@ -72,13 +72,13 @@ protected:
         stringstream _ss;
     };
 
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
         return BaseXMLReaderPtr(new PIDXMLReader(boost::shared_ptr<XMLData>(),atts));
     }
 
-    CustomController(EnvironmentBasePtr penv) : ControllerBase(penv)
+    CustomController(const EnvironmentBasePtr& penv) : ControllerBase(penv)
     {
     }
     virtual ~CustomController() {

@@ -81,7 +81,7 @@ class GrasperModule : public ModuleBase
     };
 
 public:
-    GrasperModule(EnvironmentBasePtr penv, std::istream& sinput)  : ModuleBase(penv), outfile(NULL), errfile(NULL) {
+    GrasperModule(const EnvironmentBasePtr& penv, std::istream& sinput)  : ModuleBase(penv), outfile(NULL), errfile(NULL) {
         __description = ":Interface Author: Rosen Diankov\n\nUsed to simulate a hand grasping an object by closing its fingers until collision with all links. ";
         RegisterCommand("Grasp",boost::bind(&GrasperModule::_GraspCommand,this,_1,_2),
                         "Performs a grasp and returns contact points");
@@ -1231,7 +1231,7 @@ protected:
         }
     }
 
-    void SampleObject(KinBodyPtr pbody, vector<CONTACT>& vpoints, int N, Vector graspcenter)
+    void SampleObject(const KinBodyPtr& pbody, vector<CONTACT>& vpoints, int N, Vector graspcenter)
     {
         RAY r;
         Vector com = graspcenter;
@@ -1264,7 +1264,7 @@ protected:
     }
 
     // generates samples across a geodesic sphere (the higher the level, the higher the number of points
-    void DeterministicallySample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int levels, Vector graspcenter)
+    void DeterministicallySample(const KinBodyPtr& pbody, vector<CONTACT>& vpoints, int levels, Vector graspcenter)
     {
         RAY r;
         TriMesh tri;
@@ -1397,7 +1397,7 @@ protected:
         tri = *pcur;
     }
 
-    void BoxSample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int num_samples, Vector center)
+    void BoxSample(const KinBodyPtr& pbody, vector<CONTACT>& vpoints, int num_samples, Vector center)
     {
         RAY r;
         TriMesh tri;
@@ -1821,7 +1821,7 @@ protected:
     std::vector<dReal> _vjointmaxlengths;
 };
 
-ModuleBasePtr CreateGrasperModule(EnvironmentBasePtr penv, std::istream& sinput)
+ModuleBasePtr CreateGrasperModule(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return ModuleBasePtr(new GrasperModule(penv,sinput));
 }

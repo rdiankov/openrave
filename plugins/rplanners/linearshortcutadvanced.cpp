@@ -23,7 +23,7 @@
 class ShortcutLinearPlanner : public PlannerBase
 {
 public:
-    ShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    ShortcutLinearPlanner(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\npath optimizer using linear shortcuts.";
         _linearretimer = RaveCreatePlanner(GetEnv(), "LinearTrajectoryRetimer");
@@ -31,7 +31,7 @@ public:
     virtual ~ShortcutLinearPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -40,7 +40,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -565,7 +565,7 @@ protected:
     /// the subsampled trajectory.)
     /// \param[in] ptraj a linear trajectory
     /// \param[out] listpath list of (config, dist) pairs. Each dist is the distance from config to its predecessor.
-    void _SubsampleTrajectory(TrajectoryBasePtr ptraj, list< std::pair< vector<dReal>, dReal> >& listpath) const
+    void _SubsampleTrajectory(const TrajectoryBasePtr& ptraj, list< std::pair< vector<dReal>, dReal> >& listpath) const
     {
         PlannerParametersConstPtr parameters = GetParameters();
         vector<dReal> q0(parameters->GetDOF()), q1(parameters->GetDOF()), dq(parameters->GetDOF()), qcur(parameters->GetDOF()), dq2;
@@ -657,7 +657,7 @@ protected:
         return std::string();
     }
 
-    std::string _DumpTrajectory(TrajectoryBasePtr traj, int option)
+    std::string _DumpTrajectory(const TrajectoryBasePtr& traj, int option)
     {
         string filename;
         if (option == 0) {
@@ -689,6 +689,6 @@ protected:
     PlannerProgress _progress;
 };
 
-PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
+PlannerBasePtr CreateShortcutLinearPlanner(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return PlannerBasePtr(new ShortcutLinearPlanner(penv, sinput));
 }

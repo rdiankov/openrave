@@ -680,7 +680,7 @@ public:
         static const GeometryType GeomCylinder RAVE_DEPRECATED = OpenRAVE::GT_Cylinder;
         static const GeometryType GeomTrimesh RAVE_DEPRECATED = OpenRAVE::GT_TriMesh;
 
-        Geometry(boost::shared_ptr<Link> parent, const KinBody::GeometryInfo& info);
+        Geometry(const boost::shared_ptr<Link>& parent, const KinBody::GeometryInfo& info);
         ~Geometry() {
         }
 
@@ -1074,7 +1074,7 @@ private:
     class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>, public ReadablesContainer
     {
 public:
-        Link(KinBodyPtr parent);         ///< pass in a ODE world
+        Link(const KinBodyPtr& parent);         ///< pass in a ODE world
         ~Link();
 
         /// \deprecated (12/10/18)
@@ -1291,13 +1291,13 @@ public:
         ///
         /// Will store the geometry pointer to use for later, so do not modify after this.
         /// \param addToGroups if true, will add the same ginfo to all groups
-        void AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups);
+        void AddGeometry(const KinBody::GeometryInfoPtr& pginfo, bool addToGroups);
 
         /// \brief adds geometry info to the geometry group specified by groupname
         ///
         /// Will store the geometry pointer to use for later, so do not modify after this.
         /// \param groupname the name of the geometry group to add this new geometry info to
-        void AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const std::string& groupname);
+        void AddGeometryToGroup(const KinBody::GeometryInfoPtr& pginfo, const std::string& groupname);
 
         /// \brief removes geometry that matches a name from the current geometries and possibly stored extra group geometries
         ///
@@ -1670,7 +1670,7 @@ public:
         static const KinBody::JointType JointSpherical RAVE_DEPRECATED = KinBody::JointSpherical;
         static const KinBody::JointType JointTrajectory RAVE_DEPRECATED = KinBody::JointTrajectory;
 
-        Joint(KinBodyPtr parent, KinBody::JointType type = KinBody::JointNone);
+        Joint(const KinBodyPtr& parent, KinBody::JointType type = KinBody::JointNone);
         ~Joint();
 
         inline const std::string& GetId() const {
@@ -2155,7 +2155,7 @@ protected:
             \param vinitialvalues the current values of the robot used to set the 0 offset of the robot
             \param bProcessStatic if true, then check to see if the joint is static and then set its cache and reduce its limits. If false, treat the joint as non-static.
          */
-        void _ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
+        void _ComputeJointInternalInformation(const LinkPtr& plink0, const LinkPtr& plink1, const Vector& vanchor, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues);
 
         /// \brief once all the joints have been computed and initiailzed, call this function
         void _ComputeInternalStaticInformation();
@@ -2421,7 +2421,7 @@ protected:
     class OPENRAVE_API KinBodyStateSaver
     {
 public:
-        KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
+        KinBodyStateSaver(const KinBodyPtr& pbody, int options = Save_LinkTransformation|Save_LinkEnable);
         virtual ~KinBodyStateSaver();
         inline const KinBodyPtr& GetBody() const {
             return _pbody;
@@ -3137,7 +3137,7 @@ private:
     ///
     /// This function allows self-collisions to use a different, un-padded geometry for self-collisions
     /// \param collisionchecker The new collision checker to use. If empty, will use the environment set collision checker.
-    virtual void SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker);
+    virtual void SetSelfCollisionChecker(const CollisionCheckerBasePtr& collisionchecker);
 
     /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
     virtual CollisionCheckerBasePtr GetSelfCollisionChecker() const;
@@ -3153,7 +3153,7 @@ private:
         \param report [optional] collision report
         \param collisionchecker An option collision checker to use for checking self-collisions. If not specified, then will use the environment collision checker.
      */
-    virtual bool CheckSelfCollision(CollisionReportPtr report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
+    virtual bool CheckSelfCollision(const CollisionReportPtr& report = CollisionReportPtr(), CollisionCheckerBasePtr collisionchecker=CollisionCheckerBasePtr()) const;
 
     /** \brief checks collision of a robot link with the surrounding environment using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
@@ -3161,14 +3161,14 @@ private:
        \param[in] tlinktrans The transform of the link to check
        \param[out] report [optional] collision report
      */
-    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, const CollisionReportPtr& report = CollisionReportPtr());
 
     /** \brief checks collision of a robot link with the surrounding environment using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
-    virtual bool CheckLinkCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
+    virtual bool CheckLinkCollision(int ilinkindex, const CollisionReportPtr& report = CollisionReportPtr());
 
     /** \brief checks collision of a robot link with a specified body using a new transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
@@ -3177,7 +3177,7 @@ private:
        \param[in] pbody the body to check
        \param[out] report [optional] collision report
      */
-    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+    virtual bool CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr());
 
     /** \brief checks collision of a robot link with a specified body using the current link's transform. Attached/Grabbed bodies to this link are also checked for collision. Rigidly attached links to the specified link are not checked for collision.
 
@@ -3185,14 +3185,14 @@ private:
         \param[in] pbody the body to check
         \param[out] report [optional] collision report
      */
-    virtual bool CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr());
+    virtual bool CheckLinkCollision(int ilinkindex, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr());
 
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
         \param[out] report [optional] collision report
      */
-    virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
+    virtual bool CheckLinkSelfCollision(int ilinkindex, const CollisionReportPtr& report = CollisionReportPtr());
 
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
@@ -3200,12 +3200,12 @@ private:
         \param[in] tlinktrans The transform of the link to check
         \param[out] report [optional] collision report
      */
-    virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+    virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, const CollisionReportPtr& report = CollisionReportPtr());
 
     //@}
 
     /// \return true if two bodies should be considered as one during collision (ie one is grabbing the other)
-    bool IsAttached(KinBodyConstPtr body) const RAVE_DEPRECATED {
+    bool IsAttached(const KinBodyConstPtr& body) const RAVE_DEPRECATED {
         return IsAttached(*body);
     }
     bool IsAttached(const KinBody &body) const;
@@ -3317,7 +3317,7 @@ private:
         _nUpdateStampId += inc;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions);
 
     /// \brief Register a callback with the interface.
     ///
@@ -3328,7 +3328,7 @@ private:
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const boost::function<void()>& callback) const;
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    void Serialize(const BaseXMLWriterPtr& writer, int options=0) const;
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -3391,7 +3391,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(const KinBodyPtr& body, const LinkPtr& pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grab the body with the specified link.
 
@@ -3402,7 +3402,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(const KinBodyPtr& body, const LinkPtr& pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grab a body with the specified link.
 
@@ -3411,13 +3411,13 @@ private:
         \param[in] rGrabbedUserData custom data to keep in the body
         \return true if successful and body is grabbed/
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(const KinBodyPtr& body, const LinkPtr& pBodyLinkToGrabWith, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Release the body if grabbed.
 
         \param body body to release
      */
-    void Release(KinBodyPtr body) RAVE_DEPRECATED {
+    void Release(const KinBodyPtr& body) RAVE_DEPRECATED {
         Release(*body);
     }
     virtual void Release(KinBody &body);
@@ -3425,7 +3425,7 @@ private:
     /// Release all grabbed bodies.
     virtual void ReleaseAllGrabbed();     ///< release all bodies
 
-    void ReleaseAllGrabbedWithLink(LinkPtr pBodyLinkToGrabWith) {
+    void ReleaseAllGrabbedWithLink(const LinkPtr& pBodyLinkToGrabWith) {
         ReleaseAllGrabbedWithLink(*pBodyLinkToGrabWith);
     }
     virtual void ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToGrabWith);
@@ -3440,7 +3440,7 @@ private:
 
         \param[in] body the body to check
      */
-    LinkPtr IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
+    LinkPtr IsGrabbing(const KinBodyConstPtr& body) const RAVE_DEPRECATED {
         return IsGrabbing(*body);
     }
     LinkPtr IsGrabbing(const KinBody &body) const;
@@ -3518,7 +3518,7 @@ private:
         \param[in] body the grabbed body
         \param[out] list of the ignored links
      */
-    void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
+    void GetIgnoredLinksOfGrabbed(const KinBodyConstPtr& body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
 
     inline int64_t GetLastModifiedAtUS() {
         return _lastModifiedAtUS;
@@ -3627,7 +3627,7 @@ protected:
     int _GetNumAttached(std::vector<int8_t>& vAttachedVisited) const;
 
     /// \brief adds an attached body
-    void _AttachBody(KinBodyPtr body);
+    void _AttachBody(const KinBodyPtr& body);
 
     /// \brief removes an attached body
     ///
@@ -3647,13 +3647,13 @@ protected:
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized.
-    void _InitAndAddLink(LinkPtr plink);
+    void _InitAndAddLink(const LinkPtr& plink);
 
     /// \brief initializes and adds a link to internal hierarchy.
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized
-    void _InitAndAddJoint(JointPtr pjoint);
+    void _InitAndAddJoint(const JointPtr& pjoint);
 
     void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
 
@@ -3755,7 +3755,7 @@ private:
 class OPENRAVE_API Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
 public:
-    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink);
+    Grabbed(const KinBodyPtr& pGrabbedBody, const KinBody::LinkPtr& pGrabbingLink);
     virtual ~Grabbed() {
     }
 

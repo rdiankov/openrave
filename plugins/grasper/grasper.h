@@ -18,14 +18,14 @@
 
 #include <openrave/plugin.h>
 
-OpenRAVE::PlannerBasePtr CreateGrasperPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::ModuleBasePtr CreateGrasperModule(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateGrasperPlanner(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::ModuleBasePtr CreateGrasperModule(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
 struct GrasperPlugin : public RavePlugin {
     GrasperPlugin();
     ~GrasperPlugin() override;
 
-    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) override;
+    OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv) override;
     const InterfaceMap& GetInterfaces() const override;
     const std::string& GetPluginName() const override;
 

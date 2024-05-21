@@ -30,8 +30,8 @@
 //namespace ik_katana5d { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
 //namespace ik_katana5d_trans { IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr, std::istream& sinput, const std::vector<dReal>&vfreeinc); }
 
-OpenRAVE::IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, OpenRAVE::EnvironmentBasePtr penv);
-OpenRAVE::ModuleBasePtr CreateIkFastModule(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, const OpenRAVE::EnvironmentBasePtr& penv);
+OpenRAVE::ModuleBasePtr CreateIkFastModule(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 void DestroyIkFastLibraries();
 
 const std::string IKFastSolversPlugin::_pluginname = "IKFastSolversPlugin";
@@ -64,7 +64,7 @@ void IKFastSolversPlugin::Destroy()
     DestroyIkFastLibraries();
 }
 
-OpenRAVE::InterfaceBasePtr IKFastSolversPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr IKFastSolversPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case PT_IkSolver: {

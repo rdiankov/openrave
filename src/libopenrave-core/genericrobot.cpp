@@ -21,7 +21,7 @@ namespace OpenRAVE {
 class GenericRobot : public RobotBase
 {
 public:
-    GenericRobot(EnvironmentBasePtr penv, std::istream& sinput) : RobotBase(penv)
+    GenericRobot(const EnvironmentBasePtr& penv, std::istream& sinput) : RobotBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nSimplest robot possible that just passes the trajectories to the controller";
     }
@@ -63,7 +63,7 @@ protected:
     ControllerBasePtr _pController;
 };
 
-RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput)
+RobotBasePtr CreateGenericRobot(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return RobotBasePtr(new GenericRobot(penv,sinput));
 }

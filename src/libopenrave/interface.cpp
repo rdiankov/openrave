@@ -21,7 +21,7 @@
 using namespace boost::placeholders;
 
 namespace OpenRAVE {
-InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
+InterfaceBase::InterfaceBase(InterfaceType type, const EnvironmentBasePtr& penv) : __type(type), __penv(penv)
 {
     RaveInitializeFromState(penv->GlobalState()); // make sure global state is set
     RegisterCommand("help",boost::bind(&InterfaceBase::_GetCommandHelp,this,_1,_2), "display help commands.");
@@ -81,7 +81,7 @@ bool InterfaceBase::RemoveUserData(const std::string& key) const
     return true;
 }
 
-void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+void InterfaceBase::Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
 {
     if( !preference ) {
         throw openrave_exception(_("invalid cloning reference"),ORE_InvalidArguments);
@@ -122,7 +122,7 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
     return true;
 }
 
-void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
+void InterfaceBase::Serialize(const BaseXMLWriterPtr& writer, int options) const
 {
     boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
     FOREACHC(it, GetReadableInterfaces()) {
@@ -189,22 +189,22 @@ bool InterfaceBase::_GetCommandHelp(std::ostream& o, std::istream& sinput) const
     }
 
     // display full help string
-    o << endl << GetXMLId() << " Commands" << endl;
+    o << '\n' << GetXMLId() << " Commands" << '\n';
     for(size_t i = 0; i < GetXMLId().size(); ++i) {
         o << "=";
     }
-    o << "=========" << endl << endl;
+    o << "=========" << '\n' << '\n';
     for(it = __mapCommands.begin(); it != __mapCommands.end(); ++it) {
         if( label.size() > 0 ) {
             string strlower = it->first;
             std::transform(strlower.begin(), strlower.end(), strlower.begin(), ::tolower);
-            o << endl << ".. _" << label << strlower << ":" << endl << endl;
+            o << '\n' << ".. _" << label << strlower << ":" << '\n' << '\n';
         }
-        o << endl << it->first << endl;
+        o << '\n' << it->first << '\n';
         for(size_t i = 0; i < it->first.size(); ++i) {
             o << "~";
         }
-        o << endl << endl << it->second->help << endl << endl << "~~~~" << endl << endl;
+        o << '\n' << '\n' << it->second->help << '\n' << '\n' << "~~~~" << '\n' << '\n';
     }
     return true;
 }
@@ -266,7 +266,7 @@ ReadablePtr ReadablesContainer::GetReadableInterface(const std::string& id) cons
     return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
-ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, ReadablePtr readable)
+ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, const ReadablePtr& readable)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     READERSMAP::iterator it = __mapReadableInterfaces.find(id);

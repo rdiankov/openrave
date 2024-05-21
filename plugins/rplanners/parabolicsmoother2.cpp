@@ -352,7 +352,7 @@ private:
     }; // end class MyRampNDFeasibilityChecker
 
 public:
-    ParabolicSmoother2(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _feasibilitychecker(this)
+    ParabolicSmoother2(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv), _feasibilitychecker(this)
     {
         __description = "";
         _bmanipconstraints = false;
@@ -366,7 +366,7 @@ public:
         _feasibilitychecker.SetEnvID(_environmentid); // set envid for logging purpose
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -374,7 +374,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -3385,7 +3385,7 @@ protected:
     /// \param[in] level : debug level
     /// \param[in] option : option to determine the additional file name.
     /// \return filename to dump
-    std::string _DumpTrajectory(TrajectoryBasePtr ptraj, const int option)
+    std::string _DumpTrajectory(const TrajectoryBasePtr& ptraj, const int option)
     {
         std::string filename;
         switch( option )
@@ -3597,7 +3597,7 @@ protected:
 
 }; // end class ParabolicSmoother2
 
-PlannerBasePtr CreateParabolicSmoother2(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateParabolicSmoother2(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new ParabolicSmoother2(penv, sinput));
 }

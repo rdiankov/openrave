@@ -88,7 +88,7 @@ Interval SolveIneq(dReal a,dReal b)
    \param q2 the configuration at the end of ramp 2
    \param v2 the velocity at the end of ramp 2
  */
-bool CheckValidity(dReal Ta,dReal Tb,const std::vector<dReal>& q0,const std::vector<dReal>& v0,const std::vector<dReal>& q2,const std::vector<dReal>& v2,std::vector<dReal>& qres,std::vector<dReal>& vres,ConstraintTrajectoryTimingParametersPtr params)
+bool CheckValidity(dReal Ta,dReal Tb,const std::vector<dReal>& q0,const std::vector<dReal>& v0,const std::vector<dReal>& q2,const std::vector<dReal>& v2,std::vector<dReal>& qres,std::vector<dReal>& vres,const ConstraintTrajectoryTimingParametersPtr& params)
 {
 
     vector<dReal> amax = params->_vConfigAccelerationLimit;
@@ -139,7 +139,7 @@ bool CheckValidity(dReal Ta,dReal Tb,const std::vector<dReal>& q0,const std::vec
     \param q3 the configuration at the end of the ramp at T2
     \param v3 the velocity at the end of the ramp at T2
  */
-bool CheckMerge(dReal T0,dReal T1,dReal T2,const std::vector<dReal>& q0,const std::vector<dReal>& v0,const std::vector<dReal>& q3,const std::vector<dReal>& v3,dReal& alpha,std::vector<dReal>& qres,std::vector<dReal>& vres,ConstraintTrajectoryTimingParametersPtr params)
+bool CheckMerge(dReal T0,dReal T1,dReal T2,const std::vector<dReal>& q0,const std::vector<dReal>& v0,const std::vector<dReal>& q3,const std::vector<dReal>& v3,dReal& alpha,std::vector<dReal>& qres,std::vector<dReal>& vres,const ConstraintTrajectoryTimingParametersPtr& params)
 {
     dReal T = T0+T1+T2;
     dReal Q,A0,B0lo,B0hi,A1lo,A1hi,B1,A2lo,B2lo,A2hi,B2hi;
@@ -269,7 +269,7 @@ int factorial(int n)
    \param ramps input ramps
    \param desireddurations list of desired durations
  */
-bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::list<dReal>& desireddurations, ConstraintTrajectoryTimingParametersPtr params)
+bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::list<dReal>& desireddurations, const ConstraintTrajectoryTimingParametersPtr& params)
 {
     OPENRAVE_ASSERT_OP(ramps.size(),==,desireddurations.size());
     if( ramps.size() == 0) {
@@ -353,7 +353,7 @@ bool IterativeFixRamps(std::list<ParabolicRamp::ParabolicRampND>& ramps, std::li
     \param ramps result ramps
     \param v3 the velocity at the end of the ramp at T2
  */
-bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, std::list<ParabolicRamp::ParabolicRampND>& ramps, ConstraintTrajectoryTimingParametersPtr params, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler)
+bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, std::list<ParabolicRamp::ParabolicRampND>& ramps, const ConstraintTrajectoryTimingParametersPtr& params, bool checkcontrollertime, const SpaceSamplerBasePtr& uniformsampler)
 {
     // Determine the number max of iterations as a function of the number of short ramps
     size_t i = 0;
@@ -576,7 +576,7 @@ bool CheckRamps(std::list<ParabolicRamp::ParabolicRampND>&ramps, ParabolicRamp::
     return true;
 }
 
-bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const ParabolicRamp::Vector& qstart, const ParabolicRamp::Vector& qgoal, dReal radius, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options)
+bool SpecialCheckRamp(const ParabolicRamp::ParabolicRampND& ramp,const ParabolicRamp::Vector& qstart, const ParabolicRamp::Vector& qgoal, dReal radius, const ConstraintTrajectoryTimingParametersPtr& params, ParabolicRamp::RampFeasibilityChecker& check, int options)
 {
 
     dReal dt = 0.01;
@@ -699,7 +699,7 @@ dReal ComputeRampQuality(const std::list<ParabolicRamp::ParabolicRampND>& ramps)
     return 1/res;
 }
 
-bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options)
+bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, const ConstraintTrajectoryTimingParametersPtr& params, dReal upperbound, bool checkcontrollertime, const SpaceSamplerBasePtr& uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options)
 {
     //int nitersfurthermerge = params->nitersfurthermerge;
     int nitersfurthermerge = 0;
@@ -749,7 +749,7 @@ bool FurtherMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps
     return bHasChanged;
 }
 
-bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options)
+bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, const ConstraintTrajectoryTimingParametersPtr& params, dReal upperbound, bool checkcontrollertime, const SpaceSamplerBasePtr& uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options)
 {
     std::list<ParabolicRamp::ParabolicRampND> ramps,ramps2;
     dReal testcoef;
@@ -799,7 +799,7 @@ bool IterativeMergeRamps(const std::list<ParabolicRamp::ParabolicRampND>&origram
 }
 
 
-bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, dReal upperbound, dReal stepsize, bool checkcontrollertime, SpaceSamplerBasePtr uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options)
+bool IterativeMergeRampsNoDichotomy(const std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, const ConstraintTrajectoryTimingParametersPtr& params, dReal upperbound, dReal stepsize, bool checkcontrollertime, const SpaceSamplerBasePtr& uniformsampler, ParabolicRamp::RampFeasibilityChecker& check, int options)
 {
     std::list<ParabolicRamp::ParabolicRampND> ramps;
     for(dReal testcoef=1; testcoef<=upperbound; testcoef+=stepsize) {
@@ -836,7 +836,7 @@ ParabolicRamp::Vector AddVectors(ParabolicRamp::Vector a,ParabolicRamp::Vector b
 }
 
 
-bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check,int options)
+bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector& x0, const ParabolicRamp::Vector& x1, const ConstraintTrajectoryTimingParametersPtr& params, ParabolicRamp::RampFeasibilityChecker& check,int options)
 {
     ParabolicRamp::Vector zero(x0.size(),0.0);
     ParabolicRamp::Vector dx = AddVectors(x1,x0,1,-1);
@@ -929,7 +929,7 @@ bool ComputeLinearRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>
 
 
 
-bool ComputeLinearRampsWithConstraints2(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector x1, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check,int options)
+bool ComputeLinearRampsWithConstraints2(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector& x0, const ParabolicRamp::Vector& x1, const ConstraintTrajectoryTimingParametersPtr& params, ParabolicRamp::RampFeasibilityChecker& check,int options)
 {
     ParabolicRamp::Vector zero(x0.size(),0.0);
     ParabolicRamp::ParabolicRampND newramp;
@@ -1000,7 +1000,7 @@ bool ComputeLinearRampsWithConstraints2(std::list<ParabolicRamp::ParabolicRampND
 }
 
 
-bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector x0, const ParabolicRamp::Vector dx0, const ParabolicRamp::Vector x1, const ParabolicRamp::Vector dx1, dReal fOriginalTrajectorySegmentTime, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options)
+bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRampND>& resramps, const ParabolicRamp::Vector& x0, const ParabolicRamp::Vector& dx0, const ParabolicRamp::Vector& x1, const ParabolicRamp::Vector& dx1, dReal fOriginalTrajectorySegmentTime, const ConstraintTrajectoryTimingParametersPtr& params, ParabolicRamp::RampFeasibilityChecker& check, int options)
 {
     std::vector<std::vector<ParabolicRamp::ParabolicRamp1D> > tmpramps1d;
     std::list<ParabolicRamp::ParabolicRampND> tmpramps;
@@ -1119,7 +1119,7 @@ bool AreRampsCollinear(ParabolicRamp::ParabolicRampND& ramp0,ParabolicRamp::Para
     return RaveFabs(dotproduct*dotproduct - x0length2*x1length2) <= TINY;
 }
 
-bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, ConstraintTrajectoryTimingParametersPtr params, ParabolicRamp::RampFeasibilityChecker& check, int options)
+bool FixRampsEnds(std::list<ParabolicRamp::ParabolicRampND>&origramps,std::list<ParabolicRamp::ParabolicRampND>&resramps, const ConstraintTrajectoryTimingParametersPtr& params, ParabolicRamp::RampFeasibilityChecker& check, int options)
 {
     if (origramps.size()<2) {
         return false;
@@ -1324,7 +1324,7 @@ dReal ComputeRampsDuration(const std::list<ParabolicRamp::ParabolicRampND>&ramps
 }
 
 // For logging purpose
-void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>&ramps,ConstraintTrajectoryTimingParametersPtr params,bool checkcontrollertimestep)
+void PrintRamps(const std::list<ParabolicRamp::ParabolicRampND>&ramps,const ConstraintTrajectoryTimingParametersPtr& params,bool checkcontrollertimestep)
 {
     int itx = 0;
     dReal totaltime = 0;

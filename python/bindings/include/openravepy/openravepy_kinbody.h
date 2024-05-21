@@ -176,7 +176,7 @@ protected:
     std::list<OPENRAVE_SHARED_PTR<void> > _listStateSavers;
 
 public:
-    PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv);
+    PyKinBody(const KinBodyPtr& pbody, PyEnvironmentBasePtr pyenv);
     PyKinBody(const PyKinBody& r);
     virtual ~PyKinBody();
     void Destroy();

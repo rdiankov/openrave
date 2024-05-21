@@ -59,7 +59,7 @@ class QtCoinViewer : public QMainWindow, public ViewerBase
     Q_OBJECT
 
 public:
-    QtCoinViewer(EnvironmentBasePtr penv, std::istream& sinput);
+    QtCoinViewer(const EnvironmentBasePtr& penv, std::istream& sinput);
     virtual ~QtCoinViewer();
 
     //! the kinds of toggle switches
@@ -145,7 +145,7 @@ public:
     virtual boost::shared_ptr<void> LockGUI();
 
     /// \brief notified when a body has been removed from the environment
-    virtual void RemoveKinBody(KinBodyPtr pbody) {
+    virtual void RemoveKinBody(const KinBodyPtr& pbody) {
         if( !!pbody ) {
             pbody->RemoveUserData("qtcoinviewer");
         }

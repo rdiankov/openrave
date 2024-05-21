@@ -51,7 +51,7 @@ class QOSGViewerWidget : public QOpenGLWidget
 {
 public:
 
-    QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey,
+    QOSGViewerWidget(const EnvironmentBasePtr& penv, const std::string &userdatakey,
                      const boost::function<bool(int)> &onKeyDown = boost::function<bool(int)>(),
                      QWidget *parent = 0);
 
@@ -194,7 +194,7 @@ public:
     KinBodyItemPtr GetItemFromName(const std::string &name);
 
     /// \brief Find KinBodyItem from a kinbody instance
-    KinBodyItemPtr GetItemFromKinBody(KinBodyPtr kinBody);
+    KinBodyItemPtr GetItemFromKinBody(const KinBodyPtr& kinBody);
 
     /// \brief restores cursor to what it was originally set to
     void RestoreCursor();
@@ -241,7 +241,7 @@ protected:
 
 
     /// \brief Find joint into OpenRAVE core
-    KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link);
+    KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, const KinBody::LinkPtr& link);
 
     //  Lighting Stuff //
     osg::ref_ptr<osg::Material> _CreateSimpleMaterial(osg::Vec4 color);

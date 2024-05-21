@@ -40,7 +40,7 @@ using PiecewisePolynomials::PolynomialCheckReturn;
 
 class JerkLimitedSmootherBase : public PlannerBase {
 public:
-    JerkLimitedSmootherBase(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    JerkLimitedSmootherBase(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = "";
         _bManipConstraints = false;
@@ -63,7 +63,7 @@ public:
         return "jerklimitedsmootherbase";
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -71,7 +71,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& sparams)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& sparams)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -577,7 +577,7 @@ protected:
     /// \param[in] posSpec ConfigurationSpecification for joint values
     /// \param[out] pwptraj
     /// \return PS_HasSolution only if successful.
-    PlannerStatus ConvertOpenRAVEPathToPiecewisePolynomialTrajectory(TrajectoryBasePtr ptraj, ConfigurationSpecification& posSpec, PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
+    PlannerStatus ConvertOpenRAVEPathToPiecewisePolynomialTrajectory(const TrajectoryBasePtr& ptraj, ConfigurationSpecification& posSpec, PiecewisePolynomials::PiecewisePolynomialTrajectory& pwptraj)
     {
         // Cache stuff
         std::vector<dReal> &x0Vect = _cacheX0Vect;
@@ -959,7 +959,7 @@ protected:
     /// \param[in] suffix The suffix to append to the filename
     /// \param[in] level Only dump the trajectory if the current debug level is not less than this.
     /// \return true if dumping is successful. false otherwise.
-    bool _DumpOpenRAVETrajectory(TrajectoryBasePtr ptraj, const char* suffix, DebugLevel level)
+    bool _DumpOpenRAVETrajectory(const TrajectoryBasePtr& ptraj, const char* suffix, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
             std::string filename = boost::str(boost::format("%s/%s_%d_%s.ortraj")%RaveGetHomeDirectory()%GetPlannerName()%_fileIndex%suffix);

@@ -168,7 +168,7 @@ void IkReturn::Clear()
 class CustomIkSolverFilterData : public boost::enable_shared_from_this<CustomIkSolverFilterData>, public UserData
 {
 public:
-    CustomIkSolverFilterData(int32_t priority, const IkSolverBase::IkFilterCallbackFn& filterfn, IkSolverBasePtr iksolver) : _priority(priority), _filterfn(filterfn), _iksolverweak(iksolver) {
+    CustomIkSolverFilterData(int32_t priority, const IkSolverBase::IkFilterCallbackFn& filterfn, const IkSolverBasePtr& iksolver) : _priority(priority), _filterfn(filterfn), _iksolverweak(iksolver) {
     }
     virtual ~CustomIkSolverFilterData() {
         IkSolverBasePtr iksolver = _iksolverweak.lock();
@@ -188,7 +188,7 @@ typedef boost::shared_ptr<CustomIkSolverFilterData> CustomIkSolverFilterDataPtr;
 class IkSolverFinishCallbackData : public boost::enable_shared_from_this<IkSolverFinishCallbackData>, public UserData
 {
 public:
-    IkSolverFinishCallbackData(const IkSolverBase::IkFinishCallbackFn& finishfn, IkSolverBasePtr iksolver) : _finishfn(finishfn), _iksolverweak(iksolver) {
+    IkSolverFinishCallbackData(const IkSolverBase::IkFinishCallbackFn& finishfn, const IkSolverBasePtr& iksolver) : _finishfn(finishfn), _iksolverweak(iksolver) {
     }
     virtual ~IkSolverFinishCallbackData() {
         IkSolverBasePtr iksolver = _iksolverweak.lock();
@@ -204,12 +204,12 @@ public:
 
 typedef boost::shared_ptr<IkSolverFinishCallbackData> IkSolverFinishCallbackDataPtr;
 
-bool CustomIkSolverFilterDataCompare(UserDataPtr data0, UserDataPtr data1)
+bool CustomIkSolverFilterDataCompare(const UserDataPtr& data0, const UserDataPtr& data1)
 {
     return boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data0)->_priority > boost::dynamic_pointer_cast<CustomIkSolverFilterData>(data1)->_priority;
 }
 
-bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, const IkReturnPtr& ikreturn)
 {
     if( !ikreturn ) {
         return Solve(param,q0,filteroptions,boost::shared_ptr< vector<dReal> >());
@@ -224,7 +224,7 @@ bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dRea
     return true;
 }
 
-bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn)
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, const IkReturnPtr& ikreturn)
 {
     return Solve(param, q0, filteroptions, ikreturn);
 }
@@ -245,12 +245,12 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, 
     return vsolutions.size() > 0;
 }
 
-bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
+bool IkSolverBase::SolveAll(const IkParameterization& param, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, std::vector<IkReturnPtr>& ikreturns)
 {
     return SolveAll(param, filteroptions, ikreturns);
 }
 
-bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkReturnPtr& ikreturn)
 {
     if( !ikreturn ) {
         return Solve(param,q0,vFreeParameters,filteroptions,boost::shared_ptr< vector<dReal> >());
@@ -265,7 +265,7 @@ bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dRea
     return true;
 }
 
-bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn)
+bool IkSolverBase::Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, const IkReturnPtr& ikreturn)
 {
     return Solve(param, q0, vFreeParameters, filteroptions, ikreturn);
 }
@@ -286,7 +286,7 @@ bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<d
     return vsolutions.size() > 0;
 }
 
-bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns)
+bool IkSolverBase::SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, std::vector<IkReturnPtr>& ikreturns)
 {
     return SolveAll(param, vFreeParameters, filteroptions, ikreturns);
 }
@@ -312,7 +312,7 @@ UserDataPtr IkSolverBase::RegisterFinishCallback(const IkFinishCallbackFn& finis
     return pdata;
 }
 
-IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr filterreturn, int32_t minpriority, int32_t maxpriority)
+IkReturnAction IkSolverBase::_CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, const IkReturnPtr& filterreturn, int32_t minpriority, int32_t maxpriority)
 {
     vector<dReal> vtestsolution;
     if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {

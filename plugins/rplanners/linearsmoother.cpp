@@ -18,7 +18,7 @@
 class LinearSmoother : public PlannerBase
 {
 public:
-    LinearSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    LinearSmoother(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nPath optimizer using linear shortcuts assuming robot has no constraints and _neighstatefn is just regular addition. Should be faster than shortcut_linear.\n\nIf passing 0 or 1 to the constructor, can enable/disable single-dof smoothing.";
         _linearretimer = RaveCreatePlanner(GetEnv(), "LinearTrajectoryRetimer");
@@ -29,7 +29,7 @@ public:
     virtual ~LinearSmoother() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -38,7 +38,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -266,7 +266,7 @@ public:
     }
 
 protected:
-    string _DumpTrajectory(TrajectoryBaseConstPtr trajectory)
+    string _DumpTrajectory(const TrajectoryBaseConstPtr& trajectory)
     {
         string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
         ofstream f(filename.c_str());
@@ -1281,6 +1281,6 @@ protected:
     int _nUseSingleDOFSmoothing;
 };
 
-PlannerBasePtr CreateLinearSmoother(EnvironmentBasePtr penv, std::istream& sinput) {
+PlannerBasePtr CreateLinearSmoother(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return PlannerBasePtr(new LinearSmoother(penv, sinput));
 }

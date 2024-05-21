@@ -100,11 +100,11 @@ namespace OpenRAVE
 class ColladaReader;
 class ColladaWriter;
 
-RobotBasePtr CreateGenericRobot(EnvironmentBasePtr penv, std::istream& sinput);
-MultiControllerBasePtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput);
-TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput);
-PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput);
-CollisionCheckerBasePtr CreateGenericCollisionChecker(EnvironmentBasePtr penv, std::istream& sinput);
+RobotBasePtr CreateGenericRobot(const EnvironmentBasePtr& penv, std::istream& sinput);
+MultiControllerBasePtr CreateMultiController(const EnvironmentBasePtr& penv, std::istream& sinput);
+TrajectoryBasePtr CreateGenericTrajectory(const EnvironmentBasePtr& penv, std::istream& sinput);
+PhysicsEngineBasePtr CreateGenericPhysicsEngine(const EnvironmentBasePtr& penv, std::istream& sinput);
+CollisionCheckerBasePtr CreateGenericCollisionChecker(const EnvironmentBasePtr& penv, std::istream& sinput);
 
 enum MassType
 {
@@ -263,7 +263,7 @@ namespace OpenRAVEXMLParser
 class InterfaceXMLReadable : public Readable
 {
 public:
-    InterfaceXMLReadable(InterfaceBasePtr pinterface) : Readable(pinterface->GetXMLId()), _pinterface(pinterface) {
+    InterfaceXMLReadable(const InterfaceBasePtr& pinterface) : Readable(pinterface->GetXMLId()), _pinterface(pinterface) {
     }
     virtual ~InterfaceXMLReadable() {
     }
@@ -291,21 +291,21 @@ public:
 int& GetXMLErrorCount();
 
 /// \param bResetParseDirectory if true, will reset the parse directory to the current working directory
-bool ParseXMLFile(BaseXMLReaderPtr preader, const std::string& filename);
+bool ParseXMLFile(const BaseXMLReaderPtr& preader, const std::string& filename);
 bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
-BaseXMLReaderPtr CreateEnvironmentReader(EnvironmentBasePtr penv, const AttributesList& atts);
-BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
-BaseXMLReaderPtr CreateInterfaceReader(EnvironmentBasePtr penv, const AttributesList& atts, bool bAddToEnvironment);
+BaseXMLReaderPtr CreateEnvironmentReader(const EnvironmentBasePtr& penv, const AttributesList& atts);
+BaseXMLReaderPtr CreateInterfaceReader(const EnvironmentBasePtr& penv, InterfaceType type, const InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
+BaseXMLReaderPtr CreateInterfaceReader(const EnvironmentBasePtr& penv, const AttributesList& atts, bool bAddToEnvironment);
 
 /// \brief creates a trimesh from reading a file. tries to automatically determine the format by the filename extension
-bool CreateTriMeshFromFile(EnvironmentBasePtr, const std::string& filename, const Vector &vscale, TriMesh& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
+bool CreateTriMeshFromFile(const EnvironmentBasePtr&, const std::string& filename, const Vector &vscale, TriMesh& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
 
 /// \brief creates a trimesh from in-memory data. format is automatically determined from contents of data
 ///
 /// \param formathint is the hint to the underlying cad importer for the format of data
 bool CreateTriMeshFromData(const std::string& data, const std::string& formathint, const Vector &vscale, TriMesh& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
 
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::vector<KinBody::GeometryInfo>& vGeometries);
+bool CreateGeometries(const EnvironmentBasePtr& penv, const std::string& filename, const Vector& vscale, std::vector<KinBody::GeometryInfo>& vGeometries);
 }
 
 #ifdef _WIN32
@@ -328,10 +328,10 @@ bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, cons
 #include <boost/assert.hpp>
 #include <boost/version.hpp>
 
-bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
-bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
-bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::vector<char>& data,const AttributesList& atts);
-bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::vector<char>& data,const AttributesList& atts);
+bool RaveParseXFile(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList& atts);
+bool RaveParseXFile(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList& atts);
+bool RaveParseXData(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::vector<char>& data,const AttributesList& atts);
+bool RaveParseXData(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::vector<char>& data,const AttributesList& atts);
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave", msgid)
 #endif

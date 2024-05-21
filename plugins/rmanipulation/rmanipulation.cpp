@@ -16,10 +16,10 @@
 #include "rmanipulation.h"
 #include "plugindefs.h"
 
-OpenRAVE::ModuleBasePtr CreateBaseManipulation(OpenRAVE::EnvironmentBasePtr penv);
-//OpenRAVE::ModuleBasePtr CreateTaskCaging(OpenRAVE::EnvironmentBasePtr penv);
-OpenRAVE::ModuleBasePtr CreateTaskManipulation(OpenRAVE::EnvironmentBasePtr penv);
-OpenRAVE::ModuleBasePtr CreateVisualFeedback(OpenRAVE::EnvironmentBasePtr penv);
+OpenRAVE::ModuleBasePtr CreateBaseManipulation(const OpenRAVE::EnvironmentBasePtr& penv);
+//OpenRAVE::ModuleBasePtr CreateTaskCaging(const OpenRAVE::EnvironmentBasePtr& penv);
+OpenRAVE::ModuleBasePtr CreateTaskManipulation(const OpenRAVE::EnvironmentBasePtr& penv);
+OpenRAVE::ModuleBasePtr CreateVisualFeedback(const OpenRAVE::EnvironmentBasePtr& penv);
 
 RManipulationPlugin::RManipulationPlugin()
 {
@@ -31,7 +31,7 @@ RManipulationPlugin::RManipulationPlugin()
 
 RManipulationPlugin::~RManipulationPlugin() {}
 
-OpenRAVE::InterfaceBasePtr RManipulationPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr RManipulationPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case PT_Module:

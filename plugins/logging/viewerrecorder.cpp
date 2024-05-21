@@ -118,7 +118,7 @@ class ViewerRecorder : public ModuleBase
     boost::shared_ptr<VideoFrame> _frameLastAdded;
 
 public:
-    ViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) : ModuleBase(penv)
+    ViewerRecorder(const EnvironmentBasePtr& penv, std::istream& sinput) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nRecords the images produced from a viewer into video file. The recordings can be synchronized to real-time or simulation time, by default simulation time is used. Each instance can record only one file at a time. To record multiple files simultaneously, create multiple VideoRecorder instances";
         RegisterCommand("Start",boost::bind(&ViewerRecorder::_StartCommand,this,_1,_2),
@@ -945,7 +945,7 @@ protected:
 #endif
 };
 
-ModuleBasePtr CreateViewerRecorder(EnvironmentBasePtr penv, std::istream& sinput) {
+ModuleBasePtr CreateViewerRecorder(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return ModuleBasePtr(new ViewerRecorder(penv,sinput));
 }
 void DestroyViewerRecordingStaticResources()

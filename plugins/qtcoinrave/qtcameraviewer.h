@@ -19,7 +19,7 @@
 class QtCameraViewer : public ViewerBase
 {
 public:
-    QtCameraViewer(EnvironmentBasePtr penv, std::istream& sinput) : ViewerBase(penv) {
+    QtCameraViewer(const EnvironmentBasePtr& penv, std::istream& sinput) : ViewerBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a camera image viewer (Qt4). Can attach to any camera by specifying the camera name in the type string when creating the interface. The qtcoin viewer needs to be set ";
         string name; sinput >> name;
         _psensor = penv->GetSensor(name);

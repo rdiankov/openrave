@@ -1392,7 +1392,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 bool bSideWallChanged = false;
                 for(unsigned iSideWall=0; iSideWall < vSideWalls.size(); iSideWall++) {
                     if (vSideWalls[iSideWall].Compare(_vSideWalls[iSideWall], fUnitScale) > 0) {
-                        _vSideWalls[iSideWall] = std::move(vSideWalls[iSideWall]);
+                        _vSideWalls[iSideWall] = vSideWalls[iSideWall];
                         bSideWallChanged = true;
                     }
                 }
@@ -1759,7 +1759,7 @@ uint8_t KinBody::GeometryInfo::GetSideWallExists() const
     return mask;
 }
 
-KinBody::Geometry::Geometry(KinBody::LinkPtr parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
+KinBody::Geometry::Geometry(const KinBody::LinkPtr& parent, const KinBody::GeometryInfo& info) : _parent(parent), _info(info)
 {
 }
 

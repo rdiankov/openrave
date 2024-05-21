@@ -150,7 +150,7 @@ class JSONReader
 {
 public:
 
-    JSONReader(const AttributesList& atts, EnvironmentBasePtr penv, const std::string& defaultSuffix) : _penv(penv), _defaultSuffix(defaultSuffix)
+    JSONReader(const AttributesList& atts, const EnvironmentBasePtr& penv, const std::string& defaultSuffix) : _penv(penv), _defaultSuffix(defaultSuffix)
     {
         std::string remoteUrl;
         std::string unixEndpoint;
@@ -1134,21 +1134,21 @@ protected:
 };
 
 
-bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(const EnvironmentBasePtr& penv, const std::string& uri, const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
     reader.SetURI(uri);
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(const EnvironmentBasePtr& penv, const std::string& uri, KinBodyPtr& ppbody, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
     reader.SetURI(uri);
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSON(const EnvironmentBasePtr& penv, const std::string& uri, RobotBasePtr& pprobot, const rapidjson::Value& doc, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
     reader.SetURI(uri);
@@ -1160,7 +1160,7 @@ bool RaveParseJSON(EnvironmentBasePtr penv, const std::string& uri, RobotBasePtr
     return false;
 }
 
-bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONFile(const EnvironmentBasePtr& penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.size() == 0 ) {
@@ -1174,7 +1174,7 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, const std::string& filename, Upd
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONFile(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.size() == 0 ) {
@@ -1187,7 +1187,7 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::s
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONFile(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if (RaveParseJSONFile(penv, pbody, filename, atts, alloc)) {
@@ -1197,7 +1197,7 @@ bool RaveParseJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
     return false;
 }
 
-bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONURI(const EnvironmentBasePtr& penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
     reader.SetURI(uri);
@@ -1218,7 +1218,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFro
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONURI(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".json");
     reader.SetURI(uri);
@@ -1238,7 +1238,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::st
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }
 
-bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONURI(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if (RaveParseJSONURI(penv, pbody, uri, atts, alloc)) {
@@ -1248,7 +1248,7 @@ bool RaveParseJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std:
     return false;
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(const EnvironmentBasePtr& penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document rEnvInfo(&alloc);
     orjson::ParseJson(rEnvInfo, data);
@@ -1258,7 +1258,7 @@ bool RaveParseJSONData(EnvironmentBasePtr penv, const std::string& uri, const st
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     orjson::ParseJson(doc, data);
@@ -1267,7 +1267,7 @@ bool RaveParseJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::s
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseJSONData(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if (RaveParseJSONData(penv, pbody, uri, data, atts, alloc)) {
@@ -1277,7 +1277,7 @@ bool RaveParseJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std
     return false;
 }
 
-bool RaveParseMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackFile(const EnvironmentBasePtr& penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.size() == 0 ) {
@@ -1291,7 +1291,7 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, 
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackFile(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.size() == 0 ) {
@@ -1304,7 +1304,7 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackFile(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if(RaveParseMsgPackFile(penv, pbody, filename, atts, alloc)) {
@@ -1314,7 +1314,7 @@ bool RaveParseMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
     return false;
 }
 
-bool RaveParseEncryptedJSONFile(EnvironmentBasePtr penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONFile(const EnvironmentBasePtr& penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.empty() ) {
@@ -1328,7 +1328,7 @@ bool RaveParseEncryptedJSONFile(EnvironmentBasePtr penv, const std::string& file
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseEncryptedJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONFile(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.empty() ) {
@@ -1341,7 +1341,7 @@ bool RaveParseEncryptedJSONFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, con
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseEncryptedJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONFile(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if(RaveParseEncryptedJSONFile(std::move(penv), pbody, filename, atts, alloc)) {
@@ -1351,7 +1351,7 @@ bool RaveParseEncryptedJSONFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, 
     return false;
 }
 
-bool RaveParseEncryptedMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackFile(const EnvironmentBasePtr& penv, const std::string& filename, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.empty() ) {
@@ -1365,7 +1365,7 @@ bool RaveParseEncryptedMsgPackFile(EnvironmentBasePtr penv, const std::string& f
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseEncryptedMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackFile(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::string fullFilename = RaveFindLocalFile(filename);
     if (fullFilename.empty() ) {
@@ -1378,7 +1378,7 @@ bool RaveParseEncryptedMsgPackFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, 
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseEncryptedMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackFile(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if(RaveParseEncryptedMsgPackFile(std::move(penv), pbody, filename, atts, alloc)) {
@@ -1388,7 +1388,7 @@ bool RaveParseEncryptedMsgPackFile(EnvironmentBasePtr penv, RobotBasePtr& pprobo
     return false;
 }
 
-bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackURI(const EnvironmentBasePtr& penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".msgpack");
     reader.SetURI(uri);
@@ -1409,7 +1409,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, Update
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackURI(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, penv, ".msgpack");
     reader.SetURI(uri);
@@ -1430,7 +1430,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std:
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }
 
-bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackURI(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if (RaveParseMsgPackURI(penv, pbody, uri, atts, alloc)) {
@@ -1440,7 +1440,7 @@ bool RaveParseMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const s
     return false;
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(const EnvironmentBasePtr& penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document rEnvInfo(&alloc);
     MsgPack::ParseMsgPack(rEnvInfo, data);
@@ -1450,7 +1450,7 @@ bool RaveParseMsgPackData(EnvironmentBasePtr penv, const std::string& uri, const
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     MsgPack::ParseMsgPack(doc, data);
@@ -1459,7 +1459,7 @@ bool RaveParseMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std
     return reader.ExtractFirst(doc, ppbody, alloc);
 }
 
-bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseMsgPackData(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if (RaveParseMsgPackData(penv, pbody, uri, data, atts, alloc)) {
@@ -1470,7 +1470,7 @@ bool RaveParseMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const 
 }
 
 
-bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONData(const EnvironmentBasePtr& penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::istringstream iss(data);
     std::ostringstream oss;
@@ -1480,7 +1480,7 @@ bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, const std::string& uri,
     return RaveParseJSONData(std::move(penv), oss.str(), uri, updateMode, atts, alloc);
 }
 
-bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONData(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::istringstream iss(data);
     std::ostringstream oss;
@@ -1490,7 +1490,7 @@ bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, con
     return RaveParseJSONData(std::move(penv), ppbody, uri, oss.str(), atts, alloc);
 }
 
-bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONData(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::istringstream iss(data);
     std::ostringstream oss;
@@ -1500,7 +1500,7 @@ bool RaveParseEncryptedJSONData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, 
     return RaveParseJSONData(std::move(penv), pprobot, uri, oss.str(), atts, alloc);
 }
 
-bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackData(const EnvironmentBasePtr& penv, const std::string& uri, const std::string& data, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::istringstream iss(data);
     std::ostringstream oss;
@@ -1510,7 +1510,7 @@ bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, const std::string& u
     return RaveParseMsgPackData(std::move(penv), uri, oss.str(), updateMode, atts, alloc);
 }
 
-bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackData(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::istringstream iss(data);
     std::ostringstream oss;
@@ -1520,7 +1520,7 @@ bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, 
     return RaveParseMsgPackData(std::move(penv), ppbody, uri, oss.str(), atts, alloc);
 }
 
-bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackData(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const std::string& data, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::istringstream iss(data);
     std::ostringstream oss;
@@ -1532,7 +1532,7 @@ bool RaveParseEncryptedMsgPackData(EnvironmentBasePtr penv, RobotBasePtr& pprobo
 
 ///// Support for PGP-encrypted data
 
-bool RaveParseEncryptedJSONURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONURI(const EnvironmentBasePtr& penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, std::move(penv), ".json.gpg");
     reader.SetURI(uri);
@@ -1553,7 +1553,7 @@ bool RaveParseEncryptedJSONURI(EnvironmentBasePtr penv, const std::string& uri, 
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseEncryptedJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONURI(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, std::move(penv), ".json.gpg");
     reader.SetURI(uri);
@@ -1573,7 +1573,7 @@ bool RaveParseEncryptedJSONURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, cons
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }
 
-bool RaveParseEncryptedJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedJSONURI(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if (RaveParseEncryptedJSONURI(std::move(penv), pbody, uri, atts, alloc)) {
@@ -1583,7 +1583,7 @@ bool RaveParseEncryptedJSONURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, c
     return false;
 }
 
-bool RaveParseEncryptedMsgPackURI(EnvironmentBasePtr penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackURI(const EnvironmentBasePtr& penv, const std::string& uri, UpdateFromInfoMode updateMode, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, std::move(penv), ".msgpack.gpg");
     reader.SetURI(uri);
@@ -1604,7 +1604,7 @@ bool RaveParseEncryptedMsgPackURI(EnvironmentBasePtr penv, const std::string& ur
     return reader.ExtractAll(rEnvInfo, updateMode, vCreatedBodies, vModifiedBodies, vRemovedBodies, alloc);
 }
 
-bool RaveParseEncryptedMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackURI(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     JSONReader reader(atts, std::move(penv), ".msgpack.gpg");
     reader.SetURI(uri);
@@ -1624,7 +1624,7 @@ bool RaveParseEncryptedMsgPackURI(EnvironmentBasePtr penv, KinBodyPtr& ppbody, c
     return reader.ExtractOne(doc, ppbody, uri, alloc);
 }
 
-bool RaveParseEncryptedMsgPackURI(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+bool RaveParseEncryptedMsgPackURI(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& uri, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     KinBodyPtr pbody;
     if (RaveParseEncryptedMsgPackURI(std::move(penv), pbody, uri, atts, alloc)) {

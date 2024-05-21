@@ -2359,11 +2359,11 @@ PyKinBodyStateSaver::PyKinBodyStateSaver(PyKinBodyPtr pybody, object options) : 
     // python should not support restoring on destruction since there's garbage collection
     _state.SetRestoreOnDestructor(false);
 }
-PyKinBodyStateSaver::PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : _pyenv(pyenv), _state(pbody) {
+PyKinBodyStateSaver::PyKinBodyStateSaver(const KinBodyPtr& pbody, PyEnvironmentBasePtr pyenv) : _pyenv(pyenv), _state(pbody) {
     // python should not support restoring on destruction since there's garbage collection
     _state.SetRestoreOnDestructor(false);
 }
-PyKinBodyStateSaver::PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(pbody,pyGetIntFromPy(options, 0)) {
+PyKinBodyStateSaver::PyKinBodyStateSaver(const KinBodyPtr& pbody, PyEnvironmentBasePtr pyenv, object options) : _pyenv(pyenv), _state(pbody,pyGetIntFromPy(options, 0)) {
     // python should not support restoring on destruction since there's garbage collection
     _state.SetRestoreOnDestructor(false);
 }
@@ -2710,7 +2710,7 @@ py::object PyKinBody::PyKinBodyInfo::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
-PyKinBody::PyKinBody(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pbody,pyenv), _pbody(pbody)
+PyKinBody::PyKinBody(const KinBodyPtr& pbody, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pbody,pyenv), _pbody(pbody)
 {
 }
 
@@ -4392,7 +4392,7 @@ void PyKinBody::__exit__(object type, object value, object traceback)
     }
 }
 
-object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
+object toPyKinBodyLink(const KinBody::LinkPtr& plink, PyEnvironmentBasePtr pyenv)
 {
     if( !plink ) {
         return py::none_();
@@ -4400,7 +4400,7 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr pyenv)
     return py::to_object(PyLinkPtr(new PyLink(plink,pyenv)));
 }
 
-object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv)
+object toPyKinBodyLink(const KinBody::LinkPtr& plink, object opyenv)
 {
     extract_<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {
@@ -4410,7 +4410,7 @@ object toPyKinBodyLink(KinBody::LinkPtr plink, object opyenv)
     return py::none_();
 }
 
-object toPyKinBodyGeometry(KinBody::GeometryPtr pgeom)
+object toPyKinBodyGeometry(const KinBody::GeometryPtr& pgeom)
 {
     if( !pgeom ) {
         return py::none_();
@@ -4418,7 +4418,7 @@ object toPyKinBodyGeometry(KinBody::GeometryPtr pgeom)
     return py::to_object(OPENRAVE_SHARED_PTR<PyGeometry>(new PyGeometry(pgeom)));
 }
 
-object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
+object toPyKinBodyJoint(const KinBody::JointPtr& pjoint, PyEnvironmentBasePtr pyenv)
 {
     if( !pjoint ) {
         return py::none_();
@@ -4499,7 +4499,7 @@ PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr pykinbody)
     return pykinbody->GetEnv();
 }
 
-PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)
+PyInterfaceBasePtr toPyKinBody(const KinBodyPtr& pkinbody, PyEnvironmentBasePtr pyenv)
 {
     if( !pkinbody ) {
         return PyInterfaceBasePtr();
@@ -4510,7 +4510,7 @@ PyInterfaceBasePtr toPyKinBody(KinBodyPtr pkinbody, PyEnvironmentBasePtr pyenv)
     return PyInterfaceBasePtr(new PyKinBody(pkinbody,pyenv));
 }
 
-object toPyKinBody(KinBodyPtr pkinbody, object opyenv)
+object toPyKinBody(const KinBodyPtr& pkinbody, object opyenv)
 {
     extract_<PyEnvironmentBasePtr> pyenv(opyenv);
     if( pyenv.check() ) {

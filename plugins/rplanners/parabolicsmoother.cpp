@@ -185,7 +185,7 @@ private:
     };
 
 public:
-    ParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _feasibilitychecker(this)
+    ParabolicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv), _feasibilitychecker(this)
     {
         __description = ":Interface Author: Rosen Diankov\n\nInterface to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
         _bmanipconstraints = false;
@@ -199,7 +199,7 @@ public:
         _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -207,7 +207,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -2812,7 +2812,7 @@ protected:
         return std::string();
     }
 
-    std::string _DumpTrajectory(TrajectoryBasePtr traj)
+    std::string _DumpTrajectory(const TrajectoryBasePtr& traj)
     {
         // store the trajectory
         uint32_t randnum;
@@ -2921,7 +2921,7 @@ protected:
 };
 
 
-PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateParabolicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new ParabolicSmoother(penv,sinput));
 }

@@ -26,7 +26,7 @@ PQPRavePlugin::PQPRavePlugin()
 
 PQPRavePlugin::~PQPRavePlugin() {}
  
-OpenRAVE::InterfaceBasePtr PQPRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr PQPRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:

@@ -33,10 +33,10 @@ class GrasperPlanner :  public PlannerBase
     };
 
 public:
-    GrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _report(new CollisionReport()) {
+    GrasperPlanner(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv), _report(new CollisionReport()) {
         __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\n\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
     }
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = pbase;
@@ -542,7 +542,7 @@ public:
         return ptraj->GetNumWaypoints() > 0 ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);     // only return true if there is at least one valid pose!
     }
 
-    virtual int _CheckCollision(KinBody::JointConstPtr pjoint, KinBodyPtr targetbody)
+    virtual int _CheckCollision(const KinBody::JointConstPtr& pjoint, KinBodyPtr targetbody)
     {
         int ct = 0;
         for(int q = 0; q < (int)_vlinks.size(); q++) {
@@ -553,7 +553,7 @@ public:
         return ct;
     }
 
-    virtual int _CheckCollision(KinBody::LinkConstPtr plink, KinBodyPtr targetbody)
+    virtual int _CheckCollision(const KinBody::LinkConstPtr& plink, KinBodyPtr targetbody)
     {
         int ct = (plink->GetIndex()<<CT_LinkMaskShift);
         bool bcollision;
@@ -733,7 +733,7 @@ protected:
     dReal _fTargetRadius;
 };
 
-PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateGrasperPlanner(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new GrasperPlanner(penv,sinput));
 }

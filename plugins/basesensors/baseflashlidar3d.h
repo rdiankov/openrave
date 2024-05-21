@@ -141,12 +141,12 @@ public:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseFlashLidar3DXMLReader(boost::dynamic_pointer_cast<BaseFlashLidar3DSensor>(ptr)));
     }
 
-    BaseFlashLidar3DSensor(EnvironmentBasePtr penv) : SensorBase(penv)
+    BaseFlashLidar3DSensor(const EnvironmentBasePtr& penv) : SensorBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated 3D flash lidar sensor. A flash LIDAR instantaneously returns the depth measurements in the form of an image. It has the same projection parameters as a camera except each pixel is an active element that measures distance. The XML parameters are the same as :ref:`sensor-baselaser2d` along with:\n\
 * KK - 4 element vector that constructs the intrinsic matrix of the flash lidar (KK[0] 0 KK[2]; 0 KK[1] KK[3]; 0 0 1]. \n\
@@ -386,7 +386,7 @@ public:
         return _trans;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseFlashLidar3DSensor const> r = boost::dynamic_pointer_cast<BaseFlashLidar3DSensor const>(preference);

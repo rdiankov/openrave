@@ -36,7 +36,7 @@ public:
     typedef boost::shared_ptr<ParabolicGroupInfo> ParabolicGroupInfoPtr;
     typedef boost::shared_ptr<ParabolicGroupInfo const> ParabolicGroupInfoConstPtr;
 
-    ParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer2(penv, sinput)
+    ParabolicTrajectoryRetimer2(const EnvironmentBasePtr& penv, std::istream& sinput) : TrajectoryRetimer2(penv, sinput)
     {
         __description = ":Interface Author: Rosen Diankov\n\nSimple parabolic trajectory re-timing while passing through all the waypoints, waypoints will not be modified. This assumes all waypoints have velocity 0 (unless the start and final points are forced). Overwrites the velocities and timestamps of input trajectory.";
     }
@@ -1044,7 +1044,7 @@ protected:
 
 }; // end class ParabolicTrajectoryRetimer2
 
-PlannerBasePtr CreateParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateParabolicTrajectoryRetimer2(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new ParabolicTrajectoryRetimer2(penv, sinput));
 }

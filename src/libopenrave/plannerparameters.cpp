@@ -37,7 +37,7 @@ typedef bai::base64_from_binary<    // convert binary values to base64 character
             >
         > base64_text;
 
-WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(0), _penv(penv), _bProcessing(false) {
+WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(const EnvironmentBasePtr& penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(0), _penv(penv), _bProcessing(false) {
     _vXMLParameters.push_back("maxdeviationangle");
     _vXMLParameters.push_back("maintaintiming");
     _vXMLParameters.push_back("greedysearch");
@@ -54,13 +54,13 @@ bool WorkspaceTrajectoryParameters::serialize(std::ostream& O, int options) cons
     if( !PlannerParameters::serialize(O, options&~1) ) {
         return false;
     }
-    O << "<maxdeviationangle>" << maxdeviationangle << "</maxdeviationangle>" << std::endl;
-    O << "<maintaintiming>" << maintaintiming << "</maintaintiming>" << std::endl;
-    O << "<greedysearch>" << greedysearch << "</greedysearch>" << std::endl;
-    O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << std::endl;
-    O << "<ignorefirstcollisionee>" << ignorefirstcollisionee << "</ignorefirstcollisionee>" << std::endl;
-    O << "<ignorelastcollisionee>" << ignorelastcollisionee << "</ignorelastcollisionee>" << std::endl;
-    O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << std::endl;
+    O << "<maxdeviationangle>" << maxdeviationangle << "</maxdeviationangle>" << '\n';
+    O << "<maintaintiming>" << maintaintiming << "</maintaintiming>" << '\n';
+    O << "<greedysearch>" << greedysearch << "</greedysearch>" << '\n';
+    O << "<ignorefirstcollision>" << ignorefirstcollision << "</ignorefirstcollision>" << '\n';
+    O << "<ignorefirstcollisionee>" << ignorefirstcollisionee << "</ignorefirstcollisionee>" << '\n';
+    O << "<ignorelastcollisionee>" << ignorelastcollisionee << "</ignorelastcollisionee>" << '\n';
+    O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << '\n';
     if( !!workspacetraj ) {
         O << "<workspacetrajectory><![CDATA[";
 
@@ -72,10 +72,10 @@ bool WorkspaceTrajectoryParameters::serialize(std::ostream& O, int options) cons
             base64_text(sbinarytraj.c_str() + sbinarytraj.size()),
             ostream_iterator<char>(O)
             );
-        O << "]]></workspacetrajectory>" << std::endl;
+        O << "]]></workspacetrajectory>" << '\n';
     }
     if( !(options & 1) ) {
-        O << _sExtraParameters << endl;
+        O << _sExtraParameters << '\n';
     }
     return !!O;
 }

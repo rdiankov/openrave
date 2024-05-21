@@ -79,7 +79,7 @@ public:
         {
 public:
             FCLGeometryInfo();
-            FCLGeometryInfo(KinBody::GeometryPtr pgeom);
+            FCLGeometryInfo(const KinBody::GeometryPtr& pgeom);
 
             virtual ~FCLGeometryInfo() {
             }
@@ -97,7 +97,7 @@ public:
         {
 public:
             LinkInfo();
-            LinkInfo(KinBody::LinkPtr plink);
+            LinkInfo(const KinBody::LinkPtr& plink);
 
             virtual ~LinkInfo() {
                 Reset();
@@ -180,7 +180,7 @@ public:
     typedef boost::shared_ptr<FCLSpace::FCLKinBodyInfo::LinkInfo> LinkInfoPtr;
     typedef boost::function<void (FCLKinBodyInfoPtr)> SynchronizeCallbackFn;
 
-    FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey);
+    FCLSpace(const EnvironmentBasePtr& penv, const std::string& userdatakey);
 
     virtual ~FCLSpace()
     {
@@ -189,8 +189,8 @@ public:
 
     void DestroyEnvironment();
 
-    FCLKinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo = FCLKinBodyInfoPtr(), bool bSetToCurrentPInfo=true);
-    void ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo);
+    FCLKinBodyInfoPtr InitKinBody(const KinBodyConstPtr& pbody, FCLKinBodyInfoPtr pinfo = FCLKinBodyInfoPtr(), bool bSetToCurrentPInfo=true);
+    void ReloadKinBodyLinks(const KinBodyConstPtr& pbody, const FCLKinBodyInfoPtr& pinfo);
 
     bool HasNamedGeometry(const KinBody &body, const std::string& groupname);
 
@@ -198,7 +198,7 @@ public:
 
     const std::string& GetGeometryGroup() const;
 
-    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname);
+    bool SetBodyGeometryGroup(const KinBodyConstPtr& pbody, const std::string& groupname);
 
     const std::string& GetBodyGeometryGroup(const KinBody &body) const;
 
@@ -217,7 +217,7 @@ public:
 
     const FCLKinBodyInfoPtr& GetInfo(const KinBody &body) const;
 
-    void RemoveUserData(KinBodyConstPtr pbody);
+    void RemoveUserData(const KinBodyConstPtr& pbody);
 
     /// \brief returns bodies initialized by this space. Note that some entries are null pointer.
     const std::vector<KinBodyConstPtr>& GetEnvBodies() const {
@@ -293,9 +293,9 @@ private:
         boost::function<void()> _fn;
         bool _bDoRemove;
     };
-    void _ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo);
+    void _ResetCurrentGeometryCallback(const boost::weak_ptr<FCLKinBodyInfo>& _pinfo);
 
-    void _ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo);
+    void _ResetGeometryGroupsCallback(const boost::weak_ptr<FCLKinBodyInfo>& _pinfo);
 
     void _ResetLinkEnableCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo) {
         FCLKinBodyInfoPtr pinfo = _pinfo.lock();

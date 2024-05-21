@@ -97,7 +97,7 @@ class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::Fe
 
 
 public:
-    ConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    ConstraintParabolicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\nConstraint-based smoothing with `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
         _bCheckControllerTimeStep = true;
@@ -105,7 +105,7 @@ public:
         //OPENRAVE_ASSERT_FORMAT0(!!_distancechecker, "need pqp distance checker", ORE_Assert);
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -114,7 +114,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -512,7 +512,7 @@ public:
         }
         return std::string();
     }
-    std::string _DumpTrajectory(TrajectoryBasePtr traj)
+    std::string _DumpTrajectory(const TrajectoryBasePtr& traj)
     {
         // store the trajectory
         string filename = str(boost::format("%s/parabolicsmoother%d.traj.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
@@ -948,7 +948,7 @@ public:
     /*class GravitySaver
        {
        public:
-        GravitySaver(EnvironmentBasePtr penv) : _penv(penv) {
+        GravitySaver(const EnvironmentBasePtr& penv) : _penv(penv) {
             _vgravity = penv->GetPhysicsEngine()->GetGravity();
         }
         ~GravitySaver() {
@@ -1114,7 +1114,7 @@ private:
 };
 
 
-PlannerBasePtr CreateConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateConstraintParabolicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new ConstraintParabolicSmoother(penv,sinput));
 }

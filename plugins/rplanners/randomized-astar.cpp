@@ -20,7 +20,7 @@ class RandomizedAStarPlanner : public PlannerBase
     class SimpleCostMetric
     {
 public:
-        SimpleCostMetric(RobotBasePtr robot) {
+        SimpleCostMetric(const RobotBasePtr& robot) {
         }
         virtual float Eval(const vector<dReal>& pConfiguration) {
             return 1;
@@ -30,7 +30,7 @@ public:
     class SimpleGoalMetric
     {
 public:
-        SimpleGoalMetric(RobotBasePtr robot, dReal thresh=0.01f) : _robot(robot), _thresh(thresh) {
+        SimpleGoalMetric(const RobotBasePtr& robot, dReal thresh=0.01f) : _robot(robot), _thresh(thresh) {
         }
 
         //checks if pConf is within this cone (note: only works in 3D)
@@ -145,11 +145,11 @@ protected:
             if( !PlannerParameters::serialize(O) )
                 return false;
 
-            O << "<radius>" << fRadius << "</radius>" << endl;
-            O << "<distthresh>" << fDistThresh << "</distthresh>" << endl;
-            O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << endl;
-            O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << endl;
-            O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << endl;
+            O << "<radius>" << fRadius << "</radius>" << '\n';
+            O << "<distthresh>" << fDistThresh << "</distthresh>" << '\n';
+            O << "<goalcoeff>" << fGoalCoeff << "</goalcoeff>" << '\n';
+            O << "<maxchildren>" << nMaxChildren << "</maxchildren>" << '\n';
+            O << "<maxsampletries>" << nMaxSampleTries << "</maxsampletries>" << '\n';
 
             return !!O;
         }
@@ -278,7 +278,7 @@ public:
         CLOSED
     };
 
-    RandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    RandomizedAStarPlanner(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nRandomized A*. A continuous version of A*. See:\n\
 Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf. on Intelligent Robots and Systems, October 2007.\"\n";
@@ -308,7 +308,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
 
     // Planning Methods
     ///< manipulator state is also set
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset();
@@ -438,7 +438,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         }
 
         stringstream ss;
-        ss << endl << "Path found, final node: cost: " << pbest->fcost << ", goal: " << (pbest->ftotal-pbest->fcost)/_parameters->fGoalCoeff << endl;
+        ss << '\n' << "Path found, final node: cost: " << pbest->fcost << ", goal: " << (pbest->ftotal-pbest->fcost)/_parameters->fGoalCoeff << '\n';
         for(int i = 0; i < GetDOF(); ++i) {
             ss << pbest->q[i] << " ";
         }
@@ -498,7 +498,7 @@ private:
         return p;
     }
 
-    void _InterpolateNodes(const vector<dReal>& pQ0, const vector<dReal>& pQ1, TrajectoryBasePtr ptraj)
+    void _InterpolateNodes(const vector<dReal>& pQ0, const vector<dReal>& pQ1, const TrajectoryBasePtr& ptraj)
     {
         // compute  the discretization
         int i, numSteps = 1;
@@ -619,6 +619,6 @@ private:
     int nIndex;
 };
 
-PlannerBasePtr CreateRandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
+PlannerBasePtr CreateRandomizedAStarPlanner(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return PlannerBasePtr(new RandomizedAStarPlanner(penv, sinput));
 }

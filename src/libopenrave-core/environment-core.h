@@ -143,7 +143,7 @@ protected:
 class KinBodyIdSaver
 {
 public:
-    KinBodyIdSaver(KinBodyPtr pbody) : _pbody(pbody) {
+    KinBodyIdSaver(const KinBodyPtr& pbody) : _pbody(pbody) {
         if( !!_pbody ) {
             _id = pbody->GetId();
         }
@@ -183,7 +183,7 @@ public:
             }
         }
 
-        void Add(OpenRAVE::GraphHandlePtr phandle) {
+        void Add(const OpenRAVE::GraphHandlePtr& phandle) {
             if( !!phandle) {
                 listhandles.push_back(phandle);
             }
@@ -196,7 +196,7 @@ public:
     class CollisionCallbackData : public UserData
     {
 public:
-        CollisionCallbackData(const CollisionCallbackFn& callback, boost::shared_ptr<Environment> penv) : _callback(callback), _pweakenv(penv) {
+        CollisionCallbackData(const CollisionCallbackFn& callback, const boost::shared_ptr<Environment>& penv) : _callback(callback), _pweakenv(penv) {
         }
         virtual ~CollisionCallbackData() {
             boost::shared_ptr<Environment> penv = _pweakenv.lock();
@@ -217,7 +217,7 @@ protected:
     class BodyCallbackData : public UserData
     {
 public:
-        BodyCallbackData(const BodyCallbackFn& callback, boost::shared_ptr<Environment> penv) : _callback(callback), _pweakenv(penv) {
+        BodyCallbackData(const BodyCallbackFn& callback, const boost::shared_ptr<Environment>& penv) : _callback(callback), _pweakenv(penv) {
         }
         virtual ~BodyCallbackData() {
             boost::shared_ptr<Environment> penv = _pweakenv.lock();
@@ -509,14 +509,14 @@ public:
         return RaveGlobalState();
     }
 
-    virtual void OwnInterface(InterfaceBasePtr pinterface) override
+    virtual void OwnInterface(const InterfaceBasePtr& pinterface) override
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentLock lockenv(GetMutex());
         ExclusiveLock lock473(_mutexInterfaces);
         _listOwnedInterfaces.push_back(pinterface);
     }
-    virtual void DisownInterface(InterfaceBasePtr pinterface) override
+    virtual void DisownInterface(const InterfaceBasePtr& pinterface) override
     {
         CHECK_INTERFACE(pinterface);
         EnvironmentLock lockenv(GetMutex());
@@ -540,13 +540,13 @@ public:
         return penv;
     }
 
-    void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) override
+    void Clone(const EnvironmentBaseConstPtr& preference, int cloningoptions) override
     {
         EnvironmentLock lockenv(GetMutex());
         _Clone(boost::static_pointer_cast<Environment const>(preference),cloningoptions,true);
     }
 
-    void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) override
+    void Clone(const EnvironmentBaseConstPtr& preference, const std::string& clonedEnvName, int cloningoptions) override
     {
         EnvironmentLock lockenv(GetMutex());
         _Clone(boost::static_pointer_cast<Environment const>(preference), cloningoptions,true);
@@ -972,7 +972,7 @@ public:
         }
     }
 
-    virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs) override
+    virtual void Add(const InterfaceBasePtr& pinterface, InterfaceAddMode addMode, const std::string& cmdargs) override
     {
         CHECK_INTERFACE(pinterface);
         switch(pinterface->GetInterfaceType()) {
@@ -990,7 +990,7 @@ public:
         }
     }
 
-    virtual void _AddKinBody(KinBodyPtr pbody, InterfaceAddMode addMode)
+    virtual void _AddKinBody(const KinBodyPtr& pbody, InterfaceAddMode addMode)
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
@@ -1093,7 +1093,7 @@ public:
         psensor->Configure(SensorBase::CC_PowerOn);
     }
 
-    virtual bool Remove(InterfaceBasePtr pinterface) override
+    virtual bool Remove(const InterfaceBasePtr& pinterface) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_INTERFACE(pinterface);
@@ -1488,14 +1488,14 @@ public:
         return _pCurrentChecker;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report) override
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody1, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         return _pCurrentChecker->CheckCollision(pbody1,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report) override
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody1, const KinBodyConstPtr& pbody2, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
@@ -1503,14 +1503,14 @@ public:
         return _pCurrentChecker->CheckCollision(pbody1,pbody2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report ) override
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report ) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report) override
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink1, const KinBody::LinkConstPtr& plink2, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
@@ -1518,7 +1518,7 @@ public:
         return _pCurrentChecker->CheckCollision(plink1,plink2,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report) override
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const KinBodyConstPtr& pbody, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
@@ -1526,45 +1526,45 @@ public:
         return _pCurrentChecker->CheckCollision(plink,pbody,report);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report) override
+    virtual bool CheckCollision(const RAY& ray, const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         return _pCurrentChecker->CheckCollision(ray,plink,report);
     }
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report) override
+    virtual bool CheckCollision(const RAY& ray, const KinBodyConstPtr& pbody, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(ray,pbody,report);
     }
-    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report) override
+    virtual bool CheckCollision(const RAY& ray, const CollisionReportPtr& report) override
     {
         return _pCurrentChecker->CheckCollision(ray,report);
     }
 
-    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report) override
+    virtual bool CheckCollision(const TriMesh& trimesh, const KinBodyConstPtr& pbody, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         return _pCurrentChecker->CheckCollision(trimesh,pbody,report);
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report) override
+    virtual bool CheckStandaloneSelfCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
@@ -2333,7 +2333,7 @@ public:
         return pinterface;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts, const std::string& uri)
+    virtual InterfaceBasePtr ReadInterfaceData(const InterfaceBasePtr& pinterface, InterfaceType type, const std::string& data, const AttributesList& atts, const std::string& uri)
     {
         EnvironmentLock lockenv(GetMutex());
 
@@ -3298,7 +3298,7 @@ public:
             }
         }
 
-        for(KinBodyPtr pRenamedBody : listBodiesTemporarilyRenamed) {
+        for(const KinBodyPtr& pRenamedBody : listBodiesTemporarilyRenamed) {
             RAVELOG_INFO_FORMAT("env=%s, body '%s' (id=%s) was renamed to avoid a name conflict, but not modified to another name, so assuming that it should be deleted", GetNameId()%pRenamedBody->GetName()%pRenamedBody->GetId());
             Remove(pRenamedBody);
             vRemovedBodies.push_back(pRenamedBody);
@@ -3972,7 +3972,7 @@ protected:
     /// \param pbody kin body to be added to the environment
     /// \param envBodyIndex environment body index of the pbody
     /// assuming _mutexInterfaces is exclusively locked
-    inline void _AddKinBodyInternal(KinBodyPtr pbody, int envBodyIndex)
+    inline void _AddKinBodyInternal(const KinBodyPtr& pbody, int envBodyIndex)
     {
         EnsureVectorSize(_vecbodies, envBodyIndex+1);
         _vecbodies.at(envBodyIndex) = pbody;
@@ -4056,7 +4056,7 @@ protected:
     }
 
     /// locks _mutexInterfaces internally
-    virtual bool _CheckUniqueName(KinBodyConstPtr pbody, bool bDoThrow=false) const
+    virtual bool _CheckUniqueName(const KinBodyConstPtr& pbody, bool bDoThrow=false) const
     {
         const std::string& name = pbody->GetName();
 
@@ -4108,7 +4108,7 @@ protected:
 
     /// \brief do not allow empty ids
     /// locks _mutexInterfaces internally
-    virtual bool _CheckUniqueId(KinBodyConstPtr pbody, bool bDoThrow=false) const
+    virtual bool _CheckUniqueId(const KinBodyConstPtr& pbody, bool bDoThrow=false) const
     {
         const std::string& inputBodyId = pbody->GetId();
         if( inputBodyId.empty() ) {
@@ -4166,7 +4166,7 @@ protected:
     }
 
     /// assumes _mutexInterfaces is locked
-    virtual int _AssignEnvironmentBodyIndex(KinBodyPtr pbody)
+    virtual int _AssignEnvironmentBodyIndex(const KinBodyPtr& pbody)
     {
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
         int envBodyIndex = 0;
@@ -4302,7 +4302,7 @@ protected:
     }
 
     /// _mutexInterfaces should not be locked
-    void _CallBodyCallbacks(KinBodyPtr pbody, int action)
+    void _CallBodyCallbacks(const KinBodyPtr& pbody, int action)
     {
         std::list<UserDataWeakPtr> listRegisteredBodyCallbacks;
         {

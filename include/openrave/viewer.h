@@ -58,7 +58,7 @@ public:
         VE_ItemSelection = 1,
     } RAVE_DEPRECATED;
 
-    ViewerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Viewer, penv) {
+    ViewerBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_Viewer, penv) {
     }
     virtual ~ViewerBase() {
     }
@@ -69,7 +69,7 @@ public:
     }
 
     /// \brief notified when a body has been removed from the environment
-    virtual void RemoveKinBody(KinBodyPtr pbody) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual void RemoveKinBody(const KinBodyPtr& pbody) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief goes into the main loop
     ///
@@ -197,7 +197,7 @@ public:
 
 protected:
     /// \deprecated (12/12/11)
-    virtual void SetViewerData(KinBodyPtr body, UserDataPtr data) RAVE_DEPRECATED {
+    virtual void SetViewerData(const KinBodyPtr& body, UserDataPtr data) RAVE_DEPRECATED {
         body->SetUserData(GetXMLId(), data);
     }
 

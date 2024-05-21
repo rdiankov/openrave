@@ -270,7 +270,7 @@ private:
     };
 
 public:
-    SimpleTextServer(EnvironmentBasePtr penv) : ModuleBase(penv) {
+    SimpleTextServer(const EnvironmentBasePtr& penv) : ModuleBase(penv) {
         _nIdIndex = 1;
         _nNextFigureId = 1;
         _bWorking = false;

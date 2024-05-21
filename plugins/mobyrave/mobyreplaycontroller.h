@@ -280,12 +280,12 @@ protected:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
     	return BaseXMLReaderPtr(new ControllerPropertiesXMLReader(boost::dynamic_pointer_cast<MobyReplayController>(ptr),atts));
     }
 
-    MobyReplayController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _mrdfilename(""), _firstAction(true) {
+    MobyReplayController(const EnvironmentBasePtr& penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false), _mrdfilename(""), _firstAction(true) {
         _penv = penv;
 
         __description = ":Interface Author: James Taylor and Rosen Diankov\n\nThe Moby controller is capable of supporting any combination of PID control depending on the gains specified in the controller xml configuration\n\n";
@@ -307,7 +307,7 @@ public:
         _mrdfile->Close();
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
+    virtual bool Init(const RobotBasePtr& robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
         if( flog.is_open() ) {
@@ -989,7 +989,7 @@ private:
     std::vector<std::string> _mrdLookups;
 };
 
-ControllerBasePtr CreateMobyReplayController(EnvironmentBasePtr penv, std::istream& sinput)
+ControllerBasePtr CreateMobyReplayController(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return ControllerBasePtr(new MobyReplayController(penv,sinput));
 }

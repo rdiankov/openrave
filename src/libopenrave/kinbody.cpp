@@ -68,7 +68,7 @@ inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t vectorSize)
 class ChangeCallbackData : public UserData
 {
 public:
-    ChangeCallbackData(int properties, const boost::function<void()>& callback, KinBodyConstPtr pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
+    ChangeCallbackData(int properties, const boost::function<void()>& callback, const KinBodyConstPtr& pbody) : _properties(properties), _callback(callback), _pweakbody(pbody) {
     }
     virtual ~ChangeCallbackData() {
         KinBodyConstPtr pbody = _pweakbody.lock();
@@ -737,7 +737,7 @@ bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, cons
     }
     _vecjoints.reserve(jointinfos.size());
     FOREACHC(itjointinfo, jointinfos) {
-        JointInfoConstPtr rawinfo = *itjointinfo;
+        const JointInfoConstPtr& rawinfo = *itjointinfo;
         JointPtr pjoint(new Joint(shared_kinbody()));
         pjoint->_info = *rawinfo;
         _InitAndAddJoint(pjoint);
@@ -4083,7 +4083,7 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
     }
 }
 
-void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
+void KinBody::SetSelfCollisionChecker(const CollisionCheckerBasePtr& collisionchecker)
 {
     if( _selfcollisionchecker != collisionchecker ) {
         _selfcollisionchecker = collisionchecker;
@@ -5381,7 +5381,7 @@ bool KinBody::_IsAttached(const KinBody &body, std::set<KinBodyConstPtr>&setChec
     return false;
 }
 
-void KinBody::_AttachBody(KinBodyPtr pbody)
+void KinBody::_AttachBody(const KinBodyPtr& pbody)
 {
     _listAttachedBodies.push_back(pbody);
     pbody->_listAttachedBodies.push_back(shared_kinbody());
@@ -5533,7 +5533,7 @@ const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
     class TransformsSaver
     {
 public:
-        TransformsSaver(KinBodyConstPtr pbody) : _pbody(pbody) {
+        TransformsSaver(const KinBodyConstPtr& pbody) : _pbody(pbody) {
             _pbody->GetLinkTransformations(vcurtrans, _vdoflastsetvalues);
         }
         ~TransformsSaver() {
@@ -5655,7 +5655,7 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
     _vForcedAdjacentLinks.at(index) = 1;
 }
 
-void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+void KinBody::Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
 {
     InterfaceBase::Clone(preference,cloningoptions);
     KinBodyConstPtr r = RaveInterfaceConstCast<KinBody>(preference);
@@ -5926,7 +5926,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     }
 }
 
-void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
+void KinBody::Serialize(const BaseXMLWriterPtr& writer, int options) const
 {
     InterfaceBase::Serialize(writer,options);
 }
@@ -6057,7 +6057,7 @@ void KinBody::_SetForcedAdjacentLinks(int linkindex0, int linkindex1)
     _vForcedAdjacentLinks.at(index) = 1;
 }
 
-void KinBody::_InitAndAddLink(LinkPtr plink)
+void KinBody::_InitAndAddLink(const LinkPtr& plink)
 {
     CHECK_NO_INTERNAL_COMPUTATION;
     LinkInfo& info = plink->_info;
@@ -6091,7 +6091,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     __hashKinematicsGeometryDynamics.resize(0);
 }
 
-void KinBody::_InitAndAddJoint(JointPtr pjoint)
+void KinBody::_InitAndAddJoint(const JointPtr& pjoint)
 {
     CHECK_NO_INTERNAL_COMPUTATION;
     // check to make sure there are no repeating names in already added links

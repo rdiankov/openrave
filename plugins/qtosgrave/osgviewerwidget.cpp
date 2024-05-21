@@ -585,7 +585,7 @@ void QOSGViewerWidget::SetFont(osgText::Font* font) {
     QOSGViewerWidget::OSG_FONT = font;
 }
 
-QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
+QOSGViewerWidget::QOSGViewerWidget(const EnvironmentBasePtr& penv, const std::string& userdatakey,
                                    const boost::function<bool(int)>& onKeyDown,
                                    QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
@@ -1464,7 +1464,7 @@ KinBodyItemPtr QOSGViewerWidget::GetItemFromName(const std::string& name)
     return GetItemFromKinBody(pbody);
 }
 
-KinBodyItemPtr QOSGViewerWidget::GetItemFromKinBody(KinBodyPtr kinBody)
+KinBodyItemPtr QOSGViewerWidget::GetItemFromKinBody(const KinBodyPtr& kinBody)
 {
     return boost::dynamic_pointer_cast<KinBodyItem>(kinBody->GetUserData(_userdatakey));
 }
@@ -1499,7 +1499,7 @@ KinBodyItemPtr QOSGViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
 }
 
 
-KinBody::JointPtr QOSGViewerWidget::_FindJoint(KinBodyItemPtr pitem, KinBody::LinkPtr link)
+KinBody::JointPtr QOSGViewerWidget::_FindJoint(KinBodyItemPtr pitem, const KinBody::LinkPtr& link)
 {
     if( !!pitem && !!pitem->GetBody() && !!link ) {
         // search for the joint whose child link is this link

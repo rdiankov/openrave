@@ -21,7 +21,7 @@ using namespace OpenRAVE;
 class RobotConfigurationSampler : public SpaceSamplerBase
 {
 public:
-    RobotConfigurationSampler(EnvironmentBasePtr penv, std::istream& sinput);
+    RobotConfigurationSampler(const EnvironmentBasePtr& penv, std::istream& sinput);
 
     void SetSeed(uint32_t seed) override;
 

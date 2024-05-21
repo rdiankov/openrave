@@ -66,7 +66,7 @@ using namespace OpenRAVE;
 class CollisionCheckerMngr
 {
 public:
-    CollisionCheckerMngr(EnvironmentBasePtr penv, const string& collisionchecker) : _penv(penv)
+    CollisionCheckerMngr(const EnvironmentBasePtr& penv, const string& collisionchecker) : _penv(penv)
     {
         _pprevchecker = _penv->GetCollisionChecker();
         _coloptions = _pprevchecker->GetCollisionOptions();

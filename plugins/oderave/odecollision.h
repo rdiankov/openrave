@@ -34,7 +34,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
     class CollisionCallbackData
     {
     public:
-        CollisionCallbackData(boost::shared_ptr<ODECollisionChecker> pchecker, CollisionReportPtr report, KinBodyConstPtr pbody, KinBody::LinkConstPtr plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
+        CollisionCallbackData(boost::shared_ptr<ODECollisionChecker> pchecker, const CollisionReportPtr& report, const KinBodyConstPtr& pbody, const KinBody::LinkConstPtr& plink) : _pchecker(pchecker), _report(report), _pbody(pbody), _plink(plink), fraymaxdist(0), pvbodyexcluded(NULL), pvlinkexcluded(NULL), _bCollision(false), _bStopChecking(false)
         {
             _bHasCallbacks = pchecker->GetEnv()->HasRegisteredCollisionCallbacks();
             if( _bHasCallbacks && !_report ) {
@@ -53,7 +53,7 @@ class ODECollisionChecker : public OpenRAVE::CollisionCheckerBase
             return _listcallbacks;
         }
 
-        bool IsActiveLink(KinBodyPtr pbody, int linkindex)
+        bool IsActiveLink(const KinBodyPtr& pbody, int linkindex)
         {
             if( !bActiveDOFs || !_pbody || !_pbody->IsRobot()) {
                 return true;
@@ -114,7 +114,7 @@ private:
     }
 
 public:
-    ODECollisionChecker(EnvironmentBasePtr penv) : OpenRAVE::CollisionCheckerBase(penv) {
+    ODECollisionChecker(const EnvironmentBasePtr& penv) : OpenRAVE::CollisionCheckerBase(penv) {
         _userdatakey = std::string("odecollision") + boost::lexical_cast<std::string>(this);
         _odespace.reset(new ODESpace(penv,_userdatakey,false));
         _options = 0;
@@ -144,7 +144,7 @@ public:
         _odespace->Destroy();
     }
 
-    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
         boost::shared_ptr<ODECollisionChecker const > r = boost::dynamic_pointer_cast<ODECollisionChecker const>(preference);
@@ -163,12 +163,12 @@ public:
     virtual void SetTolerance(OpenRAVE::dReal tolerance) {
     }
 
-    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    virtual bool SetBodyGeometryGroup(const KinBodyConstPtr& pbody, const std::string& groupname)
     {
         return false;
     }
 
-    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
+    const std::string& GetBodyGeometryGroup(const KinBodyConstPtr& pbody) const
     {
         return _odespace->GetGeometryGroup();
     }
@@ -193,7 +193,7 @@ public:
         _odespace->DestroyEnvironment();
     }
 
-    virtual bool InitKinBody(KinBodyPtr pbody)
+    virtual bool InitKinBody(const KinBodyPtr&pbody)
     {
         ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData(_userdatakey));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
@@ -203,7 +203,7 @@ public:
         return !!pinfo;
     }
 
-    virtual void RemoveKinBody(KinBodyPtr pbody)
+    virtual void RemoveKinBody(const KinBodyPtr&pbody)
     {
         _odespace->RemoveUserData(pbody);
     }
@@ -221,7 +221,7 @@ public:
         return _options;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         CollisionCallbackData cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
@@ -240,7 +240,7 @@ public:
         return cb._bCollision;
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody1, const KinBodyConstPtr& pbody2, const CollisionReportPtr& report)
     {
         CollisionCallbackData cb(shared_checker(),report,pbody1,KinBody::LinkConstPtr());
         if(( pbody1->GetLinks().size() == 0) || !pbody1->IsEnabled() ) {
@@ -279,7 +279,7 @@ public:
         return cb._bCollision;
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report)
     {
         CollisionCallbackData cb(shared_checker(),report,KinBodyPtr(),plink);
         if( !plink->IsEnabled() ) {
@@ -327,7 +327,7 @@ public:
         return vcontacts.size();
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink1, const KinBody::LinkConstPtr& plink2, const CollisionReportPtr& report)
     {
         if( !!report ) {
             report->Reset(_options);
@@ -354,7 +354,7 @@ public:
     }
 
     /// shouldn't call Reset on the report since it could be compounded!
-    bool _CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr preport)
+    bool _CheckCollision(const KinBody::LinkConstPtr& plink1, const KinBody::LinkConstPtr& plink2, const CollisionReportPtr& preport)
     {
         const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
         std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
@@ -373,8 +373,7 @@ public:
                 int N = _GeomCollide(geom1, geom2, vcontacts, !!preport && !!(preport->options & OpenRAVE::CO_Contacts));
                 if (N) {
                     if( !preport && bUseCallbacks ) {
-                        preport.reset(new CollisionReport());
-                        preport->Reset(_options);
+                        throw openrave_exception("ODECollision - ERROR: YOU MUST PASS IN A CollisionReport STRUCT TO USE CALLBACK!");
                     }
 
                     if(( N > 0) && !!preport ) {
@@ -444,7 +443,7 @@ public:
         return bCollision;
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         if( !!report ) {
             report->Reset(_options);
@@ -493,7 +492,7 @@ public:
         //    dSpaceCollide2((dGeomID)pbody->GetSpace(), plink1->GetGeom(), plink1, LinkCollisionCallback);
     }
 
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBody::LinkConstPtr& plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report)
     {
         if(( vlinkexcluded.size() == 0) &&( vbodyexcluded.size() == 0) ) {
             return CheckCollision(plink,report);
@@ -505,7 +504,7 @@ public:
         throw openrave_exception(_("This type of collision checking is not yet implemented in the ODE collision checker.\n"),OpenRAVE::ORE_NotImplemented);
     }
 
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report)
+    virtual bool CheckCollision(const KinBodyConstPtr& pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, const CollisionReportPtr& report)
     {
         CollisionCallbackData cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
@@ -530,7 +529,7 @@ public:
         return cb._bCollision;
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckCollision(const RAY& ray, const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report)
     {
         if( !!report ) {
             report->Reset(_options);
@@ -569,8 +568,7 @@ public:
             if (N > 0) {
 
                 if( !report && bUseCallbacks ) {
-                    report.reset(new CollisionReport());
-                    report->Reset(_options);
+                    throw openrave_exception("ODECollision - ERROR: YOU MUST PASS IN A CollisionReport STRUCT TO USE CALLBACK!");
                 }
 
                 int index = 0;
@@ -656,7 +654,7 @@ public:
         return bCollision;
     }
 
-    virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(const RAY& ray, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         CollisionCallbackData cb(shared_checker(),report,pbody,KinBody::LinkConstPtr());
         if(( pbody->GetLinks().size() == 0) || !pbody->IsEnabled() ) {
@@ -683,7 +681,7 @@ public:
         return cb._bCollision;
     }
 
-    virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report)
+    virtual bool CheckCollision(const RAY& ray, const CollisionReportPtr& report)
     {
         CollisionCallbackData cb(shared_checker(),report,KinBodyPtr(),KinBody::LinkConstPtr());
         cb.fraymaxdist = OpenRAVE::RaveSqrt(ray.dir.lengthsqr3());
@@ -715,13 +713,13 @@ public:
         return cb._bCollision;
     }
 
-    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckCollision(const OpenRAVE::TriMesh& trimesh, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         RAVELOG_WARN("ODE doesn't support trimesh/body collision call");
         return false; //TODO
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
     {
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("ode doesn't support CO_Distance\n");
@@ -781,7 +779,7 @@ public:
         return bCollision;
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(const KinBody::LinkConstPtr& plink, const CollisionReportPtr& report)
     {
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("ode doesn't support CO_Distance\n");

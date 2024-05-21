@@ -60,7 +60,7 @@ struct OPENRAVE_HELPER_DLL_EXPORT RavePlugin : public OpenRAVE::UserData, public
     /// \param[in] sinput a stream to the rest of the input args to \ref OpenRAVECreateInterface
     /// \param[in] penv the environment pointer
     /// \return a pointer to the interface if one could have been created.
-    inline OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, std::string name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv);
+    inline OpenRAVE::InterfaceBasePtr OpenRAVECreateInterface(OpenRAVE::InterfaceType type, std::string name, const char* interfacehash, const char* envhash, const OpenRAVE::EnvironmentBasePtr& penv);
 
     /// \brief \b <b>[export]</b> Definition of a plugin export. Requires \ref GetPluginAttributesValidated to be defined.
     /// \ingroup plugin_exports
@@ -101,7 +101,7 @@ protected:
 
     // Plugins must supply an implementation of this method.
     // OpenRAVECreateInterface will call this method to create the interface.
-    virtual OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv) = 0;
+    virtual OpenRAVE::InterfaceBasePtr CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv) = 0;
 };
 
 using PluginPtr = boost::shared_ptr<RavePlugin>;
@@ -114,7 +114,7 @@ using PluginExportFn_Create = RavePlugin*(*)();
 // Implementations
 
 
-OpenRAVE::InterfaceBasePtr RavePlugin::OpenRAVECreateInterface(OpenRAVE::InterfaceType type, std::string name, const char* interfacehash, const char* envhash, OpenRAVE::EnvironmentBasePtr penv) try
+OpenRAVE::InterfaceBasePtr RavePlugin::OpenRAVECreateInterface(OpenRAVE::InterfaceType type, std::string name, const char* interfacehash, const char* envhash, const OpenRAVE::EnvironmentBasePtr& penv) try
 {
     std::for_each(name.begin(), name.end(), ::tolower);
     std::pair<OpenRAVE::InterfaceType, std::string> p(type, name);

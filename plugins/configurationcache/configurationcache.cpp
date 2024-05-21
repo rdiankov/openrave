@@ -16,9 +16,9 @@
 
 namespace configurationcache
 {
-OpenRAVE::CollisionCheckerBasePtr CreateCacheCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::SpaceSamplerBasePtr CreateConfigurationJitterer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::CollisionCheckerBasePtr CreateCacheCollisionChecker(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::SpaceSamplerBasePtr CreateConfigurationJitterer(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 }
 
 const std::string ConfigurationCachePlugin::_pluginname = "ConfigurationCachePlugin";
@@ -32,7 +32,7 @@ ConfigurationCachePlugin::ConfigurationCachePlugin()
 
 ConfigurationCachePlugin::~ConfigurationCachePlugin() {}
 
-OpenRAVE::InterfaceBasePtr ConfigurationCachePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr ConfigurationCachePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:

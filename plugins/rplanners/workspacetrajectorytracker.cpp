@@ -18,7 +18,7 @@
 class WorkspaceTrajectoryTracker : public PlannerBase
 {
 public:
-    WorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    WorkspaceTrajectoryTracker(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = "\
 :Interface Author:  Rosen Diankov\n\n\
@@ -46,7 +46,7 @@ Planner Parameters\n\
     virtual ~WorkspaceTrajectoryTracker() {
     }
 
-    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& probot, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
 
@@ -321,7 +321,7 @@ protected:
         _vprevsolution = vsolution;
     }
 
-    IkReturnAction _ValidateSolution(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization& ikp)
+    IkReturnAction _ValidateSolution(std::vector<dReal>& vsolution, const RobotBase::ManipulatorConstPtr& pmanip, const IkParameterization& ikp)
     {
         RobotBase::RobotStateSaver saver(_robot);
 
@@ -434,6 +434,6 @@ protected:
     PlannerBasePtr _retimerplanner;
 };
 
-PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput) {
+PlannerBasePtr CreateWorkspaceTrajectoryTracker(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return PlannerBasePtr(new WorkspaceTrajectoryTracker(penv, sinput));
 }

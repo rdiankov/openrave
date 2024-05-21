@@ -34,7 +34,7 @@ static const dReal g_fEpsilonQuadratic = RavePow(g_fEpsilon,0.55); // should be 
 static const dReal g_fEpsilonCubic = RavePow(g_fEpsilon,0.55);
 static const dReal g_fEpsilonQuintic = RavePow(g_fEpsilon,0.55);
 
-int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn)
+int JitterActiveDOF(const RobotBasePtr& robot,int nMaxIterations,dReal fRand,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn)
 {
     RAVELOG_VERBOSE("starting jitter active dof...\n");
     vector<dReal> curdof, newdof, deltadof, deltadof2;
@@ -159,7 +159,7 @@ int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations,dReal fRand,const Plan
     return 0;
 }
 
-bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations)
+bool JitterTransform(const KinBodyPtr& pbody, float fJitter, int nMaxIterations)
 {
     RAVELOG_VERBOSE("starting jitter transform...\n");
 
@@ -186,7 +186,7 @@ bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations)
     return true;
 }
 
-int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters, int maxiterations, dReal maxjitter, dReal perturbation)
+int JitterCurrentConfiguration(const PlannerBase::PlannerParametersConstPtr& parameters, int maxiterations, dReal maxjitter, dReal perturbation)
 {
     std::vector<dReal> curdof, newdof, deltadof, deltadof2, zerodof;
     parameters->_getstatefn(curdof);
@@ -399,7 +399,7 @@ int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters
 class TrajectoryVerifier
 {
 public:
-    TrajectoryVerifier(PlannerBase::PlannerParametersConstPtr parameters) : _parameters(parameters) {
+    TrajectoryVerifier(const PlannerBase::PlannerParametersConstPtr& parameters) : _parameters(parameters) {
         VerifyParameters();
     }
 
@@ -410,7 +410,7 @@ public:
         OPENRAVE_ASSERT_OP_FORMAT0((int)_parameters->_vConfigResolution.size(), ==, _parameters->GetDOF(), "unexpected size",ORE_InvalidState);
     }
 
-    void VerifyTrajectory(TrajectoryBaseConstPtr trajectory, dReal samplingstep)
+    void VerifyTrajectory(const TrajectoryBaseConstPtr& trajectory, dReal samplingstep)
     {
         OPENRAVE_ASSERT_FORMAT0(!!trajectory,"need valid trajectory",ORE_InvalidArguments);
 
@@ -563,7 +563,7 @@ public:
         }
     }
 
-    string DumpTrajectory(TrajectoryBaseConstPtr trajectory)
+    string DumpTrajectory(const TrajectoryBaseConstPtr& trajectory)
     {
         string filename = str(boost::format("%s/failedtrajectory%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%1000));
         ofstream f(filename.c_str());
@@ -576,18 +576,21 @@ protected:
     PlannerBase::PlannerParametersConstPtr _parameters;
 };
 
-void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep)
+void VerifyTrajectory(const PlannerBase::PlannerParametersConstPtr& parameters, const TrajectoryBaseConstPtr& trajectory, dReal samplingstep)
 {
     if( !parameters ) {
         PlannerBase::PlannerParametersPtr newparams(new PlannerBase::PlannerParameters());
         newparams->SetConfigurationSpecification(trajectory->GetEnv(), trajectory->GetConfigurationSpecification().GetTimeDerivativeSpecification(0));
-        parameters = newparams;
+        TrajectoryVerifier v(newparams);
+        v.VerifyTrajectory(trajectory,samplingstep);
     }
-    TrajectoryVerifier v(parameters);
-    v.VerifyTrajectory(trajectory,samplingstep);
+    else {
+        TrajectoryVerifier v(parameters);
+        v.VerifyTrajectory(trajectory,samplingstep);
+    }
 }
 
-PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+PlannerStatus _PlanActiveDOFTrajectory(const TrajectoryBasePtr& traj, const RobotBasePtr& probot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -635,7 +638,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
     return PlannerStatus(PS_HasSolution);
 }
 
-ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
+ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(const RobotBasePtr& robot, const std::string& _plannername, const std::string& plannerparameters)
 {
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicsmoother";
     _robot = robot;
@@ -656,7 +659,7 @@ ActiveDOFTrajectorySmoother::ActiveDOFTrajectorySmoother(RobotBasePtr robot, con
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectorySmoother::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj, int planningoptions)
+PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(const TrajectoryBasePtr& traj, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -696,7 +699,7 @@ void ActiveDOFTrajectorySmoother::_UpdateParameters()
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
-ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const std::string& _plannername, const std::string& plannerparameters)
+ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(const RobotBasePtr& robot, const std::string& _plannername, const std::string& plannerparameters)
 {
     std::string plannername = _plannername.size() > 0 ? _plannername : "parabolicretimer";
     _robot = robot;
@@ -719,7 +722,7 @@ ActiveDOFTrajectoryRetimer::ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const
     _changehandler = robot->RegisterChangeCallback(KinBody::Prop_JointAccelerationVelocityTorqueLimits|KinBody::Prop_JointLimits|KinBody::Prop_JointProperties, boost::bind(&ActiveDOFTrajectoryRetimer::_UpdateParameters, this));
 }
 
-PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, bool hastimestamps, int planningoptions)
+PlannerStatus ActiveDOFTrajectoryRetimer::PlanPath(const TrajectoryBasePtr& traj, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -760,7 +763,7 @@ void ActiveDOFTrajectoryRetimer::_UpdateParameters()
     _parameters=params; // necessary because SetRobotActiveJoints builds functions that hold weak_ptr to the parameters
 }
 
-PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+PlannerStatus _PlanTrajectory(const TrajectoryBasePtr& traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need velocities, but should at least add a time group
@@ -806,7 +809,7 @@ PlannerStatus _PlanTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal 
     return PlannerStatus(PS_HasSolution);
 }
 
-static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int> vrotaxes)
+static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int>& vrotaxes)
 {
     BOOST_ASSERT(q1.size()==q2.size());
     for(size_t i = 0; i < q1.size(); ++i) {
@@ -819,20 +822,20 @@ static void diffstatefn(std::vector<dReal>& q1, const std::vector<dReal>& q2, co
     }
 }
 
-static void _SetTransformBody(std::vector<dReal>::const_iterator itvalues, KinBodyPtr pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
+static void _SetTransformBody(std::vector<dReal>::const_iterator itvalues, const KinBodyPtr& pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
 {
     Transform t = pbody->GetTransform();
     RaveGetTransformFromAffineDOFValues(t,itvalues+index,affinedofs,vActvAffineRotationAxis);
     pbody->SetTransform(t);
 }
 
-static void _GetTransformBody(std::vector<dReal>::iterator itvalues, KinBodyPtr pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
+static void _GetTransformBody(std::vector<dReal>::iterator itvalues, const KinBodyPtr& pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
 {
     Transform t = pbody->GetTransform();
     RaveGetAffineDOFValuesFromTransform(itvalues+index,t, affinedofs,vActvAffineRotationAxis);
 }
 
-static dReal _ComputeTransformBodyDistance(std::vector<dReal>::const_iterator itvalues0, std::vector<dReal>::const_iterator itvalues1, KinBodyPtr pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
+static dReal _ComputeTransformBodyDistance(std::vector<dReal>::const_iterator itvalues0, std::vector<dReal>::const_iterator itvalues1, const KinBodyPtr& pbody, int index, int affinedofs,const Vector& vActvAffineRotationAxis)
 {
     Transform t0 = pbody->GetTransform();
     Transform t1 = t0;
@@ -888,7 +891,7 @@ private:
 };
 
 // this function is very messed up...?
-static PlannerStatus _PlanAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
+static PlannerStatus _PlanAffineTrajectory(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, bool bsmooth, const std::string& plannerparameters)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1038,7 +1041,7 @@ void AffineTrajectoryRetimer::SetPlanner(const std::string& plannername, const s
     }
 }
 
-PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, int planningoptions)
+PlannerStatus AffineTrajectoryRetimer::PlanPath(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // don't need retiming, but should at least add a time group
@@ -1154,7 +1157,7 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     return _planner->PlanPath(traj, planningoptions);
 }
 
-PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::vector<dReal>& maxjerks, bool hastimestamps, int planningoptions)
+PlannerStatus AffineTrajectoryRetimer::PlanPath(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::vector<dReal>& maxjerks, bool hastimestamps, int planningoptions)
 {
     if( traj->GetNumWaypoints() == 1 ) {
         // Since traj has only one point, don't need retiming. Anyway, should at least add deltatime group.
@@ -1281,22 +1284,22 @@ PlannerStatus AffineTrajectoryRetimer::PlanPath(TrajectoryBasePtr traj, const st
     return _planner->PlanPath(traj, planningoptions);
 }
 
-PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus SmoothActiveDOFTrajectory(const TrajectoryBasePtr& traj, const RobotBasePtr& robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanActiveDOFTrajectory(traj,robot,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
 
-PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus SmoothAffineTrajectory(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, false, plannername.size() > 0 ? plannername : "parabolicsmoother", true, plannerparameters);
 }
 
-PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus SmoothTrajectory(const TrajectoryBasePtr& traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanTrajectory(traj,false,fmaxvelmult,fmaxaccelmult,plannername.size() > 0 ? plannername : "parabolicsmoother", true,plannerparameters);
 }
 
-static std::string GetPlannerFromInterpolation(TrajectoryBasePtr traj, const std::string& forceplanner=std::string())
+static std::string GetPlannerFromInterpolation(const TrajectoryBasePtr& traj, const std::string& forceplanner=std::string())
 {
     if( forceplanner.size() > 0 ) {
         return forceplanner;
@@ -1327,29 +1330,29 @@ static std::string GetPlannerFromInterpolation(TrajectoryBasePtr traj, const std
     }
 }
 
-PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus RetimeActiveDOFTrajectory(const TrajectoryBasePtr& traj, const RobotBasePtr& robot, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanActiveDOFTrajectory(traj, robot, hastimestamps, fmaxvelmult, fmaxaccelmult, GetPlannerFromInterpolation(traj, plannername), /*bsmooth*/ false, plannerparameters);
 }
 
-PlannerStatus RetimeRobotDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, const std::vector<int>& vRobotDOFIndices, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus RetimeRobotDOFTrajectory(const TrajectoryBasePtr& traj, const RobotBasePtr& robot, const std::vector<int>& vRobotDOFIndices, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     RobotBase::RobotStateSaver activesaver(robot, RobotBase::Save_ActiveDOF);
     robot->SetActiveDOFs(vRobotDOFIndices);
     return _PlanActiveDOFTrajectory(traj, robot, hastimestamps, fmaxvelmult, fmaxaccelmult, GetPlannerFromInterpolation(traj, plannername), /*bsmooth*/ false, plannerparameters);
 }
 
-PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus RetimeAffineTrajectory(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanAffineTrajectory(traj, maxvelocities, maxaccelerations, hastimestamps, GetPlannerFromInterpolation(traj, plannername), /*bsmooth*/ false, plannerparameters);
 }
 
-PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+PlannerStatus RetimeTrajectory(const TrajectoryBasePtr& traj, bool hastimestamps, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     return _PlanTrajectory(traj, hastimestamps, fmaxvelmult, fmaxaccelmult, GetPlannerFromInterpolation(traj, plannername), /*bsmooth*/ false, plannerparameters);
 }
 
-size_t ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const RobotBasePtr& robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("trajectory is void"),ORE_InvalidArguments);
@@ -1391,7 +1394,7 @@ size_t ExtendActiveDOFWaypoint(int waypointindex, const std::vector<dReal>& dofv
     return InsertActiveDOFWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,robot,fmaxvelmult,fmaxaccelmult,plannername);
 }
 
-size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
+size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const RobotBasePtr& robot, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername, const std::string& plannerparameters)
 {
     BOOST_ASSERT((int)dofvalues.size()==robot->GetActiveDOF());
     BOOST_ASSERT(traj->GetEnv()==robot->GetEnv());
@@ -1515,7 +1518,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     return waypointindex+nInitialNumWaypoints-1;
 }
 
-size_t ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner){
+size_t ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, PlannerBasePtr planner){
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("trajectory is void"),ORE_InvalidArguments);
     }
@@ -1536,7 +1539,7 @@ size_t ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, co
     return InsertWaypointWithRetiming(waypointindex,dofvalues,dofvelocities,traj,planner);
 }
 
-size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const PlannerBasePtr& planner)
 {
     PlannerBase::PlannerParametersConstPtr parameters = planner->GetParameters();
     BOOST_ASSERT((int)dofvalues.size()==parameters->GetDOF());
@@ -1606,7 +1609,7 @@ size_t InsertWaypointWithRetiming(int waypointindex, const std::vector<dReal>& d
     return waypointindex+nInitialNumWaypoints-1;
 }
 
-size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
+size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, dReal fmaxvelmult, dReal fmaxaccelmult, const std::string& plannername)
 {
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     ConfigurationSpecification specpos = traj->GetConfigurationSpecification().GetTimeDerivativeSpecification(0);
@@ -1630,7 +1633,7 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
     return InsertWaypointWithSmoothing(index, dofvalues, dofvelocities, traj, planner);
 }
 
-size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner)
+size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const PlannerBasePtr& planner)
 {
     if( index != (int)traj->GetNumWaypoints() ) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("InsertWaypointWithSmoothing only supports adding waypoints at the end"),ORE_InvalidArguments);
@@ -1744,7 +1747,7 @@ size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalue
     return iBestInsertionWaypoint+pBestTrajectory->GetNumWaypoints();
 }
 
-void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification& spec)
+void ConvertTrajectorySpecification(const TrajectoryBasePtr& traj, const ConfigurationSpecification& spec)
 {
     if( traj->GetConfigurationSpecification() != spec ) {
         size_t numpoints = traj->GetConfigurationSpecification().GetDOF() > 0 ? traj->GetNumWaypoints() : 0;
@@ -1759,7 +1762,7 @@ void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationS
     }
 }
 
-void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv)
+void ComputeTrajectoryDerivatives(const TrajectoryBasePtr& traj, int maxderiv)
 {
     OPENRAVE_ASSERT_OP(maxderiv,>,0);
     ConfigurationSpecification newspec = traj->GetConfigurationSpecification();
@@ -1813,7 +1816,7 @@ void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv)
     traj->Insert(0,data);
 }
 
-TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
+TrajectoryBasePtr GetReverseTrajectory(const TrajectoryBaseConstPtr& sourcetraj)
 {
     vector<dReal> sourcedata;
     size_t numpoints = sourcetraj->GetNumWaypoints();
@@ -1871,13 +1874,13 @@ TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr sourcetraj)
     return traj;
 }
 
-TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr sourcetraj)
+TrajectoryBasePtr ReverseTrajectory(const TrajectoryBasePtr& sourcetraj)
 {
     // might need to change to in-memory reverse...
     return GetReverseTrajectory(sourcetraj);
 }
 
-void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
+void SegmentTrajectory(const TrajectoryBasePtr& traj, dReal starttime, dReal endtime)
 {
     if( starttime < 0 ) {
         RAVELOG_WARN_FORMAT("got an invalid start time %.15e", starttime);
@@ -1947,7 +1950,7 @@ void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime)
     OPENRAVE_ASSERT_OP(RaveFabs(traj->GetDuration() - (endtime - starttime)),<=,g_fEpsilonLinear*nOriginalNumWaypoints); // normalize with respect to number of points!
 }
 
-TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime)
+TrajectoryBasePtr GetTrajectorySegment(const TrajectoryBaseConstPtr& traj, dReal starttime, dReal endtime)
 {
     std::vector<dReal> values;
     const ConfigurationSpecification& spec = traj->GetConfigurationSpecification();
@@ -2128,7 +2131,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
             ConfigurationSpecification::ConvertData(vnewdata.begin(),spec,vpointdata.begin(),(*ittraj)->GetConfigurationSpecification(),vtimes.size(),presulttraj->GetEnv(),false);
         }
 
-        sdesc << (*ittraj)->GetDescription() << endl;
+        sdesc << (*ittraj)->GetDescription() << '\n';
     }
 
     vnewdata.at(deltatimeoffset) = vtimes[0];
@@ -2146,7 +2149,7 @@ TrajectoryBasePtr MergeTrajectories(const std::list<TrajectoryBaseConstPtr>& lis
     return presulttraj;
 }
 
-void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbody)
+void GetDHParameters(std::vector<DHParameter>& vparameters, const KinBodyConstPtr& pbody)
 {
     EnvironmentLock lockenv(pbody->GetEnv()->GetMutex());
     Transform tbaseinv = pbody->GetTransform().inverse();
@@ -2238,7 +2241,7 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
-DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(DC_NominalTorque), _perturbation(0.1)
+DynamicsCollisionConstraint::DynamicsCollisionConstraint(const PlannerBase::PlannerParametersConstPtr& parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(DC_NominalTorque), _perturbation(0.1)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
     _report.reset(new CollisionReport());
@@ -2278,7 +2281,7 @@ void DynamicsCollisionConstraint::SetPerturbation(dReal perturbation)
     _perturbation = perturbation;
 }
 
-int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
+int DynamicsCollisionConstraint::_SetAndCheckState(const PlannerBase::PlannerParametersConstPtr& params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, const ConstraintFilterReturnPtr& filterreturn)
 {
 //    if( IS_DEBUGLEVEL(Level_Verbose) ) {
 //        stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
@@ -2331,7 +2334,7 @@ int DynamicsCollisionConstraint::_SetAndCheckState(PlannerBase::PlannerParameter
     return 0;
 }
 
-int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn)
+int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, const ConstraintFilterReturnPtr& filterreturn)
 {
     options &= _filtermask;
     if( (options&CFO_CheckUserConstraints) && !!_usercheckfns[0] ) {
@@ -2547,7 +2550,7 @@ inline std::ostream& RaveSerializeValues(std::ostream& O, const std::vector<dRea
     return O;
 }
 
-int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
+int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options, const ConstraintFilterReturnPtr& filterreturn)
 {
     int maskoptions = options&_filtermask;
     int maskinterval = interval & IT_IntervalMask;
@@ -3595,7 +3598,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
 int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1,
                                        const std::vector<dReal>& dq0, const std::vector<dReal>& dq1,
                                        const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1,
-                                       dReal timeelapsed, IntervalType interval, int options, ConstraintFilterReturnPtr filterreturn)
+                                       dReal timeelapsed, IntervalType interval, int options, const ConstraintFilterReturnPtr& filterreturn)
 {
     if( !!filterreturn ) {
         filterreturn->Clear();
@@ -4667,7 +4670,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
     return 0;
 }
 
-SimpleDistanceMetric::SimpleDistanceMetric(RobotBasePtr robot) : _robot(robot)
+SimpleDistanceMetric::SimpleDistanceMetric(const RobotBasePtr& robot) : _robot(robot)
 {
     _robot->GetActiveDOFWeights(weights2);
     for(std::vector<dReal>::iterator it = weights2.begin(); it != weights2.end(); ++it) {
@@ -4718,7 +4721,7 @@ bool SimpleNeighborhoodSampler::Sample(std::vector<dReal>& samples)
     return samples.size()>0;
 }
 
-ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob, bool searchfreeparameters, int ikfilteroptions, const std::vector<dReal>& freevalues) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob), _ikfilteroptions(ikfilteroptions), _searchfreeparameters(searchfreeparameters), _vfreegoalvalues(freevalues)
+ManipulatorIKGoalSampler::ManipulatorIKGoalSampler(const RobotBase::ManipulatorConstPtr& pmanip, const std::list<IkParameterization>& listparameterizations, int nummaxsamples, int nummaxtries, dReal fsampleprob, bool searchfreeparameters, int ikfilteroptions, const std::vector<dReal>& freevalues) : _pmanip(pmanip), _nummaxsamples(nummaxsamples), _nummaxtries(nummaxtries), _fsampleprob(fsampleprob), _ikfilteroptions(ikfilteroptions), _searchfreeparameters(searchfreeparameters), _vfreegoalvalues(freevalues)
 {
     _tempikindex = -1;
     _fjittermaxdist = 0;

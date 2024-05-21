@@ -78,7 +78,7 @@ def main():
             interface_contents += """class %(name)s : public %(classname)s
 {
 public:
-    %(name)s(EnvironmentBasePtr penv, std::istream& ss) : %(classname)s(penv) {
+    %(name)s(const EnvironmentBasePtr& penv, std::istream& ss) : %(classname)s(penv) {
         RegisterCommand("MyCommand",boost::bind(&%(name)s::MyCommand,this,_1,_2),
                         "This is an example command");
     }
@@ -124,7 +124,7 @@ using namespace boost::placeholders;
 
 %s
 // called to create a new plugin
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, const EnvironmentBasePtr& penv)
 {
 %s
     return InterfaceBasePtr();

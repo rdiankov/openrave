@@ -743,7 +743,7 @@ int main(int argc, char** argv)
 
 #include "plugindefs.h" 
 namespace IKFAST_NAMESPACE {
-IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, const std::vector<dReal>& vfreeinc) {
+IkSolverBasePtr CreateIkSolver(const EnvironmentBasePtr& penv, std::istream& sinput, const std::vector<dReal>& vfreeinc) {
     boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions(new ikfast::IkFastFunctions<IkReal>());
     ikfunctions->_ComputeIk = IKFAST_NAMESPACE::ComputeIk;
     ikfunctions->_ComputeFk = IKFAST_NAMESPACE::ComputeFk;

@@ -46,7 +46,7 @@ public:
     virtual ~EnvironmentJSONWriter() {
     }
 
-    virtual void Write(EnvironmentBasePtr penv) {
+    virtual void Write(const EnvironmentBasePtr& penv) {
         dReal fUnitScale = 1.0;
         EnvironmentBase::EnvironmentBaseInfo info;
         penv->ExtractInfo(info);
@@ -54,7 +54,7 @@ public:
         info.SerializeJSON(_rEnvironment, _allocator, fUnitScale, _serializeOptions);
     }
 
-    virtual void Write(KinBodyPtr pbody) {
+    virtual void Write(const KinBodyPtr& pbody) {
         std::list<KinBodyPtr> listbodies;
         listbodies.push_back(pbody);
         _Write(listbodies);
@@ -195,7 +195,7 @@ protected:
     rapidjson::Document::AllocatorType& _allocator;
 };
 
-void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteJSONFile(const EnvironmentBasePtr& penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofstream(filename.c_str());
     RaveWriteJSONStream(penv, ofstream, atts, alloc);
@@ -207,7 +207,7 @@ void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::strin
     RaveWriteJSONStream(listbodies, ofstream, atts, alloc);
 }
 
-void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteJSONStream(const EnvironmentBasePtr& penv, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
@@ -223,7 +223,7 @@ void RaveWriteJSONStream(const std::list<KinBodyPtr>& listbodies, ostream& os, c
     OpenRAVE::orjson::DumpJson(doc, os);
 }
 
-void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteJSONMemory(const EnvironmentBasePtr& penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
@@ -239,7 +239,7 @@ void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<ch
     OpenRAVE::orjson::DumpJson(doc, output);
 }
 
-void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
+void RaveWriteJSON(const EnvironmentBasePtr& penv, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
     EnvironmentJSONWriter jsonwriter(atts, rEnvironment, allocator);
     jsonwriter.Write(penv);
@@ -251,7 +251,7 @@ void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Value& rE
     jsonwriter.Write(listbodies);
 }
 
-void RaveWriteMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteMsgPackFile(const EnvironmentBasePtr& penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofstream(filename.c_str());
     RaveWriteMsgPackStream(penv, ofstream, atts, alloc);
@@ -263,7 +263,7 @@ void RaveWriteMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::st
     RaveWriteMsgPackStream(listbodies, ofstream, atts, alloc);
 }
 
-void RaveWriteMsgPackStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteMsgPackStream(const EnvironmentBasePtr& penv, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
 
@@ -281,7 +281,7 @@ void RaveWriteMsgPackStream(const std::list<KinBodyPtr>& listbodies, ostream& os
     OpenRAVE::MsgPack::DumpMsgPack(doc, os);
 }
 
-void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteMsgPackMemory(const EnvironmentBasePtr& penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
@@ -298,7 +298,7 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     OpenRAVE::MsgPack::DumpMsgPack(doc, output);
 }
 
-void RaveWriteEncryptedJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteEncryptedJSONFile(const EnvironmentBasePtr& penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofs(filename, std::ios::binary);
     RaveWriteEncryptedJSONStream(std::move(penv), ofs, atts, alloc);
@@ -310,7 +310,7 @@ void RaveWriteEncryptedJSONFile(const std::list<KinBodyPtr>& listbodies, const s
     RaveWriteEncryptedJSONStream(listbodies, ofs, atts, alloc);
 }
 
-void RaveWriteEncryptedJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteEncryptedJSONMemory(const EnvironmentBasePtr& penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>> vs(std::ios::binary);
     RaveWriteEncryptedJSONStream(std::move(penv), vs, atts, alloc);
@@ -325,7 +325,7 @@ void RaveWriteEncryptedJSONMemory(const std::list<KinBodyPtr>& listbodies, std::
     vs.swap_vector(output);
 }
 
-void RaveWriteEncryptedJSONStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteEncryptedJSONStream(const EnvironmentBasePtr& penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::unordered_set<std::string> keyIds;
     for (const std::pair<std::string, std::string>& attribute : atts) {
@@ -359,7 +359,7 @@ void RaveWriteEncryptedJSONStream(const std::list<KinBodyPtr>& listbodies, std::
     }
 }
 
-void RaveWriteEncryptedMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteEncryptedMsgPackFile(const EnvironmentBasePtr& penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofs(filename, std::ios::binary);
     RaveWriteEncryptedMsgPackStream(std::move(penv), ofs, atts, alloc);
@@ -371,7 +371,7 @@ void RaveWriteEncryptedMsgPackFile(const std::list<KinBodyPtr>& listbodies, cons
     RaveWriteEncryptedMsgPackStream(listbodies, ofs, atts, alloc);
 }
 
-void RaveWriteEncryptedMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteEncryptedMsgPackMemory(const EnvironmentBasePtr& penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>> vs(std::ios::binary);
     RaveWriteEncryptedMsgPackStream(std::move(penv), vs, atts, alloc);
@@ -386,7 +386,7 @@ void RaveWriteEncryptedMsgPackMemory(const std::list<KinBodyPtr>& listbodies, st
     vs.swap_vector(output);
 }
 
-void RaveWriteEncryptedMsgPackStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+void RaveWriteEncryptedMsgPackStream(const EnvironmentBasePtr& penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::unordered_set<std::string> keyIds;
     for (const std::pair<std::string, std::string>& attribute : atts) {

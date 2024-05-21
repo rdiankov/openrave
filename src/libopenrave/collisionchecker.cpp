@@ -637,7 +637,7 @@ int CollisionReport::SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, c
     return 0;
 }
 
-CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
+CollisionOptionsStateSaver::CollisionOptionsStateSaver(const CollisionCheckerBasePtr& p, int newoptions, bool required)
 {
     _oldoptions = p->GetCollisionOptions();
     _p = p;

@@ -190,7 +190,7 @@ public:
      */
     typedef boost::function<void (IkReturnPtr, RobotBase::ManipulatorConstPtr, const IkParameterization&)> IkFinishCallbackFn;
 
-    IkSolverBase(EnvironmentBasePtr penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {
+    IkSolverBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_InverseKinematicsSolver, penv) {
     }
     virtual ~IkSolverBase() {
     }
@@ -270,8 +270,8 @@ public:
         \param[out] ikreturn Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn);
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, const IkReturnPtr& ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, const IkReturnPtr& ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -295,7 +295,7 @@ public:
         \return true if at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
-    virtual bool SolveAll(const IkParameterization& param, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /** Return a joint configuration for the given end effector transform.
 
@@ -319,8 +319,8 @@ public:
         \param[out] ikreturn Holds all the ik output data (including ik solutions) from the many processes involved in solving ik.
         \return true if solution is found
      */
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn);
-    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, IkReturnPtr ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkReturnPtr& ikreturn);
+    virtual bool Solve(const IkParameterization& param, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, const IkReturnPtr& ikreturn);
 
     /** \brief Return all joint configurations for the given end effector transform.
 
@@ -348,7 +348,7 @@ public:
         \return true at least one solution is found
      */
     virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& ikreturns);
-    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkFailureAccumulatorBasePtr paccumulator, std::vector<IkReturnPtr>& ikreturns);
+    virtual bool SolveAll(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkFailureAccumulatorBasePtr& paccumulator, std::vector<IkReturnPtr>& ikreturns);
 
     /// \brief returns true if the solver supports a particular ik parameterization as input.
     virtual bool Supports(IkParameterizationType iktype) const OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -365,7 +365,7 @@ public:
         \param maxpriority the maximum inclusive priority to consider
         \return \ref IkReturn outputs the action to take for the current ik solution and any custom parameters the filter should pass to the user.
      */
-    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual IkReturnAction CallFilters(const IkParameterization& param, const IkReturnPtr& ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief returns the kinematics structure hash this ik solver is encoded to. Checked with \ref RobotBase::Manipulator::GetKinematicsStructureHash()
     virtual const std::string& GetKinematicsStructureHash() const OPENRAVE_DUMMY_IMPLEMENTATION;
@@ -378,7 +378,7 @@ protected:
         return boost::static_pointer_cast<IkSolverBase const>(shared_from_this());
     }
 
-    virtual IkReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, IkReturnPtr ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority);
+    virtual IkReturnAction _CallFilters(std::vector<dReal>& solution, RobotBase::ManipulatorPtr manipulator, const IkParameterization& param, const IkReturnPtr& ikreturn=IkReturnPtr(), int32_t minpriority=IKSP_MinPriority, int32_t maxpriority=IKSP_MaxPriority);
 
     /// \brief returns true if there's registered filters within the priority range (inclusive)
     virtual bool _HasFilterInRange(int32_t minpriority, int32_t maxpriority) const;

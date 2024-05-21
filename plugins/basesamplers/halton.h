@@ -21,7 +21,7 @@ using namespace std;
 class HaltonSampler : public SpaceSamplerBase
 {
 public:
-    HaltonSampler(EnvironmentBasePtr penv, std::istream& sinput) : SpaceSamplerBase(penv)
+    HaltonSampler(const EnvironmentBasePtr& penv, std::istream& sinput) : SpaceSamplerBase(penv)
     {
         __description = ":Interface Author: John Burkardt\n\n\
 References:\n\n\

@@ -23,7 +23,7 @@ class BulletPhysicsEngine : public PhysicsEngineBase
 public:
         PhysicsFilterCallback() : OpenRAVEFilterCallback() {
         }
-        virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const
+        virtual bool CheckLinks(const KinBody::LinkPtr& plink0, const KinBody::LinkPtr& plink1) const
         {
             bool flag_of_collision;
             KinBodyPtr pbody0 = plink0->GetParent();
@@ -156,12 +156,12 @@ protected:
 
 public:
     
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
     	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<BulletPhysicsEngine>(ptr),atts));
     }
 
-    BulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
+    BulletPhysicsEngine(const EnvironmentBasePtr& penv, std::istream& sinput) : PhysicsEngineBase(penv), _space(new BulletSpace(penv, GetPhysicsInfo, true))
     {
 	stringstream ss;        
 	__description = ":Interface Authors: Max Argus, Nick Hillier, Katrina Monkley, Rosen Diankov\n\nInterface to `Bullet Physics Engine <http://bulletphysics.org/>`_\n";
@@ -192,7 +192,7 @@ public:
     /* This function is registered as a command to transform the static links of robots.
        The application can be seen when one wants to use a stand alone gripper with enabled physics and wants to move the base of the gripper */
     bool SetStaticBodyTransform(ostream& sout, istream& sinput)
-    // bool SetStaticBodyTransform(KinBody::LinkPtr plink, const Vector& translation, const Vector& axisofrot,const dReal& angleofrot)
+    // bool SetStaticBodyTransform(const KinBody::LinkPtr& plink, const Vector& translation, const Vector& axisofrot,const dReal& angleofrot)
     {
 	KinBody::LinkPtr plink;
         Vector _rotation;
@@ -360,7 +360,7 @@ public:
         _listcallbacks.clear();
     }
 
-     virtual bool InitKinBody(KinBodyPtr pbody)
+     virtual bool InitKinBody(const KinBodyPtr& pbody)
     {
         if( !_dynamicsWorld ) {
             return false;
@@ -416,7 +416,7 @@ public:
     }
 
 
-    virtual void RemoveKinBody(KinBodyPtr pbody)
+    virtual void RemoveKinBody(const KinBodyPtr& pbody)
     {
         if( !!pbody ) {
             pbody->RemoveUserData("bulletphysics");
@@ -438,7 +438,7 @@ public:
         return false;
     }
 
-    virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
+    virtual bool SetLinkVelocity(const KinBody::LinkPtr& plink, const Vector& linearvel, const Vector& angularvel)
     {
         BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(plink->GetParent());
         boost::shared_ptr<btRigidBody> rigidbody(pinfo->vlinks.at(plink->GetIndex())->_rigidbody);
@@ -449,7 +449,7 @@ public:
         rigidbody->setAngularVelocity(BulletSpace::GetBtVector(angularvel));
         return false;
     }
-    virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
+    virtual bool SetLinkVelocities(const KinBodyPtr& pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
         BulletSpace::KinBodyInfoPtr pinfo = GetPhysicsInfo(pbody);
         FOREACH(itlink, pinfo->vlinks) {
@@ -465,7 +465,7 @@ public:
         return false;
     }
 
-    virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
+    virtual bool GetLinkVelocity(const KinBody::LinkConstPtr& plink, Vector& linearvel, Vector& angularvel)
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
@@ -481,7 +481,7 @@ public:
         return true;
     }
 
-    virtual bool GetLinkVelocities(KinBodyConstPtr pbody, std::vector<std::pair<Vector,Vector> >& velocities)
+    virtual bool GetLinkVelocities(const KinBodyConstPtr& pbody, std::vector<std::pair<Vector,Vector> >& velocities)
     {
         _space->Synchronize(pbody);
         velocities.resize(0);
@@ -501,7 +501,7 @@ public:
         return true;
     }
 
-    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const std::vector<dReal>& pJointVelocity)
+    virtual bool SetJointVelocity(const KinBody::JointPtr& pjoint, const std::vector<dReal>& pJointVelocity)
     {
         boost::shared_ptr<btTypedConstraint> joint = _space->GetJoint(pjoint);
         _space->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
@@ -519,7 +519,7 @@ public:
         return true;
     }
 
-    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<dReal>& pJointVelocity)
+    virtual bool GetJointVelocity(const KinBody::JointConstPtr& pjoint, std::vector<dReal>& pJointVelocity)
     {
         boost::shared_ptr<btTypedConstraint> joint = _space->GetJoint(pjoint);
         _space->Synchronize(KinBodyConstPtr(pjoint->GetParent()));
@@ -535,7 +535,7 @@ public:
         return true;
     }
 
-      virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques)
+      virtual bool AddJointTorque(const KinBody::JointPtr& pjoint, const std::vector<dReal>& pTorques)
     {
        
         boost::shared_ptr<btTypedConstraint> joint = _space->GetJoint(pjoint);
@@ -594,7 +594,7 @@ public:
         return true;
     }
 
-   virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
+   virtual bool SetBodyForce(const KinBody::LinkPtr& plink, const Vector& force, const Vector& position, bool bAdd)
     {
         boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
         btVector3 _Force(force[0], force[1], force[2]);
@@ -608,7 +608,7 @@ public:
     
     }
 
-    virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
+    virtual bool SetBodyTorque(const KinBody::LinkPtr& plink, const Vector& torque, bool bAdd)
     {
         btVector3 _Torque(torque[0], torque[1], torque[2]);
         boost::shared_ptr<btRigidBody> rigidbody = boost::dynamic_pointer_cast<btRigidBody>(_space->GetLinkBody(plink));
@@ -667,7 +667,7 @@ public:
     btScalar _super_damp2;
 
 private:
-    static BulletSpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
+    static BulletSpace::KinBodyInfoPtr GetPhysicsInfo(const KinBodyConstPtr& pbody)
     {
         return boost::dynamic_pointer_cast<BulletSpace::KinBodyInfo>(pbody->GetUserData("bulletphysics"));
     }
@@ -697,7 +697,7 @@ private:
 };
 
 
-PhysicsEngineBasePtr CreateBulletPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
+PhysicsEngineBasePtr CreateBulletPhysicsEngine(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PhysicsEngineBasePtr(new BulletPhysicsEngine(penv,sinput));
 }

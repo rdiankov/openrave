@@ -18,12 +18,12 @@
 class ODEVelocityController : public ControllerBase
 {
 public:
-    ODEVelocityController(EnvironmentBasePtr penv) : ControllerBase(penv)
+    ODEVelocityController(const EnvironmentBasePtr& penv) : ControllerBase(penv)
     {
         __description = ":Interface Authors: Juan Gonzalez and Rosen Diankov\n\nODE Velocity controller.";
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
+    virtual bool Init(const RobotBasePtr& robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
         _dofindices = dofindices;

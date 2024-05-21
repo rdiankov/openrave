@@ -140,7 +140,7 @@ void CustomCoinHandlerCB(const class SoError * error, void * data)
 }
 
 static QtCoinViewer* s_pviewer = NULL;
-QtCoinViewer::QtCoinViewer(EnvironmentBasePtr penv, std::istream& sinput)
+QtCoinViewer::QtCoinViewer(const EnvironmentBasePtr& penv, std::istream& sinput)
     : QMainWindow(NULL, Qt::Window),
     ViewerBase(penv), _ivOffscreen(SbViewportRegion(_nRenderWidth, _nRenderHeight))
 {

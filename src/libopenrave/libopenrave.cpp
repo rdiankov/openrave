@@ -638,7 +638,7 @@ public:
     class XMLReaderFunctionData : public UserData
     {
 public:
-        XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
+        XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, const boost::shared_ptr<RaveGlobal>& global) : _global(global), _type(type), _xmltag(xmltag)
         {
             std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapxmlreaders[_type][_xmltag];
@@ -677,7 +677,7 @@ protected:
     class JSONReaderFunctionData : public UserData
     {
 public:
-        JSONReaderFunctionData(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _id(id)
+        JSONReaderFunctionData(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn, const boost::shared_ptr<RaveGlobal>& global) : _global(global), _type(type), _id(id)
         {
             std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapjsonreaders[_type][_id];
@@ -703,7 +703,7 @@ protected:
         return UserDataPtr(new JSONReaderFunctionData(type,id,fn,shared_from_this()));
     }
 
-    const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts)
+    const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& id, const ReadablePtr& pReadable, const AttributesList& atts)
     {
         JSONREADERSMAP::iterator it = _mapjsonreaders[type].find(id);
         if( it == _mapjsonreaders[type].end() ) {
@@ -755,7 +755,7 @@ protected:
         }
     }
 
-    int GetEnvironmentId(EnvironmentBaseConstPtr penv)
+    int GetEnvironmentId(const EnvironmentBaseConstPtr& penv)
     {
         return !!penv ? penv->GetId() : 0;
 //        std::lock_guard<std::mutex> lock(_mutexinternal);
@@ -1121,7 +1121,7 @@ private:
     log4cxx::LoggerPtr _logger;
 #endif
 
-    friend void RaveInitializeFromState(UserDataPtr);
+    friend void RaveInitializeFromState(const UserDataPtr&);
     friend int RaveInitialize(bool bLoadAllPlugins, int level);
     friend UserDataPtr RaveGlobalState();
 };
@@ -1194,7 +1194,7 @@ int RaveInitialize(bool bLoadAllPlugins, int level)
     }
 }
 
-void RaveInitializeFromState(UserDataPtr globalstate)
+void RaveInitializeFromState(const UserDataPtr& globalstate)
 {
     RaveGlobal::_state = boost::dynamic_pointer_cast<RaveGlobal>(globalstate);
 }
@@ -1228,7 +1228,7 @@ void RaveAddCallbackForDestroy(const boost::function<void()>& fn)
     RaveGlobal::instance()->AddCallbackForDestroy(fn);
 }
 
-int RaveGetEnvironmentId(EnvironmentBaseConstPtr penv)
+int RaveGetEnvironmentId(const EnvironmentBaseConstPtr& penv)
 {
     return RaveGlobal::instance()->GetEnvironmentId(penv);
 }
@@ -1268,32 +1268,32 @@ bool RaveHasInterface(InterfaceType type, const std::string& interfacename)
     return RaveGlobal::instance()->GetDatabase()->HasInterface(type,interfacename);
 }
 
-InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type,const std::string& interfacename)
+InterfaceBasePtr RaveCreateInterface(const EnvironmentBasePtr& penv, InterfaceType type,const std::string& interfacename)
 {
     return RaveGlobal::instance()->GetDatabase()->Create(penv, type,interfacename);
 }
 
-RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name)
+RobotBasePtr RaveCreateRobot(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<RobotBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Robot, name));
 }
 
-PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name)
+PlannerBasePtr RaveCreatePlanner(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<PlannerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Planner, name));
 }
 
-SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name)
+SensorSystemBasePtr RaveCreateSensorSystem(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<SensorSystemBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SensorSystem, name));
 }
 
-ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name)
+ControllerBasePtr RaveCreateController(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Controller, name));
 }
 
-MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const std::string& rawname)
+MultiControllerBasePtr RaveCreateMultiController(const EnvironmentBasePtr& env, const std::string& rawname)
 {
     std::string name;
     if( rawname == "" ) {
@@ -1312,62 +1312,62 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
     return MultiControllerBasePtr();
 }
 
-ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name)
+ModuleBasePtr RaveCreateModule(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
-ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
+ModuleBasePtr RaveCreateProblem(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
-ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name)
+ModuleBasePtr RaveCreateProblemInstance(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
-IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name)
+IkSolverBasePtr RaveCreateIkSolver(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<IkSolverBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_IkSolver, name));
 }
 
-PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name)
+PhysicsEngineBasePtr RaveCreatePhysicsEngine(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<PhysicsEngineBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_PhysicsEngine, name));
 }
 
-SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name)
+SensorBasePtr RaveCreateSensor(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<SensorBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Sensor, name));
 }
 
-CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name)
+CollisionCheckerBasePtr RaveCreateCollisionChecker(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<CollisionCheckerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_CollisionChecker, name));
 }
 
-ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name)
+ViewerBasePtr RaveCreateViewer(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<ViewerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Viewer, name));
 }
 
-KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name)
+KinBodyPtr RaveCreateKinBody(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<KinBody>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_KinBody, name));
 }
 
-TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name)
+TrajectoryBasePtr RaveCreateTrajectory(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, name));
 }
 
-TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof)
+TrajectoryBasePtr RaveCreateTrajectory(const EnvironmentBasePtr& penv, int dof)
 {
     return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, ""));
 }
 
-SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name)
+SpaceSamplerBasePtr RaveCreateSpaceSampler(const EnvironmentBasePtr& penv, const std::string& name)
 {
     return boost::static_pointer_cast<SpaceSamplerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SpaceSampler, name));
 }
@@ -1392,7 +1392,7 @@ BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag
     return RaveGlobal::instance()->CallXMLReader(type,xmltag,pinterface,atts);
 }
 
-BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts)
+BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, const ReadablePtr& pReadable, const AttributesList& atts)
 {
     return RaveGlobal::instance()->CallJSONReader(type, id, pReadable, atts);
 }
@@ -1957,7 +1957,7 @@ void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularve
     }
 }
 
-bool PhysicsEngineBase::GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
+bool PhysicsEngineBase::GetLinkForceTorque(const KinBody::LinkConstPtr& plink, Vector& force, Vector& torque)
 {
     force = Vector(0,0,0);
     torque = Vector(0,0,0);
@@ -2175,7 +2175,7 @@ BaseXMLReader::ProcessElement DummyXMLReader::startElement(const std::string& na
         FOREACHC(itatt, atts) {
             *_osrecord << itatt->first << "=\"" << itatt->second << "\" ";
         }
-        *_osrecord << ">" << endl;
+        *_osrecord << ">" << '\n';
     }
 
     // create a new parser
@@ -2189,7 +2189,7 @@ bool DummyXMLReader::endElement(const std::string& name)
         if( _pcurreader->endElement(name) ) {
             _pcurreader.reset();
             if( !!_osrecord ) {
-                *_osrecord << "</" << name << ">" << endl;
+                *_osrecord << "</" << name << ">" << '\n';
             }
         }
         return false;
@@ -2250,7 +2250,7 @@ EnvironmentBase::~EnvironmentBase()
     RaveGlobal::instance()->UnregisterEnvironment(this);
 }
 
-void EnvironmentBase::Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs)
+void EnvironmentBase::Add(const InterfaceBasePtr& pinterface, bool bAnonymous, const std::string& cmdargs)
 {
     RAVELOG_WARN("Cannot Add with bAnonymous anymore, should switch to the new InterfaceAddMode");
     Add(pinterface, bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking, cmdargs);
@@ -2411,7 +2411,7 @@ bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value,
     return true;
 }
 
-void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
+void SensorBase::Serialize(const BaseXMLWriterPtr& writer, int options) const
 {
     RAVELOG_WARN(str(boost::format("sensor %s does not implement Serialize")%GetXMLId()));
 }
@@ -2419,7 +2419,7 @@ void SensorBase::Serialize(BaseXMLWriterPtr writer, int options) const
 class CustomSamplerCallbackData : public boost::enable_shared_from_this<CustomSamplerCallbackData>, public UserData
 {
 public:
-    CustomSamplerCallbackData(const SpaceSamplerBase::StatusCallbackFn& callbackfn, SpaceSamplerBasePtr sampler) : _callbackfn(callbackfn), _samplerweak(sampler) {
+    CustomSamplerCallbackData(const SpaceSamplerBase::StatusCallbackFn& callbackfn, const SpaceSamplerBasePtr& sampler) : _callbackfn(callbackfn), _samplerweak(sampler) {
     }
     virtual ~CustomSamplerCallbackData() {
         SpaceSamplerBasePtr sampler = _samplerweak.lock();

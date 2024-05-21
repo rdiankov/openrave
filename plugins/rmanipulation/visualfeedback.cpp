@@ -596,7 +596,7 @@ private:
         vector<Transform> _vcameras;         ///< camera transformations in local coord systems
     };
 
-    VisualFeedback(EnvironmentBasePtr penv) : ModuleBase(penv), _preport(new CollisionReport())
+    VisualFeedback(const EnvironmentBasePtr& penv) : ModuleBase(penv), _preport(new CollisionReport())
     {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_visualfeedback.jpg\n\
@@ -1574,6 +1574,6 @@ protected:
     Vector _vcenterconvex;     ///< center point on the z=1 plane of the convex region
 };
 
-ModuleBasePtr CreateVisualFeedback(EnvironmentBasePtr penv) {
+ModuleBasePtr CreateVisualFeedback(const EnvironmentBasePtr& penv) {
     return ModuleBasePtr(new VisualFeedback(penv));
 }

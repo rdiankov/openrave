@@ -18,8 +18,8 @@
 //#include "plugindefs.h"
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
 
-OpenRAVE::RobotBasePtr CreateCollisionMapRobot(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::RobotBasePtr CreateConveyorRobot(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::RobotBasePtr CreateCollisionMapRobot(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::RobotBasePtr CreateConveyorRobot(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
 void RegisterCollisionMapRobotReaders(std::list< OpenRAVE::UserDataPtr >& listRegisteredReaders);
 void RegisterConveyorReaders(std::list< OpenRAVE::UserDataPtr >& listRegisteredReaders);
@@ -36,7 +36,7 @@ BaseRobotsPlugin::BaseRobotsPlugin()
 
 BaseRobotsPlugin::~BaseRobotsPlugin() {}
 
-OpenRAVE::InterfaceBasePtr BaseRobotsPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr BaseRobotsPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case OpenRAVE::PT_Robot:

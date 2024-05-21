@@ -195,10 +195,10 @@ private:
     }
 
     /// \brief sets up the planner parameters to use the active joints of the robot
-    virtual void SetRobotActiveJoints(RobotBasePtr& probot);
+    virtual void SetRobotActiveJoints(const RobotBasePtr& probot);
 
     /// \brief sets up the planner to use specific DOF indices of the robot.
-    virtual void SetRobotDOFIndices(RobotBasePtr& probot, const std::vector<int>& dofindices);
+    virtual void SetRobotDOFIndices(const RobotBasePtr& probot, const std::vector<int>& dofindices);
 
     /** \brief sets up the planner parameters to use the configuration specification space
 
@@ -229,7 +229,7 @@ private:
         - _configurationspecification
         \throw openrave_exception If the configuration specification is invalid or points to targets that are not present in the environment.
      */
-    virtual void SetConfigurationSpecification(EnvironmentBasePtr env, const ConfigurationSpecification& spec);
+    virtual void SetConfigurationSpecification(const EnvironmentBasePtr& env, const ConfigurationSpecification& spec);
 
     /// \brief veriries that the configuration space and all parameters are consistent
     ///
@@ -634,7 +634,7 @@ public:
         int _iteration;
     };
 
-    PlannerBase(EnvironmentBasePtr penv);
+    PlannerBase(const EnvironmentBasePtr& penv);
     virtual ~PlannerBase() {
 
     }
@@ -649,7 +649,7 @@ public:
         \param robot main robot to be used for planning
         \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
      */
-    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
+    virtual bool InitPlan(const RobotBasePtr& robot, PlannerParametersConstPtr params) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 
@@ -658,7 +658,7 @@ public:
         pass information to planners without excplicitly knowning the format/internal structures used
         \return true if plan is initialized successfully and initial conditions are satisfied.
      */
-    virtual bool InitPlan(RobotBasePtr robot, std::istream& isParameters);
+    virtual bool InitPlan(const RobotBasePtr& robot, std::istream& isParameters);
 
     /** \brief Executes the main planner trying to solve for the goal condition.
 
@@ -703,9 +703,9 @@ protected:
         \param probot the robot this trajectory is meant for, also uses the robot for checking collisions.
         \param traj Initial trajectory to be smoothed is inputted. If optimization path succeeds, final trajectory output is set in this variable. The trajectory is for the configuration degrees of freedom defined by the planner parameters.
      */
-    virtual PlannerStatus _ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr traj);
+    virtual PlannerStatus _ProcessPostPlanners(const RobotBasePtr& probot, TrajectoryBasePtr traj);
 
-    virtual bool _OptimizePath(RobotBasePtr probot, TrajectoryBasePtr traj) RAVE_DEPRECATED {
+    virtual bool _OptimizePath(const RobotBasePtr& probot, TrajectoryBasePtr traj) RAVE_DEPRECATED {
         return !!(_ProcessPostPlanners(probot,traj).statusCode & PS_HasSolution);
     }
 

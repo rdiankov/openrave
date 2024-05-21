@@ -25,12 +25,12 @@ namespace ParabolicRamp = ParabolicRampInternal;
 class SubParabolicSmoother : public PlannerBase, public ParabolicRamp::FeasibilityCheckerBase, public ParabolicRamp::RandomNumberGeneratorBase
 {
 public:
-    SubParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    SubParabolicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nInterface to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -38,7 +38,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
@@ -150,7 +150,7 @@ public:
             }
 
             int numshortcuts=0;
-            if( !!parameters->_setstatevaluesfn || !!parameters->_setstatefn ) {
+            if( !!parameters->_setstatevaluesfn || !!parameters->_getstatefn ) {
                 // no idea what a good mintimestep is... _parameters->_fStepLength*0.5?
                 numshortcuts = Shortcut(dynamicpath, parameters->_nMaxIterations,checker,this, parameters->_fStepLength*0.99);
             }
@@ -232,7 +232,7 @@ public:
                             }
                         }
                         if( !bSuccess ) {
-                            throw OPENRAVE_EXCEPTION_FORMAT0(_("original ramp is in collision!"), ORE_Assert);
+                            throw OPENRAVE_EXCEPTION_FORMAT0(mpl_::_("original ramp is in collision!"), ORE_Assert);
                         }
                     }
                     _bUsePerturbation = true; // re-enable
@@ -456,7 +456,7 @@ protected:
 };
 
 
-PlannerBasePtr CreateSubParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateSubParabolicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new SubParabolicSmoother(penv,sinput));
 }

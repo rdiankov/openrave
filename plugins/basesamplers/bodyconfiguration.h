@@ -21,7 +21,7 @@ using namespace OpenRAVE;
 class BodyConfigurationSampler : public SpaceSamplerBase
 {
 public:
-    BodyConfigurationSampler(EnvironmentBasePtr penv, std::istream& sinput);
+    BodyConfigurationSampler(const EnvironmentBasePtr& penv, std::istream& sinput);
 
     void SetSeed(uint32_t seed) override;
 

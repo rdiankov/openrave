@@ -30,7 +30,7 @@ FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo() : bFromKinBodyGeome
 {
 }
 
-FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo(KinBody::GeometryPtr pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true)
+FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo(const KinBody::GeometryPtr& pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true)
 {
 }
 
@@ -38,11 +38,11 @@ FCLSpace::FCLKinBodyInfo::LinkInfo::LinkInfo() : bFromKinBodyLink(false)
 {
 }
 
-FCLSpace::FCLKinBodyInfo::LinkInfo::LinkInfo(KinBody::LinkPtr plink) : _plink(plink), bFromKinBodyLink(true)
+FCLSpace::FCLKinBodyInfo::LinkInfo::LinkInfo(const KinBody::LinkPtr& plink) : _plink(plink), bFromKinBodyLink(true)
 {
 }
 
-FCLSpace::FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
+FCLSpace::FCLSpace(const EnvironmentBasePtr& penv, const std::string& userdatakey)
     : _penv(penv)
     , _userdatakey(userdatakey)
     , _currentpinfo(1, FCLKinBodyInfoPtr()) // initialize with one null pointer, this is a place holder for null pointer so that we can return by reference. env id 0 means invalid so it's consistent with the definition as well
@@ -55,7 +55,7 @@ FCLSpace::FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
 void FCLSpace::DestroyEnvironment()
 {
     RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
-    for (KinBodyConstPtr pbody : _vecInitializedBodies) {
+    for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
         if (!pbody) {
             continue;
         }
@@ -71,7 +71,7 @@ void FCLSpace::DestroyEnvironment()
     _vecInitializedBodies.clear();
 }
 
-void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo) {
+void FCLSpace::ReloadKinBodyLinks(const KinBodyConstPtr& pbody, const FCLKinBodyInfoPtr& pinfo) {
     // If the body hasn't changed, don't reload the links.
     if (pbody->GetUpdateStamp() == pinfo->nLastLinkReloadStamp) {
         return;
@@ -176,7 +176,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
 }
 
-FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo, bool bSetToCurrentPInfo)
+FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(const KinBodyConstPtr& pbody, FCLKinBodyInfoPtr pinfo, bool bSetToCurrentPInfo)
 {
     if( !pinfo ) {
         pinfo.reset(new FCLKinBodyInfo());
@@ -247,7 +247,7 @@ const std::string& FCLSpace::GetGeometryGroup() const
     return _geometrygroup;
 }
 
-bool FCLSpace::SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+bool FCLSpace::SetBodyGeometryGroup(const KinBodyConstPtr& pbody, const std::string& groupname) {
     const KinBody& body = *pbody;
 
     if (!HasNamedGeometry(body, groupname)) {
@@ -423,7 +423,7 @@ const FCLSpace::FCLKinBodyInfoPtr& FCLSpace::GetInfo(const KinBody &body) const
     return _currentpinfo.at(0);
 }
 
-void FCLSpace::RemoveUserData(KinBodyConstPtr pbody) {
+void FCLSpace::RemoveUserData(const KinBodyConstPtr& pbody) {
     if( !!pbody ) {
         RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
         const int envId = pbody->GetEnvironmentBodyIndex();
@@ -641,7 +641,7 @@ private:
     KinBodyPtr _ptr;
 };
 
-void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
+void FCLSpace::_ResetCurrentGeometryCallback(const boost::weak_ptr<FCLKinBodyInfo>& _pinfo)
 {
     FCLKinBodyInfoPtr pinfo = _pinfo.lock();
     KinBodyPtr pbody = pinfo->GetBody();
@@ -665,7 +665,7 @@ void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pi
     }
 }
 
-void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
+void FCLSpace::_ResetGeometryGroupsCallback(const boost::weak_ptr<FCLKinBodyInfo>& _pinfo)
 {
     FCLKinBodyInfoPtr pinfo = _pinfo.lock();
     KinBodyPtr pbody = pinfo->GetBody();

@@ -559,8 +559,8 @@ class PyKinBodyStateSaver
 public:
     PyKinBodyStateSaver(PyKinBodyPtr pybody);
     PyKinBodyStateSaver(PyKinBodyPtr pybody, object options);
-    PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv);
-    PyKinBodyStateSaver(KinBodyPtr pbody, PyEnvironmentBasePtr pyenv, object options);
+    PyKinBodyStateSaver(const KinBodyPtr& pbody, PyEnvironmentBasePtr pyenv);
+    PyKinBodyStateSaver(const KinBodyPtr& pbody, PyEnvironmentBasePtr pyenv, object options);
     virtual ~PyKinBodyStateSaver();
 
     object GetBody() const;

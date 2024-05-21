@@ -921,7 +921,7 @@ protected:
         \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int timederivative=0) const;
+    bool ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, const KinBodyConstPtr& pbody, int timederivative=0) const;
 
     /** \brief extracts an ikparameterization given the start of a configuration space point
 
@@ -944,7 +944,7 @@ protected:
         \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative=0) const;
+    bool ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, const KinBodyConstPtr& pbody, int affinedofs, int timederivative=0) const;
 
     /** \brief extracts a body's joint values given the start of a configuration space point
 
@@ -955,7 +955,7 @@ protected:
         \param[in] timederivative the time derivative of the data to extract
         \return true if at least one group was found for extracting
      */
-    bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+    bool ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, const KinBodyConstPtr& pbody, const std::vector<int>& indices, int timederivative=0) const;
 
     /// \brief extracts the delta time from the configuration if one exists
     ///
@@ -971,7 +971,7 @@ protected:
         \param[in] timederivative the time derivative of the data to insert
         \return true if at least one group was found for inserting
      */
-    bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative=0) const;
+    bool InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, const KinBodyConstPtr& pbody, const std::vector<int>& indices, int timederivative=0) const;
 
     /** \brief sets the deltatime field of the data if one exists
 
@@ -1005,7 +1005,7 @@ protected:
         \param[in] env the environment to extract the bodies from
         \param[out] usedbodies a list of the bodies being used
      */
-    void ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const;
+    void ExtractUsedBodies(const EnvironmentBasePtr& env, std::vector<KinBodyPtr>& usedbodies) const;
 
 
     /** \brief extracts all the unique dof indices that the configuration holds for a particular body
@@ -1014,7 +1014,7 @@ protected:
         \param[out] useddofindices a vector of unique DOF indices targetted for the body
         \param[out] usedconfigindices for every used index, returns the first configuration space index it came from
      */
-    void ExtractUsedIndices(KinBodyConstPtr pbody, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
+    void ExtractUsedIndices(const KinBodyConstPtr& pbody, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
 
     /** \brief extracts all the unique dof indices that the configuration holds for a particular body
 
@@ -1032,10 +1032,10 @@ protected:
     typedef boost::function<void (std::vector<dReal>&)> GetConfigurationStateFn;
 
     /// \brief return a function to set the states of the configuration in the environment
-    boost::shared_ptr<SetConfigurationStateFn> GetSetFn(EnvironmentBasePtr env) const;
+    boost::shared_ptr<SetConfigurationStateFn> GetSetFn(const EnvironmentBasePtr& env) const;
 
     /// \brief return a function to get the states of the configuration in the environment
-    boost::shared_ptr<GetConfigurationStateFn> GetGetFn(EnvironmentBasePtr env) const;
+    boost::shared_ptr<GetConfigurationStateFn> GetGetFn(const EnvironmentBasePtr& env) const;
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 
@@ -1065,7 +1065,7 @@ protected:
         \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
         \throw openrave_exception throw f groups are incompatible
      */
-    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, const EnvironmentBaseConstPtr& penv, bool filluninitialized = true);
 
     /** \brief Converts from one specification to another.
 
@@ -1077,7 +1077,7 @@ protected:
         \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
         \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
      */
-    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+    static void ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification& targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification& sourcespec, size_t numpoints, const EnvironmentBaseConstPtr& penv, bool filluninitialized = true);
 
     /// \brief gets the name of the interpolation that represents the derivative of the passed in interpolation.
     ///
@@ -2603,7 +2603,7 @@ OPENRAVE_API void RaveGetTransformFromAffineDOFValues(Transform& t, std::vector<
  */
 OPENRAVE_API void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularvel, std::vector<dReal>::const_iterator itvalues, int affinedofs, const Vector& axis=Vector(0,0,1), const Vector& quatrotation = Vector(1,0,0,0));
 
-OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody=KinBodyConstPtr(),const std::string& interpolation="");
+OPENRAVE_API ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,const KinBodyConstPtr& pbody=KinBodyConstPtr(),const std::string& interpolation="");
 
 }
 
@@ -2657,7 +2657,7 @@ inline const char* RaveGetInterfaceHash(InterfaceType type)
 ///
 /// The reason why dynamic_pointer_cast cannot be used is because interfaces might be created by different plugins, and the runtime type information will be different.
 template <typename T>
-inline boost::shared_ptr<T> RaveInterfaceCast(InterfaceBasePtr pinterface)
+inline boost::shared_ptr<T> RaveInterfaceCast(const InterfaceBasePtr& pinterface)
 {
     if( !!pinterface ) {
         if( pinterface->GetInterfaceType() == T::GetInterfaceTypeStatic() ) {
@@ -2721,7 +2721,7 @@ OPENRAVE_API int RaveInitialize(bool bLoadAllPlugins=true, int level = Level_Inf
 /// around. If using plugin.h, this function is automatically called by \ref CreateInterfaceValidated.
 /// It is also called by and every InterfaceBase constructor.
 /// \param[in] globalstate
-OPENRAVE_API void RaveInitializeFromState(UserDataPtr globalstate);
+OPENRAVE_API void RaveInitializeFromState(const UserDataPtr& globalstate);
 
 /// \brief A pointer to the global openrave state
 /// \return a managed pointer to the state.
@@ -2763,27 +2763,27 @@ OPENRAVE_API bool RaveLoadPlugin(const std::string& libraryname);
 /// \brief Returns true if interface can be created, otherwise false.
 OPENRAVE_API bool RaveHasInterface(InterfaceType type, const std::string& interfacename);
 
-OPENRAVE_API InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr env, InterfaceType type,const std::string& interfacename);
-OPENRAVE_API RobotBasePtr RaveCreateRobot(EnvironmentBasePtr env, const std::string& name="");
-OPENRAVE_API PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API ControllerBasePtr RaveCreateController(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const std::string& name="");
-OPENRAVE_API ModuleBasePtr RaveCreateModule(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API SensorBasePtr RaveCreateSensor(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr env, const std::string& name);
-OPENRAVE_API KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr env, const std::string& name="");
+OPENRAVE_API InterfaceBasePtr RaveCreateInterface(const EnvironmentBasePtr& env, InterfaceType type,const std::string& interfacename);
+OPENRAVE_API RobotBasePtr RaveCreateRobot(const EnvironmentBasePtr& env, const std::string& name="");
+OPENRAVE_API PlannerBasePtr RaveCreatePlanner(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API SensorSystemBasePtr RaveCreateSensorSystem(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API ControllerBasePtr RaveCreateController(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API MultiControllerBasePtr RaveCreateMultiController(const EnvironmentBasePtr& env, const std::string& name="");
+OPENRAVE_API ModuleBasePtr RaveCreateModule(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateProblem(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API ModuleBasePtr RaveCreateProblemInstance(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API IkSolverBasePtr RaveCreateIkSolver(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API PhysicsEngineBasePtr RaveCreatePhysicsEngine(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API SensorBasePtr RaveCreateSensor(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API CollisionCheckerBasePtr RaveCreateCollisionChecker(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API ViewerBasePtr RaveCreateViewer(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API SpaceSamplerBasePtr RaveCreateSpaceSampler(const EnvironmentBasePtr& env, const std::string& name);
+OPENRAVE_API KinBodyPtr RaveCreateKinBody(const EnvironmentBasePtr& env, const std::string& name="");
 /// \brief Return an empty trajectory instance.
-OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, const std::string& name="");
+OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(const EnvironmentBasePtr& env, const std::string& name="");
 
 /// \deprecated (11/10/01)
-OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, int dof) RAVE_DEPRECATED;
+OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(const EnvironmentBasePtr& env, int dof) RAVE_DEPRECATED;
 
 /// \brief returned a fully cloned interface
 ///
@@ -2791,7 +2791,7 @@ OPENRAVE_API TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr env, int 
 /// \param cloningoptions combination of CO_*
 /// \param pcloneenv the environment to create the new clone in. If not specified, will use preference->GetEnv()
 template <typename T>
-inline boost::shared_ptr<T> RaveClone(boost::shared_ptr<T const> preference, int cloningoptions, EnvironmentBasePtr pcloneenv=EnvironmentBasePtr())
+inline boost::shared_ptr<T> RaveClone(const boost::shared_ptr<T const>& preference, int cloningoptions, EnvironmentBasePtr pcloneenv=EnvironmentBasePtr())
 {
     InterfaceBasePtr pcloned = RaveCreateInterface(!pcloneenv ? preference->GetEnv() : pcloneenv, preference->GetInterfaceType(), preference->GetXMLId());
     OPENRAVE_ASSERT_FORMAT(!!pcloned, "Failed to clone interface=%s id=%s", RaveGetInterfaceName(preference->GetInterfaceType())%preference->GetXMLId(), ORE_InvalidArguments);
@@ -2834,7 +2834,7 @@ OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::st
 OPENRAVE_API UserDataPtr RaveRegisterJSONReader(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
-OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBaseConstPtr env);
+OPENRAVE_API int RaveGetEnvironmentId(const EnvironmentBaseConstPtr& env);
 
 /// \brief get the environment from its unique id
 /// \param id the unique environment id returned by \ref RaveGetEnvironmentId
@@ -2851,7 +2851,7 @@ OPENRAVE_API BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::s
 /// \brief Returns the current registered json reader for the interface type/id
 ///
 /// \throw openrave_exception Will throw with ORE_InvalidArguments if registered function could not be found.
-OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts);
+OPENRAVE_API BaseJSONReaderPtr RaveCallJSONReader(InterfaceType type, const std::string& id, const ReadablePtr& pReadable, const AttributesList& atts);
 
 /** \brief Returns the absolute path of the filename on the local filesystem resolving relative paths from OpenRAVE paths.
 

@@ -25,7 +25,7 @@ namespace PiecewisePolynomials = PiecewisePolynomialsInternal;
 
 class QuinticSmoother : public JerkLimitedSmootherBase {
 public:
-    QuinticSmoother(EnvironmentBasePtr penv, std::istream& sinput) : JerkLimitedSmootherBase(penv, sinput)
+    QuinticSmoother(const EnvironmentBasePtr& penv, std::istream& sinput) : JerkLimitedSmootherBase(penv, sinput)
     {
     }
 
@@ -822,7 +822,7 @@ private:
 
 }; // end class QuinticSmoother
 
-PlannerBasePtr CreateQuinticSmoother(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateQuinticSmoother(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new QuinticSmoother(penv, sinput));
 }

@@ -122,7 +122,7 @@ bool RobotBase::ManipulatorInfo::operator==(const ManipulatorInfo& other) const
         && _id == other._id;
 }
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
+RobotBase::Manipulator::Manipulator(const RobotBasePtr& probot, const RobotBase::ManipulatorInfo& info) : _info(info), __probot(probot) {
 }
 RobotBase::Manipulator::~Manipulator() {
 }
@@ -136,7 +136,7 @@ RobotBase::Manipulator::Manipulator(const RobotBase::Manipulator& r)
     }
 }
 
-RobotBase::Manipulator::Manipulator(RobotBasePtr probot, boost::shared_ptr<RobotBase::Manipulator const> r)
+RobotBase::Manipulator::Manipulator(const RobotBasePtr& probot, const boost::shared_ptr<RobotBase::Manipulator const>& r)
 {
     *this = *r.get();
     __probot = probot;
@@ -330,7 +330,7 @@ IkSolverBasePtr RobotBase::Manipulator::GetIkSolver() const
     return __pIkSolver;
 }
 
-bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
+bool RobotBase::Manipulator::SetIkSolver(const IkSolverBasePtr& iksolver)
 {
     if( !iksolver ) {
         __pIkSolver.reset();
@@ -423,12 +423,12 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
 }
 
 
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, int filteroptions, const IkReturnPtr& ikreturn, const IkFailureAccumulatorBasePtr& paccumulator) const
 {
     return FindIKSolution(goal, vector<dReal>(), filteroptions, ikreturn, paccumulator);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkReturnPtr& ikreturn, const IkFailureAccumulatorBasePtr& paccumulator) const
 {
     IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
@@ -449,12 +449,12 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, paccumulator, ikreturn) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, paccumulator, ikreturn);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int filteroptions, std::vector<IkReturnPtr>& vikreturns, const IkFailureAccumulatorBasePtr& paccumulator) const
 {
     return FindIKSolutions(goal, vector<dReal>(), filteroptions, vikreturns, paccumulator);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, const IkFailureAccumulatorBasePtr& paccumulator) const
 {
     IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
@@ -905,7 +905,7 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
     }
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const CollisionReportPtr& report) const
 {
     RobotBasePtr probot(__probot);
 
@@ -958,13 +958,13 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Col
     return _CheckEndEffectorCollision(tEE, pdummynull, report);
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, CollisionReportPtr report) const
 {
     OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
     return _CheckEndEffectorCollision(tEE, pbody, report);
 }
 
-bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const
+bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, const CollisionReportPtr& report) const
 {
     RobotBasePtr probot(__probot);
     const Transform toldEE = GetTransform();
@@ -1019,7 +1019,7 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
     return bincollision;
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
+bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const CollisionReportPtr& report, bool bIgnoreManipulatorLinks) const
 {
     RobotBasePtr probot(__probot);
 
@@ -1087,7 +1087,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
     return bincollision;
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
+bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, const CollisionReportPtr& report, bool bIgnoreManipulatorLinks) const
 {
     RobotBasePtr probot(__probot);
     const Transform toldEE = GetTransform();
@@ -1167,13 +1167,13 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization&
     return _CheckEndEffectorCollision(ikparam, pdummynull, report, numredundantsamples);
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, CollisionReportPtr report, int numredundantsamples) const
 {
     OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
     return _CheckEndEffectorCollision(ikparam, pbody, report, numredundantsamples);
 }
 
-bool RobotBase::Manipulator::_CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const
+bool RobotBase::Manipulator::_CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, const CollisionReportPtr& report, int numredundantsamples) const
 {
     if( ikparam.GetType() == IKP_Transform6D ) {
         return _CheckEndEffectorCollision(ikparam.GetTransform6D(),pbody,report);
@@ -1245,7 +1245,7 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const IkParameterization
     }
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples, bool bIgnoreManipulatorLinks) const
+bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterization& ikparam, const CollisionReportPtr& report, int numredundantsamples, bool bIgnoreManipulatorLinks) const
 {
     if( ikparam.GetType() == IKP_Transform6D ) {
         return CheckEndEffectorSelfCollision(ikparam.GetTransform6D(),report,bIgnoreManipulatorLinks);
@@ -1348,7 +1348,7 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const IkParameterizat
 //    return false;
 }
 
-bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report) const
+bool RobotBase::Manipulator::CheckIndependentCollision(const CollisionReportPtr& report) const
 {
     RobotBasePtr probot(__probot);
     std::vector<KinBodyConstPtr> vbodyexcluded;

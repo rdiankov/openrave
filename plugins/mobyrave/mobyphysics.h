@@ -114,12 +114,12 @@ protected:
 
 public:
 
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
     	return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<MobyPhysics>(ptr),atts));
     }
 
-    MobyPhysics(EnvironmentBasePtr penv, istream& sinput) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
+    MobyPhysics(const EnvironmentBasePtr& penv, istream& sinput) : PhysicsEngineBase(penv), _StepSize(0.001), _space(new MobySpace(penv, GetPhysicsInfo, true)) 
     {
 	stringstream ss;
 	__description = ":Interface Authors: James Taylor and Rosen Diankov\n\nInterface to `Moby Physics Engine <https://github.com/PositronicsLab/Moby/>`_\n";
@@ -185,7 +185,7 @@ public:
        //_sim->reset();
     }
 
-    virtual bool InitKinBody(KinBodyPtr pbody)
+    virtual bool InitKinBody(const KinBodyPtr& pbody)
     {
         MobySpace::KinBodyInfoPtr pinfo = _space->InitKinBody(pbody);
         pbody->SetUserData("mobyphysics", pinfo);
@@ -196,7 +196,7 @@ public:
     }
 
 
-    virtual void RemoveKinBody(KinBodyPtr pbody)
+    virtual void RemoveKinBody(const KinBodyPtr& pbody)
     {
         if( !!pbody ) {
             pbody->RemoveUserData("mobyphysics");
@@ -219,7 +219,7 @@ public:
     }
 
     // Note: this implementation is only additive
-    virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
+    virtual bool SetBodyForce(const KinBody::LinkPtr& plink, const Vector& force, const Vector& position, bool bAdd)
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
@@ -230,7 +230,7 @@ public:
     }
 
     // Note: velocities w.r.t to the body's inertial reference frame
-    virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
+    virtual bool SetLinkVelocity(const KinBody::LinkPtr& plink, const Vector& linearvel, const Vector& angularvel)
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
@@ -247,7 +247,7 @@ public:
     }
 
     // Note: velocities w.r.t to the respective body's inertial reference frame
-    virtual bool SetLinkVelocities(KinBodyPtr pbody, const vector<pair<Vector,Vector> >& velocities)
+    virtual bool SetLinkVelocities(const KinBodyPtr& pbody, const vector<pair<Vector,Vector> >& velocities)
     {
         _space->Synchronize(pbody);
         FOREACHC(itlink, pbody->GetLinks()) 
@@ -269,7 +269,7 @@ public:
     }
 
     // Note: w.r.t to what reference frame?
-    virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
+    virtual bool GetLinkVelocity(const KinBody::LinkConstPtr& plink, Vector& linearvel, Vector& angularvel)
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
@@ -289,7 +289,7 @@ public:
     }
 
     // Note: w.r.t to what reference frame?
-    virtual bool GetLinkVelocities(KinBodyConstPtr pbody, vector<pair<Vector,Vector> >& velocities)
+    virtual bool GetLinkVelocities(const KinBodyConstPtr& pbody, vector<pair<Vector,Vector> >& velocities)
     {
         _space->Synchronize(pbody);
         velocities.resize(0);
@@ -313,13 +313,13 @@ public:
     }
 
     // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
-    virtual bool SetJointVelocity(KinBody::JointPtr pjoint, const vector<dReal>& pJointVelocity)
+    virtual bool SetJointVelocity(const KinBody::JointPtr& pjoint, const vector<dReal>& pJointVelocity)
     {
         return false;
     }
 
     // Note: neither in current physicsengine interface nor a python binding, came from bulletphysics
-    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, vector<dReal>& pJointVelocity)
+    virtual bool GetJointVelocity(const KinBody::JointConstPtr& pjoint, vector<dReal>& pJointVelocity)
     {
         _space->Synchronize(pjoint->GetParent());
         Moby::JointPtr joint = _space->GetJoint(pjoint);
@@ -342,7 +342,7 @@ public:
     }
 
     // Note: this implementation is only additive
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const vector<dReal>& pTorques)
+    virtual bool AddJointTorque(const KinBody::JointPtr& pjoint, const vector<dReal>& pTorques)
     {
         _space->Synchronize(pjoint->GetParent());
 
@@ -354,7 +354,7 @@ public:
     }
 
     // Note: this implementation is only additive
-    virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
+    virtual bool SetBodyTorque(const KinBody::LinkPtr& plink, const Vector& torque, bool bAdd)
     {
         _space->Synchronize(KinBodyConstPtr(plink->GetParent()));
         Moby::RigidBodyPtr body = _space->GetLinkBody(plink);
@@ -363,12 +363,12 @@ public:
         return true;
     }
 
-    virtual bool GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
+    virtual bool GetLinkForceTorque(const KinBody::LinkConstPtr& plink, Vector& force, Vector& torque)
     {
         return false;
     }
 
-    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force, Vector& torque)
+    virtual bool GetJointForceTorque(const KinBody::JointConstPtr& pjoint, Vector& force, Vector& torque)
     {
         return false;
     }
@@ -462,7 +462,7 @@ public:
     boost::shared_ptr<MobySpace> _space;
 
 private:
-    static MobySpace::KinBodyInfoPtr GetPhysicsInfo(KinBodyConstPtr pbody)
+    static MobySpace::KinBodyInfoPtr GetPhysicsInfo(const KinBodyConstPtr& pbody)
     {
         return boost::dynamic_pointer_cast<MobySpace::KinBodyInfo>(pbody->GetUserData("mobyphysics"));
     }

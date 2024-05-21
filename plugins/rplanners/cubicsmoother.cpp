@@ -24,7 +24,7 @@ namespace PiecewisePolynomials = PiecewisePolynomialsInternal;
 
 class CubicSmoother : public JerkLimitedSmootherBase {
 public:
-    CubicSmoother(EnvironmentBasePtr penv, std::istream& sinput) : JerkLimitedSmootherBase(penv, sinput)
+    CubicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput) : JerkLimitedSmootherBase(penv, sinput)
     {
         __description = ":Interface Author: Puttichai Lertkultanon\n\nTime-parameterizes the given path using cubic polynomials and performs trajectory smoothing.";
     }
@@ -1350,7 +1350,7 @@ private:
 
 }; // end class CubicSmoother
 
-PlannerBasePtr CreateCubicSmoother(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateCubicSmoother(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new CubicSmoother(penv, sinput));
 }

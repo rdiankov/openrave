@@ -19,7 +19,7 @@
 #include "plugindefs.h"
 
 #ifdef ENABLE_VIDEORECORDING
-OpenRAVE::ModuleBasePtr CreateViewerRecorder(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ModuleBasePtr CreateViewerRecorder(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 void DestroyViewerRecordingStaticResources();
 #endif
 
@@ -44,7 +44,7 @@ DestroyViewerRecordingStaticResources();
 #endif
 }
 
-OpenRAVE::InterfaceBasePtr LoggingPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr LoggingPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case OpenRAVE::PT_Module:

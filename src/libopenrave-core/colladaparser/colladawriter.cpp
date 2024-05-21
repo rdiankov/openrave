@@ -317,7 +317,7 @@ private:
         daeElementRef _elt;
     };
 
-    ColladaWriter(EnvironmentBaseConstPtr penv, const AttributesList& atts) : _dom(NULL), _penv(penv)
+    ColladaWriter(const EnvironmentBaseConstPtr& penv, const AttributesList& atts) : _dom(NULL), _penv(penv)
     {
         _doc = NULL;
         //_globalunit = 1.0;
@@ -614,7 +614,7 @@ private:
     }
 
     /// \brief Write one kinematic body as a file
-    virtual bool Write(KinBodyPtr pbody)
+    virtual bool Write(const KinBodyPtr& pbody)
     {
         if( pbody->IsRobot() ) {
             return Write(RaveInterfaceCast<RobotBase>(pbody));
@@ -640,7 +640,7 @@ private:
     }
 
     /// \brief checks if a body can be written externally
-    virtual bool _CheckForExternalWrite(KinBodyPtr pbody)
+    virtual bool _CheckForExternalWrite(const KinBodyPtr& pbody)
     {
         if( !_bExternalRefAllBodies && find(_listExternalRefExports.begin(),_listExternalRefExports.end(),pbody->GetName()) == _listExternalRefExports.end() ) {
             // user doesn't want to use external refs
@@ -684,7 +684,7 @@ private:
     }
 
     /// \brief try to write kinbody as an external reference
-    virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBodyExternal(KinBodyPtr pbody, domInstance_kinematics_sceneRef ikscene)
+    virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBodyExternal(const KinBodyPtr& pbody, domInstance_kinematics_sceneRef ikscene)
     {
         RAVELOG_DEBUG(str(boost::format("writing body %s as external reference")%pbody->GetName()));
         string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
@@ -908,7 +908,7 @@ private:
         return iasout;
     }
 
-    void _WriteKinBodyType(KinBodyPtr pbody, daeElementRef eltbody)
+    void _WriteKinBodyType(const KinBodyPtr& pbody, daeElementRef eltbody)
     {
         // interface type
         domExtraRef pextra = daeSafeCast<domExtra>(eltbody->add(COLLADA_ELEMENT_EXTRA));
@@ -921,7 +921,7 @@ private:
     }
 
     /// \brief that is independent of the kinematics/visuals so should belong in the instance_* extra fields, preferably instance_articulated_system
-    void _WriteKinBodyExtraInfo(KinBodyPtr pbody, daeElementRef eltbody)
+    void _WriteKinBodyExtraInfo(const KinBodyPtr& pbody, daeElementRef eltbody)
     {
         if( IsWrite("readable") ) {
             BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(eltbody));
@@ -930,7 +930,7 @@ private:
     }
 
     /// \brief Write robot in a given scene
-    virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBody(KinBodyPtr pbody)
+    virtual boost::shared_ptr<instance_articulated_system_output> _WriteKinBody(const KinBodyPtr& pbody)
     {
         RAVELOG_VERBOSE(str(boost::format("writing robot as instance_articulated_system (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
         string asid = str(boost::format("body%d")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]);
@@ -1230,7 +1230,7 @@ private:
     }
 
     /// \brief Write common kinematic body in a given scene, called by _WriteKinBody
-    virtual boost::shared_ptr<instance_kinematics_model_output> _WriteInstance_kinematics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
+    virtual boost::shared_ptr<instance_kinematics_model_output> _WriteInstance_kinematics_model(const KinBodyPtr& pbody, daeElementRef parent, const string& sidscope)
     {
         EnvironmentLock lockenv(_penv->GetMutex());
         RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
@@ -1290,7 +1290,7 @@ private:
         return ikmout;
     }
 
-    virtual boost::shared_ptr<instance_physics_model_output> _WriteInstance_physics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
+    virtual boost::shared_ptr<instance_physics_model_output> _WriteInstance_physics_model(const KinBodyPtr& pbody, daeElementRef parent, const string& sidscope)
     {
         if( !IsWrite("physics") ) {
             return boost::shared_ptr<instance_physics_model_output>();
@@ -1344,7 +1344,7 @@ private:
         return ipmout;
     }
 
-    virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody)
+    virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(const KinBodyPtr& pbody)
     {
         EnvironmentLock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout;
@@ -1867,7 +1867,7 @@ private:
         return kmout;
     }
 
-    virtual boost::shared_ptr<physics_model_output> WritePhysics_model(KinBodyPtr pbody)
+    virtual boost::shared_ptr<physics_model_output> WritePhysics_model(const KinBodyPtr& pbody)
     {
         boost::shared_ptr<physics_model_output> pmout = _GetPhysics_model(pbody);
         if( !!pmout ) {
@@ -2763,7 +2763,7 @@ private:
         }
     }
 
-    void _WriteCollisionData(KinBodyPtr pbody, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, bool bWriteIgnoreLinkPair=true)
+    void _WriteCollisionData(const KinBodyPtr& pbody, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, bool bWriteIgnoreLinkPair=true)
     {
         // collision data
         domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));
@@ -2856,7 +2856,7 @@ private:
         t[2] = v.z;
     }
 
-    virtual void _AddKinematics_model(KinBodyPtr pbody, boost::shared_ptr<kinematics_model_output> kmout) {
+    virtual void _AddKinematics_model(const KinBodyPtr& pbody, boost::shared_ptr<kinematics_model_output> kmout) {
         FOREACH(it, _listkinbodies) {
             if( _bReuseSimilar ) {
                 if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
@@ -2879,7 +2879,7 @@ private:
         _listkinbodies.push_back(cache);
     }
 
-    virtual boost::shared_ptr<kinematics_model_output> _GetKinematics_model(KinBodyPtr pbody) {
+    virtual boost::shared_ptr<kinematics_model_output> _GetKinematics_model(const KinBodyPtr& pbody) {
         FOREACH(it, _listkinbodies) {
             if( _bReuseSimilar ) {
                 if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
@@ -2893,7 +2893,7 @@ private:
         return boost::shared_ptr<kinematics_model_output>();
     }
 
-    virtual void _AddPhysics_model(KinBodyPtr pbody, boost::shared_ptr<physics_model_output> pmout) {
+    virtual void _AddPhysics_model(const KinBodyPtr& pbody, boost::shared_ptr<physics_model_output> pmout) {
         FOREACH(it, _listkinbodies) {
             if( _bReuseSimilar ) {
                 if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
@@ -2916,7 +2916,7 @@ private:
         _listkinbodies.push_back(cache);
     }
 
-    virtual boost::shared_ptr<physics_model_output> _GetPhysics_model(KinBodyPtr pbody) {
+    virtual boost::shared_ptr<physics_model_output> _GetPhysics_model(const KinBodyPtr& pbody) {
         FOREACH(it, _listkinbodies) {
             if( _bReuseSimilar ) {
                 if( it->uri == pbody->GetURI() && it->kinematicsgeometryhash == pbody->GetKinematicsGeometryHash() ) {
@@ -2946,7 +2946,7 @@ private:
     }
 
     /// \brief assign unique sid for all links in a body
-    virtual void _AssignLinkSids(KinBodyPtr pBody) {
+    virtual void _AssignLinkSids(const KinBodyPtr& pBody) {
         std::vector<uint8_t> vConnectedLinks; vConnectedLinks.resize(pBody->GetLinks().size(),0);
         if (pBody->IsRobot()) {
             RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
@@ -3034,7 +3034,7 @@ private:
     }
 
     /// \brief assign unique sid for all joints in a body
-    virtual void _AssignJointSids(KinBodyPtr pBody) {
+    virtual void _AssignJointSids(const KinBodyPtr& pBody) {
         std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(pBody->GetJoints().size(),0);
         std::vector<uint8_t> vConnectedPassiveJoints; vConnectedPassiveJoints.resize(pBody->GetPassiveJoints().size(),0);
         if (pBody->IsRobot()) {
@@ -3214,7 +3214,7 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::instance_kinematics_model_output)
 BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 #endif
 
-void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
+void RaveWriteColladaFile(const EnvironmentBasePtr& penv, const string& filename, const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
@@ -3274,7 +3274,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
     writer.Save(filename);
 }
 
-void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const AttributesList& atts)
+void RaveWriteColladaFile(const KinBodyPtr& pbody, const string& filename, const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
@@ -3362,7 +3362,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 }
 
 
-void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
+void RaveWriteColladaMemory(const EnvironmentBasePtr& penv, std::vector<char>& output, const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
@@ -3409,7 +3409,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
     writer.Save(output);
 }
 
-void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
+void RaveWriteColladaMemory(const KinBodyPtr& pbody, std::vector<char>& output, const AttributesList& atts)
 {
     std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);

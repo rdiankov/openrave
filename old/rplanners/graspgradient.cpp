@@ -33,7 +33,7 @@ public:
         bool bProcessed;     ///< set to true if grasp has already been used in gradient descend
     };
 
-    GraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv) {
+    GraspGradientPlanner(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nGrasp Planning with Stochastic Gradient Descent";
         _report.reset(new CollisionReport());
     }
@@ -335,6 +335,6 @@ private:
     std::vector<std::vector<dReal> > _viksolutions;
 };
 
-PlannerBasePtr CreateGraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput) {
+PlannerBasePtr CreateGraspGradientPlanner(const EnvironmentBasePtr& penv, std::istream& sinput) {
     return PlannerBasePtr(new GraspGradientPlanner(penv, sinput));
 }

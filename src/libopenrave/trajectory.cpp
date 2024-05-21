@@ -21,22 +21,22 @@
 
 namespace OpenRAVE {
 
-TrajectoryBase::TrajectoryBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Trajectory,penv)
+TrajectoryBase::TrajectoryBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_Trajectory,penv)
 {
 }
 
 void TrajectoryBase::serialize(std::ostream& O, int options) const
 {
-    O << "<trajectory type=\"" << GetXMLId() << "\">" << endl << GetConfigurationSpecification();
-    O << "<data count=\"" << GetNumWaypoints() << "\">" << endl;
+    O << "<trajectory type=\"" << GetXMLId() << "\">" << '\n' << GetConfigurationSpecification();
+    O << "<data count=\"" << GetNumWaypoints() << "\">" << '\n';
     std::vector<dReal> data;
     GetWaypoints(0,GetNumWaypoints(),data);
     FOREACHC(it,data){
         O << *it << " ";
     }
-    O << "</data>" << endl;
+    O << "</data>" << '\n';
     if( GetDescription().size() > 0 ) {
-        O << "<description><![CDATA[" << GetDescription() << "]]></description>" << endl;
+        O << "<description><![CDATA[" << GetDescription() << "]]></description>" << '\n';
     }
     if( GetReadableInterfaces().size() > 0 ) {
         xmlreaders::StreamXMLWriterPtr writer(new xmlreaders::StreamXMLWriter("readable"));
@@ -49,7 +49,7 @@ void TrajectoryBase::serialize(std::ostream& O, int options) const
         }
         writer->Serialize(O);
     }
-    O << "</trajectory>" << endl;
+    O << "</trajectory>" << '\n';
 }
 
 void TrajectoryBase::deserialize(std::istream& I)
@@ -80,7 +80,7 @@ void TrajectoryBase::DeserializeFromRawData(const uint8_t* pdata, size_t nDataSi
     xmlreaders::ParseXMLData(readerdata, (const char*)pdata, nDataSize);
 }
     
-void TrajectoryBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+void TrajectoryBase::Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
 {
     InterfaceBase::Clone(preference,cloningoptions);
     TrajectoryBaseConstPtr r = RaveInterfaceConstCast<TrajectoryBase>(preference);

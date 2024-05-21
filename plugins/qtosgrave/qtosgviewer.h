@@ -41,7 +41,7 @@ class QtOSGViewer : public QMainWindow, public ViewerBase
 {
     Q_OBJECT;
 public:
-    QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput, QCoreApplication* pQtApp);
+    QtOSGViewer(const EnvironmentBasePtr& penv, std::istream& sinput, QCoreApplication* pQtApp);
     virtual ~QtOSGViewer();
     bool isSimpleView();
     void setSimpleView(bool state);
@@ -54,7 +54,7 @@ public:
 
     virtual void Show(int showtype);
 
-    virtual bool GetFractionOccluded(KinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded);
+    virtual bool GetFractionOccluded(const KinBodyPtr& pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded);
 
     /// Retries a 24bit RGB image of dimensions width and height from the current scene
     /// extrinsic is the rotation and translation of the camera
@@ -117,7 +117,7 @@ public:
     virtual void SetTextSize(double size);
 
     /// \brief notified when a body has been removed from the environment
-    virtual void RemoveKinBody(KinBodyPtr pbody) {
+    virtual void RemoveKinBody(const KinBodyPtr& pbody) {
         if( !!pbody ) {
             pbody->RemoveUserData("qtosg");
         }
@@ -347,7 +347,7 @@ public:
     virtual void _SetCameraDistanceToFocus(float focalDistance);
     virtual void _SetCameraCenter(osg::Vec3 center);
     virtual void _StopTrackLink();
-    virtual bool _TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
+    virtual bool _TrackLink(const KinBody::LinkPtr& link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText="");
     virtual void _SetItemVisualization(std::string& itemname, std::string& visualizationmode);
     virtual void _SetProjectionMode(const std::string& projectionMode);
     virtual void _SetBkgndColor(const RaveVector<float>& color);

@@ -221,7 +221,7 @@ protected:
     bool _found;
 };
 
-inline boost::shared_ptr<EnvironmentLock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
+inline boost::shared_ptr<EnvironmentLock> LockEnvironmentWithTimeout(const EnvironmentBasePtr& penv, uint64_t timeout)
 {
     // try to acquire the lock
     boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(penv->GetMutex(), OpenRAVE::defer_lock_t());

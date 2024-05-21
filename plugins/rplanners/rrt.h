@@ -26,7 +26,7 @@ class RrtPlanner : public PlannerBase
 {
 public:
 
-    RrtPlanner(EnvironmentBasePtr penv) : PlannerBase(penv), _treeForward(0)
+    RrtPlanner(const EnvironmentBasePtr& penv) : PlannerBase(penv), _treeForward(0)
     {
         __description = "\
 :Interface Author:  Rosen Diankov\n\n\
@@ -41,7 +41,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
     virtual ~RrtPlanner() {
     }
 
-    virtual bool _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
+    virtual bool _InitPlan(const RobotBasePtr& pbase, PlannerParametersPtr params)
     {
         params->Validate();
         _goalindex = -1;
@@ -266,7 +266,7 @@ protected:
 class BirrtPlanner : public RrtPlanner<SimpleNode>
 {
 public:
-    BirrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv), _treeBackward(1)
+    BirrtPlanner(const EnvironmentBasePtr& penv) : RrtPlanner<SimpleNode>(penv), _treeBackward(1)
     {
         __description += "Bi-directional RRTs. See\n\n\
 - J.J. Kuffner and S.M. LaValle. RRT-Connect: An efficient approach to single-query path planning. In Proc. IEEE Int'l Conf. on Robotics and Automation (ICRA'2000), pages 995-1001, San Francisco, CA, April 2000.";
@@ -294,7 +294,7 @@ Some python code to display data::\n\
         dReal length;
     };
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
@@ -681,7 +681,7 @@ protected:
 class BasicRrtPlanner : public RrtPlanner<SimpleNode>
 {
 public:
-    BasicRrtPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv)
+    BasicRrtPlanner(const EnvironmentBasePtr& penv) : RrtPlanner<SimpleNode>(penv)
     {
         __description = "Rosen's Basic RRT planner";
         _fGoalBiasProb = dReal(0.05);
@@ -692,7 +692,7 @@ public:
     virtual ~BasicRrtPlanner() {
     }
 
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
@@ -949,13 +949,13 @@ protected:
 class ExplorationPlanner : public RrtPlanner<SimpleNode>
 {
 public:
-    ExplorationPlanner(EnvironmentBasePtr penv) : RrtPlanner<SimpleNode>(penv) {
+    ExplorationPlanner(const EnvironmentBasePtr& penv) : RrtPlanner<SimpleNode>(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nRRT-based exploration planner";
     }
     virtual ~ExplorationPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr pparams)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());

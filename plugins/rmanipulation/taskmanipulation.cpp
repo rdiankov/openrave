@@ -47,7 +47,7 @@ class TaskManipulation : public ModuleBase
 public:
     typedef std::map<vector<dReal>, TrajectoryBasePtr, GraspVectorCompare > PRESHAPETRAJMAP;
 
-    TaskManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
+    TaskManipulation(const EnvironmentBasePtr& penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 Task-based manipulation planning involving target objects. A lot of the algorithms and theory are covered in:\n\
 \n\
@@ -232,7 +232,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
     class ActiveDistMetric
     {
 public:
-        ActiveDistMetric(RobotBasePtr robot) : _robot(robot) {
+        ActiveDistMetric(const RobotBasePtr& robot) : _robot(robot) {
             _robot->GetActiveDOFWeights(weights);
             FOREACH(it,weights) {
                 *it *= *it;
@@ -333,7 +333,7 @@ protected:
     class GeometryGroupSaver
     {
 public:
-        GeometryGroupSaver(KinBodyPtr pbody, const std::string& sPaddedGeometryGroup) : _pbody(pbody), _sPaddedGeometryGroup(sPaddedGeometryGroup), _bPadded(false) {
+        GeometryGroupSaver(const KinBodyPtr& pbody, const std::string& sPaddedGeometryGroup) : _pbody(pbody), _sPaddedGeometryGroup(sPaddedGeometryGroup), _bPadded(false) {
         }
         ~GeometryGroupSaver() {
             SwitchRegular();
@@ -1864,6 +1864,6 @@ protected:
     CollisionReportPtr _report;
 };
 
-ModuleBasePtr CreateTaskManipulation(EnvironmentBasePtr penv) {
+ModuleBasePtr CreateTaskManipulation(const EnvironmentBasePtr& penv) {
     return ModuleBasePtr(new TaskManipulation(penv));
 }

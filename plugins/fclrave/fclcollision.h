@@ -65,7 +65,7 @@ class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 public:
     class CollisionCallbackData {
 public:
-        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded);
+        CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, const CollisionReportPtr& report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded);
 
         const std::list<EnvironmentBase::CollisionCallbackFn>& GetCallbacks();
 
@@ -89,11 +89,11 @@ public:
 
     typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
 
-    FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+    FCLCollisionChecker(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
     ~FCLCollisionChecker() override;
 
-    void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions);
 
     void SetNumMaxContacts(int numMaxContacts) {
         _numMaxContacts = numMaxContacts;
@@ -113,12 +113,12 @@ public:
         return _fclspace->GetGeometryGroup();
     }
 
-    bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname)
+    bool SetBodyGeometryGroup(const KinBodyConstPtr& pbody, const std::string& groupname)
     {
         return _fclspace->SetBodyGeometryGroup(pbody, groupname);
     }
 
-    const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const
+    const std::string& GetBodyGeometryGroup(const KinBodyConstPtr& pbody) const
     {
         return _fclspace->GetBodyGeometryGroup(*pbody);
     }
@@ -160,41 +160,41 @@ public:
 
     void DestroyEnvironment() override;
 
-    bool InitKinBody(OpenRAVE::KinBodyPtr pbody) override;
+    bool InitKinBody(const OpenRAVE::KinBodyPtr& pbody) override;
 
-    void RemoveKinBody(OpenRAVE::KinBodyPtr pbody) override;
+    void RemoveKinBody(const OpenRAVE::KinBodyPtr& pbody) override;
 
-    bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const KinBodyConstPtr& pbody1, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const KinBodyConstPtr& pbody1, const KinBodyConstPtr& pbody2, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const LinkConstPtr& plink, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const LinkConstPtr& plink1, const LinkConstPtr& plink2, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const LinkConstPtr& plink, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(LinkConstPtr plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const LinkConstPtr& plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(KinBodyConstPtr pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const KinBodyConstPtr& pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(const RAY& ray, LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const RAY& ray, const LinkConstPtr& plink, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const RAY& ray, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const RAY& ray, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const OpenRAVE::TriMesh& trimesh, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(const OpenRAVE::TriMesh& trimesh, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const OpenRAVE::TriMesh& trimesh, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const std::vector<OpenRAVE::KinBodyConstPtr>& vIncludedBodies, OpenRAVE::CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const std::vector<OpenRAVE::KinBodyConstPtr>& vIncludedBodies, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckStandaloneSelfCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
-    bool CheckStandaloneSelfCollision(LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckStandaloneSelfCollision(const LinkConstPtr& plink, const CollisionReportPtr& report = CollisionReportPtr()) override;
 
 
 private:
@@ -223,8 +223,8 @@ private:
     static CollisionPair MakeCollisionPair(fcl::CollisionObject* o1, fcl::CollisionObject* o2);
 #endif
 
-    static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2);
-    static LinkGeomPairs MakeLinkGeomPairs(LinkConstPtr plink1, LinkConstPtr plink2, GeometryConstPtr pgeom1, GeometryConstPtr pgeom2);
+    static LinkPair MakeLinkPair(const LinkConstPtr& plink1, const LinkConstPtr& plink2);
+    static LinkGeomPairs MakeLinkGeomPairs(const LinkConstPtr& plink1, const LinkConstPtr& plink2, const GeometryConstPtr& pgeom1, const GeometryConstPtr& pgeom2);
 
     std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> GetCollisionLink(const fcl::CollisionObject &collObj);
 
@@ -232,7 +232,7 @@ private:
 
     inline BroadPhaseCollisionManagerPtr _CreateManager();
 
-    FCLCollisionManagerInstance& _GetBodyManager(KinBodyConstPtr pbody, bool bactiveDOFs);
+    FCLCollisionManagerInstance& _GetBodyManager(const KinBodyConstPtr& pbody, bool bactiveDOFs);
 
     /// \brief gets environment manager corresponding to excludedBodyEnvIndices
     /// \param excludedBodyEnvIndices vector of environment body indices for excluded bodies. sorted in ascending order

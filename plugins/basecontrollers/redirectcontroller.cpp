@@ -18,13 +18,13 @@
 class RedirectController : public ControllerBase
 {
 public:
-    RedirectController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), _bAutoSync(true) {
+    RedirectController(const EnvironmentBasePtr& penv, std::istream& sinput) : ControllerBase(penv), _bAutoSync(true) {
         __description = ":Interface Author: Rosen Diankov\n\nRedirects all input and output to another controller (this avoides cloning the other controller while still allowing it to be used from cloned environments)";
     }
     virtual ~RedirectController() {
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>&dofindices, int nControlTransformation)
+    virtual bool Init(const RobotBasePtr& robot, const std::vector<int>&dofindices, int nControlTransformation)
     {
         _dofindices.clear();
         _pcontroller.reset();
@@ -98,7 +98,7 @@ public:
         return _probot;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         ControllerBase::Clone(preference,cloningoptions);
         boost::shared_ptr<RedirectController const> r = boost::dynamic_pointer_cast<RedirectController const>(preference);
@@ -154,7 +154,7 @@ private:
     ControllerBasePtr _pcontroller;
 };
 
-ControllerBasePtr CreateRedirectController(EnvironmentBasePtr penv, std::istream& sinput)
+ControllerBasePtr CreateRedirectController(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return ControllerBasePtr(new RedirectController(penv,sinput));
 }

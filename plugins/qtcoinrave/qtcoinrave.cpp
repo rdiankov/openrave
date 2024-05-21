@@ -25,7 +25,7 @@
 #include <X11/Xlib.h>
 #endif
 
-OpenRAVE::ModuleBasePtr CreateIvModelLoader(OpenRAVE::EnvironmentBasePtr penv);
+OpenRAVE::ModuleBasePtr CreateIvModelLoader(const OpenRAVE::EnvironmentBasePtr& penv);
 
 std::mutex g_mutexsoqt;
 static int s_InitRefCount = 0;
@@ -62,7 +62,7 @@ void QtCoinRavePlugin::Destroy()
     }
 }
 
-OpenRAVE::InterfaceBasePtr QtCoinRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr QtCoinRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case PT_Viewer:

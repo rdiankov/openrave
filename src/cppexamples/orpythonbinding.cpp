@@ -59,7 +59,7 @@ public:
 class PythonBindingModule : public ModuleBase
 {
 public:
-    PythonBindingModule(EnvironmentBasePtr penv, std::istream&) : ModuleBase(penv) {
+    PythonBindingModule(const EnvironmentBasePtr& penv, std::istream&) : ModuleBase(penv) {
         SetUserData(UserDataPtr(new FunctionUserData()));
     }
     virtual ~PythonBindingModule() {
@@ -90,7 +90,7 @@ public:
 
 boost::shared_ptr<void> g_PythonBindingInterfaceHandle;
 
-InterfaceBasePtr PythonBindingCreateInterface(EnvironmentBasePtr penv, std::istream& istream)
+InterfaceBasePtr PythonBindingCreateInterface(const EnvironmentBasePtr& penv, std::istream& istream)
 {
     return InterfaceBasePtr(new PythonBindingModule(penv,istream));
 }

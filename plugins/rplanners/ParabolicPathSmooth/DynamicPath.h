@@ -180,7 +180,7 @@ public:
     int OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng);
 
     bool IsValid() const;
-    void Save(std::string filename) const;
+    void Save(const std::string& filename) const;
 
     /// The joint limits (optional), velocity bounds, and acceleration bounds
     Vector xMin,xMax,velMax,accMax;

@@ -46,7 +46,7 @@ struct ManipConstraintInfo
 class ManipConstraintChecker
 {
 public:
-    ManipConstraintChecker(EnvironmentBasePtr penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
+    ManipConstraintChecker(const EnvironmentBasePtr& penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
     }
 
     /// \brief given a world AABB oriented, return its 8 vertices

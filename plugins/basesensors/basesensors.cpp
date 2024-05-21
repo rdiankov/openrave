@@ -52,7 +52,7 @@ BaseSensorsPlugin::BaseSensorsPlugin()
 
 BaseSensorsPlugin::~BaseSensorsPlugin() {}
 
-OpenRAVE::InterfaceBasePtr BaseSensorsPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr BaseSensorsPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case PT_Sensor:

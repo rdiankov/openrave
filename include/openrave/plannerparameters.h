@@ -172,7 +172,7 @@ protected:
 class OPENRAVE_API GraspSetParameters : public PlannerBase::PlannerParameters
 {
 public:
-    GraspSetParameters(EnvironmentBasePtr penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
+    GraspSetParameters(const EnvironmentBasePtr& penv) : _nGradientSamples(5), _fVisibiltyGraspThresh(0), _fGraspDistThresh(1.4f), _penv(penv),_bProcessingGS(false) {
         _vXMLParameters.push_back("grasps");
         _vXMLParameters.push_back("target");
         _vXMLParameters.push_back("numgradsamples");
@@ -264,7 +264,7 @@ protected:
 class OPENRAVE_API GraspParameters : public PlannerBase::PlannerParameters
 {
 public:
-    GraspParameters(EnvironmentBasePtr penv) : PlannerBase::PlannerParameters(), fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {
+    GraspParameters(const EnvironmentBasePtr& penv) : PlannerBase::PlannerParameters(), fstandoff(0), ftargetroll(0), vtargetdirection(0,0,1), btransformrobot(false), breturntrajectory(false), bonlycontacttarget(true), btightgrasp(false), bavoidcontact(false), fcoarsestep(0.1f), ffinestep(0.001f), ftranslationstepmult(0.1f), fgraspingnoise(0), _penv(penv) {
         _vXMLParameters.push_back("fstandoff");
         _vXMLParameters.push_back("targetbody");
         _vXMLParameters.push_back("ftargetroll");
@@ -702,7 +702,7 @@ typedef boost::shared_ptr<ConstraintTrajectoryTimingParameters const> Constraint
 class OPENRAVE_API WorkspaceTrajectoryParameters : public PlannerBase::PlannerParameters
 {
 public:
-    WorkspaceTrajectoryParameters(EnvironmentBasePtr penv);
+    WorkspaceTrajectoryParameters(const EnvironmentBasePtr& penv);
     inline EnvironmentBasePtr GetEnv() const {
         return _penv;
     }

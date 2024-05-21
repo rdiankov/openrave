@@ -18,7 +18,7 @@
 #include "bulletphysics.h"
 #include "bulletcollision.h"
 
-OpenRAVE::CollisionCheckerBasePtr CreateBulletCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::CollisionCheckerBasePtr CreateBulletCollisionChecker(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
 const std::string BulletRavePlugin::_pluginname = "BulletRavePlugin";
 
@@ -31,7 +31,7 @@ BulletRavePlugin::BulletRavePlugin()
 
 BulletRavePlugin::~BulletRavePlugin() {}
 
-OpenRAVE::InterfaceBasePtr BulletRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr BulletRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case OpenRAVE::PT_CollisionChecker:

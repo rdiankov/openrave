@@ -90,7 +90,7 @@ struct OPENRAVE_API ReadablesContainer {
     virtual ReadablePtr GetReadableInterface(const std::string& id) const;
 
     /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
-    virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
+    virtual ReadablePtr SetReadableInterface(const std::string& id, const ReadablePtr& readable);
 
     /// \brief sets a set of readable interfaces all at once. The pointers are copied
     ///
@@ -137,7 +137,7 @@ class OPENRAVE_API InterfaceBase : public boost::enable_shared_from_this<Interfa
 {
 public:
 
-    InterfaceBase(InterfaceType type, EnvironmentBasePtr penv);
+    InterfaceBase(InterfaceType type, const EnvironmentBasePtr& penv);
     virtual ~InterfaceBase();
 
     inline InterfaceType GetInterfaceType() const {
@@ -184,7 +184,7 @@ public:
     virtual bool RemoveUserData(const std::string& key) const;
 
     /// \deprecated (12/12/11)
-    virtual void SetUserData(UserDataPtr data) RAVE_DEPRECATED {
+    virtual void SetUserData(const UserDataPtr& data) RAVE_DEPRECATED {
         SetUserData(std::string(),data);
     }
 
@@ -203,7 +203,7 @@ public:
     /// \param preference the interface whose information to clone
     /// \param cloningoptions mask of CloningOptions
     /// \throw openrave_exception if command doesn't succeed
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions);
 
     /// \brief return true if the command is supported
     virtual bool SupportsCommand(const std::string& cmd);
@@ -274,7 +274,7 @@ public:
 
         Depending on the writer format, extra tags might be created.
      */
-    virtual void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    virtual void Serialize(const BaseXMLWriterPtr& writer, int options=0) const;
 
 protected:
     /// \brief The function to be executed for every command.

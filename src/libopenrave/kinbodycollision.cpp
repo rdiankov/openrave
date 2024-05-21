@@ -18,7 +18,7 @@
 
 namespace OpenRAVE {
 
-bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
+bool KinBody::CheckSelfCollision(const CollisionReportPtr& report, CollisionCheckerBasePtr collisionchecker) const
 {
     if( !collisionchecker ) {
         collisionchecker = _selfcollisionchecker;
@@ -222,7 +222,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     return bCollision;
 }
 
-bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, KinBodyConstPtr pbody, CollisionReportPtr report)
+bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
     CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
@@ -264,7 +264,7 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Ki
     return bincollision;
 }
 
-bool KinBody::CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, CollisionReportPtr report)
+bool KinBody::CheckLinkCollision(int ilinkindex, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
     CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
@@ -301,7 +301,7 @@ bool KinBody::CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, Collisio
     return bincollision;
 }
 
-bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
+bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, const CollisionReportPtr& report)
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
     CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
@@ -358,7 +358,7 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Co
     return bincollision;
 }
 
-bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
+bool KinBody::CheckLinkCollision(int ilinkindex, const CollisionReportPtr& report)
 {
     LinkPtr plink = _veclinks.at(ilinkindex);
     CollisionCheckerBasePtr pchecker = GetEnv()->GetCollisionChecker();
@@ -410,7 +410,7 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
     return bincollision;
 }
 
-bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
+bool KinBody::CheckLinkSelfCollision(int ilinkindex, const CollisionReportPtr& report)
 {
     CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
@@ -457,7 +457,7 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
     return bincollision;
 }
 
-bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
+bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, const CollisionReportPtr& report)
 {
     CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);

@@ -33,7 +33,7 @@ void printhelp()
     RAVELOG_INFO("orcollision [--list] [--checker checker_name] [--joints #values [values]] body_model\n");
 }
 
-void printinterfaces(EnvironmentBasePtr penv)
+void printinterfaces(const EnvironmentBasePtr& penv)
 {
     std::map<InterfaceType, std::vector<std::string> > interfacenames;
     RaveGetLoadedInterfaces(interfacenames);

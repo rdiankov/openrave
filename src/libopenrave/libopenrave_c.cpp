@@ -228,7 +228,7 @@ void ORCEnvironmentUnlock(void* env)
 #endif
 }
 
-void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, int bShowViewer)
+void CViewerThread(const EnvironmentBasePtr& penv, const string &strviewer, int bShowViewer)
 {
     ViewerBasePtr pviewer;
     {

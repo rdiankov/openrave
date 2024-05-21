@@ -23,7 +23,7 @@
 
 namespace qtosgrave {
 
-OpenRAVE::ViewerBasePtr CreateQtOSGViewer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ViewerBasePtr CreateQtOSGViewer(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
 }
 
@@ -44,7 +44,7 @@ void QtOSGRavePlugin::Destroy()
     //QApplication::quit();
 }
 
-OpenRAVE::InterfaceBasePtr QtOSGRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr QtOSGRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     //	Debug.
     RAVELOG_VERBOSE("Initiating QTOSGRave plugin...!!!!.\n");

@@ -41,7 +41,7 @@ struct ManipConstraintInfo2
 class ManipConstraintChecker2
 {
 public:
-    ManipConstraintChecker2(EnvironmentBasePtr penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
+    ManipConstraintChecker2(const EnvironmentBasePtr& penv) : _penv(penv), _maxmanipspeed(0), _maxmanipaccel(0) {
     }
 
     /// \brief Given a world AABB oriented, return its 8 vertices. All vertices are describted in the parent frame (see ComputeEnclosingAABB).

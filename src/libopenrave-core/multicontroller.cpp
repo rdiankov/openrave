@@ -20,13 +20,13 @@ namespace OpenRAVE {
 class MultiController : public MultiControllerBase
 {
 public:
-    MultiController(EnvironmentBasePtr penv) : MultiControllerBase(penv), _nControlTransformation(0) {
+    MultiController(const EnvironmentBasePtr& penv) : MultiControllerBase(penv), _nControlTransformation(0) {
     }
 
     virtual ~MultiController() {
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
+    virtual bool Init(const RobotBasePtr& robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         std::lock_guard<std::mutex> lock(_mutex);
         _probot=robot;
@@ -231,7 +231,7 @@ protected:
     mutable std::mutex _mutex;
 };
 
-MultiControllerBasePtr CreateMultiController(EnvironmentBasePtr penv, std::istream& sinput)
+MultiControllerBasePtr CreateMultiController(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return MultiControllerBasePtr(new MultiController(penv));
 }

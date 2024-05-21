@@ -53,7 +53,7 @@ using namespace std;
 class MT19937Sampler : public SpaceSamplerBase
 {
 public:
-    MT19937Sampler(EnvironmentBasePtr penv,std::istream& sinput) : SpaceSamplerBase(penv), _dof(1)
+    MT19937Sampler(const EnvironmentBasePtr& penv,std::istream& sinput) : SpaceSamplerBase(penv), _dof(1)
     {
         __description = ":Interface Author: Takuji Nishimura and Makoto Matsumoto\n\n\
 Mersenne twister sampling algorithm that is based on matrix linear recurrence over finite binary field F2. It has a period of 2^19937-1 and passes many tests for statistical uniform randomness.";

@@ -32,7 +32,7 @@ template <typename T> class RangeGenerator;
 class OPENRAVE_API TrajectoryBase : public InterfaceBase
 {
 public:
-    TrajectoryBase(EnvironmentBasePtr penv);
+    TrajectoryBase(const EnvironmentBasePtr& penv);
     virtual ~TrajectoryBase() {
     }
 
@@ -228,7 +228,7 @@ public:
     /// \brief initialize the trajectory via a raw pointer to memory
     virtual void DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize);
     
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions);
 
     /// \brief swap the contents of the data between the two trajectories.
     ///

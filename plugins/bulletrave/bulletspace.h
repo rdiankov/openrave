@@ -122,7 +122,7 @@ private:
     typedef boost::function<KinBodyInfoPtr(KinBodyConstPtr)> GetInfoFn;
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
-    BulletSpace(EnvironmentBasePtr penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {
+    BulletSpace(const EnvironmentBasePtr& penv, const GetInfoFn& infofn, bool bPhysics) : _penv(penv), GetInfo(infofn), _bPhysics(bPhysics) {
     }
     virtual ~BulletSpace() {
     }
@@ -143,7 +143,7 @@ private:
         _worlddynamics.reset();
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the values needs to be changed. There will be an XML interface for fmargin.
+    KinBodyInfoPtr InitKinBody(const KinBodyPtr& pbody, const KinBodyInfoPtr& pinfo = KinBodyInfoPtr(), btScalar fmargin=0.0005) //  -> changed fmargin because penetration was too little. For collision the values needs to be changed. There will be an XML interface for fmargin.
     {
         // create all ode bodies and joints
         if( !pinfo ) {
@@ -385,7 +385,7 @@ private:
         }
     }
 
-    void Synchronize(KinBodyConstPtr pbody)
+    void Synchronize(const KinBodyConstPtr& pbody)
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT( pinfo->pbody == pbody );
@@ -394,14 +394,14 @@ private:
         }
     }
 
-    boost::shared_ptr<btCollisionObject> GetLinkBody(KinBody::LinkConstPtr plink)
+    boost::shared_ptr<btCollisionObject> GetLinkBody(const KinBody::LinkConstPtr& plink)
     {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
         BOOST_ASSERT(pinfo->pbody == plink->GetParent() );
         return pinfo->vlinks.at(plink->GetIndex())->obj;
     }
 
-    boost::shared_ptr<btTypedConstraint> GetJoint(KinBody::JointConstPtr pjoint)
+    boost::shared_ptr<btTypedConstraint> GetJoint(const KinBody::JointConstPtr& pjoint)
     {
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
         BOOST_ASSERT(pinfo->pbody == pjoint->GetParent() );
@@ -439,7 +439,7 @@ private:
 
 private:
 
-    void _Synchronize(KinBodyInfoPtr pinfo)
+    void _Synchronize(const KinBodyInfoPtr& pinfo)
     {
         vector<Transform> vtrans;
         std::vector<int> dofbranches;
@@ -487,7 +487,7 @@ static KinBody::LinkPtr GetLinkFromProxy(btBroadphaseProxy* proxy) {
 class OpenRAVEFilterCallback : public btOverlapFilterCallback
 {
 public:
-    virtual bool CheckLinks(KinBody::LinkPtr plink0, KinBody::LinkPtr plink1) const = 0;
+    virtual bool CheckLinks(const KinBody::LinkPtr& plink0, const KinBody::LinkPtr& plink1) const = 0;
     virtual bool needBroadphaseCollision(btBroadphaseProxy* proxy0,btBroadphaseProxy* proxy1) const
     {
         BOOST_ASSERT( static_cast<btCollisionObject*>(proxy0->m_clientObject) != NULL );

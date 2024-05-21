@@ -30,7 +30,7 @@ namespace OpenRAVE {
 class OPENRAVE_API ControllerBase : public InterfaceBase
 {
 public:
-    ControllerBase(EnvironmentBasePtr penv);
+    ControllerBase(const EnvironmentBasePtr& penv);
     virtual ~ControllerBase();
 
     /// \brief return the static interface type this class points to (used for safe casting)
@@ -43,7 +43,7 @@ public:
     /// \param dofindices the indices that controller will have exclusive access to
     /// \param nControlTransformation \see IsControlTransformation
     /// \return true on successful initialization
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation) = 0;
+    virtual bool Init(const RobotBasePtr& robot, const std::vector<int>& dofindices, int nControlTransformation) = 0;
 
     /// \brief returns the dof indices controlled
     virtual const std::vector<int>& GetControlDOFIndices() const = 0;
@@ -122,7 +122,7 @@ private:
 class OPENRAVE_API MultiControllerBase : public ControllerBase
 {
 public:
-    MultiControllerBase(EnvironmentBasePtr penv);
+    MultiControllerBase(const EnvironmentBasePtr& penv);
     virtual ~MultiControllerBase();
 
     /// \brief initializes and adds a controller, must be called after being initialized. <b>[multi-thread safe]</b>

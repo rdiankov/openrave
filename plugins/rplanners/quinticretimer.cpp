@@ -38,7 +38,7 @@ public:
     typedef boost::shared_ptr<QuinticGroupInfo> QuinticGroupInfoPtr;
     typedef boost::shared_ptr<QuinticGroupInfo const> QuinticGroupInfoConstPtr;
 
-    QuinticTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryRetimer3(penv, sinput)
+    QuinticTrajectoryRetimer(const EnvironmentBasePtr& penv, std::istream& sinput) : TrajectoryRetimer3(penv, sinput)
     {
         __description = ":Interface Author: Puttichai Lertkultanon and Rosen Diankov\n\nSimple quintic trajectory retiming while passing through all the waypoints. Waypoints will not be modified. This assumes that all waypoints have zero velocity and acceleration (unless the start and final points are forced). Overwrites the velocities, accelerations, and timestamps of the input trajectory.";
     }
@@ -510,7 +510,7 @@ protected:
 
 }; // end class QuinticTrajectoryRetimer
 
-PlannerBasePtr CreateQuinticTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput)
+PlannerBasePtr CreateQuinticTrajectoryRetimer(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PlannerBasePtr(new QuinticTrajectoryRetimer(penv, sinput));
 }

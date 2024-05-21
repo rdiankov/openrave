@@ -32,7 +32,7 @@ namespace OpenRAVE {
 class OPENRAVE_API SensorSystemBase : public InterfaceBase
 {
 public:
-    SensorSystemBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SensorSystem, penv) {
+    SensorSystemBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_SensorSystem, penv) {
     }
     virtual ~SensorSystemBase() {
     }
@@ -50,21 +50,21 @@ public:
 
     /// add body for registering with sensor system
     /// pdata is a pointer to a data structor holding tracking/registration information for the system
-    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata) = 0;
+    virtual KinBody::ManageDataPtr AddKinBody(const KinBodyPtr& pbody, ReadableConstPtr pdata) = 0;
     /// remove body from sensory system. If bDestroy is true, will also deallocate the memory
-    virtual bool RemoveKinBody(KinBodyPtr pbody) = 0;
+    virtual bool RemoveKinBody(const KinBodyPtr& pbody) = 0;
     /// returns true if body is present
-    virtual bool IsBodyPresent(KinBodyPtr pbody) = 0;
+    virtual bool IsBodyPresent(const KinBodyPtr& pbody) = 0;
     /// enable/disable a body from being updated by the sensor system
-    virtual bool EnableBody(KinBodyPtr pbody, bool bEnable) = 0;
+    virtual bool EnableBody(const KinBodyPtr& pbody, bool bEnable) = 0;
 
     /// switches the registrations of two bodies. Can be used to quickly change the models of the current bodies
     /// \param pbody1 First body to switch
     /// \param pbody2 Second body to switch
-    virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2) = 0;
+    virtual bool SwitchBody(const KinBodyPtr& pbody1, KinBodyPtr pbody2) = 0;
 
 protected:
-    virtual void SetManageData(KinBodyPtr pbody, KinBody::ManageDataPtr data) {
+    virtual void SetManageData(const KinBodyPtr& pbody, KinBody::ManageDataPtr data) {
         pbody->SetManageData(data);
     }
 
@@ -161,7 +161,7 @@ public:
         }
 
 protected:
-        virtual void SetBody(KinBodyPtr pbody)
+        virtual void SetBody(const KinBodyPtr& pbody)
         {
             KinBody::LinkPtr plink;
             if( _initdata->strOffsetLink.size() > 0 )
@@ -200,7 +200,7 @@ protected:
     };
 
     /// registers the XML reader, do not call in the constructor of this class!
-    static UserDataPtr RegisterXMLReaderId(EnvironmentBasePtr penv, const std::string& xmlid);
+    static UserDataPtr RegisterXMLReaderId(const EnvironmentBasePtr& penv, const std::string& xmlid);
 
     SimpleSensorSystem(const std::string& xmlid, EnvironmentBasePtr penv);
     virtual ~SimpleSensorSystem();
@@ -208,17 +208,17 @@ protected:
     virtual void Reset();
 
     virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies);
-    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata);
+    virtual KinBody::ManageDataPtr AddKinBody(const KinBodyPtr& pbody, ReadableConstPtr pdata);
 
-    virtual bool RemoveKinBody(KinBodyPtr pbody);
-    virtual bool IsBodyPresent(KinBodyPtr pbody);
-    virtual bool EnableBody(KinBodyPtr pbody, bool bEnable);
-    virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2);
+    virtual bool RemoveKinBody(const KinBodyPtr& pbody);
+    virtual bool IsBodyPresent(const KinBodyPtr& pbody);
+    virtual bool EnableBody(const KinBodyPtr& pbody, bool bEnable);
+    virtual bool SwitchBody(const KinBodyPtr& pbody1, KinBodyPtr pbody2);
 
 protected:
     typedef std::pair<boost::shared_ptr<BodyData>, Transform > SNAPSHOT;
     typedef std::map<int,boost::shared_ptr<BodyData> > BODIES;
-    virtual boost::shared_ptr<BodyData> CreateBodyData(KinBodyPtr pbody, boost::shared_ptr<XMLData const> pdata);
+    virtual boost::shared_ptr<BodyData> CreateBodyData(const KinBodyPtr& pbody, boost::shared_ptr<XMLData const> pdata);
     virtual void _UpdateBodies(std::list<SNAPSHOT>& listbodies);
     virtual void _UpdateBodiesThread();
 
@@ -227,7 +227,7 @@ protected:
     }
 
     /// creates a reader to parse the data
-    static BaseXMLReaderPtr CreateXMLReaderId(const std::string& xmlid, InterfaceBasePtr ptr, const AttributesList& atts);
+    static BaseXMLReaderPtr CreateXMLReaderId(const std::string& xmlid, const InterfaceBasePtr& ptr, const AttributesList& atts);
 
     std::string _xmlid;
     BODIES _mapbodies;

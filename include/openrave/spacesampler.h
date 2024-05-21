@@ -54,7 +54,7 @@ typedef boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)
 class OPENRAVE_API SpaceSamplerBase :  public InterfaceBase
 {
 public:
-    SpaceSamplerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_SpaceSampler, penv) {
+    SpaceSamplerBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_SpaceSampler, penv) {
     }
     virtual ~SpaceSamplerBase() {
     }

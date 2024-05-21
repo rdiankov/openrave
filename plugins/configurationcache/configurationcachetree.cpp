@@ -56,7 +56,7 @@ CacheTreeNode::CacheTreeNode(const dReal* pstate, int dof, Vector* plinkspheres)
     _hitcount = 0;
 }
 
-void CacheTreeNode::SetCollisionInfo(RobotBase& robot, CollisionReportPtr& report)
+void CacheTreeNode::SetCollisionInfo(const RobotBase& robot, const CollisionReportPtr& report)
 {
     if( !!report && report->nNumValidCollisions > 0 ) {
         //_collidinglinktrans = report->plink1->GetTransform();
@@ -123,7 +123,7 @@ void CacheTreeNode::SetCollisionInfo(int robotlinkindex, int type)
 //    }
 //}
 
-CacheTree::CacheTree(RobotBasePtr& pstaterobot, int statedof)
+CacheTree::CacheTree(const RobotBasePtr& pstaterobot, int statedof)
 {
     _poolNodes.reset(new boost::pool<>(sizeof(CacheTreeNode)+sizeof(dReal)*statedof));
     _vnodes.resize(0);
@@ -196,7 +196,7 @@ void CacheTree::Reset()
 static int s_CacheTreeId = 0;
 #endif
 
-CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, CollisionReportPtr report)
+CacheTreeNodePtr CacheTree::_CreateCacheTreeNode(const std::vector<dReal>& cs, const CollisionReportPtr& report)
 {
     // allocate memory for the structure and the internal state vectors
     void* pmemory;
@@ -444,7 +444,7 @@ std::pair<CacheTreeNodeConstPtr, dReal> CacheTree::FindNearestNode(const std::ve
     return bestnode;
 }
 
-int CacheTree::InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMinSeparationDist)
+int CacheTree::InsertNode(const std::vector<dReal>& cs, const CollisionReportPtr& report, dReal fMinSeparationDist)
 {
 
     OPENRAVE_ASSERT_OP(cs.size(),==,_weights.size());
@@ -967,7 +967,7 @@ int CacheTree::LoadCache(std::string filename, EnvironmentBasePtr penv)
     return 1;
 }
 
-int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
+int CacheTree::UpdateCollisionConfigurations(const KinBodyPtr& pbody)
 {
     int nremoved=0;
     if (_numnodes > 0) {
@@ -986,7 +986,7 @@ int CacheTree::UpdateCollisionConfigurations(KinBodyPtr pbody)
     return nremoved;
 }
 
-int CacheTree::UpdateFreeConfigurations(KinBodyPtr pbody) //todo only remove those with overlaping linkspheres
+int CacheTree::UpdateFreeConfigurations(const KinBodyPtr& pbody) //todo only remove those with overlaping linkspheres
 {
     int nremoved=0;
     if (_numnodes > 0) {
@@ -1142,7 +1142,7 @@ bool CacheTree::Validate()
     return true;
 }
 
-ConfigurationCache::ConfigurationCache(RobotBasePtr pstaterobot, bool envupdates) : _cachetree(pstaterobot, pstaterobot->GetDOF())
+ConfigurationCache::ConfigurationCache(const RobotBasePtr& pstaterobot, bool envupdates) : _cachetree(pstaterobot, pstaterobot->GetDOF())
 {
     _userdatakey = std::string("configurationcache") + boost::lexical_cast<std::string>(this);
     _pstaterobot = pstaterobot;
@@ -1259,7 +1259,7 @@ void ConfigurationCache::SetWeights(const std::vector<dReal>& weights)
     _cachetree.SetWeights(weights);
 }
 
-bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, CollisionReportPtr report, dReal distin)
+bool ConfigurationCache::InsertConfiguration(const std::vector<dReal>& conf, const CollisionReportPtr& report, dReal distin)
 {
     if( !!report ) {
         for(int icollision = 0; icollision < report->nNumValidCollisions; ++icollision) {
@@ -1284,12 +1284,12 @@ int ConfigurationCache::RemoveCollisionConfigurations()
     return _cachetree.RemoveCollisionConfigurations();
 }
 
-int ConfigurationCache::UpdateCollisionConfigurations(KinBodyPtr pbody)
+int ConfigurationCache::UpdateCollisionConfigurations(const KinBodyPtr& pbody)
 {
     return _cachetree.UpdateCollisionConfigurations(pbody);
 }
 
-int ConfigurationCache::UpdateFreeConfigurations(KinBodyPtr pbody)
+int ConfigurationCache::UpdateFreeConfigurations(const KinBodyPtr& pbody)
 {
     return _cachetree.UpdateFreeConfigurations(pbody);
 }
@@ -1372,7 +1372,7 @@ bool ConfigurationCache::Validate()
     return _cachetree.Validate();
 }
 
-void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
+void ConfigurationCache::_UpdateUntrackedBody(const KinBodyPtr& pbody)
 {
     // body's state has changed, so remove collision space and invalidate free space.
     if(_envupdates) {
@@ -1382,7 +1382,7 @@ void ConfigurationCache::_UpdateUntrackedBody(KinBodyPtr pbody)
     }
 }
 
-void ConfigurationCache::_UpdateAddRemoveBodies(KinBodyPtr pbody, int action)
+void ConfigurationCache::_UpdateAddRemoveBodies(const KinBodyPtr& pbody, int action)
 {
     if( action == 1 ) {
         if (_envupdates) {

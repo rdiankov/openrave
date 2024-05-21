@@ -41,7 +41,7 @@ public:
     }
 
     /// \param report assumes in the report, plink1 is the robot and plink2 is the colliding link
-    void SetCollisionInfo(RobotBase& robot, CollisionReportPtr& report);
+    void SetCollisionInfo(const RobotBase& robot, const CollisionReportPtr& report);
 
     /// \brief sets the collision info with int values (used by the load/save)
     void SetCollisionInfo(int index, int type);
@@ -165,7 +165,7 @@ class CacheTree
 {
 public:
 
-    CacheTree(RobotBasePtr& pstaterobot, int statedof);
+    CacheTree(const RobotBasePtr& pstaterobot, int statedof);
 
     virtual ~CacheTree();
 
@@ -192,7 +192,7 @@ public:
     ///
     /// \param[in] fMinSeparationDist the max distance a node should be separated from its closest neighbor. If node is collision, then only applies to collision neighbors, free neighbors are ignored.
     /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to fMinSeparationDist
-    int InsertNode(const std::vector<dReal>& cs, CollisionReportPtr report, dReal fMinSeparationDist);
+    int InsertNode(const std::vector<dReal>& cs, const CollisionReportPtr& report, dReal fMinSeparationDist);
 
     /// \brief removes node from the tree
     ///
@@ -200,7 +200,7 @@ public:
     bool RemoveNode(CacheTreeNodeConstPtr nodein);
 
     /// \brief remove all nodes that were in collision with pbody
-    void UpdateCollisionNodes(KinBodyPtr pbody);
+    void UpdateCollisionNodes(const KinBodyPtr& pbody);
 
     /// \brief number of nodes in the tree; todo: also count nodes by type
     int GetNumNodes() const {
@@ -250,10 +250,10 @@ public:
     int RemoveFreeConfigurations();
 
     /// \brief sets all collision configurations with pbody in its report to CNT_Unknown
-    int UpdateCollisionConfigurations(KinBodyPtr pbody);
+    int UpdateCollisionConfigurations(const KinBodyPtr& pbody);
 
     /// \brief sets all free configurations to CNT_Unknown, TODO, only set those that overlap with the new body
-    int UpdateFreeConfigurations(KinBodyPtr pbody);
+    int UpdateFreeConfigurations(const KinBodyPtr& pbody);
 
     /// \brief returns the number of configurations in the tree that are not CNT_Unknown
     int GetNumKnownNodes();
@@ -266,7 +266,7 @@ public:
 
 private:
     /// \brief creates new node on the pool
-    CacheTreeNodePtr _CreateCacheTreeNode(const std::vector<dReal>& cs, CollisionReportPtr report);
+    CacheTreeNodePtr _CreateCacheTreeNode(const std::vector<dReal>& cs, const CollisionReportPtr& report);
     CacheTreeNodePtr _CloneCacheTreeNode(CacheTreeNodeConstPtr refnode);
 
     /// \brief deletes the node from the pool and calls its destructor.
@@ -356,7 +356,7 @@ class ConfigurationCache
 public:
     /// \brief start tracking the active DOFs of the robot
     /// \param envupdates, if set to true, cache is updated when the environment changes, this is set to false for selfcollision caches for example
-    ConfigurationCache(RobotBasePtr probotstate, bool envupdates = true);
+    ConfigurationCache(const RobotBasePtr& probotstate, bool envupdates = true);
     virtual ~ConfigurationCache();
 
     /// \brief insert a configuration into the cache
@@ -366,10 +366,10 @@ public:
     /// \param ndists, a vector with the distances from the nearest nodes to cs
     /// \param indist, If > 0, nearest distance for this configuration already computed by CheckCollision
     /// \return true if configuration was inserted
-    bool InsertConfiguration(const std::vector<dReal>& cs, CollisionReportPtr report = CollisionReportPtr(), dReal indist = -1);
+    bool InsertConfiguration(const std::vector<dReal>& cs, const CollisionReportPtr& report = CollisionReportPtr(), dReal indist = -1);
 
     /// \brief removes all collision configurations colliding with pbody, used to update cache when bodies are removed or moved
-    int UpdateCollisionConfigurations(KinBodyPtr pbody);
+    int UpdateCollisionConfigurations(const KinBodyPtr& pbody);
 
     /// \brief removes all collision configurations
     int RemoveCollisionConfigurations();
@@ -378,7 +378,7 @@ public:
     int RemoveFreeConfigurations();
 
     /// \brief removes all free configurations, to be updated to only remove those with linkspheres that overlap with the body
-    int UpdateFreeConfigurations(KinBodyPtr pbody);
+    int UpdateFreeConfigurations(const KinBodyPtr& pbody);
 
     /// \brief determine if current configuration is whithin threshold of a collision in the cache (_collisionthresh), known to be in collision, or requires an explicit collision check
     /// \return 1 if in collision, 0 if not in collision, -1 if unknown
@@ -391,7 +391,7 @@ public:
 
     void GetDOFValues(std::vector<dReal>& values);
 
-    //int SynchronizeAll(KinBodyConstPtr pbody = KinBodyConstPtr());
+    //int SynchronizeAll(const KinBodyConstPtr& pbody = KinBodyConstPtr());
 
     /// \brief number of nodes currently in the cover tree
     int GetNumNodes() const {
@@ -486,7 +486,7 @@ public:
     bool Validate();
 
     /// \brief remove all nodes in collision with pbody, for testing
-    inline void UpdateCollisionNodes(KinBodyPtr pbody)
+    inline void UpdateCollisionNodes(const KinBodyPtr& pbody)
     {
         _cachetree.UpdateCollisionNodes(pbody);
     }
@@ -505,10 +505,10 @@ public:
 
 private:
     /// \brief called when body has changed state.
-    void _UpdateUntrackedBody(KinBodyPtr pbody);
+    void _UpdateUntrackedBody(const KinBodyPtr& pbody);
 
     /// \brief called when a body has been added/removed from the environment. action=1 is add, action=0 is remove
-    void _UpdateAddRemoveBodies(KinBodyPtr pbody, int action);
+    void _UpdateAddRemoveBodies(const KinBodyPtr& pbody, int action);
 
     /// \brief called when tracking robot's joint limits have changed (invalidate cache)
     void _UpdateRobotJointLimits();

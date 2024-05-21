@@ -18,7 +18,7 @@
 
 namespace OpenRAVE {
 
-Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
+Grabbed::Grabbed(const KinBodyPtr& pGrabbedBody, const KinBody::LinkPtr& pGrabbingLink)
 {
     _pGrabbedBody = pGrabbedBody;
     _pGrabbingLink = pGrabbingLink;
@@ -197,7 +197,7 @@ void Grabbed::ComputeListNonCollidingLinks()
     // }
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const rapidjson::Value& rGrabbedUserData)
+bool KinBody::Grab(const KinBodyPtr& pGrabbedBody, const LinkPtr& pGrabbingLink, const rapidjson::Value& rGrabbedUserData)
 {
     // always ignore links that are statically attached to plink (ie assume they are always colliding with the body)
     std::set<int> setGrabberLinksToIgnore;
@@ -209,7 +209,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const rapidjs
     return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, rGrabbedUserData);
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const rapidjson::Value& rGrabbedUserData)
+bool KinBody::Grab(const KinBodyPtr& pGrabbedBody, const LinkPtr& pGrabbingLink, const std::set<std::string>& setIgnoreGrabberLinkNames, const rapidjson::Value& rGrabbedUserData)
 {
     std::set<int> setGrabberLinksToIgnore;
     FOREACHC(itLinkName, setIgnoreGrabberLinkNames) {
@@ -218,7 +218,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     return Grab(pGrabbedBody, pGrabbingLink, setGrabberLinksToIgnore, rGrabbedUserData);
 }
 
-bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
+bool KinBody::Grab(const KinBodyPtr& pGrabbedBody, const LinkPtr& pGrabbingLink, const std::set<int>& setGrabberLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
     OPENRAVE_ASSERT_FORMAT(!!pGrabbedBody, "env=%s, body to be grabbed by body '%s' is invalid", GetEnv()->GetNameId()%GetName(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(!!pGrabbingLink, "env=%s, pGrabbingLink of body '%s' for grabbing body '%s' is invalid", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName(), ORE_InvalidArguments);
@@ -770,7 +770,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         FOREACHC(itGrabbedInfo, vGrabbedInfos) {
-            GrabbedInfoConstPtr pGrabbedInfo = *itGrabbedInfo;
+            const GrabbedInfoConstPtr& pGrabbedInfo = *itGrabbedInfo;
             KinBodyPtr pBody = GetEnv()->GetKinBody(pGrabbedInfo->_grabbedname);
             OPENRAVE_ASSERT_FORMAT(!!pBody, "env=%s, body '%s' grabs invalid grab body '%s'",GetEnv()->GetNameId()%GetName()%pGrabbedInfo->_grabbedname, ORE_InvalidArguments);
             KinBody::LinkPtr pGrabbingLink = GetLink(pGrabbedInfo->_robotlinkname);
@@ -818,7 +818,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
     } // end if vGrabbedInfos.size() > 0
 }
 
-void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const
+void KinBody::GetIgnoredLinksOfGrabbed(const KinBodyConstPtr& body, std::list<KinBody::LinkConstPtr>& ignorelinks) const
 {
     ignorelinks.clear();
     for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {

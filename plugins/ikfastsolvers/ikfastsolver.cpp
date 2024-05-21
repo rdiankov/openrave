@@ -41,7 +41,7 @@ public:
     };
 
 public:
-    IkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold=1e-4) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc), _ikthreshold(ikthreshold) {
+    IkFastSolver(const EnvironmentBasePtr& penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<IkReal> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold=1e-4) : IkSolverBase(penv), _ikfunctions(ikfunctions), _vFreeInc(vfreeinc), _ikthreshold(ikthreshold) {
         OPENRAVE_ASSERT_OP(ikfunctions->_GetIkRealSize(),==,sizeof(IkReal));
 
         _bEmptyTransform6D = false;
@@ -214,7 +214,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
         return true;
     }
 
-    virtual IkReturnAction CallFilters(const IkParameterization& param, IkReturnPtr ikreturn, int minpriority, int maxpriority) {
+    virtual IkReturnAction CallFilters(const IkParameterization& param, const IkReturnPtr& ikreturn, int minpriority, int maxpriority) {
         // have to convert to the manipulator's base coordinate system
         RobotBase::ManipulatorPtr pmanip = _pmanip.lock();
         if( !pmanip ) {
@@ -432,7 +432,7 @@ for numBacktraceLinksForSelfCollisionWithNonMoving numBacktraceLinksForSelfColli
     class StateCheckEndEffector
     {
 public:
-        StateCheckEndEffector(RobotBasePtr probot, const std::vector<KinBody::LinkPtr>& vchildlinks, const std::vector<KinBody::LinkPtr>& vindependentlinks, int filteroptions) : _vchildlinks(vchildlinks), _vindependentlinks(vindependentlinks) {
+        StateCheckEndEffector(const RobotBasePtr& probot, const std::vector<KinBody::LinkPtr>& vchildlinks, const std::vector<KinBody::LinkPtr>& vindependentlinks, int filteroptions) : _vchildlinks(vchildlinks), _vindependentlinks(vindependentlinks) {
             _probot = probot;
             _bCheckEndEffectorEnvCollision = !(filteroptions & IKFO_IgnoreEndEffectorEnvCollisions);
             _bCheckEndEffectorSelfCollision = !(filteroptions & (IKFO_IgnoreEndEffectorSelfCollisions|IKFO_IgnoreSelfCollisions));
@@ -694,7 +694,7 @@ protected:
         return qSolutions.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, int filteroptions, const IkReturnPtr& ikreturn)
     {
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
@@ -735,7 +735,7 @@ protected:
         return vikreturns.size()>0;
     }
 
-    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn)
+    virtual bool Solve(const IkParameterization& rawparam, const std::vector<dReal>& q0, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkReturnPtr& ikreturn)
     {
         IkParameterization ikparamdummy;
         const IkParameterization& param = _ConvertIkParameterization(rawparam, ikparamdummy);
@@ -817,7 +817,7 @@ protected:
         return _pmanip.lock();
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         IkSolverBase::Clone(preference, cloningoptions);
         boost::shared_ptr< IkFastSolver<IkReal> const > r = boost::dynamic_pointer_cast<IkFastSolver<IkReal> const>(preference);
@@ -1326,7 +1326,7 @@ protected:
         return p1.second < p2.second;
     }
 
-    IkReturnAction _SolveSingle(const IkParameterization& param, const vector<IkReal>& vfree, const vector<dReal>& q0, int filteroptions, IkReturnPtr ikreturn, StateCheckEndEffector& stateCheck)
+    IkReturnAction _SolveSingle(const IkParameterization& param, const vector<IkReal>& vfree, const vector<dReal>& q0, int filteroptions, const IkReturnPtr& ikreturn, StateCheckEndEffector& stateCheck)
     {
         RobotBase::ManipulatorPtr pmanip(_pmanip);
         ikfast::IkSolutionList<IkReal> solutions;
@@ -2292,7 +2292,7 @@ protected:
     /// \brief configuraiton distance
     ///
     /// \param bNormalizeRevolute if true, then compute difference mod 2*PI
-    dReal _ComputeGeometricConfigDistSqr(RobotBasePtr probot, const vector<dReal>& q1, const vector<dReal>& q2, bool bNormalizeRevolute=false) const
+    dReal _ComputeGeometricConfigDistSqr(const RobotBasePtr& probot, const vector<dReal>& q1, const vector<dReal>& q2, bool bNormalizeRevolute=false) const
     {
         vector<dReal> q = q1;
         probot->SubtractActiveDOFValues(q,q2);
@@ -2371,7 +2371,7 @@ protected:
         }
     }
 
-    void _SortSolutions(RobotBasePtr probot, std::vector<IkReturnPtr>& vikreturns)
+    void _SortSolutions(const RobotBasePtr& probot, std::vector<IkReturnPtr>& vikreturns)
     {
         // sort with respect to how far it is from limits
         vector< pair<size_t, dReal> > vdists; vdists.resize(vikreturns.size());
@@ -2507,14 +2507,14 @@ protected:
 };
 
 #ifdef OPENRAVE_IKFAST_FLOAT32
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold)
+IkSolverBasePtr CreateIkFastSolver(const EnvironmentBasePtr& penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold)
 
 {
     return IkSolverBasePtr(new IkFastSolver<float>(penv,sinput,ikfunctions,vfreeinc,ikthreshold));
 }
 #endif
 
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold)
+IkSolverBasePtr CreateIkFastSolver(const EnvironmentBasePtr& penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const vector<dReal>& vfreeinc, dReal ikthreshold)
 {
     return IkSolverBasePtr(new IkFastSolver<double>(penv,sinput,ikfunctions,vfreeinc,ikthreshold));
 }

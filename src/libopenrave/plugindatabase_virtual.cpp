@@ -83,7 +83,7 @@ UserDataPtr RaveDatabase::AddVirtualPlugin(InterfaceType type, std::string name,
     return _vPlugins.back();
 }
 
-InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType type, std::string name)
+InterfaceBasePtr RaveDatabase::Create(const EnvironmentBasePtr& penv, InterfaceType type, std::string name)
 {
     InterfaceBasePtr pointer;
     if (name.empty()) {

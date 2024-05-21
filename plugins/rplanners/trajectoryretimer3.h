@@ -52,13 +52,13 @@ public:
     typedef boost::shared_ptr<GroupInfo const> GroupInfoConstPtr;
 
 public:
-    TrajectoryRetimer3(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
+    TrajectoryRetimer3(const EnvironmentBasePtr& penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Puttichai Lertkultanon and Rosen Diankov\nTrajectory re-timing without modifying any of the points. Overwrites the velocities, accelerations, and timestamps.";
         _bManipConstraints = false;
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) {
+    virtual bool InitPlan(const RobotBasePtr& pbase, PlannerParametersConstPtr params) {
         EnvironmentLock lock(GetEnv()->GetMutex());
         params->Validate();
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -69,7 +69,7 @@ public:
         return _InitPlan();
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual bool InitPlan(const RobotBasePtr& pbase, std::istream& isParameters)
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());

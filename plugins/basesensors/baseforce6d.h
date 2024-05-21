@@ -112,7 +112,7 @@ protected:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseForce6DXMLReader(boost::dynamic_pointer_cast<BaseForce6DSensor>(ptr)));
     }
@@ -122,7 +122,7 @@ public:
         return BaseJSONReaderPtr(new BaseForce6DJSONReader(pReadable));
     }
 
-    BaseForce6DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
+    BaseForce6DSensor(const EnvironmentBasePtr& penv) : SensorBase(penv) {
         __description = ":Interface Author: Eisoku Kuroiwa\n\nProvides a simulated force6D sensor.";
         _pgeom.reset(new Force6DGeomData());
         _pdata.reset(new Force6DSensorData());
@@ -185,7 +185,7 @@ public:
         return _trans;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions) override
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseForce6DSensor const> r = boost::dynamic_pointer_cast<BaseForce6DSensor const>(preference);
@@ -193,7 +193,7 @@ public:
         _trans = r->_trans;
     }
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const override
+    void Serialize(const BaseXMLWriterPtr& writer, int options=0) const override
     {
         _pgeom->SerializeXML(writer, options);
     }

@@ -116,7 +116,7 @@ FCLCollisionManagerInstance::~FCLCollisionManagerInstance() {
     _vecCachedBodies.clear();
 }
 
-void FCLCollisionManagerInstance::InitBodyManager(KinBodyConstPtr pbody, bool bTrackActiveDOF) {
+void FCLCollisionManagerInstance::InitBodyManager(const KinBodyConstPtr& pbody, bool bTrackActiveDOF) {
     _ptrackingbody = pbody;
     _bTrackActiveDOF = false;
     if (bTrackActiveDOF && pbody->IsRobot()) {

@@ -32,10 +32,10 @@ namespace planningutils {
 /// \brief Jitters the active joint angles of the robot until it escapes collision.
 ///
 /// \return 0 if jitter failed and robot is in collision, -1 if robot originally not in collision, 1 if jitter succeeded and position is different.
-OPENRAVE_API int JitterActiveDOF(RobotBasePtr robot,int nMaxIterations=5000,dReal fRand=0.03,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn = PlannerBase::PlannerParameters::NeighStateFn());
+OPENRAVE_API int JitterActiveDOF(const RobotBasePtr& robot,int nMaxIterations=5000,dReal fRand=0.03,const PlannerBase::PlannerParameters::NeighStateFn& neighstatefn = PlannerBase::PlannerParameters::NeighStateFn());
 
 /// \brief Jitters the transform of a body until it escapes collision.
-OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxIterations=1000);
+OPENRAVE_API bool JitterTransform(const KinBodyPtr& pbody, float fJitter, int nMaxIterations=1000);
 
 /** \brief If the current configuration does not satisfy constraints, then jitters it using a \ref PlannerBase::PlannerParameters structure
 
@@ -45,7 +45,7 @@ OPENRAVE_API bool JitterTransform(KinBodyPtr pbody, float fJitter, int nMaxItera
     \param perturbation Test with perturbations since very small changes in angles can produce collision inconsistencies
     \return Return 0 if jitter failed and constraints are not satisfied. -1 if constraints are originally satisfied. 1 if jitter succeeded, configuration is different, and constraints are satisfied.
  */
-OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstPtr parameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5);
+OPENRAVE_API int JitterCurrentConfiguration(const PlannerBase::PlannerParametersConstPtr& parameters, int maxiterations=5000, dReal maxjitter=0.015, dReal perturbation=1e-5);
 
 /** \brief validates a trajectory with respect to the planning constraints.
 
@@ -56,7 +56,7 @@ OPENRAVE_API int JitterCurrentConfiguration(PlannerBase::PlannerParametersConstP
     \param samplingstep If == 0, then will only test the supports points in trajectory->GetPoints(). If > 0, then will sample the trajectory at this time interval and check that smoothness is satisfied along with segment constraints.
     \throw openrave_exception If the trajectory is invalid, will throw ORE_InconsistentConstraints.
  */
-OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parameters, TrajectoryBaseConstPtr trajectory, dReal samplingstep=0.002);
+OPENRAVE_API void VerifyTrajectory(const PlannerBase::PlannerParametersConstPtr& parameters, const TrajectoryBaseConstPtr& trajectory, dReal samplingstep=0.002);
 
 /** \brief Extends the last ramp of the trajectory in order to reach a goal. THe configuration space matches the positional data of the trajectory.
 
@@ -64,14 +64,14 @@ OPENRAVE_API void VerifyTrajectory(PlannerBase::PlannerParametersConstPtr parame
     \param index the waypoint index of the trajectory
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t ExtendWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API size_t ExtendWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, PlannerBasePtr planner);
 
 /** \brief Extends the last ramp of the trajectory in order to reach a goal. THe configuration space is just the active DOF of the robot.
 
     Useful when appending jittered points to the trajectory.
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t ExtendActiveDOFWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API size_t ExtendActiveDOFWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const RobotBasePtr& robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
@@ -85,7 +85,7 @@ OPENRAVE_API size_t ExtendActiveDOFWaypoint(int index, const std::vector<dReal>&
     \return PlannerStatus of the status of the smoothing planner
  */
 
-OPENRAVE_API PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus SmoothActiveDOFTrajectory(const TrajectoryBasePtr& traj, const RobotBasePtr& robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 
 /** \brief Smooth the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
@@ -98,7 +98,7 @@ OPENRAVE_API PlannerStatus SmoothActiveDOFTrajectory(TrajectoryBasePtr traj, Rob
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the smoothing planner
  */
-OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>&maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus SmoothAffineTrajectory(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>&maxaccelerations, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Smooth the trajectory points to avoiding collisions by extracting and using the positional data from the trajectory. <b>[multi-thread safe]</b>
 
@@ -110,7 +110,7 @@ OPENRAVE_API PlannerStatus SmoothAffineTrajectory(TrajectoryBasePtr traj, const 
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the smoothing planner
  */
-OPENRAVE_API PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus SmoothTrajectory(const TrajectoryBasePtr& traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retime the trajectory points by extracting and using the currently set active dofs of the robot. <b>[multi-thread safe]</b>
 
@@ -124,7 +124,7 @@ OPENRAVE_API PlannerStatus SmoothTrajectory(TrajectoryBasePtr traj, dReal fmaxve
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus RetimeActiveDOFTrajectory(const TrajectoryBasePtr& traj, const RobotBasePtr& robot, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retime the trajectory points by extracting and using the passed in robot dof indices. <b>[multi-thread safe]</b>
 
@@ -139,7 +139,7 @@ OPENRAVE_API PlannerStatus RetimeActiveDOFTrajectory(TrajectoryBasePtr traj, Rob
    \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
    \return PlannerStatus of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeRobotDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr robot, const std::vector<int>& vRobotDOFIndices, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus RetimeRobotDOFTrajectory(const TrajectoryBasePtr& traj, const RobotBasePtr& robot, const std::vector<int>& vRobotDOFIndices, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Smoother planner for the trajectory points to avoiding collisions by extracting and using the currently set active dofs of the robot.
 
@@ -156,7 +156,7 @@ public:
        \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory re-timer.
        \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
      **/
-    ActiveDOFTrajectorySmoother(RobotBasePtr robot, const std::string& plannername="", const std::string& plannerparameters="");
+    ActiveDOFTrajectorySmoother(const RobotBasePtr& robot, const std::string& plannername="", const std::string& plannerparameters="");
     virtual ~ActiveDOFTrajectorySmoother() {
     }
 
@@ -164,7 +164,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, int planningoptions=0);
+    virtual PlannerStatus PlanPath(const TrajectoryBasePtr& traj, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -196,7 +196,7 @@ public:
        \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
        \param hastimestamps if true, use the already initialized timestamps of the trajectory
      **/
-    ActiveDOFTrajectoryRetimer(RobotBasePtr robot, const std::string& plannername="", const std::string& plannerparameters="");
+    ActiveDOFTrajectoryRetimer(const RobotBasePtr& robot, const std::string& plannername="", const std::string& plannerparameters="");
     virtual ~ActiveDOFTrajectoryRetimer() {
     }
 
@@ -204,7 +204,7 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, bool hastimestamps=false, int planningoptions=0);
+    virtual PlannerStatus PlanPath(const TrajectoryBasePtr& traj, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     void _UpdateParameters();
@@ -232,7 +232,7 @@ typedef boost::shared_ptr<ActiveDOFTrajectoryRetimer> ActiveDOFTrajectoryRetimer
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeAffineTrajectory(TrajectoryBasePtr traj, const std::vector<dReal>&maxvelocities, const std::vector<dReal>&maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus RetimeAffineTrajectory(const TrajectoryBasePtr& traj, const std::vector<dReal>&maxvelocities, const std::vector<dReal>&maxaccelerations, bool hastimestamps=false, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Retimer planner the trajectory points consisting of affine transformation values while avoiding collisions. <b>[multi-thread safe]</b>
 
@@ -266,8 +266,8 @@ public:
     ///
     /// \param traj the trajectory that initially contains the input points, it is modified to contain the new re-timed data.
     /// \return PlannerStatus of the status of the smoothing planner
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, int planningoptions=0);
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::vector<dReal>& maxjerks, bool hastimestamps=false, int planningoptions=0);
+    virtual PlannerStatus PlanPath(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, bool hastimestamps=false, int planningoptions=0);
+    virtual PlannerStatus PlanPath(const TrajectoryBasePtr& traj, const std::vector<dReal>& maxvelocities, const std::vector<dReal>& maxaccelerations, const std::vector<dReal>& maxjerks, bool hastimestamps=false, int planningoptions=0);
 
 protected:
     std::string _plannername, _extraparameters;
@@ -288,7 +288,7 @@ typedef boost::shared_ptr<AffineTrajectoryRetimer> AffineTrajectoryRetimerPtr;
     \param plannerparameters XML string to be appended to PlannerBase::PlannerParameters::_sExtraParameters passed in to the planner.
     \return PlannerStatus of the status of the retiming planner
  */
-OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API PlannerStatus RetimeTrajectory(const TrajectoryBasePtr& traj, bool hastimestamps=false, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -301,7 +301,7 @@ OPENRAVE_API PlannerStatus RetimeTrajectory(TrajectoryBasePtr traj, bool hastime
     \param plannername the name of the planner to use to retime. If empty, will use the default trajectory re-timer.
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, RobotBasePtr robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
+OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const RobotBasePtr& robot, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="", const std::string& plannerparameters="");
 
 /** \brief Inserts a waypoint into a trajectory at the index specified, and retimes the segment before and after the trajectory using a planner. This will \b not change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -313,7 +313,7 @@ OPENRAVE_API size_t InsertActiveDOFWaypointWithRetiming(int index, const std::ve
     \param planner initialized planner that will do the retiming. \ref PlannerBase::InitPlan should already be called.
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t InsertWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API size_t InsertWaypointWithRetiming(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const PlannerBasePtr& planner);
 
 /** \brief Insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -325,7 +325,7 @@ OPENRAVE_API size_t InsertWaypointWithRetiming(int index, const std::vector<dRea
     \param plannername the name of the planner to use to smooth. If empty, will use the default trajectory smoother.
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
+OPENRAVE_API size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, dReal fmaxvelmult=1, dReal fmaxaccelmult=1, const std::string& plannername="");
 
 /** \brief insert a waypoint in a timed trajectory and smooth so that the trajectory always goes through the waypoint at the specified velocity. This might change the previous trajectory. <b>[multi-thread safe]</b>
 
@@ -337,10 +337,10 @@ OPENRAVE_API size_t InsertWaypointWithSmoothing(int index, const std::vector<dRe
     \param planner the initialized planner to use for smoothing. \ref PlannerBase::InitPlan should already be called on it. The planner parameters should be initialized to ignore timestamps. Optionally they could be initialized to accept velocities.
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, TrajectoryBasePtr traj, PlannerBasePtr planner);
+OPENRAVE_API size_t InsertWaypointWithSmoothing(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const PlannerBasePtr& planner);
 
 /// \brief convert the trajectory and all its points to a new specification
-OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const ConfigurationSpecification &spec);
+OPENRAVE_API void ConvertTrajectorySpecification(const TrajectoryBasePtr& traj, const ConfigurationSpecification &spec);
 
 /** \brief computes the trajectory derivatives and modifies the trajetory configuration to store them.
 
@@ -349,17 +349,17 @@ OPENRAVE_API void ConvertTrajectorySpecification(TrajectoryBasePtr traj, const C
     \param traj the re-timed trajectory
     \param maxderiv the maximum derivative to assure. If 1, will assure velocities, if 2 will assure accelerations, etc.
  */
-OPENRAVE_API void ComputeTrajectoryDerivatives(TrajectoryBasePtr traj, int maxderiv);
+OPENRAVE_API void ComputeTrajectoryDerivatives(const TrajectoryBasePtr& traj, int maxderiv);
 
 /// \brief returns a new trajectory with the order of the waypoints and times reversed.
 ///
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
-OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(TrajectoryBasePtr traj);
+OPENRAVE_API TrajectoryBasePtr ReverseTrajectory(const TrajectoryBasePtr& traj);
 
 /// \brief returns a new trajectory with the order of the waypoints and times reversed.
 ///
 /// Velocities are just negated and the new trajectory is not guaranteed to be executable or valid
-OPENRAVE_API TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr traj);
+OPENRAVE_API TrajectoryBasePtr GetReverseTrajectory(const TrajectoryBaseConstPtr& traj);
 
 /// \brief segment the trajectory given the start and end points in-memory
 ///
@@ -367,14 +367,14 @@ OPENRAVE_API TrajectoryBasePtr GetReverseTrajectory(TrajectoryBaseConstPtr traj)
 /// \param traj the trajectory to segment
 /// \param starttime the start time of the segment
 /// \param endtime the end time of the segment
-OPENRAVE_API void SegmentTrajectory(TrajectoryBasePtr traj, dReal starttime, dReal endtime);
+OPENRAVE_API void SegmentTrajectory(const TrajectoryBasePtr& traj, dReal starttime, dReal endtime);
 
 /// \brief extract a segment of the trajectory given the start and end points and return a new trajectory
 ///
 /// \param traj the trajectory to segment
 /// \param starttime the start time of the segment. If < 0, returns the first waypoint of the trajectory
 /// \param endtime the end time of the segment. If > duration, returns the last waypoint of the trajectory
-OPENRAVE_API TrajectoryBasePtr GetTrajectorySegment(TrajectoryBaseConstPtr traj, dReal starttime, dReal endtime);
+OPENRAVE_API TrajectoryBasePtr GetTrajectorySegment(const TrajectoryBaseConstPtr& traj, dReal starttime, dReal endtime);
 
 /// \brief merges the contents of multiple trajectories into one so that everything can be played simultaneously.
 ///
@@ -414,7 +414,7 @@ public:
     \param vparameters One set of parameters are returned for each joint. \see DHParameter.
     \param tstart the initial transform in the body coordinate system to the first joint
  */
-OPENRAVE_API void GetDHParameters(std::vector<DHParameter>&vparameters, KinBodyConstPtr pbody);
+OPENRAVE_API void GetDHParameters(std::vector<DHParameter>&vparameters, const KinBodyConstPtr& pbody);
 
 /** \brief dynamics and collision checking with linear interpolation
 
@@ -428,7 +428,7 @@ public:
        \param parameters stored inside the structure as a weak pointer
        \param filtermask A mask of \ref ConstraintFilterOptions specifying what checks the class should perform.
      */
-    DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask=0xffffffff);
+    DynamicsCollisionConstraint(const PlannerBase::PlannerParametersConstPtr& parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask=0xffffffff);
     virtual ~DynamicsCollisionConstraint() {
     }
 
@@ -456,10 +456,10 @@ public:
     virtual void SetUserCheckFunction(const boost::function<bool() >& usercheckfn, bool bCallAfterCheckCollision=false);
 
     /// \brief checks line collision. Uses the constructor's self-collisions
-    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options = 0xffff, ConstraintFilterReturnPtr filterreturn = ConstraintFilterReturnPtr());
+    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, dReal timeelapsed, IntervalType interval, int options = 0xffff, const ConstraintFilterReturnPtr& filterreturn = ConstraintFilterReturnPtr());
 
     /// \brief checks collisions and constraints along a quintic polynomial trajectory connecting (q0, dq0, ddq0) and (q1, dq1, ddq1).
-    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1, dReal timeelapsed, IntervalType interval, int options=0xffff, ConstraintFilterReturnPtr filterreturn=ConstraintFilterReturnPtr());
+    virtual int Check(const std::vector<dReal>& q0, const std::vector<dReal>& q1, const std::vector<dReal>& dq0, const std::vector<dReal>& dq1, const std::vector<dReal>& ddq0, const std::vector<dReal>& ddq1, dReal timeelapsed, IntervalType interval, int options=0xffff, const ConstraintFilterReturnPtr& filterreturn=ConstraintFilterReturnPtr());
 
     CollisionReportPtr GetReport() const {
         return _report;
@@ -471,12 +471,12 @@ protected:
     /// \param vdofvelocities the current velocities set on the robot
     /// \param vaccelconfig the current accelerations being applied on the robot
     /// \param options should already be masked with _filtermask
-    virtual int _CheckState(const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vaccelconfig, int options, ConstraintFilterReturnPtr filterreturn);
+    virtual int _CheckState(const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vaccelconfig, int options, const ConstraintFilterReturnPtr& filterreturn);
 
     /// \brief sets and checks the state, also takes into account perturbations
     ///
     /// \param options should already be masked with _filtermask
-    virtual int _SetAndCheckState(PlannerBase::PlannerParametersConstPtr params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, ConstraintFilterReturnPtr filterreturn);
+    virtual int _SetAndCheckState(const PlannerBase::PlannerParametersConstPtr& params, const std::vector<dReal>& vdofvalues, const std::vector<dReal>& vdofvelocities, const std::vector<dReal>& vdofaccels, int options, const ConstraintFilterReturnPtr& filterreturn);
     virtual void _PrintOnFailure(const std::string& prefix);
 
     PlannerBase::PlannerParametersWeakConstPtr _parameters;
@@ -566,7 +566,7 @@ protected:
 class OPENRAVE_API SimpleDistanceMetric
 {
 public:
-    SimpleDistanceMetric(RobotBasePtr robot);
+    SimpleDistanceMetric(const RobotBasePtr& robot);
     dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1);
 protected:
     RobotBasePtr _robot;
@@ -599,7 +599,7 @@ protected:
 class OPENRAVE_API ManipulatorIKGoalSampler
 {
 public:
-    ManipulatorIKGoalSampler(RobotBase::ManipulatorConstPtr pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions, const std::vector<dReal>& freevalues = std::vector<dReal>());
+    ManipulatorIKGoalSampler(const RobotBase::ManipulatorConstPtr& pmanip, const std::list<IkParameterization>&listparameterizations, int nummaxsamples=20, int nummaxtries=10, dReal fsampleprob=1, bool searchfreeparameters=true, int ikfilteroptions=IKFO_CheckEnvCollisions, const std::vector<dReal>& freevalues = std::vector<dReal>());
     virtual ~ManipulatorIKGoalSampler() {
     }
 

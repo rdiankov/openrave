@@ -137,7 +137,7 @@ protected:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseLaser2DXMLReader(boost::dynamic_pointer_cast<BaseLaser2DSensor>(ptr)));
     }
@@ -147,7 +147,7 @@ public:
         return BaseJSONReaderPtr(new BaseLaser2DJSONReader(pReadable));
     }
 
-    BaseLaser2DSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
+    BaseLaser2DSensor(const EnvironmentBasePtr& penv) : SensorBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated 2D laser range finder.\n\
 \n\
 .. image:: ../../../images/interface_baselaser.jpg\n\
@@ -376,7 +376,7 @@ public:
         return _trans;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseLaser2DSensor const> r = boost::dynamic_pointer_cast<BaseLaser2DSensor const>(preference);
@@ -564,12 +564,12 @@ public:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseSpinningLaser2DXMLReader(boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor>(ptr)));
     }
 
-    BaseSpinningLaser2DSensor(EnvironmentBasePtr penv) : BaseLaser2DSensor(penv) {
+    BaseSpinningLaser2DSensor(const EnvironmentBasePtr& penv) : BaseLaser2DSensor(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated spinning 2D laser range finder. Includes all the XML parameters from :ref:`sensor-baselaser2d` along with:\n\
 * spinaxis - the second axis to spin on\n\
 * spinpos - center of rotation of second spin axis\n\
@@ -608,7 +608,7 @@ public:
         return SensorGeometryPtr(pgeom);
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         BaseLaser2DSensor::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseSpinningLaser2DSensor const> r = boost::dynamic_pointer_cast<BaseSpinningLaser2DSensor const>(preference);

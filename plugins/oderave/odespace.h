@@ -230,7 +230,7 @@ private:
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
     typedef boost::function<void (KinBodyInfoPtr)> SynchronizeCallbackFn;
 
-    ODESpace(EnvironmentBasePtr penv, const std::string& userdatakey, bool bUsingPhysics) : _penv(penv), _userdatakey(userdatakey), _bUsingPhysics(bUsingPhysics)
+    ODESpace(const EnvironmentBasePtr& penv, const std::string& userdatakey, bool bUsingPhysics) : _penv(penv), _userdatakey(userdatakey), _bUsingPhysics(bUsingPhysics)
     {
         static bool s_bIsODEInitialized = false;
         if( !s_bIsODEInitialized ) {
@@ -282,7 +282,7 @@ private:
         return !!_ode;
     }
 
-    KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
+    KinBodyInfoPtr InitKinBody(const KinBodyConstPtr& pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
         OpenRAVE::EnvironmentLock lock(pbody->GetEnv()->GetMutex());
         boost::shared_ptr<std::unique_lock<std::mutex> > lockode;
@@ -513,7 +513,7 @@ private:
         return _geometrygroup;
     }
 
-    void RemoveUserData(KinBodyConstPtr pbody)
+    void RemoveUserData(const KinBodyConstPtr& pbody)
     {
         if( !!pbody ) {
             bool bremoved = pbody->RemoveUserData(_userdatakey);
@@ -539,21 +539,21 @@ private:
         }
     }
 
-    void Synchronize(KinBodyConstPtr pbody)
+    void Synchronize(const KinBodyConstPtr& pbody)
     {
         KinBodyInfoPtr pinfo = GetCreateInfo(pbody).first;
         BOOST_ASSERT( pinfo->GetBody() == pbody );
         _Synchronize(pinfo);
     }
 
-    dSpaceID GetBodySpace(KinBodyConstPtr pbody)
+    dSpaceID GetBodySpace(const KinBodyConstPtr& pbody)
     {
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         BOOST_ASSERT(pinfo->GetBody() == pbody );
         return pinfo->space;
     }
 
-    dBodyID GetLinkBody(KinBody::LinkConstPtr plink)
+    dBodyID GetLinkBody(const KinBody::LinkConstPtr& plink)
     {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
         BOOST_ASSERT( pinfo->GetBody() == plink->GetParent() );
@@ -561,7 +561,7 @@ private:
         return pinfo->vlinks[plink->GetIndex()]->body;
     }
 
-    dGeomID GetLinkGeom(KinBody::LinkConstPtr plink)
+    dGeomID GetLinkGeom(const KinBody::LinkConstPtr& plink)
     {
         KinBodyInfoPtr pinfo = GetInfo(plink->GetParent());
         BOOST_ASSERT( pinfo->GetBody() == plink->GetParent() );
@@ -569,7 +569,7 @@ private:
         return pinfo->vlinks[plink->GetIndex()]->geom;
     }
 
-    dJointID GetJoint(KinBody::JointConstPtr pjoint)
+    dJointID GetJoint(const KinBody::JointConstPtr& pjoint)
     {
         KinBodyInfoPtr pinfo = GetInfo(pjoint->GetParent());
         OPENRAVE_ASSERT_FORMAT(!!pinfo, "info does not exist for joint %s, key %s", pjoint->GetName()%_userdatakey, OpenRAVE::ORE_Assert);
@@ -610,11 +610,11 @@ private:
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     JointSetFn _jointset[12];
 
-    KinBodyInfoPtr GetInfo(KinBodyConstPtr pbody) {
+    KinBodyInfoPtr GetInfo(const KinBodyConstPtr& pbody) {
         return boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
     }
 
-    std::pair<KinBodyInfoPtr, bool> GetCreateInfo(KinBodyConstPtr pbody, bool blockode=true) {
+    std::pair<KinBodyInfoPtr, bool> GetCreateInfo(const KinBodyConstPtr& pbody, bool blockode=true) {
         KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<KinBodyInfo>(pbody->GetUserData(_userdatakey));
         bool bcreated = false;
         if( !pinfo ) {
@@ -688,7 +688,7 @@ private:
     }
 
     /// \param block if true, then will lock _ode->_mutex. Set to false when mutex is known to be already locked.
-    void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
+    void _Synchronize(const KinBodyInfoPtr& pinfo, bool block=true)
     {
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
             boost::shared_ptr<std::unique_lock<std::mutex>> lockode;

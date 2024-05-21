@@ -23,7 +23,7 @@ using namespace boost::placeholders;
 class IdealController : public ControllerBase
 {
 public:
-    IdealController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false)
+    IdealController(const EnvironmentBasePtr& penv, std::istream& sinput) : ControllerBase(penv), cmdid(0), _bPause(false), _bIsDone(true), _bCheckCollision(false), _bThrowExceptions(false), _bEnableLogging(false)
     {
         __description = ":Interface Author: Rosen Diankov\n\nIdeal controller used for planning and non-physics simulations. Forces exact robot positions.\n\n\
 If \ref ControllerBase::SetPath is called and the trajectory finishes, then the controller will continue to set the trajectory's final joint values and transformation until one of three things happens:\n\n\
@@ -46,7 +46,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     virtual ~IdealController() {
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
+    virtual bool Init(const RobotBasePtr& robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
         if( flog.is_open() ) {
@@ -474,7 +474,7 @@ private:
         _CheckConfiguration(probot);
     }
 
-    void _CheckLimits(RobotBasePtr probot, std::vector<dReal>& prevvalues, std::vector<dReal>&curvalues, dReal timeelapsed)
+    void _CheckLimits(const RobotBasePtr& probot, std::vector<dReal>& prevvalues, std::vector<dReal>&curvalues, dReal timeelapsed)
     {
         for(size_t i = 0; i < _vlower[0].size(); ++i) {
             if( !_dofcircular[i] ) {
@@ -504,7 +504,7 @@ private:
         }
     }
 
-    void _CheckConfiguration(RobotBasePtr probot)
+    void _CheckConfiguration(const RobotBasePtr& probot)
     {
         if( _bCheckCollision ) {
             if( GetEnv()->CheckCollision(KinBodyConstPtr(probot),_report) ) {
@@ -571,7 +571,7 @@ private:
     std::mutex _mutex;
 };
 
-ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput)
+ControllerBasePtr CreateIdealController(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return ControllerBasePtr(new IdealController(penv,sinput));
 }

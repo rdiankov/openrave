@@ -23,12 +23,12 @@ using namespace boost::placeholders;
 class IdealVelocityController : public ControllerBase
 {
 public:
-    IdealVelocityController(EnvironmentBasePtr penv, std::istream& sinput) : ControllerBase(penv)
+    IdealVelocityController(const EnvironmentBasePtr& penv, std::istream& sinput) : ControllerBase(penv)
     {
         __description = ":Interface Authors: Rosen Diankov\n\nIdeal Velocity controller.";
     }
 
-    virtual bool Init(RobotBasePtr robot, const std::vector<int>& dofindices, int nControlTransformation)
+    virtual bool Init(const RobotBasePtr& robot, const std::vector<int>& dofindices, int nControlTransformation)
     {
         _probot = robot;
         _dofindices = dofindices;
@@ -107,7 +107,7 @@ protected:
     OpenRAVE::UserDataPtr _torquechangedhandle;
 };
 
-ControllerBasePtr CreateIdealVelocityController(EnvironmentBasePtr penv, std::istream& sinput)
+ControllerBasePtr CreateIdealVelocityController(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return ControllerBasePtr(new IdealVelocityController(penv,sinput));
 }

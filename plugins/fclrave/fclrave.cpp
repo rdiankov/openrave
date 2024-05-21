@@ -26,7 +26,7 @@ FCLRavePlugin::FCLRavePlugin()
 
 FCLRavePlugin::~FCLRavePlugin() {}
 
-OpenRAVE::InterfaceBasePtr FCLRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr FCLRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
         return boost::make_shared<fclrave::FCLCollisionChecker>(penv, sinput);

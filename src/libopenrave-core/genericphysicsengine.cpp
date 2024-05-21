@@ -23,7 +23,7 @@ class GenericPhysicsEngine : public PhysicsEngineBase
     class PhysicsData : public UserData
     {
 public:
-        PhysicsData(KinBodyPtr pbody) {
+        PhysicsData(const KinBodyPtr& pbody) {
             linkvelocities.resize(pbody->GetLinks().size());
         }
         virtual ~PhysicsData() {
@@ -42,7 +42,7 @@ public:
     }
 
 public:
-    GenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput) : PhysicsEngineBase(penv) {
+    GenericPhysicsEngine(const EnvironmentBasePtr& penv, std::istream& sinput) : PhysicsEngineBase(penv) {
     }
     virtual bool SetPhysicsOptions(int physicsoptions) {
         return true;
@@ -72,12 +72,12 @@ public:
         }
     }
 
-    virtual bool InitKinBody(KinBodyPtr pbody) {
+    virtual bool InitKinBody(const KinBodyPtr& pbody) {
         pbody->SetUserData("_genericphysics_", UserDataPtr(new PhysicsData(pbody)));
         return true;
     }
 
-    virtual void RemoveKinBody(KinBodyPtr pbody) {
+    virtual void RemoveKinBody(const KinBodyPtr& pbody) {
         if( !!pbody ) {
             pbody->RemoveUserData("_genericphysics_");
 
@@ -106,35 +106,35 @@ public:
         return _pysicsDataCache.at(bodyIndex);
     }
 
-    virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel) {
+    virtual bool GetLinkVelocity(const KinBody::LinkConstPtr& plink, Vector& linearvel, Vector& angularvel) {
         std::pair<Vector, Vector> vel = _EnsureData(plink->GetParent())->linkvelocities.at(plink->GetIndex());
         linearvel = vel.first;
         angularvel = vel.second;
         return true;
     }
-    bool GetLinkVelocities(KinBodyConstPtr body, std::vector<std::pair<Vector,Vector> >& velocities) {
+    bool GetLinkVelocities(const KinBodyConstPtr& body, std::vector<std::pair<Vector,Vector> >& velocities) {
         velocities = _EnsureData(body)->linkvelocities;
         return true;
     }
 
-    virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& linearvel, const Vector& angularvel)
+    virtual bool SetLinkVelocity(const KinBody::LinkPtr& plink, const Vector& linearvel, const Vector& angularvel)
     {
         _EnsureData(plink->GetParent())->linkvelocities.at(plink->GetIndex()) = make_pair(linearvel,angularvel);
         return true;
     }
-    bool SetLinkVelocities(KinBodyPtr body, const std::vector<std::pair<Vector,Vector> >& velocities)
+    bool SetLinkVelocities(const KinBodyPtr& body, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
         _EnsureData(body)->linkvelocities = velocities;
         return true;
     }
 
-    virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd) {
+    virtual bool SetBodyForce(const KinBody::LinkPtr& plink, const Vector& force, const Vector& position, bool bAdd) {
         return true;
     }
-    virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd) {
+    virtual bool SetBodyTorque(const KinBody::LinkPtr& plink, const Vector& torque, bool bAdd) {
         return true;
     }
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<dReal>& pTorques) {
+    virtual bool AddJointTorque(const KinBody::JointPtr& pjoint, const std::vector<dReal>& pTorques) {
         return true;
     }
 
@@ -145,7 +145,7 @@ public:
         return _vgravity;
     }
 
-    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force, Vector& torque) {
+    virtual bool GetJointForceTorque(const KinBody::JointConstPtr& pjoint, Vector& force, Vector& torque) {
         force = Vector(0,0,0);
         torque = Vector(0,0,0);
         return true;
@@ -154,7 +154,7 @@ public:
     virtual void SimulateStep(dReal fTimeElapsed) {
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         PhysicsEngineBase::Clone(preference,cloningoptions);
         boost::shared_ptr<GenericPhysicsEngine const> r = boost::dynamic_pointer_cast<GenericPhysicsEngine const>(preference);
@@ -166,7 +166,7 @@ private:
     std::vector<boost::shared_ptr<PhysicsData> > _pysicsDataCache; // cache of physics data to avoid slow call to dynamic_pointer_cast and GetUserData("_genericphysics_"). Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody who holds  at that index. It is assumed that environment id of kin body does not grow to infinity over time.
 };
 
-PhysicsEngineBasePtr CreateGenericPhysicsEngine(EnvironmentBasePtr penv, std::istream& sinput)
+PhysicsEngineBasePtr CreateGenericPhysicsEngine(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return PhysicsEngineBasePtr(new GenericPhysicsEngine(penv,sinput));
 }

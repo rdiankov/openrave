@@ -751,7 +751,7 @@ private:
     }
 
 public:
-    TaskCaging(EnvironmentBasePtr penv) : ModuleBase(penv) {
+    TaskCaging(const EnvironmentBasePtr& penv) : ModuleBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\n\
 .. image:: ../../../images/interface_taskcaging.jpg\n\
   :width: 500\n\n\
@@ -1931,6 +1931,6 @@ BOOST_TYPEOF_REGISTER_TYPE(TaskCaging::ConstrainedTaskData::FINDGRASPDATA)
 
 #endif
 
-ModuleBasePtr CreateTaskCaging(EnvironmentBasePtr penv) {
+ModuleBasePtr CreateTaskCaging(const EnvironmentBasePtr& penv) {
     return ModuleBasePtr(new TaskCaging(penv));
 }

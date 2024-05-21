@@ -35,7 +35,7 @@ class ConveyorBeltModule : public ModuleBase
     };
     SpaceSamplerBasePtr _psampler;
 public:
-    ConveyorBeltModule(EnvironmentBasePtr penv, std::istream& is) : ModuleBase(penv)
+    ConveyorBeltModule(const EnvironmentBasePtr& penv, std::istream& is) : ModuleBase(penv)
     {
         __description = "Handles conveyor belt movement";
         RegisterCommand("registerbody",boost::bind(&ConveyorBeltModule::RegisterBody,this,_1,_2),"registers a body to be put into the environment");
@@ -110,7 +110,7 @@ public:
         return false;
     }
 
-    static InterfaceBasePtr create(EnvironmentBasePtr penv, std::istream& is)
+    static InterfaceBasePtr create(const EnvironmentBasePtr& penv, std::istream& is)
     {
         return InterfaceBasePtr(new ConveyorBeltModule(penv,is));
     }

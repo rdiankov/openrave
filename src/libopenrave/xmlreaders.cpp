@@ -46,7 +46,7 @@ bool HierarchicalXMLReadable::SerializeXML(BaseXMLWriterPtr writer, int options)
     return true;
 }
 
-TrajectoryReader::TrajectoryReader(EnvironmentBasePtr penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
+TrajectoryReader::TrajectoryReader(const EnvironmentBasePtr& penv, TrajectoryBasePtr ptraj, const AttributesList& atts) : _ptraj(ptraj)
 {
     _bInReadable = false;
     _datacount = 0;
@@ -731,7 +731,7 @@ void StreamXMLWriter::Serialize(std::ostream& stream)
         (*it)->Serialize(stream);
     }
     if( _xmltag.size() > 0 ) {
-        stream << "</" << _xmltag << ">" << std::endl;
+        stream << "</" << _xmltag << ">" << '\n';
     }
 }
 

@@ -50,7 +50,7 @@ boost::shared_ptr<fcl::BroadPhaseCollisionManager> CreateManagerFromBroadphaseAl
     }
 }
 
-FCLCollisionChecker::CollisionCallbackData::CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, CollisionReportPtr report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded)
+FCLCollisionChecker::CollisionCallbackData::CollisionCallbackData(boost::shared_ptr<FCLCollisionChecker> pchecker, const CollisionReportPtr& report, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<LinkConstPtr>& vlinkexcluded)
     : _pchecker(pchecker)
     , _report(report)
     , _vbodyexcluded(vbodyexcluded)
@@ -89,7 +89,7 @@ const std::list<EnvironmentBase::CollisionCallbackFn>& FCLCollisionChecker::Coll
     return _listcallbacks;
 }
 
-FCLCollisionChecker::FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
+FCLCollisionChecker::FCLCollisionChecker(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput)
     : OpenRAVE::CollisionCheckerBase(penv)
     , _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
     , _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
@@ -153,7 +153,7 @@ FCLCollisionChecker::~FCLCollisionChecker() {
 #endif
 }
 
-void FCLCollisionChecker::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+void FCLCollisionChecker::Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
 {
     CollisionCheckerBase::Clone(preference, cloningoptions);
     boost::shared_ptr<FCLCollisionChecker const> r = boost::dynamic_pointer_cast<FCLCollisionChecker const>(preference);
@@ -226,7 +226,7 @@ void FCLCollisionChecker::DestroyEnvironment()
     _fclspace->DestroyEnvironment();
 }
 
-bool FCLCollisionChecker::InitKinBody(OpenRAVE::KinBodyPtr pbody)
+bool FCLCollisionChecker::InitKinBody(const OpenRAVE::KinBodyPtr& pbody)
 {
     OpenRAVE::EnvironmentLock lock(GetEnv()->GetMutex());
     FCLSpace::FCLKinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
@@ -236,7 +236,7 @@ bool FCLCollisionChecker::InitKinBody(OpenRAVE::KinBodyPtr pbody)
     return !pinfo;
 }
 
-void FCLCollisionChecker::RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
+void FCLCollisionChecker::RemoveKinBody(const OpenRAVE::KinBodyPtr& pbody)
 {
     const OpenRAVE::KinBody& body = *pbody;
 
@@ -271,14 +271,14 @@ void FCLCollisionChecker::RemoveKinBody(OpenRAVE::KinBodyPtr pbody)
     _fclspace->RemoveUserData(pbody);
 }
 
-bool FCLCollisionChecker::CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const KinBodyConstPtr& pbody1, const CollisionReportPtr& report)
 {
     START_TIMING_OPT(_statistics, "Body/Env",_options,pbody1->IsRobot());
     // TODO : tailor this case when stuff become stable enough
     return CheckCollision(pbody1, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
 }
 
-bool FCLCollisionChecker::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const KinBodyConstPtr& pbody1, const KinBodyConstPtr& pbody2, const CollisionReportPtr& report)
 {
     START_TIMING_OPT(_statistics, "Body/Body",_options,(pbody1->IsRobot() || pbody2->IsRobot()));
     if( !!report ) {
@@ -322,14 +322,14 @@ bool FCLCollisionChecker::CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink,CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const LinkConstPtr& plink, const CollisionReportPtr& report)
 {
     START_TIMING_OPT(_statistics, "Link/Env",_options,false);
     // TODO : tailor this case when stuff become stable enough
     return CheckCollision(plink, std::vector<KinBodyConstPtr>(), std::vector<LinkConstPtr>(), report);
 }
 
-bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const LinkConstPtr& plink1, const LinkConstPtr& plink2, const CollisionReportPtr& report)
 {
     START_TIMING_OPT(_statistics, "Link/Link",_options,false);
     if( !!report ) {
@@ -379,7 +379,7 @@ bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink1, LinkConstPtr plink
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbody,CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const LinkConstPtr& plink, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
 {
     START_TIMING_OPT(_statistics, "Link/Body",_options,pbody->IsRobot());
 
@@ -426,7 +426,7 @@ bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbo
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const LinkConstPtr& plink, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, const CollisionReportPtr& report)
 {
     if( !!report ) {
         report->Reset(_options);
@@ -461,7 +461,7 @@ bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink, std::vector<KinBody
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(KinBodyConstPtr pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const KinBodyConstPtr& pbody, std::vector<KinBodyConstPtr> const &vbodyexcluded, std::vector<LinkConstPtr> const &vlinkexcluded, const CollisionReportPtr& report)
 {
     if( !!report ) {
         report->Reset(_options);
@@ -494,25 +494,25 @@ bool FCLCollisionChecker::CheckCollision(KinBodyConstPtr pbody, std::vector<KinB
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(const RAY& ray, LinkConstPtr plink,CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const RAY& ray, const LinkConstPtr& plink, const CollisionReportPtr& report)
 {
     RAVELOG_WARN("fcl doesn't support Ray collisions\n");
     return false; //TODO
 }
 
-bool FCLCollisionChecker::CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const RAY& ray, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
 {
     RAVELOG_WARN("fcl doesn't support Ray collisions\n");
     return false; //TODO
 }
 
-bool FCLCollisionChecker::CheckCollision(const RAY& ray, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const RAY& ray, const CollisionReportPtr& report)
 {
     RAVELOG_WARN("fcl doesn't support Ray collisions\n");
     return false; //TODO
 }
 
-bool FCLCollisionChecker::CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const OpenRAVE::TriMesh& trimesh, const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
 {
     if( !!report ) {
         report->Reset(_options);
@@ -560,7 +560,7 @@ bool FCLCollisionChecker::CheckCollision(const OpenRAVE::TriMesh& trimesh, KinBo
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(const OpenRAVE::TriMesh& trimesh, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const OpenRAVE::TriMesh& trimesh, const CollisionReportPtr& report)
 {
     if( !!report ) {
         report->Reset(_options);
@@ -604,7 +604,7 @@ bool FCLCollisionChecker::CheckCollision(const OpenRAVE::TriMesh& trimesh, Colli
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const CollisionReportPtr& report)
 {
     if( !!report ) {
         report->Reset(_options);
@@ -637,7 +637,7 @@ bool FCLCollisionChecker::CheckCollision(const OpenRAVE::AABB& ab, const OpenRAV
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const std::vector<OpenRAVE::KinBodyConstPtr>& vIncludedBodies, OpenRAVE::CollisionReportPtr report)
+bool FCLCollisionChecker::CheckCollision(const OpenRAVE::AABB& ab, const OpenRAVE::Transform& aabbPose, const std::vector<OpenRAVE::KinBodyConstPtr>& vIncludedBodies, const CollisionReportPtr& report)
 {
     if( !!report ) {
         report->Reset(_options);
@@ -678,7 +678,7 @@ bool FCLCollisionChecker::CheckCollision(const OpenRAVE::AABB& ab, const OpenRAV
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckStandaloneSelfCollision(const KinBodyConstPtr& pbody, const CollisionReportPtr& report)
 {
     START_TIMING_OPT(_statistics, "BodySelf",_options,pbody->IsRobot());
     if( !!report ) {
@@ -744,7 +744,7 @@ bool FCLCollisionChecker::CheckStandaloneSelfCollision(KinBodyConstPtr pbody, Co
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckStandaloneSelfCollision(LinkConstPtr plink, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckStandaloneSelfCollision(const LinkConstPtr& plink, const CollisionReportPtr& report)
 {
     START_TIMING_OPT(_statistics, "LinkSelf",_options,false);
     if( !!report ) {
@@ -1152,7 +1152,7 @@ CollisionPair FCLCollisionChecker::MakeCollisionPair(fcl::CollisionObject* o1, f
 }
 #endif
 
-LinkPair FCLCollisionChecker::MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2)
+LinkPair FCLCollisionChecker::MakeLinkPair(const LinkConstPtr& plink1, const LinkConstPtr& plink2)
 {
     if( plink1.get() < plink2.get() ) {
         return make_pair(plink1, plink2);
@@ -1161,7 +1161,7 @@ LinkPair FCLCollisionChecker::MakeLinkPair(LinkConstPtr plink1, LinkConstPtr pli
     }
 }
 
-LinkGeomPairs FCLCollisionChecker::MakeLinkGeomPairs(LinkConstPtr plink1, LinkConstPtr plink2, GeometryConstPtr pgeom1, GeometryConstPtr pgeom2)
+LinkGeomPairs FCLCollisionChecker::MakeLinkGeomPairs(const LinkConstPtr& plink1, const LinkConstPtr& plink2, const GeometryConstPtr& pgeom1, const GeometryConstPtr& pgeom2)
 {
     if( plink1.get() < plink2.get() ) {
         return make_pair(make_pair(plink1, plink2), make_pair(pgeom1, pgeom2));
@@ -1208,7 +1208,7 @@ BroadPhaseCollisionManagerPtr FCLCollisionChecker::_CreateManager() {
     return CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
 }
 
-FCLCollisionManagerInstance& FCLCollisionChecker::_GetBodyManager(KinBodyConstPtr pbody, bool bactiveDOFs)
+FCLCollisionManagerInstance& FCLCollisionChecker::_GetBodyManager(const KinBodyConstPtr& pbody, bool bactiveDOFs)
 {
     _bParentlessCollisionObject = false;
     BODYMANAGERSMAP::iterator it = _bodymanagers.find(std::make_pair(pbody.get(), (int)bactiveDOFs));

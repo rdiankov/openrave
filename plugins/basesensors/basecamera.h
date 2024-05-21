@@ -165,7 +165,7 @@ protected:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new BaseCameraXMLReader(boost::dynamic_pointer_cast<BaseCameraSensor>(ptr)));
     }
@@ -175,7 +175,7 @@ public:
         return BaseJSONReaderPtr(new BaseCameraJSONReader(pReadable));
     }
 
-    BaseCameraSensor(EnvironmentBasePtr penv) : SensorBase(penv) {
+    BaseCameraSensor(const EnvironmentBasePtr& penv) : SensorBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nProvides a simulated camera using the standard pinhole projection.";
         RegisterCommand("power",boost::bind(&BaseCameraSensor::_Power,this,_1,_2), "deprecated");
         RegisterCommand("render",boost::bind(&BaseCameraSensor::_Render,this,_1,_2),"deprecated");
@@ -372,7 +372,7 @@ public:
         return _trans;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions) override
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
@@ -387,7 +387,7 @@ public:
         _Reset();
     }
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const override
+    void Serialize(const BaseXMLWriterPtr& writer, int options=0) const override
     {
         _pgeom->SerializeXML(writer, options);
         AttributesList atts;

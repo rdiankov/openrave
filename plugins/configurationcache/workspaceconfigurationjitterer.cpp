@@ -31,7 +31,7 @@ class WorkspaceConfigurationJitterer : public SpaceSamplerBase
 {
 public:
     /// \param parameters The planner parameters used to define the configuration space to jitter. The following fields are required: _getstatefn, _setstatefn, _vConfigUpperLimit, _vConfigLowerLimit, _checkpathvelocityconstraintsfn, _diffstatefn, _nRandomGeneratorSeed, _samplefn. The following are used and optional : _neighstatefn (used for constraining on manifolds)
-    WorkspaceConfigurationJitterer(EnvironmentBasePtr penv, std::istream& is) : SpaceSamplerBase(penv)
+    WorkspaceConfigurationJitterer(const EnvironmentBasePtr& penv, std::istream& is) : SpaceSamplerBase(penv)
     {
         __description = ":Interface Author: Puttichai Lertkultanon\n\n\
 If the current robot configuration is in collision, then jitters the robot until it is out of collision.\n\
@@ -1122,7 +1122,7 @@ protected:
     std::array<dReal, 3> _mults;
 };
 
-SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput)
+SpaceSamplerBasePtr CreateWorkspaceConfigurationJitterer(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return SpaceSamplerBasePtr(new WorkspaceConfigurationJitterer(penv, sinput));
 }

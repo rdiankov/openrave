@@ -765,7 +765,7 @@ OpenRAVEFunctionParserRealPtr CreateJointFunctionParser()
     return parser;
 }
 
-KinBody::Joint::Joint(KinBodyPtr parent, KinBody::JointType type)
+KinBody::Joint::Joint(const KinBodyPtr& parent, KinBody::JointType type)
 {
     _parent = parent;
     FOREACH(it,_doflastsetvalues) {
@@ -1340,7 +1340,7 @@ Vector KinBody::Joint::GetAxis(int iaxis) const
     return _attachedbodies[0]->GetTransform().rotate(_tLeft.rotate(_vaxes.at(iaxis)));
 }
 
-void KinBody::Joint::_ComputeJointInternalInformation(LinkPtr plink0, LinkPtr plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
+void KinBody::Joint::_ComputeJointInternalInformation(const LinkPtr& plink0, const LinkPtr& plink1, const Vector& vanchorraw, const std::vector<Vector>& vaxes, const std::vector<dReal>& vcurrentvalues)
 {
     OPENRAVE_ASSERT_OP_FORMAT(!!plink0,&&,!!plink1, "one or more attached _attachedbodies are invalid for joint %s", GetName(),ORE_InvalidArguments);
     for(int i = 0; i < GetDOF(); ++i) {

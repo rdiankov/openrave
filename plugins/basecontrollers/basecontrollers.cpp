@@ -15,9 +15,9 @@
 #include "basecontrollers.h"
 #include <openrave/openrave.h>
 
-OpenRAVE::ControllerBasePtr CreateIdealController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::ControllerBasePtr CreateIdealVelocityController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
-OpenRAVE::ControllerBasePtr CreateRedirectController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ControllerBasePtr CreateIdealController(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::ControllerBasePtr CreateIdealVelocityController(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
+OpenRAVE::ControllerBasePtr CreateRedirectController(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput);
 
 const std::string BaseControllersPlugin::_pluginname = "BaseControllersPlugin";
 
@@ -30,7 +30,7 @@ BaseControllersPlugin::BaseControllersPlugin()
 
 BaseControllersPlugin::~BaseControllersPlugin() {}
 
-OpenRAVE::InterfaceBasePtr BaseControllersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr BaseControllersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch(type) {
     case OpenRAVE::PT_Controller:

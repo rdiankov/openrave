@@ -30,7 +30,7 @@ namespace OpenRAVE {
 class OPENRAVE_API ModuleBase : public InterfaceBase
 {
 public:
-    ModuleBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Module, penv) {
+    ModuleBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_Module, penv) {
     }
     virtual ~ModuleBase() {
     }

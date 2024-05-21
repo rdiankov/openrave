@@ -20,7 +20,7 @@
 #include "mobyreplaycontroller.h"
 
 // create moby physics shared pointer
-OpenRAVE::PhysicsEngineBasePtr CreateMobyPhysics(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
+OpenRAVE::PhysicsEngineBasePtr CreateMobyPhysics(const OpenRAVE::EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return boost::make_shared<MobyPhysics>(penv, sinput);
 }
@@ -39,7 +39,7 @@ MobyRavePlugin::MobyRavePlugin()
 
 MobyRavePlugin::~MobyRavePlugin() {}
 
-OpenRAVE::InterfaceBasePtr MobyRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+OpenRAVE::InterfaceBasePtr MobyRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, const OpenRAVE::EnvironmentBasePtr& penv)
 {
     switch( type ) {
     case OpenRAVE::PT_PhysicsEngine:

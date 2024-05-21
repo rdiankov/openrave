@@ -399,7 +399,7 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
            && AreVectorsDeepEqual(_vgeometryinfos, other._vgeometryinfos);
 }
 
-KinBody::Link::Link(KinBodyPtr parent)
+KinBody::Link::Link(const KinBodyPtr& parent)
 {
     _parent = parent;
     _index = -1;
@@ -854,7 +854,7 @@ int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const
     return it->second.size();
 }
 
-void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups)
+void KinBody::Link::AddGeometry(const KinBody::GeometryInfoPtr& pginfo, bool addToGroups)
 {
     if( !pginfo ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);
@@ -896,7 +896,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
     _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
-void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const std::string& groupname)
+void KinBody::Link::AddGeometryToGroup(const KinBody::GeometryInfoPtr& pginfo, const std::string& groupname)
 {
     if( !pginfo ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("tried to add improper geometry to link %s"), GetName(), ORE_InvalidArguments);

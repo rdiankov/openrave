@@ -152,13 +152,13 @@ protected:
         stringstream _ss;
     };
 
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         // ptr is the robot interface that this reader is being created for
         return BaseXMLReaderPtr(new CollisionMapXMLReader(boost::shared_ptr<XMLData>(),atts));
     }
 
-    CollisionMapRobot(EnvironmentBasePtr penv, std::istream& sinput) : RobotBase(penv) {
+    CollisionMapRobot(const EnvironmentBasePtr& penv, std::istream& sinput) : RobotBase(penv) {
         __description = ":Interface Author: Rosen Diankov\n\nAllows user to specify regions of the robot configuration space that are in self-collision via lookup tables. This is most commonly used when two or more joints are coupled and their joint limits cannot be specified by simple min/max limits. A CollisionMap robot allows the user to specify self-collision regions indexed by the values of two joints.\n\n\
 The map will be 1 if the values are in free space (allowed) or 0 if they are in self-collision. If the robot gets into a 0 region, it will get into self-collision.\n\n\
 This is done by first creating a robot of type 'CollisionMapRobot' and using the **<collisionmap>** XML tag. Inside the **<collisionmap>** tag, multiple **<pair>** tags can be specified for coupled joints. For example, to specify a 181x181 2D map for joints J0, J1, J2, J3 where J0,J1 are paired and J2,J3 are paired, do: \n\n\
@@ -296,7 +296,7 @@ protected:
     ControllerBasePtr _pController;
 };
 
-RobotBasePtr CreateCollisionMapRobot(EnvironmentBasePtr penv, std::istream& sinput)
+RobotBasePtr CreateCollisionMapRobot(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return RobotBasePtr(new CollisionMapRobot(penv,sinput));
 }

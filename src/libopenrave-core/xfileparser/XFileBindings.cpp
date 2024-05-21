@@ -28,7 +28,7 @@
 class XFileReader
 {
 public:
-    XFileReader(EnvironmentBasePtr penv) : _penv(penv) {
+    XFileReader(const EnvironmentBasePtr& penv) : _penv(penv) {
     }
 
     void ReadFile(KinBodyPtr& pbody, const std::string& filename, const AttributesList& atts)
@@ -152,7 +152,7 @@ protected:
         }
     }
 
-    void _Read(KinBodyPtr pbody, const Assimp::XFile::Scene* scene)
+    void _Read(const KinBodyPtr& pbody, const Assimp::XFile::Scene* scene)
     {
         BOOST_ASSERT(!!scene);
         Transform t;
@@ -188,7 +188,7 @@ protected:
         }
     }
 
-    void _Read(KinBodyPtr pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform &transparent, int level)
+    void _Read(const KinBodyPtr& pbody, KinBody::LinkPtr plink, const Assimp::XFile::Node* node, const Transform &transparent, int level)
     {
         BOOST_ASSERT(!!node);
         Transform tnode = transparent * ExtractTransform(node->mTrafoMatrix);
@@ -353,7 +353,7 @@ protected:
         }
     }
 
-    void _InitFromMeshes(KinBodyPtr pbody, const std::vector<Assimp::XFile::Mesh*>& meshes)
+    void _InitFromMeshes(const KinBodyPtr& pbody, const std::vector<Assimp::XFile::Mesh*>& meshes)
     {
         std::vector<KinBody::GeometryInfo> vgeometries(meshes.size());
         for (size_t i = 0; i < meshes.size(); ++i) {
@@ -413,7 +413,7 @@ protected:
     bool _bSkipGeometry;
 };
 
-bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList &atts)
+bool RaveParseXFile(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::string& filename,const AttributesList &atts)
 {
     XFileReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
@@ -424,7 +424,7 @@ bool RaveParseXFile(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::stri
     return true;
 }
 
-bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList &atts)
+bool RaveParseXFile(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::string& filename,const AttributesList &atts)
 {
     XFileReader reader(penv);
     string filedata = RaveFindLocalFile(filename);
@@ -435,14 +435,14 @@ bool RaveParseXFile(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::s
     return true;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, KinBodyPtr& ppbody, const std::vector<char>& data,const AttributesList &atts)
+bool RaveParseXData(const EnvironmentBasePtr& penv, KinBodyPtr& ppbody, const std::vector<char>& data,const AttributesList &atts)
 {
     XFileReader reader(penv);
     reader.Read(ppbody,data,atts);
     return true;
 }
 
-bool RaveParseXData(EnvironmentBasePtr penv, RobotBasePtr& pprobot, const std::vector<char>& data,const AttributesList &atts)
+bool RaveParseXData(const EnvironmentBasePtr& penv, RobotBasePtr& pprobot, const std::vector<char>& data,const AttributesList &atts)
 {
     XFileReader reader(penv);
     reader.Read(pprobot,data,atts);

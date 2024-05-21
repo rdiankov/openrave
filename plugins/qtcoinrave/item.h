@@ -223,7 +223,7 @@ public:
         SoSwitch* _pswitch;
     };
 
-    RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewmode);
+    RobotItem(QtCoinViewerPtr viewer, const RobotBasePtr& robot, ViewGeometry viewmode);
 
     virtual bool UpdateFromIv();
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);

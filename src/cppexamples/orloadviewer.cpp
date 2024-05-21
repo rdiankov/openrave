@@ -29,7 +29,7 @@
 using namespace OpenRAVE;
 using namespace std;
 
-void SetViewer(EnvironmentBasePtr penv, const string& viewername)
+void SetViewer(const EnvironmentBasePtr& penv, const string& viewername)
 {
     ViewerBasePtr viewer = RaveCreateViewer(penv,viewername);
     BOOST_ASSERT(!!viewer);

@@ -18,7 +18,7 @@
 
 namespace OpenRAVE {
 
-KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _pbody(pbody), _options(options), _bRestoreOnDestructor(true)
+KinBody::KinBodyStateSaver::KinBodyStateSaver(const KinBodyPtr& pbody, int options) : _pbody(pbody), _options(options), _bRestoreOnDestructor(true)
 {
     if( _options & Save_LinkTransformation ) {
         _pbody->GetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);

@@ -104,12 +104,12 @@ public:
         return boost::str(boost::format("Coordinate(%f, %f)")%point%value);
     }
 
-    bool __eq__(PyCoordinatePtr c)
+    bool __eq__(const PyCoordinatePtr& c)
     {
         return !!c && (point == c->point) && (value == c->value);
     }
 
-    bool __ne__(PyCoordinatePtr c)
+    bool __ne__(const PyCoordinatePtr& c)
     {
         return !!c || (point != c->point) || (value != c->value);
     }
@@ -133,7 +133,7 @@ public:
     {
         _ppolynomial.reset(new piecewisepolynomials::Polynomial());
     }
-    PyPolynomial(const dReal duration_, const py::object ocoeffs_)
+    PyPolynomial(const dReal duration_, const py::object& ocoeffs_)
     {
         std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs_);
         _ppolynomial.reset(new piecewisepolynomials::Polynomial(duration_, inputCoeffs));
@@ -150,7 +150,7 @@ public:
         _PostProcess();
     }
 
-    void Initialize(const dReal duration_, const py::object ocoeffs_)
+    void Initialize(const dReal duration_, const py::object& ocoeffs_)
     {
         std::vector<dReal> inputCoeffs = openravepy::ExtractArray<dReal>(ocoeffs_);
         _ppolynomial->Initialize(duration_, inputCoeffs);
@@ -260,7 +260,7 @@ public:
         return py::to_object(ss.str());
     }
 
-    void Deserialize(const std::string s)
+    void Deserialize(const std::string& s)
     {
         std::stringstream ss(s);
         _ppolynomial->Deserialize(ss);
@@ -299,7 +299,7 @@ public:
     std::string _srep; // string representation of this polynomial
 }; // end class PyPolynomial
 
-std::vector<piecewisepolynomials::Polynomial> ExtractArrayPolynomials(const py::object ov)
+std::vector<piecewisepolynomials::Polynomial> ExtractArrayPolynomials(const py::object& ov)
 {
     size_t numPolynomials = len(ov);
     std::vector<piecewisepolynomials::Polynomial> v;
@@ -323,7 +323,7 @@ public:
         _ppwpoly.reset(new piecewisepolynomials::PiecewisePolynomial());
         _PostProcess();
     }
-    PyPiecewisePolynomial(const py::object ovpolynomials)
+    PyPiecewisePolynomial(const py::object& ovpolynomials)
     {
         std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
         _ppwpoly.reset(new piecewisepolynomials::PiecewisePolynomial(vpolynomials));
@@ -336,7 +336,7 @@ public:
         _PostProcess();
     }
 
-    void Initialize(const py::object ovpolynomials)
+    void Initialize(const py::object& ovpolynomials)
     {
         std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
         _ppwpoly.reset(new piecewisepolynomials::PiecewisePolynomial(vpolynomials));
@@ -395,7 +395,7 @@ public:
         return py::to_object(ss.str());
     }
 
-    void Deserialize(const std::string s)
+    void Deserialize(const std::string& s)
     {
         std::stringstream ss(s);
         _ppwpoly->Deserialize(ss);
@@ -469,7 +469,7 @@ public:
         _pchunk.reset(new piecewisepolynomials::Chunk());
         _PostProcess();
     }
-    PyChunk(const dReal duration_, const py::object ovpolynomials)
+    PyChunk(const dReal duration_, const py::object& ovpolynomials)
     {
         std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
         _pchunk.reset(new piecewisepolynomials::Chunk(duration_, vpolynomials));
@@ -481,14 +481,14 @@ public:
         _PostProcess();
     }
 
-    void Initialize(const dReal duration_, const py::object ovpolynomials)
+    void Initialize(const dReal duration_, const py::object& ovpolynomials)
     {
         std::vector<piecewisepolynomials::Polynomial> vpolynomials = ExtractArrayPolynomials(ovpolynomials);
         _pchunk->Initialize(duration_, vpolynomials);
         _PostProcess();
     }
 
-    void UpdateInitialValues(const py::object ovinitialvalues)
+    void UpdateInitialValues(const py::object& ovinitialvalues)
     {
         std::vector<dReal> vinitialvalues = openravepy::ExtractArray<dReal>(ovinitialvalues);
         _pchunk->UpdateInitialValues(vinitialvalues);
@@ -547,7 +547,7 @@ public:
         return openravepy::toPyArray(res);
     }
 
-    void SetConstant(const py::object ox0Vect, const dReal duration_, const size_t degree_)
+    void SetConstant(const py::object& ox0Vect, const dReal duration_, const size_t degree_)
     {
         std::vector<dReal> x0Vect = openravepy::ExtractArray<dReal>(ox0Vect);
         _pchunk->SetConstant(x0Vect, duration_, degree_);
@@ -562,7 +562,7 @@ public:
         return py::to_object(ss.str());
     }
 
-    void Deserialize(const std::string s)
+    void Deserialize(const std::string& s)
     {
         std::stringstream ss(s);
         _pchunk->Deserialize(ss);
@@ -606,7 +606,7 @@ public:
     dReal duration;
 }; // end class PyChunk
 
-std::vector<piecewisepolynomials::Chunk> ExtractArrayChunks(const py::object ov)
+std::vector<piecewisepolynomials::Chunk> ExtractArrayChunks(const py::object& ov)
 {
     size_t numChunks = len(ov);
     std::vector<piecewisepolynomials::Chunk> v;
@@ -630,14 +630,14 @@ public:
         _ptraj.reset(new piecewisepolynomials::PiecewisePolynomialTrajectory());
         _PostProcess();
     }
-    PyPiecewisePolynomialTrajectory(const py::object ovchunks)
+    PyPiecewisePolynomialTrajectory(const py::object& ovchunks)
     {
         std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
         _ptraj.reset(new piecewisepolynomials::PiecewisePolynomialTrajectory(vchunks));
         _PostProcess();
     }
 
-    void Initialize(const py::object ovchunks)
+    void Initialize(const py::object& ovchunks)
     {
         std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
         _ptraj->Initialize(vchunks);
@@ -695,14 +695,14 @@ public:
         return py::to_object(ss.str());
     }
 
-    void Deserialize(std::string s)
+    void Deserialize(const std::string& s)
     {
         std::stringstream ss(s);
         _ptraj->Deserialize(ss);
         _PostProcess();
     }
 
-    void ReplaceSegment(dReal t0, dReal t1, const py::object ovchunks)
+    void ReplaceSegment(dReal t0, dReal t1, const py::object& ovchunks)
     {
         std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
         _ptraj->ReplaceSegment(t0, t1, vchunks);
@@ -829,8 +829,8 @@ public:
         }
     }
 
-    py::object ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(const py::object ox0Vect, const py::object ox1Vect,
-                                                                       const py::object ovmVect, const py::object oamVect, const py::object ojmVect)
+    py::object ComputeNDTrajectoryZeroTimeDerivativesOptimizedDuration(const py::object& ox0Vect, const py::object& ox1Vect,
+                                                                       const py::object& ovmVect, const py::object& oamVect, const py::object& ojmVect)
     {
         std::vector<dReal> vmVect = openravepy::ExtractArray<dReal>(ovmVect);
         std::vector<dReal> amVect = openravepy::ExtractArray<dReal>(oamVect);
@@ -852,13 +852,13 @@ public:
         return pychunks;
     }
 
-    py::object ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const py::object ox0Vect, const py::object ox1Vect,
-                                                                        const py::object ov0Vect, const py::object ov1Vect,
-                                                                        const py::object oa0Vect, const py::object oa1Vect,
+    py::object ComputeNDTrajectoryArbitraryTimeDerivativesFixedDuration(const py::object& ox0Vect, const py::object& ox1Vect,
+                                                                        const py::object& ov0Vect, const py::object& ov1Vect,
+                                                                        const py::object& oa0Vect, const py::object& oa1Vect,
                                                                         const dReal T,
-                                                                        const py::object oxminVect, const py::object oxmaxVect,
-                                                                        const py::object ovmVect, const py::object oamVect,
-                                                                        const py::object ojmVect)
+                                                                        const py::object& oxminVect, const py::object& oxmaxVect,
+                                                                        const py::object& ovmVect, const py::object& oamVect,
+                                                                        const py::object& ojmVect)
     {
         std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
         std::vector<dReal> xmaxVect = openravepy::ExtractArray<dReal>(oxmaxVect);
@@ -887,12 +887,12 @@ public:
         return pychunks;
     }
 
-    py::object ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const py::object ox0Vect, const py::object ox1Vect,
-                                                                            const py::object ov0Vect, const py::object ov1Vect,
-                                                                            const py::object oa0Vect, const py::object oa1Vect,
-                                                                            const py::object oxminVect, const py::object oxmaxVect,
-                                                                            const py::object ovmVect, const py::object oamVect,
-                                                                            const py::object ojmVect, const dReal T)
+    py::object ComputeNDTrajectoryArbitraryTimeDerivativesOptimizedDuration(const py::object& ox0Vect, const py::object& ox1Vect,
+                                                                            const py::object& ov0Vect, const py::object& ov1Vect,
+                                                                            const py::object& oa0Vect, const py::object& oa1Vect,
+                                                                            const py::object& oxminVect, const py::object& oxmaxVect,
+                                                                            const py::object& ovmVect, const py::object& oamVect,
+                                                                            const py::object& ojmVect, const dReal T)
     {
         std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
         std::vector<dReal> xmaxVect = openravepy::ExtractArray<dReal>(oxmaxVect);
@@ -946,8 +946,8 @@ public:
     }
 
     PyPiecewisePolynomialPtr Compute1DTrajectory(const size_t degree,
-                                                 const py::object oInitialState, const py::object oFinalState,
-                                                 const py::object oLowerBounds, const py::object oUpperBounds,
+                                                 const py::object& oInitialState, const py::object& oFinalState,
+                                                 const py::object& oLowerBounds, const py::object& oUpperBounds,
                                                  const dReal fixedDuration)
     {
         std::vector<dReal> initialState = openravepy::ExtractArray<dReal>(oInitialState);
@@ -983,7 +983,7 @@ public:
         _pchecker->Initialize(ndof, envid);
     }
 
-    uint8_t CheckPolynomial(const py::object opolynomial, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
+    uint8_t CheckPolynomial(const py::object& opolynomial, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
                             const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1)
     {
         PyPolynomialPtr ppypoly = py::extract<PyPolynomialPtr>(opolynomial);
@@ -991,7 +991,7 @@ public:
         return ret;
     }
 
-    uint8_t CheckPiecewisePolynomial(const py::object opwpolynomial, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
+    uint8_t CheckPiecewisePolynomial(const py::object& opwpolynomial, const dReal xmin, const dReal xmax, const dReal vm, const dReal am, const dReal jm,
                                      const dReal x0, const dReal x1, const dReal v0, const dReal v1, const dReal a0, const dReal a1)
     {
         PyPiecewisePolynomialPtr ppypwpoly = py::extract<PyPiecewisePolynomialPtr>(opwpolynomial);
@@ -999,8 +999,8 @@ public:
         return ret;
     }
 
-    uint8_t CheckChunk(const py::object opychunk, const py::object oxminVect, const py::object oxmaxVect, const py::object ovmVect, const py::object oamVect, const py::object ojmVect,
-                       const py::object ox0Vect, const py::object ox1Vect, const py::object ov0Vect, const py::object ov1Vect, const py::object oa0Vect, const py::object oa1Vect)
+    uint8_t CheckChunk(const py::object& opychunk, const py::object& oxminVect, const py::object& oxmaxVect, const py::object& ovmVect, const py::object& oamVect, const py::object& ojmVect,
+                       const py::object& ox0Vect, const py::object& ox1Vect, const py::object& ov0Vect, const py::object& ov1Vect, const py::object& oa0Vect, const py::object& oa1Vect)
     {
         PyChunkPtr ppychunk = py::extract<PyChunkPtr>(opychunk);
         std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
@@ -1019,8 +1019,8 @@ public:
         return ret;
     }
 
-    uint8_t CheckChunks(const py::object ovchunks, const py::object oxminVect, const py::object oxmaxVect, const py::object ovmVect, const py::object oamVect, const py::object ojmVect,
-                        const py::object ox0Vect, const py::object ox1Vect, const py::object ov0Vect, const py::object ov1Vect, const py::object oa0Vect, const py::object oa1Vect)
+    uint8_t CheckChunks(const py::object& ovchunks, const py::object& oxminVect, const py::object& oxmaxVect, const py::object& ovmVect, const py::object& oamVect, const py::object& ojmVect,
+                        const py::object& ox0Vect, const py::object& ox1Vect, const py::object& ov0Vect, const py::object& ov1Vect, const py::object& oa0Vect, const py::object& oa1Vect)
     {
         std::vector<piecewisepolynomials::Chunk> vchunks = ExtractArrayChunks(ovchunks);
         std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);
@@ -1039,8 +1039,8 @@ public:
         return ret;
     }
 
-    uint8_t CheckPiecewisePolynomialTrajectory(const py::object otraj, const py::object oxminVect, const py::object oxmaxVect, const py::object ovmVect, const py::object oamVect, const py::object ojmVect,
-                                               const py::object ox0Vect, const py::object ox1Vect, const py::object ov0Vect, const py::object ov1Vect, const py::object oa0Vect, const py::object oa1Vect)
+    uint8_t CheckPiecewisePolynomialTrajectory(const py::object& otraj, const py::object& oxminVect, const py::object& oxmaxVect, const py::object& ovmVect, const py::object& oamVect, const py::object& ojmVect,
+                                               const py::object& ox0Vect, const py::object& ox1Vect, const py::object& ov0Vect, const py::object& ov1Vect, const py::object& oa0Vect, const py::object& oa1Vect)
     {
         PyPiecewisePolynomialTrajectoryPtr ppytraj = py::extract<PyPiecewisePolynomialTrajectoryPtr>(otraj);
         std::vector<dReal> xminVect = openravepy::ExtractArray<dReal>(oxminVect);

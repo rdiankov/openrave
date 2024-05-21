@@ -43,7 +43,7 @@ public:
         virtual ~MoveUnsync() {
         }
 
-        virtual void SetRobot(RobotBasePtr robot) {
+        virtual void SetRobot(const RobotBasePtr& robot) {
             _robot = robot; thresh = 0;
         }
         virtual float GetGoalThresh() {
@@ -108,7 +108,7 @@ public:
         vector<int> vhandjoints;
         float thresh;
 
-        static bool _MoveUnsyncJoints(EnvironmentBasePtr penv, RobotBasePtr robot, TrajectoryBasePtr ptraj, const vector<int>& vhandjoints, const vector<dReal>& vhandgoal, const std::string& pplannername="BasicRRT",int maxdivision=10)
+        static bool _MoveUnsyncJoints(const EnvironmentBasePtr& penv, const RobotBasePtr& robot, TrajectoryBasePtr ptraj, const vector<int>& vhandjoints, const vector<dReal>& vhandgoal, const std::string& pplannername="BasicRRT",int maxdivision=10)
         {
             if( vhandjoints.size() == 0 ||vhandjoints.size() != vhandgoal.size() ) {
                 return false;
@@ -172,7 +172,7 @@ public:
         /// \param tTaskFrameInManip the frame inside the manipulator frame to move
         /// \param vfreedoms The freedoms along tTargetWorldFrame which are constraints are applied to
         /// \param errorthresh the threshold of the error on the constraints
-        GripperJacobianConstrains(RobotBase::ManipulatorPtr pmanip, const Transform& tTargetWorldFrame, const Transform& tTaskFrameInManip, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
+        GripperJacobianConstrains(const RobotBase::ManipulatorPtr& pmanip, const Transform& tTargetWorldFrame, const Transform& tTaskFrameInManip, const boost::array<T,6>& vfreedoms, T errorthresh=1e-3) : _pmanip(pmanip), _vfreedoms(vfreedoms) {
             _errorthresh2 = errorthresh*errorthresh;
             _probot = _pmanip->GetRobot();
             _tTargetFrameLeft = tTargetWorldFrame;
@@ -347,7 +347,7 @@ protected:
         boost::numeric::ublas::matrix<T> _J, _Jt, _invJJt, _invJ, _error, _qdelta;
     };
 
-    static bool SetActiveTrajectory(RobotBasePtr robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
+    static bool SetActiveTrajectory(const RobotBasePtr& robot, TrajectoryBasePtr pActiveTraj, bool bExecute, const string& strsavetraj, boost::shared_ptr<ostream> pout,dReal fMaxVelMult=1)
     {
         if( pActiveTraj->GetNumWaypoints() == 0 ) {
             return false;

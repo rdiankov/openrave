@@ -43,7 +43,7 @@ static const std::set<std::string> s_setBodyGroupNames = {
     "affine_jerks",
 };
 
-ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody,const std::string& interpolation)
+ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,const KinBodyConstPtr& pbody,const std::string& interpolation)
 {
     ConfigurationSpecification spec;
     spec._vgroups.resize(1);
@@ -694,7 +694,7 @@ int ConfigurationSpecification::RemoveGroups(const std::string& groupname, bool 
     return numremoved;
 }
 
-void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::vector<KinBodyPtr>& usedbodies) const
+void ConfigurationSpecification::ExtractUsedBodies(const EnvironmentBasePtr& env, std::vector<KinBodyPtr>& usedbodies) const
 {
     usedbodies.resize(0);
     FOREACHC(itgroup, _vgroups) {
@@ -712,7 +712,7 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
-void ConfigurationSpecification::ExtractUsedIndices(KinBodyConstPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+void ConfigurationSpecification::ExtractUsedIndices(const KinBodyConstPtr& body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
     // have to look through all groups since groups can contain the same body
     std::string bodyname = body->GetName();
@@ -936,7 +936,7 @@ ConfigurationSpecification ConfigurationSpecification::operator+ (const Configur
     return spec;
 }
 
-bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int timederivative) const
+bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dReal>::const_iterator itdata, const KinBodyConstPtr& pbody, int timederivative) const
 {
     bool bfound = false;
     string searchname;
@@ -1051,7 +1051,7 @@ bool ConfigurationSpecification::ExtractIkParameterization(IkParameterization& i
     return bfound;
 }
 
-bool ConfigurationSpecification::ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, int affinedofs, int timederivative) const
+bool ConfigurationSpecification::ExtractAffineValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, const KinBodyConstPtr& pbody, int affinedofs, int timederivative) const
 {
     if( affinedofs == 0 ) {
         return false;
@@ -1091,7 +1091,7 @@ bool ConfigurationSpecification::ExtractAffineValues(std::vector<dReal>::iterato
     return bfound;
 }
 
-bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative) const
+bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator itvalues, std::vector<dReal>::const_iterator itdata, const KinBodyConstPtr& pbody, const std::vector<int>& indices, int timederivative) const
 {
     if( indices.size() == 0 ) {
         return false;
@@ -1141,7 +1141,7 @@ bool ConfigurationSpecification::ExtractDeltaTime(dReal& deltatime, std::vector<
     return false;
 }
 
-bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, KinBodyConstPtr pbody, const std::vector<int>& indices, int timederivative) const
+bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator itdata, std::vector<dReal>::const_iterator itvalues, const KinBodyConstPtr& pbody, const std::vector<int>& indices, int timederivative) const
 {
     if( indices.size() == 0 ) {
         return false;
@@ -1198,7 +1198,7 @@ bool ConfigurationSpecification::InsertDeltaTime(std::vector<dReal>::iterator it
     \param[in] vaxis optional rotation axis if affinedofs specified \ref DOF_RotationAxis
     \param[in] if true will normalize rotations, should set to false if extracting velocity data
  */
-int SetBodyTransformFromAffineDOFValues(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis, int options)
+int SetBodyTransformFromAffineDOFValues(const std::vector<dReal>& values, const KinBodyPtr& pbody, int affinedofs, const Vector& vaxis, int options)
 {
     Transform t;
     if( affinedofs != DOF_Transform ) {
@@ -1209,13 +1209,13 @@ int SetBodyTransformFromAffineDOFValues(const std::vector<dReal>& values, KinBod
     return 0;
 }
 
-void GetAffineDOFValuesFromBodyTransform(std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+void GetAffineDOFValuesFromBodyTransform(std::vector<dReal>& values, const KinBodyPtr& pbody, int affinedofs, const Vector& vaxis)
 {
     values.resize(RaveGetAffineDOF(affinedofs));
     RaveGetAffineDOFValuesFromTransform(values.begin(), pbody->GetTransform(), affinedofs, vaxis);
 }
 
-int SetBodyVelocityFromAffineDOFVelocities(const std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis, int options)
+int SetBodyVelocityFromAffineDOFVelocities(const std::vector<dReal>& values, const KinBodyPtr& pbody, int affinedofs, const Vector& vaxis, int options)
 {
     Vector linearvel, angularvel;
     Vector quatrotation;
@@ -1230,7 +1230,7 @@ int SetBodyVelocityFromAffineDOFVelocities(const std::vector<dReal>& values, Kin
     return 0;
 }
 
-void GetAffineDOFVelocitiesFromBodyVelocity(std::vector<dReal>& values, KinBodyPtr pbody, int affinedofs, const Vector& vaxis)
+void GetAffineDOFVelocitiesFromBodyVelocity(std::vector<dReal>& values, const KinBodyPtr& pbody, int affinedofs, const Vector& vaxis)
 {
     values.resize(RaveGetAffineDOF(affinedofs));
     Vector linearvel, angularvel;
@@ -1242,7 +1242,7 @@ void GetAffineDOFVelocitiesFromBodyVelocity(std::vector<dReal>& values, KinBodyP
     RaveGetAffineDOFValuesFromVelocity(values.begin(), linearvel, angularvel, quatrotation, affinedofs, vaxis);
 }
 
-boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> ConfigurationSpecification::GetSetFn(EnvironmentBasePtr penv) const
+boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> ConfigurationSpecification::GetSetFn(const EnvironmentBasePtr& penv) const
 {
     boost::shared_ptr<SetConfigurationStateFn> fn;
     Validate();
@@ -1325,7 +1325,7 @@ boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> Configura
     return fn;
 }
 
-boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> ConfigurationSpecification::GetGetFn(EnvironmentBasePtr penv) const
+boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> ConfigurationSpecification::GetGetFn(const EnvironmentBasePtr& penv) const
 {
     boost::shared_ptr<GetConfigurationStateFn> fn;
     Validate();
@@ -1462,7 +1462,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
     ConvertGroupData(ittargetdata, targetstride, gtarget, &(*itsourcedata), sourcestride, gsource, numpoints, penv, filluninitialized);
 }
 
-void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
+void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, const EnvironmentBaseConstPtr& penv, bool filluninitialized)
 {
     if( numpoints > 1 ) {
         BOOST_ASSERT(targetstride != 0 && sourcestride != 0 );
@@ -1795,7 +1795,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
     }
 }
 
-void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification &targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification &sourcespec, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
+void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittargetdata, const ConfigurationSpecification &targetspec, std::vector<dReal>::const_iterator itsourcedata, const ConfigurationSpecification &sourcespec, size_t numpoints, const EnvironmentBaseConstPtr& penv, bool filluninitialized)
 {
     for(size_t igroup = 0; igroup < targetspec._vgroups.size(); ++igroup) {
         std::vector<ConfigurationSpecification::Group>::const_iterator itcompatgroup = sourcespec.FindCompatibleGroup(targetspec._vgroups[igroup]);
@@ -1961,12 +1961,12 @@ std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec
     }
     std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(spec), _1, _2));
 
-    O << "<configuration>" << endl;
+    O << "<configuration>" << '\n';
     FOREACH(itgroupindex, vgroupindices) {
         const ConfigurationSpecification::Group& group = spec._vgroups[*itgroupindex];
-        O << "<group name=\"" << group.name << "\" offset=\"" << group.offset << "\" dof=\"" << group.dof << "\" interpolation=\"" << group.interpolation << "\"/>" << endl;
+        O << "<group name=\"" << group.name << "\" offset=\"" << group.offset << "\" dof=\"" << group.dof << "\" interpolation=\"" << group.interpolation << "\"/>" << '\n';
     }
-    O << "</configuration>" << endl;
+    O << "</configuration>" << '\n';
     return O;
 }
 

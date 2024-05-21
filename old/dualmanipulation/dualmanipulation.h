@@ -20,7 +20,7 @@
 class DualManipulation : public ModuleBase
 {
 public:
-    DualManipulation(EnvironmentBasePtr penv) : ModuleBase(penv) {
+    DualManipulation(const EnvironmentBasePtr& penv) : ModuleBase(penv) {
         __description = ":Interface Author: Achint Aggarwal\n\nInterface for planners using more than one manipulator simultaneously.";
         RegisterCommand("SetActiveManip",boost::bind(&DualManipulation::SetActiveManip,this,_1,_2),
                         "Set the active manipulator");

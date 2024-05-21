@@ -182,12 +182,12 @@ protected:
     };
 
 public:
-    static BaseXMLReaderPtr CreateXMLReader(InterfaceBasePtr ptr, const AttributesList& atts)
+    static BaseXMLReaderPtr CreateXMLReader(const InterfaceBasePtr& ptr, const AttributesList& atts)
     {
         return BaseXMLReaderPtr(new PhysicsPropertiesXMLReader(boost::dynamic_pointer_cast<ODEPhysicsEngine>(ptr),atts));
     }
 
-    ODEPhysicsEngine(OpenRAVE::EnvironmentBasePtr penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, "odephysics", true)) {
+    ODEPhysicsEngine(const OpenRAVE::EnvironmentBasePtr& penv) : OpenRAVE::PhysicsEngineBase(penv), _odespace(new ODESpace(penv, "odephysics", true)) {
         stringstream ss;
         ss << ":Interface Author: Rosen Diankov\n\nODE physics engine\n\n\
 It is possible to set ODE physics engine and its properties inside the <environment> XML tags by typing:\n\n\
@@ -275,7 +275,7 @@ The possible properties that can be set are: ";
         }
     }
 
-    virtual bool InitKinBody(KinBodyPtr pbody)
+    virtual bool InitKinBody(const KinBodyPtr& pbody)
     {
         ODESpace::KinBodyInfoPtr pinfo = boost::dynamic_pointer_cast<ODESpace::KinBodyInfo>(pbody->GetUserData("odephysics"));
         // need the pbody check since kinbodies can be cloned and could have the wrong pointer
@@ -286,7 +286,7 @@ The possible properties that can be set are: ";
         return !!pinfo;
     }
 
-    virtual void RemoveKinBody(KinBodyPtr pbody)
+    virtual void RemoveKinBody(const KinBodyPtr& pbody)
     {
         if( !!pbody ) {
             pbody->RemoveUserData("odephysics");
@@ -309,7 +309,7 @@ The possible properties that can be set are: ";
         return false;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         PhysicsEngineBase::Clone(preference,cloningoptions);
         boost::shared_ptr<ODEPhysicsEngine const> r = boost::dynamic_pointer_cast<ODEPhysicsEngine const>(preference);
@@ -328,7 +328,7 @@ The possible properties that can be set are: ";
         }
     }
 
-    virtual bool SetLinkVelocity(KinBody::LinkPtr plink, const Vector& _linearvel, const Vector& angularvel)
+    virtual bool SetLinkVelocity(const KinBody::LinkPtr& plink, const Vector& _linearvel, const Vector& angularvel)
     {
         _odespace->Synchronize(plink->GetParent());
         dBodyID body = _odespace->GetLinkBody(plink);
@@ -341,7 +341,7 @@ The possible properties that can be set are: ";
         return true;
     }
 
-    virtual bool SetLinkVelocities(KinBodyPtr pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
+    virtual bool SetLinkVelocities(const KinBodyPtr& pbody, const std::vector<std::pair<Vector,Vector> >& velocities)
     {
         bool bsuccess = true;
         _odespace->Synchronize(pbody);
@@ -361,7 +361,7 @@ The possible properties that can be set are: ";
         return bsuccess;
     }
 
-    virtual bool GetLinkVelocity(KinBody::LinkConstPtr plink, Vector& linearvel, Vector& angularvel)
+    virtual bool GetLinkVelocity(const KinBody::LinkConstPtr& plink, Vector& linearvel, Vector& angularvel)
     {
         _odespace->Synchronize(plink->GetParent());
         dBodyID body = _odespace->GetLinkBody(plink);
@@ -378,7 +378,7 @@ The possible properties that can be set are: ";
         return true;
     }
 
-    virtual bool GetLinkVelocities(KinBodyConstPtr pbody, std::vector<std::pair<Vector,Vector> >& velocities)
+    virtual bool GetLinkVelocities(const KinBodyConstPtr& pbody, std::vector<std::pair<Vector,Vector> >& velocities)
     {
         _odespace->Synchronize(pbody);
         velocities.resize(0);
@@ -396,7 +396,7 @@ The possible properties that can be set are: ";
         return true;
     }
 
-    virtual bool GetJointForceTorque(KinBody::JointConstPtr pjoint, Vector& force,Vector& torque){
+    virtual bool GetJointForceTorque(const KinBody::JointConstPtr& pjoint, Vector& force,Vector& torque){
         _odespace->Synchronize(pjoint->GetParent());
         dJointID joint = _odespace->GetJoint(pjoint);
         dJointFeedback* feedback = dJointGetFeedback( joint );
@@ -420,7 +420,7 @@ The possible properties that can be set are: ";
         return true;
     }
 
-    virtual bool GetJointVelocity(KinBody::JointConstPtr pjoint, std::vector<OpenRAVE::dReal>& vJointVelocity)
+    virtual bool GetJointVelocity(const KinBody::JointConstPtr& pjoint, std::vector<OpenRAVE::dReal>& vJointVelocity)
     {
         dJointID joint = _odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );
@@ -434,7 +434,7 @@ The possible properties that can be set are: ";
         return true;
     }
 
-    virtual bool SetBodyForce(KinBody::LinkPtr plink, const Vector& force, const Vector& position, bool bAdd)
+    virtual bool SetBodyForce(const KinBody::LinkPtr& plink, const Vector& force, const Vector& position, bool bAdd)
     {
         dBodyID body = _odespace->GetLinkBody(plink);
         if( body == NULL ) {
@@ -448,7 +448,7 @@ The possible properties that can be set are: ";
         return true;
     }
 
-    virtual bool SetBodyTorque(KinBody::LinkPtr plink, const Vector& torque, bool bAdd)
+    virtual bool SetBodyTorque(const KinBody::LinkPtr& plink, const Vector& torque, bool bAdd)
     {
         dBodyID body = _odespace->GetLinkBody(plink);
         if( body == NULL ) {
@@ -465,7 +465,7 @@ The possible properties that can be set are: ";
         return true;
     }
 
-    virtual bool AddJointTorque(KinBody::JointPtr pjoint, const std::vector<OpenRAVE::dReal>& pTorques)
+    virtual bool AddJointTorque(const KinBody::JointPtr& pjoint, const std::vector<OpenRAVE::dReal>& pTorques)
     {
         dJointID joint = _odespace->GetJoint(pjoint);
         BOOST_ASSERT( joint != NULL );

@@ -1001,7 +1001,7 @@ bool DynamicPath::IsValid() const
 }
 
 ////////Puttichai
-void DynamicPath::Save(std::string filename) const {
+void DynamicPath::Save(const std::string& filename) const {
     size_t ndof = ramps[0].ramps.size();
     for (size_t i = 1; i < ramps.size(); ++i) {
         // simple verification

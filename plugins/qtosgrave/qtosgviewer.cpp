@@ -75,7 +75,7 @@ protected:
 };
 typedef boost::shared_ptr<ViewerThreadCallbackData> ViewerThreadCallbackDataPtr;
 
-QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput, QCoreApplication* pQtApp) : QMainWindow(NULL, Qt::Window), ViewerBase(penv)
+QtOSGViewer::QtOSGViewer(const EnvironmentBasePtr& penv, std::istream& sinput, QCoreApplication* pQtApp) : QMainWindow(NULL, Qt::Window), ViewerBase(penv)
 {
     BOOST_ASSERT(!!pQtApp);
     //
@@ -1428,7 +1428,7 @@ void QtOSGViewer::Show(int showtype)
 //    }
 }
 
-bool QtOSGViewer::GetFractionOccluded(KinBodyPtr pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded)
+bool QtOSGViewer::GetFractionOccluded(const KinBodyPtr& pbody, int width, int height, float nearPlane, float farPlane, const RaveTransform<float>& extrinsic, const float* pKK, double& fracOccluded)
 {
     return false;
 }
@@ -1474,7 +1474,7 @@ void QtOSGViewer::_StopTrackLink()
     }
 }
 
-bool QtOSGViewer::_TrackLink(KinBody::LinkPtr link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
+bool QtOSGViewer::_TrackLink(const KinBody::LinkPtr& link, const RaveTransform<float>& linkRelativeTranslation, std::string infoText)
 {
     if(!!_ptrackinglink && _ptrackinglink == link && !_currentTrackLinkRelTransform.CompareTransform(linkRelativeTranslation, 1e-7)) {
         // already tracking the requested link, nothing to be done
@@ -2469,7 +2469,7 @@ void _ReleaseQtOSGViewer(QtOSGViewer* pViewer, boost::shared_ptr<QCoreApplicatio
     pQtApp.reset(); // will be deleted after the last viewer created is gone
 }
 
-ViewerBasePtr CreateQtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput)
+ViewerBasePtr CreateQtOSGViewer(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     static int s_QtArgc = 0; // has to be static!
     boost::shared_ptr<QCoreApplication> pQtApp = s_pQtApp.lock();

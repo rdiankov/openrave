@@ -531,7 +531,7 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromIv(SoNode* plinknode) const
     return KinBody::LinkPtr();
 }
 
-RobotItem::RobotItem(QtCoinViewerPtr viewer, RobotBasePtr robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom), _probot(robot)
+RobotItem::RobotItem(QtCoinViewerPtr viewer, const RobotBasePtr& robot, ViewGeometry viewgeom) : KinBodyItem(viewer, robot, viewgeom), _probot(robot)
 {
 }
 

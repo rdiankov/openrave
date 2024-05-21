@@ -118,11 +118,11 @@ public:
     class OPENRAVE_API Manipulator : public boost::enable_shared_from_this<Manipulator>
     {
 public:
-        Manipulator(RobotBasePtr probot, const ManipulatorInfo& info);
+        Manipulator(const RobotBasePtr& probot, const ManipulatorInfo& info);
         Manipulator(const Manipulator &r);
 
         /// \brief can switch the underyling robot
-        Manipulator(RobotBasePtr probot, boost::shared_ptr<Manipulator const> r);
+        Manipulator(const RobotBasePtr& probot, const boost::shared_ptr<Manipulator const>& r);
 
         ~Manipulator();
 
@@ -177,7 +177,7 @@ public:
         /// Due to complications with translation,rotation,direction,and ray ik,
         /// the ik solver should take into account the grasp transform (_info._tLocalTool) internally.
         /// The actual ik primitives are transformed into the base frame only.
-        bool SetIkSolver(IkSolverBasePtr iksolver);
+        bool SetIkSolver(const IkSolverBasePtr& iksolver);
 
         /// \brief Returns the currently set ik solver
         IkSolverBasePtr GetIkSolver() const;
@@ -299,8 +299,8 @@ public:
         /// \return true if there is a valid ik solution.
         bool FindIKSolution(const IkParameterization& param, std::vector<dReal>& solution, int filteroptions) const;
         bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions) const;
-        bool FindIKSolution(const IkParameterization& param, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
-        bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
+        bool FindIKSolution(const IkParameterization& param, int filteroptions, const IkReturnPtr& ikreturn, const IkFailureAccumulatorBasePtr& paccumulator = nullptr) const;
+        bool FindIKSolution(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, const IkReturnPtr& ikreturn, const IkFailureAccumulatorBasePtr& paccumulator = nullptr) const;
 
         /// \brief Find all the IK solutions for the given end effector transform
         ///
@@ -310,8 +310,8 @@ public:
         /// \return true if there is at least one valid ik solution.
         bool FindIKSolutions(const IkParameterization& param, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
         bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions) const;
-        bool FindIKSolutions(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
-        bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator = nullptr) const;
+        bool FindIKSolutions(const IkParameterization& param, int filteroptions, std::vector<IkReturnPtr>& vikreturns, const IkFailureAccumulatorBasePtr& paccumulator = nullptr) const;
+        bool FindIKSolutions(const IkParameterization& param, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, const IkFailureAccumulatorBasePtr& paccumulator = nullptr) const;
 
         /** \brief returns the parameterization of a given IK type for the current manipulator position.
 
@@ -372,7 +372,7 @@ public:
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
-        bool CheckEndEffectorCollision(CollisionReportPtr report = CollisionReportPtr()) const;
+        bool CheckEndEffectorCollision(const CollisionReportPtr& report = CollisionReportPtr()) const;
 
         /** \brief Checks collision with only the gripper and the rest of the environment given a new end-effector transform. Ignores disabled links.
 
@@ -389,7 +389,7 @@ public:
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
-        bool CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) const;
+        bool CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /** \brief Checks self-collision with only the gripper with the rest of the robot. Ignores disabled links.
 
@@ -397,7 +397,7 @@ public:
             \param[in] bIgnoreManipulatorLinks if true, then will ignore any links that can potentially move because of manipulator moving.
             \return true if a collision occurred
          */
-        bool CheckEndEffectorSelfCollision(CollisionReportPtr report = CollisionReportPtr(), bool bIgnoreManipulatorLinks=false) const;
+        bool CheckEndEffectorSelfCollision(const CollisionReportPtr& report = CollisionReportPtr(), bool bIgnoreManipulatorLinks=false) const;
 
         /** \brief Checks self-collision with only the gripper given its end-effector transform with the rest of the robot. Ignores disabled links.
 
@@ -406,7 +406,7 @@ public:
             \param[in] bIgnoreManipulatorLinks if true, then will ignore any links that can potentially move because of manipulator moving.
             \return true if a collision occurred
          */
-        bool CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr(), bool bIgnoreManipulatorLinks=false) const;
+        bool CheckEndEffectorSelfCollision(const Transform& tEE, const CollisionReportPtr& report = CollisionReportPtr(), bool bIgnoreManipulatorLinks=false) const;
 
         /** \brief Checks environment collisions with only the gripper given an IK parameterization of the gripper.
 
@@ -429,7 +429,7 @@ public:
             \return true if a collision occurred
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
-        bool CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
+        bool CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
 
         /** \brief Checks self-collisions with only the gripper given an IK parameterization of the gripper.
 
@@ -441,14 +441,14 @@ public:
             \return true if a collision occurred
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
-        bool CheckEndEffectorSelfCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0, bool bIgnoreManipulatorLinks=false) const;
+        bool CheckEndEffectorSelfCollision(const IkParameterization& ikparam, const CollisionReportPtr& report = CollisionReportPtr(), int numredundantsamples=0, bool bIgnoreManipulatorLinks=false) const;
 
         /** \brief Checks collision with the environment with all the independent links of the robot. Ignores disabled links.
 
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
-        bool CheckIndependentCollision(CollisionReportPtr report = CollisionReportPtr()) const;
+        bool CheckIndependentCollision(const CollisionReportPtr& report = CollisionReportPtr()) const;
 
         /** \brief Checks collision with a target body and all the independent links of the robot. Ignores disabled links.
 
@@ -456,10 +456,10 @@ public:
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
-        //bool CheckIndependentCollision(KinBodyConstPtr body, CollisionReportPtr report = CollisionReportPtr()) const;
+        //bool CheckIndependentCollision(const KinBodyConstPtr& body, CollisionReportPtr report = CollisionReportPtr()) const;
 
         /// \brief return true if the body is being grabbed by any link on this manipulator
-        bool IsGrabbing(KinBodyConstPtr body) const RAVE_DEPRECATED {
+        bool IsGrabbing(const KinBodyConstPtr& body) const RAVE_DEPRECATED {
             return IsGrabbing(*body);
         }
         bool IsGrabbing(const KinBody &body) const;
@@ -514,9 +514,9 @@ protected:
         /// \brief compute internal information from user-set info
         void _ComputeInternalInformation();
         /// \brief check end-effector collision with the given end-effector transform and with the specified body. if pbody is null, check with the environment.
-        bool _CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const;
+        bool _CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, const CollisionReportPtr& report) const;
         /// \brief check end-effector collision with the given ikparam and the specified body. if pbody is null, check with the environment.
-        bool _CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const;
+        bool _CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, const CollisionReportPtr& report, int numredundantsamples) const;
 
         ManipulatorInfo _info; ///< user-set information
 private:
@@ -617,9 +617,9 @@ public:
     class OPENRAVE_API AttachedSensor : public boost::enable_shared_from_this<AttachedSensor>
     {
 public:
-        AttachedSensor(RobotBasePtr probot);
-        AttachedSensor(RobotBasePtr probot, const AttachedSensor &sensor, int cloningoptions);
-        AttachedSensor(RobotBasePtr probot, const AttachedSensorInfo& info);
+        AttachedSensor(const RobotBasePtr& probot);
+        AttachedSensor(const RobotBasePtr& probot, const AttachedSensor &sensor, int cloningoptions);
+        AttachedSensor(const RobotBasePtr& probot, const AttachedSensorInfo& info);
         ~AttachedSensor();
 
         inline SensorBasePtr GetSensor() const {
@@ -762,9 +762,9 @@ public:
     class OPENRAVE_API ConnectedBody : public boost::enable_shared_from_this<ConnectedBody>
     {
 public:
-        ConnectedBody(RobotBasePtr probot);
-        ConnectedBody(RobotBasePtr probot, const ConnectedBody &connectedBody, int cloningoptions);
-        ConnectedBody(RobotBasePtr probot, const ConnectedBodyInfo& info);
+        ConnectedBody(const RobotBasePtr& probot);
+        ConnectedBody(const RobotBasePtr& probot, const ConnectedBody &connectedBody, int cloningoptions);
+        ConnectedBody(const RobotBasePtr& probot, const ConnectedBodyInfo& info);
         ~ConnectedBody();
 
         /// \brief have the connected body to be added to the robot kinematics. The active level has nothing to do with visibility or enabling of the links.
@@ -914,7 +914,7 @@ protected:
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
 public:
-        RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
+        RobotStateSaver(const RobotBasePtr& probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
         virtual ~RobotStateSaver();
 
         /// \brief restore the state
@@ -1269,7 +1269,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData) override;
+    bool Grab(const KinBodyPtr& body, const LinkPtr& pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grab the body with the specified link.
 
@@ -1280,7 +1280,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData) override;
+    bool Grab(const KinBodyPtr& body, const LinkPtr& pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grab a body with the specified link.
 
@@ -1289,7 +1289,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed/
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData) override;
+    bool Grab(const KinBodyPtr& body, const LinkPtr& pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData) override;
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
@@ -1299,7 +1299,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(const KinBodyPtr& body, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
@@ -1309,7 +1309,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(const KinBodyPtr& body, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
@@ -1317,7 +1317,7 @@ private:
         \param[in] rGrabbedUserData custom data to keep in Grabbed
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(const KinBodyPtr& body, const rapidjson::Value& rGrabbedUserData);
 
     //@}
 
@@ -1328,7 +1328,7 @@ private:
     virtual void SimulationStep(dReal fElapsedTime) override;
 
     /// does not clone the grabbed bodies since it requires pointers from other bodies (that might not be initialized yet)
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
+    virtual void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions) override;
 
     /// \return true if this body is derived from RobotBase
     bool IsRobot() const override {
@@ -1365,7 +1365,7 @@ private:
     virtual UpdateFromInfoResult UpdateFromRobotInfo(const RobotBaseInfo& info);
 
 protected:
-    RobotBase(EnvironmentBasePtr penv);
+    RobotBase(const EnvironmentBasePtr& penv);
 
     /// \brief Proprocess the manipulators and sensors and build the specific robot hashes.
     void _ComputeInternalInformation() override;

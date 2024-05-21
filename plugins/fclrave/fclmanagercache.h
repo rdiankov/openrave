@@ -94,7 +94,7 @@ public:
     /// \brief sets up manager for body checking
     ///
     /// \param bTrackActiveDOF true if should be tracking the active dof
-    void InitBodyManager(KinBodyConstPtr pbody, bool bTrackActiveDOF);
+    void InitBodyManager(const KinBodyConstPtr& pbody, bool bTrackActiveDOF);
 
     /// \brief sets up manager for environment checking
     /// \param excludedEnvBodyIndices Index corresponds to the environement body index. value 1 means excluded. if value at index 5 is 1, KinBody with env body index 5 is excluded
@@ -104,7 +104,7 @@ public:
     void EnsureBodies(const std::vector<KinBodyConstPtr>& vbodies);
 
     /// \brief ensures that pbody is being tracked inside the manager
-//    void EnsureBody(KinBodyConstPtr pbody)
+//    void EnsureBody(const KinBodyConstPtr& pbody)
 //    {
 //        _tmpSortedBuffer.resize(0);
 //        std::map<int, KinBodyCache>::iterator it = _vecCachedBodies.find(pbody->GetEnvironmentBodyIndex());

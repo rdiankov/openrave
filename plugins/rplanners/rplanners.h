@@ -554,7 +554,7 @@ public:
 
     void DumpTree(std::ostream& o) const
     {
-        o << _numnodes << endl;
+        o << _numnodes << '\n';
         // first organize all nodes into a vector struct with indices
         std::vector<NodePtr> vnodes; vnodes.reserve(_numnodes);
         FOREACHC(itchildren, _vsetLevelNodes) {
@@ -569,10 +569,10 @@ public:
             }
             typename std::vector<NodePtr>::iterator itnode = find(vnodes.begin(), vnodes.end(), node->rrtparent);
             if( itnode == vnodes.end() ) {
-                o << "-1" << endl;
+                o << "-1" << '\n';
             }
             else {
-                o << (size_t)(itnode-vnodes.begin()) << endl;
+                o << (size_t)(itnode-vnodes.begin()) << '\n';
             }
         }
     }

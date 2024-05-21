@@ -18,12 +18,12 @@
 
 namespace OpenRAVE {
 
-ControllerBase::ControllerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Controller, penv) {
+ControllerBase::ControllerBase(const EnvironmentBasePtr& penv) : InterfaceBase(PT_Controller, penv) {
 }
 ControllerBase::~ControllerBase() {
 }
 
-MultiControllerBase::MultiControllerBase(EnvironmentBasePtr penv) : ControllerBase(penv) {
+MultiControllerBase::MultiControllerBase(const EnvironmentBasePtr& penv) : ControllerBase(penv) {
 }
 
 MultiControllerBase::~MultiControllerBase() {

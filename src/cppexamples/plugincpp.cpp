@@ -49,7 +49,7 @@ namespace cppexamples {
 class MyModule : public ModuleBase
 {
 public:
-    MyModule(EnvironmentBasePtr penv) : ModuleBase(penv)
+    MyModule(const EnvironmentBasePtr& penv) : ModuleBase(penv)
     {
         __description = "A very simple plugin.";
         RegisterCommand("numbodies",boost::bind(&MyModule::NumBodies,this,_1,_2),"returns bodies");

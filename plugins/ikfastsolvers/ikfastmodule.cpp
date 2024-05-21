@@ -204,7 +204,7 @@ public:
             return true;
         }
 
-        IkSolverBasePtr CreateSolver(EnvironmentBasePtr penv, const vector<dReal>& vfreeinc, dReal ikthreshold)
+        IkSolverBasePtr CreateSolver(const EnvironmentBasePtr& penv, const vector<dReal>& vfreeinc, dReal ikthreshold)
         {
             std::stringstream sversion(GetIkFastVersion());
             uint32_t ikfastversion = 0;
@@ -319,7 +319,7 @@ private:
     }
 
 public:
-    IkFastModule(EnvironmentBasePtr penv, std::istream& sinput) : ModuleBase(penv)
+    IkFastModule(const EnvironmentBasePtr& penv, std::istream& sinput) : ModuleBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\n\nAllows dynamic loading and registering of ikfast shared objects to openrave plugins.\nAlso contains several test routines for inverse kinematics.";
         RegisterCommand("AddIkLibrary",boost::bind(&IkFastModule::AddIkLibrary,this,_1,_2),
@@ -430,7 +430,7 @@ public:
         return lib;
     }
 
-    void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions)
     {
         InterfaceBase::Clone(preference,cloningoptions);
         boost::shared_ptr<IkFastModule const> r = RaveInterfaceConstCast<IkFastModule>(preference);
@@ -893,7 +893,7 @@ public:
         return true;
     }
 
-    bool DebugIKFindSolution(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, std::vector<dReal>& viksolution, int filteroptions, std::vector<dReal>& parameters, int paramindex, dReal deltafree)
+    bool DebugIKFindSolution(const RobotBase::ManipulatorPtr& pmanip, const IkParameterization& twrist, std::vector<dReal>& viksolution, int filteroptions, std::vector<dReal>& parameters, int paramindex, dReal deltafree)
     {
         // ignore boundary cases since next to limits and can fail due to limit errosr
         for(dReal f = 0; f <= 1; f += deltafree) {
@@ -913,7 +913,7 @@ public:
         return false;
     }
 
-    void DebugIKFindSolutions(RobotBase::ManipulatorPtr pmanip, const IkParameterization& twrist, vector< vector<dReal> >& viksolutions, int filteroptions, std::vector<dReal>& parameters, int paramindex, dReal deltafree)
+    void DebugIKFindSolutions(const RobotBase::ManipulatorPtr& pmanip, const IkParameterization& twrist, vector< vector<dReal> >& viksolutions, int filteroptions, std::vector<dReal>& parameters, int paramindex, dReal deltafree)
     {
         // ignore boundary cases since next to limits and can fail due to limit errosr
         for(dReal f = 0; f <= 1; f += deltafree) {
@@ -1437,7 +1437,7 @@ public:
         return true;
     }
 
-    static void GetIKFastCommand(std::ostream& o, const IkParameterization& globalparam, RobotBase::ManipulatorPtr pmanip)
+    static void GetIKFastCommand(std::ostream& o, const IkParameterization& globalparam, const RobotBase::ManipulatorPtr& pmanip)
     {
         IkParameterization param = pmanip->GetBase()->GetTransform().inverse()*globalparam;
         switch(param.GetType()) {
@@ -1544,7 +1544,7 @@ public:
     }
 
     /// sinput holds the freeindices and other run-time configuraiton parameters
-    static IkSolverBasePtr CreateIkSolver(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, EnvironmentBasePtr penv)
+    static IkSolverBasePtr CreateIkSolver(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, const EnvironmentBasePtr& penv)
     {
         string name; name.resize(_name.size());
         std::transform(_name.begin(), _name.end(), name.begin(), ::tolower);
@@ -1564,7 +1564,7 @@ public:
     string _platform; ///<  current platform architecture. ie x86-64
 };
 
-ModuleBasePtr CreateIkFastModule(EnvironmentBasePtr penv, std::istream& sinput)
+ModuleBasePtr CreateIkFastModule(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return ModuleBasePtr(new IkFastModule(penv,sinput));
 }
@@ -1574,7 +1574,7 @@ void DestroyIkFastLibraries() {
     IkFastModule::GetLibraries() = NULL;
 }
 
-IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, EnvironmentBasePtr penv)
+IkSolverBasePtr CreateIkSolverFromName(const string& _name, const std::vector<dReal>& vfreeinc, dReal ikthreshold, const EnvironmentBasePtr& penv)
 {
     return IkFastModule::CreateIkSolver(_name,vfreeinc,ikthreshold, penv);
 }

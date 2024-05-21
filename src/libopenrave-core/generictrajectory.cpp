@@ -171,7 +171,7 @@ class GenericTrajectory : public TrajectoryBase
 {
     std::map<string,int> _maporder;
 public:
-    GenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput) : TrajectoryBase(penv), _timeoffset(-1)
+    GenericTrajectory(const EnvironmentBasePtr& penv, std::istream& sinput) : TrajectoryBase(penv), _timeoffset(-1)
     {
         _maporder["deltatime"] = 0;
         _maporder["joint_snaps"] = 1;
@@ -823,7 +823,7 @@ public:
         }
     }
 
-    void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override
+    void Clone(const InterfaceBaseConstPtr& preference, int cloningoptions) override
     {
         InterfaceBase::Clone(preference,cloningoptions);
         TrajectoryBaseConstPtr r = RaveInterfaceConstCast<TrajectoryBase>(preference);
@@ -1811,7 +1811,7 @@ protected:
     mutable bool _bSamplingVerified; ///< if false, then _VerifySampling() has not be called yet to verify that all points can be sampled.
 };
 
-TrajectoryBasePtr CreateGenericTrajectory(EnvironmentBasePtr penv, std::istream& sinput)
+TrajectoryBasePtr CreateGenericTrajectory(const EnvironmentBasePtr& penv, std::istream& sinput)
 {
     return TrajectoryBasePtr(new GenericTrajectory(penv,sinput));
 }

@@ -22,7 +22,7 @@
 using namespace boost::placeholders;
 using namespace OpenRAVE;
 
-BodyConfigurationSampler::BodyConfigurationSampler(EnvironmentBasePtr penv, std::istream& sinput) : SpaceSamplerBase(penv)
+BodyConfigurationSampler::BodyConfigurationSampler(const EnvironmentBasePtr& penv, std::istream& sinput) : SpaceSamplerBase(penv)
 {
     __description = ":Interface Author: Rosen Diankov\n\n\
 Samples a kinbody configuration space, treats revolute and circular joints appropriately. When creating pass the following parameters::\n\n\
