@@ -438,8 +438,8 @@ public:
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
         \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual InterfaceBasePtr ReadInterfaceData(const InterfaceBasePtr& pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLData(const InterfaceBasePtr& pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadInterfaceData(pinterface,type,data,atts);
     }
 

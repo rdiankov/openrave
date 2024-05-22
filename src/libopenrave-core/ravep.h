@@ -294,7 +294,7 @@ int& GetXMLErrorCount();
 bool ParseXMLFile(const BaseXMLReaderPtr& preader, const std::string& filename);
 bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata);
 BaseXMLReaderPtr CreateEnvironmentReader(const EnvironmentBasePtr& penv, const AttributesList& atts);
-BaseXMLReaderPtr CreateInterfaceReader(const EnvironmentBasePtr& penv, InterfaceType type, const InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
+BaseXMLReaderPtr CreateInterfaceReader(const EnvironmentBasePtr& penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList& atts);
 BaseXMLReaderPtr CreateInterfaceReader(const EnvironmentBasePtr& penv, const AttributesList& atts, bool bAddToEnvironment);
 
 /// \brief creates a trimesh from reading a file. tries to automatically determine the format by the filename extension

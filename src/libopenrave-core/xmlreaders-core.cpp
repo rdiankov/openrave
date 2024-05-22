@@ -601,7 +601,7 @@ static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
     return true;
 }
 
-static int raveXmlSAXUserParseFile(xmlSAXHandlerPtr sax, BaseXMLReaderPtr preader, const std::string& filename)
+static int raveXmlSAXUserParseFile(const xmlSAXHandlerPtr& sax, const BaseXMLReaderPtr& preader, const std::string& filename)
 {
     int ret = 0;
     xmlParserCtxtPtr ctxt;
@@ -642,7 +642,7 @@ static int raveXmlSAXUserParseFile(xmlSAXHandlerPtr sax, BaseXMLReaderPtr preade
     return ret;
 }
 
-static int raveXmlSAXUserParseMemory(xmlSAXHandlerPtr sax, BaseXMLReaderPtr preader, const char *buffer, int size)
+static int raveXmlSAXUserParseMemory(const xmlSAXHandlerPtr& sax, const BaseXMLReaderPtr& preader, const char *buffer, int size)
 {
     int ret = 0;
     xmlParserCtxtPtr ctxt;
@@ -1759,7 +1759,7 @@ typedef boost::shared_ptr<InterfaceXMLReader const> InterfaceXMLReaderConstPtr;
 class InterfaceXMLReader : public StreamXMLReader
 {
 public:
-    InterfaceXMLReader(const EnvironmentBasePtr& penv, const InterfaceBasePtr& pinterface, InterfaceType type, const string &xmltag, const AttributesList &atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
+    InterfaceXMLReader(const EnvironmentBasePtr& penv, InterfaceBasePtr& pinterface, InterfaceType type, const string &xmltag, const AttributesList &atts) : _penv(penv), _type(type), _pinterface(pinterface), _xmltag(xmltag) {
         _bProcessedLastTag = false;
         _atts = atts;
         string strtype;
@@ -1998,7 +1998,7 @@ public:
 protected:
     EnvironmentBasePtr _penv;
     InterfaceType _type;
-    InterfaceBasePtr _pinterface;
+    InterfaceBasePtr& _pinterface;
     BaseXMLReaderPtr _pcustomreader;
     string _xmltag, _interfaceprocessingtag;
     string _interfacename, _readername;
@@ -2010,7 +2010,7 @@ protected:
 class KinBodyXMLReader : public InterfaceXMLReader
 {
 public:
-    KinBodyXMLReader(const EnvironmentBasePtr& penv, const InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset_) {
+    KinBodyXMLReader(const EnvironmentBasePtr& penv, InterfaceBasePtr& pchain, InterfaceType type, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,pchain,type,"kinbody",atts), roottransoffset(roottransoffset_) {
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
         _masstype = MT_None;
@@ -2446,7 +2446,7 @@ protected:
 class ControllerXMLReader : public InterfaceXMLReader
 {
 public:
-    ControllerXMLReader(const EnvironmentBasePtr& penv, const InterfaceBasePtr& pinterface, const AttributesList &atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts) {
+    ControllerXMLReader(const EnvironmentBasePtr& penv, InterfaceBasePtr& pinterface, const AttributesList &atts,RobotBasePtr probot=RobotBasePtr()) : InterfaceXMLReader(penv,pinterface,PT_Controller,RaveGetInterfaceName(PT_Controller),atts) {
         _probot = probot;
         nControlTransformation = 0;
         FOREACHC(itatt, atts) {
@@ -2878,7 +2878,7 @@ protected:
 class RobotXMLReader : public InterfaceXMLReader
 {
 public:
-    RobotXMLReader(const EnvironmentBasePtr& penv, const InterfaceBasePtr& probot, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset_) {
+    RobotXMLReader(const EnvironmentBasePtr& penv, InterfaceBasePtr& probot, const AttributesList &atts, int roottransoffset_) : InterfaceXMLReader(penv,probot,PT_Robot,"robot",atts), roottransoffset(roottransoffset_) {
         _bSkipGeometry = false;
         _vScaleGeometry = Vector(1,1,1);
         rootoffset = rootjoffset = rootjpoffset = -1;
@@ -3168,7 +3168,7 @@ protected:
 template <InterfaceType type> class DummyInterfaceXMLReader : public InterfaceXMLReader
 {
 public:
-    DummyInterfaceXMLReader(const EnvironmentBasePtr& penv, const InterfaceBasePtr& pinterface, const string &xmltag, const AttributesList &atts) : InterfaceXMLReader(penv,pinterface,type,xmltag,atts) {
+    DummyInterfaceXMLReader(const EnvironmentBasePtr& penv, InterfaceBasePtr& pinterface, const string &xmltag, const AttributesList &atts) : InterfaceXMLReader(penv,pinterface,type,xmltag,atts) {
     }
     virtual ~DummyInterfaceXMLReader() {
     }
@@ -3177,7 +3177,7 @@ public:
 class ModuleXMLReader : public InterfaceXMLReader
 {
 public:
-    ModuleXMLReader(const EnvironmentBasePtr& penv, const InterfaceBasePtr& pinterface, const AttributesList &atts) : InterfaceXMLReader(penv,pinterface,PT_Module,RaveGetInterfaceName(PT_Module),atts) {
+    ModuleXMLReader(const EnvironmentBasePtr& penv, InterfaceBasePtr& pinterface, const AttributesList &atts) : InterfaceXMLReader(penv,pinterface,PT_Module,RaveGetInterfaceName(PT_Module),atts) {
         FOREACHC(itatt,atts) {
             if( itatt->first == "args" ) {
                 _args = itatt->second;
@@ -3200,7 +3200,7 @@ typedef boost::shared_ptr<ModuleXMLReader> ModuleXMLReaderPtr;
 class SensorXMLReader : public InterfaceXMLReader
 {
 public:
-    SensorXMLReader(const EnvironmentBasePtr& penv, const InterfaceBasePtr& pinterface, const AttributesList &atts) : InterfaceXMLReader(penv,pinterface,PT_Sensor,RaveGetInterfaceName(PT_Sensor),atts) {
+    SensorXMLReader(const EnvironmentBasePtr& penv, InterfaceBasePtr& pinterface, const AttributesList &atts) : InterfaceXMLReader(penv,pinterface,PT_Sensor,RaveGetInterfaceName(PT_Sensor),atts) {
         string args;
         _vScaleGeometry = Vector(1,1,1);
         FOREACHC(itatt,atts) {
@@ -3535,7 +3535,7 @@ BaseXMLReaderPtr CreateEnvironmentReader(const EnvironmentBasePtr& penv, const A
     return BaseXMLReaderPtr(new EnvironmentXMLReader(penv,atts,false));
 }
 
-BaseXMLReaderPtr CreateInterfaceReader(const EnvironmentBasePtr& penv, InterfaceType type, const InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList &atts)
+BaseXMLReaderPtr CreateInterfaceReader(const EnvironmentBasePtr& penv, InterfaceType type, InterfaceBasePtr& pinterface, const std::string& xmltag, const AttributesList &atts)
 {
     switch(type) {
     case PT_Planner: return InterfaceXMLReaderPtr(new DummyInterfaceXMLReader<PT_Planner>(penv,pinterface,xmltag,atts));

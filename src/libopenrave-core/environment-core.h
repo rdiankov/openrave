@@ -2333,7 +2333,7 @@ public:
         return pinterface;
     }
 
-    virtual InterfaceBasePtr ReadInterfaceData(const InterfaceBasePtr& pinterface, InterfaceType type, const std::string& data, const AttributesList& atts, const std::string& uri)
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts, const std::string& uri)
     {
         EnvironmentLock lockenv(GetMutex());
 
