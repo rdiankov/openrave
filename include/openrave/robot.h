@@ -380,7 +380,7 @@ public:
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
-        bool CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report = CollisionReportPtr()) const;
+        bool CheckEndEffectorCollision(const Transform& tEE, const CollisionReportPtr& report = CollisionReportPtr()) const;
 
         /** \brief Checks collision with only the gripper and a specified body given a new end-effector transform. Ignores disabled links.
 
@@ -389,7 +389,7 @@ public:
             \param[out] report [optional] collision report
             \return true if a collision occurred
          */
-        bool CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, CollisionReportPtr report = CollisionReportPtr()) const;
+        bool CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr()) const;
 
         /** \brief Checks self-collision with only the gripper with the rest of the robot. Ignores disabled links.
 
@@ -417,7 +417,7 @@ public:
             \return true if a collision occurred
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
-        bool CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
+        bool CheckEndEffectorCollision(const IkParameterization& ikparam, const CollisionReportPtr& report = CollisionReportPtr(), int numredundantsamples=0) const;
 
         /** \brief Checks collisions between the gripper given an IK parameterization of the gripper and a specified body
 
@@ -429,7 +429,7 @@ public:
             \return true if a collision occurred
             /// \throw openrave_exception if the gripper location cannot be fully determined from the passed in ik parameterization.
          */
-        bool CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, CollisionReportPtr report = CollisionReportPtr(), int numredundantsamples=0) const;
+        bool CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, const CollisionReportPtr& report = CollisionReportPtr(), int numredundantsamples=0) const;
 
         /** \brief Checks self-collisions with only the gripper given an IK parameterization of the gripper.
 

@@ -23,7 +23,7 @@ public:
     class ConveyorLink : public Link
     {
 public:
-        ConveyorLink(const std::string& name, Transform tinernal, KinBodyPtr parent) : Link(parent) {
+        ConveyorLink(const std::string& name, Transform tinernal, const KinBodyPtr& parent) : Link(parent) {
             _info.SetTransform(tinernal);
             _info._mass = 0.01; // just an estimate
             _info._vinertiamoments = Vector(1,1,1);
@@ -36,7 +36,7 @@ public:
     class ConveyorJoint : public Joint
     {
 public:
-        ConveyorJoint(const std::string& name, TrajectoryBasePtr trajfollow, boost::shared_ptr<KinBody::Mimic> mimic, bool bIsCircular, KinBodyPtr parent) : Joint(parent, KinBody::JointTrajectory) {
+        ConveyorJoint(const std::string& name, const TrajectoryBasePtr& trajfollow, boost::shared_ptr<KinBody::Mimic> mimic, bool bIsCircular, const KinBodyPtr& parent) : Joint(parent, KinBody::JointTrajectory) {
             _info._name = name;
             _info._vlowerlimit[0] = 0;
             _info._vupperlimit[0] = trajfollow->GetDuration();

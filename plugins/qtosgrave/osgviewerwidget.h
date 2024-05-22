@@ -67,7 +67,7 @@ public:
     void SetDraggerMode(const std::string &draggerName);
 
     /// \brief sets up a dragger selection for a robot or kinbody item
-    void SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint = KinBody::JointPtr());
+    void SelectItem(const KinBodyItemPtr& item, KinBody::JointPtr joint = KinBody::JointPtr());
 
     void SelectItemFromName(const std::string &name);
 
@@ -147,7 +147,7 @@ public:
     void SetUserHUDText(const std::string &text);
 
     /// \brief Set wire view to a node
-    void SetWire(OSGNodePtr node);
+    void SetWire(const OSGNodePtr& node);
 
     OSGGroupPtr GetSceneRoot() const {
         return _osgSceneRoot;
@@ -162,11 +162,11 @@ public:
     void HandleRayPick(const osgUtil::LineSegmentIntersector::Intersection &intersection, int buttonPressed, int modkeymask = 0);
 
     /// \brief handle case when link is selected
-    void SelectOSGLink(OSGNodePtr node, int modkeymask);
+    void SelectOSGLink(const OSGNodePtr& node, int modkeymask);
 
     /// \brief activate and configure trackmode manipulator to track given OSG node
     /// \brief trackInfoText is the text to display in canvas about the current element being tracked
-    void TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance);
+    void TrackNode(const OSGNodePtr& node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance);
     void StopTrackNode();
 
     osg::Camera *GetCamera();
@@ -188,7 +188,7 @@ public:
     void UpdateFromOSG();
 
     /// \brief Find node of Robot for the link picked
-    KinBodyItemPtr FindKinBodyItemFromOSGNode(OSGNodePtr node);
+    KinBodyItemPtr FindKinBodyItemFromOSGNode(const OSGNodePtr& node);
 
     /// \brief Find KinBodyItem from a kinbody name
     KinBodyItemPtr GetItemFromName(const std::string &name);
@@ -228,8 +228,8 @@ protected:
     void _UpdateHUDText();
 
     /// \brief Set up cameras
-    void _SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
-                      osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview);
+    void _SetupCamera(const osg::ref_ptr<osg::Camera>& camera, const osg::ref_ptr<osgViewer::View>& view,
+                      const osg::ref_ptr<osg::Camera>& hudcamera, const osg::ref_ptr<osgViewer::View>& hudview);
 
     /// \brief Retrieves RAVE environment world up unitary vector
     void _GetRAVEEnvironmentUpVector(osg::Vec3d& upVector);
@@ -241,7 +241,7 @@ protected:
 
 
     /// \brief Find joint into OpenRAVE core
-    KinBody::JointPtr _FindJoint(KinBodyItemPtr pitem, const KinBody::LinkPtr& link);
+    KinBody::JointPtr _FindJoint(const KinBodyItemPtr& pitem, const KinBody::LinkPtr& link);
 
     //  Lighting Stuff //
     osg::ref_ptr<osg::Material> _CreateSimpleMaterial(osg::Vec4 color);
@@ -285,7 +285,7 @@ protected:
     ///
     /// \param draggerName the type of dragger to create
     /// \param joint if not empty, the joint to create the dragger over (ie for moving the joint value)
-    OSGNodePtr _AddDraggerToObject(const std::string &draggerName, KinBodyItemPtr item, KinBody::JointPtr joint);
+    OSGNodePtr _AddDraggerToObject(const std::string &draggerName, const KinBodyItemPtr& item, const KinBody::JointPtr& joint);
 
     virtual void initializeGL();
 

@@ -563,7 +563,7 @@ public:
 
     friend class ItemSelectionCallbackData;
     friend class ViewerThreadCallbackData;
-    friend void DeleteItemCallbackSafe(QtOSGViewerWeakPtr, Item*);
+    friend void DeleteItemCallbackSafe(const QtOSGViewerWeakPtr&, Item*);
 };
 
 }

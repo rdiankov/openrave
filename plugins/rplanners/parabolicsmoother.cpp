@@ -2802,7 +2802,7 @@ protected:
         }
     }
 
-    std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level)
+    std::string _DumpTrajectory(const TrajectoryBasePtr& traj, DebugLevel level)
     {
         if( IS_DEBUGLEVEL(level) ) {
             std::string filename = _DumpTrajectory(traj);

@@ -25,7 +25,7 @@
 class IvDragger
 {
 public:
-    IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale);
+    IvDragger(const QtCoinViewerPtr& viewer, const ItemPtr& pItem, float draggerScale);
     virtual ~IvDragger();
 
     virtual void CheckCollision(bool flag) = 0;
@@ -100,7 +100,7 @@ protected:
 /// and checks for collision between the world and the joint's subtree.
 class IvJointDragger : public IvDragger {
 public:
-    IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint);
+    IvJointDragger(QtCoinViewerPtr viewer, const ItemPtr& pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint);
     ~IvJointDragger();
 
     void CheckCollision(bool flag);

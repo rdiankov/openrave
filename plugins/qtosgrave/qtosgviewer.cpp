@@ -24,7 +24,7 @@ namespace qtosgrave {
 
 #define ITEM_DELETER boost::bind(DeleteItemCallbackSafe,weak_viewer(),_1)
 
-void DeleteItemCallbackSafe(QtOSGViewerWeakPtr wpt, Item* pItem)
+void DeleteItemCallbackSafe(const QtOSGViewerWeakPtr& wpt, Item* pItem)
 {
     QtOSGViewerPtr pviewer = wpt.lock();
     if( !!pviewer ) {
@@ -38,7 +38,7 @@ void DeleteItemCallbackSafe(QtOSGViewerWeakPtr wpt, Item* pItem)
 class ItemSelectionCallbackData : public UserData
 {
 public:
-    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, const boost::shared_ptr<QtOSGViewer>& pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ItemSelectionCallbackData() {
         boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();
@@ -58,7 +58,7 @@ typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPt
 class ViewerThreadCallbackData : public UserData
 {
 public:
-    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, boost::shared_ptr<QtOSGViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, const boost::shared_ptr<QtOSGViewer>& pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerThreadCallbackData() {
         boost::shared_ptr<QtOSGViewer> pviewer = _pweakviewer.lock();

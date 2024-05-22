@@ -23,7 +23,7 @@
 const SbColor IvDragger::CHECK_COLOR(0.2f, 0.8f, 0.3f);
 const SbColor IvDragger::COLLISION_COLOR(1.0f, 0.4f, 0.0f);
 
-IvDragger::IvDragger(QtCoinViewerPtr viewer, ItemPtr pItem, float draggerScale)
+IvDragger::IvDragger(const QtCoinViewerPtr& viewer, const ItemPtr& pItem, float draggerScale)
 {
     _selectedItem = pItem;
     _viewer = viewer;
@@ -316,7 +316,7 @@ void IvObjectDragger::GetMessage(ostream& sout)
          << std::setw(8) << std::left << t.rot.w << ")" << endl;
 }
 
-IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, ItemPtr pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint) : IvDragger(viewer, pItem, draggerScale)
+IvJointDragger::IvJointDragger(QtCoinViewerPtr viewer, const ItemPtr& pItem, int iSelectedLink, float draggerScale, int iJointIndex, bool bHilitJoint) : IvDragger(viewer, pItem, draggerScale)
 {
     KinBodyItemPtr pbody = boost::dynamic_pointer_cast<KinBodyItem>(pItem);
     BOOST_ASSERT( !!pItem );

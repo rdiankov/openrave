@@ -3567,7 +3567,7 @@ private:
 
 protected:
     /// \brief constructors declared protected so that user always goes through environment to create bodies
-    KinBody(InterfaceType type, EnvironmentBasePtr penv);
+    KinBody(InterfaceType type, const EnvironmentBasePtr& penv);
 
     inline const Joint& _GetJointFromDOFIndex(int dofindex) const {
         return *_vecjoints.at(_vDOFIndices.at(dofindex));

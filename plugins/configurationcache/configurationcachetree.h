@@ -259,10 +259,10 @@ public:
     int GetNumKnownNodes();
 
     /// \brief save cache to disk
-    int SaveCache(std::string filename);
+    int SaveCache(const std::string& filename);
 
     /// \brief load cache from disk
-    int LoadCache(std::string filename, EnvironmentBasePtr penv);
+    int LoadCache(const std::string& filename, const EnvironmentBasePtr& penv);
 
 private:
     /// \brief creates new node on the pool

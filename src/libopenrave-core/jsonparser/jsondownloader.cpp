@@ -25,9 +25,9 @@
 namespace OpenRAVE {
 
 // Need to forward declare this
-static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext);
+static void _ParseDocument(const OpenRAVE::JSONDownloadContextPtr& pContext);
 
-static void _DecryptDocument(OpenRAVE::JSONDownloadContextPtr pContext)
+static void _DecryptDocument(const OpenRAVE::JSONDownloadContextPtr& pContext)
 {
     std::istringstream iss(pContext->buffer, std::ios::in | std::ios::binary);
     std::ostringstream oss;
@@ -41,7 +41,7 @@ static void _DecryptDocument(OpenRAVE::JSONDownloadContextPtr pContext)
     }
 }
 
-static void _ParseDocument(OpenRAVE::JSONDownloadContextPtr pContext)
+static void _ParseDocument(const OpenRAVE::JSONDownloadContextPtr& pContext)
 {
     if (StringEndsWith(pContext->uri, ".json")) {
         rapidjson::ParseResult ok = pContext->pDoc->Parse<rapidjson::kParseFullPrecisionFlag>(pContext->buffer.data(), pContext->buffer.size());

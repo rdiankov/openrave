@@ -202,7 +202,7 @@ protected:
     /// registers the XML reader, do not call in the constructor of this class!
     static UserDataPtr RegisterXMLReaderId(const EnvironmentBasePtr& penv, const std::string& xmlid);
 
-    SimpleSensorSystem(const std::string& xmlid, EnvironmentBasePtr penv);
+    SimpleSensorSystem(const std::string& xmlid, const EnvironmentBasePtr& penv);
     virtual ~SimpleSensorSystem();
 
     virtual void Reset();

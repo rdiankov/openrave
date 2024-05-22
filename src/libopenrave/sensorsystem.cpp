@@ -103,7 +103,7 @@ UserDataPtr SimpleSensorSystem::RegisterXMLReaderId(const EnvironmentBasePtr& pe
     return RaveRegisterXMLReader(PT_KinBody,xmlid, boost::bind(&SimpleSensorSystem::CreateXMLReaderId,xmlid, _1,_2));
 }
 
-SimpleSensorSystem::SimpleSensorSystem(const std::string& xmlid, EnvironmentBasePtr penv) : SensorSystemBase(penv), _expirationtime(2000000), _bShutdown(false), _threadUpdate(boost::bind(&SimpleSensorSystem::_UpdateBodiesThread,this))
+SimpleSensorSystem::SimpleSensorSystem(const std::string& xmlid, const EnvironmentBasePtr& penv) : SensorSystemBase(penv), _expirationtime(2000000), _bShutdown(false), _threadUpdate(boost::bind(&SimpleSensorSystem::_UpdateBodiesThread,this))
 {
     _xmlid = xmlid;
     std::transform(_xmlid.begin(), _xmlid.end(), _xmlid.begin(), ::tolower);

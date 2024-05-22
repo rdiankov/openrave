@@ -28,7 +28,7 @@
 #include <Inventor/actions/SoToVRML2Action.h>
 #include <Inventor/VRMLnodes/SoVRMLGroup.h>
 
-Item::Item(QtCoinViewerPtr viewer) : _viewer(viewer)
+Item::Item(const QtCoinViewerPtr& viewer) : _viewer(viewer)
 {
     // set up the Inventor nodes
     _ivXform = new SoTransform;
@@ -87,7 +87,7 @@ void Item::SetUnpickable()
     _ivGeom->insertChild(pickStyle, 0);
 }
 
-KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
+KinBodyItem::KinBodyItem(QtCoinViewerPtr viewer, const KinBodyPtr& pchain, ViewGeometry viewmode) : Item(viewer), _viewmode(viewmode)
 {
     _pchain = pchain;
     bGrabbed = false;
@@ -317,7 +317,7 @@ void KinBodyItem::Load()
     _bDrawStateChanged = false;
 }
 
-SoSeparator *KinBodyItem::RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, KinBody::Link::GeometryPtr geom)
+SoSeparator *KinBodyItem::RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, const KinBody::Link::GeometryPtr& geom)
 {
     // create custom
     if( psep == NULL ) {

@@ -1050,7 +1050,7 @@ protected:
         \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
         \throw openrave_exception throw f groups are incompatible
      */
-    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, const EnvironmentBaseConstPtr& penv, bool filluninitialized = true);
 
     /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
 

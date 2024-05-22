@@ -952,13 +952,13 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const CollisionReportPtr&
     return bincollision;
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, CollisionReportPtr report) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, const CollisionReportPtr& report) const
 {
     KinBodyConstPtr pdummynull;
     return _CheckEndEffectorCollision(tEE, pdummynull, report);
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, CollisionReportPtr report) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, const KinBodyConstPtr& pbody, const CollisionReportPtr& report) const
 {
     OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
     return _CheckEndEffectorCollision(tEE, pbody, report);
@@ -1161,13 +1161,13 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
     return bincollision;
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, CollisionReportPtr report, int numredundantsamples) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, const CollisionReportPtr& report, int numredundantsamples) const
 {
     KinBodyConstPtr pdummynull; // pass null to check with the environment
     return _CheckEndEffectorCollision(ikparam, pdummynull, report, numredundantsamples);
 }
 
-bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, CollisionReportPtr report, int numredundantsamples) const
+bool RobotBase::Manipulator::CheckEndEffectorCollision(const IkParameterization& ikparam, const KinBodyConstPtr& pbody, const CollisionReportPtr& report, int numredundantsamples) const
 {
     OPENRAVE_ASSERT_FORMAT(!!pbody, "the body is not specified for collision checking with manipulator %s:%s",RobotBasePtr(__probot)->GetName()%GetName(),ORE_InvalidArguments);
     return _CheckEndEffectorCollision(ikparam, pbody, report, numredundantsamples);

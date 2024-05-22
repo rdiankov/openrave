@@ -432,7 +432,7 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
     RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed for body '%s' (uri '%s'), perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id%_name%(_uri.empty() ? _referenceUri : _uri));
 }
 
-KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)
+KinBody::KinBody(InterfaceType type, const EnvironmentBasePtr& penv) : InterfaceBase(type, penv)
 {
     _nHierarchyComputed = 0;
     _nParametersChanged = 0;

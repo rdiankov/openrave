@@ -34,7 +34,7 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness);
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
-    Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot);
+    Item(const OSGGroupPtr& osgSceneRoot, const OSGGroupPtr& osgFigureRoot);
     virtual ~Item();
 
     /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
@@ -83,7 +83,7 @@ public:
     }
 
     /// \brief returns true if the given node is in the inventor hierarchy
-    bool ContainsOSGNode(OSGNodePtr pNode);
+    bool ContainsOSGNode(const OSGNodePtr& pNode);
 
 
     /// \brief Set the visibility of the geometry (ON = true).
@@ -125,7 +125,7 @@ private:
 class KinBodyItem : public Item
 {
 public:
-    KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, KinBodyPtr, ViewGeometry viewmode);
+    KinBodyItem(const OSGGroupPtr& osgSceneRoot, const OSGGroupPtr& osgFigureRoot, const KinBodyPtr&, ViewGeometry viewmode);
     virtual ~KinBodyItem();
 
     virtual void PrepForDeletion() {
@@ -152,7 +152,7 @@ public:
     }
 
     /// \brief gets the link from osg node
-    KinBody::LinkPtr GetLinkFromOSG(OSGNodePtr plinknode) const;
+    KinBody::LinkPtr GetLinkFromOSG(const OSGNodePtr& plinknode) const;
 
     /// \brief gets the link from the index
     OSGMatrixTransformPtr GetOSGLink(int index) const {
@@ -160,7 +160,7 @@ public:
     }
 
     /// \brief gets the geom from osg node
-    KinBody::Link::GeometryPtr GetGeomFromOSG(OSGNodePtr pgeomnode) const;
+    KinBody::Link::GeometryPtr GetGeomFromOSG(const OSGNodePtr& pgeomnode) const;
 
     /// \brief gets the geom from the index
     OSGMatrixTransformPtr GetOSGGeom(int linkindex, int geomindex) const {
@@ -227,10 +227,10 @@ private:
     void _PrintMatrix(osg::Matrix& m);
 
     /// \brief  Print nodes of scenegraph
-    void _PrintSceneGraph(const std::string& currLevel, OSGNodePtr currNode);
+    void _PrintSceneGraph(const std::string& currLevel, const OSGNodePtr& currNode);
 
     /// \brief  Print the features of the OSG Node
-    void _PrintNodeFeatures(OSGNodePtr node);
+    void _PrintNodeFeatures(const OSGNodePtr& node);
 };
 
 typedef boost::shared_ptr<KinBodyItem> KinBodyItemPtr;
@@ -253,7 +253,7 @@ public:
         OSGSwitchPtr _pswitch;
     };
 
-    RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, const RobotBasePtr& robot, ViewGeometry viewmode);
+    RobotItem(const OSGGroupPtr& osgSceneRoot, const OSGGroupPtr& osgFigureRoot, const RobotBasePtr& robot, ViewGeometry viewmode);
     virtual ~RobotItem();
 
     virtual void Load();
@@ -272,7 +272,7 @@ private:
     RobotBasePtr _probot;
 };
 
-void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const float zOffset, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency);
+void DrawCropContainerMargins(const OSGGroupPtr& pgeometrydata, const float zOffset, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency);
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

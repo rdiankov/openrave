@@ -647,7 +647,7 @@ protected:
         listpath.emplace_back(q1,  dist);
     }
 
-    std::string _DumpTrajectory(TrajectoryBasePtr traj, DebugLevel level, int option)
+    std::string _DumpTrajectory(const TrajectoryBasePtr& traj, DebugLevel level, int option)
     {
         if( IS_DEBUGLEVEL(level) ) {
             std::string filename = _DumpTrajectory(traj, option);

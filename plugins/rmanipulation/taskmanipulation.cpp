@@ -1771,7 +1771,7 @@ protected:
         return ptraj;
     }
 
-    IkReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
+    IkReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, const RobotBase::ManipulatorConstPtr& pmanip, const IkParameterization &ikparam, const KinBodyPtr& ptarget)
     {
         if( _robot->IsGrabbing(*ptarget) ) {
             return IKRA_Success;

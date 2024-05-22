@@ -605,7 +605,7 @@ protected:
             return CA_DefaultAction;
         }
 
-        CollisionAction _CollisionCallback(CollisionReportPtr report, bool IsCalledFromPhysicsEngine)
+        CollisionAction _CollisionCallback(const CollisionReportPtr& report, bool IsCalledFromPhysicsEngine)
         {
             if( !_bCheckEndEffectorEnvCollision || !_bCheckEndEffectorSelfCollision ) {
                 int numIgnore = 0;

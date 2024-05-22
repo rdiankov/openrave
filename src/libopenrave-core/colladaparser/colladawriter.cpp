@@ -61,7 +61,7 @@ namespace XMLtoDAE
 {
 struct XMLREADERDATA
 {
-    XMLREADERDATA(daeElementRef pelt, xmlParserCtxtPtr ctxt) : _ctxt(ctxt), _offset(0) {
+    XMLREADERDATA(const daeElementRef& pelt, xmlParserCtxtPtr ctxt) : _ctxt(ctxt), _offset(0) {
         _elts.push_back(pelt);
     }
     xmlParserCtxtPtr _ctxt;
@@ -130,7 +130,7 @@ static bool xmlDetectSAX2(xmlParserCtxtPtr ctxt)
     return true;
 }
 
-static size_t Parse(daeElementRef pelt, const char* buffer, int size)
+static size_t Parse(const daeElementRef& pelt, const char* buffer, int size)
 {
     static xmlSAXHandler s_DefaultSAXHandler = { 0};
     if( size <= 0 ) {
@@ -286,7 +286,7 @@ public:
     class ColladaInterfaceWriter : public BaseXMLWriter
     {
 public:
-        ColladaInterfaceWriter(daeElementRef elt) : _elt(elt) {
+        ColladaInterfaceWriter(const daeElementRef& elt) : _elt(elt) {
         }
         const std::string& GetFormat() const {
             static const std::string _format("collada");
@@ -908,7 +908,7 @@ private:
         return iasout;
     }
 
-    void _WriteKinBodyType(const KinBodyPtr& pbody, daeElementRef eltbody)
+    void _WriteKinBodyType(const KinBodyPtr& pbody, const daeElementRef& eltbody)
     {
         // interface type
         domExtraRef pextra = daeSafeCast<domExtra>(eltbody->add(COLLADA_ELEMENT_EXTRA));
@@ -921,7 +921,7 @@ private:
     }
 
     /// \brief that is independent of the kinematics/visuals so should belong in the instance_* extra fields, preferably instance_articulated_system
-    void _WriteKinBodyExtraInfo(const KinBodyPtr& pbody, daeElementRef eltbody)
+    void _WriteKinBodyExtraInfo(const KinBodyPtr& pbody, const daeElementRef& eltbody)
     {
         if( IsWrite("readable") ) {
             BaseXMLWriterPtr extrawriter(new ColladaInterfaceWriter(eltbody));
@@ -2384,7 +2384,7 @@ private:
         return out;
     }
 
-    void _SetRotate(domTargetable_float4Ref prot, const Vector& rot)
+    void _SetRotate(const domTargetable_float4Ref& prot, const Vector& rot)
     {
         prot->getValue().setCount(4);
         Vector vaxisangle = axisAngleFromQuat(rot);
@@ -2407,7 +2407,7 @@ private:
     /// \param pelt Element to transform
     /// \param t Transform to write
     /// \param bwritesids if true, will write 'translate' and 'rotate' sids
-    void _WriteTransformation(daeElementRef pelt, const Transform& t, bool bwritesids=false)
+    void _WriteTransformation(const daeElementRef& pelt, const Transform& t, bool bwritesids=false)
     {
         domRotateRef protate = daeSafeCast<domRotate>(pelt->add(COLLADA_ELEMENT_ROTATE,0));
         _SetRotate(protate,t.rot);
@@ -2420,7 +2420,7 @@ private:
     }
 
     /// \brief binding in instance_kinematics_scene
-    void _WriteBindingsInstance_kinematics_scene(domInstance_kinematics_sceneRef ikscene, KinBodyConstPtr pbody, const std::vector<axis_sids>& vaxissids, const std::vector<std::pair<std::string,std::string> >& vkinematicsbindings)
+    void _WriteBindingsInstance_kinematics_scene(const domInstance_kinematics_sceneRef& ikscene, const KinBodyConstPtr& pbody, const std::vector<axis_sids>& vaxissids, const std::vector<std::pair<std::string,std::string> >& vkinematicsbindings)
     {
         FOREACHC(it, vkinematicsbindings) {
             domBind_kinematics_modelRef pmodelbind = daeSafeCast<domBind_kinematics_model>(ikscene->add(COLLADA_ELEMENT_BIND_KINEMATICS_MODEL));
@@ -2442,7 +2442,7 @@ private:
     }
 
     /// \brief writes the dynamic rigid constr
-    void _WriteDynamicRigidConstraints(domInstance_with_extraRef piscene, const std::list<boost::shared_ptr<instance_articulated_system_output> >& listModelDatabase)
+    void _WriteDynamicRigidConstraints(const domInstance_with_extraRef& piscene, const std::list<boost::shared_ptr<instance_articulated_system_output> >& listModelDatabase)
     {
         domTechniqueRef ptec;
         // go through every body and check if it has grabbed bodies
@@ -2515,7 +2515,7 @@ private:
         }
     }
 
-    void _WriteManipulators(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, const std::vector<std::string>& vdofsidrefs)
+    void _WriteManipulators(const RobotBasePtr& probot, const daeElementRef& parent, const std::vector<std::string>& vlinksidrefs, const std::vector<std::string>& vdofsidrefs)
     {
         std::vector<RobotBase::ManipulatorPtr> vConnectedManipulators;
         FOREACH(itConnectedBody, probot->GetConnectedBodies()) {
@@ -2605,7 +2605,7 @@ private:
         }
     }
 
-    void _WriteAttachedSensors(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs)
+    void _WriteAttachedSensors(const RobotBasePtr& probot, const daeElementRef& parent, const std::vector<std::string>& vlinksidrefs)
     {
         if (probot->GetAttachedSensors().size() > 0) {
             std::vector<RobotBase::AttachedSensorPtr> vConnectedAttachedSensors;
@@ -2699,7 +2699,7 @@ private:
         }
     }
 
-    void _WriteGripperInfos(RobotBasePtr probot, daeElementRef parent)
+    void _WriteGripperInfos(const RobotBasePtr& probot, const daeElementRef& parent)
     {
         if (probot->GetGripperInfos().size() > 0) {
             std::vector<RobotBase::GripperInfoPtr> vConnectedGripperInfos;
@@ -2741,7 +2741,7 @@ private:
         }
     }
 
-    void _WriteConnectedBodies(RobotBasePtr probot, daeElementRef parent, const std::vector<std::string>& vlinksidrefs)
+    void _WriteConnectedBodies(const RobotBasePtr& probot, const daeElementRef& parent, const std::vector<std::string>& vlinksidrefs)
     {
         if (probot->GetConnectedBodies().size() > 0) {
             FOREACHC(itConnectedBody, probot->GetConnectedBodies()) {
@@ -2763,7 +2763,7 @@ private:
         }
     }
 
-    void _WriteCollisionData(const KinBodyPtr& pbody, daeElementRef parent, const std::vector<std::string>& vlinksidrefs, bool bWriteIgnoreLinkPair=true)
+    void _WriteCollisionData(const KinBodyPtr& pbody, const daeElementRef& parent, const std::vector<std::string>& vlinksidrefs, bool bWriteIgnoreLinkPair=true)
     {
         // collision data
         domExtraRef pextra = daeSafeCast<domExtra>(parent->add(COLLADA_ELEMENT_EXTRA));

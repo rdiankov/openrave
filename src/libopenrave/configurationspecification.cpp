@@ -1457,7 +1457,7 @@ static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget,
     *(ittarget+3) = quat[3];
 }
 
-void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
+void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, const EnvironmentBaseConstPtr& penv, bool filluninitialized)
 {
     ConvertGroupData(ittargetdata, targetstride, gtarget, &(*itsourcedata), sourcestride, gsource, numpoints, penv, filluninitialized);
 }

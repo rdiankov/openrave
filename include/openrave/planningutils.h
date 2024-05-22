@@ -64,7 +64,7 @@ OPENRAVE_API void VerifyTrajectory(const PlannerBase::PlannerParametersConstPtr&
     \param index the waypoint index of the trajectory
     \return the index of the first point in the original trajectory that comes after the modified trajectory.
  */
-OPENRAVE_API size_t ExtendWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, PlannerBasePtr planner);
+OPENRAVE_API size_t ExtendWaypoint(int index, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const PlannerBasePtr& planner);
 
 /** \brief Extends the last ramp of the trajectory in order to reach a goal. THe configuration space is just the active DOF of the robot.
 

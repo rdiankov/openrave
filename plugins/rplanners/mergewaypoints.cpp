@@ -191,7 +191,7 @@ bool CheckMerge(dReal T0,dReal T1,dReal T2,const std::vector<dReal>& q0,const st
     \param resrampx result ramp with x=0,1
     \param Ta,Tb desired final durations
  */
-bool FixRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp::ParabolicRampND& ramp1,ParabolicRamp::ParabolicRampND& resramp0,ParabolicRamp::ParabolicRampND& resramp1, dReal Ta, dReal Tb, ConstraintTrajectoryTimingParametersPtr params)
+bool FixRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp::ParabolicRampND& ramp1,ParabolicRamp::ParabolicRampND& resramp0,ParabolicRamp::ParabolicRampND& resramp1, dReal Ta, dReal Tb, const ConstraintTrajectoryTimingParametersPtr& params)
 {
     vector<dReal> q0 = ramp0.x0, v0=ramp0.dx0, q2=ramp1.x1, v2=ramp1.dx1, qres, vres;
     //dReal T0,T1;
@@ -224,7 +224,7 @@ bool FixRamps(const ParabolicRamp::ParabolicRampND& ramp0,const ParabolicRamp::P
     \param rampx input ramps with x=0,1,2
     \param resrampx result ramp with x=0,1
  */
-bool MergeRamps(const ParabolicRamp::ParabolicRampND& ramp0, const ParabolicRamp::ParabolicRampND& ramp1, const ParabolicRamp::ParabolicRampND& ramp2,ParabolicRamp::ParabolicRampND& resramp0,ParabolicRamp::ParabolicRampND& resramp1,ConstraintTrajectoryTimingParametersPtr params)
+bool MergeRamps(const ParabolicRamp::ParabolicRampND& ramp0, const ParabolicRamp::ParabolicRampND& ramp1, const ParabolicRamp::ParabolicRampND& ramp2,ParabolicRamp::ParabolicRampND& resramp0,ParabolicRamp::ParabolicRampND& resramp1,const ConstraintTrajectoryTimingParametersPtr& params)
 {
     vector<dReal> q0 = ramp0.x0,v0 = ramp0.dx0, q3=ramp2.x1, v3=ramp2.dx1;
     dReal T,T0,T1,T2,Ta,Tb;
@@ -502,7 +502,7 @@ bool IterativeMergeRampsFixedTime(const std::list<ParabolicRamp::ParabolicRampND
     }
 }
 
-bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, std::list<ParabolicRamp::ParabolicRampND>& ramps, dReal coef, bool trysmart, ConstraintTrajectoryTimingParametersPtr params)
+bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps, std::list<ParabolicRamp::ParabolicRampND>& ramps, dReal coef, bool trysmart, const ConstraintTrajectoryTimingParametersPtr& params)
 {
     ramps.resize(0);
     bool doscale = RaveFabs(coef-1)>TINY;

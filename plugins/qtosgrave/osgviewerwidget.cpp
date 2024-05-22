@@ -44,7 +44,7 @@ public:
         _transitionAnimationPath->setLoopMode(osg::AnimationPath::NO_LOOPING);
     }
 
-    void TrackNode(OSGNodePtr node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
+    void TrackNode(const OSGNodePtr& node, const osg::Vec3d& offset, double trackDistance, osg::Camera* currentCamera, const osg::Vec3d& worldUpVector)
     {
         _offset = offset;
         _distance = trackDistance;
@@ -769,7 +769,7 @@ void QOSGViewerWidget::SetDraggerMode(const std::string& draggerName)
     }
 }
 
-void QOSGViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
+void QOSGViewerWidget::SelectItem(const KinBodyItemPtr& item, KinBody::JointPtr joint)
 {
     if( _selectedItem != item ) {
         if( !!_selectedItem ) {
@@ -889,7 +889,7 @@ void QOSGViewerWidget::SetPolygonMode(int mode)
     }
 }
 
-void QOSGViewerWidget::SetWire(OSGNodePtr node)
+void QOSGViewerWidget::SetWire(const OSGNodePtr& node)
 {
     osg::ref_ptr<osg::PolygonMode> poly(new osg::PolygonMode());
     osg::ref_ptr<osg::ShadeModel> sm(new osg::ShadeModel());
@@ -970,7 +970,7 @@ void QOSGViewerWidget::UpdateFromOSG()
     }
 }
 
-void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
+void QOSGViewerWidget::SelectOSGLink(const OSGNodePtr& node, int modkeymask)
 {
     if (!node) {
         if( !(modkeymask & osgGA::GUIEventAdapter::MODKEY_CTRL) ) {
@@ -1003,7 +1003,7 @@ void QOSGViewerWidget::SelectOSGLink(OSGNodePtr node, int modkeymask)
     }
 }
 
-void QOSGViewerWidget::TrackNode(OSGNodePtr node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance)
+void QOSGViewerWidget::TrackNode(const OSGNodePtr& node, const std::string& trackInfoText, const osg::Vec3d& offset, double trackDistance)
 {
     _strTrackInfoText = str(boost::format("Tracking %s")%trackInfoText);
     SetCurrentCameraManipulator(_osgTrackModeManipulator.get());
@@ -1371,8 +1371,8 @@ void QOSGViewerWidget::SetTextureCubeMap(const std::string& posx, const std::str
     _osgSkybox->setTextureCubeMap(posx, negx, posy, negy, posz, negz);
 }
 
-void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_ptr<osgViewer::View> view,
-                                    osg::ref_ptr<osg::Camera> hudcamera, osg::ref_ptr<osgViewer::View> hudview)
+void QOSGViewerWidget::_SetupCamera(const osg::ref_ptr<osg::Camera>& camera, const osg::ref_ptr<osgViewer::View>& view,
+                                    const osg::ref_ptr<osg::Camera>& hudcamera, const osg::ref_ptr<osgViewer::View>& hudview)
 {
     view->setCamera( camera.get() );
     hudview->setCamera( hudcamera.get() );
@@ -1469,7 +1469,7 @@ KinBodyItemPtr QOSGViewerWidget::GetItemFromKinBody(const KinBodyPtr& kinBody)
     return boost::dynamic_pointer_cast<KinBodyItem>(kinBody->GetUserData(_userdatakey));
 }
 
-KinBodyItemPtr QOSGViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
+KinBodyItemPtr QOSGViewerWidget::FindKinBodyItemFromOSGNode(const OSGNodePtr& node)
 {
     if (!node) {
         return KinBodyItemPtr();
@@ -1499,7 +1499,7 @@ KinBodyItemPtr QOSGViewerWidget::FindKinBodyItemFromOSGNode(OSGNodePtr node)
 }
 
 
-KinBody::JointPtr QOSGViewerWidget::_FindJoint(KinBodyItemPtr pitem, const KinBody::LinkPtr& link)
+KinBody::JointPtr QOSGViewerWidget::_FindJoint(const KinBodyItemPtr& pitem, const KinBody::LinkPtr& link)
 {
     if( !!pitem && !!pitem->GetBody() && !!link ) {
         // search for the joint whose child link is this link
@@ -1776,7 +1776,7 @@ std::vector<osg::ref_ptr<osgManipulator::Dragger> > QOSGViewerWidget::_CreateDra
     return draggers;
 }
 
-OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName, KinBodyItemPtr item, KinBody::JointPtr pjoint)
+OSGNodePtr QOSGViewerWidget::_AddDraggerToObject(const std::string& draggerName, const KinBodyItemPtr& item, const KinBody::JointPtr& pjoint)
 {
     // Clears dragger
     _ClearDragger();

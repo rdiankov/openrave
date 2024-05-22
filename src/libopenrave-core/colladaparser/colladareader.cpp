@@ -145,7 +145,7 @@ public:
     class InstanceModelBinding
     {
 public:
-        InstanceModelBinding(domInstance_nodeRef inode, domNodeRef node, domInstance_kinematics_modelRef ikmodel, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>(), const std::string& idsuffix=std::string()) : _inode(inode), _node(node), _ikmodel(ikmodel), _idsuffix(idsuffix) {
+        InstanceModelBinding(const domInstance_nodeRef& inode, const domNodeRef& node, const domInstance_kinematics_modelRef& ikmodel, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>(), const std::string& idsuffix=std::string()) : _inode(inode), _node(node), _ikmodel(ikmodel), _idsuffix(idsuffix) {
             _listInstanceScopeKModel = listInstanceScope;
         }
         domInstance_nodeRef _inode; ///< optional instance node that the visual node could have come from
@@ -161,7 +161,7 @@ public:
     class JointAxisBinding
     {
 public:
-        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, daeElementRef pvisualtrans_, domAxis_constraintRef pkinematicaxis_, dReal jointvalue_, domKinematics_axis_infoRef kinematics_axis_info_, domMotion_axis_infoRef motion_axis_info_, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans_), pkinematicaxis(pkinematicaxis_), jointvalue(jointvalue_), kinematics_axis_info(kinematics_axis_info_), motion_axis_info(motion_axis_info_),_iaxis(0) {
+        JointAxisBinding(const boost::function<domNodeRef(daeElementRef)>& instantiatenodefn, const daeElementRef& pvisualtrans_, const domAxis_constraintRef& pkinematicaxis_, dReal jointvalue_, const domKinematics_axis_infoRef& kinematics_axis_info_, const domMotion_axis_infoRef& motion_axis_info_, const std::list<daeElementRef>& listInstanceScope = std::list<daeElementRef>()) : pvisualtrans(pvisualtrans_), pkinematicaxis(pkinematicaxis_), jointvalue(jointvalue_), kinematics_axis_info(kinematics_axis_info_), motion_axis_info(motion_axis_info_),_iaxis(0) {
             _listInstanceScopeAxis = listInstanceScope;
             BOOST_ASSERT( !!pkinematicaxis );
             if( !!pvisualtrans ) {
@@ -222,7 +222,7 @@ public:
         std::list<JointAxisBinding> listAxisBindings;
         std::list<InstanceLinkBinding> listInstanceLinkBindings;
 
-        bool AddAxisInfo(const domInstance_kinematics_model_Array& arr, domKinematics_axis_infoRef kinematics_axis_info, domMotion_axis_infoRef motion_axis_info)
+        bool AddAxisInfo(const domInstance_kinematics_model_Array& arr, const domKinematics_axis_infoRef& kinematics_axis_info, const domMotion_axis_infoRef& motion_axis_info)
         {
             if( !kinematics_axis_info ) {
                 return false;
@@ -1042,7 +1042,7 @@ public:
 
     /// \brief extracts an articulated system. Note that an articulated system can include other articulated systems
     /// \param probot the robot to be created from the system
-    bool ExtractArticulatedSystem(KinBodyPtr& pbody, domInstance_articulated_systemRef ias, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope, const std::string& strParentURI=std::string(), const std::string& strParentName=std::string())
+    bool ExtractArticulatedSystem(KinBodyPtr& pbody, const domInstance_articulated_systemRef& ias, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope, const std::string& strParentURI=std::string(), const std::string& strParentName=std::string())
     {
         if( !ias ) {
             return false;
@@ -1383,7 +1383,7 @@ public:
         return true;
     }
 
-    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, domInstance_kinematics_modelRef ikm, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
+    bool ExtractKinematicsModel(KinBodyPtr& pkinbody, const domInstance_kinematics_modelRef& ikm, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         if( !ikm ) {
             return false;
@@ -1485,7 +1485,7 @@ public:
     }
 
     /// \brief extract one rigid link composed of the node hierarchy
-    KinBodyPtr _ExtractKinematicsModel(domNodeRef pdomnode, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes, std::list<daeElementRef>& listInstanceScope)
+    KinBodyPtr _ExtractKinematicsModel(const domNodeRef& pdomnode, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes, std::list<daeElementRef>& listInstanceScope)
     {
         if( !!pdomnode->getID() &&( find(vprocessednodes.begin(),vprocessednodes.end(),pdomnode->getID()) != vprocessednodes.end()) ) {
             return KinBodyPtr();
@@ -1518,7 +1518,7 @@ public:
     }
 
     /// \brief append the kinematics model to the openrave kinbody
-    bool _ExtractKinematicsModel(KinBodyPtr& pkinbody, domKinematics_modelRef kmodel, domNodeRef pnode, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
+    bool _ExtractKinematicsModel(KinBodyPtr& pkinbody, const domKinematics_modelRef& kmodel, const domNodeRef& pnode, KinematicsSceneBindings& bindings, std::list<daeElementRef>& listInstanceScope)
     {
         vector<domJointRef> vdomjoints;
         if (!pkinbody) {
@@ -1869,7 +1869,7 @@ public:
     }
 
     ///  \brief Extract Link info and add it to an existing body
-    KinBody::LinkPtr ExtractLink(const KinBodyPtr& pkinbody, const domLinkRef pdomlink,const domNodeRef pdomnode, const Transform& tParentLink, const std::vector<domJointRef>& vdomjoints, KinematicsSceneBindings& bindings)
+    KinBody::LinkPtr ExtractLink(const KinBodyPtr& pkinbody, const domLinkRef& pdomlink,const domNodeRef& pdomnode, const Transform& tParentLink, const std::vector<domJointRef>& vdomjoints, KinematicsSceneBindings& bindings)
     {
         //  Set link name with the name of the COLLADA's Link
         std::string linkname;
@@ -2388,7 +2388,7 @@ public:
     /// Extract Geometry and apply the transformations of the node
     /// \param pdomnode  Node to extract the geometry
     /// \param plink     Link of the kinematics model
-    bool ExtractGeometries(const domNodeRef pdomnode, const Transform& tkinbodytrans, KinBody::LinkPtr plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
+    bool ExtractGeometries(const domNodeRef& pdomnode, const Transform& tkinbodytrans, const KinBody::LinkPtr& plink, const KinematicsSceneBindings& bindings, const std::vector<std::string>& vprocessednodes)
     {
         if( !pdomnode ) {
             return false;
@@ -2522,7 +2522,7 @@ public:
     /// Paint the Geometry with the color material
     /// \param  pmat    Material info of the COLLADA's model
     /// \param  geom    Geometry properties in OpenRAVE
-    void FillGeometryColor(const domMaterialRef pmat, KinBody::GeometryInfo& geom)
+    void FillGeometryColor(const domMaterialRef& pmat, KinBody::GeometryInfo& geom)
     {
         if( !!pmat && !!pmat->getInstance_effect() ) {
             domEffectRef peffect = daeSafeCast<domEffect>(pmat->getInstance_effect()->getUrl().getElement().cast());
@@ -2563,7 +2563,7 @@ public:
     /// \param mapmaterials    Materials applied to the geometry
     /// \param geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domTrianglesRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domTrianglesRef& triRef, const domVerticesRef& vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
@@ -2645,7 +2645,7 @@ public:
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domTrifansRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domTrifansRef& triRef, const domVerticesRef& vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
@@ -2735,7 +2735,7 @@ public:
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domTristripsRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domTristripsRef& triRef, const domVerticesRef& vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
@@ -2828,7 +2828,7 @@ public:
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  geom The geometry info to store
     /// \param transgeom transform all vertices before storing
-    bool _ExtractGeometry(const domPolylistRef triRef, const domVerticesRef vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
+    bool _ExtractGeometry(const domPolylistRef& triRef, const domVerticesRef& vertsRef, const map<string,domMaterialRef>& mapmaterials, KinBody::GeometryInfo& geom, const Transform& transgeom)
     {
         if( !triRef ) {
             return false;
@@ -2902,7 +2902,7 @@ public:
         return true;
     }
 
-    domMaterialRef _ExtractFirstMaterial(const domGeometryRef domgeom, const map<string,domMaterialRef>& mapmaterials)
+    domMaterialRef _ExtractFirstMaterial(const domGeometryRef& domgeom, const map<string,domMaterialRef>& mapmaterials)
     {
         map<string,domMaterialRef>::const_iterator itmat;
         if (!!domgeom->getMesh()) {
@@ -2957,7 +2957,7 @@ public:
     /// \param  domgeom    Geometry to extract of the COLLADA's model
     /// \param  mapmaterials    Materials applied to the geometry
     /// \param  listGeometryInfos the geometry infos to output
-    bool ExtractGeometry(const domGeometryRef domgeom, const map<string,domMaterialRef>& mapmaterials, std::list<KinBody::GeometryInfo>& listGeometryInfos)
+    bool ExtractGeometry(const domGeometryRef& domgeom, const map<string,domMaterialRef>& mapmaterials, std::list<KinBody::GeometryInfo>& listGeometryInfos)
     {
         if( !domgeom ) {
             return false;
@@ -3385,7 +3385,7 @@ public:
     }
 
     /// \brief extract the robot manipulators
-    void ExtractRobotManipulators(RobotBasePtr probot, domExtra_Array& manipulatorExtraArray, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
+    void ExtractRobotManipulators(const RobotBasePtr& probot, domExtra_Array& manipulatorExtraArray, const domArticulated_systemRef& as, const KinematicsSceneBindings& bindings)
     {
         for(size_t ie = 0; ie < manipulatorExtraArray.getCount(); ++ie) {
             domExtraRef pextra = manipulatorExtraArray[ie];
@@ -3574,7 +3574,7 @@ public:
     }
 
     /// \brief Extract Sensors attached to a Robot
-    void ExtractRobotAttachedSensors(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
+    void ExtractRobotAttachedSensors(const RobotBasePtr& probot, const domArticulated_systemRef& as, const KinematicsSceneBindings& bindings)
     {
         std::list< std::pair<RobotBase::AttachedSensorPtr, daeElementRef> > listSensorsToExtract; // accumulate a list of sensor/element pairs to call _ExtractSensor on. This has to be done after all sensors have been processed.
         std::map<std::string, std::string> mapSensorURLsToNames;
@@ -3681,7 +3681,7 @@ public:
     }
 
     /// \brief Extract Sensors attached to a Robot
-    void ExtractRobotGripperInfos(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
+    void ExtractRobotGripperInfos(const RobotBasePtr& probot, const domArticulated_systemRef& as, const KinematicsSceneBindings& bindings)
     {
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
@@ -3717,7 +3717,7 @@ public:
     }
 
     /// \brief extract the robot manipulators
-    void ExtractRobotAttachedActuators(RobotBasePtr probot, const domArticulated_systemRef as, const KinematicsSceneBindings& bindings)
+    void ExtractRobotAttachedActuators(const RobotBasePtr& probot, const domArticulated_systemRef& as, const KinematicsSceneBindings& bindings)
     {
         list<KinBody::JointPtr> listOrderedJoints;
         for(size_t ie = 0; ie < as->getExtra_array().getCount(); ++ie) {
@@ -3792,7 +3792,7 @@ public:
         }
     }
 
-    void ExtractRobotConnectedBodies(const RobotBasePtr probot, const domArticulated_systemRef &as) {
+    void ExtractRobotConnectedBodies(const RobotBasePtr& probot, const domArticulated_systemRef &as) {
         // extract connect_body from /COLLADA/library_articulated_systems/articulated_system/extra
         for (size_t ie = 0; ie < as->getExtra_array().getCount(); ie++) {
             domExtraRef pextra = as->getExtra_array()[ie];
@@ -3903,7 +3903,7 @@ public:
     }
 
     /// \brief Extract activation states of connected bodies
-    void _ExtractRobotConnectedBodyActivationData(const RobotBasePtr probot, const domExtra_Array& arr)
+    void _ExtractRobotConnectedBodyActivationData(const RobotBasePtr& probot, const domExtra_Array& arr)
     {
         for( size_t i = 0; i < arr.getCount(); ++i ) {
             domExtraRef pextra = arr[i];
@@ -3947,7 +3947,7 @@ public:
     /// \brief Extract an instance of a sensor without parsing its data
     ///
     /// \return the newly created sensor
-    std::pair<SensorBasePtr, daeElementRef> _ExtractCreateSensor(daeElementRef instance_sensor)
+    std::pair<SensorBasePtr, daeElementRef> _ExtractCreateSensor(const daeElementRef& instance_sensor)
     {
         if( !instance_sensor ) {
             return std::make_pair(SensorBasePtr(), daeElementRef());
@@ -3974,7 +3974,7 @@ public:
     /// \brief Extractan instance of a actuator without parsing its data
     ///
     /// \return the newly created actuator
-    ElectricMotorActuatorInfoPtr _ExtractElectricMotorActuatorInfo(daeElementRef instance_actuator)
+    ElectricMotorActuatorInfoPtr _ExtractElectricMotorActuatorInfo(const daeElementRef& instance_actuator)
     {
         if( !instance_actuator ) {
             return ElectricMotorActuatorInfoPtr();
@@ -4113,7 +4113,7 @@ public:
     /// \param preader the reader returned from RaveCallXMLReader
     /// \param elt the parent element (usually <extra>)
     /// \param mapURLsToNames map of URLs to names
-    bool _ProcessXMLReader(BaseXMLReaderPtr preader, daeElementRef elt, const std::map<std::string, std::string>& mapURLsToNames = std::map<std::string, std::string>())
+    bool _ProcessXMLReader(const BaseXMLReaderPtr& preader, const daeElementRef& elt, const std::map<std::string, std::string>& mapURLsToNames = std::map<std::string, std::string>())
     {
         daeTArray<daeElementRef> children;
         elt->getChildren(children);
@@ -4153,7 +4153,7 @@ public:
         return false;
     }
 
-    static daeElement* searchBinding(domCommon_sidref_or_paramRef paddr, daeElementRef parent, std::list<daeElementRef>& listInstanceScope)
+    static daeElement* searchBinding(const domCommon_sidref_or_paramRef& paddr, const daeElementRef& parent, std::list<daeElementRef>& listInstanceScope)
     {
         if( !!paddr->getSIDREF() ) {
             return daeSidRef(paddr->getSIDREF()->getValue(),parent).resolve().elt;
@@ -4164,7 +4164,7 @@ public:
         return NULL;
     }
 
-    static daeElement* searchBindingFromSIDREF(domSidref value, daeElementRef parent)
+    static daeElement* searchBindingFromSIDREF(domSidref value, const daeElementRef& parent)
     {
         return daeSidRef(value,parent).resolve().elt;
     }
@@ -4172,7 +4172,7 @@ public:
     /// Search a given parameter reference and stores the new reference to search.
     /// \param ref the reference name to search
     /// \param parent The array of parameter where the method searchs.
-    static daeElement* searchBinding(daeString ref, daeElementRef parent, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
+    static daeElement* searchBinding(daeString ref, const daeElementRef& parent, bool bLogWarning, std::list<daeElementRef>& listInstanceScope)
     {
         if( !parent ) {
             return NULL;
@@ -4360,7 +4360,7 @@ public:
         return 0;
     }
 
-    static bool resolveCommon_float_or_param(daeElementRef pcommon, daeElementRef parent, domFloat& f)
+    static bool resolveCommon_float_or_param(const daeElementRef& pcommon, const daeElementRef& parent, domFloat& f)
     {
         if( !pcommon ) {
             return false;
@@ -4394,7 +4394,7 @@ public:
         return false;
     }
 
-    static bool resolveCommon_bool_or_param(daeElementRef pcommon, daeElementRef parent, bool& bvalue)
+    static bool resolveCommon_bool_or_param(const daeElementRef& pcommon, const daeElementRef& parent, bool& bvalue)
     {
         if( !pcommon ) {
             return false;
@@ -4427,7 +4427,7 @@ public:
         return false;
     }
 
-    static bool resolveCommon_int_or_param(daeElementRef pcommon, daeElementRef parent, int& intvalue)
+    static bool resolveCommon_int_or_param(const daeElementRef& pcommon, const daeElementRef& parent, int& intvalue)
     {
         if( !pcommon ) {
             return false;
@@ -4455,7 +4455,7 @@ public:
     }
 
     /// Gets all transformations applied to the node
-    TransformMatrix getTransform(daeElementRef pelt)
+    TransformMatrix getTransform(const daeElementRef& pelt)
     {
         TransformMatrix t;
         domRotateRef protate = daeSafeCast<domRotate>(pelt);
@@ -4607,7 +4607,7 @@ public:
 private:
 
     /// \brief if inode points to a valid node, inserts it in the scene and removes the instance_node
-    domNodeRef _InstantiateNode(daeElementRef pelt)
+    domNodeRef _InstantiateNode(const daeElementRef& pelt)
     {
         domInstance_nodeRef inode = daeSafeCast<domInstance_node>(pelt);
         if( !inode ) {
@@ -4664,7 +4664,7 @@ private:
     }
 
     /// \brief for the element and all its children, replace any URIs with srcuri
-    static void _ResolveURLs(daeElementRef elt, const daeURI& srcuri)
+    static void _ResolveURLs(const daeElementRef& elt, const daeURI& srcuri)
     {
         // resolve all xsAnyURIs
         for(size_t iattr = 0; iattr < elt->getAttributeCount(); ++iattr) {
@@ -4694,7 +4694,7 @@ private:
     ///
     /// \param kiscene instance of one kinematics scene, binds the kinematic and visual models
     /// \param bindings the extracted bindings
-    void _ExtractKinematicsVisualBindings(domInstance_with_extraRef viscene, domInstance_kinematics_sceneRef kiscene, KinematicsSceneBindings& bindings)
+    void _ExtractKinematicsVisualBindings(const domInstance_with_extraRef& viscene, const domInstance_kinematics_sceneRef& kiscene, KinematicsSceneBindings& bindings)
     {
         domKinematics_sceneRef kscene = daeSafeCast<domKinematics_scene> (kiscene->getUrl().getElement().cast());
         if (!kscene) {
@@ -4784,7 +4784,7 @@ private:
         }
     }
 
-    void _ExtractPhysicsBindings(domCOLLADA::domSceneRef allscene, KinematicsSceneBindings& bindings)
+    void _ExtractPhysicsBindings(const domCOLLADA::domSceneRef& allscene, KinematicsSceneBindings& bindings)
     {
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
             domPhysics_sceneRef pscene = daeSafeCast<domPhysics_scene>(allscene->getInstance_physics_scene_array()[iphysics]->getUrl().getElement().cast());
@@ -4836,7 +4836,7 @@ private:
         return domTechniqueRef();
     }
 
-    daeElementRef _ExtractOpenRAVEProfile(const daeElementRef pelt)
+    daeElementRef _ExtractOpenRAVEProfile(const daeElementRef& pelt)
     {
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
@@ -4848,7 +4848,7 @@ private:
         return daeElementRef();
     }
 
-    domInstance_physics_modelRef _GetPhysicsModelNodeOffset(domCOLLADA::domSceneRef allscene, domNodeRef parentnode)
+    domInstance_physics_modelRef _GetPhysicsModelNodeOffset(const domCOLLADA::domSceneRef& allscene, const domNodeRef& parentnode)
     {
         BOOST_ASSERT( !!parentnode && !!parentnode->getID() );
         for(size_t iphysics = 0; iphysics < allscene->getInstance_physics_scene_array().getCount(); ++iphysics) {
@@ -4899,7 +4899,7 @@ private:
         }
     }
 
-    void _ExtractAttributesList(daeElementRef elt, AttributesList& atts)
+    void _ExtractAttributesList(const daeElementRef& elt, AttributesList& atts)
     {
         atts.clear();
         size_t num = elt->getAttributeCount();
@@ -4913,7 +4913,7 @@ private:
     }
 
     /// \brief returns an openrave interface type from the extra array
-    InterfaceTypePtr _ExtractInterfaceType(const daeElementRef pelt) {
+    InterfaceTypePtr _ExtractInterfaceType(const daeElementRef& pelt) {
         daeTArray<daeElementRef> children;
         pelt->getChildren(children);
         for(size_t i = 0; i < children.getCount(); ++i) {
@@ -4947,7 +4947,7 @@ private:
     }
 
     /// \param pbody is the body that the link has to be long to
-    KinBody::LinkPtr _ResolveLinkBinding(const std::list<InstanceLinkBinding>& listInstanceLinkBindings, const std::string& linksid, KinBodyPtr pbody) {
+    KinBody::LinkPtr _ResolveLinkBinding(const std::list<InstanceLinkBinding>& listInstanceLinkBindings, const std::string& linksid, const KinBodyPtr& pbody) {
         FOREACHC(itbinding,listInstanceLinkBindings) {
             if( !!itbinding->_domlink && !!itbinding->_domlink->getSid() && !!itbinding->_link ) {
                 if( !pbody || pbody == itbinding->_link->GetParent() ) {
@@ -4963,7 +4963,7 @@ private:
     /// \brief extracts collision-specific data infoe
     ///
     /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
-    InterfaceTypePtr _ExtractCollisionData(const KinBodyPtr& pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
+    InterfaceTypePtr _ExtractCollisionData(const KinBodyPtr& pbody, const daeElementRef& referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"collision") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -5092,7 +5092,7 @@ private:
     /// \brief extracts visible-specific data infoe
     ///
     /// \param bAndWithPrevious if true, then AND collision and visible state with previous values
-    InterfaceTypePtr _ExtractVisibleData(const KinBodyPtr& pbody, daeElementRef referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
+    InterfaceTypePtr _ExtractVisibleData(const KinBodyPtr& pbody, const daeElementRef& referenceElt, const domExtra_Array& arr, const std::list<InstanceLinkBinding>& listInstanceLinkBindings, bool bAndWithPrevious=false) {
         for(size_t i = 0; i < arr.getCount(); ++i) {
             if( strcmp(arr[i]->getType(),"visible") == 0 ) {
                 domTechniqueRef tec = _ExtractOpenRAVEProfile(arr[i]->getTechnique_array());
@@ -5134,7 +5134,7 @@ private:
         return InterfaceTypePtr();
     }
 
-    std::string _ExtractLinkName(domLinkRef pdomlink) {
+    std::string _ExtractLinkName(const domLinkRef& pdomlink) {
         std::string linkname;
         if( !!pdomlink ) {
             if( !!pdomlink->getName() ) {
@@ -5147,7 +5147,7 @@ private:
         return _ConvertToOpenRAVEName(linkname);
     }
 
-    bool _checkMathML(daeElementRef pelt,const string& type)
+    bool _checkMathML(const daeElementRef& pelt,const string& type)
     {
         if( pelt->getElementName()==type ) {
             return true;
@@ -5161,7 +5161,7 @@ private:
         return name.substr(pos+1)==type;
     }
 
-    std::pair<KinBody::JointPtr,domJointRef> _getJointFromRef(xsToken targetref, daeElementRef peltref, KinBodyPtr pkinbody, const KinematicsSceneBindings& bindings) {
+    std::pair<KinBody::JointPtr,domJointRef> _getJointFromRef(xsToken targetref, const daeElementRef& peltref, const KinBodyPtr& pkinbody, const KinematicsSceneBindings& bindings) {
         daeElement* peltjoint = daeSidRef(targetref, peltref).resolve().elt;
         domJointRef pdomjoint;
         if( !!peltjoint ) {
@@ -5226,7 +5226,7 @@ private:
     }
 
     /// \brief get the element name without the namespace
-    std::string _getElementName(daeElementRef pelt) {
+    std::string _getElementName(const daeElementRef& pelt) {
         std::string name = pelt->getElementName();
         std::size_t pos = name.find_last_of(':');
         if( pos != string::npos ) {
@@ -5263,7 +5263,7 @@ private:
     }
 
     /// \brief searches through the node's children until one matches the node stored in listInstanceModelBindings
-    static std::list<InstanceModelBinding>::iterator _FindChildModel(domNodeRef pnode, std::list<InstanceModelBinding>& listInstanceModelBindings)
+    static std::list<InstanceModelBinding>::iterator _FindChildModel(const domNodeRef& pnode, std::list<InstanceModelBinding>& listInstanceModelBindings)
     {
         if( !pnode ) {
             return listInstanceModelBindings.end();
@@ -5281,7 +5281,7 @@ private:
     }
 
     /// \brief Extracts MathML into fparser equation format
-    std::string _ExtractMathML(daeElementRef proot, KinBodyPtr pkinbody, daeElementRef pelt, const KinematicsSceneBindings& bindings)
+    std::string _ExtractMathML(const daeElementRef& proot, const KinBodyPtr& pkinbody, const daeElementRef& pelt, const KinematicsSceneBindings& bindings)
     {
         std::string name = _getElementName(pelt);
         std::string eq;
@@ -5698,7 +5698,7 @@ private:
         return string(elt1->getSid()) == elt2->getSid();
     }
 
-    static int _CompareElementAttribute(daeElementRef elt1, daeElementRef elt2, const std::string& attr) {
+    static int _CompareElementAttribute(const daeElementRef& elt1, const daeElementRef& elt2, const std::string& attr) {
         if( !elt1 || !elt2 ) {
             return -1;
         }
@@ -5725,7 +5725,7 @@ private:
         return elt1->getAttribute(attr.c_str()) == elt2->getAttribute(attr.c_str());
     }
 
-    static int CompareElementsSidToId(daeElementRef elt1, daeElementRef elt2) {
+    static int CompareElementsSidToId(const daeElementRef& elt1, const daeElementRef& elt2) {
         if( elt1 == elt2 ) {
             return 1;
         }
@@ -5802,7 +5802,7 @@ private:
         return newname;
     }
 
-    inline dReal _GetUnitScale(daeElementRef pelt, dReal startscale)
+    inline dReal _GetUnitScale(const daeElementRef& pelt, dReal startscale)
     {
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
@@ -5848,7 +5848,7 @@ private:
     /// \brief returns a string with the full URI
     ///
     /// \param pelt the element that instantiates the uri
-    std::string _MakeFullURI(const xsAnyURI& uri, daeElementRef pelt) {
+    std::string _MakeFullURI(const xsAnyURI& uri, const daeElementRef& pelt) {
         daeURI* docuri = pelt->getDocumentURI();
         if( !docuri ) {
             RAVELOG_WARN(str(boost::format("failed to get the URI of the document, so cannot resolve %s")%uri.str()));
@@ -5862,7 +5862,7 @@ private:
         }
     }
 
-    std::string _MakeFullURIFromId(const std::string& id, daeElementRef pelt) {
+    std::string _MakeFullURIFromId(const std::string& id, const daeElementRef& pelt) {
         daeURI* docuri = pelt->getDocumentURI();
         if( !docuri ) {
             RAVELOG_WARN(str(boost::format("failed to get the URI of the document, so cannot resolve id %s")%id));

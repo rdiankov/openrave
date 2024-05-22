@@ -492,7 +492,7 @@ private:
             return true;
         }
 
-        CollisionAction _IgnoreCollisionCallback(CollisionReportPtr preport, bool IsCalledFromPhysicsEngine)
+        CollisionAction _IgnoreCollisionCallback(const CollisionReportPtr& preport, bool IsCalledFromPhysicsEngine)
         {
             if( _bSamplingRays ) {
                 int numIgnore = 0;
@@ -550,7 +550,7 @@ private:
     class GoalSampleFunction
     {
 public:
-        GoalSampleFunction(boost::shared_ptr<VisualFeedback> vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
+        GoalSampleFunction(const boost::shared_ptr<VisualFeedback>& vf, const vector<Transform>& visibilitytransforms) : _vconstraint(vf), _fSampleGoalProb(1.0f), _vf(vf), _visibilitytransforms(visibilitytransforms)
         {
             RAVELOG_DEBUG(str(boost::format("have %d detection extents hypotheses\n")%_visibilitytransforms.size()));
             _ttarget = _vf->_targetlink->GetTransform();

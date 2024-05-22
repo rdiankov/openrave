@@ -48,7 +48,7 @@ const float TIMER_SENSOR_INTERVAL = (1.0f/60.0f);
 #define VIDEO_HEIGHT 480
 #define VIDEO_FRAMERATE (30000.0/1001.0) // 29.97 //60
 
-void DeleteItemCallbackSafe(QtCoinViewerWeakPtr wpt, Item* pItem)
+void DeleteItemCallbackSafe(const QtCoinViewerWeakPtr& wpt, Item* pItem)
 {
     QtCoinViewerPtr pviewer = wpt.lock();
     if( !!pviewer ) {
@@ -61,7 +61,7 @@ void DeleteItemCallbackSafe(QtCoinViewerWeakPtr wpt, Item* pItem)
 class ItemSelectionCallbackData : public UserData
 {
 public:
-    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ItemSelectionCallbackData(const ViewerBase::ItemSelectionCallbackFn& callback, const boost::shared_ptr<QtCoinViewer>& pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ItemSelectionCallbackData() {
         boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
@@ -81,7 +81,7 @@ typedef boost::shared_ptr<ItemSelectionCallbackData> ItemSelectionCallbackDataPt
 class ViewerImageCallbackData : public UserData
 {
 public:
-    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerImageCallbackData(const ViewerBase::ViewerImageCallbackFn& callback, const boost::shared_ptr<QtCoinViewer>& pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerImageCallbackData() {
         boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
@@ -101,7 +101,7 @@ typedef boost::shared_ptr<ViewerImageCallbackData> ViewerImageCallbackDataPtr;
 class ViewerThreadCallbackData : public UserData
 {
 public:
-    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, boost::shared_ptr<QtCoinViewer> pviewer) : _callback(callback), _pweakviewer(pviewer) {
+    ViewerThreadCallbackData(const ViewerBase::ViewerThreadCallbackFn& callback, const boost::shared_ptr<QtCoinViewer>& pviewer) : _callback(callback), _pweakviewer(pviewer) {
     }
     virtual ~ViewerThreadCallbackData() {
         boost::shared_ptr<QtCoinViewer> pviewer = _pweakviewer.lock();
@@ -3803,7 +3803,7 @@ void QtCoinViewer::About()
 
 }
 
-QtCoinViewer::EnvMessage::EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex)
+QtCoinViewer::EnvMessage::EnvMessage(const QtCoinViewerPtr& pviewer, void** ppreturn, bool bWaitForMutex)
     : _pviewer(pviewer), _ppreturn(ppreturn)
 {
     // get a mutex

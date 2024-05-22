@@ -68,7 +68,7 @@ namespace configurationcachepy {
 class PyConfigurationCache
 {
 public:
-    PyConfigurationCache(object pyrobot)
+    PyConfigurationCache(const object& pyrobot)
     {
         _pyenv = openravepy::toPyEnvironment(pyrobot);
         _cache.reset(new configurationcache::ConfigurationCache(openravepy::GetRobot(pyrobot)));
@@ -76,7 +76,7 @@ public:
     virtual ~PyConfigurationCache(){
     }
 
-    int InsertConfigurationDist(object ovalues, object opyreport, dReal dist)
+    int InsertConfigurationDist(const object& ovalues, const object& opyreport, dReal dist)
     {
         CollisionReport report;
         CollisionReportPtr preport;
@@ -92,7 +92,7 @@ public:
         return bCollision;
     }
 
-    int InsertConfiguration(object ovalues, object opyreport)
+    int InsertConfiguration(const object& ovalues, const object& opyreport)
     {
         CollisionReport report;
         CollisionReportPtr preport;
@@ -107,7 +107,7 @@ public:
         return bCollision;
     }
 
-    object CheckCollision(object ovalues)
+    object CheckCollision(const object& ovalues)
     {
         KinBody::LinkConstPtr crobotlink, ccollidinglink;
         dReal closestdist=0;
@@ -148,7 +148,7 @@ public:
         _cache->SetFreeSpaceThresh(freespacethresh);
     }
 
-    void SetWeights(object oweights)
+    void SetWeights(const object& oweights)
     {
         _cache->SetWeights(openravepy::ExtractArray<dReal>(oweights));
     }
@@ -188,7 +188,7 @@ public:
         return openravepy::toPyArray(values);
     }
 
-    object FindNearestNode(object ovalues, dReal dist) {
+    object FindNearestNode(const object& ovalues, dReal dist) {
         std::pair<std::vector<dReal>, dReal> nn = _cache->FindNearestNode(openravepy::ExtractArray<dReal>(ovalues), dist);
         if( nn.first.empty() ) {
             return py::none_(); // didn't find anything
@@ -198,7 +198,7 @@ public:
         }
     }
 
-    dReal ComputeDistance(object oconfi, object oconff) {
+    dReal ComputeDistance(const object& oconfi, const object& oconff) {
         return _cache->ComputeDistance(openravepy::ExtractArray<dReal>(oconfi), openravepy::ExtractArray<dReal>(oconff));
     }
 

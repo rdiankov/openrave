@@ -1518,7 +1518,7 @@ size_t InsertActiveDOFWaypointWithRetiming(int waypointindex, const std::vector<
     return waypointindex+nInitialNumWaypoints-1;
 }
 
-size_t ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, PlannerBasePtr planner){
+size_t ExtendWaypoint(int waypointindex, const std::vector<dReal>& dofvalues, const std::vector<dReal>& dofvelocities, const TrajectoryBasePtr& traj, const PlannerBasePtr& planner){
     if( traj->GetNumWaypoints()<1) {
         throw OPENRAVE_EXCEPTION_FORMAT0(_("trajectory is void"),ORE_InvalidArguments);
     }

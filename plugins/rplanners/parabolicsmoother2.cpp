@@ -3372,7 +3372,7 @@ protected:
     /// \param[in] ptraj : trajectory to dump
     /// \param[in] level : debug level
     /// \param[in] option : option to determine the additional file name.
-    void _DumpTrajectory(TrajectoryBasePtr ptraj, const DebugLevel level, const int option)
+    void _DumpTrajectory(const TrajectoryBasePtr& ptraj, const DebugLevel level, const int option)
     {
         if( IS_DEBUGLEVEL(level) ) {
             std::string filename = _DumpTrajectory(ptraj, option);

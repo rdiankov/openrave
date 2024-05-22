@@ -806,7 +806,7 @@ int CacheTree::RemoveCollisionConfigurations()
     return nremoved;
 }
 
-int CacheTree::SaveCache(std::string filename)
+int CacheTree::SaveCache(const std::string& filename)
 {
     //std::lock_guard<std::mutex> lock(_mutexpool);
     _mapNodeIndices.clear();
@@ -879,7 +879,7 @@ int CacheTree::SaveCache(std::string filename)
     return 1;
 }
 
-int CacheTree::LoadCache(std::string filename, EnvironmentBasePtr penv)
+int CacheTree::LoadCache(const std::string& filename, const EnvironmentBasePtr& penv)
 {
     //std::lock_guard<std::mutex> lock(_mutexpool);
     _fulldirname = RaveFindDatabaseFile(std::string("selfcache.")+filename,false);

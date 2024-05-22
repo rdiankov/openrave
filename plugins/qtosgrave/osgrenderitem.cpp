@@ -102,7 +102,7 @@ OSGGroupPtr CreateOSGXYZAxes(double len, double axisthickness)
 class WorldCoordOfNodeVisitor : public osg::NodeVisitor
 {
 public:
-    WorldCoordOfNodeVisitor(OSGNodePtr osgSceneRoot) : osg::NodeVisitor(NodeVisitor::TRAVERSE_PARENTS), _osgSceneRoot(osgSceneRoot), done(false) {
+    WorldCoordOfNodeVisitor(const OSGNodePtr& osgSceneRoot) : osg::NodeVisitor(NodeVisitor::TRAVERSE_PARENTS), _osgSceneRoot(osgSceneRoot), done(false) {
     }
     virtual void apply(osg::Node &node) {
         if( !done ) {
@@ -143,7 +143,7 @@ private:
     bool done;
 };
 
-Item::Item(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot) : _osgSceneRoot(osgSceneRoot), _osgFigureRoot(osgFigureRoot)
+Item::Item(const OSGGroupPtr& osgSceneRoot, const OSGGroupPtr& osgFigureRoot) : _osgSceneRoot(osgSceneRoot), _osgFigureRoot(osgFigureRoot)
 {
     // set up the Inventor nodes
     _osgWorldTransform = new osg::MatrixTransform;
@@ -158,7 +158,7 @@ Item::~Item()
     _osgSceneRoot->removeChild(_osgWorldTransform); // should remove all references
 }
 
-bool Item::ContainsOSGNode(OSGNodePtr pNode)
+bool Item::ContainsOSGNode(const OSGNodePtr& pNode)
 {
     FindNode search(pNode);
     search.apply(*_osgWorldTransform);
@@ -233,7 +233,7 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
 }
 
 /// KinBodyItem class
-KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, KinBodyPtr pbody, ViewGeometry viewmode) : Item(osgSceneRoot, osgFigureRoot), _viewmode(viewmode)
+KinBodyItem::KinBodyItem(const OSGGroupPtr& osgSceneRoot, const OSGGroupPtr& osgFigureRoot, const KinBodyPtr& pbody, ViewGeometry viewmode) : Item(osgSceneRoot, osgFigureRoot), _viewmode(viewmode)
 {
     BOOST_ASSERT( !!pbody );
     _pbody = pbody;
@@ -652,7 +652,7 @@ void KinBodyItem::_PrintMatrix(osg::Matrix& m)
     }
 }
 
-void KinBodyItem::_PrintSceneGraph(const std::string& currLevel, OSGNodePtr currNode)
+void KinBodyItem::_PrintSceneGraph(const std::string& currLevel, const OSGNodePtr& currNode)
 {
     std::string level;
     level = currLevel;
@@ -671,7 +671,7 @@ void KinBodyItem::_PrintSceneGraph(const std::string& currLevel, OSGNodePtr curr
     }
 }
 
-void KinBodyItem::_PrintNodeFeatures(OSGNodePtr node)
+void KinBodyItem::_PrintNodeFeatures(const OSGNodePtr& node)
 {
 //  RAVELOG_VERBOSE("----->>>> printNodeFeatures(node)\n");
 //  osg::StateSet* state;
@@ -949,7 +949,7 @@ void KinBodyItem::SetGrab(bool bGrab, bool bUpdate)
     }
 }
 
-KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(OSGNodePtr plinknode) const
+KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(const OSGNodePtr& plinknode) const
 {
     FindNode search(plinknode);
     for(size_t ilink = 0; ilink < _veclinks.size(); ++ilink) {
@@ -962,7 +962,7 @@ KinBody::LinkPtr KinBodyItem::GetLinkFromOSG(OSGNodePtr plinknode) const
     return KinBody::LinkPtr();
 }
 
-KinBody::Link::GeometryPtr KinBodyItem::GetGeomFromOSG(OSGNodePtr pgeomnode) const
+KinBody::Link::GeometryPtr KinBodyItem::GetGeomFromOSG(const OSGNodePtr& pgeomnode) const
 {
     FindNode search(pgeomnode);
     for(size_t ilink = 0; ilink < _vecgeoms.size(); ++ilink) {
@@ -977,7 +977,7 @@ KinBody::Link::GeometryPtr KinBodyItem::GetGeomFromOSG(OSGNodePtr pgeomnode) con
     return KinBody::Link::GeometryPtr();
 }
 
-RobotItem::RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, const RobotBasePtr& robot, ViewGeometry viewgeom) : KinBodyItem(osgSceneRoot, osgFigureRoot, robot, viewgeom)
+RobotItem::RobotItem(const OSGGroupPtr& osgSceneRoot, const OSGGroupPtr& osgFigureRoot, const RobotBasePtr& robot, ViewGeometry viewgeom) : KinBodyItem(osgSceneRoot, osgFigureRoot, robot, viewgeom)
 {
     _probot = robot;
 }
@@ -1156,7 +1156,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
     return true;
 }
 
-void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const float zOffset, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency){
+void DrawCropContainerMargins(const OSGGroupPtr& pgeometrydata, const float zOffset, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency){
     if(negativeCropContainerMargins == Vector(0, 0, 0) && positiveCropContainerMargins == Vector(0, 0, 0)){
         // do nothing if CropContainerMargins are all zeros
         return;

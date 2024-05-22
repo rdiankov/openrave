@@ -31,7 +31,7 @@ enum ViewGeometry {
 class Item : public boost::enable_shared_from_this<Item>, public OpenRAVE::UserData
 {
 public:
-    Item(QtCoinViewerPtr viewer);
+    Item(const QtCoinViewerPtr& viewer);
     virtual ~Item();
 
     /// \brief called when OpenRAVE::Environment is locked and item is about to be removed
@@ -133,7 +133,7 @@ protected:
     }
 
 public:
-    KinBodyItem(QtCoinViewerPtr viewer, KinBodyPtr, ViewGeometry viewmode);
+    KinBodyItem(QtCoinViewerPtr viewer, const KinBodyPtr&, ViewGeometry viewmode);
     virtual ~KinBodyItem() {
     }
 
@@ -188,7 +188,7 @@ protected:
     virtual void GeometryChangedCallback();
     virtual void DrawChangedCallback();
 
-    SoSeparator *RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, KinBody::Link::GeometryPtr geom);
+    SoSeparator *RenderTrimesh(SoSeparator *psep, TriMesh const &mesh, const KinBody::Link::GeometryPtr& geom);
 
     KinBodyPtr _pchain;
     int networkid;            ///< _pchain->GetNetworkId()

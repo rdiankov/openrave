@@ -229,7 +229,7 @@ public:
     class EnvMessage : public boost::enable_shared_from_this<EnvMessage>
     {
 public:
-        EnvMessage(QtCoinViewerPtr pviewer, void** ppreturn, bool bWaitForMutex);
+        EnvMessage(const QtCoinViewerPtr& pviewer, void** ppreturn, bool bWaitForMutex);
         virtual ~EnvMessage();
 
         /// execute the command in the caller

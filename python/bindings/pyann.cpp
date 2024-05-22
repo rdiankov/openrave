@@ -115,7 +115,7 @@ public:
 };
 
 // Constructor from list        TODO: change to iterator
-OPENRAVE_SHARED_PTR<ANNkd_tree>       init_from_list(object lst)
+OPENRAVE_SHARED_PTR<ANNkd_tree>       init_from_list(const object& lst)
 {
     BOOST_ASSERT(sizeof(ANNdist)==8 || sizeof(ANNdist)==4);
     BOOST_ASSERT(sizeof(ANNidx)==4);
@@ -142,7 +142,7 @@ void destroy_points(ANNkd_tree& kdtree)
     annDeallocPts(dataPts);
 }
 
-object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = false)
+object search(ANNkd_tree& kdtree, const object& q, int k, double eps, bool priority = false)
 {
     BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
     ANNpointManaged annq(kdtree.theDim());
@@ -187,7 +187,7 @@ object search(ANNkd_tree& kdtree, object q, int k, double eps, bool priority = f
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool priority = false)
+object search_array(ANNkd_tree& kdtree, const object& qarray, int k, double eps, bool priority = false)
 {
     BOOST_ASSERT(k <= kdtree.nPoints());
     const int N = len(qarray);
@@ -246,7 +246,7 @@ object search_array(ANNkd_tree& kdtree, object qarray, int k, double eps, bool p
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, double eps)
+object k_fixed_radius_search(ANNkd_tree& kdtree, const object& q, double sqRad, int k, double eps)
 {
     BOOST_ASSERT(k <= kdtree.nPoints() && kdtree.theDim() == len(q));
     ANNpointManaged annq(kdtree.theDim());
@@ -306,7 +306,7 @@ object k_fixed_radius_search(ANNkd_tree& kdtree, object q, double sqRad, int k, 
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object k_fixed_radius_search_array(ANNkd_tree& kdtree, object qarray, double sqRad, int k, double eps)
+object k_fixed_radius_search_array(ANNkd_tree& kdtree, const object& qarray, double sqRad, int k, double eps)
 {
     BOOST_ASSERT(k <= kdtree.nPoints());
     const int N = len(qarray);

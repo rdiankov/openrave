@@ -66,7 +66,7 @@ bool ComputeQuadraticRampsWithConstraints(std::list<ParabolicRamp::ParabolicRamp
     \param trysmart if false, modify all the ramps by the constant factor. if true, then modify ramps whos modified field is true.
     \param flag
  */
-bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,OpenRAVE::dReal coef,bool trysmart, ConstraintTrajectoryTimingParametersPtr params);
+bool ScaleRampsTime(const std::list<ParabolicRamp::ParabolicRampND>& origramps,std::list<ParabolicRamp::ParabolicRampND>& ramps,OpenRAVE::dReal coef,bool trysmart, const ConstraintTrajectoryTimingParametersPtr& params);
 
 /** Determine the minimum switchtime in a ramp
     \param rampnd input ramp

@@ -921,7 +921,7 @@ public:
         return true;
     }
 
-    void _WorkerThread(const WorkerParametersPtr worker_params, EnvironmentBasePtr penv)
+    void _WorkerThread(const WorkerParametersPtr& worker_params, const EnvironmentBasePtr& penv)
     {
         // clone environment
         EnvironmentBasePtr pcloneenv = penv->CloneSelf(Clone_Bodies|Clone_Simulation);
