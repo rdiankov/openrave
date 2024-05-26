@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.145.0
+===============
+
+- Rename TimeUnit into TimeDurationUnit and create a new TimeStampUnit
+
+Version 0.144.4
+===============
+
+- Optimize processing of ignore links for grabbed bodies.
+
 Version 0.144.3
 ===============
 
