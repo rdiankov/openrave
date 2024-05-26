@@ -47,8 +47,9 @@ enum OpenRAVEErrorCode
 
     ORE_LengthUnitInvalid = 16, ///< Cannot find the specific LengthUnit
     ORE_MassUnitInvalid = 17, ///< Cannot find the specific MassUnit
-    ORE_TimeUnitInvalid = 18, ///< Cannot find the specific TimeUnit
+    ORE_TimeDurationUnitInvalid = 18, ///< Cannot find the specific TimeDurationUnit
     ORE_AngleUnitInvalid = 19, ///< Cannot find the specific AngleUnit
+    ORE_TimeStampUnitInvalid = 20, ///< Cannot find the specific TimeStampUnit
 
     ORE_EnvironmentFormatUnrecognized = 0x0100, ///< the environment format to load is not recognized.
 
