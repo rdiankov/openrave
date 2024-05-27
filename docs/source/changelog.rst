@@ -3,10 +3,20 @@
 ChangeLog
 #########
 
-Version 0.145.0
+Version 0.146.0
 ===============
 
 - Add `Reserve` API to `TrajectoryBase` and implement it in `GenericTrajectory`.
+
+Version 0.145.0
+===============
+
+- Rename TimeUnit into TimeDurationUnit and create a new TimeStampUnit
+
+Version 0.144.4
+===============
+
+- Optimize processing of ignore links for grabbed bodies.
 
 Version 0.144.3
 ===============
