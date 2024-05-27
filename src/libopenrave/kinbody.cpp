@@ -457,7 +457,7 @@ void KinBody::Destroy()
     if( GetEnvironmentBodyIndex() != 0 ) {
         RAVELOG_DEBUG_FORMAT("env=%s, destroying body '%s' with bodyIndex=%d while it is still in the environment.", GetEnv()->GetNameId()%GetName()%GetEnvironmentBodyIndex());
     }
-    
+
     ReleaseAllGrabbed();
     if( _listAttachedBodies.size() > 0 ) {
         // could be in the environment destructor?
@@ -5135,6 +5135,21 @@ void KinBody::_DeinitializeInternalInformation()
     _nHierarchyComputed = 0; // should reset to inform other elements that kinematics information might not be accurate
 }
 
+void KinBody::GetDirectlyAttachedBodies(std::vector<KinBodyPtr>& vBodies) const
+{
+    // Clear the output and reserve enough space for all potentially attached bodies
+    vBodies.clear();
+    vBodies.reserve(_listAttachedBodies.size());
+
+    // Filter down the attached bodies to only the set of bodies that are still live
+    for (const KinBodyWeakPtr& pbody : _listAttachedBodies) {
+        KinBodyPtr attachedBody = pbody.lock();
+        if (!!attachedBody) {
+            vBodies.emplace_back(std::move(attachedBody));
+        }
+    }
+}
+
 bool KinBody::IsAttached(const KinBody &body) const
 {
     // handle obvious cases without doing expensive operations
@@ -6157,7 +6172,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._dofValues.clear();
 
     if( !(options & EIO_SkipDOFValues) ) {
-        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized    
+        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized
         std::vector<dReal> vDOFValues;
         GetDOFValues(vDOFValues);
         for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
