@@ -1732,15 +1732,15 @@ void init_openravepy_global()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object timeUnit = enum_<TimeUnit>(m, "TimeUnit" DOXY_ENUM(TimeUnit))
+    object timeDurationUnit = enum_<TimeDurationUnit>(m, "TimeDurationUnit" DOXY_ENUM(TimeDurationUnit))
 #else
-    object timeUnit = enum_<TimeUnit>("TimeUnit" DOXY_ENUM(TimeUnit))
+    object timeDurationUnit = enum_<TimeDurationUnit>("TimeDurationUnit" DOXY_ENUM(TimeDurationUnit))
 #endif
-                      .value(GetTimeUnitString(TU_Second), TU_Second)
-                      .value(GetTimeUnitString(TU_Millisecond), TU_Millisecond)
-                      .value(GetTimeUnitString(TU_Microsecond), TU_Microsecond)
-                      .value(GetTimeUnitString(TU_Nanosecond), TU_Nanosecond)
-                      .value(GetTimeUnitString(TU_Picosecond), TU_Picosecond)
+                              .value(GetTimeDurationUnitString(TDU_Second), TDU_Second)
+                              .value(GetTimeDurationUnitString(TDU_Millisecond), TDU_Millisecond)
+                              .value(GetTimeDurationUnitString(TDU_Microsecond), TDU_Microsecond)
+                              .value(GetTimeDurationUnitString(TDU_Nanosecond), TDU_Nanosecond)
+                              .value(GetTimeDurationUnitString(TDU_Picosecond), TDU_Picosecond)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1751,6 +1751,17 @@ void init_openravepy_global()
                        .value(GetAngleUnitString(AU_Radian), AU_Radian)
                        .value(GetAngleUnitString(AU_Degree), AU_Degree)
                        .value(GetAngleUnitString(AU_Centidegree), AU_Centidegree)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object timeStampUnit = enum_<TimeStampUnit>(m, "TimeStampUnit" DOXY_ENUM(TimeStampUnit))
+#else
+    object timeStampUnit = enum_<TimeStampUnit>("TimeStampUnit" DOXY_ENUM(TimeStampUnit))
+#endif
+                      .value(GetTimeStampUnitString(TSU_SecondsFromLinuxEpoch), TSU_SecondsFromLinuxEpoch)
+                      .value(GetTimeStampUnitString(TSU_MillisecondsFromLinuxEpoch), TSU_MillisecondsFromLinuxEpoch)
+                      .value(GetTimeStampUnitString(TSU_MicrosecondsFromLinuxEpoch), TSU_MicrosecondsFromLinuxEpoch)
+                      .value(GetTimeStampUnitString(TSU_ISO8601), TSU_ISO8601)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1792,8 +1803,9 @@ void init_openravepy_global()
         })
     .def_readwrite("lengthUnit",&UnitInfo::lengthUnit)
     .def_readwrite("massUnit",&UnitInfo::massUnit)
-    .def_readwrite("timeUnit",&UnitInfo::timeUnit)
+    .def_readwrite("timeDurationUnit",&UnitInfo::timeDurationUnit)
     .def_readwrite("angleUnit",&UnitInfo::angleUnit)
+    .def_readwrite("timeStampUnit",&UnitInfo::timeStampUnit)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

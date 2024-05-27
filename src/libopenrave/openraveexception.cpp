@@ -63,8 +63,9 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
 
     case ORE_LengthUnitInvalid: return "LengthUnitInvalid";
     case ORE_MassUnitInvalid: return "MassUnitInvalid";
-    case ORE_TimeUnitInvalid: return "TimeUnitInvalid";
+    case ORE_TimeDurationUnitInvalid: return "TimeDurationUnitInvalid";
     case ORE_AngleUnitInvalid: return "AngleUnitInvalid";
+    case ORE_TimeStampUnitInvalid: return "TimeStampUnitInvalid";
 
     case ORE_SensorNameConflict: return "SensorNameConflict";
     case ORE_BodyIdConflict: return "BodyIdConflict";

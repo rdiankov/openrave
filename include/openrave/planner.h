@@ -52,7 +52,9 @@ enum PlannerStatusCode
     PS_HasSolution = 1, ///< planner succeeded
     PS_Interrupted = 2, ///< planning was interrupted, but can be resumed by calling PlanPath again
     PS_InterruptedWithSolution = 3, ///< planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results
-    PS_FailedDueToCollision = 0x00030000, ///< planner failed due to collision constraints
+    PS_FailedDueToEnvCollision = 0x00010000, ///< planner failed due to env collision constraints
+    PS_FailedDueToSelfCollision = 0x00020000, ///< planner failed due to self collision constraints
+    PS_FailedDueToCollision = (PS_FailedDueToEnvCollision|PS_FailedDueToSelfCollision), ///< planner failed due to any collision constraints
     PS_FailedDueToInitial = 0x00040000, ///< failed due to initial configurations
     PS_FailedDueToGoal = 0x00080000, ///< failed due to goal configurations
     PS_FailedDueToKinematics = 0x00100000, ///< failed due to kinematics constraints

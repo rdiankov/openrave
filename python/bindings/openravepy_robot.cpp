@@ -2454,6 +2454,7 @@ void init_openravepy_robot()
                            .def_readwrite("_vManipulatorInfos",&PyRobotBase::PyRobotBaseInfo::_vManipulatorInfos)
                            .def_readwrite("_vAttachedSensorInfos",&PyRobotBase::PyRobotBaseInfo::_vAttachedSensorInfos)
                            .def_readwrite("_vConnectedBodyInfos",&PyRobotBase::PyRobotBaseInfo::_vConnectedBodyInfos)
+                           .def_readwrite("_vGripperInfos",&PyRobotBase::PyRobotBaseInfo::_vGripperInfos)
                            .def("__str__",&PyRobotBase::PyRobotBaseInfo::__str__)
                            .def("__unicode__",&PyRobotBase::PyRobotBaseInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
