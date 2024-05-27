@@ -41,7 +41,10 @@ public:
         return PT_Trajectory;
     }
 
-    virtual void Init(const ConfigurationSpecification& spec) = 0;
+    /// \brief Initialize openrave trajectory. Many of APIs assume that this API is called beforehand.
+    /// \param[in] nWayPointsToReserve : number of way points to reserve. If nWayPointsToReserve is positive value, internal memories are reserved. Otherwise, not reserved. Note that the waypoint-related memories which might grow in runtime APIs are reserved by nWayPointsToReserve.
+    /// \param[in] options : options for the reserve.
+    virtual void Init(const ConfigurationSpecification& spec, const int nWayPointsToReserve=0, const int options=0) = 0;
 
     /// \brief clears the waypoint data from the trajectory
     virtual void ClearWaypoints() = 0;
@@ -235,12 +238,6 @@ public:
     /// \param traj the trajrectory to swap data with. this->GetXMLId() == traj->GetXMLId() has to be met.
     /// This function is meant to be extremely fast with as few memory copies as possible.
     virtual void Swap(TrajectoryBasePtr traj) OPENRAVE_DUMMY_IMPLEMENTATION;
-
-    /// \brief reserve the internal memory used for trajectory data.
-    ///        since memories mostly for ConfigurationSpecification are initialized in Init, this API does not cover them. In addition, Init needs to be called before Reserve API.
-    /// \param[in] nWayPoints : number of reserved way points.
-    /// \param[in] options : options for the reserve.
-    virtual void Reserve(const int nWayPoints, const int options=0) OPENRAVE_DUMMY_IMPLEMENTATION;
 
 protected:
     inline TrajectoryBasePtr shared_trajectory() {

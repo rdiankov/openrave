@@ -217,7 +217,7 @@ public:
         return it1->second < it2->second;
     }
 
-    void Init(const ConfigurationSpecification& spec) override
+    void Init(const ConfigurationSpecification& spec, const int nWayPointsToReserve=0, const int option=0) override
     {
         if( _bInit  && _spec == spec ) {
             // already init
@@ -248,6 +248,15 @@ public:
         _vdeltainvtime.clear();
         _bChanged = true;
         _bSamplingVerified = false;
+        // reserve
+        if( nWayPointsToReserve > 0 ) {
+            _vtrajdata.reserve(nWayPointsToReserve*_spec.GetDOF()); // see also GetNumWaypoints API.
+            if( option & 0x01 ) { // only if this option is specified, reserve the time-related vectors, since these are only necessary when the Sample-related APIs are called. If such APIs are not called, the user might want to skip the unnecessary memory allocation.
+                _vaccumtime.reserve(nWayPointsToReserve);
+                _vdeltainvtime.reserve(nWayPointsToReserve);
+            }
+        }
+        // finally set init flag
         _bInit = true;
     }
 
@@ -850,16 +859,6 @@ public:
         std::swap(_bChanged, traj->_bChanged);
         std::swap(_bSamplingVerified, traj->_bSamplingVerified);
         _InitializeGroupFunctions();
-    }
-
-    void Reserve(const int nWayPoints, const int option)
-    {
-        BOOST_ASSERT(_bInit); // requires Init to initialize _spec.
-        _vtrajdata.reserve(nWayPoints*_spec.GetDOF()); // see also GetNumWaypoints API.
-        if( option & 0x01 ) { // only if this option is specified, reserve the time-related vectors, since these are only necessary when the Sample-related APIs are called. Is such APIs are not called, the user might want to skip the unnecessary memory allocation.
-            _vaccumtime.reserve(nWayPoints);
-            _vdeltainvtime.reserve(nWayPoints);
-        }
     }
 
 protected:
