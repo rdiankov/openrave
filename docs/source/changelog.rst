@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.147.0
+===============
+
+- Update API to enable to reserve way points memories in `TrajectoryBase::Init` and implement it in `GenericTrajectory`.
+
 Version 0.146.0
 ===============
 
