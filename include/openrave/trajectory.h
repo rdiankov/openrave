@@ -26,6 +26,12 @@ namespace OpenRAVE {
 
 template <typename T> class RangeGenerator;
 
+/// \brief bitmask options for Init API.
+enum TrajectoryInitializationOptions
+{
+    TIO_ReserveTimeBasedVectors = 0x00000001, ///< If this is specified, reserve the time-based memories. If not specified, only reserve way-point-related memories. This is effective only when positive nWayPointsToReserve is given to Init argument.
+};
+
 /** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> \arch_trajectory
     \ingroup interfaces
  */
@@ -43,7 +49,7 @@ public:
 
     /// \brief Initialize openrave trajectory. Many of APIs assume that this API is called beforehand.
     /// \param[in] nWayPointsToReserve : number of way points to reserve. If nWayPointsToReserve is positive value, internal memories are reserved. Otherwise, not reserved. Note that the waypoint-related memories which might grow in runtime APIs are reserved by nWayPointsToReserve.
-    /// \param[in] options : options for the reserve.
+    /// \param[in] options : options for Init. Please use TrajectoryInitializationOptions to specify the options.
     virtual void Init(const ConfigurationSpecification& spec, const int nWayPointsToReserve=0, const int options=0) = 0;
 
     /// \brief clears the waypoint data from the trajectory

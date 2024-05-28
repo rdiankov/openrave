@@ -217,7 +217,7 @@ public:
         return it1->second < it2->second;
     }
 
-    void Init(const ConfigurationSpecification& spec, const int nWayPointsToReserve=0, const int option=0) override
+    void Init(const ConfigurationSpecification& spec, const int nWayPointsToReserve=0, const int options=0) override
     {
         if( _bInit  && _spec == spec ) {
             // already init
@@ -251,7 +251,7 @@ public:
         // reserve
         if( nWayPointsToReserve > 0 ) {
             _vtrajdata.reserve(nWayPointsToReserve*_spec.GetDOF()); // see also GetNumWaypoints API.
-            if( option & 0x01 ) { // only if this option is specified, reserve the time-related vectors, since these are only necessary when the Sample-related APIs are called. If such APIs are not called, the user might want to skip the unnecessary memory allocation.
+            if( options & TIO_ReserveTimeBasedVectors ) { // only if this option is specified, reserve the time-related vectors, since these are only necessary when the Sample-related APIs are called. If such APIs are not called, the user might want to skip the unnecessary memory allocation.
                 _vaccumtime.reserve(nWayPointsToReserve);
                 _vdeltainvtime.reserve(nWayPointsToReserve);
             }
