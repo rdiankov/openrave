@@ -3,10 +3,23 @@
 ChangeLog
 #########
 
+Version 0.147.0
+===============
+
+- Update API to enable to reserve way points memories in `TrajectoryBase::Init` and implement it in `GenericTrajectory`.
+
 Version 0.146.0
 ===============
 
-- Add `Reserve` API to `TrajectoryBase` and implement it in `GenericTrajectory`.
+- Officially support `chuckingDirection` in `gripperInfo` to deprecate gripper settings in `ManipulatorInfo`. Now it's recommended to use GripperInfo for `chuckingDirection` and `gripperJointNames`.
+- `Manipulator` has caches for `chuckingDirection` and `gripperJointNames` independent from those in `ManipulatorInfo`. Those in Manipulator are determined both by `GripperInfo` and `ManipulatorInfo`.
+- Keep code in `ManipulatorInfo` for backward compatibility purpose.
+- Deprecate the unused API for Manipulator about chucking. Remove `SetClosingDirection` and `SetChuckingDirection`, since these seem unused.
+
+Note for backward compatibility
+-------------------------------
+
+If loading scenes saved by the old openrave on the latest openrave, it requires the code in `ManipulatorInfo`. In addition, some of the downstream code uses `AddManipulator` to define temporary manipulator, and it requires setting in `ManipulatorInfo`. Thus, this MR keeps the infomration in `ManipulatorInfo`. Instead, `Manipulator` class has its own caches. That way, if the openrave loads the cleanly-migrated scene (e.g. setting is only in `GripperInfo`) and saves it, it keeps clean (e.g. `ManipulatorInfo` does not have settings).
 
 Version 0.145.0
 ===============
