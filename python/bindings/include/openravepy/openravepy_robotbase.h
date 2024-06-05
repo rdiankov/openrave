@@ -96,8 +96,6 @@ public:
         object GetLocalToolTransformPose();
         void SetLocalToolTransform(object otrans);
         void SetLocalToolDirection(object odirection);
-        void SetClosingDirection(object oclosingdirection);
-        void SetChuckingDirection(object ochuckingdirection);
         py::array_int GetGripperJoints();
         py::array_int GetGripperIndices();
         py::array_int GetArmJoints();
