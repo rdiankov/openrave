@@ -2850,6 +2850,11 @@ object PyEnvironmentBase::GetBodies()
     return bodies;
 }
 
+int PyEnvironmentBase::GetNumBodies()
+{
+    return _penv->GetNumBodies();
+}
+
 object PyEnvironmentBase::GetRobots()
 {
     std::vector<RobotBasePtr> vrobots;
@@ -3957,6 +3962,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
                      .def("GetRobots",&PyEnvironmentBase::GetRobots, DOXY_FN(EnvironmentBase,GetRobots))
                      .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
+                     .def("GetNumBodies",&PyEnvironmentBase::GetNumBodies, DOXY_FN(EnvironmentBase,GetNumBodies))
                      .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                      .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
