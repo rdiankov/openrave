@@ -17,6 +17,7 @@
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_collisionreport.h>
 #include <openravepy/openravepy_iksolverbase.h>
 #include <openrave/utils.h>
 
@@ -47,6 +48,62 @@ using py::def;
 
 namespace numeric = py::numeric;
 
+PyIkFailureInfo::PyIkFailureInfo(const IkFailureInfo& ikFailureInfo) : _ikFailureInfo(ikFailureInfo) {
+}
+IkReturnAction PyIkFailureInfo::GetAction() {
+    return _ikFailureInfo._action;
+}
+object PyIkFailureInfo::GetConfiguration() {
+    return toPyArray(_ikFailureInfo._vconfig);
+}
+object PyIkFailureInfo::GetIkParam() {
+    if( _ikFailureInfo.HasValidIkParam() ) {
+        return toPyIkParameterization(_ikFailureInfo.GetIkParam());
+    }
+    else {
+        return py::none_();
+    }
+}
+
+object PyIkFailureInfo::GetCollisionReport() {
+    if( _ikFailureInfo._report.IsValid() ) {
+        return py::to_object(openravepy::toPyCollisionReport(_ikFailureInfo._report));
+    }
+    else {
+        return py::none_();
+    }
+}
+
+std::string PyIkFailureInfo::GetDescription() {
+    return _ikFailureInfo._description;
+}
+
+object PyIkFailureInfo::GetMapData(uint64_t key) {
+    std::vector<dReal> data;
+    if( _ikFailureInfo._mapCustomData.Find(key, data) ) {
+        return toPyArray(data);
+    }
+    return py::none_();
+}
+
+object PyIkFailureInfo::GetMapDataDict() {
+    py::dict odata;
+    const orcontainer::VectorBackedMap<std::vector<dReal>>& vCustomData = _ikFailureInfo._mapCustomData;
+    for (orcontainer::VectorBackedMap<std::vector<dReal>>::Iterator it = vCustomData.GetBegin(); it != vCustomData.GetEnd(); ++it) {
+        odata[it.GetNameId()] = toPyArray(it.GetValue());
+    }
+    return odata;
+}
+object PyIkFailureInfo::SerializeJSON() {
+    rapidjson::Document rIkFailureInfo(rapidjson::kObjectType);
+    _ikFailureInfo.SaveToJson(rIkFailureInfo, rIkFailureInfo.GetAllocator());
+    return toPyObject(rIkFailureInfo);
+}
+
+PyIkFailureAccumulatorBase::PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator) {
+    _pIkFailureAccumulator = pIkFailureAccumulator;
+}
+
 PyIkReturn::PyIkReturn(const IkReturn& ret) : _ret(ret) {
 }
 PyIkReturn::PyIkReturn(IkReturnPtr pret) : _ret(*pret) {
@@ -72,10 +129,29 @@ object PyIkReturn::GetMapData(const std::string& key) {
 object PyIkReturn::GetMapDataDict() {
     py::dict odata;
     FOREACHC(it,_ret._mapdata) {
-        odata[it->first] = toPyArray(it->second);
+        odata[it->first.c_str()] = toPyArray(it->second);
     }
     return odata;
 }
+object PyIkReturn::GetIkFailureInfoIndices() {
+    return toPyArray(_ret._vIkFailureInfoIndices);
+//    py::list pyreturns;
+//    FOREACHC(itIkFailureInfo, _ret._vIkFailureInfos) {
+//        pyreturns.append(py::to_object(PyIkFailureInfoPtr(new PyIkFailureInfo(**itIkFailureInfo))));
+//    }
+//    return pyreturns;
+}
+// object PyIkReturn::GetIkFailureInfo() {
+//     return toPyIkFailureInfo(_ret._ikFailureInfo);
+// }
+// object PyIkReturn::GetCheckedConfiguration() {
+//     if( _ret._action == IKRA_Success ) {
+//         return toPyArray(_ret._vsolution);
+//     }
+//     else {
+//         return toPyArray(_ret._ikFailureInfo._vconfig);
+//     }
+// }
 
 void PyIkReturn::SetUserData(PyUserData pdata) {
     _ret._userdata = pdata._handle;
@@ -253,6 +329,11 @@ object toPyIkReturn(const IkReturn& ret)
     return py::to_object(PyIkReturnPtr(new PyIkReturn(ret)));
 }
 
+object toPyIkFailureInfo(const IkFailureInfo& ikFailureInfo)
+{
+    return py::to_object(PyIkFailureInfoPtr(new PyIkFailureInfo(ikFailureInfo)));
+}
+
 IkSolverBasePtr GetIkSolver(object oiksolver)
 {
     extract_<PyIkSolverBasePtr> pyiksolver(oiksolver);
@@ -312,7 +393,7 @@ void init_openravepy_iksolver()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<IkReturnAction>(m, "IkReturnAction" DOXY_ENUM(IkReturnAction))
+    enum_<IkReturnAction>(m, "IkReturnAction", py::arithmetic() DOXY_ENUM(IkReturnAction))
 #else
     enum_<IkReturnAction>("IkReturnAction" DOXY_ENUM(IkReturnAction))
 #endif
@@ -328,22 +409,50 @@ void init_openravepy_iksolver()
     .value("RejectCustomFilter",IKRA_RejectCustomFilter)
     ;
 
+    // PyIkFailureInfo
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyIkFailureInfo, PyIkFailureInfoPtr>(m, "IkFailureInfo", DOXY_CLASS(IkFailureInfo))
+#else
+    class_<PyIkFailureInfo, PyIkFailureInfoPtr>("IkFailureInfo", DOXY_CLASS(IkFailureInfo), no_init)
+#endif
+    .def("GetAction", &PyIkFailureInfo::GetAction, "Returns the corresponding IkReturnAction.")
+    .def("GetConfiguration", &PyIkFailureInfo::GetConfiguration, "Returns the configuration that fails the check by the iksolver/registered filters.")
+    .def("GetIkParam", &PyIkFailureInfo::GetIkParam, "Returns the ikparam that fails the check by the iksolver/registered filters.")
+    .def("GetCollisionReport", &PyIkFailureInfo::GetCollisionReport, "Returns the collision report info generated during ik computation.")
+    .def("GetDescription", &PyIkFailureInfo::GetDescription, "Returns the description of this failure.")
+    .def("GetMapData", &PyIkFailureInfo::GetMapData, PY_ARGS("key") "Returns an array of numbers corresponding the entry specified by key in IkFailureInfo::_mapdata. If key does not exist in the map, returns None.")
+    .def("GetMapDataDict", &PyIkFailureInfo::GetMapDataDict, "Returns a dictionary copy of IkFailureInfo::_mapdata")
+    .def("SerializeJSON", &PyIkFailureInfo::SerializeJSON, "Returns a JSON struct for this IkFailureInfo")
+    ;
+
+    // PyIkFailureAccumulatorBase
+    {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        scope_ ikfailureaccumulator = class_<PyIkFailureAccumulatorBase, PyIkFailureAccumulatorBasePtr>(m, "IkFailureAccumulatorBase", DOXY_CLASS(IkFailureAccumulatorBase))
+            //.def(init<>())
+#else
+            scope_ ikfailureaccumulator = class_<PyIkFailureAccumulatorBase, PyIkFailureAccumulatorBasePtr>("IkFailureAccumulatorBase", DOXY_CLASS(IkFailureAccumulatorBase), no_init)
+#endif
+        ;
+    } // end PyIkFailureAccumulatorBase
+
     {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         scope_ ikreturn = class_<PyIkReturn, PyIkReturnPtr>(m, "IkReturn", DOXY_CLASS(IkReturn))
-                                 .def(init<IkReturnAction>(), "action"_a)
+                          .def(init<IkReturnAction>(), "action"_a)
 #else
         scope_ ikreturn = class_<PyIkReturn, PyIkReturnPtr>("IkReturn", DOXY_CLASS(IkReturn), no_init)
-                                 .def(init<IkReturnAction>(py::args("action")))
+                          .def(init<IkReturnAction>(py::args("action")))
 #endif
-                         .def("GetAction",&PyIkReturn::GetAction, "Retuns IkReturn::_action")
-                         .def("GetSolution",&PyIkReturn::GetSolution, "Retuns IkReturn::_vsolution")
-                         .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
-                         .def("GetMapData",&PyIkReturn::GetMapData, PY_ARGS("key") "Indexes into the map and returns an array of numbers. If key doesn't exist, returns None")
-                         .def("GetMapDataDict",&PyIkReturn::GetMapDataDict, "Returns a dictionary copy for IkReturn::_mapdata")
-                         .def("SetUserData",&PyIkReturn::SetUserData,PY_ARGS("data") "Set IKReturn::_userdata")
-                         .def("SetSolution",&PyIkReturn::SetSolution,PY_ARGS("solution") "Set IKReturn::_vsolution")
-                         .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,PY_ARGS("key", "value") "Adds key/value pair to IKReturn::_mapdata")
+                          .def("GetAction",&PyIkReturn::GetAction, "Retuns IkReturn::_action")
+                          .def("GetSolution",&PyIkReturn::GetSolution, "Retuns IkReturn::_vsolution")
+                          .def("GetUserData",&PyIkReturn::GetUserData, "Retuns IkReturn::_userdata")
+                          .def("GetMapData",&PyIkReturn::GetMapData, PY_ARGS("key") "Indexes into the map and returns an array of numbers. If key doesn't exist, returns None")
+                          .def("GetMapDataDict",&PyIkReturn::GetMapDataDict, "Returns a dictionary copy for IkReturn::_mapdata")
+                          .def("GetIkFailureInfoIndices",&PyIkReturn::GetIkFailureInfoIndices, "Returns PyIkFailureInfos containing information of failure associated with this IkReturn")
+                          .def("SetUserData",&PyIkReturn::SetUserData,PY_ARGS("data") "Set IKReturn::_userdata")
+                          .def("SetSolution",&PyIkReturn::SetSolution,PY_ARGS("solution") "Set IKReturn::_vsolution")
+                          .def("SetMapKeyValue",&PyIkReturn::SetMapKeyValue,PY_ARGS("key", "value") "Adds key/value pair to IKReturn::_mapdata")
         ;
     }
 

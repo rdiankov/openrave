@@ -33,7 +33,9 @@ public:
     PyIkParameterization(const IkParameterization &ikparam);
     virtual ~PyIkParameterization();
 
-    IkParameterizationType GetType();
+    IkParameterizationType GetType() const;
+    std::string GetId() const;
+    object GetName() const;
 
     int GetDOF();
 

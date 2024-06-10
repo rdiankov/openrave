@@ -447,7 +447,7 @@ public:
             // Check to really make sure that all waypoints are certainly at least collision-free.
             std::vector<dReal>& waypoint = _cacheAllWaypoints; // reuse _cacheAllWaypoints
             std::vector<dReal> &x0Vect = _cacheX0Vect, &v0Vect = _cacheV0Vect, &a0Vect = _cacheA0Vect;
-            for( int iwaypoint = 0; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint ) {
+            for( int iwaypoint = 0; iwaypoint < (int)ptraj->GetNumWaypoints(); ++iwaypoint ) {
                 // Get waypoint data from the trajectory
                 ptraj->GetWaypoint(iwaypoint, waypoint, newSpec);
 
@@ -802,9 +802,7 @@ public:
                         if( _bManipConstraints && !!_manipConstraintChecker ) {
                             // Scale down accelLimits and/or velLimits based on what constraints are violated.
                             dReal fVelMult, fAccelMult, fJerkMult;
-                            bool maxManipSpeedViolated = false, maxManipAccelViolated = false;
                             if( checkret.fMaxManipAccel > _parameters->maxmanipaccel ) {
-                                maxManipAccelViolated = true;
                                 if( SCALE_ALL_WHEN_TOOLACCEL_VIOLATED ) {
 #ifdef JERK_LIMITED_SMOOTHER_PROGRESS_DEBUG
                                     RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d, t0=%.15e; t1=%.15e; max manip accel violated (%.15e > %.15e). fTimeBasedSurpassMult=%.15e", _envId%iter%numIters%t0%t1%checkret.fMaxManipAccel%_parameters->maxmanipaccel%checkret.fTimeBasedSurpassMult);
@@ -850,7 +848,6 @@ public:
                                 } // end if !SCALE_ALL_WHEN_TOOLACCEL_VIOLATED
                             }
                             else if( checkret.fMaxManipSpeed > _parameters->maxmanipspeed ) {
-                                maxManipSpeedViolated = true;
                                 bScaledDown = true;
 
                                 fVelMult = checkret.fTimeBasedSurpassMult;

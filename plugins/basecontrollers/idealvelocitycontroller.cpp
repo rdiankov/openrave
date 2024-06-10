@@ -15,8 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
+
+using namespace boost::placeholders;
 
 class IdealVelocityController : public ControllerBase
 {
@@ -40,7 +42,7 @@ public:
     virtual void Reset(int options)
     {
 //        if( !!_probot ) {
-//            EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+//            EnvironmentLock lock(GetEnv()->GetMutex());
 //            //_probot->GetDOFVelocities(_vPreviousVelocities,_dofindices);
 //        }
         _bVelocityMode = false;
@@ -55,7 +57,7 @@ public:
 
     virtual bool SetDesired(const std::vector<OpenRAVE::dReal>& values, TransformConstPtr trans) {
         OPENRAVE_ASSERT_OP(values.size(),==,_dofindices.size());
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
 
         _vDesiredVelocities = values;
         std::vector<dReal> vallvelocities;

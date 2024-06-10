@@ -85,7 +85,7 @@ public:
                     cvSaveImage(filename.c_str(),vcameras[icamera]->img);
                 }
             }
-            boost::this_thread::sleep(boost::posix_time::milliseconds(200));
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
         }
 
     }

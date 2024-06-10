@@ -196,7 +196,7 @@ public:
         _Reset();
     }
 
-    virtual int Configure(ConfigureCommand command, bool blocking)
+    virtual int Configure(ConfigureCommand command, bool blocking) override
     {
         switch(command) {
         case CC_PowerOn:
@@ -227,7 +227,7 @@ public:
             return _bRenderData;
         }
         case CC_RenderDataOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _dataviewer.reset();
             _bRenderData = false;
             return _bRenderData;
@@ -239,7 +239,7 @@ public:
             _RenderGeometry();
             return _bRenderData;
         case CC_RenderGeometryOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _graphgeometry.reset();
             _bRenderGeometry = false;
             return _bRenderData;
@@ -260,14 +260,14 @@ public:
         _dataviewer.reset();
     }
 
-    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
+    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry) override
     {
         OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Camera );
         *_pgeom = *boost::static_pointer_cast<CameraGeomData const>(pgeometry);
         _Reset();
     }
 
-    virtual bool SimulationStep(dReal fTimeElapsed)
+    virtual bool SimulationStep(dReal fTimeElapsed) override
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
@@ -281,7 +281,7 @@ public:
                     _vimagedata.resize(3*_pgeom->width*_pgeom->height);
                     if( GetEnv()->GetViewer()->GetCameraImage(_vimagedata, _pgeom->width, _pgeom->height, _trans, _pgeom->KK) ) {
                         // copy the data
-                        boost::mutex::scoped_lock lock(_mutexdata);
+                        std::lock_guard<std::mutex> lock(_mutexdata);
                         pdata->vimagedata = _vimagedata;
                         pdata->__stamp = GetEnv()->GetSimulationTime();
                         pdata->__trans = _trans;
@@ -292,7 +292,7 @@ public:
         return true;
     }
 
-    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type)
+    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type) override
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             CameraGeomData* pgeom = new CameraGeomData();
@@ -302,7 +302,7 @@ public:
         return SensorGeometryConstPtr();
     }
 
-    virtual SensorDataPtr CreateSensorData(SensorType type)
+    virtual SensorDataPtr CreateSensorData(SensorType type) override
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             return SensorDataPtr(boost::shared_ptr<CameraSensorData>(new CameraSensorData()));
@@ -310,10 +310,10 @@ public:
         return SensorDataPtr();
     }
 
-    virtual bool GetSensorData(SensorDataPtr psensordata)
+    virtual bool GetSensorData(SensorDataPtr psensordata) override
     {
         if( _bPower &&( psensordata->GetType() == ST_Camera) ) {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             if( _pdata->vimagedata.size() > 0 ) {
                 *boost::dynamic_pointer_cast<CameraSensorData>(psensordata) = *_pdata;
                 return true;
@@ -322,7 +322,7 @@ public:
         return false;
     }
 
-    virtual bool Supports(SensorType type) {
+    virtual bool Supports(SensorType type) override {
         return type == ST_Camera;
     }
 
@@ -363,16 +363,16 @@ public:
         return false;
     }
 
-    virtual void SetTransform(const Transform& trans)
+    virtual void SetTransform(const Transform& trans) override
     {
         _trans = trans;
     }
 
-    virtual const Transform& GetTransform() {
+    virtual const Transform& GetTransform() override {
         return _trans;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);
@@ -456,7 +456,7 @@ protected:
     ViewerBasePtr _dataviewer;
     string _channelformat;
 
-    mutable boost::mutex _mutexdata;
+    mutable std::mutex _mutexdata;
 
     bool _bRenderGeometry, _bRenderData;
     bool _bPower;     ///< if true, gather data, otherwise don't

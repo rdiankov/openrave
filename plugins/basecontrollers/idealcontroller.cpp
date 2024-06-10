@@ -15,8 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
+
+using namespace boost::placeholders;
 
 class IdealController : public ControllerBase
 {
@@ -120,7 +122,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
         if( !_bPause ) {
             RobotBasePtr probot = _probot.lock();
-            EnvironmentMutex::scoped_lock lockenv(probot->GetEnv()->GetMutex());
+            EnvironmentLock lockenv(probot->GetEnv()->GetMutex());
             _vecdesired = values;
             if( _nControlTransformation ) {
                 if( !!trans ) {
@@ -142,7 +144,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         OPENRAVE_ASSERT_FORMAT0(!ptraj || GetEnv()==ptraj->GetEnv(), "trajectory needs to come from the same environment as the controller", ORE_InvalidArguments);
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         if( _bPause ) {
             RAVELOG_DEBUG("IdealController cannot start trajectories when paused\n");
             _ptraj.reset();
@@ -257,7 +259,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( _bPause ) {
             return;
         }
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
             RobotBasePtr probot = _probot.lock();
@@ -352,10 +354,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 if( !!grabinfo.trelativepose ) {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                probot->Grab(grabinfo.pbody, plink);
+                probot->Grab(grabinfo.pbody, plink, rapidjson::Value());
             }
             FOREACH(it,listgrab) {
-                probot->Grab(it->first,it->second);
+                probot->Grab(it->first,it->second, rapidjson::Value());
             }
             // set _bIsDone after all computation is done!
             _bIsDone = bIsDone;
@@ -476,6 +478,9 @@ private:
     {
         for(size_t i = 0; i < _vlower[0].size(); ++i) {
             if( !_dofcircular[i] ) {
+                if( std::isnan(curvalues.at(i)) ) {
+                    continue;
+                }
                 if( curvalues.at(i) < _vlower[0][i]-g_fEpsilonJointLimit ) {
                     _ReportError(str(boost::format("robot %s dof %d is violating lower limit %e < %e, time=%f")%probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
                 }
@@ -488,6 +493,9 @@ private:
             vector<dReal> vdiff = curvalues;
             probot->SubtractDOFValues(vdiff,prevvalues);
             for(size_t i = 0; i < _vupper[1].size(); ++i) {
+                if( std::isnan(vdiff.at(i)) ) {
+                    continue;
+                }
                 dReal maxallowed = timeelapsed * _vupper[1][i]+1e-6;
                 if( RaveFabs(vdiff.at(i)) > maxallowed ) {
                     _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %.15e > %.15e, time=%f")%probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed%_fCommandTime));
@@ -560,7 +568,7 @@ private:
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
     boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
-    boost::mutex _mutex;
+    std::mutex _mutex;
 };
 
 ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput)

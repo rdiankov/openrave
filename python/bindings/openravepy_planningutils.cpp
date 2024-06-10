@@ -228,9 +228,9 @@ public:
         std::list<KinBodyPtr> listCheckBodies;
         size_t numCheckBodies = len(olistCheckBodies);
         for(size_t i = 0; i < numCheckBodies; ++i) {
-            KinBodyPtr pbody = openravepy::GetKinBody(olistCheckBodies[i]);
+            KinBodyPtr pbody = openravepy::GetKinBody(olistCheckBodies[py::to_object(i)]);
             BOOST_ASSERT(!!pbody);
-            _pyenv = GetPyEnvFromPyKinBody(olistCheckBodies[i]);
+            _pyenv = GetPyEnvFromPyKinBody(olistCheckBodies[py::to_object(i)]);
             listCheckBodies.push_back(pbody);
         }
         _pconstraints.reset(new OpenRAVE::planningutils::DynamicsCollisionConstraint(parameters, listCheckBodies, filtermask));
@@ -294,7 +294,7 @@ public:
         if( !_pconstraints->GetReport() ) {
             return py::none_();
         }
-        return py::to_object(openravepy::toPyCollisionReport(_pconstraints->GetReport(), _pyenv));
+        return py::to_object(openravepy::toPyCollisionReport(_pconstraints->GetReport()));
     }
 
     void SetPlannerParameters(object oparameters)
@@ -367,7 +367,7 @@ object pyMergeTrajectories(object pytrajectories)
     std::list<TrajectoryBaseConstPtr> listtrajectories;
     PyEnvironmentBasePtr pyenv;
     for(size_t i = 0; i < len(pytrajectories); ++i) {
-        extract_<PyTrajectoryBasePtr> epytrajectory(pytrajectories[i]);
+        extract_<PyTrajectoryBasePtr> epytrajectory(pytrajectories[py::to_object(i)]);
         PyTrajectoryBasePtr pytrajectory = (PyTrajectoryBasePtr)epytrajectory;
         if( !pyenv ) {
             pyenv = openravepy::toPyEnvironment(pytrajectory);
@@ -448,7 +448,7 @@ public:
         size_t num = len(oparameterizations);
         for(size_t i = 0; i < num; ++i) {
             IkParameterization ikparam;
-            if( ExtractIkParameterization(oparameterizations[i],ikparam) ) {
+            if( ExtractIkParameterization(oparameterizations[py::to_object(i)],ikparam) ) {
                 listparameterizationsPtr.push_back(ikparam);
             }
             else {

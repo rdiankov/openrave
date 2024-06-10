@@ -305,7 +305,7 @@ bool CreateTriMeshFromFile(EnvironmentBasePtr, const std::string& filename, cons
 /// \param formathint is the hint to the underlying cad importer for the format of data
 bool CreateTriMeshFromData(const std::string& data, const std::string& formathint, const Vector &vscale, TriMesh& trimesh, RaveVector<float>&diffuseColor, RaveVector<float>&ambientColor, float &ftransparency);
 
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries);
+bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::vector<KinBody::GeometryInfo>& vGeometries);
 }
 
 #ifdef _WIN32
@@ -319,7 +319,6 @@ bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, cons
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); ++(it))
 
-#include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/thread/thread.hpp>

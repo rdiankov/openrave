@@ -16,6 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
+
 namespace OpenRAVE {
 InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __type(type), __penv(penv)
 {
@@ -26,10 +30,9 @@ InterfaceBase::InterfaceBase(InterfaceType type, EnvironmentBasePtr penv) : __ty
 
 InterfaceBase::~InterfaceBase()
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapCommands.clear();
     __mapUserData.clear();
-    __mapReadableInterfaces.clear();
     __penv.reset();
     __mapJSONCommands.clear();
 }
@@ -38,7 +41,7 @@ void InterfaceBase::SetUserData(const std::string& key, UserDataPtr data) const
 {
     UserDataPtr olduserdata;
     {
-        boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+        std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
         std::map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
         if( it == __mapUserData.end() ) {
             __mapUserData[key] = data;
@@ -66,7 +69,7 @@ bool InterfaceBase::RemoveUserData(const std::string& key) const
     // have to destroy the userdata pointer outside the lock, otherwise can get into a deadlock
     UserDataPtr olduserdata;
     {
-        boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+        std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
         std::map<std::string, UserDataPtr>::iterator it = __mapUserData.find(key);
         if( it == __mapUserData.end() ) {
             return false;
@@ -86,7 +89,7 @@ void InterfaceBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // cannot clone the user data since it can be environment dependent!
     //__mapUserData = preference->__mapUserData;
     __struri = preference->__struri;
-    __mapReadableInterfaces = preference->__mapReadableInterfaces;
+    SetReadableInterfaces(preference->GetReadableInterfaces(), true);
     __description = preference->__description;
 }
 
@@ -121,7 +124,8 @@ bool InterfaceBase::SendCommand(ostream& sout, istream& sinput)
 
 void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 {
-    FOREACHC(it, __mapReadableInterfaces) {
+    boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
+    FOREACHC(it, GetReadableInterfaces()) {
         if( !!it->second ) {
             it->second->SerializeXML(writer,options);
         }
@@ -130,7 +134,7 @@ void InterfaceBase::Serialize(BaseXMLWriterPtr writer, int options) const
 
 void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::InterfaceCommandFn fncmd, const std::string& strhelp)
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     if((cmdname.size() == 0)|| !utils::IsValidName(cmdname) ||(_stricmp(cmdname.c_str(),"commands") == 0)) {
         throw openrave_exception(str(boost::format(_("command '%s' invalid"))%cmdname),ORE_InvalidArguments);
     }
@@ -142,7 +146,7 @@ void InterfaceBase::RegisterCommand(const std::string& cmdname, InterfaceBase::I
 
 void InterfaceBase::UnregisterCommand(const std::string& cmdname)
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     CMDMAP::iterator it = __mapCommands.find(cmdname);
     if( it != __mapCommands.end() ) {
         __mapCommands.erase(it);
@@ -213,7 +217,7 @@ bool InterfaceBase::SupportsJSONCommand(const std::string& cmd)
 
 void InterfaceBase::RegisterJSONCommand(const std::string& cmdname, InterfaceBase::InterfaceJSONCommandFn fncmd, const std::string& strhelp)
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     if((cmdname.size() == 0)|| !utils::IsValidName(cmdname)) {
         throw openrave_exception(str(boost::format(_("command '%s' invalid"))%cmdname),ORE_InvalidArguments);
     }
@@ -225,7 +229,7 @@ void InterfaceBase::RegisterJSONCommand(const std::string& cmdname, InterfaceBas
 
 void InterfaceBase::UnregisterJSONCommand(const std::string& cmdname)
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     JSONCMDMAP::iterator it = __mapJSONCommands.find(cmdname);
     if( it != __mapJSONCommands.end() ) {
         __mapJSONCommands.erase(it);
@@ -255,16 +259,16 @@ void InterfaceBase::_GetJSONCommandHelp(const rapidjson::Value& input, rapidjson
     }
 }
 
-ReadablePtr InterfaceBase::GetReadableInterface(const std::string& id) const
+ReadablePtr ReadablesContainer::GetReadableInterface(const std::string& id) const
 {
     boost::shared_lock< boost::shared_mutex > lock(_mutexInterface);
     READERSMAP::const_iterator it = __mapReadableInterfaces.find(id);
     return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
-ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadablePtr readable)
+ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     READERSMAP::iterator it = __mapReadableInterfaces.find(id);
     if( it == __mapReadableInterfaces.end() ) {
         if( !!readable ) {
@@ -282,9 +286,9 @@ ReadablePtr InterfaceBase::SetReadableInterface(const std::string& id, ReadableP
     return pprev;
 }
 
-void InterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
+void ReadablesContainer::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     if( bClearAllExisting ) {
         __mapReadableInterfaces = mapReadables;
     }
@@ -293,19 +297,19 @@ void InterfaceBase::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapRe
     }
 }
 
-void InterfaceBase::ClearReadableInterfaces()
+void ReadablesContainer::ClearReadableInterfaces()
 {
-    boost::unique_lock< boost::shared_mutex > lock(_mutexInterface);
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapReadableInterfaces.clear();
 }
 
-void InterfaceBase::ClearReadableInterface(const std::string& id) {
-    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+void ReadablesContainer::ClearReadableInterface(const std::string& id) {
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     __mapReadableInterfaces.erase(id);
 }
 
-bool InterfaceBase::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
-    boost::unique_lock<boost::shared_mutex> lock(_mutexInterface);
+bool ReadablesContainer::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
+    std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
     bool bChanged = false;
     bool bNewAllFound = true;
     FOREACH(it, newReadableInterfaces) {

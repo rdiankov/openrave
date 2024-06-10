@@ -129,16 +129,21 @@ bool TrajectoryReader::endElement(const std::string& name)
         }
     }
     else if( name == "data" ) {
+        std::string tmpDataStr;
         _vdata.resize(_spec.GetDOF()*_datacount);
         for(size_t i = 0; i < _vdata.size(); ++i) {
-            _ss >> _vdata[i];
+            if( !(_ss >> _vdata[i]) ) {
+                _ss.clear(); // clear error state
+                _ss >> tmpDataStr;
+                if( tmpDataStr == "nan" ) {
+                    _vdata[i] = std::numeric_limits<dReal>::quiet_NaN();
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed reading %d numbers from trajectory <data> element"), _vdata.size(), ORE_Assert);
+                }
+            }
         }
-        if( !_ss ) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("failed reading %d numbers from trajectory <data> element"), _vdata.size(), ORE_Assert);
-        }
-        else {
-            _ptraj->Insert(_ptraj->GetNumWaypoints(),_vdata);
-        }
+        _ptraj->Insert(_ptraj->GetNumWaypoints(),_vdata);
     }
     else if( name == "description" ) {
         _ptraj->SetDescription(_ss.str());

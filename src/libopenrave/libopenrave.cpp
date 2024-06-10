@@ -18,8 +18,8 @@
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility.hpp>
-#include <boost/thread/once.hpp>
 
+#include <mutex>
 #include <streambuf>
 
 #ifndef _WIN32
@@ -31,6 +31,7 @@
 #include <locale>
 #include <set>
 
+#include "plugindatabase_virtual.h"
 #include "plugindatabase.h"
 
 #include <boost/algorithm/string/trim.hpp>
@@ -342,7 +343,7 @@ dReal RaveCeil(dReal f) {
 #endif
 
 static std::set<std::string> _gettextDomainsInitialized;
-static boost::once_flag _onceRaveInitialize = BOOST_ONCE_INIT;
+static std::once_flag _onceRaveInitialize;
 
 /// there is only once global openrave state. It is created when openrave
 /// is first used, and destroyed when the program quits or RaveDestroy is called.
@@ -413,7 +414,7 @@ public:
 
     static boost::shared_ptr<RaveGlobal>& instance()
     {
-        boost::call_once(_create,_onceRaveInitialize);
+        std::call_once(_onceRaveInitialize, _create);
         return _state;
     }
 
@@ -444,10 +445,12 @@ public:
         }
 
         // since initialization depends on _pdatabase, have pdatabase be local until it is complete
-        boost::shared_ptr<RaveDatabase> pdatabase(new RaveDatabase());
-        if( !pdatabase->Init(bLoadAllPlugins) ) {
-            RAVELOG_FATAL("failed to create the openrave plugin database\n");
-        }
+#if OPENRAVE_STATIC_PLUGINS
+        boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<StaticRaveDatabase>();
+#else
+        boost::shared_ptr<RaveDatabase> pdatabase = boost::make_shared<DynamicRaveDatabase>();
+#endif // OPENRAVE_STATIC_PLUGINS
+        pdatabase->Init();
 
         char* phomedir = getenv("OPENRAVE_HOME"); // getenv not thread-safe?
         if( phomedir == NULL ) {
@@ -500,7 +503,7 @@ public:
         // environments have to be destroyed carefully since their destructors can be called, which will attempt to unregister the environment
         std::map<int, EnvironmentBase*> mapenvironments;
         {
-            boost::mutex::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             mapenvironments = _mapenvironments;
         }
         FOREACH(itenv,mapenvironments) {
@@ -517,7 +520,7 @@ public:
         // process the callbacks
         std::list<boost::function<void()> > listDestroyCallbacks;
         {
-            boost::mutex::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             listDestroyCallbacks.swap(_listDestroyCallbacks);
         }
         FOREACH(itcallback, listDestroyCallbacks) {
@@ -548,7 +551,7 @@ public:
 
     void AddCallbackForDestroy(const boost::function<void()>& fn)
     {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _listDestroyCallbacks.push_back(fn);
     }
 
@@ -637,7 +640,7 @@ public:
 public:
         XMLReaderFunctionData(InterfaceType type, const std::string& xmltag, const CreateXMLReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _xmltag(xmltag)
         {
-            boost::mutex::scoped_lock lock(global->_mutexinternal);
+            std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapxmlreaders[_type][_xmltag];
             global->_mapxmlreaders[_type][_xmltag] = fn;
         }
@@ -645,7 +648,7 @@ public:
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
-                boost::mutex::scoped_lock lock(global->_mutexinternal);
+                std::lock_guard<std::mutex> lock(global->_mutexinternal);
                 global->_mapxmlreaders[_type][_xmltag] = _oldfn;
             }
         }
@@ -676,7 +679,7 @@ protected:
 public:
         JSONReaderFunctionData(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn, boost::shared_ptr<RaveGlobal> global) : _global(global), _type(type), _id(id)
         {
-            boost::mutex::scoped_lock lock(global->_mutexinternal);
+            std::lock_guard<std::mutex> lock(global->_mutexinternal);
             _oldfn = global->_mapjsonreaders[_type][_id];
             global->_mapjsonreaders[_type][_id] = fn;
         }
@@ -684,7 +687,7 @@ public:
         {
             boost::shared_ptr<RaveGlobal> global = _global.lock();
             if( !!global ) {
-                boost::mutex::scoped_lock lock(global->_mutexinternal);
+                std::lock_guard<std::mutex> lock(global->_mutexinternal);
                 global->_mapjsonreaders[_type][_id] = _oldfn;
             }
         }
@@ -736,14 +739,14 @@ protected:
     int RegisterEnvironment(EnvironmentBase* penv)
     {
         BOOST_ASSERT(!!_pdatabase);
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _mapenvironments[++_nGlobalEnvironmentId] = penv;
         return _nGlobalEnvironmentId;
     }
 
     void UnregisterEnvironment(EnvironmentBase* penv)
     {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         FOREACH(it, _mapenvironments) {
             if( it->second == penv ) {
                 _mapenvironments.erase(it);
@@ -755,7 +758,7 @@ protected:
     int GetEnvironmentId(EnvironmentBaseConstPtr penv)
     {
         return !!penv ? penv->GetId() : 0;
-//        boost::mutex::scoped_lock lock(_mutexinternal);
+//        std::lock_guard<std::mutex> lock(_mutexinternal);
 //        FOREACH(it,_mapenvironments) {
 //            if( it->second == penv.get() ) {
 //                return it->first;
@@ -766,7 +769,7 @@ protected:
 
     EnvironmentBasePtr GetEnvironment(int id)
     {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         std::map<int, EnvironmentBase*>::iterator it = _mapenvironments.find(id);
         if( it == _mapenvironments.end() ) {
             return EnvironmentBasePtr();
@@ -777,7 +780,7 @@ protected:
     void GetEnvironments(std::list<EnvironmentBasePtr>& listenvironments)
     {
         listenvironments.clear();
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         FOREACH(it,_mapenvironments) {
             EnvironmentBasePtr penv = it->second->shared_from_this();
             if( !!penv ) {
@@ -789,9 +792,10 @@ protected:
     SpaceSamplerBasePtr GetDefaultSampler()
     {
         if( !_pdefaultsampler ) {
-            boost::mutex::scoped_lock lock(_mutexinternal);
+            std::lock_guard<std::mutex> lock(_mutexinternal);
             BOOST_ASSERT( _mapenvironments.size() > 0 );
-            _pdefaultsampler = GetDatabase()->CreateSpaceSampler(_mapenvironments.begin()->second->shared_from_this(),"MT19937");
+            InterfaceBasePtr ifBasePtr = GetDatabase()->Create(_mapenvironments.begin()->second->shared_from_this(), PT_SpaceSampler, "MT19937");
+            _pdefaultsampler = RaveInterfaceCast<SpaceSamplerBase>(ifBasePtr);
         }
         return _pdefaultsampler;
     }
@@ -805,7 +809,7 @@ protected:
             return std::string();
         }
 
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         boost::filesystem::path fullfilename;
         boost::filesystem::path filename(_filename);
 
@@ -870,11 +874,11 @@ protected:
     }
 
     void SetDataAccess(int options) {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         _nDataAccessOptions = options;
     }
     int GetDataAccess() {
-        boost::mutex::scoped_lock lock(_mutexinternal);
+        std::lock_guard<std::mutex> lock(_mutexinternal);
         return _nDataAccessOptions;
     }
     std::string GetDefaultViewerType() {
@@ -906,7 +910,7 @@ protected:
         return std::string();
     }
 
-    boost::mutex& GetInitializationMutex() {
+    std::mutex& GetInitializationMutex() {
         return _mutexInitialization;
     }
 
@@ -1089,8 +1093,8 @@ private:
     // state that is initialized/destroyed
     boost::shared_ptr<RaveDatabase> _pdatabase;
     int _nDebugLevel;
-    boost::mutex _mutexInitialization; ///< external mutex for initialization only
-    boost::mutex _mutexinternal;
+    std::mutex _mutexInitialization; ///< external mutex for initialization only
+    std::mutex _mutexinternal;
     std::map<InterfaceType, XMLREADERSMAP > _mapxmlreaders;
     std::map<InterfaceType, JSONREADERSMAP > _mapjsonreaders;
     std::map<InterfaceType,string> _mapinterfacenames;
@@ -1180,9 +1184,9 @@ std::string RaveFindDatabaseFile(const std::string& filename, bool bRead)
 int RaveInitialize(bool bLoadAllPlugins, int level)
 {
     boost::shared_ptr<RaveGlobal>& state = RaveGlobal::instance();
-    boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+    std::lock_guard<std::mutex> lock(state->GetInitializationMutex());
     if( state->_IsInitialized() ) {
-        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", boost::this_thread::get_id());
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE already initialized, so not initializing again", std::this_thread::get_id());
         return 0;
     }
     else {
@@ -1205,7 +1209,7 @@ UserDataPtr RaveGlobalState()
         }
         else {
             // make sure another thread is not initializing the state!
-            boost::mutex::scoped_lock lock(state->GetInitializationMutex());
+            std::lock_guard<std::mutex> lock(state->GetInitializationMutex());
             if( state->_IsInitialized() ) {
                 return state;
             }
@@ -1271,22 +1275,22 @@ InterfaceBasePtr RaveCreateInterface(EnvironmentBasePtr penv, InterfaceType type
 
 RobotBasePtr RaveCreateRobot(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateRobot(penv,name);
+    return boost::static_pointer_cast<RobotBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Robot, name));
 }
 
 PlannerBasePtr RaveCreatePlanner(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreatePlanner(penv, name);
+    return boost::static_pointer_cast<PlannerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Planner, name));
 }
 
 SensorSystemBasePtr RaveCreateSensorSystem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateSensorSystem(penv, name);
+    return boost::static_pointer_cast<SensorSystemBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SensorSystem, name));
 }
 
 ControllerBasePtr RaveCreateController(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateController(penv, name);
+    return boost::static_pointer_cast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Controller, name));
 }
 
 MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const std::string& rawname)
@@ -1300,7 +1304,7 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
     }
     // TODO remove hack once MultiController is a registered interface
-    ControllerBasePtr pcontroller = RaveGlobal::instance()->GetDatabase()->CreateController(env, name);
+    ControllerBasePtr pcontroller = boost::static_pointer_cast<ControllerBase>(RaveGlobal::instance()->GetDatabase()->Create(env, PT_Controller, name));
     if( name == "genericmulticontroller" ) {
         return boost::static_pointer_cast<MultiControllerBase>(pcontroller);
     }
@@ -1310,62 +1314,62 @@ MultiControllerBasePtr RaveCreateMultiController(EnvironmentBasePtr env, const s
 
 ModuleBasePtr RaveCreateModule(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 ModuleBasePtr RaveCreateProblem(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 ModuleBasePtr RaveCreateProblemInstance(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateModule(penv, name);
+    return boost::static_pointer_cast<ModuleBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Module, name));
 }
 
 IkSolverBasePtr RaveCreateIkSolver(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateIkSolver(penv, name);
+    return boost::static_pointer_cast<IkSolverBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_IkSolver, name));
 }
 
 PhysicsEngineBasePtr RaveCreatePhysicsEngine(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreatePhysicsEngine(penv, name);
+    return boost::static_pointer_cast<PhysicsEngineBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_PhysicsEngine, name));
 }
 
 SensorBasePtr RaveCreateSensor(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateSensor(penv, name);
+    return boost::static_pointer_cast<SensorBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Sensor, name));
 }
 
 CollisionCheckerBasePtr RaveCreateCollisionChecker(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateCollisionChecker(penv, name);
+    return boost::static_pointer_cast<CollisionCheckerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_CollisionChecker, name));
 }
 
 ViewerBasePtr RaveCreateViewer(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateViewer(penv, name);
+    return boost::static_pointer_cast<ViewerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Viewer, name));
 }
 
 KinBodyPtr RaveCreateKinBody(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateKinBody(penv, name);
+    return boost::static_pointer_cast<KinBody>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_KinBody, name));
 }
 
 TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateTrajectory(penv, name);
+    return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, name));
 }
 
 TrajectoryBasePtr RaveCreateTrajectory(EnvironmentBasePtr penv, int dof)
 {
-    return RaveCreateTrajectory(penv,"");
+    return boost::static_pointer_cast<TrajectoryBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_Trajectory, ""));
 }
 
 SpaceSamplerBasePtr RaveCreateSpaceSampler(EnvironmentBasePtr penv, const std::string& name)
 {
-    return RaveGlobal::instance()->GetDatabase()->CreateSpaceSampler(penv, name);
+    return boost::static_pointer_cast<SpaceSamplerBase>(RaveGlobal::instance()->GetDatabase()->Create(penv, PT_SpaceSampler, name));
 }
 
 UserDataPtr RaveRegisterInterface(InterfaceType type, const std::string& name, const char* interfacehash, const char* envhash, const boost::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)>& createfn)
@@ -1953,141 +1957,6 @@ void RaveGetVelocityFromAffineDOFVelocities(Vector& linearvel, Vector& angularve
     }
 }
 
-OpenRAVEException::OpenRAVEException() : std::exception(), _s("unknown exception"), _error(ORE_Failed)
-{
-}
-
-OpenRAVEException::OpenRAVEException(const std::string& s, OpenRAVEErrorCode error) : std::exception()
-{
-    _error = error;
-    _s = "openrave (";
-    _s += RaveGetErrorCodeString(_error);
-    _s += "): ";
-    _s += s;
-}
-
-char const* OpenRAVEException::what() const throw() {
-    return _s.c_str();
-}
-
-const std::string& OpenRAVEException::message() const {
-    return _s;
-}
-
-OpenRAVEErrorCode OpenRAVEException::GetCode() const {
-    return _error;
-}
-
-const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
-{
-    switch(error) {
-    case ORE_Failed: return "Failed";
-    case ORE_InvalidArguments: return "InvalidArguments";
-    case ORE_EnvironmentNotLocked: return "EnvironmentNotLocked";
-    case ORE_CommandNotSupported: return "CommandNotSupported";
-    case ORE_Assert: return "Assert";
-    case ORE_InvalidPlugin: return "InvalidPlugin";
-    case ORE_InvalidInterfaceHash: return "InvalidInterfaceHash";
-    case ORE_NotImplemented: return "NotImplemented";
-    case ORE_InconsistentConstraints: return "InconsistentConstraints";
-    case ORE_NotInitialized: return "NotInitialized";
-    case ORE_InvalidState: return "InvalidState";
-    case ORE_Timeout: return "Timeout";
-    case ORE_InvalidURI: return "InvalidURI";
-    case ORE_BodyNameConflict: return "BodyNameConflict";
-    case ORE_SensorNameConflict: return "SensorNameConflict";
-    case ORE_BodyIdConflict: return "BodyIdConflict";
-    }
-    // should throw an exception?
-    return "";
-}
-
-void CollisionReport::Reset(int coloptions)
-{
-    options = coloptions;
-    if( !(nKeepPrevious & 1) ) {
-        minDistance = 1e20f;
-        numWithinTol = 0;
-        contacts.resize(0);
-        vLinkColliding.resize(0);
-        plink1.reset();
-        plink2.reset();
-        pgeom1.reset();
-        pgeom2.reset();
-    }
-}
-
-std::string CollisionReport::__str__() const
-{
-    stringstream s;
-    if( vLinkColliding.size() > 0 ) {
-        s << "pairs=" << vLinkColliding.size();
-        int index = 0;
-        FOREACH(itlinkpair, vLinkColliding) {
-            s << ", [" << index << "](";
-            if( !!itlinkpair->first ) {
-                KinBodyPtr parent = itlinkpair->first->GetParent(true);
-                if( !!parent ) {
-                    s << parent->GetName() << ":" << itlinkpair->first->GetName();
-                }
-                else {
-                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->first->GetName());
-                    s << "[deleted]:" << itlinkpair->first->GetName();
-                }
-            }
-            s << ")x(";
-            if( !!itlinkpair->second ) {
-                KinBodyPtr parent = itlinkpair->second->GetParent(true);
-                if( !!parent ) {
-                    s << parent->GetName() << ":" << itlinkpair->second->GetName();
-                }
-                else {
-                    RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", itlinkpair->second->GetName());
-                    s << "[deleted]:" << itlinkpair->second->GetName();
-                }
-            }
-            s << ") ";
-            ++index;
-        }
-    }
-    else {
-        s << "(";
-        if( !!plink1 ) {
-            KinBodyPtr parent = plink1->GetParent(true);
-            if( !!parent ) {
-                s << plink1->GetParent()->GetName() << ":" << plink1->GetName();
-            }
-            else {
-                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink1->GetName());
-                s << "[deleted]:" << plink1->GetName();
-            }
-            if( !!pgeom1 ) {
-                s << ":" << pgeom1->GetName();
-            }
-        }
-        s << ")x(";
-        if( !!plink2 ) {
-            KinBodyPtr parent = plink2->GetParent(true);
-            if( !!parent ) {
-                s << plink2->GetParent()->GetName() << ":" << plink2->GetName();
-            }
-            else {
-                RAVELOG_WARN_FORMAT("could not get parent for link name %s when printing collision report", plink2->GetName());
-                s << "[deleted]:" << plink2->GetName();
-            }
-            if( !!pgeom2 ) {
-                s << ":" << pgeom2->GetName();
-            }
-        }
-        s << ")";
-    }
-    s << ", contacts="<<contacts.size();
-    if( minDistance < 1e10 ) {
-        s << ", mindist="<<minDistance;
-    }
-    return s.str();
-}
-
 bool PhysicsEngineBase::GetLinkForceTorque(KinBody::LinkConstPtr plink, Vector& force, Vector& torque)
 {
     force = Vector(0,0,0);
@@ -2162,11 +2031,11 @@ void TriMesh::Append(const TriMesh& mesh)
 {
     int offset = (int)vertices.size();
     vertices.insert(vertices.end(), mesh.vertices.begin(), mesh.vertices.end());
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
-    }
-    FOREACHC(it, mesh.indices) {
-        indices.push_back(*it+offset);
+
+    const size_t baseIndicesSize = indices.size();
+    indices.resize(baseIndicesSize + mesh.indices.size());
+    for (size_t i = 0; i < mesh.indices.size(); i++) {
+        indices[baseIndicesSize + i] = mesh.indices[i] + offset;
     }
 }
 
@@ -2177,11 +2046,11 @@ void TriMesh::Append(const TriMesh& mesh, const Transform& trans)
     for(size_t i = 0; i < mesh.vertices.size(); ++i) {
         vertices[i+offset] = trans * mesh.vertices[i];
     }
-    if( indices.capacity() < indices.size()+mesh.indices.size() ) {
-        indices.reserve(indices.size()+mesh.indices.size());
-    }
-    FOREACHC(it, mesh.indices) {
-        indices.push_back(*it+offset);
+
+    const size_t baseIndicesSize = indices.size();
+    indices.resize(baseIndicesSize + mesh.indices.size());
+    for (size_t i = 0; i < mesh.indices.size(); i++) {
+        indices[baseIndicesSize + i] = mesh.indices[i] + offset;
     }
 }
 
@@ -2236,6 +2105,21 @@ void TriMesh::serialize(std::ostream& o, int options) const
     FOREACHC(it,indices) {
         o << *it << " ";
     }
+}
+
+void TriMesh::SerializeJSON(rapidjson::Value& rTriMesh, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    rTriMesh.SetObject();
+    rapidjson::Value rVertices;
+    rVertices.SetArray();
+    rVertices.Reserve(vertices.size()*3, allocator);
+    for(size_t ivertex = 0; ivertex < vertices.size(); ++ivertex) {
+        rVertices.PushBack(vertices[ivertex][0]*fUnitScale, allocator);
+        rVertices.PushBack(vertices[ivertex][1]*fUnitScale, allocator);
+        rVertices.PushBack(vertices[ivertex][2]*fUnitScale, allocator);
+    }
+    rTriMesh.AddMember("vertices", rVertices, allocator);
+    orjson::SetJsonValueByKey(rTriMesh, "indices", indices, allocator);
 }
 
 std::ostream& operator<<(std::ostream& O, const TriMesh& trimesh)
@@ -2333,10 +2217,10 @@ void DummyXMLReader::characters(const std::string& ch)
 void EnvironmentBase::_InitializeInternal()
 {
     if( !RaveGlobalState() ) {
-        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", boost::this_thread::get_id());
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state is not initialized! Need to call RaveInitialize before any OpenRAVE services can be used. For now, initializing with default parameters.", std::this_thread::get_id());
         uint64_t starttime = utils::GetMicroTime();
         RaveInitialize(true);
-        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", boost::this_thread::get_id()%(utils::GetMicroTime()-starttime));
+        RAVELOG_WARN_FORMAT("[th:%s] OpenRAVE global state finished initializing in %u[us].", std::this_thread::get_id()%(utils::GetMicroTime()-starttime));
     }
     __nUniqueId = RaveGlobal::instance()->RegisterEnvironment(this);
 }
@@ -2471,6 +2355,32 @@ bool SensorBase::CameraGeomData::DeserializeJSON(const rapidjson::Value& value, 
     return true;
 }
 
+bool SensorBase::LaserGeomData::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
+{
+    SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
+    orjson::SetJsonValueByKey(value, "minAngle", min_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "maxAngle", max_angle[0], allocator);
+    orjson::SetJsonValueByKey(value, "resolution", resolution[0], allocator);
+    orjson::SetJsonValueByKey(value, "minRange", min_range, allocator);
+    orjson::SetJsonValueByKey(value, "maxRange", max_range, allocator);
+    orjson::SetJsonValueByKey(value, "timeIncrement", time_increment, allocator);
+    orjson::SetJsonValueByKey(value, "timeScan", time_scan, allocator);
+    return true;
+}
+
+bool SensorBase::LaserGeomData::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
+{
+    SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
+    orjson::LoadJsonValueByKey(value, "minAngle", min_angle[0]);
+    orjson::LoadJsonValueByKey(value, "maxAngle", max_angle[0]);
+    orjson::LoadJsonValueByKey(value, "resolution", resolution[0]);
+    orjson::LoadJsonValueByKey(value, "minRange", min_range);
+    orjson::LoadJsonValueByKey(value, "maxRange", max_range);
+    orjson::LoadJsonValueByKey(value, "timeIncrement", time_increment);
+    orjson::LoadJsonValueByKey(value, "timeScan", time_scan);
+    return true;
+}
+
 bool SensorBase::Force6DGeomData::SerializeXML(BaseXMLWriterPtr writer, int options) const
 {
     SensorGeometry::SerializeXML(writer, options);
@@ -2489,7 +2399,7 @@ bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjs
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
-    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
+    orjson::SetJsonValueByKey(value, "correctionMatrix", correction_matrix, allocator, correction_matrix.size());
     return true;
 }
 
@@ -2497,7 +2407,7 @@ bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value,
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "polarity", polarity);
-    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
+    orjson::LoadJsonValueByKey(value, "correctionMatrix", correction_matrix);
     return true;
 }
 
@@ -2544,20 +2454,8 @@ int SpaceSamplerBase::_CallStatusFunctions(int sampleiteration)
     return ret;
 }
 
-CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
+void ModuleBase::SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailureAccumulator)
 {
-    _oldoptions = p->GetCollisionOptions();
-    _p = p;
-    if( !_p->SetCollisionOptions(newoptions) ) {
-        if( required ) {
-            throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%newoptions%_p->GetXMLId()));
-        }
-    }
-}
-
-CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
-{
-    _p->SetCollisionOptions(_oldoptions);
 }
 
 void RaveInitRandomGeneration(uint32_t seed)
@@ -2589,8 +2487,13 @@ double RaveRandomDouble(IntervalType interval)
 void IkParameterization::SerializeJSON(rapidjson::Value& rIkParameterization, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale) const
 {
     rIkParameterization.SetObject();
-    orjson::SetJsonValueByKey(rIkParameterization, "id", GetId(), allocator);
-    orjson::SetJsonValueByKey(rIkParameterization, "type", GetName(), allocator);
+    if( !_id.empty() ) {
+        orjson::SetJsonValueByKey(rIkParameterization, "id", _id, allocator);
+    }
+    if( !_name.empty() ) {
+        orjson::SetJsonValueByKey(rIkParameterization, "name", _name, allocator);
+    }
+    orjson::SetJsonValueByKey(rIkParameterization, "type", GetTypeString(), allocator);
 
     Transform transform = _transform;
     transform.trans *= fUnitScale;
@@ -2653,6 +2556,7 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
         throw OPENRAVE_EXCEPTION_FORMAT0(_("Cannot decode non-object JSON value to IkParameterization"), ORE_InvalidArguments);
     }
     orjson::LoadJsonValueByKey(rIkParameterization, "id", _id);
+    orjson::LoadJsonValueByKey(rIkParameterization, "name", _name);
 
     if( rIkParameterization.HasMember("type") ) {
         const char* ptype =  rIkParameterization["type"].GetString();
@@ -2787,6 +2691,33 @@ void IkParameterization::DeserializeJSON(const rapidjson::Value& rIkParameteriza
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
+void IkParameterization::ConvertUnitScale(dReal fUnitScale)
+{
+    switch (_type & ~IKP_VelocityDataBit) {
+    case IKP_Transform6D:
+    case IKP_Translation3D:
+    case IKP_TranslationXY2D:
+    case IKP_TranslationXYOrientation3D:
+    case IKP_Ray4D:
+    case IKP_Lookat3D:
+    case IKP_TranslationDirection5D:
+    case IKP_TranslationXAxisAngle4D:
+    case IKP_TranslationYAxisAngle4D:
+    case IKP_TranslationZAxisAngle4D:
+    case IKP_TranslationXAxisAngleZNorm4D:
+    case IKP_TranslationYAxisAngleXNorm4D:
+    case IKP_TranslationZAxisAngleYNorm4D:
+        _transform.trans *= fUnitScale;
+        break;
+    case IKP_TranslationLocalGlobal6D:
+        _transform.trans *= fUnitScale;
+        _transform.rot *= fUnitScale;
+        break;
+    }
+
+    // TODO have to scale _mapCustomData by fUnitScale
+}
+
 StringReadable::StringReadable(const std::string& id, const std::string& data) : Readable(id), _data(data)
 {
 }
@@ -2830,6 +2761,45 @@ bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitS
 {
     _data = value.GetString();
     return true;
+}
+
+int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
+{
+    if (pIsoFormatDateTime == nullptr) {
+        return 0;
+    }
+    // RFC 3339 Nano format (2006-01-02T15:04:05.999999999Z07:00)
+    struct tm datetime = {0};
+    const char *remain = strptime(pIsoFormatDateTime, "%FT%T", &datetime);
+    if (remain == nullptr) {
+        return 0;
+    }
+
+    int64_t timestamp = std::mktime(&datetime) - timezone;
+    timestamp *= 1000000;
+
+    if (*remain == '.') {
+        int64_t fraction = 0, multiplier = 100000000;
+        while (std::isdigit(*(++remain)) && multiplier > 0) {
+            fraction += (*remain - '0') * multiplier;
+            multiplier /= 10;
+        }
+        timestamp += fraction / 1000; // nanoseconds convert to microseconds
+    }
+
+    if (*remain == '+' || *remain == '-') {
+        const bool positive = (*(remain++) == '+');
+        int64_t tz_hour = 0, tz_min = 0;
+        if (std::sscanf(remain, "%ld:%ld", &tz_hour, &tz_min) == 2) {
+            if (positive) {
+                timestamp -= (tz_hour * 3600 + tz_min * 60) * 1000000;
+            } else {
+                timestamp += (tz_hour * 3600 + tz_min * 60) * 1000000;
+            }
+        }
+    }
+
+    return timestamp;
 }
 
 } // end namespace OpenRAVE

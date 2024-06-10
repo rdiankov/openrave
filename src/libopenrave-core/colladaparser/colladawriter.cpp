@@ -18,8 +18,6 @@
 using namespace ColladaDOM150;
 
 #include <locale>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/date_time/time_facet.hpp>
 #include <boost/algorithm/string.hpp>
 #include <ctime>
 
@@ -430,9 +428,9 @@ private:
             contribAuthor->setValue(author.c_str());
 
             domAsset::domUnitRef units = daeSafeCast<domAsset::domUnit>( asset->add( COLLADA_ELEMENT_UNIT ) );
-            std::pair<std::string, dReal> unit = _penv->GetUnit();
-            units->setMeter(unit.second);
-            units->setName(unit.first.c_str());
+            UnitInfo unitInfo = _penv->GetUnitInfo();
+            units->setMeter(1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
+            units->setName(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit));
 
             domAsset::domUp_axisRef zup = daeSafeCast<domAsset::domUp_axis>( asset->add( COLLADA_ELEMENT_UP_AXIS ) );
             zup->setValue(UP_AXIS_Z_UP);
@@ -512,7 +510,7 @@ private:
     /// \brief Write down environment
     virtual bool Write(const std::string& scenename=std::string())
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         std::list<KinBodyPtr> listbodies(vbodies.begin(),vbodies.end());
@@ -595,7 +593,7 @@ private:
     /// \brief Write one robot as a file
     virtual bool Write(RobotBasePtr probot)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         _CreateScene(probot->GetName());
         _mapBodyIds[probot->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(probot);
@@ -621,7 +619,7 @@ private:
         if( pbody->IsRobot() ) {
             return Write(RaveInterfaceCast<RobotBase>(pbody));
         }
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         _CreateScene(pbody->GetName());
         _mapBodyIds[pbody->GetEnvironmentBodyIndex()] = 0;
         _AssignLinkSids(pbody);
@@ -1234,7 +1232,7 @@ private:
     /// \brief Write common kinematic body in a given scene, called by _WriteKinBody
     virtual boost::shared_ptr<instance_kinematics_model_output> _WriteInstance_kinematics_model(KinBodyPtr pbody, daeElementRef parent, const string& sidscope)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         RAVELOG_VERBOSE(str(boost::format("writing instance_kinematics_model (%d) %s\n")%_mapBodyIds[pbody->GetEnvironmentBodyIndex()]%pbody->GetName()));
         boost::shared_ptr<kinematics_model_output> kmout = WriteKinematics_model(pbody);
 
@@ -1348,7 +1346,7 @@ private:
 
     virtual boost::shared_ptr<kinematics_model_output> WriteKinematics_model(KinBodyPtr pbody)
     {
-        EnvironmentMutex::scoped_lock lockenv(_penv->GetMutex());
+        EnvironmentLock lockenv(_penv->GetMutex());
         boost::shared_ptr<kinematics_model_output> kmout;
         if( _bReuseSimilar ) {
             kmout = _GetKinematics_model(pbody);
@@ -1711,11 +1709,23 @@ private:
                         // robotId
                         daeElementRef param_controllerType = param_jointcontrolinfo_robotcontroller->add("controllerType");
                         param_controllerType->setCharData(pjoint->_info._jci_robotcontroller->controllerType.c_str());
-                        // robotControllerAxisIndex
+                        // robotControllerAxis[Index, Mult, Offset, ProductCode]
                         for( int iaxis = 0; iaxis < pjoint->GetDOF(); ++iaxis ) {
                             daeElementRef param_robotControllerAxisIndex = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisIndex");
                             param_robotControllerAxisIndex->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisIndex->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisIndex[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisMult = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisMult");
+                            param_robotControllerAxisMult->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisMult->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisMult[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisOffset = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisOffset");
+                            param_robotControllerAxisOffset->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisOffset->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisOffset[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisManufacturerCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisManufacturerCode");
+                            param_robotControllerAxisManufacturerCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisManufacturerCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisManufacturerCode[iaxis].c_str());
+                            daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
+                            param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
                         }
                         break;
                     } // end case JCM_RobotController
@@ -2129,6 +2139,7 @@ private:
                 pcylinder->add("height")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderHeight()));
                 break;
             }
+            case GT_Axial:
             case GT_None:
             case GT_TriMesh:
                 // don't add anything
@@ -2760,13 +2771,13 @@ private:
         domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
         ptec->setProfile("OpenRAVE");
         const std::vector<KinBody::LinkPtr>& links = pbody->GetLinks();
-        for (int linkIndex0 = 0; linkIndex0 < links.size(); ++linkIndex0) {
+        for (int linkIndex0 = 0; linkIndex0 < (int)links.size(); ++linkIndex0) {
             const KinBody::LinkPtr plink0 = links.at(linkIndex0);
             if (!plink0) {
                 RAVELOG_WARN_FORMAT("env=%d body \"%s\" link %d / %d is null so skip writing ignore link pair.", pbody->GetEnv()->GetId()%pbody->GetName()%linkIndex0%links.size());
                 continue;
             }
-            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < links.size(); ++linkIndex1) {
+            for (int linkIndex1 = linkIndex0 + 1; linkIndex1 < (int)links.size(); ++linkIndex1) {
                 if (pbody->AreAdjacentLinks(linkIndex0, linkIndex1)) {
                     const KinBody::LinkPtr plink1 = links.at(linkIndex1);
                     if (!plink1) {
@@ -3205,7 +3216,7 @@ BOOST_TYPEOF_REGISTER_TYPE(ColladaWriter::articulated_system_output)
 
 void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3265,7 +3276,7 @@ void RaveWriteColladaFile(EnvironmentBasePtr penv, const string& filename, const
 
 void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
     std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3289,7 +3300,7 @@ void RaveWriteColladaFile(KinBodyPtr pbody, const string& filename, const Attrib
 
 void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename,const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     if( listbodies.size() > 0 ) {
         EnvironmentBasePtr penv = listbodies.front()->GetEnv();
         ColladaWriter writer(penv,atts);
@@ -3353,7 +3364,7 @@ void RaveWriteColladaFile(const std::list<KinBodyPtr>& listbodies, const std::st
 
 void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(penv, atts);
     std::string scenename, keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3400,7 +3411,7 @@ void RaveWriteColladaMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
 
 void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     ColladaWriter writer(pbody->GetEnv(),atts);
     std::string keywords, subject, author;
     FOREACHC(itatt,atts) {
@@ -3424,7 +3435,7 @@ void RaveWriteColladaMemory(KinBodyPtr pbody, std::vector<char>& output, const A
 
 void RaveWriteColladaMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output,  const AttributesList& atts)
 {
-    boost::mutex::scoped_lock lock(GetGlobalDAEMutex());
+    std::lock_guard<std::mutex> lock(GetGlobalDAEMutex());
     output.clear();
     if( listbodies.size() > 0 ) {
         EnvironmentBasePtr penv = listbodies.front()->GetEnv();

@@ -24,8 +24,25 @@
 
 namespace OpenRAVE {
 
-typedef boost::recursive_try_mutex EnvironmentMutex;
-typedef EnvironmentMutex::scoped_lock EnvironmentLock;
+#if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
+#if __cplusplus >= 201703L
+#include <mutex>
+using EnvironmentMutex = ::std::recursive_mutex;
+using EnvironmentLock  = ::std::unique_lock<std::recursive_mutex>;
+using defer_lock_t     = ::std::defer_lock_t;
+using try_to_lock_t    = ::std::try_to_lock_t;
+#else
+using EnvironmentMutex = ::boost::recursive_try_mutex;
+using EnvironmentLock  = EnvironmentMutex::scoped_lock;
+using defer_lock_t     = ::boost::defer_lock_t;
+using try_to_lock_t    = ::boost::try_to_lock_t;
+#endif // __cplusplus >= 201703L
+#else
+using EnvironmentMutex = ::std::mutex;
+using EnvironmentLock  = ::std::unique_lock<std::mutex>;
+using defer_lock_t     = ::std::defer_lock_t;
+using try_to_lock_t    = ::std::try_to_lock_t;
+#endif // OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
 
 /// \brief used when adding interfaces to the environment
 enum InterfaceAddMode
@@ -50,6 +67,9 @@ public:
     /// Removing all environment pointer might not be enough to destroy the environment resources.
     virtual void Destroy()=0;
 
+    /// \brief initializes the environment
+    virtual void Init(bool bStartSimulationThread) = 0;
+            
     /// \brief Resets all objects of the scene (preserves all problems, planners). <b>[multi-thread safe]</b>
     ///
     /// Do not call inside a SimulationStep call
@@ -254,7 +274,7 @@ public:
     virtual bool LoadURI(const std::string& uri, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
-    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
 
     /// \brief loads a scene from rapidjson document
     ///
@@ -262,7 +282,9 @@ public:
     /// \param vCreatedBodies the bodies created in this operation
     /// \param vModifiedBodies the bodies modified in this operation
     /// \param vRemovedBodies the bodies removed from the environment in this operation
-    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList()) = 0;
+    /// \param atts attributes that is passed to JSONReader for further options.
+    /// \param uri the URI of the scene. Used to inject the URI into the environment.
+    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
@@ -333,11 +355,23 @@ public:
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot.
+\param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadRobotData(robot,data,atts);
     }
+
+    /** \brief Initialize a robot from rapidjson document.
+
+        The robot should not be added to the environment when calling this function.
+        \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled.
+        \param rEnvInfo the rapidjson document that contains the robot information.
+        \param atts attributes that is passed to JSONReader for further options.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
+        \returns the robot that is created.
+     */
+    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
@@ -363,11 +397,23 @@ public:
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId. More info in \ref arch_kinbody.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadKinBodyData(body,data,atts);
     }
+
+    /** \brief Initializes a kinematic body from rapidjson document.
+
+        The body should not be added to the environment when calling this function.
+        \param body If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled.
+        \param rEnvInfo the rapidjson document that contains the robot information.
+        \param atts attributes that is passed to JSONReader for further options.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
+        \returns the body that is created.
+     */
+    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 
@@ -390,8 +436,9 @@ public:
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param data string containing data
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadInterfaceData(pinterface,type,data,atts);
     }
@@ -468,10 +515,17 @@ public:
     /// \return first KinBody (including robots) that matches with name
     virtual KinBodyPtr GetKinBody(const std::string& name) const =0;
 
+    /// \brief query a body from its name
+    virtual KinBodyPtr GetKinBody(const string_view name) const =0;
+
+    virtual KinBodyPtr GetKinBody(const char* pname) const =0;
+
     /// \brief Query a body from its id. <b>[multi-thread safe]</b>
     ///
     /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentBodyIndex!
     virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
+
+    virtual KinBodyPtr GetKinBodyById(const string_view id) const =0;
 
     /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>
     ///
@@ -686,7 +740,7 @@ public:
     ///
     /// \param worldPosition is the position of the label in world space.
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
-    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition) = 0;
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1), float height = 0.05) = 0;
 
     /// \brief Draws a box. <b>[multi-thread safe]</b>
     ///
@@ -699,6 +753,16 @@ public:
     /// extents are half the width, height, and depth of the box
     /// \return handle to plotted boxes, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) = 0;
+
+    /// \brief Draws a AABB. <b>[multi-thread safe]</b>
+    ///
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency) = 0;
+
+    /// \brief Draws a OBB. <b>[multi-thread safe]</b>
+    ///
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency) = 0;
 
     /// \brief Draws a textured plane. <b>[multi-thread safe]</b>
     ///
@@ -734,12 +798,24 @@ public:
     /// \brief unit - (name, mult factor to meters)
     ///
     /// \return (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual std::pair<std::string, dReal> GetUnit() const = 0;
+    /// \deprecated (23/07/03), use GetUnitInfo instead.
+    virtual std::pair<std::string, dReal> GetUnit() const RAVE_DEPRECATED = 0;
 
     /// \brief set units for the current environment.
     ///
     /// \param unit (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
+    /// \deprecated (23/07/03), use SetUnitInfo instead.
+    virtual void SetUnit(std::pair<std::string, dReal> unit) RAVE_DEPRECATED = 0;
+
+    /// \brief unitInfo
+    ///
+    /// \return UnitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual UnitInfo GetUnitInfo() const = 0;
+
+    /// \brief set unitInfo for the current environment.
+    ///
+    /// \param unitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual void SetUnitInfo(UnitInfo unitInfo) = 0;
 
     //@}
 
@@ -816,7 +892,9 @@ public:
         std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
         std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
         int _revision = 0;  ///< environment revision number
-        std::pair<std::string, dReal> _unit = {"meter", 1.0}; ///< environment unit
+        UnitInfo _unitInfo; ///< environment unitInfo
+        int64_t _lastModifiedAtUS = 0; ///< us, linux epoch, last modified time of the environment when it was originally loaded from the environment.
+        int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
     };
     typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
     typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;

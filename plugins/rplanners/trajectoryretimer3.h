@@ -60,7 +60,7 @@ public:
 
     virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         params->Validate();
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
@@ -72,7 +72,7 @@ public:
 
     virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
         _parameters->Validate();

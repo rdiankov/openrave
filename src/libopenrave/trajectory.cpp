@@ -125,32 +125,111 @@ void TrajectoryBase::SamplePoints(std::vector<dReal>& data, const std::vector<dR
     }
 }
 
+/// \brief generator of range from start to stop
+template<typename T>
+class RangeGenerator
+{
+ public:
+    RangeGenerator(T step, T start, T stop, bool ensureLast)
+        : _index(0), _numPoints(std::ceil((stop - start)/step)), _start(start), _step(step), _stop(stop), _ensureLast(ensureLast)
+    {
+    }
+
+    /// \brief resets current index to start
+    void Reset()
+    {
+        _index = 0;
+    }
+
+    /// \brief return current value and iterate to next value
+    /// \return current value
+    T GetAndIncrement()
+    {
+        {
+            const T value = _start + _step * _index;
+            const bool lessThanStop = _index < _numPoints;
+            if (lessThanStop) {
+                ++_index;
+                return value;
+            }
+        }
+        if (_index == _numPoints) {
+            if (_IsPaddedByEnsureLast()) {
+                ++_index;
+                return _stop;
+            }
+        }
+        throw std::out_of_range("index=" + std::to_string(_index) + " is out of size=" + std::to_string(GetSize()) + ", ensureLast=" + std::to_string(_ensureLast));
+    }
+
+    /// \brief size of range
+    size_t GetSize() const
+    {
+        return _numPoints + _IsPaddedByEnsureLast();
+    }
+
+ private:
+    bool _IsPaddedByEnsureLast() const
+    {
+        return _ensureLast && (_start + _step * (_numPoints - 1)) < _stop;
+    }
+
+    size_t _index; ///< current index, can go up to _numPoints if _ensureLast is true and other conditions are met.
+    const size_t _numPoints; ///< number of data points. excludes padding added by _ensureLast
+    const T _start, _step, _stop; ///< defines linearly interpolated range from start to stop separated by step size.
+    const bool _ensureLast; ///< if true, _stop is guaranteed to be returned by GetAndIncrement
+};
+
+template <typename T>
+void TrajectoryBase::_SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange) const
+{
+    std::vector<dReal> tempdata;
+    int dof = GetConfigurationSpecification().GetDOF();
+    data.resize(dof*timeRange.GetSize());
+    std::vector<dReal>::iterator itdata = data.begin();
+    for(size_t i = 0; i < timeRange.GetSize(); ++i, itdata += dof) {
+        const dReal time = timeRange.GetAndIncrement();
+        Sample(tempdata, time);
+        std::copy(tempdata.begin(), tempdata.end(), itdata);
+    }
+}
+
+template <typename T>
+void TrajectoryBase::_SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange, const ConfigurationSpecification& spec) const
+{
+    std::vector<dReal> tempdata;
+    int dof = GetConfigurationSpecification().GetDOF();
+    data.resize(dof*timeRange.GetSize());
+    std::vector<dReal>::iterator itdata = data.begin();
+    for(size_t i = 0; i < timeRange.GetSize(); ++i, itdata += dof) {
+        const dReal time = timeRange.GetAndIncrement();
+        Sample(tempdata, time, spec);
+        std::copy(tempdata.begin(), tempdata.end(), itdata);
+    }
+}
+
 void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const
 {
-    const dReal duration = GetDuration();
-    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
-    std::vector<dReal> vtimes(numPoints, deltatime);
-    for (int i = 0; i < numPoints; ++i) {
-        vtimes[i] *= i;
-    }
-    if (ensureLastPoint && vtimes.back() < duration) {
-        vtimes.push_back(duration);
-    }
-    return SamplePoints(data, vtimes);
+    RangeGenerator<dReal> timeRange(deltatime, 0, GetDuration(), ensureLastPoint);
+    return _SamplePointsInRange(data, timeRange);
 }
 
 void TrajectoryBase::SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
 {
-    const dReal duration = GetDuration();
-    int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
-    std::vector<dReal> vtimes(numPoints, deltatime);
-    for (int i = 0; i < numPoints; ++i) {
-        vtimes[i] *= i;
-    }
-    if (ensureLastPoint && vtimes.back() < duration) {
-        vtimes.push_back(duration);
-    }
-    return SamplePoints(data, vtimes, spec);
+    RangeGenerator<dReal> timeRange(deltatime, 0, GetDuration(), ensureLastPoint);
+    return _SamplePointsInRange(data, timeRange, spec);
+}
+
+void TrajectoryBase::SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const
+{
+    RangeGenerator<dReal> timeRange(deltatime, startTime, stopTime, ensureLastPoint);
+    return _SamplePointsInRange(data, timeRange);
+}
+
+void TrajectoryBase::SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, const ConfigurationSpecification& spec) const
+{
+    RangeGenerator<dReal> timeRange(deltatime, startTime, stopTime, ensureLastPoint);
+    return _SamplePointsInRange(data, timeRange, spec);
 }
 
 void TrajectoryBase::GetWaypoints(size_t startindex, size_t endindex, std::vector<dReal>& data, const ConfigurationSpecification& spec) const

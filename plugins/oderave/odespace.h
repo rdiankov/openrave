@@ -69,7 +69,7 @@ public:
         dWorldID world;          ///< the dynamics world
         dSpaceID space;          ///< the collision world
         dJointGroupID contactgroup;
-        boost::mutex _mutex;
+        std::mutex _mutex;
     };
 
 public:
@@ -143,7 +143,7 @@ public:
         }
 
         virtual ~KinBodyInfo() {
-            boost::mutex::scoped_lock lock(_ode->_mutex);
+            std::lock_guard<std::mutex> lock(_ode->_mutex);
             Reset();
             dSpaceClean(space);
             dJointGroupEmpty(jointgroup);
@@ -284,10 +284,10 @@ private:
 
     KinBodyInfoPtr InitKinBody(KinBodyConstPtr pbody, KinBodyInfoPtr pinfo = KinBodyInfoPtr(), bool blockode=true)
     {
-        EnvironmentMutex::scoped_lock lock(pbody->GetEnv()->GetMutex());
-        boost::shared_ptr<boost::mutex::scoped_lock> lockode;
+        OpenRAVE::EnvironmentLock lock(pbody->GetEnv()->GetMutex());
+        boost::shared_ptr<std::unique_lock<std::mutex> > lockode;
         if( blockode ) {
-            lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
+            lockode = boost::make_shared<std::unique_lock<std::mutex> >(_ode->_mutex);
         }
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
@@ -529,7 +529,7 @@ private:
 #ifdef ODE_HAVE_ALLOCATE_DATA_THREAD
         dAllocateODEDataForThread(dAllocateMaskAll);
 #endif
-        boost::mutex::scoped_lock lockode(_ode->_mutex);
+        std::lock_guard<std::mutex> lockode(_ode->_mutex);
         vector<KinBodyPtr> vbodies;
         _penv->GetBodies(vbodies);
         FOREACHC(itbody, vbodies) {
@@ -642,8 +642,11 @@ private:
         case OpenRAVE::GT_Cylinder:
             odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
             break;
+        case OpenRAVE::GT_ConicalFrustum:
+        case OpenRAVE::GT_Axial:
         case OpenRAVE::GT_Container:
         case OpenRAVE::GT_Cage:
+        case OpenRAVE::GT_CalibrationBoard: // calibration board is box-shaped but has z-offset. so have to use trimesh.
         case OpenRAVE::GT_TriMesh:
             if( info._meshcollision.indices.size() > 0 ) {
                 dTriIndex* pindices = new dTriIndex[info._meshcollision.indices.size()];
@@ -688,9 +691,9 @@ private:
     void _Synchronize(KinBodyInfoPtr pinfo, bool block=true)
     {
         if( pinfo->nLastStamp != pinfo->GetBody()->GetUpdateStamp() ) {
-            boost::shared_ptr<boost::mutex::scoped_lock> lockode;
+            boost::shared_ptr<std::unique_lock<std::mutex>> lockode;
             if( block ) {
-                lockode.reset(new boost::mutex::scoped_lock(_ode->_mutex));
+                lockode = boost::make_shared<std::unique_lock<std::mutex>>(_ode->_mutex);
             }
             vector<Transform> vtrans;
             KinBodyPtr pbody = pinfo->GetBody();

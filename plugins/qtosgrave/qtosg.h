@@ -62,7 +62,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/assert.hpp>
 #include <boost/thread/condition.hpp>
 #include <boost/version.hpp>
@@ -78,8 +78,9 @@
 #include <QtWidgets/QWidget>
 #include <QtWidgets/QTreeWidget>
 
-using namespace OpenRAVE;
 using namespace std;
+using namespace boost::placeholders;
+using namespace OpenRAVE;
 
 #define FORIT(it, v) for(it = (v).begin(); it != (v).end(); (it)++)
 
@@ -220,14 +221,10 @@ protected:
     bool _found;
 };
 
-inline boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
+inline boost::shared_ptr<EnvironmentLock> LockEnvironmentWithTimeout(EnvironmentBasePtr penv, uint64_t timeout)
 {
     // try to acquire the lock
-#if BOOST_VERSION >= 103500
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(penv->GetMutex(),boost::defer_lock_t()));
-#else
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(penv->GetMutex(),false));
-#endif
+    boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(penv->GetMutex(), OpenRAVE::defer_lock_t());
     uint64_t basetime = utils::GetMicroTime();
     while(utils::GetMicroTime()-basetime<timeout ) {
         if( lockenv->try_lock() ) {

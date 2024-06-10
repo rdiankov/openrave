@@ -48,6 +48,8 @@ public:
 
     object GetGeometryGroup();
 
+    object GetBodyGeometryGroup(PyKinBodyPtr pybody);
+
     void RemoveKinBody(PyKinBodyPtr pbody);
 
     bool CheckCollision(PyKinBodyPtr pbody1);
@@ -80,7 +82,7 @@ public:
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport);
 
-    object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false);
+    object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false, object oCheckPreemptFn=py::none_());
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray);
 
@@ -91,6 +93,8 @@ public:
     bool CheckCollisionTriMesh(object otrimesh, PyCollisionReportPtr pReport);
 
     bool CheckCollisionOBB(object oaabb, object otransform, PyCollisionReportPtr pReport);
+
+    bool CheckCollisionOBB(object oaabb, object otransform, object bodiesincluded, PyCollisionReportPtr pReport);
 
     virtual bool CheckSelfCollision(object o1, PyCollisionReportPtr pReport);
 };

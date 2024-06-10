@@ -47,7 +47,7 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
                 for (; ptr < END; ++ptr)
                 {
                     rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> element(&v.GetAllocator());
-                    ptr->convert(&element);
+                    ptr->convert(element);
                     v.PushBack(static_cast<rapidjson::GenericValue<Encoding, Allocator>&>(element), v.GetAllocator());
                 }
             }
@@ -60,12 +60,50 @@ struct convert< rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> 
                 {
                     rapidjson::GenericValue<Encoding, Allocator> key(ptr->key.via.str.ptr, ptr->key.via.str.size, v.GetAllocator());
                     rapidjson::GenericDocument<Encoding, Allocator, StackAllocator> val(&v.GetAllocator());
-                    ptr->val.convert(&val);
+                    ptr->val.convert(val);
 
                     v.AddMember(key, val, v.GetAllocator());
                 }
             }
                 break;
+            case msgpack::type::EXT: {
+                if (o.via.ext.type() == -1) {
+                    const std::chrono::system_clock::time_point tp = o.as<std::chrono::system_clock::time_point>();
+                    const std::time_t parsedTime = std::chrono::system_clock::to_time_t(tp);
+
+                    // RFC 3339 Nano format
+                    char formatted[sizeof("2006-01-02T15:04:05.999999999Z07:00")];
+
+                    // The extension does not include timezone information. By convention, we format to local time.
+                    struct tm datetime = {0};
+                    std::size_t size = std::strftime(formatted, sizeof(formatted), "%FT%T", localtime_r(&parsedTime, &datetime));
+
+                    // Add nanoseconds portion if present
+                    const long nanoseconds = (std::chrono::duration_cast<chrono::nanoseconds>(tp.time_since_epoch()).count() % 1000000000 + 1000000000) % 1000000000;
+                    if (nanoseconds != 0) {
+                        size += sprintf(formatted + size, ".%09lu", nanoseconds);
+                        // remove trailing zeros
+                        while (formatted[size - 1] == '0') {
+                            --size;
+                        }
+                    }
+                    if (datetime.tm_gmtoff == 0) {
+                        formatted[size] = 'Z';
+                    } else {
+                        size += std::strftime(formatted + size, sizeof(formatted) - size, "%z", &datetime);
+                        // fix timezone format (0000 -> 00:00)
+                        formatted[size] = formatted[size - 1];
+                        formatted[size - 1] = formatted[size - 2];
+                        formatted[size - 2] = ':';
+                    }
+                    formatted[++size] = '\0';
+
+                    v.SetString(formatted, size, v.GetAllocator());
+                } else {
+                    RAVELOG_WARN("Unrecognized msgpack extension type.");
+                }
+                break;
+            }
             case msgpack::type::NIL:
             default:
                 v.SetNull(); break;
@@ -284,19 +322,26 @@ private:
 void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::ostream& os)
 {
     msgpack::osbuffer buf(os);
-    msgpack::pack(&buf, value);
+    msgpack::pack(buf, value);
 }
 
 void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::vector<char>& output)
 {   
     msgpack::vbuffer buf(output);
-    msgpack::pack(&buf, value);
+    msgpack::pack(buf, value);
 }
 
 void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
 {
     msgpack::unpacked unpacked;
-    msgpack::unpack(&unpacked, str.data(), str.size());
+    msgpack::unpack(unpacked, str.data(), str.size());
+    unpacked.get().convert(d);
+}
+
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const void* data, size_t size)
+{
+    msgpack::unpacked unpacked;
+    msgpack::unpack(unpacked, (const char*) data, size);
     unpacked.get().convert(d);
 }
 
@@ -306,6 +351,8 @@ void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, std::istream& is)
     str.assign(std::istreambuf_iterator<char>(is), std::istreambuf_iterator<char>());
     OpenRAVE::MsgPack::ParseMsgPack(d, str);
 }
+
+
 
 #else
 
@@ -320,6 +367,11 @@ void OpenRAVE::MsgPack::DumpMsgPack(const rapidjson::Value& value, std::vector<c
 }
 
 void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const std::string& str)
+{
+    throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
+}
+
+void OpenRAVE::MsgPack::ParseMsgPack(rapidjson::Document& d, const void* data, size_t size)
 {
     throw OPENRAVE_EXCEPTION_FORMAT0("MsgPack support is not enabled", ORE_NotImplemented);
 }

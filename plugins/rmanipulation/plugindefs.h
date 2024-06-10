@@ -62,8 +62,6 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/bind.hpp>
-
 using namespace std;
 using namespace OpenRAVE;
 

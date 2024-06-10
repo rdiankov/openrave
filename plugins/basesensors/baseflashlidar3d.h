@@ -195,7 +195,7 @@ public:
             _bRenderData = true;
             return _bRenderData;
         case CC_RenderDataOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _listGraphicsHandles.clear();
             _bRenderData = false;
             return _bRenderData;
@@ -207,7 +207,7 @@ public:
             _RenderGeometry();
             return _bRenderData;
         case CC_RenderGeometryOff: {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             _graphgeometry.reset();
             _bRenderGeometry = false;
             return _bRenderData;
@@ -232,7 +232,7 @@ public:
 
             {
                 // Lock the data mutex and fill with the range data (get all in one timestep)
-                boost::mutex::scoped_lock lock(_mutexdata);
+                std::lock_guard<std::mutex> lock(_mutexdata);
                 t = GetTransform();
                 _pdata->__trans = t;
                 _pdata->__stamp = GetEnv()->GetSimulationTime();
@@ -255,9 +255,20 @@ public:
                             _pdata->ranges[index] = vdir*_report->minDistance;
                             _pdata->intensity[index] = 1;
                             // store the colliding bodies
-                            KinBody::LinkConstPtr plink = !!_report->plink1 ? _report->plink1 : _report->plink2;
-                            if( !!plink ) {
-                                _databodyids[index] = plink->GetParent()->GetEnvironmentBodyIndex();
+                            for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision) {
+                                const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
+                                string_view bodyname;
+                                cpinfo.ExtractFirstBodyName(bodyname);
+                                if( bodyname.empty() ) {
+                                    cpinfo.ExtractSecondBodyName(bodyname);
+                                }
+
+                                if( !bodyname.empty() ) {
+                                    KinBodyPtr pbody = GetEnv()->GetKinBody(bodyname);
+                                    if( !!pbody ) {
+                                        _databodyids[index] = pbody->GetEnvironmentBodyIndex();
+                                    }
+                                }
                             }
                         }
                         else {
@@ -282,7 +293,7 @@ public:
 
                 {
                     // Lock the data mutex and fill the arrays used for rendering
-                    boost::mutex::scoped_lock lock(_mutexdata);
+                    std::lock_guard<std::mutex> lock(_mutexdata);
                     N = (int)_pdata->ranges.size();
                     vpoints.resize(N+1);
                     for(int i = 0; i < N; ++i)
@@ -341,7 +352,7 @@ public:
     virtual bool GetSensorData(SensorDataPtr psensordata)
     {
         if( psensordata->GetType() == ST_Laser ) {
-            boost::mutex::scoped_lock lock(_mutexdata);
+            std::lock_guard<std::mutex> lock(_mutexdata);
             *boost::dynamic_pointer_cast<LaserSensorData>(psensordata) = *_pdata;
             return true;
         }
@@ -359,7 +370,7 @@ public:
     }
     bool _CollidingBodies(ostream& sout, istream& sinput)
     {
-        boost::mutex::scoped_lock lock(_mutexdata);
+        std::lock_guard<std::mutex> lock(_mutexdata);
         FOREACH(it, _databodyids) {
             sout << *it << " ";
         }
@@ -455,7 +466,7 @@ protected:
     GraphHandlePtr _graphgeometry;
     dReal _fTimeToScan;
 
-    boost::mutex _mutexdata;
+    std::mutex _mutexdata;
     bool _bRenderData, _bRenderGeometry, _bPower;
 
     friend class BaseFlashLidar3DXMLReader;

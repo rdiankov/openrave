@@ -31,15 +31,16 @@
 
 #include <iostream>
 #include <sstream>
+#include <mutex>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem.hpp>
 #endif
 
 #include <boost/utility.hpp>
-#include <boost/thread/once.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
 
 BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 
@@ -60,11 +61,13 @@ BOOST_STATIC_ASSERT(sizeof(xmlChar) == 1);
 #include <ivcon.h>
 #endif
 
+using boost::placeholders::_1;
+
 namespace OpenRAVEXMLParser
 {
 
-static boost::once_flag __onceCreateXMLMutex = BOOST_ONCE_INIT;
-static boost::once_flag __onceSetAssimpLog = BOOST_ONCE_INIT;
+static std::once_flag __onceCreateXMLMutex;
+static std::once_flag __onceSetAssimpLog;
 
 /// lock for parsing XML, don't make it a static variable in order to ensure it remains valid for as long as possible
 static EnvironmentMutex* __mutexXML;
@@ -107,7 +110,7 @@ void __SetAssimpLog()
 
 EnvironmentMutex* GetXMLMutex()
 {
-    boost::call_once(__CreateXMLMutex,__onceCreateXMLMutex);
+    std::call_once(__onceCreateXMLMutex, __CreateXMLMutex);
     return __mutexXML;
 }
 
@@ -142,8 +145,10 @@ class aiSceneManaged
 {
 public:
     aiSceneManaged(const std::string& dataorfilename, bool bIsFilename=true, const std::string& formathint=std::string(), unsigned int flags = aiProcess_JoinIdenticalVertices|aiProcess_Triangulate|aiProcess_FindDegenerates|aiProcess_PreTransformVertices|aiProcess_SortByPType) {
-        boost::call_once(__SetAssimpLog,__onceSetAssimpLog);
+        std::call_once(__onceSetAssimpLog, __SetAssimpLog);
         _importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT|aiPrimitiveType_LINE);
+        _importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, aiComponent_NORMALS);
+        flags |= aiProcess_RemoveComponent;
         if( bIsFilename ) {
             _scene = _importer.ReadFile(dataorfilename.c_str(),flags);
         }
@@ -227,7 +232,7 @@ static bool _AssimpCreateTriMesh(const aiScene* scene, aiNode* node, const Vecto
     return true;
 }
 
-static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::list<KinBody::GeometryInfo>& listGeometries)
+static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Vector& scale, std::vector<KinBody::GeometryInfo>& vGeometries)
 {
     if( !node ) {
         return false;
@@ -243,8 +248,8 @@ static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Ve
     }
 
     for (size_t i = 0; i < node->mNumMeshes; i++) {
-        listGeometries.push_back(KinBody::GeometryInfo());
-        KinBody::GeometryInfo& g = listGeometries.back();
+        vGeometries.push_back(KinBody::GeometryInfo());
+        KinBody::GeometryInfo& g = vGeometries.back();
         g._type = GT_TriMesh;
         g._vRenderScale = scale;
         aiMesh* input_mesh = scene->mMeshes[node->mMeshes[i]];
@@ -287,12 +292,12 @@ static bool _AssimpCreateGeometries(const aiScene* scene, aiNode* node, const Ve
     }
 
     for (size_t i=0; i < node->mNumChildren; ++i) {
-        _AssimpCreateGeometries(scene, node->mChildren[i], scale, listGeometries);
+        _AssimpCreateGeometries(scene, node->mChildren[i], scale, vGeometries);
     }
     return true;
 }
 
-static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
+static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::vector<KinBody::GeometryInfo>& vGeometries)
 {
     // some formats (screen) has # in the beginning until the STL solid definition.
     ifstream f(filename.c_str());
@@ -356,8 +361,8 @@ static bool _ParseSpecialSTLFile(EnvironmentBasePtr penv, const std::string& fil
             }
 
             if( !!scene->_scene && !!scene->_scene->mRootNode && !!scene->_scene->HasMeshes() ) {
-                if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, listGeometries) ) {
-                    FOREACH(itgeom, listGeometries) {
+                if( _AssimpCreateGeometries(scene->_scene,scene->_scene->mRootNode, vscale, vGeometries) ) {
+                    FOREACH(itgeom, vGeometries) {
                         itgeom->_vDiffuseColor = vcolor;
                         if( bTransformOffset ) {
                             itgeom->_meshcollision.ApplyTransform(toffset.inverse());
@@ -425,11 +430,11 @@ bool CreateTriMeshFromFile(EnvironmentBasePtr penv, const std::string& filename,
                 }
 
 #ifdef OPENRAVE_ASSIMP
-                std::list<KinBody::GeometryInfo> listGeometries;
-                if( _ParseSpecialSTLFile(penv, filename, vscale, listGeometries) ) {
+                std::vector<KinBody::GeometryInfo> vGeometries;
+                if( _ParseSpecialSTLFile(penv, filename, vscale, vGeometries) ) {
                     trimesh.vertices.clear();
                     trimesh.indices.clear();
-                    FOREACH(itgeom, listGeometries) {
+                    FOREACH(itgeom, vGeometries) {
                         trimesh.Append(itgeom->_meshcollision, itgeom->GetTransform());
                     }
                     return true;
@@ -683,7 +688,7 @@ bool ParseXMLFile(BaseXMLReaderPtr preader, const string& filename)
     if( filedata.size() == 0 ) {
         return false;
     }
-    EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+    EnvironmentLock lock(*GetXMLMutex());
 
 #ifdef HAVE_BOOST_FILESYSTEM
     SetParseDirectoryScope scope(boost::filesystem::path(filedata).parent_path().string());
@@ -718,7 +723,7 @@ bool ParseXMLData(BaseXMLReaderPtr preader, const std::string& pdata)
     if( pdata.size() == 0 ) {
         return false;
     }
-    EnvironmentMutex::scoped_lock lock(*GetXMLMutex());
+    EnvironmentLock lock(*GetXMLMutex());
     return raveXmlSAXUserParseMemory(GetSAXHandler(), preader, pdata.c_str(), pdata.size())==0;
 }
 
@@ -768,7 +773,7 @@ class LinkXMLReader : public StreamXMLReader
 {
 public:
 
-    static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::list<KinBody::GeometryInfo>& listGeometries)
+    static bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::vector<KinBody::GeometryInfo>& vGeometries)
     {
         string extension;
         if( filename.find_last_of('.') != string::npos ) {
@@ -783,14 +788,14 @@ public:
             {
                 aiSceneManaged scene(filename);
                 if( !!scene._scene && !!scene._scene->mRootNode && !!scene._scene->HasMeshes() ) {
-                    if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, listGeometries) ) {
+                    if( _AssimpCreateGeometries(scene._scene,scene._scene->mRootNode, vscale, vGeometries) ) {
                         return true;
                     }
                 }
             }
             if( extension == "stl" || extension == "x") {
                 if( extension == "stl" ) {
-                    if( _ParseSpecialSTLFile(penv, filename, vscale, listGeometries) ) {
+                    if( _ParseSpecialSTLFile(penv, filename, vscale, vGeometries) ) {
                         return true;
                     }
                     RAVELOG_WARN_FORMAT("failed to load STL file %s. If it is in binary format, make sure the first 5 characters of the file are not 'solid'!", filename);
@@ -801,8 +806,8 @@ public:
 #endif
 
         // for other importers, just convert into one big trimesh
-        listGeometries.push_back(KinBody::GeometryInfo());
-        KinBody::GeometryInfo& g = listGeometries.back();
+        vGeometries.push_back(KinBody::GeometryInfo());
+        KinBody::GeometryInfo& g = vGeometries.back();
         g._type = GT_TriMesh;
         g._vDiffuseColor=Vector(1,0.5f,0.5f,1);
         g._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
@@ -995,11 +1000,11 @@ public:
                             info->_filenamecollision = _fnGetModelsDir(info->_filenamecollision);
                         }
                     }
-                    std::list<KinBody::GeometryInfo> listGeometryInfos;
+                    std::vector<KinBody::GeometryInfo> vGeometryInfos;
                     if( info->_type == GT_TriMesh ) {
                         bool bSuccess = false;
                         if( info->_filenamecollision.size() > 0 ) {
-                            if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, listGeometryInfos) ) {
+                            if( !CreateGeometries(_pparent->GetEnv(),info->_filenamecollision, info->_vCollisionScale, vGeometryInfos) ) {
                                 RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamecollision));
                             }
                             else {
@@ -1008,7 +1013,7 @@ public:
                         }
                         if( info->_filenamerender.size() > 0 ) {
                             if( !bSuccess ) {
-                                if( !CreateGeometries(_pparent->GetEnv(), info->_filenamerender, info->_vRenderScale, listGeometryInfos) ) {
+                                if( !CreateGeometries(_pparent->GetEnv(), info->_filenamerender, info->_vRenderScale, vGeometryInfos) ) {
                                     RAVELOG_WARN(str(boost::format("failed to find %s\n")%info->_filenamerender));
                                 }
                                 else {
@@ -1016,13 +1021,13 @@ public:
                                 }
                             }
                         }
-                        if( listGeometryInfos.size() > 0 ) {
+                        if( vGeometryInfos.size() > 0 ) {
                             // append all the geometries to the link. make sure the render filename is specified in only one geometry.
                             string extension;
                             if( info->_filenamerender.find_last_of('.') != string::npos ) {
                                 extension = info->_filenamerender.substr(info->_filenamerender.find_last_of('.')+1);
                             }
-                            FOREACH(itnewgeom,listGeometryInfos) {
+                            FOREACH(itnewgeom,vGeometryInfos) {
                                 itnewgeom->_bVisible = info->_bVisible;
                                 itnewgeom->_bModifiable = info->_bModifiable;
                                 itnewgeom->_fTransparency = info->_fTransparency;
@@ -1045,12 +1050,13 @@ public:
                                 itnewgeom->SetTransform(t);
                                 _plink->_collision.Append(itnewgeom->_meshcollision, itnewgeom->GetTransform());
                             }
-                            listGeometryInfos.front()._vRenderScale = info->_vRenderScale*geomspacescale;
-                            listGeometryInfos.front()._filenamerender = info->_filenamerender;
-                            listGeometryInfos.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
-                            listGeometryInfos.front()._filenamecollision = info->_filenamecollision;
-                            listGeometryInfos.front()._bVisible = info->_bVisible;
-                            FOREACH(itinfo, listGeometryInfos) {
+                            vGeometryInfos.front()._vRenderScale = info->_vRenderScale*geomspacescale;
+                            vGeometryInfos.front()._filenamerender = info->_filenamerender;
+                            vGeometryInfos.front()._vCollisionScale = info->_vCollisionScale*geomspacescale;
+                            vGeometryInfos.front()._filenamecollision = info->_filenamecollision;
+                            vGeometryInfos.front()._bVisible = info->_bVisible;
+                            vGeometryInfos.front()._name = info->_name;
+                            FOREACH(itinfo, vGeometryInfos) {
                                 _plink->_vGeometries.push_back(KinBody::Link::GeometryPtr(new KinBody::Link::Geometry(_plink,*itinfo)));
                             }
                         }
@@ -1346,9 +1352,9 @@ private:
     Vector _vMassExtents;                   ///< used only if mass is a box
 };
 
-bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector &vscale, std::list<KinBody::GeometryInfo>& listGeometryInfos)
+bool CreateGeometries(EnvironmentBasePtr penv, const std::string& filename, const Vector& vscale, std::vector<KinBody::GeometryInfo>& vGeometryInfos)
 {
-    return LinkXMLReader::CreateGeometries(penv,filename,vscale,listGeometryInfos);
+    return LinkXMLReader::CreateGeometries(penv, filename, vscale, vGeometryInfos);
 }
 
 // Joint Reader
@@ -2465,7 +2471,7 @@ public:
         if( InterfaceXMLReader::endElement(xmlname) ) {
             if( !_probot ) {
                 if( _robotname.size() > 0 ) {
-                    KinBodyPtr pbody = _penv->GetKinBody(_robotname.c_str());
+                    KinBodyPtr pbody = _penv->GetKinBody(_robotname);
                     if( pbody->IsRobot() )
                         _probot = RaveInterfaceCast<RobotBase>(pbody);
                 }
@@ -2665,13 +2671,17 @@ public:
             }
         }
         else if( xmlname == "closingdirection" || xmlname == "closingdir" || xmlname == "chuckingdirection" ) {
-            _manipinfo._vChuckingDirection = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
-            FOREACH(it, _manipinfo._vChuckingDirection) {
-                if( *it > 0 ) {
-                    *it = 1;
+            vector<dReal> vChuckingDirectionReal = vector<dReal>((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+            _manipinfo._vChuckingDirection.resize(vChuckingDirectionReal.size());
+            for (size_t index = 0; index < vChuckingDirectionReal.size(); ++index) {
+                const dReal realVal = vChuckingDirectionReal[index];
+                int& intVal = _manipinfo._vChuckingDirection[index];
+                intVal = 0;
+                if( realVal > 0 ) {
+                    intVal = 1;
                 }
-                else if( *it < 0 ) {
-                    *it = -1;
+                else if( realVal < 0 ) {
+                    intVal = -1;
                 }
             }
         }
@@ -3497,7 +3507,9 @@ public:
         else if(xmlname == "unit"){
             std::pair<std::string, dReal> unit;
             _ss >> unit.first >> unit.second;
-            _penv->SetUnit(unit);
+            UnitInfo unitInfo = _penv->GetUnitInfo();
+            unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
+            _penv->SetUnitInfo(unitInfo);
         }
 
         if( xmlname !=_processingtag ) {

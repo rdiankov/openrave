@@ -40,13 +40,17 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
     orjson::SetJsonValueByKey(value, "id", _id, allocator);
     orjson::SetJsonValueByKey(value, "name", _name, allocator);
     orjson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
-    orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    if( _vChuckingDirection.size() > 0 ) {
+        orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
+    }
     orjson::SetJsonValueByKey(value, "direction", _vdirection, allocator);
     orjson::SetJsonValueByKey(value, "baseLinkName", _sBaseLinkName, allocator);
     orjson::SetJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName, allocator); //optional;
     orjson::SetJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName, allocator);
     orjson::SetJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId, allocator);
-    orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
+    if( _vGripperJointNames.size() > 0 ) {
+        orjson::SetJsonValueByKey(value, "gripperJointNames", _vGripperJointNames, allocator);
+    }
     orjson::SetJsonValueByKey(value, "grippername", _grippername, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName, allocator);
     orjson::SetJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName, allocator);
@@ -58,13 +62,55 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
     orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
-    orjson::LoadJsonValueByKey(value, "chuckingDirections", _vChuckingDirection);
+
+    // Now recommended to use chuckingDirection in GripperInfo. However, we still read it from ManipulatorInfo for backward compatibility, e.g. the saved scene is not migrated.
+    rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirections");
+    if( itChuckingDirections != value.MemberEnd() ) {
+        const rapidjson::Value& rChuckingDirections = itChuckingDirections->value;
+        if( !rChuckingDirections.IsArray() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("When loading tool '%s' with id '%s', 'chuckingDirections' needs to be an array, currently it is '%s'"), _name%_id%orjson::DumpJson(rChuckingDirections), ORE_InvalidArguments);
+        }
+
+        _vChuckingDirection.resize(rChuckingDirections.Size());
+        if( rChuckingDirections.Size() > 0 ) {
+            RAVELOG_WARN_FORMAT("For manipulator '%s', read 'chuckingDirections' (size=%d) in tools' setting. But, since it's deprecated, using 'gripperInfos' is recommended.", _name%_vChuckingDirection.size());
+        }
+        for(int index = 0; index < (int)_vChuckingDirection.size(); ++index) {
+            int direction = 0;
+            if( rChuckingDirections[index].IsFloat() || rChuckingDirections[index].IsDouble() ) {
+                double fdirection = 0;
+                orjson::LoadJsonValue(rChuckingDirections[index], fdirection);
+                if( fdirection > 0 ) {
+                    direction = 1;
+                }
+                else if( fdirection < 0 ) {
+                    direction = -1;
+                }
+            }
+            else {
+                orjson::LoadJsonValue(rChuckingDirections[index], direction);
+                if (direction > 0) {
+                    direction = 1;
+                }
+                else if (direction < 0) {
+                    direction = -1;
+                }
+            }
+            _vChuckingDirection[index] = direction;
+        }
+    }
+
     orjson::LoadJsonValueByKey(value, "direction", _vdirection);
     orjson::LoadJsonValueByKey(value, "baseLinkName", _sBaseLinkName);
     orjson::LoadJsonValueByKey(value, "ikChainEndLinkName", _sIkChainEndLinkName); //optional;
     orjson::LoadJsonValueByKey(value, "effectorLinkName", _sEffectorLinkName);
     orjson::LoadJsonValueByKey(value, "ikSolverType", _sIkSolverXMLId);
     orjson::LoadJsonValueByKey(value, "gripperJointNames", _vGripperJointNames);
+    // Now recommended to use gripperJointNames in GripperInfo. However, we still read it from ManipulatorInfo for backward compatibility, e.g. the saved scene is not migrated.
+    rapidjson::Value::ConstMemberIterator itGripperJointNames = value.FindMember("gripperJointNames");
+    if( (itGripperJointNames != value.MemberEnd()) && itGripperJointNames->value.IsArray() && (itGripperJointNames->value.Size() > 0) ) {
+        RAVELOG_WARN_FORMAT("For manipulator '%s', read 'gripperJointNames' (size=%d) in 'tools' setting. But, since it's deprecated, using 'gripperInfos is recommended.", _name%_vGripperJointNames.size());
+    }
     orjson::LoadJsonValueByKey(value, "grippername", _grippername);
     orjson::LoadJsonValueByKey(value, "toolChangerConnectedBodyToolName", _toolChangerConnectedBodyToolName);
     orjson::LoadJsonValueByKey(value, "toolChangerLinkName", _toolChangerLinkName);
@@ -164,7 +210,7 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
         return UFIR_RequireReinitialize;
     }
 
-    if (info._sIkSolverXMLId != info._sIkSolverXMLId) {
+    if (_info._sIkSolverXMLId != info._sIkSolverXMLId) {
         RAVELOG_VERBOSE_FORMAT("manipulator %s ik solver xml id changed", _info._id);
         return UFIR_RequireReinitialize;
     }
@@ -176,8 +222,9 @@ UpdateFromInfoResult RobotBase::Manipulator::UpdateFromInfo(const RobotBase::Man
         updateFromInfoResult = UFIR_Success;
     }
 
-    if (GetChuckingDirection() != info._vChuckingDirection) {
-        SetChuckingDirection(info._vChuckingDirection);
+    if (_info._vChuckingDirection != info._vChuckingDirection) {
+        _info._vChuckingDirection = info._vChuckingDirection;
+        GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
         RAVELOG_VERBOSE_FORMAT("manipulator %s chucking direction changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
@@ -205,13 +252,6 @@ int RobotBase::Manipulator::GetArmDOF() const
 int RobotBase::Manipulator::GetGripperDOF() const
 {
     return static_cast<int>(__vgripperdofindices.size());
-}
-
-void RobotBase::Manipulator::SetChuckingDirection(const std::vector<dReal>& chuckingdirection)
-{
-    OPENRAVE_ASSERT_OP((int)chuckingdirection.size(),==,GetGripperDOF());
-    _info._vChuckingDirection = chuckingdirection;
-    GetRobot()->_PostprocessChangedParameters(Prop_RobotManipulatorTool);
 }
 
 void RobotBase::Manipulator::SetLocalToolTransform(const Transform& t)
@@ -324,14 +364,23 @@ bool RobotBase::Manipulator::SetIkSolver(IkSolverBasePtr iksolver)
 
 void RobotBase::Manipulator::GetArmDOFValues(std::vector<dReal>& v) const
 {
-    GetRobot()->GetDOFValues(v, __varmdofindices);
+    if( __varmdofindices.empty() ) {
+        v.resize(0);
+    }
+    else {
+        GetRobot()->GetDOFValues(v, __varmdofindices);
+    }
 }
 
 void RobotBase::Manipulator::GetGripperDOFValues(std::vector<dReal>& v) const
 {
-    GetRobot()->GetDOFValues(v, __vgripperdofindices);
+    if( __vgripperdofindices.empty() ) {
+        v.resize(0);
+    }
+    else {
+        GetRobot()->GetDOFValues(v, __vgripperdofindices);
+    }
 }
-
 
 bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, vector<dReal>& solution, int filteroptions) const
 {
@@ -381,12 +430,12 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
 }
 
 
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, int filteroptions, IkReturnPtr ikreturn) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator) const
 {
-    return FindIKSolution(goal, vector<dReal>(), filteroptions, ikreturn);
+    return FindIKSolution(goal, vector<dReal>(), filteroptions, ikreturn, paccumulator);
 }
 
-bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn) const
+bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturnPtr ikreturn, IkFailureAccumulatorBasePtr paccumulator) const
 {
     IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
@@ -404,15 +453,15 @@ bool RobotBase::Manipulator::FindIKSolution(const IkParameterization& goal, cons
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, ikreturn) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, ikreturn);
+    return vFreeParameters.size() == 0 ? pIkSolver->Solve(localgoal, solution, filteroptions, paccumulator, ikreturn) : pIkSolver->Solve(localgoal, solution, vFreeParameters, filteroptions, paccumulator, ikreturn);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator) const
 {
-    return FindIKSolutions(goal, vector<dReal>(), filteroptions, vikreturns);
+    return FindIKSolutions(goal, vector<dReal>(), filteroptions, vikreturns, paccumulator);
 }
 
-bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns) const
+bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, IkFailureAccumulatorBasePtr paccumulator) const
 {
     IkSolverBasePtr pIkSolver = GetIkSolver();
     OPENRAVE_ASSERT_FORMAT(!!pIkSolver, "manipulator %s:%s does not have an IK solver set",RobotBasePtr(__probot)->GetName()%GetName(),ORE_Failed);
@@ -424,7 +473,7 @@ bool RobotBase::Manipulator::FindIKSolutions(const IkParameterization& goal, con
     else {
         localgoal=goal;
     }
-    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,vikreturns) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,vikreturns);
+    return vFreeParameters.size() == 0 ? pIkSolver->SolveAll(localgoal,filteroptions,paccumulator,vikreturns) : pIkSolver->SolveAll(localgoal,vFreeParameters,filteroptions,paccumulator,vikreturns);
 }
 
 IkParameterization RobotBase::Manipulator::GetIkParameterization(IkParameterizationType iktype, bool inworld) const
@@ -835,12 +884,7 @@ bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
             return false;
         }
     }
-    for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-        if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-            return true;
-        }
-    }
-    return false;
+    return true;
 }
 
 void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
@@ -871,10 +915,6 @@ void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) c
 bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report) const
 {
     RobotBasePtr probot(__probot);
-    // get all child links of the manipualtor
-    int iattlink = __pEffector->GetIndex();
-    vector<LinkPtr> vattachedlinks;
-    __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
 
     CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
@@ -886,19 +926,13 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
 
     bool bincollision = false;
 
-    FOREACHC(itlink,vattachedlinks) {
-        if( probot->CheckLinkCollision((*itlink)->GetIndex(), report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
-            }
-            bincollision = true;
-        }
-    }
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if((ilink == iattlink)|| !(*itlink)->IsEnabled() ) {
-            continue;
-        }
+        // Do not skip the iteration even if the link is not enabled since the link can be grabbing stuff that is
+        // enabled. CheckLinkCollision will take care of the fact that this link is not enabled.
+        // if( !(*itlink)->IsEnabled() ) {
+        //     continue;
+        // }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
         FOREACHC(itarmdof,__varmdofindices) {
@@ -911,28 +945,15 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report
             continue;
         }
 
-        bool bIsAffected = false;
-        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                bIsAffected = true;
-                if( probot->CheckLinkCollision(ilink, report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
-                }
-                break;
+        // check all gripper links including
+        // 1. links that are rigidly attached to the end effector
+        // 2. links that are controlled by joints other than arm joints
+        // 3. links that are connected with passive but non-static joints
+        if( probot->CheckLinkCollision(ilink, report) ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
             }
-        }
-
-        if( !bIsAffected ) {
-            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
-            if( probot->CheckLinkCollision(ilink, report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                bincollision = true;
-            }
+            bincollision = true;
         }
     }
     return bincollision;
@@ -953,12 +974,9 @@ bool RobotBase::Manipulator::CheckEndEffectorCollision(const Transform& tEE, Kin
 bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const
 {
     RobotBasePtr probot(__probot);
-    Transform toldEE = GetTransform();
-    Transform tdelta = tEE*toldEE.inverse();
+    const Transform toldEE = GetTransform();
+    const Transform tdelta = tEE*toldEE.inverse();
     // get all child links of the manipualtor
-    int iattlink = __pEffector->GetIndex();
-    vector<LinkPtr> vattachedlinks;
-    __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
 
     CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
@@ -970,24 +988,13 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
 
     bool bincollision = false;
 
-    FOREACHC(itlink,vattachedlinks) {
-        if( !!pbody ) {
-            // check with the specified body
-            bincollision |= probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),pbody,report);
-        }
-        else {
-            // check with the environment
-            bincollision |= probot->CheckLinkCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report);
-        }
-        if( bincollision && !bAllLinkCollisions) { // if checking all collisions, have to continue
-            return true;
-        }
-    }
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if((ilink == iattlink)|| !(*itlink)->IsEnabled() ) {
-            continue;
-        }
+        // Do not skip the iteration even if the link is not enabled since the link can be grabbing stuff that is
+        // enabled. CheckLinkCollision will take care of the fact that this link is not enabled.
+        // if( !(*itlink)->IsEnabled() ) {
+        //     continue;
+        // }
         // gripper needs to be affected by all joints
         bool bGripperLink = true;
         FOREACHC(itarmdof,__varmdofindices) {
@@ -1000,38 +1007,20 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
             continue;
         }
 
-        bool bIsAffected = false;
-        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                bIsAffected = true;
-                if( !!pbody ) {
-                    // check with the specified body
-                    bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report);
-                }
-                else {
-                    // check with the environment
-                    bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report);
-                }
-                if( bincollision && !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                break;
-            }
+        // check all gripper links including
+        // 1. links that are rigidly attached to the end effector
+        // 2. links that are controlled by joints other than arm joints
+        // 3. links that are connected with passive but non-static joints
+        if( !!pbody ) {
+            // check with the specified body
+            bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report);
         }
-
-        if( !bIsAffected ) {
-            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
-            if( !!pbody ) {
-                // check with the specified body
-                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),pbody,report);
-            }
-            else {
-                // check with the environment
-                bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report);
-            }
-            if( bincollision && !bAllLinkCollisions) { // if checking all collisions, have to continue
-                return true;
-            }
+        else {
+            // check with the environment
+            bincollision |= probot->CheckLinkCollision(ilink,tdelta*(*itlink)->GetTransform(),report);
+        }
+        if( bincollision && !bAllLinkCollisions ) { // if checking all collisions, have to continue
+            return true;
         }
     }
     return bincollision;
@@ -1040,108 +1029,6 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
 {
     RobotBasePtr probot(__probot);
-    // get all child links of the manipualtor
-    int iattlink = __pEffector->GetIndex();
-    vector<LinkPtr> vattachedlinks;
-    __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
-
-    CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
-    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
-    CollisionReportKeepSaver reportsaver(report);
-    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
-        report->Reset();
-        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
-    }
-
-    bool bincollision = false;
-
-    if( bIgnoreManipulatorLinks ) {
-        CollisionCheckerBasePtr pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
-        std::vector<LinkPtr> vindependentinks;
-        GetIndependentLinks(vindependentinks);
-        FOREACHC(itlink,vattachedlinks) {
-            KinBody::LinkPtr plink = *itlink;
-            if( plink->IsEnabled() ) {
-                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
-                FOREACHC(itindependentlink,vindependentinks) {
-                    if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                        if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                RAVELOG_VERBOSE_FORMAT("link self collision with link %s", (*itlink)->GetName());
-                                return true;
-                            }
-                            bincollision = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else {
-        // unfortunately we cannot check for self collisions of links since after IK they could be different for links that move because of the manipulator!
-        FOREACHC(itlink,vattachedlinks) {
-            if( probot->CheckLinkSelfCollision((*itlink)->GetIndex(),report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    RAVELOG_VERBOSE_FORMAT("link self collision with link %s", (*itlink)->GetName());
-                    return true;
-                }
-                bincollision = true;
-            }
-        }
-    }
-    FOREACHC(itlink, probot->GetLinks()) {
-        int ilink = (*itlink)->GetIndex();
-        if((ilink == iattlink)|| !(*itlink)->IsEnabled() ) {
-            continue;
-        }
-        // gripper needs to be affected by all joints
-        bool bGripperLink = true;
-        FOREACHC(itarmdof,__varmdofindices) {
-            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
-                bGripperLink = false;
-                break;
-            }
-        }
-        if( !bGripperLink ) {
-            continue;
-        }
-
-        bool bIsAffected = false;
-        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                bIsAffected = true;
-                if( probot->CheckLinkSelfCollision(ilink,report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
-                }
-                break;
-            }
-        }
-
-        if( !bIsAffected ) {
-            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
-            if( probot->CheckLinkSelfCollision(ilink,report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                bincollision = true;
-            }
-        }
-    }
-    return bincollision;
-}
-
-bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
-{
-    RobotBasePtr probot(__probot);
-    Transform toldEE = GetTransform();
-    Transform tdelta = tEE*toldEE.inverse();
-    // get all child links of the manipualtor
-    int iattlink = __pEffector->GetIndex();
-    vector<LinkPtr> vattachedlinks;
-    __pEffector->GetRigidlyAttachedLinks(vattachedlinks);
 
     CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
@@ -1161,44 +1048,9 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
     }
 
-    if( bIgnoreManipulatorLinks ) {
-        GetIndependentLinks(vindependentinks);
-        FOREACHC(itlink,vattachedlinks) {
-            KinBody::LinkPtr plink = *itlink;
-            if( plink->IsEnabled() ) {
-                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
-                Transform tlinktrans = tdelta*plink->GetTransform();
-                plink->SetTransform(tlinktrans);
-
-                FOREACHC(itindependentlink,vindependentinks) {
-                    if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                        if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                RAVELOG_VERBOSE_FORMAT("link self collision with link %s", (*itlink)->GetName());
-                                return true;
-                            }
-                            bincollision = true;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else {
-        // unfortunately we cannot check for self collisions of links since after IK they could be different for links that move because of the manipulator!
-        FOREACHC(itlink,vattachedlinks) {
-            if( probot->CheckLinkSelfCollision((*itlink)->GetIndex(),tdelta*(*itlink)->GetTransform(),report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    RAVELOG_VERBOSE_FORMAT("link self collision with link %s", (*itlink)->GetName());
-                    return true;
-                }
-                bincollision = true;
-            }
-        }
-    }
     FOREACHC(itlink, probot->GetLinks()) {
         int ilink = (*itlink)->GetIndex();
-        if((ilink == iattlink)|| !(*itlink)->IsEnabled() ) {
+        if( !(*itlink)->IsEnabled() ) {
             continue;
         }
         // gripper needs to be affected by all joints
@@ -1213,67 +1065,104 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
             continue;
         }
 
-        bool bIsAffected = false;
-        for(size_t ijoint = 0; ijoint < probot->GetJoints().size(); ++ijoint) {
-            if( probot->DoesAffect(ijoint,ilink) && !probot->DoesAffect(ijoint,iattlink) ) {
-                bIsAffected = true;
-                if( bIgnoreManipulatorLinks ) {
-                    boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
-                    Transform tlinktrans = tdelta*(*itlink)->GetTransform();
-                    (*itlink)->SetTransform(tlinktrans);
-
-                    FOREACHC(itindependentlink,vindependentinks) {
-                        if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                            if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                    RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
-                                    return true;
-                                }
-                                bincollision = true;
-                            }
-                        }
-                    }
-                }
-                else {
-                    if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
+        // check all gripper links including
+        // 1. links that are rigidly attached to the end effector
+        // 2. links that are controlled by joints other than arm joints
+        // 3. links that are connected with passive but non-static joints
+        if( bIgnoreManipulatorLinks ) {
+            FOREACHC(itindependentlink,vindependentinks) {
+                if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
+                    if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
                         if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                            RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
                             return true;
                         }
                         bincollision = true;
                     }
                 }
+            }
+        }
+        else {
+            if( probot->CheckLinkSelfCollision(ilink,report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
+            }
+        }
+    }
+    return bincollision;
+}
+
+bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
+{
+    RobotBasePtr probot(__probot);
+    const Transform toldEE = GetTransform();
+    const Transform tdelta = tEE*toldEE.inverse();
+
+    CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
+    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
+    CollisionReportKeepSaver reportsaver(report);
+    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
+        report->Reset();
+        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+    }
+
+    bool bincollision = false;
+
+    // parameters used only when bIgnoreManipulatorLinks is true
+    CollisionCheckerBasePtr pselfchecker;
+    std::vector<LinkPtr> vindependentinks;
+    if( bIgnoreManipulatorLinks ) {
+        GetIndependentLinks(vindependentinks);
+        pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
+    }
+
+    FOREACHC(itlink, probot->GetLinks()) {
+        int ilink = (*itlink)->GetIndex();
+        if( !(*itlink)->IsEnabled() ) {
+            continue;
+        }
+        // gripper needs to be affected by all joints
+        bool bGripperLink = true;
+        FOREACHC(itarmdof,__varmdofindices) {
+            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
+                bGripperLink = false;
                 break;
             }
         }
+        if( !bGripperLink ) {
+            continue;
+        }
 
-        if( !bIsAffected ) {
-            // link is not affected by any of the joints, perhaps there could be passive joints that are attached to the end effector that are non-static. if a link is affected by all the joints in the chain, then it is most likely a child just by the fact that all the arm joints affect it.
-            if( bIgnoreManipulatorLinks ) {
-                boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
-                Transform tlinktrans = tdelta*(*itlink)->GetTransform();
-                (*itlink)->SetTransform(tlinktrans);
+        // check all gripper links including
+        // 1. links that are rigidly attached to the end effector
+        // 2. links that are controlled by joints other than arm joints
+        // 3. links that are connected with passive but non-static joints
+        if( bIgnoreManipulatorLinks ) {
+            boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
+            const Transform tlinktrans = tdelta*(*itlink)->GetTransform();
+            (*itlink)->SetTransform(tlinktrans);
 
-                FOREACHC(itindependentlink,vindependentinks) {
-                    if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                        if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
-                                return true;
-                            }
-                            bincollision = true;
+            FOREACHC(itindependentlink,vindependentinks) {
+                if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
+                    if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
+                        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                            RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                            return true;
                         }
+                        bincollision = true;
                     }
                 }
             }
-            else {
-                if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
+        }
+        else {
+            if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
                 }
+                bincollision = true;
             }
-            break;
         }
     }
     return bincollision;
@@ -1626,12 +1515,12 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
     if( options & SO_RobotManipulators ) {
         o << (!__pBase ? -1 : __pBase->GetIndex()) << " " << (!__pEffector ? -1 : __pEffector->GetIndex()) << " ";
         // don't include __varmdofindices and __vgripperdofindices since they are generated from the data
-        o << _info._vGripperJointNames.size() << " ";
-        FOREACHC(it,_info._vGripperJointNames) {
+        o << __vGripperJointNames.size() << " ";
+        FOREACHC(it, __vGripperJointNames) {
             o << *it << " ";
         }
-        FOREACHC(it,_info._vChuckingDirection) {
-            SerializeRound(o,*it);
+        FOREACHC(it, __vChuckingDirection) {
+            o << *it << " ";
         }
         SerializeRound(o,_info._tLocalTool);
     }
@@ -1807,37 +1696,44 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
             }
             // initialize the arm configuration spec
             __armspec = probot->GetConfigurationSpecificationIndices(__varmdofindices);
+
+            // sanity check
+            FOREACHC(itarmdof,__varmdofindices) {
+                if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(), __pEffector->GetIndex()) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("manipulator \"%s\" is not valid. end effector link \"%s\" is not affected by joint \"%s\""), GetName()%__pEffector->GetName()%probot->GetJointFromDOFIndex(*itarmdof)->GetName(), ORE_Failed);
+                }
+            }
         }
         else {
             RAVELOG_WARN(str(boost::format("manipulator %s failed to find chain between %s and %s links\n")%GetName()%__pBase->GetName()%__pEffector->GetName()));
         }
     }
 
-    std::vector<dReal> vChuckingDirection;
 
+    // Initialize __vGripperJointNames and __vChuckingDirection, both based on ManipulatorInfo and GripperInfo.
+    // In the latest way, recommended to use GripperInfo. But, for backward compatibility, prioritize those in ManipulatorInfo.
+    // - The usual robot model files do not need the backward compatibility since they should be properly migrated, e.g. GripperInfo should only have settings. However, the saved scene from the old openrave is not migrated. When we load such scene from the new openrave, it requires this backward compatibility code like this.
+    // - Some of the user code call "AddManipulator" to temporarily define the manipulator with newer chuckingDirections/gripperJointNames setting. To support this, still need to read those from ManipulatorInfo.
     GripperInfoPtr pGripperInfo;
+    __vGripperJointNames = _info._vGripperJointNames;
+    __vChuckingDirection = _info._vChuckingDirection;
     if( !_info._grippername.empty() ) {
         pGripperInfo = probot->GetGripperInfo(_info._grippername);
         if( !!pGripperInfo ) {
-
             if( _info._vGripperJointNames.empty() ) {
-                _info._vGripperJointNames = pGripperInfo->gripperJointNames;
-                if( !_info._vGripperJointNames.empty() ) {
-                    RAVELOG_VERBOSE_FORMAT("For manipulator '%s', using %d gripperJointNames from gripperInfo '%s'", _info._name%_info._vGripperJointNames.size()%_info._grippername);
-                }
+                __vGripperJointNames = pGripperInfo->gripperJointNames;
             }
-
             if( _info._vChuckingDirection.empty() ) {
-                if( pGripperInfo->_docGripperInfo.IsObject() ) {
-                    orjson::LoadJsonValueByKey(pGripperInfo->_docGripperInfo, "chuckingDirection", _info._vChuckingDirection);
-                }
+                __vChuckingDirection = pGripperInfo->vChuckingDirections;
             }
         }
     }
 
     // init the gripper dof indices
+    std::vector<int> vValidChuckingDirections;
+    std::vector<std::string> vValidGripperJointNames;
     size_t ichuckingdirection = 0;
-    FOREACHC(itjointname,_info._vGripperJointNames) {
+    FOREACHC(itjointname,__vGripperJointNames) {
         JointPtr pjoint = probot->GetJoint(*itjointname);
         if( !pjoint ) {
             RAVELOG_WARN(str(boost::format("could not find gripper joint %s for manipulator %s")%*itjointname%GetName()));
@@ -1856,11 +1752,12 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
                     }
                     else {
                         __vgripperdofindices.push_back(pjoint->GetDOFIndex()+i);
-                        if( ichuckingdirection < _info._vChuckingDirection.size() ) {
-                            vChuckingDirection.push_back(_info._vChuckingDirection[ichuckingdirection++]);
+                        vValidGripperJointNames.push_back(*itjointname);
+                        if( ichuckingdirection < __vChuckingDirection.size() ) {
+                            vValidChuckingDirections.push_back(__vChuckingDirection[ichuckingdirection++]);
                         }
                         else {
-                            vChuckingDirection.push_back(0);
+                            vValidChuckingDirections.push_back(0);
                             RAVELOG_WARN_FORMAT("manipulator %s chucking direction not correct length, might get bad chucking/release grasping", GetName());
                         }
                     }
@@ -1872,7 +1769,34 @@ void RobotBase::Manipulator::_ComputeInternalInformation()
             }
         }
     }
-    _info._vChuckingDirection.swap(vChuckingDirection);
+
+    // If the above validated chuckingDirections/gripperJointNames are different from those in gripperInfo, show warin.
+    if( !!pGripperInfo ) {
+        if( (pGripperInfo->vChuckingDirections != vValidChuckingDirections) || (pGripperInfo->gripperJointNames != vValidGripperJointNames ) ) {
+            std::stringstream ss;
+            ss << "'chuckingDirection' in gripperInfo [";
+            FOREACH(itdir, pGripperInfo->vChuckingDirections) {
+                ss << *itdir << ", ";
+            }
+            ss << "], 'gripperJointNames' in gripperInfo [";
+            FOREACH(itname, pGripperInfo->gripperJointNames) {
+                ss << *itname << ", ";
+            }
+            ss << "], 'chuckingDirection' validated in tool [";
+            FOREACH(itdir, vValidChuckingDirections) {
+                ss << *itdir << ", ";
+            }
+            ss << "], 'gripperJointNames' validated in tool [";
+            FOREACH(itname, vValidGripperJointNames) {
+                ss << *itname << ", ";
+            }
+            ss << "]";
+            RAVELOG_WARN_FORMAT("'chuckingDirection' and/or 'gripperJointNames' in gripperInfo '%s' is inconsistent with that in manipulator '%s'. %s", _info._grippername % GetName()%ss.str());
+        }
+    }
+
+    __vChuckingDirection.swap(vValidChuckingDirections);
+    __vGripperJointNames.swap(vValidGripperJointNames);
 }
 
 }

@@ -162,31 +162,28 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                     }
                     // See if these two links were initially colliding. If they are, then no further
                     // check is need (as this link pair should be skipped).
+                    // if the link is in nonCollidingLinks1, collision has already been checked.
                     if( std::find(nonCollidingLinks1.begin(), nonCollidingLinks1.end(), pGrabbedBody2Link) != nonCollidingLinks1.end() ) {
-                        for( const KinBody::LinkPtr& pGrabbedBody1Link : grabbedBody1.GetLinks() ) {
-                            if( !pGrabbedBody1Link->IsEnabled() ) {
-                                continue;
-                            }
-                            if( std::find(nonCollidingLinks2.begin(), nonCollidingLinks2.end(), pGrabbedBody1Link) != nonCollidingLinks2.end() ) {
-                                if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(pGrabbedBody1Link),
-                                                                     KinBody::LinkConstPtr(pGrabbedBody2Link),
-                                                                     pusereport) ) {
-                                    bCollision = true;
-                                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                                        break;
-                                    }
-                                } // end if CheckCollision
-                                if( !!pusereport && pusereport->minDistance < report->minDistance ) {
-                                    *report = *pusereport;
-                                }
-                            } // end if pGrabbedBody1Link in nonCollidingLinks2
-                            if( bCollision ) {
+                        continue;
+                    }
+                    for( const KinBody::LinkPtr& pGrabbedBody1Link : grabbedBody1.GetLinks() ) {
+                        if( !pGrabbedBody1Link->IsEnabled() ) {
+                            continue;
+                        }
+                        if( std::find(nonCollidingLinks2.begin(), nonCollidingLinks2.end(), pGrabbedBody1Link) != nonCollidingLinks2.end() ) {
+                            if( collisionchecker->CheckCollision(KinBody::LinkConstPtr(pGrabbedBody1Link),
+                                                                 KinBody::LinkConstPtr(pGrabbedBody2Link),
+                                                                 pusereport) ) {
+                                bCollision = true;
                                 if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                                     break;
                                 }
+                            } // end if CheckCollision
+                            if( !!pusereport && pusereport->minDistance < report->minDistance ) {
+                                *report = *pusereport;
                             }
-                        } // end for pGrabbedBody1Link in nonCollidingLinks2
-                    } // end if pGrabbedBody2Link in nonCollidingLinks1
+                        } // end if pGrabbedBody1Link in nonCollidingLinks2
+                    } // end for pGrabbedBody1Link in nonCollidingLinks2
                     if( bCollision ) {
                         if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                             break;
@@ -425,7 +422,6 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
     bool bincollision = false;
     LinkPtr plink = _veclinks.at(ilinkindex);
     if( plink->IsEnabled() ) {
-        boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
             if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                 return true;

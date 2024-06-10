@@ -1351,7 +1351,7 @@ namespace CONVEX_DECOMPOSITION
 	to choose from.  I only looked at a billion or so.
 	--------------------------------------------------------------------
 	*/
-	NX_INLINE NxU32 hashMix(NxU32 &a, NxU32 &b, NxU32 &c)
+	NX_INLINE void hashMix(NxU32 &a, NxU32 &b, NxU32 &c)
 	{
 		a -= b; a -= c; a ^= (c>>13);
 		b -= c; b -= a; b ^= (a<<8);

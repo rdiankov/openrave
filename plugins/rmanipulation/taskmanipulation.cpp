@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
 #define GRASPTHRESH2 dReal(0.002f)
 
 struct GRASPGOAL
@@ -193,7 +196,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
         return ModuleBase::SendCommand(sout,sinput);
     }
@@ -338,14 +341,14 @@ public:
         void SwitchPadded() {
             if( !_bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to padded robot\n");
-                _pbody->SetLinkGeometriesFromGroup(_sPaddedGeometryGroup);
+                _pbody->SetLinkGeometriesFromGroup(_sPaddedGeometryGroup, false);
                 _bPadded = true;
             }
         }
         void SwitchRegular() {
             if( _bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to regular robot\n");
-                _pbody->SetLinkGeometriesFromGroup("self");
+                _pbody->SetLinkGeometriesFromGroup("self", false);
                 _bPadded = false;
             }
         }
@@ -1117,7 +1120,13 @@ protected:
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = directions[index];
+            }
+        }
 
         vector<dReal> voffset;
         string cmd;
@@ -1237,9 +1246,13 @@ protected:
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
-        FOREACH(it,graspparams->vgoalconfig) {
-            *it = -*it;
+
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = -directions[index];
+            }
         }
         string cmd;
         while(!sinput.eof()) {
@@ -1323,16 +1336,17 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
-
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner init", GetEnv()->GetNameId());
         if( !graspplanner->InitPlan(_robot, graspparams).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
-
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner start to plan", GetEnv()->GetNameId());
         if( !graspplanner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner plan finished", GetEnv()->GetNameId());
 
         if( ptraj->GetNumWaypoints() == 0 ) {
             return false;
@@ -1346,7 +1360,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1356,7 +1369,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
@@ -1492,7 +1504,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1502,7 +1513,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
@@ -1770,20 +1780,24 @@ protected:
             // only check end effector if not trasform 6d
             if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), _report) ) {
                 // if any of the collisions is the target
-                if( (!!_report->plink1 && _report->plink1->GetParent() == ptarget) || (!!_report->plink2 && _report->plink2->GetParent() == ptarget) ) {
-                    // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
-                }
-                else {
-                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ss << "grasper planner CheckEndEffectorCollision: " << _report->__str__() << ", manipvalues=[";
-                        FOREACHC(it, vsolution) {
-                            ss << *it << ", ";
-                        }
-                        ss << "]";
-                        RAVELOG_VERBOSE(ss.str());
+                for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision) {
+                    const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
+                    if( cpinfo.CompareFirstBodyName(ptarget->GetName()) == 0 || cpinfo.CompareSecondBodyName(ptarget->GetName()) == 0 ) {
+                        
+                        // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
                     }
-                    return IKRA_Reject;
+                    else {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            ss << "grasper planner CheckEndEffectorCollision: (" << cpinfo.bodyLinkGeom1Name << ")x(" << cpinfo.bodyLinkGeom2Name << "), manipvalues=[";
+                            FOREACHC(it, vsolution) {
+                                ss << *it << ", ";
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
+                        return IKRA_Reject;
+                    }
                 }
             }
             return IKRA_Success;

@@ -18,16 +18,19 @@ from optparse import OptionParser
 import os
 import subprocess
 import shutil
+from six import ensure_str
 from openravepy.misc import mkdir_recursive
 
 def getsvnurl(dirname):
-    outinfo=subprocess.Popen(['svn','info',dirname],stdout=subprocess.PIPE).communicate()[0]
-    url=None
-    for line in outinfo.splitlines():
-        if line.startswith('URL:'):
-            url=line[4:].strip()
-            break
-    return url
+    # TODO check source/plugins.rst output and give proper string
+    return dirname
+
+def GetPluginName(filename):
+    dirname,libname = os.path.split(filename)
+    pluginname = os.path.splitext(libname)[0]
+    if pluginname.startswith('lib'):
+        pluginname = pluginname[3:]
+    return pluginname
 
 if __name__ == "__main__":
     parser = OptionParser(description='Builds an rst file of the interfaces provided')
@@ -53,11 +56,7 @@ Interface Types
             interfaceinfo[type] = []
         for filename,info in plugininfo:
             dirname,libname = os.path.split(filename)
-            pluginname = os.path.splitext(libname)[0]
-            if pluginname.startswith('lib'):
-                pluginname = pluginname[3:]
-            info.dirname = dirname
-            info.pluginname = pluginname
+            pluginname = GetPluginName(filename)
             for type,names in info.interfacenames:
                 for name in names:
                     print(name)
@@ -74,13 +73,13 @@ Interface Types
                         try:
                             commandtext = interface.SendCommand('help label %s-%s-'%(type,name.lower()))
                             if commandtext is not None:
-                                itext +=  commandtext
+                                itext +=  ensure_str(commandtext)
                         except (openrave_exception,RuntimeError) as e:
                             print(e)
                         interfaceinfo[type].append([name,pluginname,itext])
                         interface = None # destroy
         
-        sortedtypes = interfaceinfo.keys()
+        sortedtypes = list(interfaceinfo.keys())
         sortedtypes.sort(key=lambda x: str(x))
         for type in sortedtypes:
             descs = interfaceinfo[type]
@@ -116,22 +115,24 @@ Plugins
 -------
 """
         # sort plugins by root name
-        plugininfo.sort(key=lambda x: x[1].pluginname)
+        plugininfo.sort(key=lambda x: GetPluginName(x[0]))
         for filename,info in plugininfo:
-            print(info.pluginname)
-            text += '.. _plugin-%s:\n\n'%info.pluginname # link
-            text += info.pluginname + '\n' + '-'*len(info.pluginname) + '\n\n'
+            dirname,libname = os.path.split(filename)
+            pluginname = GetPluginName(filename)
+            print(pluginname)
+            text += '.. _plugin-%s:\n\n'%pluginname # link
+            text += pluginname + '\n' + '-'*len(pluginname) + '\n\n'
             text += 'Offers: '
             for type,names in info.interfacenames:
                 for name in names:
                     text += ':ref:`%s:%s <%s-%s>` '%(str(type),name,str(type),name.lower())
             text += '\n\n'
             text += 'OpenRAVE Version: %s\n\n'%info.version
-            if info.pluginname in coreplugins:
-                revision,url = coreplugins[info.pluginname]
+            if pluginname in coreplugins:
+                revision,url = coreplugins[pluginname]
                 text += 'Core Plugin: Last updated r%s\n\nURL: %s'%(revision,url)
             else:
-                url=getsvnurl(os.path.join(info.dirname,'..'))
+                url=getsvnurl(os.path.join(dirname,'..'))
                 if url is not None:
                     text += 'URL: '+url
             text += '\n\n'

@@ -200,7 +200,7 @@ protected:
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
     std::vector<dReal> _vdofbranches;
-    mutable boost::mutex _mutexjoints;
+    mutable std::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
 };
 

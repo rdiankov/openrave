@@ -131,6 +131,8 @@ public:
     virtual const std::string& GetName() const {
         return _name;
     }
+    virtual void SetUserText(const string& userText);
+    virtual void SetTextSize(double size);
 
     virtual bool LoadModel(const string& filename);
 
@@ -188,12 +190,12 @@ public:
     virtual UserDataPtr RegisterViewerThreadCallback(const ViewerThreadCallbackFn& fncallback);
     virtual void _DeleteItemCallback(Item* pItem)
     {
-        boost::mutex::scoped_lock lock(_mutexItems);
+        std::lock_guard<std::mutex> lock(_mutexItems);
         pItem->PrepForDeletion();
         _listRemoveItems.push_back(pItem);
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
+    boost::shared_ptr<EnvironmentLock> LockEnvironment(uint64_t timeout=50000,bool bUpdateEnvironment = true);
 
 public slots:
 
@@ -244,8 +246,8 @@ public:
 protected:
         boost::weak_ptr<QtCoinViewer> _pviewer;
         void** _ppreturn;
-        boost::mutex _mutex;
-        boost::shared_ptr<boost::mutex::scoped_lock> _plock;
+        std::mutex _mutex;
+        boost::shared_ptr<std::unique_lock<std::mutex>> _plock;
     };
     typedef boost::shared_ptr<EnvMessage> EnvMessagePtr;
     typedef boost::shared_ptr<EnvMessage const> EnvMessageConstPtr;
@@ -339,6 +341,10 @@ public:
     virtual void _SetTriangleMesh(SoSeparator* pparent, const float* ppoints, int stride, const int* pIndices, int numTriangles);
     virtual void _Reset();
     virtual void _SetBkgndColor(const RaveVector<float>& color);
+    virtual void _SetTextSize(double size);
+    virtual double _GetTextBaseSize(double size);
+    virtual SbVec3f _GetMessageBaseTranslation();
+    virtual SbVec3f _GetMessageShadowTranslation();
     virtual void _closegraph(SoSwitch* handle);
     virtual void _SetGraphTransform(SoSwitch* handle, const RaveTransform<float>& t);
     virtual void _SetGraphShow(SoSwitch* handle, bool bshow);
@@ -385,8 +391,8 @@ public:
     // Message Queue
     list<EnvMessagePtr> _listMessages;
     list<Item*> _listRemoveItems;
-    boost::mutex _mutexItems, _mutexUpdating, _mutexMouseMove;     ///< mutex protected messages
-    mutable boost::mutex _mutexMessages;
+    std::mutex _mutexItems, _mutexUpdating, _mutexMouseMove;     ///< mutex protected messages
+    mutable std::mutex _mutexMessages;
 
     QVBoxLayout * vlayout;
     QGroupBox * view1;
@@ -411,7 +417,10 @@ public:
     std::list< boost::shared_ptr<IvDragger> > _plistdraggers;     /// draggers drawn
     SoEventCallback* _eventKeyboardCB;
 
+    SoSwitch* _messageSwitch;
+    SoFont* _messageFont;
     boost::array<SoText2*,2> _messageNodes;
+    SoTranslation* _messageBaseTranslation;
     SoTranslation* _messageShadowTranslation;
 
     bool _altDown[2];
@@ -419,6 +428,7 @@ public:
     int _VideoFrameRate;
 
     std::string _name;
+    std::string _userText;
     std::map<KinBodyPtr, KinBodyItemPtr> _mapbodies;        ///< all the bodies created
 
     ItemPtr _pSelectedItem;                   ///< the currently selected item
@@ -446,9 +456,9 @@ public:
     int _available;
 
     bool _bLockEnvironment;
-    boost::mutex _mutexUpdateModels, _mutexCallbacks;
-    boost::condition _condUpdateModels;     ///< signaled everytime environment models are updated
-    boost::mutex _mutexGUI;
+    std::mutex _mutexUpdateModels, _mutexCallbacks;
+    std::condition_variable _condUpdateModels;     ///< signaled everytime environment models are updated
+    std::mutex _mutexGUI;
     bool _bInIdleThread;
 
     // toggle switches
@@ -524,6 +534,7 @@ public:
     friend class DeselectMessage;
     friend class ResetMessage;
     friend class SetBkgndColorMessage;
+    friend class SetTextSizeMessage;
     friend class StartPlaybackTimerMessage;
     friend class StopPlaybackTimerMessage;
     friend class SetGraphTransformMessage;

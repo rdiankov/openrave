@@ -43,7 +43,9 @@ class TaskManipulation:
                 self.args += ' graspername %s '%graspername
             else:
                 self.args += ' nograsper '
-        env.Add(self.prob,True,self.args)
+        with env:
+            env.Add(self.prob,True,self.args)
+
     def  __del__(self):
         # need to lock the environment since Remove locks it
         env = self.prob.GetEnv()
@@ -61,7 +63,8 @@ class TaskManipulation:
         clone = shallowcopy(self)
         clone.prob = RaveCreateModule(envother,'TaskManipulation')
         clone.robot = envother.GetRobot(self.robot.GetName())
-        envother.Add(clone.prob,True,clone.args)
+        with envother:
+            envother.Add(clone.prob,True,clone.args)
         return clone
     
     def SetRobot(self, robot):

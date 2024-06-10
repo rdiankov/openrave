@@ -75,7 +75,7 @@ PyPlannerStatus::PyPlannerStatus(const PlannerStatus& status) {
     }
     else {
         //_report = status._report->__str__();
-        report = py::to_object(openravepy::toPyCollisionReport(status.report, NULL));
+        report = py::to_object(openravepy::toPyCollisionReport(*status.report));
     }
 
     ikparam = toPyIkParameterization(status.ikparam);
@@ -282,6 +282,9 @@ bool PyPlannerBase::PyPlannerParameters::__eq__(OPENRAVE_SHARED_PTR<PyPlannerPar
 }
 bool PyPlannerBase::PyPlannerParameters::__ne__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {
     return !p || _paramsread != p->_paramsread;
+}
+long PyPlannerBase::PyPlannerParameters::__hash__() {
+    return static_cast<long>(uintptr_t(_paramsread.get()));
 }
 
 typedef OPENRAVE_SHARED_PTR<PyPlannerBase::PyPlannerParameters> PyPlannerParametersPtr;
@@ -571,6 +574,7 @@ void init_openravepy_planner()
         .def("__repr__",&PyPlannerBase::PyPlannerParameters::__repr__)
         .def("__eq__",&PyPlannerBase::PyPlannerParameters::__eq__)
         .def("__ne__",&PyPlannerBase::PyPlannerParameters::__ne__)
+        .def("__hash__",&PyPlannerBase::PyPlannerParameters::__hash__)
         ;
     }
 

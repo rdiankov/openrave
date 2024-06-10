@@ -33,7 +33,7 @@ public:
 
     virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
         _probot = pbase;
@@ -42,7 +42,7 @@ public:
 
     virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
         _probot = pbase;
@@ -197,7 +197,6 @@ protected:
         int nrejected = 0;
         int iiter = parameters->_nMaxIterations;
         int itercount = 0;
-        int numiters = (int)parameters->_nMaxIterations;
         std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
 
         int numshortcuts = 0; // keep track of the number of successful shortcuts

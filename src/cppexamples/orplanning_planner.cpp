@@ -54,7 +54,7 @@ public:
         while(IsOk()) {
             GraphHandlePtr pgraph;
             {
-                EnvironmentMutex::scoped_lock lock(penv->GetMutex()); // lock environment
+                EnvironmentLock lock(penv->GetMutex()); // lock environment
 
                 probot->SetActiveDOFs(pmanip->GetArmIndices());
 
@@ -113,7 +113,7 @@ public:
 
             // unlock the environment and wait for the robot to finish
             while(!probot->GetController()->IsDone() && IsOk()) {
-                boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
         }
     }

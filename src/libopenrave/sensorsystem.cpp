@@ -16,6 +16,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
+
 namespace OpenRAVE {
 
 SimpleSensorSystem::SimpleXMLReader::SimpleXMLReader(boost::shared_ptr<XMLData> p) : _pdata(p)
@@ -114,7 +118,7 @@ SimpleSensorSystem::~SimpleSensorSystem()
 
 void SimpleSensorSystem::Reset()
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     _mapbodies.clear();
 }
 
@@ -144,7 +148,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, Readable
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     if( _mapbodies.find(pbody->GetEnvironmentBodyIndex()) != _mapbodies.end() ) {
         RAVELOG_WARN(str(boost::format("body %s already added\n")%pbody->GetName()));
         return KinBody::ManageDataPtr();
@@ -160,7 +164,7 @@ KinBody::ManageDataPtr SimpleSensorSystem::AddKinBody(KinBodyPtr pbody, Readable
 
 bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     bool bSuccess = _mapbodies.erase(pbody->GetEnvironmentBodyIndex())>0;
     RAVELOG_VERBOSE(str(boost::format("system removing body %s %s\n")%pbody->GetName()%(bSuccess ? "succeeded" : "failed")));
     return bSuccess;
@@ -168,13 +172,13 @@ bool SimpleSensorSystem::RemoveKinBody(KinBodyPtr pbody)
 
 bool SimpleSensorSystem::IsBodyPresent(KinBodyPtr pbody)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     return _mapbodies.find(pbody->GetEnvironmentBodyIndex()) != _mapbodies.end();
 }
 
 bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
 {
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     BODIES::iterator it = _mapbodies.find(pbody->GetEnvironmentBodyIndex());
     if( it == _mapbodies.end() ) {
         RAVELOG_WARN("trying to %s body %s that is not in system\n", bEnable ? "enable" : "disable", pbody->GetName().c_str());
@@ -187,7 +191,7 @@ bool SimpleSensorSystem::EnableBody(KinBodyPtr pbody, bool bEnable)
 
 bool SimpleSensorSystem::SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2)
 {
-    //boost::mutex::scoped_lock lock(_mutex);
+    //std::lock_guard<std::mutex> lock(_mutex);
     BODIES::iterator it = _mapbodies.find(pbody1->GetEnvironmentBodyIndex());
     boost::shared_ptr<BodyData> pb1,pb2;
     if( it != _mapbodies.end() ) {
@@ -218,7 +222,7 @@ boost::shared_ptr<SimpleSensorSystem::BodyData> SimpleSensorSystem::CreateBodyDa
 
 void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listbodies)
 {
-    EnvironmentMutex::scoped_lock lockenv(GetEnv()->GetMutex()); // always lock environment to preserve mutex order
+    EnvironmentLock lockenv(GetEnv()->GetMutex()); // always lock environment to preserve mutex order
     uint64_t curtime = utils::GetMicroTime();
     if( listbodies.size() > 0 ) {
 
@@ -246,7 +250,7 @@ void SimpleSensorSystem::_UpdateBodies(list<SimpleSensorSystem::SNAPSHOT>& listb
         }
     }
 
-    boost::mutex::scoped_lock lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     BODIES::iterator itbody = _mapbodies.begin();
     while(itbody != _mapbodies.end()) {
         KinBody::LinkPtr plink = itbody->second->GetOffsetLink();

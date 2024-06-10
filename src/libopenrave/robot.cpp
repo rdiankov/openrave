@@ -26,6 +26,7 @@ RobotBase::GripperInfo& RobotBase::GripperInfo::operator=(const RobotBase::Gripp
     name = other.name;
     grippertype = other.grippertype;
     gripperJointNames = other.gripperJointNames;
+    vChuckingDirections = other.vChuckingDirections;
     rapidjson::Document docGripperInfo;
     if (other._docGripperInfo.IsObject()) {
         docGripperInfo.CopyFrom(other._docGripperInfo, docGripperInfo.GetAllocator());
@@ -40,6 +41,7 @@ void RobotBase::GripperInfo::Reset()
     name.clear();
     grippertype.clear();
     gripperJointNames.clear();
+    vChuckingDirections.clear();
     _docGripperInfo = rapidjson::Document();
 }
 
@@ -53,6 +55,7 @@ void RobotBase::GripperInfo::SerializeJSON(rapidjson::Value &value, rapidjson::D
     orjson::SetJsonValueByKey(value, "id", _id, allocator);
     orjson::SetJsonValueByKey(value, "grippertype", grippertype, allocator);
     orjson::SetJsonValueByKey(value, "gripperJointNames", gripperJointNames, allocator);
+    orjson::SetJsonValueByKey(value, "chuckingDirection", vChuckingDirections, allocator);
 }
 
 void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
@@ -66,6 +69,46 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     orjson::LoadJsonValueByKey(value, "grippertype", grippertype);
     orjson::LoadJsonValueByKey(value, "gripperJointNames", gripperJointNames);
 
+    {
+        rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirection");
+        vChuckingDirections.assign(gripperJointNames.size(), 0);
+        if( itChuckingDirections != value.MemberEnd() ) {
+            const rapidjson::Value& rChuckingDirections = itChuckingDirections->value;
+            if( !rChuckingDirections.IsArray() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("When loading gripperInfo '%s' with id '%s', 'chuckingDirection' needs to be an array, currently it is '%s'"), name%_id%orjson::DumpJson(rChuckingDirections), ORE_InvalidArguments);
+            }
+
+            int nMinSize = rChuckingDirections.Size();
+            if( gripperJointNames.size() < rChuckingDirections.Size() ) {
+                RAVELOG_WARN_FORMAT("When loading gripperInfo with '%s' with id '%s', the size of 'chuckingDirection'=%d is more than the size of 'gripperJointNames'=%d. Clamp it with 'gripperJointNames' size.", name%_id%rChuckingDirections.Size()%gripperJointNames.size());
+                nMinSize = gripperJointNames.size();
+            }
+            for(int index = 0; index < nMinSize; ++index) {
+                int direction = 0;
+                if( rChuckingDirections[index].IsFloat() || rChuckingDirections[index].IsDouble() ) {
+                    double fdirection = 0;
+                    orjson::LoadJsonValue(rChuckingDirections[index], fdirection);
+                    if( fdirection > 0 ) {
+                        direction = 1;
+                    }
+                    else if( fdirection < 0 ) {
+                        direction = -1;
+                    }
+                }
+                else {
+                    orjson::LoadJsonValue(rChuckingDirections[index], direction);
+                    if (direction > 0) {
+                        direction = 1;
+                    }
+                    else if (direction < 0) {
+                        direction = -1;
+                    }
+                }
+                vChuckingDirections[index] = direction;
+            }
+        }
+    }
+
     rapidjson::Document docGripperInfo;
     docGripperInfo.SetObject();
     if (_docGripperInfo.IsObject()) {
@@ -74,10 +117,13 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
     }
     for (rapidjson::Value::ConstMemberIterator it = value.MemberBegin(); it != value.MemberEnd(); ++it) {
         const std::string& memberName = it->name.GetString();
-        if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames") {
+        if (memberName == "id" || memberName == "name" || memberName == "grippertype" || memberName == "gripperJointNames" || memberName == "chuckingDirection" ) {
             continue;
         }
-        orjson::SetJsonValueByKey(docGripperInfo, memberName, it->value);
+
+        // update objects recursively 
+        orjson::UpdateJsonByKey(docGripperInfo, memberName.c_str(), it->value, docGripperInfo.GetAllocator());
+
     }
     _docGripperInfo.Swap(docGripperInfo);
 }
@@ -87,8 +133,23 @@ UpdateFromInfoResult RobotBase::GripperInfo::UpdateFromInfo(const RobotBase::Gri
     if (info == *this) {
         return UFIR_NoChange;
     }
+
+    UpdateFromInfoResult updateFromInfoResult = UFIR_Success;
+    // In the following, if necessary, set UFIR_RequireReinitialize for members referred by Manipulator since these need to update internal information of Manipulator.
+    if( info.name != name ) {
+        RAVELOG_VERBOSE_FORMAT("gripper %s name changed", name);
+        updateFromInfoResult = UFIR_RequireReinitialize;
+    }
+    if( info.gripperJointNames != gripperJointNames ) {
+        RAVELOG_VERBOSE_FORMAT("gripper %s gripperJointNames changed", name);
+        updateFromInfoResult = UFIR_RequireReinitialize;
+    }
+    if( info.vChuckingDirections != vChuckingDirections ) {
+        RAVELOG_VERBOSE_FORMAT("gripper %s chuckingDirection changed", name);
+        updateFromInfoResult = UFIR_RequireReinitialize;
+    }
     *this = info;
-    return UFIR_Success;
+    return updateFromInfoResult;
 }
 
 void RobotBase::AttachedSensorInfo::Reset()
@@ -138,7 +199,20 @@ void RobotBase::AttachedSensorInfo::DeserializeJSON(const rapidjson::Value& valu
         if (!_docSensorGeometry.IsObject()) {
             _docSensorGeometry.SetObject();
         }
-        orjson::UpdateJson(_docSensorGeometry, value["sensorGeometry"]);
+        const rapidjson::Value& rSensorGeometry = value["sensorGeometry"];
+        if( rSensorGeometry.IsObject() ) {
+            for (rapidjson::Value::ConstMemberIterator it = rSensorGeometry.MemberBegin(); it != rSensorGeometry.MemberEnd(); ++it) {
+                if( it->value.IsObject() && _docSensorGeometry.HasMember(it->name.GetString()) ) {
+                    // have to update recursively
+                    for (rapidjson::Value::ConstMemberIterator it2 = it->value.MemberBegin(); it2 != it->value.MemberEnd(); ++it2) {
+                        orjson::SetJsonValueByKey(_docSensorGeometry[it->name.GetString()], it2->name.GetString(), it2->value, _docSensorGeometry.GetAllocator());
+                    }
+                }
+                else {
+                    orjson::SetJsonValueByKey(_docSensorGeometry, it->name.GetString(), it->value);
+                }
+            }
+        }
     }
 }
 
@@ -702,7 +776,7 @@ void RobotBase::RobotBaseInfo::DeserializeJSON(const rapidjson::Value& value, dR
     }
 }
 
-void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale) {
+void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale) {
     std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
     ReadablePtr pReadable;
     if(itReadable != _mReadableInterfaces.end()) {
@@ -710,12 +784,12 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
     }
     BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_Robot, id, pReadable, AttributesList());
     if (!!pReader) {
-        pReader->DeserializeJSON(value, fUnitScale);
+        pReader->DeserializeJSON(rReadable, fUnitScale);
         _mReadableInterfaces[id] = pReader->GetReadable();
         return;
     }
-    if (value.IsString()) {
-        StringReadablePtr pReadableString(new StringReadable(id, value.GetString()));
+    if (rReadable.IsString()) {
+        StringReadablePtr pReadableString(new StringReadable(id, rReadable.GetString()));
         _mReadableInterfaces[id] = pReadableString;
         return;
     }
@@ -2015,37 +2089,46 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody)
+bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector());
+    return Grab(pbody, pmanip->GetEndEffector(), rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore);
+    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith);
+    ManipulatorPtr pmanip = GetActiveManipulator();
+    if( !pmanip ) {
+        return false;
+    }
+    return Grab(pbody, pmanip->GetEndEffector(), setIgnoreBodyLinkNames, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, rGrabbedUserData);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
 {
-    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rGrabbedUserData);
+}
+
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
+{
+    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rGrabbedUserData);
 }
 
 void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
@@ -2520,9 +2603,9 @@ const std::string& RobotBase::GetRobotStructureHash() const
     return __hashrobotstructure;
 }
 
-void RobotBase::ExtractInfo(RobotBaseInfo& info)
+void RobotBase::ExtractInfo(RobotBaseInfo& info, ExtractInfoOptions options)
 {
-    KinBody::ExtractInfo(info);
+    KinBody::ExtractInfo(info, options);
     info._isRobot = true;
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);

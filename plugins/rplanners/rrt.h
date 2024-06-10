@@ -46,7 +46,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         params->Validate();
         _goalindex = -1;
         _startindex = -1;
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         if( !_uniformsampler ) {
             _uniformsampler = RaveCreateSpaceSampler(GetEnv(),"mt19937");
         }
@@ -303,7 +303,7 @@ Some python code to display data::\n\
 
     virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
         _parameters->copy(pparams);
         PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
@@ -375,9 +375,9 @@ Some python code to display data::\n\
             return OPENRAVE_PLANNER_STATUS(str(boost::format("env=%s, BirrtPlanner::PlanPath - Error, planner not initialized")%GetEnv()->GetNameId()), PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint64_t basetimeus = utils::GetMonotonicTime();
-        
+
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
         if (planningoptions & PO_AddCollisionStatistics) {
             constraintFilterOptions = constraintFilterOptions|CFO_FillCollisionReport;
@@ -669,14 +669,15 @@ Some python code to display data::\n\
     }
 
     virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
-        std::string filename = RaveGetHomeDirectory() + string("/birrtdump.txt");
+        std::string filename = RaveGetHomeDirectory() + boost::str(boost::format("/birrtdump_%d.txt")%utils::GetMilliTime());
         getline(is, filename);
         boost::trim(filename);
-        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        RAVELOG_INFO_FORMAT("env=%s, dumping RRT trees to %s", GetEnv()->GetNameId()%filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _treeForward.DumpTree(f);
         _treeBackward.DumpTree(f);
+        os << filename;
         return true;
     }
 
@@ -705,7 +706,7 @@ public:
 
     PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
         _parameters->copy(pparams);
         PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
@@ -765,7 +766,7 @@ public:
             return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
 
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
 
         NodeBasePtr lastnode; // the last node visited by the RRT
@@ -942,13 +943,14 @@ public:
     }
 
     virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
-        std::string filename = RaveGetHomeDirectory() + string("/basicrrtdump.txt");
+        std::string filename = RaveGetHomeDirectory() + boost::str(boost::format("/basicrrtdump_%d.txt")%utils::GetMilliTime());
         getline(is, filename);
         boost::trim(filename);
-        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        RAVELOG_INFO_FORMAT("env=%s, dumping BasicRRT tree to %s", GetEnv()->GetNameId()%filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _treeForward.DumpTree(f);
+        os << filename;
         return true;
     }
 protected:
@@ -970,7 +972,7 @@ public:
 
     virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());
         _parameters->copy(pparams);
         PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
@@ -989,7 +991,7 @@ public:
         if( !_parameters ) {
             return OPENRAVE_PLANNER_STATUS(PS_Failed);
         }
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         vector<dReal> vSampleConfig;
 
         PlannerParameters::StateSaver savestate(_parameters);

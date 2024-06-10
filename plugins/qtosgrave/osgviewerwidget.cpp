@@ -72,12 +72,11 @@ public:
         switch( ea.getEventType() )
         {
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -333,12 +332,11 @@ public:
             return handleMouseDoubleClick( ea, us );
 
         case osgGA::GUIEventAdapter::SCROLL:
-            if(_posgviewerwidget->IsInOrthoMode()) {
+            {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
-            break;
 
         default:
             break;
@@ -588,7 +586,7 @@ void QOSGViewerWidget::SetFont(osgText::Font* font) {
 }
 
 QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& userdatakey,
-                                   const boost::function<bool(int)>& onKeyDown, double metersinunit,
+                                   const boost::function<bool(int)>& onKeyDown,
                                    QWidget* parent) : QOpenGLWidget(parent), _onKeyDown(onKeyDown)
 {
 
@@ -599,7 +597,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _bSwitchMouseLeftMiddleButton = false;
     _bLightOn = true;
     _bIsSelectiveActive = false;
-    _metersinunit = metersinunit;
     _osgview = new osgViewer::View();
     _osghudview = new osgViewer::View();
     _osgviewer = new osgViewer::CompositeViewer();
@@ -607,8 +604,8 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     // Qt5 specific thread model
     _osgviewer->setThreadingModel(osgViewer::CompositeViewer::SingleThreaded);
 
-    _SetupCamera(_CreateCamera(0, 0, 100, 100, metersinunit), _osgview,
-                 _CreateHUDCamera(0, 0, 100, 100, metersinunit), _osghudview);
+    _SetupCamera(_CreateCamera(0, 0, 100, 100), _osgview,
+                 _CreateHUDCamera(0, 0, 100, 100), _osghudview);
 
     //  Sets pickhandler
     _picker = new OSGPickHandler(boost::bind(&QOSGViewerWidget::HandleRayPick, this, _1, _2, _3), boost::bind(&QOSGViewerWidget::UpdateFromOSG,this));
@@ -645,6 +642,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
     _osgWorldAxis->addChild(CreateOSGXYZAxes(32.0, 2.0));
 
     _vecTextScreenOffset = osg::Vec2(10.0, 0.0);
+    _hudTextSize = 18.0;
 
     if( !!_osgCameraHUD ) {
         // in order to get the axes to render without lighting:
@@ -828,7 +826,11 @@ void QOSGViewerWidget::SetHome()
 {
     if (!!_osgLightsGroup) {
         const osg::BoundingSphere& bs = _osgSceneRoot->getBound();
-        _osgview->getCameraManipulator()->setHomePosition(osg::Vec3d(1.5*bs.radius(),0,1.5*bs.radius()),bs.center(),osg::Vec3d(0.0,0.0,1.0));
+        _osgview->getCameraManipulator()->setHomePosition(
+            osg::Vec3d(ClampDistance(1.5*bs.radius()), 0, ClampDistance(1.5*bs.radius())),
+            bs.center(),
+            osg::Vec3d(0.0, 0.0, 1.0)
+        );
         _osgview->home();
     }
 }
@@ -930,8 +932,7 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
             KinBodyItemPtr item = FindKinBodyItemFromOSGNode(node);
 
             if( !!item ) {
-                osg::Vec3d pos = intersection.getWorldIntersectPoint();
-                pos *= 1000.0 * _metersinunit;
+                osg::Vec3d posInMM = intersection.getWorldIntersectPoint() * GetLengthUnitConversionScale<double>(_penv->GetUnitInfo().lengthUnit,LU_Millimeter);
                 osg::Vec3d normal = intersection.getWorldIntersectNormal();
                 KinBody::LinkPtr link = item->GetLinkFromOSG(node);
                 std::string linkname;
@@ -943,7 +944,7 @@ void QOSGViewerWidget::HandleRayPick(const osgUtil::LineSegmentIntersector::Inte
                 if( !!geom ) {
                     geomname = geom->GetName();
                 }
-                _strRayInfoText = str(boost::format("mouse\xa0on\xa0%s:%s:%s: (%.2f,\xa0%.2f,\xa0%.2f), n=(%.5f,\xa0%.5f,\xa0%.5f)")%item->GetName()%linkname%geomname%pos.x()%pos.y()%pos.z()%normal.x()%normal.y()%normal.z());
+                _strRayInfoText = str(boost::format("mouse\xa0on\xa0%s:%s:%s: (%.2f,\xa0%.2f,\xa0%.2f)[mm], n=(%.5f,\xa0%.5f,\xa0%.5f)")%item->GetName()%linkname%geomname%posInMM.x()%posInMM.y()%posInMM.z()%normal.x()%normal.y()%normal.z());
                 std::replace(_strRayInfoText.begin(), _strRayInfoText.end(), '-', '\xac');
             }
             else {
@@ -960,8 +961,8 @@ void QOSGViewerWidget::UpdateFromOSG()
         // have to update the underlying openrave model since dragger is most likely changing the positions
         _selectedItem->UpdateFromOSG();
         Transform t = _selectedItem->GetTransform();
-        Vector trans = 1000.0 * _metersinunit * t.trans;
-        _strSelectedItemText = str(boost::format("Selected\xa0%s. trans=(%.2f,\xa0%.2f,\xa0%.2f)")%_selectedItem->GetName()%trans.x%trans.y%trans.z);
+        Vector transInMM = t.trans * GetLengthUnitConversionScale<dReal>(_penv->GetUnitInfo().lengthUnit,LU_Millimeter);
+        _strSelectedItemText = str(boost::format("Selected\xa0%s. trans=(%.2f,\xa0%.2f,\xa0%.2f)[mm]")%_selectedItem->GetName()%transInMM.x%transInMM.y%transInMM.z);
         std::replace(_strSelectedItemText.begin(), _strSelectedItemText.end(), '-', '\xac');
     }
     else {
@@ -1065,7 +1066,7 @@ void QOSGViewerWidget::_UpdateHUDText()
         if( s.size() > 0 ) {
             s += "\n";
         }
-        s += _strRayInfoText;
+        s += _strUserText;
     }
     if( _strSelectedItemText.size() > 0 ) {
         if( s.size() > 0 ) {
@@ -1147,7 +1148,10 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     float scale = this->devicePixelRatio();
     _osgview->getCamera()->setViewport(0,0,width*scale,height*scale);
     _osghudview->getCamera()->setViewport(0,0,width*scale,height*scale);
-    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width*scale/2, width*scale/2, -height*scale/2, height*scale/2, 0.01/_metersinunit, 100.0/_metersinunit));
+
+    float fNear = 0.01 * GetLengthUnitConversionScale<float>(LU_Meter, _penv->GetUnitInfo().lengthUnit);
+    float fFar = 100 * GetLengthUnitConversionScale<float>(LU_Meter, _penv->GetUnitInfo().lengthUnit);
+    _osghudview->getCamera()->setProjectionMatrix(osg::Matrix::ortho(-width*scale/2, width*scale/2, -height*scale/2, height*scale/2, fNear, fFar));
 
     osgViewer::Viewer::Windows windows;
     _osgviewer->getWindows(windows);
@@ -1162,11 +1166,22 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     osg::Camera *hudcamera = _osghudview->getCamera();
     hudcamera->setViewport(0, 0, width * scale, height * scale);
 
-    double textheight = 18*scale;
-    _osgHudText->setCharacterSize(textheight);
-    _osgHudText->setFontResolution(textheight, textheight);
-    SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+    SetHUDTextSize(_hudTextSize);
     _UpdateHUDAxisTransform(width, height);
+}
+
+void QOSGViewerWidget::SetHUDTextSize(double size)
+{
+    if ( size >= 0 ) {
+        _hudTextSize = size;
+
+        float scale = this->devicePixelRatio();
+        double textheight = _hudTextSize*scale;
+        _osgHudText->setCharacterSize(textheight);
+        _osgHudText->setFontResolution(textheight, textheight);
+
+        SetHUDTextOffset(_vecTextScreenOffset.x(), _vecTextScreenOffset.y());
+    }
 }
 
 osg::Vec2 QOSGViewerWidget::GetHUDTextOffset()
@@ -1179,7 +1194,7 @@ void QOSGViewerWidget::SetHUDTextOffset(double xOffset, double yOffset)
     _vecTextScreenOffset.set(xOffset, yOffset);
 
     double scale = this->devicePixelRatio();
-    double textheight = 18*scale;
+    double textheight = _hudTextSize*scale;
     _osgHudText->setPosition(
         osg::Vec3(
             -_osgview->getCamera()->getViewport()->width() / 2 + _vecTextScreenOffset.x(),
@@ -1297,7 +1312,7 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
 
     osg::Vec3d panTranslation = camSpacePanDirection;
     panTranslation.normalize();
-    panTranslation = panTranslation * (delta / _metersinunit);
+    panTranslation = panTranslation * delta;
 
     viewMatrix(3,0) = viewMatrix(3,0) + panTranslation.x();
     viewMatrix(3,1) = viewMatrix(3,1) + panTranslation.y();
@@ -1329,7 +1344,7 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 {
     if(!IsInOrthoMode() && isPan) {
         // move focal point along with camera position by using camera space foward direction to pan
-        _PanCameraTowardsDirection((panDelta / _metersinunit), osg::Vec3d(0,0,1));
+        _PanCameraTowardsDirection(panDelta, osg::Vec3d(0,0,1));
         return;
     }
 
@@ -1345,7 +1360,7 @@ void QOSGViewerWidget::Zoom(float factor)
         _SetCameraViewOrthoProjectionPlaneSize(_currentOrthoFrustumSize);
         return;
     }
-    SetCameraDistanceToFocus(GetCameraDistanceToFocus() / factor);
+    SetCameraDistanceToFocus(ClampDistance(GetCameraDistanceToFocus() / factor));
 }
 
 
@@ -1393,7 +1408,7 @@ void QOSGViewerWidget::_GetRAVEEnvironmentUpVector(osg::Vec3d& upVector)
 }
 
 
-osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, int h, double metersinunit)
+osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, int h)
 {
     osg::ref_ptr<osg::DisplaySettings> ds = osg::DisplaySettings::instance();
 
@@ -1415,13 +1430,14 @@ osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateCamera( int x, int y, int w, 
 
     camera->setClearColor(osg::Vec4(0.95, 0.95, 0.95, 1.0));
     camera->setViewport(new osg::Viewport(0, 0, traits->width, traits->height));
-    _zNear = 0.01/metersinunit;
-    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), _zNear, 100.0/metersinunit);
+    _zNear = 0.01 * GetLengthUnitConversionScale<float>(LU_Meter, _penv->GetUnitInfo().lengthUnit);
+    float fFar = 100 * GetLengthUnitConversionScale<float>(LU_Meter, _penv->GetUnitInfo().lengthUnit);
+    camera->setProjectionMatrixAsPerspective(45.0f, static_cast<double>(traits->width)/static_cast<double>(traits->height), _zNear, fFar);
     camera->setCullingMode(camera->getCullingMode() & ~osg::CullSettings::SMALL_FEATURE_CULLING); // need this for allowing small points with zero bunding voluem to be displayed correctly
     return camera;
 }
 
-osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateHUDCamera( int x, int y, int w, int h, double metersinunit)
+osg::ref_ptr<osg::Camera> QOSGViewerWidget::_CreateHUDCamera( int x, int y, int w, int h)
 {
     osg::ref_ptr<osg::Camera> camera(new osg::Camera());
     camera->setProjectionMatrix(osg::Matrix::ortho(-1,1,-1,1,1,10));

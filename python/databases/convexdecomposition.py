@@ -55,7 +55,7 @@ Approximates each of the links with a set of convex hulls using John Ratcliff's 
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database convexdecomposition --help
+.. shell-block:: python3 -m openravepy --database convexdecomposition --help
 
 Class Definitions
 -----------------
@@ -134,7 +134,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     
     def getversion(self):
-        return 3
+        return 5
     
     def save(self):
         try:
@@ -244,7 +244,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             return self.has()
         
         except Exception as e:
-            log.debug(u'LoadHDF5 for %s: ',filename,e)
+            log.debug(u'LoadHDF5 for %s: %r',filename,e)
             return False
         finally:
             if f is not None:
@@ -285,27 +285,26 @@ class ConvexDecompositionModel(DatabaseGenerator):
         self.linkgeometry = []
         with self.env:
             links = self.robot.GetLinks()
-            for il,link in enumerate(links):
+            for il, link in enumerate(links):
                 geomhulls = []
                 geometries = link.GetGeometries()
-                for ig,geom in enumerate(geometries):
-                    if geom.GetType() == KinBody.Link.GeomType.Trimesh or padding > 0:
+                for ig, geom in enumerate(geometries):
+                    trimesh = geom.GetCollisionMesh()
+                    if len(trimesh.indices) == 0:
+                        geom.InitCollisionMesh()
                         trimesh = geom.GetCollisionMesh()
-                        if len(trimesh.indices) == 0:
-                            geom.InitCollisionMesh()
-                            trimesh = geom.GetCollisionMesh()
-                        if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
-                            log.info(u'computing hull for link %d/%d geom %d/%d: vertices=%d, indices=%d',il,len(links), ig, len(geometries), len(trimesh.vertices), len(trimesh.indices))
-                            orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
-                        else:
-                            log.info(u'computing decomposition for link %d/%d geom %d/%d type %s',il,len(links), ig, len(geometries), geom.GetType())
-                            orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
-                        cdhulls = []
-                        for hull in orghulls:
-                            if any(isnan(hull[0])):
-                                raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
-                            cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
-                        geomhulls.append((ig,cdhulls))
+                    if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
+                        log.info(u'computing hull for link %d/%d geom %d/%d (%s:%s): vertices=%d, indices=%d', il, len(links), ig, len(geometries), link.GetName(), geom.GetName(), len(trimesh.vertices), len(trimesh.indices))
+                        orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
+                    else:
+                        log.info(u'computing decomposition for link %d/%d geom %d/%d (%s:%s): type %s', il, len(links), ig, len(geometries), link.GetName(), geom.GetName(), geom.GetType())
+                        orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
+                    cdhulls = []
+                    for hull in orghulls:
+                        if any(isnan(hull[0])):
+                            raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
+                        cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
+                    geomhulls.append((ig,cdhulls))
                 self.linkgeometry.append(geomhulls)
         self._padding = padding
         log.info(u'all convex decomposition finished in %fs',time.time()-starttime)
@@ -313,6 +312,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
     def ComputePaddedConvexDecompositionFromTriMesh(self, trimesh, padding=0.0):
         if len(trimesh.indices) > 0:
             orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
+            if not self._ValidateConvexDecomposition(orghulls, trimesh):
+                log.warn('Some original vertices are not inside the convex decomposition. Using ConvexHull instead.')
+                return [self.ComputePaddedConvexHullFromTriMesh(trimesh, padding)]
         else:
             orghulls = []
         if len(orghulls) > 0:
@@ -458,6 +460,34 @@ class ConvexDecompositionModel(DatabaseGenerator):
         for i in range(len(normalizedplanes)-1):
             uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<thresh
         return planes[uniqueplanes]
+
+    def _ValidateConvexDecomposition(self, hullList, trimesh, tol=5e-4):
+        """Checks if the convex hulls specified in hullList cover all the vertices in the given trimesh.
+        
+        Args:
+            hullList (list of (vertices, indices)): list of tuples (vertices, indices), where each tuple contains vertices and indices for one convex hull.
+            trimesh (OpenRAVE.TriMesh):
+            tol (float): tolerance for when checking whether a point is inside a convex hull or not.
+        
+        Return:
+            allInside (bool): whether all the original vertices (in trimesh) are fully contained in the given hulls.
+        
+        """
+        inside = zeros(len(trimesh.vertices), bool)
+        leftIndices = arange(len(trimesh.vertices))
+        leftPoints = array(trimesh.vertices) # make a copy
+        for ihull, hull in enumerate(hullList):
+            hullPlanes = self.ComputeHullPlanes(hull)
+            insideIndices = numpy.all(dot(leftPoints, transpose(hullPlanes[:, 0:3])) + tile(hullPlanes[:, 3], (len(leftPoints), 1)) <= tol, axis=1)
+            inside[leftIndices[flatnonzero(insideIndices)]] = True
+            outsideIndices = flatnonzero(insideIndices == 0)
+            leftPoints = leftPoints[outsideIndices]
+            leftIndices = leftIndices[outsideIndices]
+            if len(leftIndices) == 0:
+                break
+        if len(leftIndices) > 0:
+            log.info('There are %d vertices not inside the given hulls', len(leftIndices))
+        return len(leftIndices) == 0
     
     def testPointsInside(self,points):
         """tests if a point is inside the convex mesh of the robot.

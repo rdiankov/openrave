@@ -76,14 +76,35 @@ public:
     virtual ~PyConfigurationCache(){
     }
 
-    int InsertConfigurationDist(object ovalues, object pyreport, dReal dist)
+    int InsertConfigurationDist(object ovalues, object opyreport, dReal dist)
     {
-        return _cache->InsertConfiguration(openravepy::ExtractArray<dReal>(ovalues), openravepy::GetCollisionReport(pyreport), dist);
+        CollisionReport report;
+        CollisionReportPtr preport;
+        if( openravepy::IsCollisionReport(opyreport) ) {
+            preport = CollisionReportPtr(&report,utils::null_deleter());
+        }
+
+        bool bCollision = _cache->InsertConfiguration(openravepy::ExtractArray<dReal>(ovalues), preport, dist);
+
+        if( !!preport ) {
+            openravepy::UpdateCollisionReport(opyreport, report);
+        }
+        return bCollision;
     }
 
-    int InsertConfiguration(object ovalues, object pyreport)
+    int InsertConfiguration(object ovalues, object opyreport)
     {
-        return _cache->InsertConfiguration(openravepy::ExtractArray<dReal>(ovalues), openravepy::GetCollisionReport(pyreport));
+        CollisionReport report;
+        CollisionReportPtr preport;
+        if( openravepy::IsCollisionReport(opyreport) ) {
+            preport = CollisionReportPtr(&report,utils::null_deleter());
+        }
+
+        bool bCollision = _cache->InsertConfiguration(openravepy::ExtractArray<dReal>(ovalues), preport);
+        if( !!preport ) {
+            openravepy::UpdateCollisionReport(opyreport, report);
+        }
+        return bCollision;
     }
 
     object CheckCollision(object ovalues)
