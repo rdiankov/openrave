@@ -199,20 +199,20 @@ public:
         _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
     bool _InitPlan()

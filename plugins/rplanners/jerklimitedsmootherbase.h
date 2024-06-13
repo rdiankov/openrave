@@ -63,20 +63,20 @@ public:
         return "jerklimitedsmootherbase";
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& sparams)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& sparams) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
         sparams >> *_parameters;
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
     virtual bool _InitPlan()

@@ -330,7 +330,7 @@ public:
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        if( !_planner->InitPlan(_robot, params) ) {
+        if( !_planner->InitPlan(_robot, params).HasSolution() ) {
             RAVELOG_WARN("InitPlan failed\n");
             return false;
         }
@@ -995,11 +995,11 @@ public:
                 ptraj->Init(probot->GetActiveConfigurationSpecification());
 
                 // InitPlan/PlanPath
-                if( !planner->InitPlan(probot, params) ) {
+                if( !planner->InitPlan(probot, params).HasSolution() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
-                if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+                if( !planner->PlanPath(ptraj).HasSolution() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
@@ -1088,11 +1088,11 @@ public:
                         probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
                         params->vinitialconfig.resize(0);
                         ptraj->Init(probot->GetActiveConfigurationSpecification());
-                        if( !planner->InitPlan(probot, params) ) {
+                        if( !planner->InitPlan(probot, params).HasSolution() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
-                        if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+                        if( !planner->PlanPath(ptraj).HasSolution() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }

@@ -1154,7 +1154,7 @@ PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, pe
 {
 }
 
-bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+PlannerStatus PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
 {
     RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
@@ -1206,12 +1206,14 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_sPostProcessingParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
-    if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
+
+    PlannerStatus status =  __cachePostProcessPlanner->InitPlan(probot, params);
+   if( (status.GetStatusCode() & PS_HasSolution)) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 
     // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable
-    return PlannerStatus(PS_Failed);
+    return status;
 }
 
 PlannerAction PlannerBase::_CallCallbacks(const PlannerProgress& progress)

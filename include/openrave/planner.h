@@ -649,7 +649,7 @@ public:
         \param robot main robot to be used for planning
         \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
      */
-    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
+    virtual PlannerStatus InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 
@@ -658,7 +658,7 @@ public:
         pass information to planners without excplicitly knowning the format/internal structures used
         \return true if plan is initialized successfully and initial conditions are satisfied.
      */
-    virtual bool InitPlan(RobotBasePtr robot, std::istream& isParameters);
+    virtual PlannerStatus InitPlan(RobotBasePtr robot, std::istream& isParameters);
 
     /** \brief Executes the main planner trying to solve for the goal condition.
 

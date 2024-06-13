@@ -308,7 +308,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
 
     // Planning Methods
     ///< manipulator state is also set
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset();
@@ -341,13 +341,13 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
 
         _parameters=parameters;
         nIndex = 0;
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if( !_parameters ) {
-            return PlannerStatus(PS_Failed);
+            return PlannerStatus("parameters are not set", PS_Failed);
         }
 
         RobotBase::RobotStateSaver saver(_robot);

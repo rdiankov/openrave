@@ -58,7 +58,8 @@ public:
         _bManipConstraints = false;
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) {
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
+    {
         EnvironmentLock lock(GetEnv()->GetMutex());
         params->Validate();
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -66,10 +67,10 @@ public:
         // Reset the cache
         _cachedOldSpec = ConfigurationSpecification();
         _cachedNewSpec = ConfigurationSpecification();
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ConstraintTrajectoryTimingParameters());
@@ -78,7 +79,7 @@ public:
         // Reset the cache
         _cachedOldSpec = ConfigurationSpecification();
         _cachedNewSpec = ConfigurationSpecification();
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
     virtual bool _InitPlan()

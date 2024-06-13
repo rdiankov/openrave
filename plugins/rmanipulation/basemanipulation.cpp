@@ -325,13 +325,13 @@ protected:
             return false;
         }
 
-        if( !planner->InitPlan(robot, params) ) {
+        if( !planner->InitPlan(robot, params).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
         TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !planner->PlanPath(poutputtraj).GetStatusCode() ) {
+        if( !planner->PlanPath(poutputtraj).HasSolution() ) {
             return false;
         }
         if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -524,12 +524,12 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).HasSolution() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
 
-            if( !rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
+            if( !rrtplanner->PlanPath(ptraj).HasSolution() ) {
                 RAVELOG_WARN("PlanPath failed\n");
             }
             else {
@@ -855,12 +855,12 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
 
         for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).HasSolution() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
 
-            if( rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
+            if( rrtplanner->PlanPath(ptraj).HasSolution() ) {
                 bSuccess = true;
                 RAVELOG_DEBUG("finished planning\n");
                 break;
