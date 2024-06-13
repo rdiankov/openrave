@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+Version 0.148.0
+===============
+
+- Fix treating PlannerStatus::statusCode as boolean
+- Let InitPlan return PlannerStatus for better diagnosis  
+
 Version 0.147.0
 ===============
 

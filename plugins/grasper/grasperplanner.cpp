@@ -36,13 +36,16 @@ public:
     GrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _report(new CollisionReport()) {
         __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\n\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
     }
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = pbase;
 
         if( _robot->GetActiveDOF() <= 0 ) {
-            return false;
+            std::stringstream ss;
+            ss << "env=" << GetEnv()->GetNameId()
+               << " robot \"" << _robot->GetName() << "\" has active dof(" << _robot->GetActiveDOF() << ") <= 0";
+            return PlannerStatus(ss.str(), PS_Failed);
         }
 
         _parameters.reset(new GraspParameters(GetEnv()));
@@ -61,7 +64,7 @@ public:
             _vAvoidLinkGeometry.push_back(plink);
         }
 
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
     PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
