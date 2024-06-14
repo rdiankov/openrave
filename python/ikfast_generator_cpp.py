@@ -61,21 +61,12 @@ except:
         TranslationZAxisAngleYNorm4D=0x44000010
 
 from sympy import *
+from sympy.simplify import cse_main
 
 try:
     import re # for indenting
 except ImportError:
     pass
-
-try:
-    from itertools import izip, combinations
-except ImportError:
-    def combinations(items,n):
-        if n == 0: yield[]
-        else:
-            for  i in xrange(len(items)):
-                for cc in combinations(items[i+1:],n-1):
-                    yield [items[i]]+cc
 
 try:
     # not necessary, just used for testing

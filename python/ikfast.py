@@ -181,10 +181,19 @@ if sympy_version < '0.7.0':
     raise ImportError('ikfast needs sympy 0.7.x or greater')
 sympy_smaller_073 = sympy_version < '0.7.3'
 
+from sympy import *
+from sympy.simplify import cse_main
+if sympy_version > '0.7.1':
+    _zeros, _ones = zeros, ones
+    zeros = lambda args: _zeros(*args)
+    ones = lambda args: _ones(*args)
+
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
 __version__ = '0x1000004c' # hex of the version, has to be prefixed with 0x. also in ikfast.h
+
+# has to specify __version__ after importing as sympy as it will be overwritten by sympy.__version__
 
 import sys, copy, time, math, datetime
 if sys.version_info[0]<3:
@@ -202,12 +211,7 @@ except:
         pass
 
 import numpy # required for fast eigenvalue computation
-from sympy import *
-#from sympy.simplify import cse_main
-if sympy_version > '0.7.1':
-    _zeros, _ones = zeros, ones
-    zeros = lambda args: _zeros(*args)
-    ones = lambda args: _ones(*args)
+
 try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
 except ImportError:
