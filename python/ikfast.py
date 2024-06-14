@@ -203,6 +203,7 @@ except:
 
 import numpy # required for fast eigenvalue computation
 from sympy import *
+#from sympy.simplify import cse_main
 if sympy_version > '0.7.1':
     _zeros, _ones = zeros, ones
     zeros = lambda args: _zeros(*args)
@@ -8245,9 +8246,16 @@ class IKFastSolver(AutoReloader):
                     break
                 coeffs.append(value)
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
-                if len(coeffs) == 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
-                    coeffs = None
-                    break
+                #from IPython import embed;embed()
+                if len(coeffs) == 1:
+                    def cmp(a,b):
+                        return (a > b) - (a < b)
+                    cmpValue = cmp(type(Abs(coeffs[0])), Float)
+                    #if not isinstance(coeffs[0], (Float, Integer)):
+                    #    from IPython import embed;embed()
+                    if cmpValue != 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
+                        coeffs = None
+                        break
             if coeffs is None:
                 continue
             if not all([c.is_number for c in coeffs]):
