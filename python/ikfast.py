@@ -285,6 +285,45 @@ try:
 except ImportError:
     using_swiginac = False
 
+# from sympy/core/core.py
+ordering_of_classes = [
+    # singleton numbers
+    'Zero', 'One', 'Half', 'Infinity', 'NaN', 'NegativeOne', 'NegativeInfinity',
+    # numbers
+    'Integer', 'Rational', 'Float',
+    # singleton symbols
+    'Exp1', 'Pi', 'ImaginaryUnit',
+    # symbols
+    'Symbol', 'Wild', 'Temporary',
+    # arithmetic operations
+    'Pow', 'Mul', 'Add',
+    # function values
+    'Derivative', 'Integral',
+    # defined singleton functions
+    'Abs', 'Sign', 'Sqrt',
+    'Floor', 'Ceiling',
+    'Re', 'Im', 'Arg',
+    'Conjugate',
+    'Exp', 'Log',
+    'Sin', 'Cos', 'Tan', 'Cot', 'ASin', 'ACos', 'ATan', 'ACot',
+    'Sinh', 'Cosh', 'Tanh', 'Coth', 'ASinh', 'ACosh', 'ATanh', 'ACoth',
+    'RisingFactorial', 'FallingFactorial',
+    'factorial', 'binomial',
+    'Gamma', 'LowerGamma', 'UpperGamma', 'PolyGamma',
+    'Erf',
+    # special polynomials
+    'Chebyshev', 'Chebyshev2',
+    # undefined functions
+    'Function', 'WildFunction',
+    # anonymous functions__l
+    'Lambda',
+    # Landau O symbol
+    'Order',
+    # relational operations
+    'Equality', 'Unequality', 'StrictGreaterThan', 'StrictLessThan',
+    'GreaterThan', 'LessThan',
+]
+
 CodeGenerators = {}
 # try:
 #     import ikfast_generator_vb
@@ -8250,14 +8289,8 @@ class IKFastSolver(AutoReloader):
                     break
                 coeffs.append(value)
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
-                #from IPython import embed;embed()
                 if len(coeffs) == 1:
-                    def cmp(a,b):
-                        return (a > b) - (a < b)
-                    cmpValue = cmp(type(Abs(coeffs[0])), Float)
-                    #if not isinstance(coeffs[0], (Float, Integer)):
-                    #    from IPython import embed;embed()
-                    if cmpValue != 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
+                    if ordering_of_classes.index(type(coeffs[0]).__name__) <= ordering_of_classes.index('Float') and Abs(coeffs[0]) < 2*(10.0**-self.precision):
                         coeffs = None
                         break
             if coeffs is None:
