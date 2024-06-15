@@ -176,6 +176,11 @@ A. Most likely not, usually an iksolver finishes within 10 minutes.
 """
 from __future__ import with_statement # for python 2.5
 
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
+
 from sympy import __version__ as sympy_version
 if sympy_version < '0.7.0':
     raise ImportError('ikfast needs sympy 0.7.x or greater')
@@ -185,8 +190,8 @@ from sympy import *
 from sympy.simplify import cse_main
 if sympy_version > '0.7.1':
     _zeros, _ones = zeros, ones
-    zeros = lambda args: _zeros(*args)
-    ones = lambda args: _ones(*args)
+    zeros = lambda args: _zeros(*args) if isinstance(args, Iterable) else _zeros(args)
+    ones = lambda args: _ones(*args) if isinstance(args, Iterable) else _ones(args)
 
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
