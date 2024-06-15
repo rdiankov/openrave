@@ -185,7 +185,11 @@ __license__ = 'Lesser GPL, Version 3'
 __version__ = '0x10000049' # hex of the version, has to be prefixed with 0x. also in ikfast.h
 
 import sys, os, copy, time, math, datetime
-import __builtin__
+if sys.version_info[0]<3:
+    import __builtin__
+else:
+    import builtins as __builtin__
+
 from optparse import OptionParser
 try:
     from openravepy.metaclass import AutoReloader
@@ -6229,7 +6233,7 @@ class IKFastSolver(AutoReloader):
                         linearlyindependent = True
                     break
                 else:
-                    log.info('not all abs(eigenvalues) are > 0. min is %e', min([Abs(f) for f in eigenvals if Abs(f) > eps]))
+                    log.info('not all abs(eigenvalues) > %e. min is %e', eps, min([Abs(f) for f in eigenvals if Abs(f) < eps]))
             if not linearlyindependent:
                 raise self.CannotSolveError('equations are not linearly independent')
 
