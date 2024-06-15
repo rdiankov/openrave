@@ -27,6 +27,11 @@
 
 from sympy import __version__ as sympy_version
 
+try:
+    from collections.abc import Iterable
+except ImpoprtError:
+    from collections import Iterable
+
 # core/power.py Pow
 def Pow_eval_subs(self, old, new):
     if self == old: 
@@ -58,8 +63,8 @@ if sympy_version < '0.7.2':
     # matrices/matrices.py (matrices/dense.py)
     # API-changes in zeros() and ones()
     from sympy import zeros as _zeros, ones as _ones
-    zeros = lambda args: _zeros(*args)
-    ones = lambda args: _ones(*args)
+    zeros = lambda args: _zeros(*args) if isinstance(args, Iterable) else _zeros(args)
+    ones = lambda args: _ones(*args) if isinstance(args, Iterable) else _ones(args)
 
     # polys/monomialtools.py
     # API-changes in Monomial.__init__
