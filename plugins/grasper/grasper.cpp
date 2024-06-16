@@ -13,21 +13,31 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "grasper.h"
 #include "plugindefs.h"
-#include <openrave/plugin.h>
 
-PlannerBasePtr CreateGrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput);
-ModuleBasePtr CreateGrasperModule(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateGrasperPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ModuleBasePtr CreateGrasperModule(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+const std::string GrasperPlugin::_pluginname = "GrasperPlugin";
+
+GrasperPlugin::GrasperPlugin()
+{
+    _interfaces[OpenRAVE::PT_Planner].push_back("Grasper");
+    _interfaces[OpenRAVE::PT_Module].push_back("Grasper");
+}
+
+GrasperPlugin::~GrasperPlugin() {}
+
+OpenRAVE::InterfaceBasePtr GrasperPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
-    case PT_Planner:
+    case OpenRAVE::PT_Planner:
         if( interfacename == "grasper" ) {
             return CreateGrasperPlanner(penv,sinput);
         }
         break;
-    case PT_Module:
+    case OpenRAVE::PT_Module:
         if( interfacename == "grasper") {
             return CreateGrasperModule(penv,sinput);
         }
@@ -35,15 +45,19 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& GrasperPlugin::GetInterfaces() const
 {
-    info.interfacenames[OpenRAVE::PT_Planner].push_back("Grasper");
-    info.interfacenames[OpenRAVE::PT_Module].push_back("Grasper");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& GrasperPlugin::GetPluginName() const
 {
+    return _pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new GrasperPlugin();
 }

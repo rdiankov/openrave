@@ -18,13 +18,21 @@ from openravepy import misc
 import numpy
 from numpy import *
 
-from itertools import izip, combinations
+from itertools import combinations
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
+
 import nose
 from nose.tools import assert_raises
 import fnmatch
 import time
 import os
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 import logging
 
 _multiprocess_can_split_ = True
@@ -95,6 +103,9 @@ def randpose(N=1):
     poses = random.rand(N,7)-0.5
     poses[:,0:4] /= tile(sqrt(sum(poses[:,0:4]**2,1)),(4,1)).transpose()
     return poses
+
+def randlimit(lower,upper):
+    return lower+random.rand()*(upper-lower)
 
 def randlimits(lower,upper):
     return lower+random.rand(len(lower))*(upper-lower)

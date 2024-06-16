@@ -116,7 +116,8 @@ def CompileRunCPP(name,cppdata):
 
     try:
         os.mkdir(name)
-        open(os.path.join(name,name+'.cpp'),'w').write(cppdata)
+        with open(os.path.join(name,name+'.cpp'),'w') as f:
+            f.write(cppdata)
         CMakeLists = """cmake_minimum_required (VERSION 2.6.0)
 project(%(name)s)
 find_package(OpenRAVE REQUIRED)
@@ -128,7 +129,8 @@ set_target_properties(%(name)s PROPERTIES COMPILE_FLAGS "${OpenRAVE_CXX_FLAGS}" 
 target_link_libraries(%(name)s ${OpenRAVE_LIBRARIES})
 install(TARGETS %(name)s DESTINATION .)
 """%{'name':name}
-        open(os.path.join(name,'CMakeLists.txt'),'w').write(CMakeLists)
+        with open(os.path.join(name,'CMakeLists.txt'),'w') as f:
+            f.write(CMakeLists)
         programdir = CompileProject(name,os.path.join(name,'build'))
         assert(os.system(GetRunCommand()+os.path.join(programdir,name)) == 0)
     finally:

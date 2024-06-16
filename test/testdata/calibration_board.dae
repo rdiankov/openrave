@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<COLLADA xmlns="http://www.collada.org/2008/03/COLLADASchema" version="1.5.0">
+	<asset>
+		<contributor>
+			<authoring_tool>OpenRAVE Collada Writer</authoring_tool>
+		</contributor>
+		<created>2012-08-17T18:04:39.000000</created>
+		<modified>2012-08-17T18:04:39.000000</modified>
+		<unit/>
+		<up_axis>Z_UP</up_axis>
+	</asset>
+	<library_visual_scenes id="vscenes">
+		<visual_scene id="vscene" name="OpenRAVE Visual Scene">
+			<node id="visual1" name="calibration_board0" sid="visual1">
+				<translate>0 0 0</translate>
+				<rotate>1 0 0 0</rotate>
+				<node id="v1.node0" name="base" sid="node0">
+					<translate>0 0 0</translate>
+					<rotate>1 0 0 0</rotate>
+					<instance_geometry url="#g1_link0_geom0">
+						<bind_material>
+							<technique_common>
+								<instance_material symbol="mat0" target="#g1_link0_geom0_mat"/>
+							</technique_common>
+						</bind_material>
+					</instance_geometry>
+				</node>
+			</node>
+		</visual_scene>
+	</library_visual_scenes>
+	<library_geometries id="geometries">
+		<geometry id="g1_link0_geom0">
+			<mesh>
+				<source id="g1_link0_geom0_positions">
+					<float_array id="g1_link0_geom0_positions-array" count="24" digits="2490384">0.1 0.1 0.02 0.1 0.1 0 0.1 -0.1 0.02 0.1 -0.1 0 -0.1 0.1 0.02 -0.1 0.1 0 -0.1 -0.1 0.02 -0.1 -0.1 0</float_array>
+					<technique_common>
+						<accessor count="8" source="#g1_link0_geom0_positions-array" stride="3">
+							<param name="X" type="float"/>
+							<param name="Y" type="float"/>
+							<param name="Z" type="float"/>
+						</accessor>
+					</technique_common>
+				</source>
+				<vertices id="g1_link0_geom0_vertices">
+					<input semantic="POSITION" source="#g1_link0_geom0_positions"/>
+				</vertices>
+				<triangles count="12" material="mat0">
+					<input offset="0" semantic="VERTEX" source="#g1_link0_geom0_vertices" set="0"/>
+					<p>0 2 1 1 2 3 4 5 6 5 7 6 0 1 4 1 5 4 2 6 3 3 6 7 0 4 2 2 4 6 1 3 5 3 7 5</p>
+				</triangles>
+			</mesh>
+			<extra type="geometry_info">
+				<technique profile="OpenRAVE">
+					<translate>0 0 0.1</translate>
+					<rotate>1 0 0 0</rotate>
+					<calibration_board>
+						<half_extents>0.1 0.1 0.01</half_extents>
+						<parameters>
+							<num_dots_x>5</num_dots_x>
+							<num_dots_y>6</num_dots_y>
+							<dots_distance_x>0.04</dots_distance_x>
+							<dots_distance_y>0.03</dots_distance_y>
+							<dot_color>0 0 0.5 1</dot_color>
+							<pattern_name>threeBigDotsDotGrid</pattern_name>
+							<dot_diameter_distance_ratio>0.4</dot_diameter_distance_ratio>
+							<big_dot_diameter_distance_ratio>0.8</big_dot_diameter_distance_ratio>
+						</parameters>
+					</calibration_board>
+					<visible>
+						<bool>true</bool>
+					</visible>
+				</technique>
+			</extra>
+		</geometry>
+	</library_geometries>
+	<library_effects id="effects">
+		<effect id="g1_link0_geom0_eff">
+			<profile_COMMON>
+				<technique sid="">
+					<phong>
+						<ambient>
+							<color>0 0 0 0</color>
+						</ambient>
+						<diffuse>
+							<color>0.6 0.6 0.6 0</color>
+						</diffuse>
+					</phong>
+				</technique>
+			</profile_COMMON>
+		</effect>
+	</library_effects>
+	<library_materials id="materials">
+		<material id="g1_link0_geom0_mat">
+			<instance_effect url="#g1_link0_geom0_eff"/>
+		</material>
+	</library_materials>
+	<library_kinematics_models id="kmodels">
+		<kinematics_model id="kmodel1" name="calibration_board0">
+			<asset>
+				<subject>Not documented yet.</subject>
+			</asset>
+			<technique_common>
+				<link sid="link0" name="base">
+					<translate>0 0 0</translate>
+					<rotate>1 0 0 0</rotate>
+				</link>
+			</technique_common>
+			<extra type="interface_type">
+				<technique profile="OpenRAVE">
+					<interface type="kinbody"/>
+				</technique>
+			</extra>
+			<extra type="collision">
+				<technique profile="OpenRAVE"/>
+			</extra>
+		</kinematics_model>
+	</library_kinematics_models>
+	<library_articulated_systems id="asystems">
+		<articulated_system id="body1_kinematics">
+			<kinematics>
+				<instance_kinematics_model url="#kmodel1" sid="kmodel1_inst">
+					<newparam sid="body1_kinematics_kmodel1_inst">
+						<SIDREF>body1_kinematics/kmodel1_inst</SIDREF>
+					</newparam>
+				</instance_kinematics_model>
+				<technique_common/>
+			</kinematics>
+			<extra type="interface_type">
+				<technique profile="OpenRAVE">
+					<interface type="kinbody"/>
+				</technique>
+			</extra>
+		</articulated_system>
+	</library_articulated_systems>
+	<library_kinematics_scenes id="kscenes">
+		<kinematics_scene id="kscene" name="OpenRAVE Kinematics Scene">
+			<instance_articulated_system sid="body1_kinematics_inst" url="#body1_kinematics" name="calibration_board0">
+				<newparam sid="kscene_kmodel1_inst">
+					<SIDREF>body1_kinematics/body1_kinematics_kmodel1_inst</SIDREF>
+				</newparam>
+			</instance_articulated_system>
+		</kinematics_scene>
+	</library_kinematics_scenes>
+	<library_physics_scenes id="pscenes">
+		<physics_scene id="pscene" name="OpenRAVE Physics Scene">
+			<instance_physics_model url="#pmodel1" sid="pmodel1_inst" parent="#visual1">
+				<instance_rigid_body body="rigid0" sid="rigid0" target="#v1.node0"/>
+			</instance_physics_model>
+			<technique_common>
+				<gravity>0 0 -9.797930195020351</gravity>
+			</technique_common>
+		</physics_scene>
+	</library_physics_scenes>
+	<library_physics_models id="pmodels">
+		<physics_model id="pmodel1" name="calibration_board0">
+			<rigid_body sid="rigid0" name="base">
+				<technique_common>
+					<dynamic>true</dynamic>
+					<mass>1</mass>
+					<mass_frame>
+						<translate>0 0 0</translate>
+						<rotate>1 0 0 0</rotate>
+					</mass_frame>
+					<inertia>0.4 0.4 0.4</inertia>
+					<shape>
+						<instance_geometry url="#g1_link0_geom0"/>
+						<translate>0 0 0.1</translate>
+						<rotate>1 0 0 0</rotate>
+					</shape>
+				</technique_common>
+			</rigid_body>
+		</physics_model>
+	</library_physics_models>
+	<scene>
+		<instance_physics_scene url="#pscene" sid="pscene_inst"/>
+		<instance_visual_scene url="#vscene" sid="vscene_inst"/>
+		<instance_kinematics_scene url="#kscene" sid="kscene_inst">
+			<bind_kinematics_model node="visual1/node0">
+				<param>kscene_kmodel1_inst</param>
+			</bind_kinematics_model>
+		</instance_kinematics_scene>
+	</scene>
+	<extra id="sensors" type="library_sensors">
+		<technique profile="OpenRAVE"/>
+	</extra>
+	<extra id="actuators" type="library_actuators">
+		<technique profile="OpenRAVE"/>
+	</extra>
+</COLLADA>

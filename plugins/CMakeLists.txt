@@ -8,17 +8,19 @@ if(APPLE)
 endif(APPLE)
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXXj OR COMPILER_IS_CLANG)
-  set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS} -fPIC")
+  set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS}")
 else()
   set(PLUGIN_COMPILE_FLAGS "-DOPENRAVE_DLL ${Boost_CFLAGS}")
 endif()
 
 
-check_library_exists(lapack cgesdd_ "" LAPACK_FOUND)
-#CheckLibraryExists
-#find_package(LAPACK)
+if(NOT OPENRAVE_DISABLE_ASSERT_HANDLER)
+  add_definitions("-DBOOST_ENABLE_ASSERT_HANDLER") # turns segfault into exception
+  add_definitions("-DRAPIDJSON_ASSERT=BOOST_ASSERT") # turns segfault into exception
+endif()
+
+find_package(LAPACK)
 if( LAPACK_FOUND )
-  set(LAPACK_LIBRARIES lapack)
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DOPENRAVE_HAS_LAPACK")
 else()
   message(STATUS "lapack dev library not found")
@@ -31,7 +33,7 @@ set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DISPLAY_NAME "Essential plugins for mo
 set(CPACK_COMPONENT_${PLUGINS_BASE_UPPER}_DEPENDS ${COMPONENT_PREFIX}base PARENT_SCOPE)
 set(PLUGIN_COMPONENTS ${PLUGINS_BASE})
 
-set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave configurationcache dualmanipulation grasper ikfastsolvers logging pqprave rmanipulation rplanners textserver)
+set(PLUGINS basecontrollers baserobots basesamplers basesensors bulletrave mobyrave configurationcache grasper ikfastsolvers logging pqprave rmanipulation rplanners textserver)
 if( OPT_QTOSG_VIEWER )
   set(PLUGINS ${PLUGINS} qtosgrave)
 endif()

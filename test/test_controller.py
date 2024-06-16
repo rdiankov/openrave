@@ -30,7 +30,6 @@ class RunController(EnvironmentSetup):
         robot2=self.LoadRobot('robots/schunk-lwa3.zae')
         robot2.SetName('_R2_')
         env=self.env
-        #from IPython.Shell import IPShellEmbed; IPShellEmbed(argv='')(local_ns=locals())
         with env:
             # make sure name is present
             assert(repr(robot1.GetConfigurationSpecification()).find(robot1.GetName()) >= 0)
@@ -50,8 +49,8 @@ class RunController(EnvironmentSetup):
             traj=RaveCreateTrajectory(env, '')
             traj.Init(robot1.GetActiveConfigurationSpecification('quadratic'))
             traj.Insert(0,r_[initvalues1,waypoint])
-            ret=planningutils.RetimeActiveDOFTrajectory(traj,robot1,False)
-            assert(ret==PlannerStatus.HasSolution)
+            ret=planningutils.RetimeActiveDOFTrajectory(traj,robot1,False, 1, 1, 'ParabolicTrajectoryRetimer2')
+            assert(ret.statusCode==PlannerStatusCode.HasSolution)
             assert(traj.GetDuration()>0)
             # shouldn't move
             self.RunTrajectory(robot2,traj)

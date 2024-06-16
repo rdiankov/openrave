@@ -23,30 +23,9 @@
 #include <boost/numeric/bindings/lapack/gesdd.hpp>
 #endif
 
-#include "configurationcachetree.h"
+#include "configurationjitterer.h"
 
 namespace configurationcache {
-
-/// \brief holds parameters for threshing the direction. if dot(manipdir, tooldir) > cosanglethresh, then ok
-class ManipDirectionThresh
-{
-public:
-    ManipDirectionThresh() : vManipDir(0,0,1), vGlobalDir(0,0,1), fCosAngleThresh(0.9999999) {
-    }
-    ManipDirectionThresh(const ManipDirectionThresh &r) : vManipDir(r.vManipDir), vGlobalDir(r.vGlobalDir), fCosAngleThresh(r.fCosAngleThresh) {
-    }
-
-    inline bool IsInConstraints(const Transform& tmanip) const
-    {
-        return tmanip.rotate(vManipDir).dot3(vGlobalDir) >= fCosAngleThresh;
-    }
-
-    Vector vManipDir; ///< direction on the manipulator
-    Vector vGlobalDir; ///< direction in world coordinates
-    dReal fCosAngleThresh; ///< the cos angle threshold
-};
-
-typedef boost::shared_ptr<ManipDirectionThresh> ManipDirectionThreshPtr;
 
 class ConfigurationJitterer : public SpaceSamplerBase
 {
@@ -62,19 +41,23 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 \n\
 ";
         RegisterCommand("SetMaxJitter",boost::bind(&ConfigurationJitterer::SetMaxJitterCommand,this,_1,_2),
-                        "set a new max jitter");
+                        "sets a new max jitter");
         RegisterCommand("SetMaxIterations",boost::bind(&ConfigurationJitterer::SetMaxIterationsCommand,this,_1,_2),
-                        "set a new max iterations");
+                        "sets a new max iterations");
         RegisterCommand("SetMaxLinkDistThresh",boost::bind(&ConfigurationJitterer::SetMaxLinkDistThreshCommand,this,_1,_2),
-                        "set a new max link dist threshold");
+                        "sets a new max link dist threshold");
         RegisterCommand("SetPerturbation",boost::bind(&ConfigurationJitterer::SetPerturbationCommand,this,_1,_2),
-                        "set a new perturbation");
+                        "sets a new perturbation");
         RegisterCommand("SetResultOnRobot",boost::bind(&ConfigurationJitterer::SetResultOnRobotCommand,this,_1,_2),
-                        "set a new result on a robot");
+                        "sets a new result on a robot");
         RegisterCommand("SetNeighDistThresh",boost::bind(&ConfigurationJitterer::SetNeighDistThreshCommand,this,_1,_2),
                         "sets the minimum distance that nodes can be with respect to each other for the cache");
         RegisterCommand("SetConstraintToolDirection", boost::bind(&ConfigurationJitterer::SetConstraintToolDirectionCommand,this,_1,_2),
                         "constrains an axis of the manipulator around a cone. manipname + 7 values: vManipDir, vGlobalDir, fCosAngleThresh.");
+        RegisterCommand("SetConstraintToolPosition", boost::bind(&ConfigurationJitterer::SetConstraintToolPositionCommand,this,_1,_2),
+                        "constrains the position of the manipulator around an obb: right, up, dir, pos, extents");
+        RegisterCommand("SetResetIterationsOnSample",boost::bind(&ConfigurationJitterer::SetResetIterationsOnSampleCommand,this,_1,_2),
+                        "sets the _bResetIterationsOnSample: whether or not to reset _nNumIterations every time Sample is called.");
         RegisterCommand("SetManipulatorBias",boost::bind(&ConfigurationJitterer::SetManipulatorBiasCommand,this,_1,_2),
                         "Sets a bias on the sampling so that the manipulator has a tendency to move along vbias direction::\n\n\
   [manipname] bias_dir_x bias_dir_y bias_dir_z [nullsampleprob] [nullbiassampleprob] [deltasampleprob]\n\
@@ -82,6 +65,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     bias_dir is the workspace direction to bias the sampling in.\n\
     nullsampleprob, nullbiassampleprob, and deltasampleprob are in [0,1]\n\
  //");
+        RegisterJSONCommand("GetFailuresCount", boost::bind(&ConfigurationJitterer::GetFailuresCountCommand, this, _1, _2, _3),
+                            "Gets the numbers of failing jittered configurations from the latest call categorized based on the failure reasons.");
+        RegisterJSONCommand("GetCurrentParameters", boost::bind(&ConfigurationJitterer::GetCurrentParametersCommand, this, _1, _2, _3),
+                            "Gets the current values of parameters.");
 
         bool bUseCache = false;
         std::string robotname, samplername = "MT19937";
@@ -92,7 +79,30 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _vActiveIndices = _probot->GetActiveDOFIndices();
         _nActiveAffineDOFs = _probot->GetAffineDOF();
         _vActiveAffineAxis = _probot->GetAffineRotationAxis();
-        _vLinks = _probot->GetLinks();
+        _vLinks.reserve(_probot->GetLinks().size());
+        if( _nActiveAffineDOFs == 0 ) {
+            for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                if( _probot->GetLinks()[ilink]->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
+                for (int dofindex : _vActiveIndices) {
+                    if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                        _vLinks.push_back(_probot->GetLinks()[ilink]);
+                        break;
+                    }
+                }
+            }
+        }
+        else {
+            for (const KinBody::LinkPtr& plink: _probot->GetLinks()) {
+                if( plink->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
+                _vLinks.push_back(plink);
+            }
+        }
         _vLinkAABBs.resize(_vLinks.size());
         for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
@@ -112,12 +122,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         }
 
         if( bUseCache ) {
-            _cache.reset(new CacheTree(_probot->GetActiveDOF()));
+            _cache.reset(new CacheTree(_probot, _probot->GetActiveDOF()));
             _cache->Init(vweights, 1);
         }
 
         _bSetResultOnRobot = true;
         _busebiasing = false;
+        _bResetIterationsOnSample = true;
 
         // for selecting sampling modes
         if( samplername.size() == 0 ) {
@@ -135,6 +146,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _deltadof.resize(dof);
         _deltadof2.resize(dof);
         _nRandomGeneratorSeed = 0;
+        _nNumIterations = 0;
+
+        _fulldof.resize(_probot->GetDOF(), 0);
 
         _report.reset(new CollisionReport());
         _maxiterations=5000;
@@ -159,6 +173,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
     virtual void SetSeed(uint32_t seed) {
         _nRandomGeneratorSeed = seed;
+        _nNumIterations = 0;
         _ssampler->SetSeed(seed);
     }
 
@@ -221,7 +236,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
     bool SetPerturbationCommand(std::ostream& sout, std::istream& sinput)
     {
-        int perturbation=0;
+        dReal perturbation=0;
         sinput >> perturbation;
         if( perturbation < 0 ) {
             return false;
@@ -283,6 +298,43 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         return true;
     }
 
+    bool SetConstraintToolPositionCommand(std::ostream& sout, std::istream& sinput)
+    {
+        std::string manipname;
+        ManipPositionConstraintsPtr constraint(new ManipPositionConstraints());
+        sinput >> manipname;
+        if( manipname.size() == 0 ) {
+            // reset the tool position
+            if( !!_pConstraintToolPosition ) {
+                if( !!_cache ) {
+                    _cache->Reset(); // need this here in order to invalidate cache.
+                }
+            }
+            _pConstraintToolPosition.reset();
+            return true;
+        }
+        sinput >> constraint->obb.right.x >> constraint->obb.right.y >> constraint->obb.right.z >> constraint->obb.up.x >> constraint->obb.up.y >> constraint->obb.up.z >> constraint->obb.dir.x >> constraint->obb.dir.y >> constraint->obb.dir.z >> constraint->obb.pos.x >> constraint->obb.pos.y >> constraint->obb.pos.z >> constraint->obb.extents.x >> constraint->obb.extents.y >> constraint->obb.extents.z;
+        if( !sinput ) {
+            return false;
+        }
+        RobotBase::ManipulatorConstPtr pmanip = _probot->GetManipulator(manipname);
+        if( !pmanip ) {
+            return false;
+        }
+        _pmanip = pmanip;
+        _pConstraintToolPosition = constraint;
+        if( !!_cache ) {
+            _cache->Reset(); // need this here in order to invalidate cache.
+        }
+        return true;
+    }
+
+    bool SetResetIterationsOnSampleCommand(std::ostream& sout, std::istream& sinput)
+    {
+        sinput >> _bResetIterationsOnSample;
+        return !!sinput;
+    }
+
     virtual int SampleSequence(std::vector<dReal>& samples, size_t num=1,IntervalType interval=IT_Closed)
     {
         samples.resize(0);
@@ -311,6 +363,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
     virtual int SampleComplete(std::vector<dReal>& samples, size_t num, IntervalType interval=IT_Closed) {
         // have to reset the seed
         _ssampler->SetSeed(_nRandomGeneratorSeed);
+        _nNumIterations = 0;
         return SampleSequence(samples, num, interval);
     }
 
@@ -348,13 +401,70 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _nullbiassampleprob = nullbiassampleprob;
         _deltasampleprob = deltasampleprob;
         _busebiasing = true;
-        RAVELOG_VERBOSE_FORMAT("set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", _nullsampleprob%_nullbiassampleprob%_deltasampleprob);
+        _InitRobotState(); // for recomputing biasing
+        RAVELOG_VERBOSE_FORMAT("env=%s, set bias nullsampleprob %f nullbiassampleprob %f deltasampleprob %f", GetEnv()->GetNameId()%_nullsampleprob%_nullbiassampleprob%_deltasampleprob);
 #else
         throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot set manipulator bias since lapack is not supported"), ORE_CommandNotSupported);
 #endif
     }
 
-    /// \brief jitters the current configuration and sets a new configuration on the environment
+    void SetNeighStateFn(const OpenRAVE::NeighStateFn& neighstatefn)
+    {
+        _neighstatefn = neighstatefn;
+    }
+
+    virtual bool GetFailuresCountCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& alloc)
+    {
+        _counter.SaveToJson(output, alloc);
+        return true;
+    }
+
+    virtual bool GetCurrentParametersCommand(const rapidjson::Value& input, rapidjson::Value& output, rapidjson::Document::AllocatorType& alloc)
+    {
+        output.SetObject();
+        if( _busebiasing ) {
+            orjson::SetJsonValueByKey(output, "jitterBiasDirection", _vbiasdirection, alloc);
+            orjson::SetJsonValueByKey(output, "nullSampleProb", _nullsampleprob, alloc);
+            orjson::SetJsonValueByKey(output, "nullBiasSampleProb", _nullbiassampleprob, alloc);
+            orjson::SetJsonValueByKey(output, "deltaSampleProb", _deltasampleprob, alloc);
+        }
+        orjson::SetJsonValueByKey(output, "currentJointValues", _fulldof, alloc);
+        orjson::SetJsonValueByKey(output, "maxJitter", _maxjitter, alloc);
+        orjson::SetJsonValueByKey(output, "maxJitterIterations", _maxiterations, alloc);
+        orjson::SetJsonValueByKey(output, "maxJitterLinkDist", _linkdistthresh, alloc);
+        orjson::SetJsonValueByKey(output, "jitterPerturbation", _perturbation, alloc);
+        orjson::SetJsonValueByKey(output, "jitterNeighDistThresh", _neighdistthresh, alloc);
+        orjson::SetJsonValueByKey(output, "resetIterationsOnSample", _bResetIterationsOnSample, alloc);
+        if( !!_pmanip ) {
+            orjson::SetJsonValueByKey(output, "manipName", _pmanip->GetName(), alloc);
+            rapidjson::Value rTransform;
+            rTransform.SetArray();
+            rTransform.Reserve(7, alloc);
+            rTransform.PushBack(_tLocalTool.rot[0], alloc);
+            rTransform.PushBack(_tLocalTool.rot[1], alloc);
+            rTransform.PushBack(_tLocalTool.rot[2], alloc);
+            rTransform.PushBack(_tLocalTool.rot[3], alloc);
+            rTransform.PushBack(_tLocalTool.trans[0], alloc);
+            rTransform.PushBack(_tLocalTool.trans[1], alloc);
+            rTransform.PushBack(_tLocalTool.trans[2], alloc);
+            orjson::SetJsonValueByKey(output, "localToolPose", rTransform, alloc);
+            if( !!_pConstraintToolDirection ) {
+                rapidjson::Value rConstraintToolDirection;
+                _pConstraintToolDirection->SaveToJson(rConstraintToolDirection, alloc);
+                orjson::SetJsonValueByKey(output, "constraintToolDirection", rConstraintToolDirection, alloc);
+            }
+            if( !!_pConstraintToolPosition ) {
+                rapidjson::Value rConstraintToolPosition;
+                _pConstraintToolPosition->SaveToJson(rConstraintToolPosition, alloc);
+                orjson::SetJsonValueByKey(output, "constraintToolPosition", rConstraintToolPosition, alloc);
+            }
+        }
+        return true;
+    }
+
+    /// \brief Jitters the current configuration and sets a new configuration on the environment. The jittered
+    ///        configuration will also be checked with small perturbations to make sure that it is not too close to
+    ///        boundaries of collision constraints and tool direction constraints.
     ///
     int Sample(std::vector<dReal>& vnewdof, IntervalType interval=IT_Closed)
     {
@@ -362,6 +472,10 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         _InitRobotState();
         const dReal linkdistthresh = _linkdistthresh;
         const dReal linkdistthresh2 = _linkdistthresh2;
+
+        if( _bResetIterationsOnSample ) {
+            _nNumIterations = 0;
+        }
 
         vector<AABB> newLinkAABBs;
         bool bCollision = false;
@@ -379,23 +493,15 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             perturbations.resize(1,0);
         }
         vnewdof.resize(GetDOF());
-        FOREACH(itperturbation,perturbations) {
-            if( bConstraint ) {
-                FOREACH(it,_deltadof) {
-                    *it = *itperturbation;
-                }
-                vnewdof = _curdof;
-                if( !_neighstatefn(vnewdof,_deltadof,0) ) {
-                    _probot->SetActiveDOFValues(_curdof);
-//                    if( setret != 0 ) {
-//                        // state failed to set, this could mean the initial state is just really bad, so resume jittering
-//                        bCollision = true;
-//                        break;
-//                    }
-                    return -1;
-                }
-            }
-            else {
+
+        // count of types of failures to better give user that info
+        _counter.Reset();
+
+        if( _nNumIterations == 0 ) {
+            FOREACH(itperturbation,perturbations) {
+                // Perturbation is added to a config to make sure that the config is not too close to collision and tool
+                // direction/position constraint boundaries. So we do not use _neighstatefn to compute perturbed
+                // configurations.
                 for(size_t i = 0; i < vnewdof.size(); ++i) {
                     vnewdof[i] = _curdof[i]+*itperturbation;
                     if( vnewdof[i] > _upper.at(i) ) {
@@ -405,26 +511,68 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                         vnewdof[i] = _lower.at(i);
                     }
                 }
-            }
 
-            // don't need to set state since CheckPathAllConstraints does it
-            _probot->SetActiveDOFValues(vnewdof);
+                // don't need to set state since CheckPathAllConstraints does it
+                _probot->SetActiveDOFValues(vnewdof);
 
-            if( !!_pConstraintToolDirection && !!_pmanip ) {
-                if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
-                    bConstraintFailed = true;
+                if( !!_pConstraintToolDirection && !!_pmanip ) {
+                    if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
+                        _counter.nConstraintToolDirFailure++;
+                        bConstraintFailed = true;
+                        break;
+
+                    }
+                }
+                if( !!_pConstraintToolPosition && !!_pmanip ) {
+                    if( !_pConstraintToolPosition->IsInConstraints(_pmanip->GetTransform()) ) {
+                        _counter.nConstraintToolPositionFailure++;
+                        bConstraintFailed = true;
+                        break;
+
+                    }
+                }
+                if( GetEnv()->CheckCollision(_probot, _report) ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "colvalues=[";
+                        FOREACHC(itval, vnewdof) {
+                            ss << *itval << ",";
+                        }
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%s, original env collision failed. report=%s; %s", GetEnv()->GetNameId()%_report->__str__()%ss.str());
+                    }
+                    _counter.nEnvCollisionFailure++;
+                    bCollision = true;
                     break;
+                }
 
+                if( _probot->CheckSelfCollision(_report) ) {
+                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                        stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                        ss << "colvalues=[";
+                        FOREACHC(itval, vnewdof) {
+                            ss << *itval << ",";
+                        }
+                        ss << "]";
+                        RAVELOG_VERBOSE_FORMAT("env=%s, original self collision failed. report=%s; %s", GetEnv()->GetNameId()%_report->__str__()%ss.str());
+                    }
+                    _counter.nSelfCollisionFailure++;
+                    bCollision = true;
+                    break;
                 }
             }
-            if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report) ) {
-                bCollision = true;
-                break;
-            }
-        }
 
-        if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
-            return -1;
+            if( (!bCollision && !bConstraintFailed) || _maxjitter <= 0 ) {
+                if( _counter.nNeighStateFailure > 0 ) {
+                    RAVELOG_DEBUG_FORMAT("env=%s, jitterer returning initial point is good, but neigh state failed %d times", GetEnv()->GetNameId()%_counter.nNeighStateFailure);
+                }
+                return -1;
+            }
+
+            _nNumIterations++;
+        }
+        else {
+            RAVELOG_VERBOSE_FORMAT("env=%s, skipping orig pos check", GetEnv()->GetNameId());
         }
 
         if( !!_cache ) {
@@ -433,7 +581,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
         }
 
         BOOST_ASSERT(!_busebiasing || _vbiasdofdirection.size() > 0);
-        const boost::array<dReal, 3> rayincs = {{0.5, 0.9, 0.2}};
+        const boost::array<dReal, 3> rayincs = {{0.2, 0.5, 0.9}};
 
         bool busebiasing = _busebiasing;
         const int nMaxIterRadiusThresh=_maxiterations/2;
@@ -449,10 +597,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             if( (iter%10) == 0 ) { // not sure what a good rate is...
                 _CallStatusFunctions(iter);
             }
-            if( busebiasing && iter < (int)rayincs.size() ) {
+
+            _nNumIterations++;
+            if( busebiasing && iter+((int)_nNumIterations-2) < (int)rayincs.size() ) {
+                int iray = iter+(_nNumIterations-2);
                 // start by checking samples directly above the current configuration
                 for (size_t j = 0; j < vnewdof.size(); ++j) {
-                    vnewdof[j] = _curdof[j] + (rayincs[iter] * _vbiasdofdirection.at(j));
+                    vnewdof[j] = _curdof[j] + (rayincs.at(iray) * _vbiasdofdirection.at(j));
                 }
             }
             else {
@@ -498,6 +649,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
 
                 if (!samplebiasdir && !samplenull && !deltasuccess) {
+                    _counter.nSameSamples++;
                     continue;
                 }
                 // (lambda * biasdir) + (Nx) + delta + _curdofs
@@ -532,9 +684,24 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 }
             }
 
+            // Compute a neighbor of _curdof that satisfies constraints. If _neighstatefn is not initialized, then the neighbor is vnewdof itself.
+            if( bConstraint ) {
+                // Obtain the delta dof values computed from the jittering above.
+                for(size_t idof = 0; idof < _deltadof.size(); ++idof) {
+                    _deltadof[idof] = vnewdof[idof] - _curdof[idof];
+                }
+                vnewdof = _curdof;
+                _probot->SetActiveDOFValues(vnewdof); // need to set robot configuration before calling _neighstatefn
+                if( _neighstatefn(vnewdof, _deltadof, 0) == NSS_Failed) {
+                    _counter.nNeighStateFailure++;
+                    continue;
+                }
+            }
+
             if( !!_cache ) {
                 if( !!_cache->FindNearestNode(vnewdof, _neighdistthresh).first ) {
                     _cachehit++;
+                    _counter.nCacheHitSamples++;
                     continue;
                 }
             }
@@ -610,9 +777,25 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                             break;
                         }
                     }
+                    if( !bSuccess ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "dofvalues=[";
+                            for(size_t i = 0; i < vnewdof.size(); ++i ) {
+                                ss << vnewdof[i];
+                                if( i < vnewdof.size() - 1 ) {
+                                    ss << ", ";
+                                }
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE_FORMAT("env=%s, link '%s' exceeded linkdisthresh=%e. ellipdist[%e] > rhs[%e], %s", GetEnv()->GetNameId()%_vLinks[ilink]->GetName()%_linkdistthresh%ellipdist%rhs%ss.str());
+                        }
+                        break;
+                    }
                 }
 
                 if (!bSuccess) {
+                    _counter.nLinkDistThreshRejections++;
                     continue;
                 }
             }
@@ -621,45 +804,76 @@ By default will sample the robot's active DOFs. Parameters part of the interface
             bCollision = false;
             bConstraintFailed = false;
             FOREACH(itperturbation,perturbations) {
-                for(size_t j = 0; j < _deltadof.size(); ++j) {
-                    _deltadof2[j] = *itperturbation;
-                }
-                if( bConstraint ) {
-                    _newdof2 = vnewdof;
-                    _probot->SetActiveDOFValues(_newdof2);
-                    if( !_neighstatefn(_newdof2,_deltadof2,0) ) {
-                        if( *itperturbation != 0 ) {
-                            RAVELOG_DEBUG(str(boost::format("constraint function failed, pert=%e\n")%*itperturbation));
-                        }
-                        bConstraintFailed = true;
-                        break;
+                // Perturbation is added to a config to make sure that the config is not too close to collision and tool
+                // direction/position constraint boundaries. So we do not use _neighstatefn to compute perturbed
+                // configurations.
+                _newdof2 = vnewdof;
+                for(size_t idof = 0; idof < _newdof2.size(); ++idof) {
+                    _newdof2[idof] += *itperturbation;
+                    if( _newdof2[idof] > _upper.at(idof) ) {
+                        _newdof2[idof] = _upper.at(idof);
+                    }
+                    else if( _newdof2[idof] < _lower.at(idof) ) {
+                        _newdof2[idof] = _lower.at(idof);
                     }
                 }
-                else {
-                    for(size_t j = 0; j < _deltadof.size(); ++j) {
-                        _newdof2[j] = vnewdof[j] + _deltadof2[j];
-                        if( _newdof2[j] > _upper.at(j) ) {
-                            _newdof2[j] = _upper.at(j);
-                        }
-                        else if( _newdof2[j] < _lower.at(j) ) {
-                            _newdof2[j] = _lower.at(j);
-                        }
-                    }
-                }
-
                 _probot->SetActiveDOFValues(_newdof2);
                 if( !!_pConstraintToolDirection ) {
                     if( !_pConstraintToolDirection->IsInConstraints(_pmanip->GetTransform()) ) {
                         bConstraintFailed = true;
+                        _counter.nConstraintToolDirFailure++;
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "env=" << GetEnv()->GetNameId() << ", direction constraints failed, ";
+                            for(size_t i = 0; i < _newdof2.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << _newdof2[i];
+                                }
+                                else {
+                                    ss << "colvalues=[" << _newdof2[i];
+                                }
+                            }
+                            ss << "]; cosangle=" << _pConstraintToolDirection->ComputeCosAngle(_pmanip->GetTransform()) << "; quat=[" << _pmanip->GetTransform().rot.x << ", " << _pmanip->GetTransform().rot.y << ", " << _pmanip->GetTransform().rot.z << ", " << _pmanip->GetTransform().rot.w << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
+                        break;
+                    }
+                }
+                if( !!_pConstraintToolPosition ) {
+                    if( !_pConstraintToolPosition->IsInConstraints(_pmanip->GetTransform()) ) {
+                        bConstraintFailed = true;
+                        _counter.nConstraintToolPositionFailure++;
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                            ss << "env=" << GetEnv()->GetNameId() << ", position constraints failed, ";
+                            for(size_t i = 0; i < _newdof2.size(); ++i ) {
+                                if( i > 0 ) {
+                                    ss << "," << _newdof2[i];
+                                }
+                                else {
+                                    ss << "colvalues=[" << _newdof2[i];
+                                }
+                            }
+                            ss << "]; trans=[" << _pmanip->GetTransform().trans.x << ", " << _pmanip->GetTransform().trans.y << ", " << _pmanip->GetTransform().trans.z << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
                         break;
                     }
                 }
 
-                if( GetEnv()->CheckCollision(_probot, _report) || _probot->CheckSelfCollision(_report)) {
+                if( GetEnv()->CheckCollision(_probot, _report) ) {
                     bCollision = true;
+                    _counter.nEnvCollisionFailure++;
+                }
+                if( !bCollision && _probot->CheckSelfCollision(_report)) {
+                    bCollision = true;
+                    _counter.nSelfCollisionFailure++;
+                }
+
+                if( bCollision ) {
                     if( IS_DEBUGLEVEL(Level_Verbose) ) {
                         stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                        ss << "constraints failed, ";
+                        ss << "env=" << _probot->GetEnv()->GetNameId() << ", iter=" << iter << "; collision failed, ";
                         for(size_t i = 0; i < _newdof2.size(); ++i ) {
                             if( i > 0 ) {
                                 ss << "," << _newdof2[i];
@@ -680,7 +894,7 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                     _probot->GetActiveDOFValues(vnewdof);
                     stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                    ss << "jitter iter=" << iter << " ";
+                    ss << "env=" << GetEnv()->GetNameId() << ", jitter iter=" << iter << " ";
 #ifdef _DEBUG
                     ss << "maxtrans=" << fmaxtransdist << " ";
 #endif
@@ -701,13 +915,13 @@ By default will sample the robot's active DOFs. Parameters part of the interface
                     robotsaver.Release();
                 }
 
-                RAVELOG_DEBUG_FORMAT("succeed iterations=%d, computation=%fs\n",iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+                RAVELOG_DEBUG_FORMAT("env=%s, succeed iterations=%d, computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, nLinkDistThreshRejections=%d",GetEnv()->GetNameId()%iter%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure%_counter.nCacheHitSamples%_counter.nLinkDistThreshRejections);
                 //RAVELOG_VERBOSE_FORMAT("succeed iterations=%d, cachehits=%d, cache size=%d, originaldist=%f, computation=%fs\n",iter%_cachehit%cache.GetNumNodes()%cache.ComputeDistance(_curdof, vnewdof)%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
                 return 1;
             }
         }
 
-        RAVELOG_INFO_FORMAT("failed iterations=%d, computation=%fs\n",_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
+        RAVELOG_INFO_FORMAT("env=%s, failed iterations=%d (max=%d), computation=%fs, bConstraint=%d, neighstate=%d, constraintToolDir=%d, constraintToolPos=%d, envCollision=%d, selfCollision=%d, cachehit=%d, samesamples=%d, nLinkDistThreshRejections=%d", GetEnv()->GetNameId()%_nNumIterations%_maxiterations%(1e-9*(utils::GetNanoPerformanceTime() - starttime))%bConstraint%_counter.nNeighStateFailure%_counter.nConstraintToolDirFailure%_counter.nConstraintToolPositionFailure%_counter.nEnvCollisionFailure%_counter.nSelfCollisionFailure%_counter.nCacheHitSamples%_counter.nSameSamples%_counter.nLinkDistThreshRejections);
         //RAVELOG_WARN_FORMAT("failed iterations=%d, cachehits=%d, cache size=%d, jitter time=%fs", _maxiterations%_cachehit%cache.GetNumNodes()%(1e-9*(utils::GetNanoPerformanceTime() - starttime)));
         return 0;
     }
@@ -719,6 +933,10 @@ protected:
     {
         _probot->SetActiveDOFs(_vActiveIndices, _nActiveAffineDOFs, _vActiveAffineAxis);
         _probot->GetActiveDOFValues(_curdof);
+        _probot->GetDOFValues(_fulldof);
+        if( !!_pmanip ) {
+            _tLocalTool = _pmanip->GetLocalToolTransform();
+        }
 
         _vOriginalTransforms.resize(_vLinks.size());
         _vOriginalInvTransforms.resize(_vLinks.size());
@@ -727,7 +945,7 @@ protected:
             _vOriginalInvTransforms[i] = _vOriginalTransforms[i].inverse();
         }
 #ifdef OPENRAVE_HAS_LAPACK
-        if( _busebiasing ) {
+        if( !!_pmanip ) { // have to always compute since _busebiasing might switch true/false without calling this function
             using namespace boost::numeric::ublas;
             _pmanip->CalculateJacobian(_mjacobian);
             boost::numeric::ublas::matrix<double, boost::numeric::ublas::column_major> J(3,_pmanip->GetArmIndices().size());
@@ -747,7 +965,7 @@ protected:
             // compute single value decomposition: Jacobian = U*diag(S)*transpose(V)
             int ret = boost::numeric::bindings::lapack::gesdd('O','A',J,S,U,V);
             if( ret != 0 ) {
-                RAVELOG_WARN("failed to compute SVD for jacobian, disabling bias\n");
+                RAVELOG_WARN_FORMAT("env=%s, failed to compute SVD for jacobian, disabling bias", GetEnv()->GetNameId());
                 return;
             }
             // diag(S) * transpose(V) * dofvelocities = transpose(U) * P = P2
@@ -769,7 +987,8 @@ protected:
             }
             // dofvelocities = P3
             P3 = prod(trans(V),P3);
-            _vbiasdofdirection.resize(numdof);
+            _vbiasdofdirection.resize(_probot->GetActiveDOF());
+            std::fill(_vbiasdofdirection.begin(), _vbiasdofdirection.end(), 0);
             for(size_t i = 0; i < numdof; ++i) {
                 _vbiasdofdirection[i] = P3(i);
             }
@@ -813,7 +1032,32 @@ protected:
     {
         vector<KinBodyPtr> vgrabbedbodies;
         _probot->GetGrabbed(vgrabbedbodies);
-        _vLinks.resize(_probot->GetLinks().size());
+        // robot itself might have changed?
+        _vLinks.resize(0);
+        _vLinks.reserve(_probot->GetLinks().size());
+        if( _nActiveAffineDOFs == 0 ) {
+            for (size_t ilink = 0; ilink < _probot->GetLinks().size(); ++ilink) {
+                if( _probot->GetLinks()[ilink]->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
+                for (int dofindex : _vActiveIndices) {
+                    if( _probot->DoesAffect(_probot->GetJointFromDOFIndex(dofindex)->GetJointIndex(), ilink)) {
+                        _vLinks.push_back(_probot->GetLinks()[ilink]);
+                        break;
+                    }
+                }
+            }
+        }
+        else {
+            for (const KinBody::LinkPtr& plink: _probot->GetLinks()) {
+                if( plink->GetGeometries().empty() ) {
+                    // Links that don't have geometries (virtual links) don't matter for jittering. Their AABBs can interfere with the results.
+                    continue;
+                }
+                _vLinks.push_back(plink);
+            }
+        }
         FOREACHC(itgrabbed, vgrabbedbodies) {
             FOREACHC(itlink2, (*itgrabbed)->GetLinks()) {
                 _vLinks.push_back(*itlink2);
@@ -822,7 +1066,7 @@ protected:
 
         // update all the grabbed links
         _vLinkAABBs.resize(_vLinks.size());
-        for(size_t i = _probot->GetLinks().size(); i < _vLinks.size(); ++i) {
+        for(size_t i = 0; i < _vLinks.size(); ++i) {
             _vLinkAABBs[i] = _vLinks[i]->ComputeLocalAABB();
         }
 
@@ -831,6 +1075,7 @@ protected:
 
     void _UpdateLimits()
     {
+        RobotBase::RobotStateSaver robotsaver(_probot, KinBody::Save_ActiveDOF);
         _probot->SetActiveDOFs(_vActiveIndices, _nActiveAffineDOFs, _vActiveAffineAxis);
         _probot->GetActiveDOFLimits(_lower, _upper);
         _range.resize(_lower.size());
@@ -866,20 +1111,24 @@ protected:
     std::vector<Transform> _vOriginalTransforms, _vOriginalInvTransforms; ///< indexed according to _vLinks
     CollisionReportPtr _report;
 
-    boost::function<bool (std::vector<dReal>&,const std::vector<dReal>&, int)> _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
+    OpenRAVE::NeighStateFn _neighstatefn; ///< if initialized, then use this function to get nearest neighbor
     ///< Advantage of using neightstatefn is that user constraints can be met like maintaining a certain orientation of the gripper.
 
     UserDataPtr _limitscallback, _grabbedcallback; ///< limits,grabbed change handles
 
+    FailureCounter _counter;
+
     /// \return Return 0 if jitter failed and constraints are not satisfied. -1 if constraints are originally satisfied. 1 if jitter succeeded, configuration is different, and constraints are satisfied.
 
     uint32_t _nRandomGeneratorSeed;
+    uint32_t _nNumIterations; ///< maintains the iteration count from start of SetSeed to how many iterations Sample has undergone. Used to consecutively call Sample without re-sampling the same _curdof. When > 0, then will skip some commonly tested configurations not randomized
     int _maxiterations; ///< number of different configurations to test
     dReal _maxjitter; ///< The max deviation of a dof value to jitter. value +- maxjitter
     dReal _perturbation; ///< Test with perturbations since very small changes in angles can produce collision inconsistencies
     dReal _linkdistthresh, _linkdistthresh2; ///< the maximum distance to allow a link to move. If 0, then will disable checking
 
     std::vector<dReal> _curdof, _newdof2, _deltadof, _deltadof2, _vonesample;
+    std::vector<dReal> _fulldof; ///< full robot dof values
 
     CacheTreePtr _cache; ///< caches the visisted configurations
     int _cachehit;
@@ -896,10 +1145,16 @@ protected:
     std::vector<dReal> _vbiasdofdirection; // direction to bias in configuration space (from jacobian)
     std::vector< std::vector<dReal> > _vbiasnullspace; // configuration nullspace that does not constraint rotation. vectors are unit
 
-    ManipDirectionThreshPtr _pConstraintToolDirection;
+    // manip constraints
+    ManipDirectionThreshPtr _pConstraintToolDirection; ///< constrain direction
+    ManipPositionConstraintsPtr _pConstraintToolPosition; ///< constraint position
+    Transform _tLocalTool; ///< manipulator local tool pose
+
+    //Vector vManipConstraintBoxMin, vManipConstraintBoxMax; // constraint position
 
     bool _bSetResultOnRobot; ///< if true, will set the final result on the robot DOF values
     bool _busebiasing; ///< if true will bias the end effector along a certain direction using the jacobian and nullspace.
+    bool _bResetIterationsOnSample; ///< if true, when Sample or SampleSequence is called, will reset the _nNumIterations to 0. O
 };
 
 SpaceSamplerBasePtr CreateConfigurationJitterer(EnvironmentBasePtr penv, std::istream& sinput)

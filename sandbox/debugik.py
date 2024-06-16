@@ -1087,7 +1087,8 @@ def test_ik():
     
     chaintree = solver.generateIkSolver(baselink=baselink,eelink=eelink,freeindices=freeindices,solvefn=solvefn,ikfastoptions=1)
     code=ikmodel.ikfast.ikfast_generator_cpp.CodeGenerator(version=ikmodel.ikfast.__version__).generate(chaintree)
-    open(sourcefilename,'w').write(code)
+    with open(sourcefilename,'w') as f:
+        f.write(code)
     
     #T0links.append(self.affineInverse(T1links.pop(-1)))
     # get values

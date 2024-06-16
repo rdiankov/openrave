@@ -18,6 +18,8 @@
 
 #include <openrave/mathextra.h>
 
+namespace rplanners {
+
 /**
    t,dt,v0,v1,px = symbols('t,dt,v0,v1,px')
 
@@ -33,7 +35,7 @@ public:
     class CubicGroupInfo : public GroupInfo
     {
 public:
-        CubicGroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : GroupInfo(degree, gpos, gvel) {
+        CubicGroupInfo(int degree_, const ConfigurationSpecification::Group& gpos_, const ConfigurationSpecification::Group &gvel_) : GroupInfo(degree_, gpos_, gvel_) {
         }
 
         //ConfigurationSpecification::Group gaccel;
@@ -46,10 +48,10 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nSingle cubic trajectory re-timing while passing through the waypoints, waypoints will not be modified. Computing fastest time is slow";
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         _trajxmlid = ptraj->GetXMLId();
-        return TrajectoryRetimer::PlanPath(ptraj);
+        return TrajectoryRetimer::PlanPath(ptraj, planningoptions);
     }
 
 protected:
@@ -194,7 +196,7 @@ protected:
                     if( times[iroot] > 0 && times[iroot] < deltatime ) {
                         dReal pos = c0 + times[iroot] * (c1 + times[iroot] * (c2 + times[iroot]*c3));
                         if( pos < info->_vConfigLowerLimit[i]-g_fEpsilonJointLimit || pos > info->_vConfigUpperLimit[i]+g_fEpsilonJointLimit ) {
-                            RAVELOG_VERBOSE_FORMAT("pos constraints dof=%d, %e (limit) < %e < %e (limit)", i%info->_vConfigLowerLimit[i]%pos%info->_vConfigUpperLimit[i]);
+                            RAVELOG_VERBOSE_FORMAT("env=%d, pos constraints dof=%d, %e (limit) < %e < %e (limit)", GetEnv()->GetId()%i%info->_vConfigLowerLimit[i]%pos%info->_vConfigUpperLimit[i]);
                             return false;
                         }
                     }
@@ -206,11 +208,11 @@ protected:
             if(checkoptions&4) {
                 // check acceleration limits
                 if( RaveFabs(a0) > info->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("acceleration constraints dof=%d, abs(%e) > %e (limit)", i%a0%(info->_vConfigAccelerationLimit.at(i)));
+                    RAVELOG_VERBOSE_FORMAT("env=%d, acceleration constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%a0%(info->_vConfigAccelerationLimit.at(i)));
                     return false;
                 }
                 if( RaveFabs(a0+a1*deltatime) > info->_vConfigAccelerationLimit.at(i)+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("acceleration constraints dof=%d, abs(%e) > %e (limit)", i%(a0+a1*deltatime)%(info->_vConfigAccelerationLimit.at(i)));
+                    RAVELOG_VERBOSE_FORMAT("env=%d, acceleration constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%(a0+a1*deltatime)%(info->_vConfigAccelerationLimit.at(i)));
                     return false;
                 }
             }
@@ -220,17 +222,17 @@ protected:
                     if( vtime > 0 && vtime < deltatime ) {
                         dReal vellimit = c1 + vtime * (2*c2 + vtime * 3*c3 );
                         if( RaveFabs(vellimit) > info->_vConfigVelocityLimit.at(i)+g_fEpsilonJointLimit ) {
-                            RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%vellimit%info->_vConfigVelocityLimit.at(i));
+                            RAVELOG_VERBOSE_FORMAT("env=%d, velocity constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%vellimit%info->_vConfigVelocityLimit.at(i));
                             return false;
                         }
                     }
                 }
                 if( RaveFabs(v0) > info->_vConfigVelocityLimit[i]+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%v0%info->_vConfigVelocityLimit[i]);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, velocity constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%v0%info->_vConfigVelocityLimit[i]);
                     return false;
                 }
                 if( RaveFabs(v1) > info->_vConfigVelocityLimit[i]+g_fEpsilonJointLimit ) {
-                    RAVELOG_VERBOSE_FORMAT("velocity constraints dof=%d, abs(%e) > %e (limit)", i%v1%info->_vConfigVelocityLimit[i]);
+                    RAVELOG_VERBOSE_FORMAT("env=%d, velocity constraints dof=%d, abs(%e) > %e (limit)", GetEnv()->GetId()%i%v1%info->_vConfigVelocityLimit[i]);
                     return false;
                 }
             }
@@ -252,18 +254,18 @@ protected:
             _v0vel[i] = *(itdataprev+info->gvel.offset+i);
             _v1vel[i] = *(itdata+info->gvel.offset+i);
         }
-        dReal deltatime = *(itdata+_timeoffset);
-        dReal ideltatime = 1/deltatime;
-        dReal ideltatime2 = ideltatime*ideltatime;
-        for(int i=0; i < info->gvel.dof; ++i) {
-            dReal px = *(itdata+info->gpos.offset+i) - *(itdataprev+info->gpos.offset+i);
-            dReal v0 = *(itdataprev+info->gvel.offset+i);
-            dReal v1 = *(itdata+info->gvel.offset+i);
-            dReal c3 = (v1 + v0 - 2*px*ideltatime)*ideltatime2;
-            dReal c2 = (3*px*ideltatime - (2*v0 + v1))*ideltatime;
+//        dReal deltatime = *(itdata+_timeoffset);
+//        dReal ideltatime = 1/deltatime;
+//        dReal ideltatime2 = ideltatime*ideltatime;
+//        for(int i=0; i < info->gvel.dof; ++i) {
+//            dReal px = *(itdata+info->gpos.offset+i) - *(itdataprev+info->gpos.offset+i);
+//            dReal v0 = *(itdataprev+info->gvel.offset+i);
+//            dReal v1 = *(itdata+info->gvel.offset+i);
+//            dReal c3 = (v1 + v0 - 2*px*ideltatime)*ideltatime2;
+//            dReal c2 = (3*px*ideltatime - (2*v0 + v1))*ideltatime;
 //            dReal a1 = 6*c3, a0 = 2*c2;
 //            *(itdata+info->gaccel.offset+i) = a0 + deltatime*a1;
-        }
+//        }
         return true;
     }
 
@@ -312,3 +314,5 @@ protected:
 PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
     return PlannerBasePtr(new CubicTrajectoryRetimer(penv, sinput));
 }
+
+} // end namespace rplanners

@@ -323,14 +323,14 @@ End Function
         
         code = "Public Function getNumFreeParameters() As Integer\n    getNumFreeParameters = %d\nEnd Function\n"%len(node.freejointvars)
 #         if len(node.freejointvars) == 0:
-#             code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+#             code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
 #         else:
-#             code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+#             code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
 #             for i,freejointvar in enumerate(node.freejointvars):
 #                 code += "%d"%(freejointvar[1])
 #                 if i < len(node.freejointvars)-1:
 #                     code += ", "
-#             code += "}; return freeparams; }\n"
+#             code += "}; return freeindices; }\n"
         code += 'Public Function getNumJoints() As Integer\n    getNumJoints = %d\nEnd Function\n'%(len(node.freejointvars)+len(node.solvejointvars))
         #code += "Public Function getIKRealSize() As Integer\n    return sizeof(IKReal); }\n\n"
         code += 'Public Function getIKType() As Integer\n    getIKType = %d\nEnd Function\n'%IkType.Transform6D
@@ -419,14 +419,14 @@ End Class
         
         code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
                     code += ", "
-            code += "}; return freeparams; }\n"
+            code += "}; return freeindices; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Rotation3D
@@ -503,14 +503,14 @@ End Class
         
         code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
                     code += ", "
-            code += "}; return freeparams; }\n"
+            code += "}; return freeindices; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Translation3D
@@ -575,14 +575,14 @@ End Class
         
         code = "IKFAST_API int getNumFreeParameters() { return %d; }\n"%len(node.freejointvars)
         if len(node.freejointvars) == 0:
-            code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+            code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
         else:
-            code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+            code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
             for i,freejointvar in enumerate(node.freejointvars):
                 code += "%d"%(freejointvar[1])
                 if i < len(node.freejointvars)-1:
                     code += ", "
-            code += "}; return freeparams; }\n"
+            code += "}; return freeindices; }\n"
         code += "IKFAST_API int getNumJoints() { return %d; }\n\n"%(len(node.freejointvars)+len(node.solvejointvars))
         code += "IKFAST_API int getIKRealSize() { return sizeof(IKReal); }\n\n"
         code += 'IKFAST_API int getIKType() { return %d; }\n\n'%IkType.Direction3D
@@ -654,14 +654,14 @@ End Class
 
         code = "Public Function getNumFreeParameters() As Integer\n    getNumFreeParameters = %d\nEnd Function\n"%len(node.freejointvars)
 #         if len(node.freejointvars) == 0:
-#             code += "IKFAST_API int* getFreeParameters() { return NULL; }\n"
+#             code += "IKFAST_API const int* GetFreeIndices() { return NULL; }\n"
 #         else:
-#             code += "IKFAST_API int* getFreeParameters() { static int freeparams[] = {"
+#             code += "IKFAST_API const int* GetFreeIndices() { static const int freeindices[] = {"
 #             for i,freejointvar in enumerate(node.freejointvars):
 #                 code += "%d"%(freejointvar[1])
 #                 if i < len(node.freejointvars)-1:
 #                     code += ", "
-#             code += "}; return freeparams; }\n"
+#             code += "}; return freeindices; }\n"
         code += 'Public Function getNumJoints() As Integer\n    getNumJoints = %d\nEnd Function\n'%(len(node.freejointvars)+len(node.solvejointvars))
         #code += "Public Function getIKRealSize() As Integer\n    return sizeof(IKReal); }\n\n"
         code += 'Public Function getIKType() As Integer\n    getIKType = %d\nEnd Function\n'%IkType.Ray4D

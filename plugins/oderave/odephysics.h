@@ -59,10 +59,10 @@ class ODEPhysicsEngine : public OpenRAVE::PhysicsEngineBase
     }
 
     inline boost::shared_ptr<ODEPhysicsEngine> shared_physics() {
-        return boost::dynamic_pointer_cast<ODEPhysicsEngine>(shared_from_this());
+        return boost::static_pointer_cast<ODEPhysicsEngine>(shared_from_this());
     }
     inline boost::shared_ptr<ODEPhysicsEngine const> shared_physics_const() const {
-        return boost::dynamic_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
+        return boost::static_pointer_cast<ODEPhysicsEngine const>(shared_from_this());
     }
 
     class PhysicsPropertiesXMLReader : public BaseXMLReader
@@ -484,7 +484,7 @@ The possible properties that can be set are: ";
         }
     }
 
-    virtual Vector GetGravity()
+    virtual const Vector& GetGravity()
     {
         return _gravity;
     }
@@ -597,7 +597,7 @@ private:
             int minindex = min(pkb1->GetIndex(), pkb2->GetIndex());
             int maxindex = max(pkb1->GetIndex(), pkb2->GetIndex());
 
-            if( pkb1->GetParent()->GetAdjacentLinks().find(minindex|(maxindex<<16)) != pkb1->GetParent()->GetAdjacentLinks().end() )
+            if( pkb1->GetParent()->AreAdjacentLinks(minindex, maxindex))
                 return;
         }
 
@@ -611,12 +611,12 @@ private:
         if( _listcallbacks.size() > 0 ) {
             // fill the collision report
             _report->Reset(OpenRAVE::CO_Contacts);
-            _report->plink1 = pkb1;
-            _report->plink2 = pkb2;
+            int icollision = _report->AddLinkCollision(*pkb1, *pkb2);
 
+            OpenRAVE::CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
             dGeomID checkgeom1 = dGeomGetClass(o1) == dGeomTransformClass ? dGeomTransformGetGeom(o1) : o1;
             for(int i = 0; i < n; ++i) {
-                _report->contacts.push_back(CollisionReport::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
+                cpinfo.contacts.push_back(OpenRAVE::CONTACT(contact[i].geom.pos, checkgeom1 != contact[i].geom.g1 ? -Vector(contact[i].geom.normal) : Vector(contact[i].geom.normal), contact[i].geom.depth));
             }
 
             FOREACH(itfn, _listcallbacks) {

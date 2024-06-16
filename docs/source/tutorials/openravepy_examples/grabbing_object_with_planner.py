@@ -23,5 +23,5 @@ robot.WaitForController(0) # wait
 with env:
     robot.Grab(env.GetKinBody('mug4'))
     # move manipulator to all zeros, set jitter to 0.04 since cup is initially colliding with table
-    manipprob.MoveManipulator(numpy.zeros(len(manip.GetArmIndices())),jitter=0.04)
+    manipprob.MoveManipulator(numpy.zeros(len(manip.GetArmIndices())),jitter=0.08)
 robot.WaitForController(0) # wait

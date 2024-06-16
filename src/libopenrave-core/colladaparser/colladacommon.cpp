@@ -22,12 +22,32 @@
 namespace OpenRAVE
 {
 static boost::shared_ptr<DAE> s_dae;
-static boost::mutex s_daemutex;
+static std::mutex s_daemutex;
+static bool s_daedestroycallback=false; // true if we already registered with RaveAddCallbackForDestroy
+
+/// \brief should have s_daemutex locked before calling
+void SetGlobalDAE(boost::shared_ptr<DAE> newdae)
+{
+    RAVELOG_VERBOSE("resetting global collada DAE\n");
+    s_dae = newdae;
+}
+
+void ResetGlobalDAEWithLock()
+{
+    RAVELOG_VERBOSE("resetting global collada DAE\n");
+    std::lock_guard<std::mutex> lock(s_daemutex);
+    s_dae.reset();
+}
+
+/// \brief should have s_daemutex locked before calling
 boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults)
 {
+    if( !s_daedestroycallback ) {
+        RaveAddCallbackForDestroy(ResetGlobalDAEWithLock);
+        s_daedestroycallback = true;
+    }
     if( !s_dae ) {
         s_dae.reset(new DAE());
-        RaveAddCallbackForDestroy(boost::bind(SetGlobalDAE,boost::shared_ptr<DAE>()));
     }
     if( resetdefaults ) {
         // load the normal resolvers
@@ -42,13 +62,7 @@ boost::shared_ptr<DAE> GetGlobalDAE(bool resetdefaults)
     return s_dae;
 }
 
-void SetGlobalDAE(boost::shared_ptr<DAE> newdae)
-{
-    RAVELOG_VERBOSE("resetting global collada DAE\n");
-    s_dae = newdae;
-}
-
-boost::mutex& GetGlobalDAEMutex()
+std::mutex& GetGlobalDAEMutex()
 {
     return s_daemutex;
 }

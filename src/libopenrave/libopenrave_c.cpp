@@ -17,7 +17,7 @@
 #include "openrave_c/openrave_c.h"
 #include "libopenrave.h"
 
-#include <boost/thread/condition.hpp>
+#include <condition_variable>
 
 namespace OpenRAVE {
 
@@ -72,9 +72,12 @@ void ORCSetDebugLevel(int level)
     RaveSetDebugLevel((OpenRAVE::DebugLevel)level);
 }
 
-void ORCInitialize(bool bLoadAllPlugins, int level)
+void ORCInitialize(int bLoadAllPlugins, int level)
 {
-    RaveInitialize(bLoadAllPlugins,level);
+    if (bLoadAllPlugins == 1)
+        RaveInitialize(true,level);
+    else
+        RaveInitialize(false,level);
 }
 
 void ORCDestroy()
@@ -117,10 +120,10 @@ void ORCTriMeshDestroy(void* trimesh)
 }
 
 // can only support one viewer per environment
-typedef std::map<EnvironmentBasePtr, boost::shared_ptr<boost::thread> > VIEWERMAP;
+typedef std::map<EnvironmentBasePtr, boost::shared_ptr<std::thread> > VIEWERMAP;
 static VIEWERMAP s_mapEnvironmentThreadViewers;
-static boost::mutex s_mutexViewer;
-static boost::condition s_conditionViewer;
+static std::mutex s_mutexViewer;
+static std::condition_variable s_conditionViewer;
 
 void ORCEnvironmentDestroy(void* env)
 {
@@ -142,14 +145,17 @@ void ORCEnvironmentDestroy(void* env)
     penv->Destroy();
 }
 
-bool ORCEnvironmentLoad(void* env, const char* filename)
+int ORCEnvironmentLoad(void* env, const char* filename)
 {
-    return GetEnvironment(env)->Load(filename);
+    if(GetEnvironment(env)->Load(filename))
+        return 1;
+    else
+        return 0;
 }
 
 void* ORCEnvironmentGetKinBody(void* env, const char* name)
 {
-    KinBodyPtr pbody = GetEnvironment(env)->GetKinBody(name);
+    KinBodyPtr pbody = GetEnvironment(env)->GetKinBody(string_view(name, strlen(name)));
     if( !pbody ) {
         return NULL;
     }
@@ -186,7 +192,7 @@ int ORCEnvironmentGetRobots(void* env, void** robots)
 
 void ORCEnvironmentAdd(void* env, void* pinterface)
 {
-    GetEnvironment(env)->Add(GetInterface(pinterface));
+    GetEnvironment(env)->Add(GetInterface(pinterface), IAM_StrictNameChecking);
 }
 
 int ORCEnvironmentAddModule(void* env, void* module, const char* args)
@@ -222,14 +228,14 @@ void ORCEnvironmentUnlock(void* env)
 #endif
 }
 
-void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer)
+void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, int bShowViewer)
 {
     ViewerBasePtr pviewer;
     {
-        boost::mutex::scoped_lock lock(s_mutexViewer);
+        std::lock_guard<std::mutex> lock(s_mutexViewer);
         pviewer = RaveCreateViewer(penv, strviewer);
         if( !!pviewer ) {
-            penv->AddViewer(pviewer);
+            penv->Add(pviewer, IAM_AllowRenaming);
         }
         s_conditionViewer.notify_one();
     }
@@ -237,11 +243,15 @@ void CViewerThread(EnvironmentBasePtr penv, const string &strviewer, bool bShowV
     if( !pviewer ) {
         return;
     }
-    pviewer->main(bShowViewer);     // spin until quitfrommainloop is called
+
+    if (bShowViewer == 1)
+        pviewer->main(true);                                    // spin until quitfrommainloop is called
+    else
+        pviewer->main(false);
     penv->Remove(pviewer);
 }
 
-bool ORCEnvironmentSetViewer(void* env, const char* viewername)
+int ORCEnvironmentSetViewer(void* env, const char* viewername)
 {
     EnvironmentBasePtr penv = GetEnvironment(env);
     VIEWERMAP::iterator it = s_mapEnvironmentThreadViewers.find(penv);
@@ -253,12 +263,12 @@ bool ORCEnvironmentSetViewer(void* env, const char* viewername)
     }
 
     if( !!viewername && strlen(viewername) > 0 ) {
-        boost::mutex::scoped_lock lock(s_mutexViewer);
-        boost::shared_ptr<boost::thread> threadviewer(new boost::thread(boost::bind(CViewerThread, penv, std::string(viewername), true)));
+        std::unique_lock<std::mutex> lock(s_mutexViewer);
+        boost::shared_ptr<std::thread> threadviewer = boost::make_shared<std::thread>(std::bind(CViewerThread, penv, std::string(viewername), true));
         s_mapEnvironmentThreadViewers[penv] = threadviewer;
         s_conditionViewer.wait(lock);
     }
-    return true;
+    return 1;
 }
 
 char* ORCInterfaceSendCommand(void* pinterface, const char* command)
@@ -269,9 +279,9 @@ char* ORCInterfaceSendCommand(void* pinterface, const char* command)
     if( !bSuccess ) {
         return NULL;
     }
-    stringstream::streampos posstart = sout.tellg();
+    stringstream::pos_type posstart = sout.tellg();
     sout.seekg(0, ios_base::end);
-    stringstream::streampos posend = sout.tellg();
+    stringstream::pos_type posend = sout.tellg();
     sout.seekg(posstart);
     BOOST_ASSERT(posstart<=posend);
     char* poutput = (char*)malloc(posend-posstart+1);
@@ -377,10 +387,21 @@ void ORCBodyGetTransformMatrix(void* body, dReal* matrix)
     }
 }
 
-bool ORCBodyInitFromTrimesh(void* body, void* trimesh, bool visible)
+int ORCBodyInitFromTrimesh(void* body, void* trimesh, int visible)
 {
     TriMesh* ptrimesh = static_cast<TriMesh*>(trimesh);
-    return GetBody(body)->InitFromTrimesh(*ptrimesh,visible);
+    if (visible == 1) {
+        if (GetBody(body)->InitFromTrimesh(*ptrimesh, true))
+            return 1;
+        else
+            return 0;
+    }
+    else {
+        if (GetBody(body)->InitFromTrimesh(*ptrimesh, false))
+            return 1;
+        else
+            return 0;
+    }
 }
 
 int ORCBodyLinkGetGeometries(void* link, void** geometries)

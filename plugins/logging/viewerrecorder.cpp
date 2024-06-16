@@ -16,11 +16,14 @@
 #define __STDC_CONSTANT_MACROS
 #include "plugindefs.h"
 
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
-#include <boost/version.hpp>
+#include <condition_variable>
+#include <mutex>
 
+#include <boost/version.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
+
+using namespace boost::placeholders;
 
 #ifdef _WIN32
 
@@ -81,10 +84,10 @@ static boost::shared_ptr<VideoGlobalState> s_pVideoGlobalState;
 class ViewerRecorder : public ModuleBase
 {
     inline boost::shared_ptr<ViewerRecorder> shared_module() {
-        return boost::dynamic_pointer_cast<ViewerRecorder>(shared_from_this());
+        return boost::static_pointer_cast<ViewerRecorder>(shared_from_this());
     }
     inline boost::shared_ptr<ViewerRecorder const> shared_module_const() const {
-        return boost::dynamic_pointer_cast<ViewerRecorder const>(shared_from_this());
+        return boost::static_pointer_cast<ViewerRecorder const>(shared_from_this());
     }
     struct VideoFrame
     {
@@ -96,11 +99,11 @@ class ViewerRecorder : public ModuleBase
         bool _bProcessed;
     };
 
-    boost::mutex _mutex; // for video data passing
-    boost::mutex _mutexlibrary; // for video encoding library resources
-    boost::condition _condnewframe;
+    std::mutex _mutex; // for video data passing
+    std::mutex _mutexlibrary; // for video encoding library resources
+    std::condition_variable _condnewframe;
     bool _bContinueThread, _bStopRecord;
-    boost::shared_ptr<boost::thread> _threadrecord;
+    boost::shared_ptr<std::thread> _threadrecord;
 
     boost::multi_array<uint32_t,2> _vwatermarkimage;
     int _nFrameCount, _nVideoWidth, _nVideoHeight;
@@ -152,7 +155,7 @@ public:
         _picture_size = 0;
         _outbuf_size = 0;
 #endif
-        _threadrecord.reset(new boost::thread(boost::bind(&ViewerRecorder::_RecordThread,this)));
+        _threadrecord = boost::make_shared<std::thread>(std::bind(&ViewerRecorder::_RecordThread, this));
     }
     virtual ~ViewerRecorder()
     {
@@ -160,7 +163,7 @@ public:
         _bContinueThread = false;
         _Reset();
         {
-            boost::mutex::scoped_lock lock(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
             _condnewframe.notify_all();
         }
         _threadrecord->join();
@@ -232,7 +235,7 @@ protected:
                     break;
                 }
             }
-            boost::mutex::scoped_lock lock(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
             if( !pviewer ) {
                 RAVELOG_WARN("invalid viewer\n");
             }
@@ -270,7 +273,7 @@ protected:
 
     bool _SetWatermarkCommand(ostream& sout, istream& sinput)
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         int W, H;
         sinput >> W >> H;
         _vwatermarkimage.resize(boost::extents[H][W]);
@@ -284,7 +287,7 @@ protected:
 
     void _ViewerImageCallback(const uint8_t* memory, int width, int height, int pixeldepth)
     {
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         if( !GetEnv() || !_callback ) {
             // recorder already destroyed and this thread is just remaining
             return;
@@ -326,7 +329,7 @@ protected:
             // calls the environment lock, which might be taken if the environment is destroying the problem
             // therefore need to take it first
             while(_bContinueThread && !_bStopRecord) {
-                boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv = _LockEnvironment(100000);
+                boost::shared_ptr<EnvironmentLock> lockenv = _LockEnvironment(100000);
                 if( !!lockenv ) {
                     GetEnv()->StepSimulation(_fSimulationTimeMultiplier/_framerate);
                     break;
@@ -335,14 +338,10 @@ protected:
         }
     }
 
-    boost::shared_ptr<EnvironmentMutex::scoped_try_lock> _LockEnvironment(uint64_t timeout)
+    boost::shared_ptr<EnvironmentLock> _LockEnvironment(uint64_t timeout)
     {
         // try to acquire the lock
-#if BOOST_VERSION >= 103500
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),boost::defer_lock_t()));
-#else
-        boost::shared_ptr<EnvironmentMutex::scoped_try_lock> lockenv(new EnvironmentMutex::scoped_try_lock(GetEnv()->GetMutex(),false));
-#endif
+        boost::shared_ptr<EnvironmentLock> lockenv = boost::make_shared<EnvironmentLock>(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
         uint64_t basetime = utils::GetMicroTime();
         while(utils::GetMicroTime()-basetime<timeout ) {
             lockenv->try_lock();
@@ -362,7 +361,7 @@ protected:
             boost::shared_ptr<VideoFrame> frame;
             uint64_t numstores=0;
             {
-                boost::mutex::scoped_lock lock(_mutex);
+                std::unique_lock<std::mutex> lock(_mutex);
                 if( !_bContinueThread ) {
                     return;
                 }
@@ -456,7 +455,7 @@ protected:
         {
             RAVELOG_DEBUG("ViewerRecorder _Reset\n");
             _bStopRecord = true;
-            boost::mutex::scoped_lock lock(_mutex);
+            std::lock_guard<std::mutex> lock(_mutex);
             _nFrameCount = 0;
             _nVideoWidth = _nVideoHeight = 0;
             _framerate = 30000.0f/1001.0f;
@@ -470,7 +469,7 @@ protected:
         }
         {
             RAVELOG_DEBUG("ViewerRecorder _ResetLibrary\n");
-            boost::mutex::scoped_lock lock(_mutexlibrary);
+            std::lock_guard<std::mutex> lock(_mutexlibrary);
             _ResetLibrary();
         }
     }
@@ -623,7 +622,7 @@ protected:
 
     void _AddFrame(void* pdata)
     {
-        boost::mutex::scoped_lock lock(_mutexlibrary);
+        std::lock_guard<std::mutex> lock(_mutexlibrary);
         HRESULT hr = AVIStreamWrite(_psCompressed /*stream pointer*/, _nFrameCount /*time of this frame*/, 1 /*number to write*/, pdata, _biSizeImage /*size of this frame*/, AVIIF_KEYFRAME /*flags....*/, NULL, NULL);
         BOOST_ASSERT(hr == AVIERR_OK);
         _nFrameCount++;
@@ -715,8 +714,12 @@ protected:
         AVCodecContext *codec_ctx;
         AVCodec *codec;
 
+        bool bFixH264 = false;
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
         AVCodecID video_codec = codecid == -1 ? AV_CODEC_ID_MPEG4 : (AVCodecID)codecid;
+        if (video_codec == AV_CODEC_ID_H264) {
+            bFixH264 = true;
+        }
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
@@ -725,25 +728,35 @@ protected:
 #else
         AVOutputFormat *fmt = first_oformat;
 #endif
-        while (fmt != NULL) {
-            if (fmt->video_codec == video_codec) {
-                break;
+
+        _output = NULL;
+        if ( bFixH264 ) {
+            avformat_alloc_output_context2(&_output, NULL, "mp4", NULL);
+            BOOST_ASSERT(!!_output);
+        } else {
+            while (fmt != NULL) {
+                if (fmt->video_codec == video_codec) {
+                    break;
+                }
+                fmt = fmt->next;
             }
-            fmt = fmt->next;
+            BOOST_ASSERT(!!fmt);
+            _output = avformat_alloc_context();
+            BOOST_ASSERT(!!_output);
+            _output->oformat = fmt;
         }
-        BOOST_ASSERT(!!fmt);
 
         _frameindex = 0;
-        _output = avformat_alloc_context();
-        BOOST_ASSERT(!!_output);
-
-        _output->oformat = fmt;
+        
         snprintf(_output->filename, sizeof(_output->filename), "%s", filename.c_str());
 
-#if LIBAVFORMAT_VERSION_INT >= (54<<16)
-        _stream = avformat_new_stream(_output, 0);
+        codec = avcodec_find_encoder(video_codec);
+        BOOST_ASSERT(!!codec);
+
+#if LIBAVFORMAT_VERSION_INT >= (54<<16)     
+        _stream = avformat_new_stream(_output, codec);
 #else
-        _stream = av_new_stream(_output, 0);
+        _stream = av_new_stream(_output, codec);
 #endif
         BOOST_ASSERT(!!_stream);
 
@@ -767,7 +780,11 @@ protected:
         }
         codec_ctx->gop_size = 10;
         codec_ctx->max_b_frames = 1;
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+#else
         codec_ctx->pix_fmt = PIX_FMT_YUV420P;
+#endif
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
         // not necessary to set parameters?
@@ -776,8 +793,6 @@ protected:
             throw OPENRAVE_EXCEPTION_FORMAT0("set parameters failed",ORE_Assert);
         }
 #endif
-        codec = avcodec_find_encoder(codec_ctx->codec_id);
-        BOOST_ASSERT(!!codec);
 
         RAVELOG_DEBUG(str(boost::format("opening %s, w:%d h:%dx fps:%f, codec: %s")%_output->filename%width%height%frameRate%codec->name));
 
@@ -808,23 +823,36 @@ protected:
 #endif
         _bWroteHeader = true;
 
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        _picture = av_frame_alloc();
+        _yuv420p = av_frame_alloc();
+#else
         _picture = avcodec_alloc_frame();
         _yuv420p = avcodec_alloc_frame();
+#endif
 
         _outbuf_size = 500000;
         _outbuf = (char*)malloc(_outbuf_size);
         BOOST_ASSERT(!!_outbuf);
 
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#else
         _picture_size = avpicture_get_size(PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#endif
         _picture_buf = (char*)malloc(_picture_size);
         BOOST_ASSERT(!!_picture_buf);
 
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#else
         avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+#endif
     }
 
     void _AddFrame(void* pdata)
     {
-        boost::mutex::scoped_lock lock(_mutexlibrary);
+        std::lock_guard<std::mutex> lock(_mutexlibrary);
         if( !_output ) {
             RAVELOG_DEBUG("video resources destroyed\n");
             return;
@@ -844,7 +872,11 @@ protected:
 
 #ifdef HAVE_NEW_FFMPEG
         struct SwsContext *img_convert_ctx;
-        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, AV_PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+#else
+        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+#endif
         if (!sws_scale(img_convert_ctx, _picture->data, _picture->linesize, 0, _stream->codec->height, _yuv420p->data, _yuv420p->linesize)) {
             sws_freeContext(img_convert_ctx);
             throw OPENRAVE_EXCEPTION_FORMAT0("ADD_FRAME sws_scale failed",ORE_Assert);
@@ -864,7 +896,11 @@ protected:
         av_init_packet(&pkt);
         int ret = avcodec_encode_video2(_stream->codec, &pkt, _yuv420p, &got_packet);
         if( ret < 0 ) {
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+            av_free_packet(&pkt);
+#else
             av_destruct_packet(&pkt);
+#endif
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
         }
         if( got_packet ) {
@@ -873,11 +909,19 @@ protected:
                 _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
             if( av_write_frame(_output, &pkt) < 0) {
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+                av_free_packet(&pkt);
+#else
                 av_destruct_packet(&pkt);
+#endif
                 throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
             }
         }
+#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+        av_free_packet(&pkt);
+#else
         av_destruct_packet(&pkt);
+#endif
 #else
         int size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
         if (size < 0) {

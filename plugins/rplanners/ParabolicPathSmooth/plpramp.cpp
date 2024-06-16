@@ -1,6 +1,8 @@
 // -*- coding: utf-8 -*-
 #include "plpramp.h"
 
+#pragma GCC diagnostic ignored "-Wshadow"
+
 namespace ParabolicRampInternal {
 
 Real PLPRamp::Evaluate(Real t) const

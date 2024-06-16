@@ -1,7 +1,6 @@
 #ifndef OPENRAVE_PLUGINDEFS_H
 #define OPENRAVE_PLUGINDEFS_H
 
-
 #include <openrave/openrave.h> // should be included first in order to get boost throwing openrave exceptions
 #include <openrave/utils.h>
 
@@ -36,8 +35,8 @@
 
 #else
 
-#define FOREACH(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); (it)++)
-#define FOREACH_NOINC(it, v) for(decltype((v).begin())it = (v).begin(); it != (v).end(); )
+#define FOREACH(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); (it)++)
+#define FOREACH_NOINC(it, v) for(decltype((v).begin()) it = (v).begin(); it != (v).end(); )
 
 #endif
 
@@ -53,11 +52,9 @@
 #include <iostream>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
 #include <boost/make_shared.hpp>
-#include <boost/iterator/transform_iterator.hpp>
 #include <boost/range/concepts.hpp>
-#include <boost/range/detail/any_iterator.hpp>
+#include <boost/unordered_map.hpp>
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_oderave", msgid)
 
@@ -100,6 +97,7 @@ using OpenRAVE::AttributesList;
 
 
 #include <fcl/collision.h>
+#include <fcl/distance.h>
 #include <fcl/BVH/BVH_model.h>
 #include <fcl/broadphase/broadphase.h>
 #include <fcl/shape/geometric_shapes.h>

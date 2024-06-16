@@ -16,6 +16,9 @@
 #include "commonmanipulation.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 class BaseManipulation : public ModuleBase
 {
@@ -114,7 +117,7 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
             }
         }
 
-        RAVELOG_DEBUG(str(boost::format("BaseManipulation: using %s planner\n")%_strRRTPlannerName));
+        RAVELOG_DEBUG_FORMAT("env=%d, BaseManipulation: using %s planner", GetEnv()->GetId()%_strRRTPlannerName);
         return 0;
     }
 
@@ -125,16 +128,16 @@ Method wraps the WorkspaceTrajectoryTracker planner. For more details on paramet
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         return ModuleBase::SendCommand(sout,sinput);
     }
 protected:
 
     inline boost::shared_ptr<BaseManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<BaseManipulation>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<BaseManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<BaseManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<BaseManipulation const>(shared_from_this());
     }
 
     bool Traj(ostream& sout, istream& sinput)
@@ -322,13 +325,13 @@ protected:
             return false;
         }
 
-        if( !planner->InitPlan(robot, params) ) {
+        if( !planner->InitPlan(robot, params).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
         TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !planner->PlanPath(poutputtraj) ) {
+        if( !planner->PlanPath(poutputtraj).HasSolution() ) {
             return false;
         }
         if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -453,7 +456,6 @@ protected:
 
         if( usedynamicsconstraints ) {
             // use dynamics constraints, so remove the old path constraint function
-            params->_checkpathconstraintsfn.clear();
             std::list<KinBodyPtr> listCheckBodies;
             listCheckBodies.push_back(robot);
             planningutils::DynamicsCollisionConstraintPtr dynamics(new planningutils::DynamicsCollisionConstraint(params, listCheckBodies, 0xffffffff));
@@ -522,12 +524,12 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).HasSolution() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
 
-            if( !rrtplanner->PlanPath(ptraj) ) {
+            if( !rrtplanner->PlanPath(ptraj).HasSolution() ) {
                 RAVELOG_WARN("PlanPath failed\n");
             }
             else {
@@ -550,12 +552,12 @@ protected:
         if( jitter > 0 ) {
             // could have returned a jittered goal different from the original goals
             try {
-                stringstream soutput, sinput;
-                sinput << "GetGoalIndex";
-                rrtplanner->SendCommand(soutput,sinput);
+                stringstream ssoutput, ssinput;
+                ssinput << "GetGoalIndex";
+                rrtplanner->SendCommand(ssoutput,ssinput);
 
                 int goalindex = -1;
-                soutput >> goalindex;
+                ssoutput >> goalindex;
                 if( goalindex >= 0 && goalindex < (int)vgoalchanged.size() && vgoalchanged.at(goalindex) ) {
                     std::copy(voriggoalconfig.begin()+goalindex*robot->GetActiveDOF(),voriggoalconfig.begin()+(goalindex+1)*robot->GetActiveDOF(),vonegoal.begin());
                     planningutils::InsertActiveDOFWaypointWithRetiming(ptraj->GetNumWaypoints(),vonegoal,vector<dReal>(), ptraj, robot, _fMaxVelMult);
@@ -600,6 +602,7 @@ protected:
         dReal goalsampleprob = 0.1;
         int nGoalMaxTries=10;
         std::vector<dReal> vinitialconfig;
+        std::vector<dReal> vfreevalues;
         while(!sinput.eof()) {
             sinput >> cmd;
             if( !sinput ) {
@@ -743,6 +746,14 @@ protected:
                     sinput >> *itvalue;
                 }
             }
+            else if (cmd == "freevalues") {
+                size_t num=0;
+                sinput >> num;
+                vfreevalues.resize(num);
+                FOREACH(itvalue, vfreevalues) {
+                    sinput >> *itvalue;
+                }
+            }
             else {
                 RAVELOG_WARN(str(boost::format("unrecognized command: %s\n")%cmd));
                 break;
@@ -777,7 +788,7 @@ protected:
             params->_sPostProcessingPlanner = "shortcut_linear";
             params->_sPostProcessingParameters ="<_nmaxiterations>100</_nmaxiterations><_postprocessing planner=\"lineartrajectoryretimer\"></_postprocessing>";
             vector<dReal> vdelta(params->vinitialconfig.size(),0);
-            if( !params->_neighstatefn(params->vinitialconfig,vdelta,0)) {
+            if( params->_neighstatefn(params->vinitialconfig,vdelta,0) == NSS_Failed ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0("initial configuration does not follow constraints",ORE_InconsistentConstraints);
             }
         }
@@ -785,7 +796,8 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices(), 0);
 
         vector<dReal> vgoal;
-        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples,nGoalMaxTries);
+        const bool searchfreeparameters = vfreevalues.empty();
+        planningutils::ManipulatorIKGoalSampler goalsampler(pmanip, listgoals,goalsamples,nGoalMaxTries, 1, searchfreeparameters, IKFO_CheckEnvCollisions, vfreevalues);
         goalsampler.SetJitter(jitterikparam);
         params->vgoalconfig.reserve(nSeedIkSolutions*robot->GetActiveDOF());
         while(nSeedIkSolutions > 0) {
@@ -843,12 +855,12 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
 
         for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).HasSolution() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
 
-            if( rrtplanner->PlanPath(ptraj) ) {
+            if( rrtplanner->PlanPath(ptraj).HasSolution() ) {
                 bSuccess = true;
                 RAVELOG_DEBUG("finished planning\n");
                 break;
@@ -872,9 +884,9 @@ protected:
         if( jitterikparam > 0 ) {
             // could have returned a jittered goal different from the original goals
             try {
-                stringstream soutput, sinput;
-                sinput << "GetGoalIndex";
-                rrtplanner->SendCommand(soutput,sinput);
+                stringstream ssoutput, ssinput;
+                ssinput << "GetGoalIndex";
+                rrtplanner->SendCommand(ssoutput,ssinput);
             }
             catch(const std::exception& ex) {
                 RAVELOG_WARN(str(boost::format("planner %s does not support GetGoalIndex command necessary for determining what goal it chose! %s")%rrtplanner->GetXMLId()%ex.what()));
@@ -1084,7 +1096,7 @@ protected:
         }
 
         RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
-        robot->Grab(ptarget);
+        robot->Grab(ptarget, rapidjson::Value());
         return true;
     }
 

@@ -37,10 +37,18 @@ else:
 if openravepy_currentversion is not None:
     from sys import modules
     modules['openravepy'] = openravepy_currentversion
+    from sys import version_info
+    from types import ModuleType
+    if version_info[0] >= 3:
+        # have to resolve so modules so that they are not initialized twice
+        for name, value in modules['openravepy'].__dict__.items():
+            if isinstance(value, ModuleType):
+                if hasattr(value, '__file__') and value.__file__.endswith(('.so', '.pyd')):
+                    modules['openravepy.' + name] = value
 
 # necessary in order to generate documentation
 try:
     if __openravepy_import_examples__:
         import openravepy.examples
-except Exception, e:
+except Exception as e:
     pass

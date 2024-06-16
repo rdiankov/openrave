@@ -24,18 +24,29 @@
 
 namespace OpenRAVE {
 
-/// \brief Specifies the boundary conditions of intervals for sampling
+/// \brief The lower sixteen bits specify the boundary confitions of intervals for sampling. The upper sixteen bits
+/// specify interpolation mode (currently specifically for the Check function).
 enum IntervalType {
+    // Interval type (lower sixteen bits)
     IT_Open=0, ///< (a,b)
     IT_OpenStart=1, ///< (a,b]
     IT_OpenEnd=2, ///< [a,b)
     IT_Closed=3, ///< [a,b]
+    IT_IntervalMask=0xffff,
+    // Interpolation mode (higher sixteen bits)
+    IT_Default=0x00000000,
+    IT_AllLinear=0x00010000,
+    IT_Cubic=0x00020000,
+    IT_Quintic=0x00040000,
+    IT_InterpolationMask=0xffff0000,
 };
 
 enum SampleDataType {
     SDT_Real=1,
     SDT_Uint32=2,
 };
+
+typedef boost::function<int (std::vector<dReal>&,const std::vector<dReal>&, int)> NeighStateFn;
 
 /** \brief <b>[interface]</b> Contains space samplers commonly used in planners. <b>If not specified, method is not multi-thread safe.</b> See \ref arch_spacesampler.
     \ingroup interfaces
@@ -139,15 +150,18 @@ public:
     /// \brief Sets a distance metric for measuring samples. Used when computing neighborhood sampling
     //virtual void SetDistanceMetric(const boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn) OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief Sets a function for computing a neighboring state of a given sample that satisfies constraints.
+    virtual void SetNeighStateFn(const NeighStateFn& neighstatefn) OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /** \brief Callback function during sampling
 
         \param sampleiteration the sampling iteration of the planner (shows how far the planner has gone)
         \return return value can be processed by the sampler to modify its behavior. the meaning is user defined.
      */
-    typedef boost::function<int(int)> StatusCallbackFn;
-    
+    typedef boost::function<int (int)> StatusCallbackFn;
+
     /** \brief register a function that is called periodically during sampling
-        
+
         Callback can be used to periodically send status messages from the sampler's thread. It can also throw an exception to "cancel" the sampler if it takes too long.
      */
     virtual UserDataPtr RegisterStatusCallback(const StatusCallbackFn& callbackfn);
@@ -162,14 +176,14 @@ protected:
 
     /// \brief Calls the registered callbacks in order, returns the bitwise OR of all the functions.
     virtual int _CallStatusFunctions(int sampleiteration);
-    
+
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_SPACESAMPLER_HASH;
     }
-    
+
     std::list<UserDataWeakPtr> __listRegisteredCallbacks; ///< internally managed callbacks
-    
+
     friend class CustomSamplerCallbackData;
 };
 

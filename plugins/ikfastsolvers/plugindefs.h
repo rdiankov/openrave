@@ -59,7 +59,6 @@
 #include <cmath>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
 #include <boost/format.hpp>
 
 using namespace std;
@@ -74,9 +73,9 @@ static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
 #include "ikfast.h"
 
 #ifdef OPENRAVE_IKFAST_FLOAT32
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const std::vector<dReal>& vfreeinc);
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<float> > ikfunctions, const std::vector<dReal>& vfreeinc, dReal ikthreshold=1e-4);
 #endif
-IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const std::vector<dReal>& vfreeinc);
+IkSolverBasePtr CreateIkFastSolver(EnvironmentBasePtr penv, std::istream& sinput, boost::shared_ptr<ikfast::IkFastFunctions<double> > ikfunctions, const std::vector<dReal>& vfreeinc, dReal ikthreshold=1e-4);
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()
@@ -86,5 +85,11 @@ BOOST_TYPEOF_REGISTER_TEMPLATE(IkSolutionList, 1)
 #endif
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_ikfastsolvers", msgid)
+
+inline std::ostream& SerializeTransform(std::ostream& O, const Transform& t, char delim=',')
+{
+    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
+    return O;
+}
 
 #endif

@@ -14,16 +14,27 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include <openrave/plugin.h>
+#include "basesamplers.h"
+
 #include "mt19937ar.h"
 #include "halton.h"
 #include "robotconfiguration.h"
 #include "bodyconfiguration.h"
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+BaseSamplersPlugin::BaseSamplersPlugin()
+{
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("MT19937");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("Halton");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("RobotConfiguration");
+    _interfaces[OpenRAVE::PT_SpaceSampler].push_back("BodyConfiguration");
+}
+
+BaseSamplersPlugin::~BaseSamplersPlugin() {}
+
+OpenRAVE::InterfaceBasePtr BaseSamplersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
-    case PT_SpaceSampler:
+    case OpenRAVE::PT_SpaceSampler:
         if( interfacename == "mt19937") {
             return InterfaceBasePtr(new MT19937Sampler(penv,sinput));
         }
@@ -40,17 +51,24 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& BaseSamplersPlugin::GetInterfaces() const
 {
-    info.interfacenames[PT_SpaceSampler].push_back("MT19937");
-    info.interfacenames[PT_SpaceSampler].push_back("Halton");
-    info.interfacenames[PT_SpaceSampler].push_back("RobotConfiguration");
-    info.interfacenames[PT_SpaceSampler].push_back("BodyConfiguration");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& BaseSamplersPlugin::GetPluginName() const
 {
+    static std::string pluginname = "BaseSamplersPlugin";
+    return pluginname;
 }
+
+#if !OPENRAVE_STATIC_PLUGINS
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new BaseSamplersPlugin();
+}
+
+#endif // OPENRAVE_STATIC_PLUGINS

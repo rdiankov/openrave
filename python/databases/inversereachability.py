@@ -38,7 +38,7 @@ Description
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database inversereachability --help
+.. shell-block:: python3 -m openravepy --database inversereachability --help
 
 Class Definitions
 -----------------
@@ -72,7 +72,7 @@ log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 try:
     from scipy.optimize import leastsq
 except ImportError:
-    print 'could not import scipy.optimize.leastsq'
+    print('could not import scipy.optimize.leastsq')
 
 class InverseReachabilityModel(DatabaseGenerator):
     """Inverts the reachability and computes probability distributions of the robot's base given an end effector position"""
@@ -665,7 +665,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     self.robot.SetDOFValues(random.rand()*(upper-lower)+lower,self.manip.GetArmIndices()) # set random values
                     if not self.robot.CheckSelfCollision():
                         break
-                Tgrasp = self.manip.GetEndEffectorTransform()
+                Tgrasp = self.manip.GetTransform()
             with self.env:
                 densityfn,samplerfn,bounds = self.computeBaseDistribution(Tgrasp,logllthresh=1.0)
                 if densityfn is None:

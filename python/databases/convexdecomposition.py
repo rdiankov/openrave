@@ -55,7 +55,7 @@ Approximates each of the links with a set of convex hulls using John Ratcliff's 
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database convexdecomposition --help
+.. shell-block:: python3 -m openravepy --database convexdecomposition --help
 
 Class Definitions
 -----------------
@@ -69,7 +69,9 @@ __license__ = 'Apache License, Version 2.0'
 if not __openravepy_build_doc__:
     from numpy import *
 
-from numpy import reshape, array, float64, int32, zeros, isnan
+from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose
+from numpy.linalg import norm
+from numpy.core.umath_tests import inner1d
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
@@ -81,20 +83,27 @@ import time
 import os.path
 from os import makedirs
 from optparse import OptionParser
-from itertools import izip
+
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 
 try:
     from cStringIO import StringIO
-except:
-    from StringIO import StringIO
+except ImportError:
+    try:
+        from StringIO import StringIO
+    except ImportError:
+        from io import StringIO
     
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
 try:
     from .. import convexdecompositionpy
-except Exception, e:
-    print 'failed to import convexdecompositionpy', e
+except Exception as e:
+    print('failed to import convexdecompositionpy %r'%e)
 
 class ConvexDecompositionError(Exception):
     def __init__(self,msg=u''):
@@ -125,7 +134,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         return self.linkgeometry is not None and len(self.linkgeometry)==len(self.robot.GetLinks())
     
     def getversion(self):
-        return 2
+        return 5
     
     def save(self):
         try:
@@ -141,7 +150,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
             except ImportError:
                 log.warn('python h5py library not found, will not be able to speedup database access')
                 return self.LoadPickle()
-        except Exception, e:
+        except Exception as e:
             log.warn(e)
             return False
 
@@ -161,7 +170,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
         try:
             f['version'] = self.getversion()
             gparams = f.create_group('params')
-            for name,value in self.convexparams.iteritems():
+            for name,value in self.convexparams.items():
                 gparams[name] = value
             f['padding'] = self._padding
             glinkgeometry = f.create_group('linkgeometry')
@@ -209,19 +218,23 @@ class ConvexDecompositionModel(DatabaseGenerator):
             
             self.convexparams = {}
             gparams = f['params']
-            for name,value in gparams.iteritems():
+            for name,value in gparams.items():
                 self.convexparams[name] = value.value
             self._padding = f['padding'].value
             glinkgeometry = f['linkgeometry']
             self.linkgeometry = []
-            for ilink, glink in glinkgeometry.iteritems():
+            for ilink, glink in glinkgeometry.items():
                 linkgeometry = []
-                for ig, glinkhulls in glink.iteritems():
+                for ig, glinkhulls in glink.items():
                     ghulls = glinkhulls['hulls']
                     geometryhulls = []
-                    for j, ghull in ghulls.iteritems():
-                        hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
-                        geometryhulls.append(hull)
+                    for j, ghull in ghulls.items():
+                        if 'vertices' in ghull and len(ghull['vertices'].shape) == 2 and 'indices' in ghull and len(ghull['indices'].shape\
+) == 2 and 'planes' in ghull and len(ghull['planes'].shape) == 2:
+                            hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
+                            geometryhulls.append(hull)
+                        else:
+                            log.warn('could not open link %s geometry %s hull %s: %r', ilink, ig, j, ghull)
                     linkgeometry.append((int(ig),geometryhulls))
                 while len(self.linkgeometry) <= int(ilink):
                     self.linkgeometry.append(None)
@@ -230,8 +243,8 @@ class ConvexDecompositionModel(DatabaseGenerator):
             f = None
             return self.has()
         
-        except Exception,e:
-            log.debug(u'LoadHDF5 for %s: ',filename,e)
+        except Exception as e:
+            log.debug(u'LoadHDF5 for %s: %r',filename,e)
             return False
         finally:
             if f is not None:
@@ -272,27 +285,26 @@ class ConvexDecompositionModel(DatabaseGenerator):
         self.linkgeometry = []
         with self.env:
             links = self.robot.GetLinks()
-            for il,link in enumerate(links):
+            for il, link in enumerate(links):
                 geomhulls = []
                 geometries = link.GetGeometries()
-                for ig,geom in enumerate(geometries):
-                    if geom.GetType() == KinBody.Link.GeomType.Trimesh or padding > 0:
+                for ig, geom in enumerate(geometries):
+                    trimesh = geom.GetCollisionMesh()
+                    if len(trimesh.indices) == 0:
+                        geom.InitCollisionMesh()
                         trimesh = geom.GetCollisionMesh()
-                        if len(trimesh.indices) == 0:
-                            geom.InitCollisionMesh()
-                            trimesh = geom.GetCollisionMesh()
-                        if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
-                            log.info(u'computing hull for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
-                            orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
-                        else:
-                            log.info(u'computing decomposition for link %d/%d geom %d/%d',il,len(links), ig, len(geometries))
-                            orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
-                        cdhulls = []
-                        for hull in orghulls:
-                            if any(isnan(hull[0])):
-                                raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
-                            cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
-                        geomhulls.append((ig,cdhulls))
+                    if link.GetName() in convexHullLinks or (minTriangleConvexHullThresh is not None and len(trimesh.indices) > minTriangleConvexHullThresh):
+                        log.info(u'computing hull for link %d/%d geom %d/%d (%s:%s): vertices=%d, indices=%d', il, len(links), ig, len(geometries), link.GetName(), geom.GetName(), len(trimesh.vertices), len(trimesh.indices))
+                        orghulls = [self.ComputePaddedConvexHullFromTriMesh(trimesh,padding)]
+                    else:
+                        log.info(u'computing decomposition for link %d/%d geom %d/%d (%s:%s): type %s', il, len(links), ig, len(geometries), link.GetName(), geom.GetName(), geom.GetType())
+                        orghulls = self.ComputePaddedConvexDecompositionFromTriMesh(trimesh,padding)
+                    cdhulls = []
+                    for hull in orghulls:
+                        if any(isnan(hull[0])):
+                            raise ConvexDecompositionError(u'geom link %s has NaNs', link.GetName())
+                        cdhulls.append((hull[0],hull[1],self.ComputeHullPlanes(hull)))
+                    geomhulls.append((ig,cdhulls))
                 self.linkgeometry.append(geomhulls)
         self._padding = padding
         log.info(u'all convex decomposition finished in %fs',time.time()-starttime)
@@ -300,6 +312,9 @@ class ConvexDecompositionModel(DatabaseGenerator):
     def ComputePaddedConvexDecompositionFromTriMesh(self, trimesh, padding=0.0):
         if len(trimesh.indices) > 0:
             orghulls = convexdecompositionpy.computeConvexDecomposition(trimesh.vertices,trimesh.indices,**self.convexparams)
+            if not self._ValidateConvexDecomposition(orghulls, trimesh):
+                log.warn('Some original vertices are not inside the convex decomposition. Using ConvexHull instead.')
+                return [self.ComputePaddedConvexHullFromTriMesh(trimesh, padding)]
         else:
             orghulls = []
         if len(orghulls) > 0:
@@ -318,7 +333,12 @@ class ConvexDecompositionModel(DatabaseGenerator):
             cmd = StringIO()
             cmd.write('ConvexHull returnplanes 0 returnfaces 0 returntriangles 1 points %d %d '%(len(trimesh.vertices),3))
             for v in trimesh.vertices:
-                cmd.write('%.15e %.15e %.15e '%(v[0],v[1],v[2]))            
+                cmd.write('%.15e %.15e %.15e '%(v[0],v[1],v[2]))
+            minpos = numpy.min(trimesh.vertices,axis=0)
+            maxpos = numpy.max(trimesh.vertices,axis=0)
+            if all(abs(maxpos-minpos) <= 1e-7):
+                log.warn('trimesh of %d vertices is very small!', len(trimesh.vertices))
+                return zeros((0,3), float), zeros((0,3),int)# trimesh.vertices, trimesh.indices
             res = self._graspermodule.SendCommand(cmd.getvalue()).split()
             if res is None:
                 raise ConvexDecompositionError(u'failed to compute convex hull')
@@ -331,29 +351,52 @@ class ConvexDecompositionModel(DatabaseGenerator):
             return self.PadMesh(trimesh.vertices,reshape(array(res[offset:(offset+3*numtriangles)],int32),(numtriangles,3)), padding)
         
     @staticmethod
-    def PadMesh(vertices,indices,padding):
+    def PadMesh(vertices, indices, padding, mergeDuplicated=True, rtol=1e-05, atol=1e-08, setNormalsAwayFromCenter=False):
         """pads a mesh by increasing towards the normal
+        :param mergeDuplicated: This function will return a bad mesh when there are duplicated vertices and mergeDuplicated=False
+        :param rtol: The relative tolerance parameter to np.isclose when finding duplicated vertices
+        :param atol: The absolute tolerance parameter to np.isclose when finding duplicated vertices
+        :param setNormalsAwayFromCenter: if True, then will normalize all normals so that they point away from center-of-geometry.
         """
         M = mean(vertices,0)
-        facenormals = array([cross(vertices[i1]-vertices[i0],vertices[i2]-vertices[i0]) for i0,i1,i2 in indices])
-        facenormals *= transpose(tile(1.0/sqrt(sum(facenormals**2,1)),(3,1)))
+        
+        # Merge duplicated vertices (+- epsilon)
+        indices_raveled = indices.ravel()
+        vertices_map = arange(len(vertices), dtype=indices.dtype)
+        for a in range(len(vertices) - 1):
+            if vertices_map[a] == a:
+                combine = a + 1 + flatnonzero(isclose(vertices[a], vertices[a+1:], rtol, atol).all(axis=1))
+                vertices_map[combine] = a
+        indices = vertices_map[indices.ravel()].reshape(-1, 3)
+        
+        vertices_0 = vertices[indices[:, 0]]
+        facenormals = cross(vertices[indices[:, 1]] - vertices_0, vertices[indices[:, 2]] - vertices_0)
+        degenerate = isclose(facenormals, 0.0, rtol, atol).all(axis=1)
+        facenormals /= norm(facenormals, axis=1)[:, newaxis]
+        # Take care of degenerate triangles. Otherwise their normals would be none
+        facenormals[degenerate] = 0.0
+        
         # make sure normals are facing outward
-        newvertices = zeros((0,3),float64)
-        newindices = zeros((0,3),int32)
-        originaledges = []
-        for i in range(len(facenormals)):
-            if dot(vertices[indices[i,0]]-M,facenormals[i]) < 0:
-                facenormals[i] *= -1
-            offset = len(newvertices)
-            newvertices = r_[newvertices,vertices[indices[i,:]]+tile(facenormals[i]*padding,(3,1))]
-            newindices = r_[newindices,[[offset,offset+1,offset+2]]]
-            for j0,j1 in [[0,1],[0,2],[1,2]]:
-                if indices[i,j0] < indices[i,j1]:
-                    originaledges.append([indices[i,j0],indices[i,j1],offset+j0,offset+j1])
-                else:
-                    originaledges.append([indices[i,j1],indices[i,j0],offset+j1,offset+j0])
+        newindices = arange(3 * len(facenormals), dtype=int32).reshape(-1, 3)
+        originaledges = empty((3 * len(facenormals), 5), dtype=int32)
+        
+        if setNormalsAwayFromCenter:
+            flip = inner1d(vertices[indices[:,0]] - M, facenormals) < 0
+            facenormals[flip] *= -1 # dangerous for hollow objects!
+        newvertices = vertices[indices.ravel()] + repeat(facenormals*padding, 3, axis=0)
+        
+        offsets = arange(0, 3 * len(facenormals), 3)
+        indices_j = [indices[:, j] for j in range(3)]
+        for j0, j1, n in [[0,1,0],[1,2,1],[2,0,2]]:
+            swap = indices_j[j0] < indices_j[j1]
+            originaledges_n = originaledges[n::3]
+            originaledges_n[:, 0] = where(swap, indices_j[j0], indices_j[j1])
+            originaledges_n[:, 1] = where(swap, indices_j[j1], indices_j[j0])
+            originaledges_n[:, 2] = offsets + j0#where(swap, j0, j1)
+            originaledges_n[:, 3] = offsets + j1#where(swap, j1, j0)
+            originaledges_n[:, 4] = swap
+        
         # find the connecting edges across the new faces
-        originaledges = array(originaledges)
         offset = 0
         verticesofinterest = {}
         for i,edge in enumerate(originaledges):
@@ -367,27 +410,40 @@ class ConvexDecompositionModel(DatabaseGenerator):
                 if not edge[1] in verticesofinterest:
                     verticesofinterest[edge[1]] = len(newvertices)+offset
                     offset += 1
-                newindices = r_[newindices,[[edge[2],edge[3],cedge[3]],[edge[2],cedge[3],cedge[2]],[edge[2],cedge[2],verticesofinterest[edge[0]]],[edge[3],cedge[3],verticesofinterest[edge[1]]]]]
+                newindices = r_[newindices,[[edge[2],cedge[3],edge[3]],[edge[3],cedge[3],cedge[2]]]]
+                if edge[4] == 0:
+                    newindices = r_[newindices, [[edge[3],cedge[2],verticesofinterest[edge[0]]],[cedge[3],edge[2],verticesofinterest[edge[1]]]]]
+                else:
+                    newindices = r_[newindices, [[cedge[3],edge[2],verticesofinterest[edge[0]]],[edge[3],cedge[2],verticesofinterest[edge[1]]]]]
         if offset > 0:
             newvertices = r_[newvertices,zeros((offset,3))]
         # for every vertex, add a point representing the mean of surrounding extruded vertices
-        for originalvertex, newvertex in verticesofinterest.iteritems():
+        for originalvertex, newvertex in verticesofinterest.items():
             vertexindices = flatnonzero(indices==originalvertex)
             assert(len(vertexindices) > 0)
             newvertices[newvertex,:] = mean(newvertices[vertexindices],0)
         assert(not any(isnan(newvertices)))
+        
         # make sure all faces are facing outward
-        for inds in newindices:
-            if dot(cross(newvertices[inds[1]]-newvertices[inds[0]],newvertices[inds[2]]-newvertices[inds[0]]),newvertices[inds[0]]-M) < 0:
-                inds[1],inds[2] = inds[2],inds[1]
+        if setNormalsAwayFromCenter:
+            newvertices_0 = newvertices[newindices[:, 0]]
+            flip = inner1d(cross(newvertices[newindices[:, 1]] - newvertices_0,
+                                 newvertices[newindices[:, 2]] - newvertices_0), newvertices_0 - M) < 0
+            for n, inds in enumerate(newindices):
+                if flip[n]:
+                    inds[1],inds[2] = inds[2],inds[1]
+        
         return newvertices,newindices
-
+    
     @staticmethod
     def ComputeHullPlanes(hull,thresh=0.99999):
         """computes the planes of a hull
         
         The computed planes point outside of the mesh. Therefore a point is inside only if the distance to all planes is negative.
         """
+        if len(hull[0]) == 0:
+            return zeros((0,4),float)
+        
         vm = mean(hull[0],0)
         v0 = hull[0][hull[1][:,0],:]
         v1 = hull[0][hull[1][:,1],:]-v0
@@ -404,6 +460,34 @@ class ConvexDecompositionModel(DatabaseGenerator):
         for i in range(len(normalizedplanes)-1):
             uniqueplanes[i+1:] &= dot(normalizedplanes[i+1:,:],normalizedplanes[i])<thresh
         return planes[uniqueplanes]
+
+    def _ValidateConvexDecomposition(self, hullList, trimesh, tol=5e-4):
+        """Checks if the convex hulls specified in hullList cover all the vertices in the given trimesh.
+        
+        Args:
+            hullList (list of (vertices, indices)): list of tuples (vertices, indices), where each tuple contains vertices and indices for one convex hull.
+            trimesh (OpenRAVE.TriMesh):
+            tol (float): tolerance for when checking whether a point is inside a convex hull or not.
+        
+        Return:
+            allInside (bool): whether all the original vertices (in trimesh) are fully contained in the given hulls.
+        
+        """
+        inside = zeros(len(trimesh.vertices), bool)
+        leftIndices = arange(len(trimesh.vertices))
+        leftPoints = array(trimesh.vertices) # make a copy
+        for ihull, hull in enumerate(hullList):
+            hullPlanes = self.ComputeHullPlanes(hull)
+            insideIndices = numpy.all(dot(leftPoints, transpose(hullPlanes[:, 0:3])) + tile(hullPlanes[:, 3], (len(leftPoints), 1)) <= tol, axis=1)
+            inside[leftIndices[flatnonzero(insideIndices)]] = True
+            outsideIndices = flatnonzero(insideIndices == 0)
+            leftPoints = leftPoints[outsideIndices]
+            leftIndices = leftIndices[outsideIndices]
+            if len(leftIndices) == 0:
+                break
+        if len(leftIndices) > 0:
+            log.info('There are %d vertices not inside the given hulls', len(leftIndices))
+        return len(leftIndices) == 0
     
     def testPointsInside(self,points):
         """tests if a point is inside the convex mesh of the robot.
@@ -450,16 +534,18 @@ class ConvexDecompositionModel(DatabaseGenerator):
                         break
         return inside
 
-    def GetGeometryInfosFromLink(self,ilink,preservetransform=False):
+    def GetGeometryInfosFromLink(self,ilink,preservetransform=False,color=None):
         """gets a list of geometries for the link
         :param preservetransform: if True, will set the same geometry transform as the original geometry. Otherwise will pre-multiply with the new trimesh.
         """
+        if color is None:
+            color = [0,0,0.4]
         with self.env:
             geometryinfos = []
             geometries = self.robot.GetLinks()[ilink].GetGeometries()
             for ig,hulls in self.linkgeometry[ilink]:
                 ginfo = KinBody.GeometryInfo()
-                ginfo._vDiffuseColor = [0,0,0.4]
+                ginfo._vDiffuseColor = color
                 ginfo._type = GeometryType.Trimesh
                 ginfo._meshcollision = TriMesh()
                 if preservetransform:

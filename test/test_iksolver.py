@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import *
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 class TestIkSolver(EnvironmentSetup):
     def test_customfilter(self):
@@ -158,13 +161,13 @@ class TestIkSolver(EnvironmentSetup):
             ikparam = ikmodel.manip.GetIkParameterization(IkParameterizationType.Transform6D)
             solexpected = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions)
             assert(solexpected is None)
-            expectedaction = int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.RejectJointLimits)
+            expectedactions = [int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.RejectJointLimits), int(IkReturnAction.QuitEndEffectorCollision)|int(IkReturnAction.Reject)]
             ikreturn = ikmodel.manip.FindIKSolution(ikparam,IkFilterOptions.CheckEnvCollisions,ikreturn=True)
-            assert(ikreturn.GetAction()==expectedaction)
+            assert(ikreturn.GetAction() in expectedactions)
             
             ikparam2 = ikparam.Transform(Tbaseinv)
             ikreturn = solver.Solve(ikparam2,None, IkFilterOptions.CheckEnvCollisions)
-            assert( ikreturn.GetAction() == expectedaction)
+            assert( ikreturn.GetAction() in expectedactions)
         
     def test_customikvalues(self):
         env=self.env
@@ -183,11 +186,11 @@ class TestIkSolver(EnvironmentSetup):
             ikparam.SetCustomValues('myparam0_transform=direction_',d)
             ikparam.SetCustomValues('myparam1_transform=point_',p)
             ikparam.SetCustomValues('myparam2',[5,4])
-            ikparam.SetCustomValues('myparam3_transform=ikparam_',r_[float(ikparam.GetType()),ikparam.GetValues()])
+            ikparam.SetCustomValues('myparam3_transform=ikparam_',r_[float(int(ikparam.GetType())),ikparam.GetValues()])
             assert(transdist(ikparam.GetCustomValues('myparam0_transform=direction_'),d) <= g_epsilon)
             assert(transdist(ikparam.GetCustomValues('myparam1_transform=point_'),p) <= g_epsilon)
             assert(transdist(ikparam.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
-            assert(transdist(ikparam.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam.GetType()),ikparam.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam.GetType())),ikparam.GetValues()]) <= g_epsilon)
             data=str(ikparam)
             ikparam2 = IkParameterization(data)
             assert(transdist(ikparam2.GetCustomValues('myparam0_transform=direction_'),d) <= g_epsilon)
@@ -195,7 +198,7 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(ikparam2.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
             ikparam2.ClearCustomValues('myparam2')
             assert(ikparam2.GetCustomValues('myparam2') is None)
-            assert(transdist(ikparam2.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam2.GetType()),ikparam2.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam2.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam2.GetType())),ikparam2.GetValues()]) <= g_epsilon)
             ikparam2.ClearCustomValues()
             assert(ikparam2.GetCustomValues('myparam3_transform=ikparam_') is None)
 
@@ -205,7 +208,7 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(ikparam3.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
             assert(transdist(ikparam3.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
             assert(transdist(ikparam3.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
-            assert(transdist(ikparam3.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam3.GetType()),ikparam3.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam3.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam3.GetType())),ikparam3.GetValues()]) <= g_epsilon)
 
             T = linalg.inv(manip.GetBase().GetTransform())
             ikparam4 = ikparam.Transform(T)
@@ -214,13 +217,13 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(ikparam5.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
             assert(transdist(ikparam5.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
             assert(transdist(ikparam5.GetCustomValues('myparam2'),[5,4]) <= g_epsilon)
-            assert(transdist(ikparam5.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparam5.GetType()),ikparam5.GetValues()]) <= g_epsilon)
+            assert(transdist(ikparam5.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparam5.GetType())),ikparam5.GetValues()]) <= g_epsilon)
             
             def filtertest(sol,manip,ikparamint):
                 assert(transdist(ikparamint.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
                 assert(transdist(ikparamint.GetCustomValues('myparam1_transform=point_'),dot(T[0:3,0:3],p)+T[0:3,3]) <= g_epsilon)
                 assert(transdist(ikparamint.GetCustomValues('myparam2'),[5,4]) != g_epsilon)
-                assert(transdist(ikparamint.GetCustomValues('myparam3_transform=ikparam_'),r_[float(ikparamint.GetType()),ikparamint.GetValues()]) != g_epsilon)
+                assert(transdist(ikparamint.GetCustomValues('myparam3_transform=ikparam_'),r_[float(int(ikparamint.GetType())),ikparamint.GetValues()]) != g_epsilon)
                 return IkReturnAction.Success
             
             handle = ikmodel.manip.GetIkSolver().RegisterCustomFilter(0,filtertest)
@@ -245,12 +248,12 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(newtransvelocity, dot(T[0:3,0:3],transvelocity)) <= g_epsilon)
 
             # test pickling
-            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3))
+            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3), 2)
             assert(str(ikparam3pickled) == str(ikparam3))
 
     def test_ikfastrobotsolutions(self):
         env=self.env
-        testrobotfiles = [('ikfastrobots/testik0.zae','arm',[(zeros(6), 31)])]
+        testrobotfiles = [('ikfastrobots/testik0.zae','arm',[(zeros(6), 100)])]
         for robotfilename, manipname, testsolutions in testrobotfiles:
             env.Reset()
             robot=self.LoadRobot(robotfilename)
@@ -260,13 +263,28 @@ class TestIkSolver(EnvironmentSetup):
                 ikmodel.autogenerate()
             for values, numexpected in testsolutions:
                 robot.SetDOFValues(values,manip.GetArmIndices())
+                realpose = manip.GetTransformPose()
                 solutions=manip.FindIKSolutions(manip.GetIkParameterization(ikmodel.iktype),0)
                 numsolutions = len(solutions)
-                if numsolutions != numexpected:
+                if numsolutions < numexpected:
                     raise ValueError('%s!=%s, robot=%s, manip=%s, values=%r'%(numsolutions,numexpected,robotfilename,manipname, values))
                 
-                assert(numsolutions==numexpected)
-
+                # test every solution
+                counts = 0
+                f = 0
+                usedindices = []
+                for isolution, testsolution in enumerate(solutions):
+                    robot.SetDOFValues(testsolution)
+                    testpose = manip.GetTransformPose()
+                    distquat = arccos(min(1, abs(dot(testpose[:4],realpose[:4]))))
+                    disttrans2 = sum((testpose[4:]-realpose[4:])**2)
+                    assert(distquat+sqrt(disttrans2) <= 1e-6)
+                    
+                    # make sure this solution is unique
+                    numCloseSolutions = sum(sum((solutions - tile(testsolution, (len(solutions),1)))**2, axis=1) <= 1e-10)
+                    f += 1.0/numCloseSolutions
+                    assert(numCloseSolutions==1)
+    
     def test_circularfree(self):
         # test when free joint is circular and IK doesn't succeed (thanks to Chris Dellin)
         robotxmldata = '''<Robot name="BarrettWAM">

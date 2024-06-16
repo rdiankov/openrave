@@ -24,7 +24,34 @@
 
 namespace OpenRAVE {
 
-typedef boost::recursive_try_mutex EnvironmentMutex;
+#if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
+#if __cplusplus >= 201703L
+#include <mutex>
+using EnvironmentMutex = ::std::recursive_mutex;
+using EnvironmentLock  = ::std::unique_lock<std::recursive_mutex>;
+using defer_lock_t     = ::std::defer_lock_t;
+using try_to_lock_t    = ::std::try_to_lock_t;
+#else
+using EnvironmentMutex = ::boost::recursive_try_mutex;
+using EnvironmentLock  = EnvironmentMutex::scoped_lock;
+using defer_lock_t     = ::boost::defer_lock_t;
+using try_to_lock_t    = ::boost::try_to_lock_t;
+#endif // __cplusplus >= 201703L
+#else
+using EnvironmentMutex = ::std::mutex;
+using EnvironmentLock  = ::std::unique_lock<std::mutex>;
+using defer_lock_t     = ::std::defer_lock_t;
+using try_to_lock_t    = ::std::try_to_lock_t;
+#endif // OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
+
+/// \brief used when adding interfaces to the environment
+enum InterfaceAddMode
+{
+    IAM_AllowRenaming = 0, ///< rename the name and id. if true and there exists a body/robot with the same name, will make body's name and id unique
+    IAM_StrictNameChecking = 1, ///< name is strict, will throw exception if it conflicts. id is not strict
+    IAM_StrictIdChecking = 2, ///< id is strict, will throw exception if it conflicts. id is not strict
+    IAM_StrictNameIdChecking = 3, ///< name and id are both strict, will throw exception if it conflicts.
+};
 
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
  */
@@ -32,6 +59,7 @@ class OPENRAVE_API EnvironmentBase : public boost::enable_shared_from_this<Envir
 {
 public:
     EnvironmentBase();
+    EnvironmentBase(const std::string& name);
     virtual ~EnvironmentBase();
 
     /// \brief Releases all environment resources, should be always called when environment stops being used.
@@ -39,6 +67,9 @@ public:
     /// Removing all environment pointer might not be enough to destroy the environment resources.
     virtual void Destroy()=0;
 
+    /// \brief initializes the environment
+    virtual void Init(bool bStartSimulationThread) = 0;
+            
     /// \brief Resets all objects of the scene (preserves all problems, planners). <b>[multi-thread safe]</b>
     ///
     /// Do not call inside a SimulationStep call
@@ -73,11 +104,30 @@ public:
     /// \return An environment of the same type as this environment containing the copied information.
     virtual EnvironmentBasePtr CloneSelf(int options) = 0;
 
+    /// \brief Create and return a clone of the current environment.
+    ///
+    /// Clones do not share any memory or resource between each other.
+    /// or their parent making them ideal for performing separte planning experiments while keeping
+    /// the parent environment unchanged.
+    /// By default a clone only copies the collision checkers and physics engine.
+    /// When bodies are cloned, the unique ids are preserved across environments (each body can be referenced with its id in both environments). The attached and grabbed bodies of each body/robot are also copied to the new environment.
+    /// \param clonedEnvName The name of the cloned (and retuned) environment
+    /// \param options A set of \ref CloningOptions describing what is actually cloned.
+    /// \return An environment of the same type as this environment containing the copied information.
+    virtual EnvironmentBasePtr CloneSelf(const std::string& clonedEnvName, int options) = 0;
+
     /// \brief Clones the reference environment into the current environment
     ///
     /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
     /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
     virtual void Clone(EnvironmentBaseConstPtr preference, int cloningoptions) = 0;
+
+    /// \brief Clones the reference environment into the current environment
+    ///
+    /// Tries to preserve computation by re-using bodies/interfaces that are already similar between the current and reference environments.
+    /// \param[in] clonedEnvName The name of the cloned environment
+    /// \param[in] cloningoptions The parts of the environment to clone. Parts not specified are left as is.
+    virtual void Clone(EnvironmentBaseConstPtr preference, const std::string& clonedEnvName, int cloningoptions) = 0;
 
     /// \brief Each function takes an optional pointer to a CollisionReport structure and returns true if collision occurs. <b>[multi-thread safe]</b>
     ///
@@ -117,6 +167,9 @@ public:
 
     /// \see CollisionCheckerBase::CheckCollision(const RAY&,CollisionReportPtr)
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
+    /// \see CollisionCheckerBase::CheckCollision(const TriMesh&,KinBodyConstPtr, CollisionReportPtr)
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \see CollisionCheckerBase::CheckSelfCollision
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
@@ -170,7 +223,7 @@ public:
     /// \brief Stops the internal physics loop, stops calling SimulateStep for all modules. <b>[multi-thread safe]</b>
     ///
     /// See \ref arch_simulation for more about the simulation thread.
-    /// \param shutdownthread 
+    /// \param shutdownthread
     virtual void StopSimulation(int shutdownthread=1) = 0;
 
     /// \brief Return true if inner simulation loop is executing. <b>[multi-thread safe]</b>
@@ -215,15 +268,23 @@ public:
 
     /** \brief Loads a scene from a URI and adds all objects in the environment. <b>[multi-thread safe]</b>
 
-        Currently only collada files are supported. Options are passed through to
-        \code
-        DAE::getIOPlugin()->setOption(key,value).
-        \endcode
+        \param uri the URI of the file to load. Scheme can be 'file:' or 'openrave:' or 'X:' if openravescheme is overwritten by atts
+        \param atts a string set of attributes to pass to each loader. For example: 'openravescheme' can be overwritten.
      */
-    virtual bool LoadURI(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadURI(const std::string& uri, const AttributesList& atts = AttributesList()) = 0;
 
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
-    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
+
+    /// \brief loads a scene from rapidjson document
+    ///
+    /// \param updateMode specifies how to update the current environment from rEnvInfo
+    /// \param vCreatedBodies the bodies created in this operation
+    /// \param vModifiedBodies the bodies modified in this operation
+    /// \param vRemovedBodies the bodies removed from the environment in this operation
+    /// \param atts attributes that is passed to JSONReader for further options.
+    /// \param uri the URI of the scene. Used to inject the URI into the environment.
+    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
         return LoadData(data,atts);
@@ -231,9 +292,9 @@ public:
 
     /** \brief Saves a scene depending on the filename extension. Default is in COLLADA format
 
-        \param filename the filename to save the results at
+        \param filename the filename to save the results at. Use the suffix extension of the filename to figure out the type to save. Supports: "dae", "json", "msgpack"
         \param options controls what to save
-        \param atts attributes that refine further options. For collada parsing, the options are passed through
+        \param atts attributes that refine further options. For collada-dom parsing, the options are passed through
         \code
         DAE::getIOPlugin()->setOption(key,value).
         \endcode
@@ -247,9 +308,28 @@ public:
     /// \deprecated (12/08/15)
     virtual void Save(const std::string& filename, SelectionOptions options, const std::string& selectname) RAVE_DEPRECATED {
         AttributesList atts;
-        atts.push_back(std::make_pair(std::string("target"),selectname));
+        atts.emplace_back("target", selectname);
         Save(filename,options,atts);
     }
+
+    /// \brief saves a scene to rapidjson document
+    virtual void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
+
+    /** \brief Saves a scene depending on the filename extension.
+
+        \param filetype the type of file to save, can be: "collada", "json", "msgpack"
+        \param output the output data if saving is successful
+        \param options controls what to save
+        \param atts attributes that refine further options. For collada parsing, the options are passed through
+        \code
+        DAE::getIOPlugin()->setOption(key,value).
+        \endcode
+        Several default options are:
+        - 'target' - the target body name of the options, if relevant
+        - 'password' - the password/key to encrypt the data with, collada supports this through zae zip archives
+        \throw openrave_exception Throw if failed to save anything
+     */
+    virtual void WriteToMemory(const std::string& filetype, std::vector<char>& output, SelectionOptions options=SO_Everything, const AttributesList& atts = AttributesList()) = 0;
 
     /** \brief Initializes a robot from a resource file. The robot is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
@@ -274,12 +354,24 @@ public:
 
         The robot should not be added the environment when calling this function.
         \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled
-        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot. 
+        \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot.
+\param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadRobotData(robot,data,atts);
     }
+
+    /** \brief Initialize a robot from rapidjson document.
+
+        The robot should not be added to the environment when calling this function.
+        \param robot If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled.
+        \param rEnvInfo the rapidjson document that contains the robot information.
+        \param atts attributes that is passed to JSONReader for further options.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
+        \returns the robot that is created.
+     */
+    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
@@ -305,11 +397,23 @@ public:
         The body should not be added to the environment when calling this function.
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId. More info in \ref arch_kinbody.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadKinBodyData(body,data,atts);
     }
+
+    /** \brief Initializes a kinematic body from rapidjson document.
+
+        The body should not be added to the environment when calling this function.
+        \param body If a null pointer is passed, a new robot will be created, otherwise an existing robot will be filled.
+        \param rEnvInfo the rapidjson document that contains the robot information.
+        \param atts attributes that is passed to JSONReader for further options.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
+        \returns the body that is created.
+     */
+    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 
@@ -332,8 +436,9 @@ public:
         \param pinterface If a null pointer is passed, a new interface will be created, otherwise an existing interface will be filled
         \param data string containing data
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
+        \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) = 0;
+    virtual InterfaceBasePtr ReadInterfaceData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
     virtual InterfaceBasePtr ReadInterfaceXMLData(InterfaceBasePtr pinterface, InterfaceType type, const std::string& data, const AttributesList& atts = AttributesList()) {
         return ReadInterfaceData(pinterface,type,data,atts);
     }
@@ -367,34 +472,19 @@ public:
         Depending on the type of interface, the addition behaves differently. For bodies/robots, will add them to visual/geometric environment. For modules, will call their main() method and add them officially. For viewers, will attach a viewer to the environment and start sending it data.
         For interfaces that don't make sense to add, will throw an exception.
         \param[in] pinterface the pointer to an initialized interface
-        \param[in] bAnonymous if true and there exists a body/robot with the same name, will make body's name unique
+        \param[in] addMode One of IAM_X
         \param[in] cmdargs The command-line arguments for the module.
         \throw openrave_exception Throw if interface is invalid or already added
      */
-    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous=false, const std::string& cmdargs="") = 0;
+    virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs=std::string()) = 0;
 
-    /// \deprecated (12/04/18)
-    virtual void AddKinBody(KinBodyPtr body, bool bAnonymous=false) RAVE_DEPRECATED {
-        RAVELOG_WARN("EnvironmentBase::AddKinBody deprecated, please use EnvironmentBase::Add\n");
-        Add(body,bAnonymous);
-    }
-    /// \deprecated (12/04/18)
-    virtual void AddRobot(RobotBasePtr robot, bool bAnonymous=false) RAVE_DEPRECATED {
-        RAVELOG_WARN("EnvironmentBase::AddRobot deprecated, please use EnvironmentBase::Add\n");
-        Add(robot,bAnonymous);
-    }
-
-    /// \deprecated (12/04/18)
-    virtual void AddSensor(SensorBasePtr sensor, bool bAnonymous=false) RAVE_DEPRECATED {
-        RAVELOG_WARN("EnvironmentBase::AddSensor deprecated, please use EnvironmentBase::Add\n");
-        Add(sensor,bAnonymous);
-    }
+    virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs=std::string()) RAVE_DEPRECATED;
 
     /// \brief bodycallback(body, action)
     ///
     /// \param body KinBodyPtr
     /// \param action if 0 body has been removed from the environment (environment id is already reset), if 1 body was just added to environment
-    typedef boost::function<void(KinBodyPtr, int)> BodyCallbackFn;
+    typedef boost::function<void (KinBodyPtr, int)> BodyCallbackFn;
     virtual UserDataPtr RegisterBodyCallback(const BodyCallbackFn& callback) = 0;
 
     /// \brief Fill an array with all sensors loaded in the environment. <b>[multi-thread safe]</b>
@@ -408,16 +498,43 @@ public:
     ///
     /// The function removes currently loaded bodies, robots, sensors, problems from the actively used
     /// interfaces of the environment. This does not destroy the interface, but it does remove all
-    /// references managed. Some interfaces like problems have destroy methods that are called to signal
+    /// references managed. Some interfaces like modules have destroy methods that are called to signal
     /// unloading. Note that the active interfaces are different from the owned interfaces.
     /// \param[in] obj interface to remove
     /// \return true if the interface was successfully removed from the environment.
     virtual bool Remove(InterfaceBasePtr obj) = 0;
 
+    /// \brief Removes all kinbodies that match the name
+    ///
+    /// \param[in] name of the kinbody to remove
+    /// \return true if the kinbody was successfully removed from the environment.
+    virtual bool RemoveKinBodyByName(const std::string& name) = 0;
+
     /// \brief Query a body from its name. <b>[multi-thread safe]</b>
+    ///
     /// \return first KinBody (including robots) that matches with name
     virtual KinBodyPtr GetKinBody(const std::string& name) const =0;
 
+    /// \brief query a body from its name
+    virtual KinBodyPtr GetKinBody(const string_view name) const =0;
+
+    virtual KinBodyPtr GetKinBody(const char* pname) const =0;
+
+    /// \brief Query a body from its id. <b>[multi-thread safe]</b>
+    ///
+    /// \return first KinBody (including robots) that matches with the id (ie KinBody::GetId). This is different from KinBody::GetEnvironmentBodyIndex!
+    virtual KinBodyPtr GetKinBodyById(const std::string& id) const =0;
+
+    virtual KinBodyPtr GetKinBodyById(const string_view id) const =0;
+
+    /// \brief Query the largest environment body index in this environment. <b>[multi-thread safe]</b>
+    ///
+    /// \return largetst environment body index among the bodies in this environment
+    virtual int GetMaxEnvironmentBodyIndex() const = 0;
+
+    /// \brief Return the number of bodies currently in the environment. <b>[multi-thread safe]</b>
+    virtual int GetNumBodies() const = 0;
+    
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
     virtual SensorBasePtr GetSensor(const std::string& name) const =0;
@@ -449,6 +566,33 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout=0) = 0;
 
+    /// \brief Retrieve published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    /// \return true if name matches to a published body
+    virtual bool GetPublishedBody(const std::string& name, KinBody::BodyState& bodystate, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve joint values of published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBodyJointValues returns.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    /// \return true if name matches to a published body
+    virtual bool GetPublishedBodyJointValues(const std::string& name, std::vector<dReal> &jointValues, uint64_t timeout=0) = 0;
+
+    /// \brief Retrieve body transform of all published bodies whose name matches prefix, completes even if environment is locked. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the modules.
+    /// Note that the pbody pointer might become invalid as soon as GetPublishedBody returns.
+    /// \param prefix the prefix to match to the target names.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetPublishedBodyTransformsMatchingPrefix(const std::string& prefix, std::vector<std::pair<std::string, Transform> >& nameTransfPairs, uint64_t timeout = 0) = 0;
+
     /// \brief Updates the published bodies that viewers and other programs listening in on the environment see.
     ///
     /// For example, calling this function inside a planning loop allows the viewer to update the environment
@@ -459,14 +603,30 @@ public:
     virtual void UpdatePublishedBodies(uint64_t timeout=0) = 0;
 
     /// Get the corresponding body from its unique network id
-    virtual KinBodyPtr GetBodyFromEnvironmentId(int id) = 0;
+    virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
+
+    /// Get the corresponding bodies from its unique network id
+    ///
+    /// Calling GetBodyFromEnvironmentBodyIndex in loop should be replaced by this function to minimize scoped lock constrution and deconstruction
+    /// \param[in] bodyIndices body indices
+    /// \param[out] bodies vector of bodies in the same order as bodyIndices
+    virtual void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
+                                                     std::vector<KinBodyPtr>& bodies) const = 0;
+
+    /// Get the corresponding body from its unique network id
+    inline KinBodyPtr GetBodyFromEnvironmentId(int bodyIndex) RAVE_DEPRECATED {
+        return GetBodyFromEnvironmentBodyIndex(bodyIndex);
+    }
 
     /// \brief Triangulation of the body including its current transformation. trimesh will be appended the new data.  <b>[multi-thread safe]</b>
     ///
     /// \param[out] trimesh - The output triangle mesh
     /// \param[in] body body the triangulate
     /// \throw openrave_exception Throw if failed to add anything
-    virtual void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody) = 0;
+    void Triangulate(TriMesh& trimesh, KinBodyConstPtr pbody) RAVE_DEPRECATED {
+        return Triangulate(trimesh, *pbody);
+    }
+    virtual void Triangulate(TriMesh& trimesh, const KinBody &body) = 0;
 
     /// \brief General triangulation of the whole scene. <b>[multi-thread safe]</b>
     ///
@@ -511,17 +671,6 @@ public:
 
     /// \deprecated (10/11/05)
     typedef OpenRAVE::GraphHandlePtr GraphHandlePtr RAVE_DEPRECATED;
-
-    /// \deprecated (12/04/18)
-    virtual void AddViewer(ViewerBasePtr pviewer) {
-        Add(pviewer);
-    }
-
-    /// \deprecated (11/06/13) see AddViewer
-    virtual bool AttachViewer(ViewerBasePtr pnewviewer) RAVE_DEPRECATED {
-        Add(pnewviewer);
-        return true;
-    }
 
     /// \brief Return a viewer with a particular name.
     ///
@@ -587,11 +736,33 @@ public:
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color = RaveVector<float>(1,0.5,0.5,1)) = 0;
 
+    /// \brief Draws a label. <b>[multi-thread safe]</b>
+    ///
+    /// \param worldPosition is the position of the label in world space.
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1), float height = 0.05) = 0;
+
     /// \brief Draws a box. <b>[multi-thread safe]</b>
     ///
     /// extents are half the width, height, and depth of the box
     /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
     virtual OpenRAVE::GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) = 0;
+
+    /// \brief Draws an array of box. <b>[multi-thread safe]</b>
+    ///
+    /// extents are half the width, height, and depth of the box
+    /// \return handle to plotted boxes, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) = 0;
+
+    /// \brief Draws a AABB. <b>[multi-thread safe]</b>
+    ///
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawaabb(const AABB& aabb, const RaveTransform<float>& transform, const RaveVector<float>& vcolor, float transparency) = 0;
+
+    /// \brief Draws a OBB. <b>[multi-thread safe]</b>
+    ///
+    /// \return handle to plotted points, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
+    virtual OpenRAVE::GraphHandlePtr drawobb(const OrientedBox& obb, const RaveVector<float>& vcolor, float transparency) = 0;
 
     /// \brief Draws a textured plane. <b>[multi-thread safe]</b>
     ///
@@ -627,12 +798,24 @@ public:
     /// \brief unit - (name, mult factor to meters)
     ///
     /// \return (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual std::pair<std::string, dReal> GetUnit() const = 0;
+    /// \deprecated (23/07/03), use GetUnitInfo instead.
+    virtual std::pair<std::string, dReal> GetUnit() const RAVE_DEPRECATED = 0;
 
     /// \brief set units for the current environment.
     ///
     /// \param unit (name, mult factor) that describes the unit's name and how many meters there are in 1 unit. For example ("mm", 0.001)
-    virtual void SetUnit(std::pair<std::string, dReal> unit) = 0;
+    /// \deprecated (23/07/03), use SetUnitInfo instead.
+    virtual void SetUnit(std::pair<std::string, dReal> unit) RAVE_DEPRECATED = 0;
+
+    /// \brief unitInfo
+    ///
+    /// \return UnitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual UnitInfo GetUnitInfo() const = 0;
+
+    /// \brief set unitInfo for the current environment.
+    ///
+    /// \param unitInfo that describes length unit, mass unit, time unit and angle unit
+    virtual void SetUnitInfo(UnitInfo unitInfo) = 0;
 
     //@}
 
@@ -640,11 +823,121 @@ public:
     inline int GetId() const {
         return __nUniqueId;
     }
-    
+
+    /// \brief returns the scene name
+    inline const std::string& GetName() const {
+        return _name;
+    }
+
+    /// \brief returns the scene name and id as formated string
+    inline const std::string& GetNameId() const {
+        return _formatedNameId;
+    }
+
+    /// \brief sets a named parameter to be tracked by the environment
+    ///
+    /// internally locks the environment mutex
+    virtual void SetUInt64Parameter(const std::string& parameterName, uint64_t value) = 0;
+
+    /// \brief removes a named parameter tracked by the environment
+    ///
+    /// internally locks the environment mutex
+    /// \return true if parameter was in the environment and now is removed
+    virtual bool RemoveUInt64Parameter(const std::string& parameterName) = 0;
+
+    /// \brief retries the named parameter to be tracked by the environment.
+    ///
+    /// internally locks the environment mutex
+    /// if parameter is not present, will return defaultValue
+    virtual uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const = 0;
+
+    /// \brief notifys name of kin body is changed.
+    ///
+    /// Should be called when name of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
+    /// \param oldName name before change
+    /// \param newName name after change
+    /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
+    virtual bool NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) = 0;
+
+    /// \brief retries the named parameter to be tracked by the environment.
+    ///
+    /// Should be called when id of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
+    /// \param oldId id before change
+    /// \param newId id after change
+    /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
+    virtual bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
+
+    /// \brief info structure used to initialize environment
+    class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
+    {
+public:
+        EnvironmentBaseInfo();
+        EnvironmentBaseInfo(const EnvironmentBaseInfo& other);
+        bool operator==(const EnvironmentBaseInfo& other) const;
+        bool operator!=(const EnvironmentBaseInfo& other) const;
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
+
+        void DeserializeJSON(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options) override;
+
+        /// \param vInputToBodyInfoMapping maps indices into rEnvInfo["bodies"] into indices of _vBodyInfos: rEnvInfo["bodies"][i] -> _vBodyInfos[vInputToBodyInfoMapping[i]]. This forces certain _vBodyInfos to get updated with specific input. Use -1 for no mapping
+        void DeserializeJSONWithMapping(const rapidjson::Value& rEnvInfo, dReal fUnitScale, int options, const std::vector<int>& vInputToBodyInfoMapping);
+
+        std::string _description;   ///< environment description
+        std::vector<std::string> _keywords;  ///< some string values for describinging the environment
+        Vector _gravity = Vector(0,0,-9.797930195020351);  ///< gravity and gravity direction of the environment
+        std::string _uri; ///< optional, the URI this environment comes from
+        std::string _referenceUri; ///< optional, if the environment was opened by referencing another environment file, then this is the URI for that file.
+        std::vector<KinBody::KinBodyInfoPtr> _vBodyInfos; ///< list of pointers to KinBodyInfo
+        std::map<std::string, uint64_t> _uInt64Parameters; ///< user parameters associated with the environment
+        int _revision = 0;  ///< environment revision number
+        UnitInfo _unitInfo; ///< environment unitInfo
+        int64_t _lastModifiedAtUS = 0; ///< us, linux epoch, last modified time of the environment when it was originally loaded from the environment.
+        int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+    };
+    typedef boost::shared_ptr<EnvironmentBaseInfo> EnvironmentBaseInfoPtr;
+    typedef boost::shared_ptr<EnvironmentBaseInfo const> EnvironmentBaseInfoConstPtr;
+
+    /// \brief returns environment revision number
+    virtual int GetRevision() const = 0;
+
+    /// \brief sets the scene description
+    virtual void SetDescription(const std::string& sceneDescription) = 0;
+
+    /// \brief returns the scene description
+    virtual std::string GetDescription() const = 0;
+
+    /// \brief sets the scene keywords
+    virtual void SetKeywords(const std::vector<std::string>& sceneKeywords) = 0;
+
+    /// \brief returns the scene keywords
+    virtual std::vector<std::string> GetKeywords() const = 0;
+
+    /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
+    virtual void ExtractInfo(EnvironmentBaseInfo& info) = 0;
+
+    /// \brief update EnvironmentBase according to new EnvironmentBaseInfo
+    ///
+    /// \param vCreatedBodies the bodies created in this operation
+    /// \param vModifiedBodies the bodies modified in this operation
+    /// \param vRemovedBodies the bodies removed from the environment in this operation
+    /// \param updateMode one of UFIM_X
+    virtual void UpdateFromInfo(const EnvironmentBaseInfo& info, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, UpdateFromInfoMode updateMode) = 0;
+
+    int _revision = 0;  ///< environment current revision
+    std::string _description;   ///< environment description
+    std::vector<std::string> _keywords;  ///< some string values for describinging the environment
+
 protected:
     virtual const char* GetHash() const {
         return OPENRAVE_ENVIRONMENT_HASH;
     }
+
+    void _InitializeInternal();
+
+    std::string _name;   ///< environment name. only set during construction and cloning.
+    std::string _formatedNameId; ///< environment name and id. \see GetNameId
 
 private:
     UserDataPtr __pUserData;         ///< \see GetUserData

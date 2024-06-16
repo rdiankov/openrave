@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_COLLISIONCHECKER_H
 #define OPENRAVE_COLLISIONCHECKER_H
 
+#include <openrave/openravejson.h>
+
 namespace OpenRAVE {
 
 /// options for collision checker
@@ -40,7 +42,10 @@ enum CollisionOptions
      */
     CO_ActiveDOFs = 0x10,
     CO_AllLinkCollisions = 0x20, ///< if set then all the link collisions will be returned inside CollisionReport::vLinkColliding. Collision is slower because more pairs have to be checked.
-    CO_AllGeometryContacts = 0x40, ///< if set, then will return the contacts of all the colliding geometries of two links. Do not need to explore all pairs of links once the first pair is found. This option can be slow.
+    CO_AllGeometryCollisions = 0x40, ///< if set, then will return the collisions of all the colliding geometries. Do not need to explore all pairs of links once the first pair is found. This option can be slow.
+    CO_AllGeometryContacts = 0x80, ///< if set, then will return the contact points of all the colliding geometries. Do not need to explore all pairs of links once the first pair is found. This option can be slow.
+
+    CO_IgnoreCallbacks = 0x100 ///< if set, then will not use the registered collision callbacks.
 };
 
 /// \brief action to perform whenever a collision is detected between objects
@@ -50,49 +55,127 @@ enum CollisionAction
     CA_Ignore = 1, ///< do nothing
 };
 
-/// \brief Holds information about a particular collision that occured.
+class OPENRAVE_API CONTACT
+{
+public:
+    CONTACT() {
+    }
+    CONTACT(const Vector &p, const Vector &n, dReal d) : pos(p), norm(n), depth(d) {
+    }
+
+    Vector pos;  ///< where the contact occured
+    Vector norm; ///< the normals of the faces
+    dReal depth = 0; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
+
+    void SaveToJson(rapidjson::Value& rContact, rapidjson::Document::AllocatorType& alloc) const;
+    void LoadFromJson(const rapidjson::Value& rContact);
+};
+
+class OPENRAVE_API CollisionPairInfo
+{
+public:
+    inline void Reset() {
+        bodyLinkGeom1Name.clear();
+        bodyLinkGeom2Name.clear();
+        contacts.clear();
+    }
+    
+    void SaveToJson(rapidjson::Value& rCollisionPair, rapidjson::Document::AllocatorType& alloc) const;
+    void LoadFromJson(const rapidjson::Value& rCollisionPair);
+
+    /// \brief swaps the contents
+    void Swap(CollisionPairInfo& rhs);
+    
+    /// \brief swaps the first and second geometries, also changes contacts
+    void SwapFirstSecond();
+    
+    void SetFirstCollision(const std::string& bodyname, const std::string& linkname, const std::string& geomname);
+    void SetSecondCollision(const std::string& bodyname, const std::string& linkname, const std::string& geomname);
+
+    /// \brief extracts the first body name
+    void ExtractFirstBodyName(string_view& bodyname) const;
+    void ExtractSecondBodyName(string_view& bodyname) const;
+    /// \brief extracts the first link name
+    void ExtractFirstLinkName(string_view& linkname) const;
+    void ExtractSecondLinkName(string_view& linkname) const;
+    /// \brief extracts the first body and link names
+    void ExtractFirstBodyLinkNames(string_view& bodyname, string_view& linkname) const;
+    void ExtractSecondBodyLinkNames(string_view& bodyname, string_view& linkname) const;
+    /// \brief extracts the first body, link, and geom names
+    void ExtractFirstBodyLinkGeomNames(string_view& bodyname, string_view& linkname, string_view& geomname) const;
+    void ExtractSecondBodyLinkGeomNames(string_view& bodyname, string_view& linkname, string_view& geomname) const;
+    
+    /// \brief compares the first body name with the passed in bodyname. return value is same as strncmp
+    int CompareFirstBodyName(const std::string& bodyname) const;
+    int CompareSecondBodyName(const std::string& bodyname) const;
+
+    /// \brief return true if the first collision matches the link
+    int CompareFirstLink(const KinBody::Link& link) const;
+    int CompareSecondLink(const KinBody::Link& link) const;
+
+    /// \brief compares the first link name with the passed in linkname. return value is same as strncmp
+    int CompareFirstLinkName(const std::string& linkname) const;
+    int CompareSecondLinkName(const std::string& linkname) const;
+
+    /// \brief if first linkname matches that of any of the links passed in, then return the index (also checks body name). Return -1 if no matching
+    ///
+    /// \param vlinks list of links coming from the same kinbody
+    int FindFirstMatchingLinkIndex(const std::vector<KinBody::LinkPtr>& vlinks) const;
+    int FindSecondMatchingLinkIndex(const std::vector<KinBody::LinkPtr>& vlinks) const;
+
+    /// \brief returns a pointer to the first body
+    KinBodyPtr ExtractFirstBody(EnvironmentBase& env) const;
+    KinBodyPtr ExtractSecondBody(EnvironmentBase& env) const;
+    
+    // to save on dynamic allocation, only have one string per body/link/geom. Given that names cannot have spaces, can separate with spaces
+    std::string bodyLinkGeom1Name; ///< "bodyname linkname geomname" for first collision
+    std::string bodyLinkGeom2Name; ///< "bodyname linkname geomname" for second collision
+
+    std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of pgeom1's surface. Filled if CO_UseContacts option is set.
+};
+
+/// \brief Holds information about a particular collision that occured. Keep the class non-virtual to allow c++ to optimize more
 class OPENRAVE_API CollisionReport
 {
 public:
-    class OPENRAVE_API CONTACT
-    {
-public:
-        CONTACT() : depth(0) {
-        }
-        CONTACT(const Vector &p, const Vector &n, dReal d) : pos(p), norm(n) {
-            depth = d;
-        }
+    CollisionReport();
+    CollisionReport(const CollisionReport& rhs);
 
-        Vector pos;  ///< where the contact occured
-        Vector norm; ///< the normals of the faces
-        dReal depth; ///< the penetration depth, positive means the surfaces are penetrating, negative means the surfaces are not colliding (used for distance queries)
-    };
+    // should be careful not to copy all of vCollisionInfos, only the valid ones
+    CollisionReport& operator=(const CollisionReport& rhs);
 
-    CollisionReport() {
-        nKeepPrevious = 0;
-        Reset();
-    }
+    /// \brief swaps the contents
+    void Swap(CollisionReport& rhs);
     
     /// \brief resets the report structure for the next collision call
     ///
     /// depending on nKeepPrevious will keep previous data.
-    virtual void Reset(int coloptions = 0);
-    virtual std::string __str__() const;
-    
-    KinBody::LinkConstPtr plink1, plink2; ///< the colliding links if a collision involves a bodies. Collisions do not always occur with 2 bodies like ray collisions, so these fields can be empty.
-    
-    std::vector<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> > vLinkColliding; ///< all link collision pairs. Set when CO_AllCollisions is enabled.
+    void Reset(int coloptions = 0);
+    std::string __str__() const;
 
-    std::vector<CONTACT> contacts; ///< the convention is that the normal will be "out" of plink1's surface. Filled if CO_UseContacts option is set.
+    inline bool IsValid() const {
+        return nNumValidCollisions > 0;
+    }
 
-    int options; ///< the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
-    
-    dReal minDistance; ///< minimum distance from last query, filled if CO_Distance option is set
-    int numWithinTol; ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
+    void SaveToJson(rapidjson::Value& rCollisionReport, rapidjson::Document::AllocatorType& alloc) const;
+    void LoadFromJson(const rapidjson::Value& rCollisionReport);
 
-    uint8_t nKeepPrevious; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
+    /// \brief return index of the collision
+    int AddCollision();
+    int AddLinkCollision(const KinBody::Link& link1);
+    int AddLinkCollision(const KinBody::Link& link1, const KinBody::Link& link2);
+    int AddLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const KinBody::GeometryConstPtr& pgeom1, const KinBody::LinkConstPtr& plink2, const KinBody::GeometryConstPtr& pgeom2);
 
-    //KinBody::Link::GeomConstPtr pgeom1, pgeom2; ///< the specified geometries hit for the given links
+    // set only one collision
+    int SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const KinBody::GeometryConstPtr& pgeom1, const KinBody::LinkConstPtr& plink2, const KinBody::GeometryConstPtr& pgeom2);
+
+    std::vector<CollisionPairInfo> vCollisionInfos; ///< all geometry collision pairs. Set when CO_AllGeometryCollisions or CO_AllLinkCollisions or CO_AllGeometryContacts is enabled. The size of the array is not indicative of how many valid collisions there are! See nNumValidCollisions instead. Due to caching and memory constraints, should not resize this vector, instead change nNumValidCollisions
+    int nNumValidCollisions = 0; ///< how many infos are valid in vCollisionInfos
+    int options = 0; ///< mix of CO_X, the options that the CollisionReport was called with. It is overwritten by the options set on the collision checker writing the report
+
+    dReal minDistance = 1e20; ///< minimum distance from last query, filled if CO_Distance option is set
+    int16_t numWithinTol = 0; ///< number of objects within tolerance of this object, filled if CO_UseTolerance option is set
+    uint8_t nKeepPrevious = 0; ///< if 1, will keep all previous data when resetting the collision checker. otherwise will reset
 };
 
 typedef CollisionReport COLLISIONREPORT RAVE_DEPRECATED;
@@ -123,13 +206,23 @@ public:
 
     /// \brief Sets the geometry group that the collision checker will prefer to use (if present)
     ///
-    /// \param groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
+    /// Will also set the default geometry groups used for any new bodies added to the scene. groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
     virtual void SetGeometryGroup(const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Gets the geometry group this collision checker is tracking.
     ///
     /// If empty, collision checker is not tracking any specific groups.
     virtual const std::string& GetGeometryGroup() const OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Sets the geometry group that the collision checker will prefer to use for a body
+    ///
+    /// \param pbody the body to change the geometry group
+    /// \param groupname the geometry group name. If empty, will disable the groups and use the current geometries set on the link.
+    /// \return true if body geometry group with groupname exists. false otherwise
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \biref Gets the geometry group that a body is currently using
+    virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief initialize the checker with the current environment and gather all current bodies in the environment and put them in its collision space
     virtual bool InitEnvironment() = 0;
@@ -149,25 +242,25 @@ public:
     //@{
 
     /// \brief checks collision of a body and a scene. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of the body.
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief checks collision between two bodies. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of the pbody1.
-    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief checks collision of a link and a scene. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief checks collision of two links. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief checks collision of a link and a body. Attached bodies for pbody are respected. CO_ActiveDOFs option is ignored.
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief checks collision of a link and a scene. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
-    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief checks collision of a body and a scene. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of pbody.
-    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr())=0;
+    virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \brief Check collision with a link and a ray with a specified length. CO_ActiveDOFs option is ignored.
     ///
@@ -189,6 +282,34 @@ public:
     /// \param pbody the kinbody to look for collisions
     /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report = CollisionReportPtr()) = 0;
+
+    /// \brief Check collision with a triangle mesh and a body in the scene.
+    ///
+    /// \param trimesh Holds a dynamic triangle mesh to check collision with the body.
+    /// \param pbody the link to collide with. If CO_ActiveDOFs is set, will only check affected links of the body.
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Check collision with a triangle mesh and the entire scene
+    ///
+    /// \param trimesh Holds a dynamic triangle mesh to check collision with the body.
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const TriMesh& trimesh, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Check collision with a dummy box and the entire scene
+    ///
+    /// \param ab box to check collision with. The box is transformed by aabbPose
+    /// \param aabbPose the pose of the box
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const AABB& ab, const Transform& aabbPose, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    /// \brief Check collision with a dummy box and a list of bodies
+    ///
+    /// \param ab box to check collision with. The box is transformed by aabbPose
+    /// \param aabbPose the pose of the box
+    /// \param bodies vector of bodies to check collision with the dummy AABB
+    /// \param[out] report [optional] collision report to be filled with data about the collision. If a body was hit, CollisionReport::plink1 contains the hit link pointer.
+    virtual bool CheckCollision(const AABB& ab, const Transform& aabbPose, const std::vector<KinBodyConstPtr>& vbodies, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     /// \brief Checks self collision only with the links of the passed in body.
     ///
@@ -261,7 +382,7 @@ typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaver
 /** \brief Helper class to save and restore the nKeepPrevious variable in a collision report. Should be used by anyone using multiple CheckCollision calls and aggregating results.
 
     Sample code would look like:
-    
+
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
     CollisionReportKeepSaver reportsaver(report);
     if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
@@ -276,13 +397,16 @@ public:
         if( !!preport ) {
             _nKeepPrevious = preport->nKeepPrevious;
         }
+        else {
+            _nKeepPrevious = 0; // keep here otherwise compiler warning
+        }
     }
     virtual ~CollisionReportKeepSaver() {
         if( !!_report ) {
             _report->nKeepPrevious = _nKeepPrevious;
         }
     }
-    
+
 private:
     CollisionReportPtr _report;
     uint8_t _nKeepPrevious;

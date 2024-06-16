@@ -55,7 +55,6 @@
 #include <fstream>
 #include <iostream>
 
-#include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/array.hpp>
 #include <boost/thread/thread.hpp>

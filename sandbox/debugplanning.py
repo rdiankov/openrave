@@ -231,7 +231,7 @@ def test_constraintplanning():
     self.robot.SetJointValues([-0.90993702,  1.4134903 ,  1.18074048,  1.6281302 , -1.42419982, 1.17677045, -2.48384023,  0.98699927,  0.59599888,  1.1350019 ,  0])
     target = self.gmodel.target
     robot.Grab(target)
-    T = self.manip.GetEndEffectorTransform()
+    T = self.manip.GetTransform()
     T[2,3] += 0.4
     constraintfreedoms = [1,1,0,0,0,0]
     constraintmatrix = eye(4)
@@ -308,7 +308,8 @@ def test_contours():
     id = tvtk.ImageData(origin=array((numpy.min(x),numpy.min(y),numpy.min(z))),spacing=spacing,dimensions=scalars.shape)
     id.point_data.scalars = scalars.ravel()
 
-    x,y,z,t,sweptdata = pickle.load(open('tris.pp','r'))
+    with open('tris.pp','r') as f:
+        x,y,z,t,sweptdata = pickle.load(f)
     sweptdata = array(sweptdata,'float64')
     #sweptdata = sweptdata[0:61,0:60,0:60]
     id = tvtk.ImageData(origin=array((0,0,0)),spacing=array((0.005,0.005,0.005)),dimensions=sweptdata.shape[::-1])

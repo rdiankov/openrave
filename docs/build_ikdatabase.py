@@ -16,9 +16,10 @@ from openravepy import *
 from numpy import *
 from optparse import OptionParser
 import os, sys, operator
-import scipy
+# import scipy
+import imageio
 import shutil
-import pysvn
+# import pysvn
 from openravepy import ikfast
 
 imagedir = 'images/robots'
@@ -69,10 +70,12 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
         env.Reset()
         robot=env.ReadRobotXMLFile(robotfilename)
         if robot is None:
-            print 'failed ',robotfilename
+            print('failed %s'%robotfilename)
         else:
-            print 'processing ',robotname
+            print('processing %s'%robotname)
             env.AddRobot(robot)
+            roboturl = robot.GetXMLFilename()
+            '''
             try:
                 entry = pysvn.Client().info(robot.GetXMLFilename())
                 roboturl = str(entry.url)
@@ -83,6 +86,7 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
                     roboturl = str(entry.url)
                 except pysvn.ClientError:
                     pass
+            '''
                 
             # transform the robot so we don't render it at its axis aligned (white robots completely disappear)
             #robot.SetTransform(matrixFromQuat(quatRotateDirection([-1,0,0],[-1,1,0.5])))
@@ -109,9 +113,9 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
             Ix = viewer.GetCameraImage(width=width,height=height,transform=Tx,K=K)
             Ty=transformLookat(lookat=zeros(3),camerapos=array([0.0,-1.0,0])*L,cameraup=[0,0,-1])
             Iy = viewer.GetCameraImage(width=width,height=height,transform=Ty,K=K)
-            scipy.misc.pilutil.imsave(os.path.join(imagedir,imagename),hstack([Iall,Ix,Iy]))
+            imageio.imsave(os.path.join(imagedir,imagename),hstack([Iall,Ix,Iy]))
 
-    print 'writing ',robotname
+    print('writing %s'%robotname)
     robotlink = 'robot-'+robotname
     robotxml = """.. _%s:\n\n%s Robot\n%s======
 
@@ -164,7 +168,8 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
 
         if sourcefilename is not None:
             sourcefilename_tail = os.path.split(sourcefilename)[1]
-            open(os.path.join(sourceoutputdir,sourcefilename_tail),'w').write(sourcecode)
+            with open(os.path.join(sourceoutputdir,sourcefilename_tail),'w') as f:
+                f.write(sourcecode)
             sourcename = ':download:`C++ Code <%s/%s>`'%(robotname,sourcefilename_tail)
         else:
             sourcename = ':red:`Failed`'
@@ -206,7 +211,8 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
         rows.append(row)
     if rows is not None:
         robotxml += writetable(rows)
-    open(os.path.join(outputdir,robotname+'.rst'),'w').write(robotxml)
+    with open(os.path.join(outputdir,robotname+'.rst'),'w') as f:
+        f.write(robotxml)
     returnxml = """
 :ref:`%s`
 %s
@@ -245,7 +251,7 @@ def build(allstats,buildoptions,outputdir,env):
             if not stat[0] in robotdict:
                 robotdict[stat[0]] = []
             robotdict[stat[0]].append(stat[1:])
-    robotlist = sorted(robotdict.iteritems(), key=operator.itemgetter(0))
+    robotlist = sorted(robotdict.items(), key=operator.itemgetter(0))
     robotxml = ''
     robotnames = []
     for robotfilename, robotstats in robotlist:
@@ -284,7 +290,8 @@ Robots
 """%(outputdir,buildoptions.jenkinsbuild_url, robotxml)
     for robotname in robotnames:
         text += '  %s\n'%(robotname)
-    open(os.path.join(outputdir,'robots.rst'),'w').write(text)
+    with open(os.path.join(outputdir,'robots.rst'),'w') as f:
+        f.write(text)
     freeparameters = ', '.join('%s free - %s tests'%(i,num) for i,num in enumerate(buildoptions.numiktests))
     text="""
 .. _ikfast-database:
@@ -333,7 +340,8 @@ Degenerate configurations can frequently occur when the robot axes align, this p
 
 .. [1] The discretization of the free joint values depends on the robot manipulator and is given in each individual manipulator page.
 """%(ikfast.__version__, buildoptions.errorthreshold,freeparameters,buildoptions.minimumsuccess,buildoptions.maximumnosolutions)
-    open(os.path.join(outputdir,'index.rst'),'w').write(text)
+    with open(os.path.join(outputdir,'index.rst'),'w') as f:
+        f.write(text)
 
 if __name__ == "__main__":
     parser = OptionParser(description='Builds the ik database')
@@ -356,7 +364,8 @@ if __name__ == "__main__":
         os.makedirs(imagedir)
     except OSError:
         pass
-    allstats,buildoptions = pickle.load(open(options.ikfaststats,'r'))
+    with open(options.ikfaststats,'r') as f:
+        allstats,buildoptions = pickle.load(f)
     env=Environment()
     try:
         env.SetViewer('qtcoin',False)
@@ -365,4 +374,6 @@ if __name__ == "__main__":
         viewer.SendCommand('SetFiguresInCamera 1')
         build(allstats,buildoptions,options.outputdir,env)
     finally:
-        RaveDestroy()
+        print('ikdatabase built')
+        exit()
+        # RaveDestroy()

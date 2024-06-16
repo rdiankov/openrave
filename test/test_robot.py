@@ -231,6 +231,44 @@ class RunRobot(EnvironmentSetup):
                     robot.SetActiveDOFValues(sol)
                     assert(not robot.CheckSelfCollision())
 
+    def test_grabstatesaver(self):
+        self.log.info('test grab state saver')
+        env=self.env
+        robot = self.LoadRobot('robots/pr2-beta-static.zae')
+        manip = robot.GetManipulator('rightarm')
+        target = env.ReadKinBodyURI('data/mug1.kinbody.xml')
+        
+        env.Add(target)
+        targetpose = manip.GetTransformPose()
+        target.SetTransform(targetpose)
+        robot.Grab(target, grablink=manip.GetEndEffector())
+        
+        with robot:
+            robot.SetDOFValues([-1],manip.GetArmIndices()[:1])
+            newtargetpose = target.GetTransformPose()
+            assert(ComputePoseDistance(targetpose, newtargetpose) > 1e-7)
+        assert(ComputePoseDistance(targetpose, target.GetTransformPose()) <= 1e-7)
+
+        with robot.CreateRobotStateSaver(KinBody.SaveParameters.GrabbedBodies): # do not save joint values!
+            robot.ReleaseAllGrabbed()
+            robot.SetDOFValues([-0.5],manip.GetArmIndices()[:1])
+            assert(ComputePoseDistance(targetpose, target.GetTransformPose()) <= 1e-7)
+            # should not move the cup!
+        # here the robot state does not get restored, only the grabbed state does. So the cup should have moved!
+        assert(robot.IsGrabbing(target))
+        assert(ComputePoseDistance(targetpose, target.GetTransformPose()) > 1e-7)
+        
+        # the opposite, grab the target inside and see if it gets restored correctly
+        robot.Release(target)
+        targetpose = manip.GetTransformPose()
+        
+        with robot.CreateRobotStateSaver(KinBody.SaveParameters.GrabbedBodies|KinBody.SaveParameters.LinkTransformation): # do not save joint values!
+            robot.Grab(target, grablink=manip.GetEndEffector())
+            robot.SetDOFValues([-1],manip.GetArmIndices()[:1])
+            assert(ComputePoseDistance(targetpose, target.GetTransformPose()) > 1e-7) # target should have moved
+            newtargetpose = target.GetTransformPose()
+        assert(ComputePoseDistance(newtargetpose, target.GetTransformPose()) <= 1e-7) # target should not have moved after state saver exits
+
     def test_ikcollision(self):
         self.log.info('test if can solve IK during collisions')
         env=self.env
@@ -254,14 +292,20 @@ class RunRobot(EnvironmentSetup):
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
             assert(not manip.CheckEndEffectorCollision(manip.GetIkParameterization(IkParameterizationType.Transform6D)))
             assert(not manip2.CheckEndEffectorCollision(manip2.GetIkParameterization(IkParameterizationType.Transform6D)))
-
+            
+            ikmodel=databases.inversekinematics.InverseKinematicsModel(manip=manip, iktype=IkParameterizationType.Transform6D)
+            if not ikmodel.load():
+                ikmodel.autogenerate()
+            
             # with bullet, robot gets into self-collision when first angle reaches 0.5
             robot.SetActiveDOFValues([0.678, 0, 1.75604762, -1.74228108, 0, 0, 0])
             assert(not robot.CheckSelfCollision())
             Tmanip = manip.GetTransform()
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions) is not None)
-
+            
+            assert(not manip.CheckEndEffectorSelfCollision(Tmanip,None,40,True)) # hand shouldn't be in collision when ignoring manip links
+            
             basemanip = interfaces.BaseManipulation(robot)
             out=basemanip.MoveToHandPosition(matrices=[Tmanip],execute=False)
             assert(out is not None)
@@ -292,10 +336,10 @@ class RunRobot(EnvironmentSetup):
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorSelfCollisions) is not None)
             assert(not robot.CheckSelfCollision())
             assert(not manip.CheckEndEffectorCollision(Tmanip))
-
+            
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -0.1,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             Tmanip = manip.GetTransform()
-
+            
             assert(manip.FindIKSolution(Tmanip,IkFilterOptions.CheckEnvCollisions|IkFilterOptions.IgnoreEndEffectorCollisions) is not None)
             # test if initial colliding attachments are handled correctly
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
@@ -311,7 +355,7 @@ class RunRobot(EnvironmentSetup):
             assert(not robot.CheckSelfCollision())
             robot.RegrabAll()
             assert(not robot.CheckSelfCollision())
-
+            
             robot.Release(target)
             assert(not robot.IsGrabbing(target))
             
@@ -322,13 +366,13 @@ class RunRobot(EnvironmentSetup):
             box2.SetTransform(manip2.GetTransform())
             robot.Grab(box2,grablink=manip2.GetEndEffector())
             assert(not manip2.CheckEndEffectorCollision(manip2.GetTransform()))
-
+            
             robot.Grab(target)
             Tmanip = manip.GetTransform()
             assert(not manip.CheckEndEffectorCollision(Tmanip))
             robot.SetActiveDOFValues([ 0.00000000e+00,   0.858,   2.95911693e+00, -1.57009246e-16,   0.00000000e+00,  -3.14018492e-16, 0.00000000e+00])
             assert(not manip.CheckEndEffectorCollision(Tmanip))
-
+            
     def test_checkendeffector(self):
         self.log.info('test if can check end effector collisions with ik params')
         env=self.env
@@ -364,13 +408,8 @@ class RunRobot(EnvironmentSetup):
             robot.SetActiveDOFValues([ 0,  0.89098841,  0.92174268, -1.32022237,  0])
             ikparam=ikmodel.manip.GetIkParameterization(IkParameterizationType.Translation3D)
             robot.SetActiveDOFValues(zeros(robot.GetActiveDOF()))
-            try:
-                ikmodel.manip.CheckEndEffectorCollision(ikparam)
-                raise ValueError('expected exception')
+            assert(not ikmodel.manip.CheckEndEffectorCollision(ikparam))
             
-            except openrave_exception:
-                pass
-
             T = eye(4)
             T[2,3] = -0.1
             ikparam2 = IkParameterization(ikparam)
@@ -392,11 +431,11 @@ class RunRobot(EnvironmentSetup):
             assert(traj.GetNumWaypoints()==2)
             try:
                 ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False)
-                assert(ret==PlannerStatus.HasSolution)
+                assert(ret==PlannerStatusCode.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw limit expected exception!')
             
-            except Exception, e:
+            except Exception as e:
                 pass
 
             traj.Init(robot.GetActiveConfigurationSpecification())
@@ -404,11 +443,11 @@ class RunRobot(EnvironmentSetup):
             assert(traj.GetNumWaypoints()==2)
             try:
                 ret=planningutils.RetimeActiveDOFTrajectory(traj,robot,False,maxvelmult=10)
-                assert(ret==PlannerStatus.HasSolution)
+                assert(ret==PlannerStatusCode.HasSolution)
                 self.RunTrajectory(robot,traj)
                 raise ValueError('controller did not throw velocity limit expected exception!')
             
-            except Exception, e:
+            except Exception as e:
                 pass
 
     def test_bigrange(self):
@@ -631,7 +670,68 @@ class RunRobot(EnvironmentSetup):
 
         assert robot.CheckSelfCollision() # succeeds
         assert cloned_robot.CheckSelfCollision() # fails
-        
+
+    def test_4dikparameterization(self):
+        self.log.info('test 4dikparameterization')
+        env=self.env
+        robot=self.LoadRobot('robots/barrettwam.robot.xml')
+
+        random.seed(0)
+        manip = robot.GetActiveManipulator()
+        robot.SetDOFValues(random.rand(robot.GetDOF()))
+
+        t = robot.GetTransform()
+        origt = copy(t)
+        axis = random.rand(3)
+        t[:3,:3] = rotationMatrixFromAxisAngle(axis/linalg.norm(axis), 1)
+        t[:3, 3] = random.rand(3)
+
+        for isNorm in [True, False]:
+            for xyz in 'XYZ':
+                xyzindex = ord(xyz) - ord('X')
+                # construct ikTypeName programatically, don't know if there is cleaner way
+                ikTypeName = 'Translation%sAxisAngle' % xyz
+                if isNorm:
+                    originAxis = 'ZXY'[xyzindex]
+                    ikTypeName += originAxis + 'Norm4D'
+                else:
+                    ikTypeName += '4D'
+
+                # ik param representation when robot is at origin
+                robot.SetTransform(origt)
+                iktype = getattr(IkParameterizationType, ikTypeName)
+                ikp = manip.GetIkParameterization(iktype, inworld=True)
+                origw = getattr(manip.GetIkParameterization(ikp, inworld=True), 'Get' + ikTypeName)()
+                origl = getattr(manip.GetIkParameterization(ikp, inworld=False), 'Get' + ikTypeName)()
+
+                for inworld in [True, False]:
+                    assert manip.GetIkParameterization(ikp, inworld=inworld).ComputeDistanceSqr(manip.GetIkParameterization(iktype, inworld=inworld)) < 1e-10
+
+                # ik param representation when robot is at random transform
+                robot.SetTransform(t)
+                randw = getattr(manip.GetIkParameterization(ikp, inworld=True), 'Get' + ikTypeName)()
+                randl = getattr(manip.GetIkParameterization(ikp, inworld=False), 'Get' + ikTypeName)()
+
+                for inworld in [True, False]:
+                    assert manip.GetIkParameterization(ikp, inworld=inworld).ComputeDistanceSqr(manip.GetIkParameterization(iktype, inworld=inworld)) < 1e-10
+
+                # angle value of 4d ik types should be invariant of robot coord
+                origwangle = origw[1]
+                assert abs(origwangle - randw[1]) < 1e-10
+                assert abs(origwangle - randl[1]) < 1e-10
+                assert abs(origwangle - origl[1]) < 1e-10
+                if not isNorm:
+                   manipGlobalDir = dot(manip.GetTransform()[:3,:3], manip.GetDirection())
+                   assert abs(origwangle - arccos(dot(manipGlobalDir, robot.GetTransform()[:3, xyzindex]))) < 1e-10
+
+                # translation check
+                assert linalg.norm(dot(origt, r_[origl[0], 1])[:3] - origw[0]) < 1e-10
+                assert linalg.norm(dot(t, r_[origl[0], 1])[:3] - randw[0]) < 1e-10
+
+                # optional print check
+                #for inworld in [True, False]:
+                #    print(manip.GetIkParameterization(ikp, inworld=inworld))
+    
 #generate_classes(RunRobot, globals(), [('ode','ode'),('bullet','bullet')])
 
 class test_ode(RunRobot):

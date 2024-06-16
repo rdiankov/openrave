@@ -4,3 +4,13 @@ msvc_libxml2/
 msvc_soqt/
 msvc_ode/
 msvc_soqt/
+
+src/models/
+
+myrelpath.pyc
+
+/build*/
+/.vs/
+/.vscode/
+/__pycache__/
+/sympy/

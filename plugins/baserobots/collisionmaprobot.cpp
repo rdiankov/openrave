@@ -19,7 +19,7 @@
 class CollisionMapRobot : public RobotBase
 {
 public:
-    class XMLData : public XMLReadable
+    class XMLData : public Readable
     {
 public:
         /// specifies the free space of two joints
@@ -30,10 +30,42 @@ public:
             boost::array<dReal,N> fmin, fmax, fidelta;
             boost::array<string,N> jointnames;
             boost::array<int,N> jointindices;
+
+            bool operator==(const COLLISIONMAP<N>& other) const {
+                return vfreespace == other.vfreespace && 
+                    fmin == other.fmin && 
+                    fmax == other.fmax && 
+                    fidelta == other.fidelta && 
+                    jointnames == other.jointnames && 
+                    jointindices == other.jointindices;
+            };
         };
         typedef COLLISIONMAP<2> COLLISIONPAIR;
-        XMLData() : XMLReadable("collisionmap") {
+
+        XMLData() : Readable("collisionmap") {
         }
+
+        bool SerializeXML(BaseXMLWriterPtr writer, int options=0) const override {
+            return false;
+        }
+
+        bool operator==(const Readable& other) const override {
+            if (GetXMLId() != other.GetXMLId()) {
+                return false;
+            }
+            const XMLData* pOther = dynamic_cast<const XMLData*>(&other);
+            if (!pOther) {
+                return false;
+            }
+            return listmaps == pOther->listmaps;
+        }
+
+        ReadablePtr CloneSelf() const override {
+            boost::shared_ptr<XMLData> pNew(new XMLData());
+            *pNew = *this;
+            return pNew;
+        }
+
         list<COLLISIONPAIR> listmaps;
     };
 
@@ -47,11 +79,11 @@ public:
             }
         }
 
-        virtual XMLReadablePtr GetReadable() {
+        ReadablePtr GetReadable() override {
             return _cmdata;
         }
 
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) {
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override{
             _ss.str("");         // have to clear the string
             if( name == "pair" ) {
                 _cmdata->listmaps.push_back(XMLData::COLLISIONPAIR());
@@ -83,7 +115,7 @@ public:
             return PE_Pass;
         }
 
-        virtual bool endElement(const std::string& name)
+        virtual bool endElement(const std::string& name) override
         {
             if( name == "pair" ) {
                 BOOST_ASSERT(_cmdata->listmaps.size()>0);
@@ -109,7 +141,7 @@ public:
             return false;
         }
 
-        virtual void characters(const std::string& ch)
+        virtual void characters(const std::string& ch) override
         {
             _ss.clear();
             _ss << ch;
@@ -229,30 +261,27 @@ For joints J2xJ3, the index operation is::\n\n\
                 }
                 if( !curmap.vfreespace(indices) ) {
                     // get all colliding links and check to make sure that at least two are enabled
-                    vector< std::pair<LinkConstPtr, LinkConstPtr> > vLinkColliding;
+                    bool bHasCollision = false;
                     FOREACHC(itjindex,curmap.jointindices) {
                         JointPtr pjoint = GetJoints().at(*itjindex);
                         if( !!pjoint->GetFirstAttached() && !!pjoint->GetSecondAttached() ) {
-                            std::pair<LinkConstPtr, LinkConstPtr> links(pjoint->GetFirstAttached(), pjoint->GetSecondAttached());
-                            if( links.first->IsEnabled() && links.second->IsEnabled() ) {
-                                if( links.second->GetIndex() < links.first->GetIndex() ) {
-                                    std::swap(links.first, links.second);
-                                }
-                                if( find(vLinkColliding.begin(),vLinkColliding.end(), links) == vLinkColliding.end() ) {
-                                    vLinkColliding.push_back(links);
+                            const KinBody::Link& link1 = *pjoint->GetFirstAttached();
+                            const KinBody::Link& link2 = *pjoint->GetSecondAttached();
+                            if( link1.IsEnabled() && link2.IsEnabled() ) {
+                                bHasCollision = true;
+                                if( !!report ) {
+                                    if( link1.GetIndex() < link2.GetIndex() ) {
+                                        report->AddLinkCollision(link1, link2);
+                                    }
+                                    else {
+                                        report->AddLinkCollision(link2, link1);
+                                    }
                                 }
                             }
                         }
                     }
-                    if( vLinkColliding.size() == 0 ) {
+                    if( !bHasCollision ) {
                         continue;
-                    }
-                    if( !!report ) {
-                        report->vLinkColliding = vLinkColliding;
-                        if( vLinkColliding.size() > 0 ) {
-                            report->plink1 = vLinkColliding.at(0).first;
-                            report->plink2 = vLinkColliding.at(0).second;
-                        }
                     }
                     RAVELOG_VERBOSE_FORMAT("Self collision: joints %s(%d):%s(%d)", curmap.jointnames[0]%indices[0]%curmap.jointnames[1]%indices[1]);
                     return true;

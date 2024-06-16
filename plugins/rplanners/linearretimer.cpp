@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "trajectoryretimer.h"
 
+namespace rplanners {
+
 class LinearTrajectoryRetimer : public TrajectoryRetimer
 {
 public:
@@ -108,7 +110,7 @@ protected:
             bestmintime = max(bestmintime,mintime);
         }
         else if( affinedofs & DOF_Rotation3D ) {
-            RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
+            RAVELOG_WARN_FORMAT("env=%d, _ComputeMinimumTimeAffine does not support DOF_Rotation3D", GetEnv()->GetId());
         }
         return bestmintime;
     }
@@ -131,7 +133,7 @@ protected:
                 }
             }
             else if( affinedofs & DOF_Rotation3D ) {
-                RAVELOG_WARN("_ComputeMinimumTimeAffine does not support DOF_Rotation3D\n");
+                RAVELOG_WARN_FORMAT("env=%d, _ComputeMinimumTimeAffine does not support DOF_Rotation3D", GetEnv()->GetId());
             }
         }
         else {
@@ -217,7 +219,7 @@ protected:
             return max(angmintime,transmintime);
         }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("does not support parameterization 0x%x"), ikparam.GetType(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, does not support parameterization 0x%x"), GetEnv()->GetId()%ikparam.GetType(),ORE_InvalidArguments);
         }
     }
 
@@ -243,3 +245,5 @@ protected:
 PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) {
     return PlannerBasePtr(new LinearTrajectoryRetimer(penv, sinput));
 }
+
+} // end namespace rplanners

@@ -32,7 +32,7 @@ public:
         boost::shared_ptr<GenericCollisionChecker const > r = boost::dynamic_pointer_cast<GenericCollisionChecker const>(preference);
         _geometrygroup = r->_geometrygroup;
     }
-    
+
     virtual bool InitEnvironment() {
         return true;
     }
@@ -94,6 +94,11 @@ public:
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr) {
         return false;
     }
+
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr) {
+        return false;
+    }
+    
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
         return false;
     }
@@ -111,6 +116,14 @@ public:
 
     virtual const std::string& GetGeometryGroup() const
     {
+        return _geometrygroup;
+    }
+
+    virtual bool SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& groupname) {
+        return false;
+    }
+
+    virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const {
         return _geometrygroup;
     }
 

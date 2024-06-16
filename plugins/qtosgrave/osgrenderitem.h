@@ -159,6 +159,14 @@ public:
         return _veclinks.at(index).second;
     }
 
+    /// \brief gets the geom from osg node
+    KinBody::Link::GeometryPtr GetGeomFromOSG(OSGNodePtr pgeomnode) const;
+
+    /// \brief gets the geom from the index
+    OSGMatrixTransformPtr GetOSGGeom(int linkindex, int geomindex) const {
+        return _vecgeoms.at(linkindex).at(geomindex).second;
+    }
+
     void SetUserData(int userdata) {
         _userdata = userdata;
     }
@@ -181,6 +189,9 @@ public:
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
+    /// \brief mark crop margin to be rendered
+    void SetCropContainerMarginsVisible(const std::string& linkName, const std::string& geometryName, const std::string& cropContainerMarginsType, bool visible);
+
 protected:
     /// \brief Calculate per-face normals from face vertices.
     //osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
@@ -189,10 +200,12 @@ protected:
     virtual void _HandleDrawChangedCallback();
 
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LinkNodes;
+    typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> GeomNodes;
 
     KinBodyPtr _pbody;
-    int _environmentid;        ///< _pbody->GetEnvironmentId()
+    int _environmentid;        ///< _pbody->GetEnvironmentBodyIndex()
     std::vector<LinkNodes> _veclinks; ///< render items for each link, indexed same as links. The group's hierarchy mimics the kinematics hierarchy. For each pair, the first Group node is used for the hierarchy, the second node contains the transform with respect to the body's transform
+    std::vector<std::vector<GeomNodes> > _vecgeoms; ///< render items for each link's geometries, indexed same as geometries.
     bool bEnabled;
     bool bGrabbed, _bReload, _bDrawStateChanged;
     ViewGeometry _viewmode;
@@ -200,8 +213,14 @@ protected:
 
     std::vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
-    mutable boost::mutex _mutexjoints;
+    mutable std::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
+
+    std::set<std::pair<std::string, std::string> > _visibleCropContainerMargins; ///< set of (linkName, geometryName) that identifies which crop container margins to render
+    std::set<std::pair<std::string, std::string> > _visibleCropContainerEmptyMargins; ///< set of (linkName, geometryName) that identifies which crop container empty margins to render
+
+    GraphHandlePtr _cropContainerMarginsLabel; ///< handle for the label "Crop container margins"
+    GraphHandlePtr _cropContainerEmptyMarginsLabel; ///< handle for the label "Crop container empty margins"
 
 private:
     /// \brief Print matrix
@@ -236,7 +255,7 @@ public:
 
     RobotItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, RobotBasePtr robot, ViewGeometry viewmode);
     virtual ~RobotItem();
-    
+
     virtual void Load();
 
     virtual bool UpdateFromOSG();
@@ -252,6 +271,8 @@ private:
     std::vector< EE > _vEndEffectors, _vAttachedSensors;
     RobotBasePtr _probot;
 };
+
+void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const float zOffset, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency);
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

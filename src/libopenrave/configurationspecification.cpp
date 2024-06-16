@@ -18,10 +18,30 @@
     \brief All definitions that involve ConfigurationSpecification
  */
 #include "libopenrave.h"
+#include <openrave/xmlreaders.h>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
 
+using boost::placeholders::_1;
+using boost::placeholders::_2;
+
 namespace OpenRAVE {
+
+static boost::array<std::string,5> s_vTimeDerivativeJoints = {{"joint_values", "joint_velocities", "joint_accelerations", "joint_jerks", "joint_snaps"}};
+static boost::array<std::string,5> s_vTimeDerivativeAffine = {{"affine_transform", "affine_velocities", "affine_accelerations", "affine_jerks", "affine_snaps"}};
+
+static const std::set<std::string> s_setBodyGroupNames = {
+    "joint_values",
+    "joint_velocities",
+    "joint_accelerations",
+    "joint_jerks",
+    "joint_torques",
+    "affine_transform",
+    "affine_velocities",
+    "affine_accelerations",
+    "affine_jerks",
+};
 
 ConfigurationSpecification RaveGetAffineConfigurationSpecification(int affinedofs,KinBodyConstPtr pbody,const std::string& interpolation)
 {
@@ -57,9 +77,11 @@ ConfigurationSpecification::ConfigurationSpecification(const ConfigurationSpecif
 
 int ConfigurationSpecification::GetDOF() const
 {
+    // this function takes non-negligible time considering how many times this is called.
+    // TODO optimize this, whether by sorting _vgroups by offset or caching dof as member of ConfigurationSpecification class.
     int maxdof = 0;
-    FOREACHC(it,_vgroups) {
-        maxdof = max(maxdof,it->offset+it->dof);
+    for (const Group& group : _vgroups) {
+        maxdof += group.dof;
     }
     return maxdof;
 }
@@ -143,6 +165,51 @@ bool ConfigurationSpecification::operator==(const ConfigurationSpecification& r)
 bool ConfigurationSpecification::operator!=(const ConfigurationSpecification& r) const
 {
     return !this->operator==(r);
+}
+
+bool CompareGroupsOfIndices(const ConfigurationSpecification& spec, int igroup0, int igroup1)
+{
+    return spec._vgroups[igroup0].offset < spec._vgroups[igroup1].offset;
+}
+
+void ConfigurationSpecification::DeserializeJSON(const rapidjson::Value& rValue) {
+    if (rValue.HasMember("groups")) {
+        _vgroups.resize(rValue["groups"].Size());
+        size_t iGroup = 0;
+        for (rapidjson::Value::ConstValueIterator it = rValue["groups"].Begin(); it != rValue["groups"].End(); it++, iGroup++) {
+            ConfigurationSpecification::Group& group = _vgroups[iGroup];
+            orjson::LoadJsonValueByKey(*it, "name", group.name);
+            orjson::LoadJsonValueByKey(*it, "offset", group.offset);
+            orjson::LoadJsonValueByKey(*it, "dof", group.dof);
+            orjson::LoadJsonValueByKey(*it, "interpolation", group.interpolation);
+        }
+    }
+}
+
+void ConfigurationSpecification::SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& alloc) const {
+    std::vector<int> vgroupindices(_vgroups.size());
+    for (int i = 0; i < (int)vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(*this), _1, _2));
+
+    rValue.SetObject();
+
+    rapidjson::Value rGroups;
+    rGroups.SetArray();
+    rGroups.Reserve(_vgroups.size(), alloc);
+    for(size_t iGroup = 0; iGroup < vgroupindices.size(); iGroup++) {
+        int iGroupIndex = vgroupindices[iGroup];
+        const ConfigurationSpecification::Group& group = _vgroups[iGroupIndex];
+        rapidjson::Value rGroup;
+        rGroup.SetObject();
+        orjson::SetJsonValueByKey(rGroup, "name", group.name, alloc);
+        orjson::SetJsonValueByKey(rGroup, "offset", group.offset, alloc);
+        orjson::SetJsonValueByKey(rGroup, "dof", group.dof, alloc);
+        orjson::SetJsonValueByKey(rGroup, "interpolation", group.interpolation, alloc);
+        rGroups.PushBack(rGroup, alloc);
+    }
+    orjson::SetJsonValueByKey(rValue, "groups", rGroups, alloc);
 }
 
 const ConfigurationSpecification::Group& ConfigurationSpecification::GetGroupFromName(const std::string& name) const
@@ -238,8 +305,13 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
             uint32_t matchscore=1;
             if( curtokens.size() > 1 && tokens.size() > 1 ) {
                 if( curtokens.at(1) != tokens.at(1) ) {
-                    // both names exist and do not match so cannot go any further!
-                    continue;
+                    if( curtokens.at(0) != "outputSignals" ) { // For outputSignals, the second string is already the signal name
+                        // both names exist and do not match so cannot go any further!
+                        continue;
+                    }
+                }
+                else {
+                    matchscore += 1;
                 }
                 if( curtokens.size() > 2 && tokens.size() > 2 ) {
                     for(size_t i = 2; i < tokens.size(); ++i) {
@@ -349,14 +421,13 @@ std::vector<ConfigurationSpecification::Group>::const_iterator ConfigurationSpec
 void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatime)
 {
     static const boost::array<string,4> s_GroupsJointValues = {{"joint_values","joint_velocities", "joint_accelerations", "joint_jerks"}};
-    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","ikparam_accelerations", "affine_jerks"}};
-    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","affine_accelerations", "ikparam_jerks"}};
+    static const boost::array<string,4> s_GroupsAffine = {{"affine_transform","affine_velocities","affine_accelerations", "affine_jerks"}};
+    static const boost::array<string,4> s_GroupsIkparam = {{"ikparam_values","ikparam_velocities","ikparam_accelerations", "ikparam_jerks"}};
     if( _vgroups.size() == 0 ) {
         return;
     }
     std::list<std::vector<ConfigurationSpecification::Group>::iterator> listtoremove;
     std::list<ConfigurationSpecification::Group> listadd;
-    int offset = GetDOF();
     bool hasdeltatime = false;
     FOREACH(itgroup,_vgroups) {
         string replacename;
@@ -400,6 +471,7 @@ void ConfigurationSpecification::AddDerivativeGroups(int deriv, bool adddeltatim
             }
         }
     }
+    int offset = GetDOF();
     if( listtoremove.size() > 0 ) {
         FOREACH(it,listtoremove) {
             _vgroups.erase(*it);
@@ -548,7 +620,7 @@ int ConfigurationSpecification::AddDeltaTimeGroup()
 {
     int dof = 0;
     for(size_t i = 0; i < _vgroups.size(); ++i) {
-        dof = max(dof,_vgroups[i].offset+_vgroups[i].dof);
+        dof += _vgroups[i].dof;
         if( _vgroups[i].name == "deltatime" ) {
             return _vgroups[i].offset;
         }
@@ -568,7 +640,7 @@ int ConfigurationSpecification::AddGroup(const std::string& name, int dof, const
     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
     int specdof = 0;
     for(size_t i = 0; i < _vgroups.size(); ++i) {
-        specdof = max(specdof,_vgroups[i].offset+_vgroups[i].dof);
+        specdof += _vgroups[i].dof;
         if( _vgroups[i].name == name ) {
             BOOST_ASSERT(_vgroups[i].dof==dof);
             return _vgroups[i].offset;
@@ -640,23 +712,9 @@ void ConfigurationSpecification::ExtractUsedBodies(EnvironmentBasePtr env, std::
     }
 }
 
-void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+void ConfigurationSpecification::ExtractUsedIndices(KinBodyConstPtr body, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
 {
-    static std::set<std::string> s_setBodyGroupNames;
-    if( s_setBodyGroupNames.size() == 0 ) {
-        s_setBodyGroupNames.insert("joint_values");
-        s_setBodyGroupNames.insert("joint_velocities");
-        s_setBodyGroupNames.insert("joint_accelerations");
-        s_setBodyGroupNames.insert("joint_jerks");
-        s_setBodyGroupNames.insert("joint_torques");
-        s_setBodyGroupNames.insert("affine_transform");
-        s_setBodyGroupNames.insert("affine_velocities");
-        s_setBodyGroupNames.insert("affine_accelerations");
-        s_setBodyGroupNames.insert("affine_jerks");
-    }
-
     // have to look through all groups since groups can contain the same body
-    std::vector<ConfigurationSpecification::Group>::const_iterator itsemanticmatch = _vgroups.end();
     std::string bodyname = body->GetName();
     std::stringstream ss;
     useddofindices.resize(0);
@@ -666,6 +724,49 @@ void ConfigurationSpecification::ExtractUsedIndices(KinBodyPtr body, std::vector
         ss.str(itgroup->name);
         std::vector<std::string> curtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
         if( curtokens.size() > 2 && s_setBodyGroupNames.find(curtokens.at(0)) != s_setBodyGroupNames.end() && curtokens.at(1) == bodyname) {
+            for(size_t i = 2; i < curtokens.size(); ++i) {
+                int index = boost::lexical_cast<int>(curtokens.at(i));
+                if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
+                    useddofindices.push_back(index);
+                    usedconfigindices.push_back(itgroup->offset + (i-2));
+                }
+            }
+        }
+    }
+}
+
+void ConfigurationSpecification::ExtractUsedIndices(const char* pBodyName, int nBodyNameLength, int timederivative, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const
+{
+    // have to look through all groups since groups can contain the same body
+    std::stringstream ss;
+    useddofindices.resize(0);
+    usedconfigindices.resize(0);
+    FOREACHC(itgroup,_vgroups) {
+        ss.clear();
+        ss.str(itgroup->name);
+        std::vector<std::string> curtokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
+        if( curtokens.size() <= 2 ) {
+            // no indices
+            continue;
+        }
+
+        if( timederivative >= 0 ) {
+            bool bMatchJoints = timederivative < (int)s_vTimeDerivativeJoints.size() && s_vTimeDerivativeJoints[timederivative] == curtokens[0];
+            if( !bMatchJoints ) {
+                bool bMatchAffine = timederivative < (int)s_vTimeDerivativeAffine.size() && s_vTimeDerivativeAffine[timederivative] == curtokens[0];
+                if( !bMatchAffine ) {
+                    continue;
+                }
+            }
+        }
+        else {
+            if( s_setBodyGroupNames.find(curtokens.at(0)) == s_setBodyGroupNames.end() ) {
+                // not part of body
+                continue;
+            }
+        }
+
+        if( (int)curtokens.at(1).size() == nBodyNameLength && strncmp(curtokens.at(1).c_str(), pBodyName, nBodyNameLength) == 0 ) {
             for(size_t i = 2; i < curtokens.size(); ++i) {
                 int index = boost::lexical_cast<int>(curtokens.at(i));
                 if( find(useddofindices.begin(), useddofindices.end(), index) == useddofindices.end() ) {
@@ -710,7 +811,6 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                         itcompatgroup->interpolation = itrgroup->interpolation;
                     }
                 }
-                itrgroup->interpolation != itcompatgroup->interpolation;
             }
 
             if( itcompatgroup->name == itrgroup->name ) {
@@ -745,6 +845,22 @@ ConfigurationSpecification& ConfigurationSpecification::operator+= (const Config
                     }
                     else {
                         listaddgroups.push_back(itrgroup);
+                    }
+                }
+                else if( targettokens.at(0).size() >= 13 && targettokens.at(0).substr(0,13) == "outputSignals") {
+                    vector<std::string> vUsedSignals;
+                    vUsedSignals.resize(itcompatgroup->dof);
+                    for(size_t i = 0; i < vUsedSignals.size(); ++i) {
+                        vUsedSignals[i] = targettokens.at(i+1);
+                    }
+                    for(int i = 0; i < itrgroup->dof; ++i) {
+                        std::string newSignal = sourcetokens.at(i+1);
+                        if( find(vUsedSignals.begin(),vUsedSignals.end(),newSignal) == vUsedSignals.end() ) {
+                            itcompatgroup->name += string(" ");
+                            itcompatgroup->name += newSignal;
+                            itcompatgroup->dof += 1;
+                            vUsedSignals.push_back(newSignal);
+                        }
                     }
                 }
                 else if( targettokens.at(0).size() >= 7 && targettokens.at(0).substr(0,7) == "affine_") {
@@ -828,6 +944,8 @@ bool ConfigurationSpecification::ExtractTransform(Transform& t, std::vector<dRea
     case 0: searchname = "affine_transform"; break;
     case 1: searchname = "affine_velocities"; break;
     case 2: searchname = "affine_accelerations"; break;
+    case 3: searchname = "affine_jerks"; break;
+    case 4: searchname = "affine_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT(_("bad time derivative %d"),timederivative,ORE_InvalidArguments);
     }
@@ -984,6 +1102,7 @@ bool ConfigurationSpecification::ExtractJointValues(std::vector<dReal>::iterator
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
@@ -1033,6 +1152,7 @@ bool ConfigurationSpecification::InsertJointValues(std::vector<dReal>::iterator 
     case 1: searchname = "joint_velocities"; break;
     case 2: searchname = "joint_accelerations"; break;
     case 3: searchname = "joint_jerks"; break;
+    case 4: searchname = "joint_snaps"; break;
     default:
         throw OPENRAVE_EXCEPTION_FORMAT0(_("bad time derivative"),ORE_InvalidArguments);
     };
@@ -1291,35 +1411,35 @@ boost::shared_ptr<ConfigurationSpecification::GetConfigurationStateFn> Configura
 }
 
 
-static void ConvertDOFRotation_AxisFrom3D(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_AxisFrom3D(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    Vector axisangle(*(itsource+0),*(itsource+1),*(itsource+2));
+    Vector axisangle(*(pSource+0),*(pSource+1),*(pSource+2));
     *ittarget = normalizeAxisRotation(vaxis,quatFromAxisAngle(axisangle)).first;
 }
 
-static void ConvertDOFRotation_AxisFromQuat(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_AxisFromQuat(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    Vector quat(*(itsource+0),*(itsource+1),*(itsource+2),*(itsource+3));
+    Vector quat(*(pSource+0),*(pSource+1),*(pSource+2),*(pSource+3));
     *ittarget = normalizeAxisRotation(vaxis,quat).first;
 }
 
-static void ConvertDOFRotation_3DFromAxis(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_3DFromAxis(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    *(ittarget+0) = vaxis[0]* *itsource;
-    *(ittarget+1) = vaxis[1]* *itsource;
-    *(ittarget+2) = vaxis[2]* *itsource;
+    *(ittarget+0) = vaxis[0]* *pSource;
+    *(ittarget+1) = vaxis[1]* *pSource;
+    *(ittarget+2) = vaxis[2]* *pSource;
 }
-static void ConvertDOFRotation_3DFromQuat(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource)
+static void ConvertDOFRotation_3DFromQuat(std::vector<dReal>::iterator ittarget, const dReal* pSource)
 {
-    Vector quat(*(itsource+0),*(itsource+1),*(itsource+2),*(itsource+3));
+    Vector quat(*(pSource+0),*(pSource+1),*(pSource+2),*(pSource+3));
     Vector axisangle = quatFromAxisAngle(quat);
     *(ittarget+0) = axisangle[0];
     *(ittarget+1) = axisangle[1];
     *(ittarget+2) = axisangle[2];
 }
-static void ConvertDOFRotation_QuatFromAxis(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource, const Vector& vaxis)
+static void ConvertDOFRotation_QuatFromAxis(std::vector<dReal>::iterator ittarget, const dReal* pSource, const Vector& vaxis)
 {
-    Vector axisangle = vaxis * *itsource;
+    Vector axisangle = vaxis * *pSource;
     Vector quat = quatFromAxisAngle(axisangle);
     *(ittarget+0) = quat[0];
     *(ittarget+1) = quat[1];
@@ -1327,9 +1447,9 @@ static void ConvertDOFRotation_QuatFromAxis(std::vector<dReal>::iterator ittarge
     *(ittarget+3) = quat[3];
 }
 
-static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget, std::vector<dReal>::const_iterator itsource)
+static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget, const dReal* pSource)
 {
-    Vector axisangle(*(itsource+0),*(itsource+1),*(itsource+2));
+    Vector axisangle(*(pSource+0),*(pSource+1),*(pSource+2));
     Vector quat = quatFromAxisAngle(axisangle);
     *(ittarget+0) = quat[0];
     *(ittarget+1) = quat[1];
@@ -1339,6 +1459,11 @@ static void ConvertDOFRotation_QuatFrom3D(std::vector<dReal>::iterator ittarget,
 
 void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const ConfigurationSpecification::Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const ConfigurationSpecification::Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
 {
+    ConvertGroupData(ittargetdata, targetstride, gtarget, &(*itsourcedata), sourcestride, gsource, numpoints, penv, filluninitialized);
+}
+
+void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized)
+{
     if( numpoints > 1 ) {
         BOOST_ASSERT(targetstride != 0 && sourcestride != 0 );
     }
@@ -1346,10 +1471,10 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
         BOOST_ASSERT(gsource.dof==gtarget.dof);
         for(size_t i = 0; i < numpoints; ++i) {
             if( i != 0 ) {
-                itsourcedata += sourcestride;
+                psourcedata += sourcestride;
                 ittargetdata += targetstride;
             }
-            std::copy(itsourcedata,itsourcedata+gsource.dof,ittargetdata);
+            std::copy(psourcedata,psourcedata+gsource.dof,ittargetdata);
         }
     }
     else {
@@ -1422,10 +1547,47 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                     if( vbodyvalues.size() > 0 ) {
                         for(size_t i = 0; i < vdefaultvalues.size(); ++i) {
-                            vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            if( vtargetindices[i] >= 0 ) { // sometimes index can be -1 to indicate that no robot value is mapped. This is used when trying to preserve an output order of values
+                                vdefaultvalues[i] = vbodyvalues.at(vtargetindices[i]);
+                            }
                         }
                     }
                 }
+            }
+        }
+        else if( targettokens.at(0).size() >= 13 && targettokens.at(0).substr(0,13) == "outputSignals") {
+            std::vector<std::string> vSourceSignalNames(gsource.dof), vTargetSignalNames(gtarget.dof);
+            if( (int)sourcetokens.size() < gsource.dof+1 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("source tokens '%s' do not have %d dof indices, guessing....", gsource.name%gsource.dof, ORE_InvalidArguments);
+            }
+            else {
+                for(int i = 0; i < gsource.dof; ++i) {
+                    vSourceSignalNames[i] = sourcetokens.at(i+1);
+                }
+            }
+            if( (int)targettokens.size() < gtarget.dof+1 ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("target tokens '%s' do not match dof '%d', guessing....", gtarget.name%gtarget.dof, ORE_InvalidArguments);
+            }
+            else {
+                for(int i = 0; i < gtarget.dof; ++i) {
+                    vTargetSignalNames[i] = targettokens.at(i+1);
+                }
+            }
+
+            bool bUninitializedData=false;
+            FOREACH(itTargetSignalName,vTargetSignalNames) {
+                std::vector<std::string>::iterator itSourceSignalName = find(vSourceSignalNames.begin(),vSourceSignalNames.end(),*itTargetSignalName);
+                if( itSourceSignalName == vSourceSignalNames.end() ) {
+                    bUninitializedData = true;
+                    vtransferindices.push_back(-1); // nothing mapped
+                }
+                else {
+                    vtransferindices.push_back(static_cast<int>(itSourceSignalName-vSourceSignalNames.begin()));
+                }
+            }
+
+            if( bUninitializedData && filluninitialized ) {
+                vdefaultvalues.resize(vTargetSignalNames.size(),-1);
             }
         }
         else if( targettokens.at(0).size() >= 7 && targettokens.at(0).substr(0,7) == "affine_") {
@@ -1467,7 +1629,7 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                 int commondata = affinesource&affinetarget;
                 int uninitdata = affinetarget&(~commondata);
                 int sourcerotationstart = -1, targetrotationstart = -1, targetrotationend = -1;
-                boost::function< void(std::vector<dReal>::iterator, std::vector<dReal>::const_iterator) > rotconverterfn;
+                boost::function< void(std::vector<dReal>::iterator, const dReal*) > rotconverterfn;
                 if( (uninitdata & DOF_RotationMask) && (affinetarget & DOF_RotationMask) && (affinesource & DOF_RotationMask) ) {
                     // both hold rotations, but need to convert
                     uninitdata &= ~DOF_RotationMask;
@@ -1531,16 +1693,16 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
                     }
                 }
 
-                for(size_t i = 0; i < numpoints; ++i, itsourcedata += sourcestride, ittargetdata += targetstride) {
+                for(size_t i = 0; i < numpoints; ++i, psourcedata += sourcestride, ittargetdata += targetstride) {
                     for(int j = 0; j < (int)vtransferindices.size(); ++j) {
                         if( vtransferindices[j] >= 0 ) {
-                            *(ittargetdata+j) = *(itsourcedata+vtransferindices[j]);
+                            *(ittargetdata+j) = *(psourcedata+vtransferindices[j]);
                         }
                         else {
                             if( j >= targetrotationstart && j < targetrotationend ) {
                                 if( j == targetrotationstart ) {
                                     // only convert when at first index
-                                    rotconverterfn(ittargetdata+targetrotationstart,itsourcedata+sourcerotationstart);
+                                    rotconverterfn(ittargetdata+targetrotationstart,psourcedata+sourcerotationstart);
                                 }
                             }
                             else if( filluninitialized ) {
@@ -1620,10 +1782,10 @@ void ConfigurationSpecification::ConvertGroupData(std::vector<dReal>::iterator i
             throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported token conversion: %s"),gtarget.name,ORE_InvalidArguments);
         }
 
-        for(size_t i = 0; i < numpoints; ++i, itsourcedata += sourcestride, ittargetdata += targetstride) {
+        for(size_t i = 0; i < numpoints; ++i, psourcedata += sourcestride, ittargetdata += targetstride) {
             for(size_t j = 0; j < vtransferindices.size(); ++j) {
                 if( vtransferindices[j] >= 0 ) {
-                    *(ittargetdata+j) = *(itsourcedata+vtransferindices[j]);
+                    *(ittargetdata+j) = *(psourcedata+vtransferindices[j]);
                 }
                 else if( filluninitialized ) {
                     *(ittargetdata+j) = vdefaultvalues.at(j);
@@ -1678,6 +1840,9 @@ void ConfigurationSpecification::ConvertData(std::vector<dReal>::iterator ittarg
                     RaveGetAffineDOFValuesFromTransform(vdefaultvalues.begin(),tdefault,affinedofs);
                 }
             }
+            else if( name.size() >= 13 && name.substr(0,13) == "outputSignals") {
+                std::fill(vdefaultvalues.begin(), vdefaultvalues.end(), -1);
+            }
             else if( name != "deltatime" ) {
                 // messages are too frequent
                 //RAVELOG_VERBOSE(str(boost::format("cannot initialize unknown group '%s'")%name));
@@ -1702,6 +1867,22 @@ std::string ConfigurationSpecification::GetInterpolationDerivative(const std::st
             }
             else {
                 return s_InterpolationOrder.at(i-deriv);
+            }
+        }
+    }
+    return "";
+}
+
+std::string ConfigurationSpecification::GetInterpolationIntegral(const std::string& interpolation, int integ)
+{
+    const static boost::array<std::string,7> s_InterpolationOrder = {{"next","linear","quadratic","cubic","quartic","quintic","sextic"}};
+    for(int i = 0; i < (int)s_InterpolationOrder.size(); ++i) {
+        if( interpolation == s_InterpolationOrder[i] ) {
+            if( i + integ > (int)s_InterpolationOrder.size() ) {
+                return s_InterpolationOrder.at(s_InterpolationOrder.size() - 1);
+            }
+            else {
+                return s_InterpolationOrder.at(i+integ);
             }
         }
     }
@@ -1774,9 +1955,16 @@ void ConfigurationSpecification::Reader::characters(const std::string& ch)
 
 std::ostream& operator<<(std::ostream& O, const ConfigurationSpecification &spec)
 {
+    std::vector<int> vgroupindices(spec._vgroups.size());
+    for(int i = 0; i < (int)vgroupindices.size(); ++i) {
+        vgroupindices[i] = i;
+    }
+    std::sort(vgroupindices.begin(), vgroupindices.end(), boost::bind(CompareGroupsOfIndices, boost::ref(spec), _1, _2));
+
     O << "<configuration>" << endl;
-    FOREACHC(it,spec._vgroups) {
-        O << "<group name=\"" << it->name << "\" offset=\"" << it->offset << "\" dof=\"" << it->dof << "\" interpolation=\"" << it->interpolation << "\"/>" << endl;
+    FOREACH(itgroupindex, vgroupindices) {
+        const ConfigurationSpecification::Group& group = spec._vgroups[*itgroupindex];
+        O << "<group name=\"" << group.name << "\" offset=\"" << group.offset << "\" dof=\"" << group.dof << "\" interpolation=\"" << group.interpolation << "\"/>" << endl;
     }
     O << "</configuration>" << endl;
     return O;
@@ -1786,7 +1974,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
 {
     if( !!I) {
         stringbuf buf;
-        stringstream::streampos pos = I.tellg();
+        stringstream::pos_type pos = I.tellg();
         I.get(buf, 0); // get all the data, yes this is inefficient, not sure if there anyway to search in streams
 
         string pbuf = buf.str();
@@ -1801,7 +1989,7 @@ std::istream& operator>>(std::istream& I, ConfigurationSpecification& spec)
             throw OPENRAVE_EXCEPTION_FORMAT(_("error, failed to find </configuration> in %s"),buf.str(),ORE_InvalidArguments);
         }
         ConfigurationSpecification::Reader reader(spec);
-        LocalXML::ParseXMLData(BaseXMLReaderPtr(&reader,utils::null_deleter()), pbuf.c_str(), ppsize);
+        xmlreaders::ParseXMLData(reader, pbuf.c_str(), ppsize);
         BOOST_ASSERT(spec.IsValid());
     }
 

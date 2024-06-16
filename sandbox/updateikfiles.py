@@ -28,7 +28,12 @@ import time,platform,os,sys
 import multiprocessing
 from optparse import OptionParser
 import logging
-import pickle
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 from openravepy import *
 from openravepy import ikfast
 
@@ -68,7 +73,8 @@ def updateik(robotfilename,manipname,iktype,destfilename=None,freeindices=None,r
                 if len(sourcefilename) == 0:
                     raise ValueError(u'robot %s manip %s cannot generate ik %s'%(robot.GetName(),manip.GetName(),iktype))
                 
-                code += open(sourcefilename,'r').read()
+                with open(sourcefilename,'r') as f: 
+                    code += f.read()
                 code += """
 #include "plugindefs.h" 
 namespace IKFAST_NAMESPACE {
@@ -77,7 +83,7 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, co
     ikfunctions->_ComputeIk = IKFAST_NAMESPACE::ComputeIk;
     ikfunctions->_ComputeFk = IKFAST_NAMESPACE::ComputeFk;
     ikfunctions->_GetNumFreeParameters = IKFAST_NAMESPACE::GetNumFreeParameters;
-    ikfunctions->_GetFreeParameters = IKFAST_NAMESPACE::GetFreeParameters;
+    ikfunctions->_GetFreeIndices = IKFAST_NAMESPACE::GetFreeIndices;
     ikfunctions->_GetNumJoints = IKFAST_NAMESPACE::GetNumJoints;
     ikfunctions->_GetIkRealSize = IKFAST_NAMESPACE::GetIkRealSize;
     ikfunctions->_GetIkFastVersion = IKFAST_NAMESPACE::GetIkFastVersion;
@@ -88,7 +94,8 @@ IkSolverBasePtr CreateIkSolver(EnvironmentBasePtr penv, std::istream& sinput, co
 } // end namespace
 """
                 print 'writing %s'%destfilename
-                open(destfilename,'w').write(code)
+                with open(destfilename,'w') as f: 
+                    f.write(code)
     finally:
         print "destroying environment"
         env.Destroy()
@@ -222,7 +229,8 @@ if __name__ == "__main__":
             p.join()
 
     saveresults = [[args[i], finalresults[i]] for i in range(len(finalresults)) if finalresults[i] is not None]
-    pickle.dump(saveresults,open(os.path.join(options.destdir, 'results.pp'),'w'))
+    with open(os.path.join(options.destdir, 'results.pp'),'w') as f:
+        pickle.dump(saveresults, f, 2)
     print 'results: ',saveresults
 
     # select max success rate one in all free indies combinations.
@@ -248,4 +256,3 @@ if __name__ == "__main__":
         except Exception,e:
             print e
             print 'error occured in writing file %s.'%args[i]
-

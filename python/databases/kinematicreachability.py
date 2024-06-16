@@ -41,7 +41,7 @@ This is the reachability when counting the total number of configurations possib
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database kinematicreachability --help
+.. shell-block:: python3 -m openravepy --database kinematicreachability --help
 
 Class Definitions
 -----------------
@@ -152,7 +152,7 @@ class ReachabilityModel(DatabaseGenerator):
             except ImportError:
                 log.warn('python h5py library not found, will not be able to speedup database access')
                 return self.LoadPickle()
-        except Exception, e:
+        except Exception as e:
             log.warn(e)
             return False
 
@@ -210,8 +210,8 @@ class ReachabilityModel(DatabaseGenerator):
             f = None
             return self.has()
         
-        except Exception,e:
-            log.debug('LoadHDF5 for %s: ',filename,e)
+        except Exception as e:
+            log.debug('LoadHDF5 for %s: %r',filename,e)
             return False
         finally:
             if f is not None:
@@ -291,7 +291,7 @@ class ReachabilityModel(DatabaseGenerator):
             # the best estimate of arm length is to sum up the distances of the anchors of all the points in between the chain
             armjoints = self.getOrderedArmJoints()
             baseanchor = armjoints[0].GetAnchor()
-            eetrans = self.manip.GetEndEffectorTransform()[0:3,3]
+            eetrans = self.manip.GetTransform()[0:3,3]
             armlength = 0
             for j in armjoints[::-1]:
                 armlength += sqrt(sum((eetrans-j.GetAnchor())**2))

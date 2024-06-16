@@ -94,7 +94,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
                       help='Add a language code, the doxygen directory that will be searched for is build/LANG/coreapixml.')
     (options, args) = parser.parse_args()
     if len(options.languagecodes) == 0:
-        print 'need to specify at least one language code!'
+        print('need to specify at least one language code!')
         sys.exit(1)
 
     functions = []
@@ -106,7 +106,8 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
         if not fnmatch.fnmatch(file, searchstring):
             continue
         # brief+detailed descriptions only, do not include entire scope
-        rawcppdata = open(os.path.join(searchpath,file),'r').read()
+        with open(os.path.join(searchpath,file),'r') as f:
+            rawcppdata = f.read()
         functions_temp=re.findall('DOXY_FN\(\s*([\w:]*)\s*,([\s\w:;* <>&"]*)\)',rawcppdata)
         while len(functions_temp) > 0 and functions_temp[0][0] == 'class':
             functions_temp.pop(0) # remove the #define's
@@ -161,7 +162,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
                 #comment_objects.append(('%s class %s'%(lang,class_name),found_classes[0]))
                 class_objects.append(found_classes[0])
             else:
-                print 'failed to find class %s'%class_name
+                print('failed to find class %s'%class_name)
 
         for classname,functionname in functions:
             matcher = FunctionArgumentMatcher(functionname)
@@ -178,18 +179,18 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
                 if len(ids) > 0:
                     matcher.ids = ids
                 else:
-                    print 'class %s could not find member: %s: '%(classname,functionname)
+                    print('class %s could not find member: %s: '%(classname,functionname))
             data_objects = list(set(finder.find(matcher))) # have to prune non-unique ones
             if len(data_objects) > 0:
                 if len(data_objects) > 1:
-                    print 'Function Overloaded: '+functionname
+                    print('Function Overloaded: '+functionname)
                 data_object = data_objects[0]
             if data_object is not None:
                 if classname is not None:
                     functionname = classname + ' ' + functionname
                 comment_objects.append(('%s function %s'%(lang,functionname),data_object))
             else:
-                print 'Cannot find "%s::%s" function in xml output' %(classname, functionname)
+                print('Cannot find "%s::%s" function in xml output' %(classname, functionname))
 
         for name in enums:
             matcher = matcher_factory.create_name_type_matcher(name,'enum')
@@ -197,7 +198,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
             if len(data_objects)>0:
                 comment_objects.append(('%s enum %s'%(lang,name),data_objects[0]))
             else:
-                print 'Cannot find "%s" enum in xml output' %name
+                print('Cannot find "%s" enum in xml output' %name)
         
         # build the reStructuredText
         document = docutils.utils.new_document('.')
@@ -234,7 +235,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
                             if os.path.isfile(os.path.join(lang,refuri)):
                                 refuri = '../' + refuri
                             else:
-                                print 'could not find a valid url from '+target
+                                print('could not find a valid url from '+target)
                                 refuri = None
                         if refuri is not None:
                             sectname = n.astext()
@@ -244,7 +245,7 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
                             newnode['refuri'] = refuri
                             newnode.append(innernode)
                     if newnode is None:
-                        print 'could not replace: ',n.asdom().toxml()
+                        print('could not replace: %s'%n.asdom().toxml())
                         newnode = contnode
                     n.replace_self(newnode)
                 domtree=node.asdom()
@@ -266,7 +267,8 @@ Uses python docutils, sphinx, breathe, and xml2rst.""")
             inF.close()
             outF.close()
 
-    open(options.outfile,'w').write("""// -*- coding: utf-8 -*-
+    with open(options.outfile,'w') as f:
+        f.write("""// -*- coding: utf-8 -*-
 // Copyright (C) 2006-2011 Rosen Diankov (rosen.diankov@gmail.com)
 //
 // This file is part of OpenRAVE.
@@ -290,5 +292,5 @@ void InitializeComments(std::map<std::string,std::string>& m)
 }
 }
 """%(sys.argv[0],options.infile,comments))
-    print 'Finished writing to doc strings to %s'%options.outfile
+    print('Finished writing to doc strings to %s'%options.outfile)
     mainXsltF.close()

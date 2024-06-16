@@ -55,14 +55,16 @@ class VisualFeedback:
         envother.Add(clone.prob,True,clone.args)
         return clone
     
-    def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,target=None,raydensity=None):
+    def SetCameraAndTarget(self,sensorindex=None,sensorname=None,manipname=None,convexdata=None,sensorrobot=None,targetlink=None,targetgeomname=None, raydensity=None):
         """See :ref:`module-visualfeedback-setcameraandtarget`
         """
-        cmd = 'SetCameraAndTarget '
-        if target is not None:
-            cmd += 'target %s '%target.GetName()
+        cmd = u'SetCameraAndTarget '
+        if targetlink is not None:
+            cmd += u'targetlink %s %s '%(targetlink.GetParent().GetName(), targetlink.GetName())
+        if targetgeomname is not None and len(targetgeomname) > 0:
+            cmd += u'targetgeomname %s '%targetgeomname
         if sensorrobot is not None:
-            cmd += 'sensorrobot %s '%sensorrobot.GetName()
+            cmd += u'sensorrobot %s '%sensorrobot.GetName()
         if sensorindex is not None:
             cmd += 'sensorindex %d '%sensorindex
         if sensorname is not None:
@@ -79,12 +81,10 @@ class VisualFeedback:
         if res is None:
             raise PlanningError()
         return res
-    def ProcessVisibilityExtents(self,localtargetcenter=None,numrolls=None,transforms=None,extents=None,sphere=None,invertsphere=None,conedirangles=None):
+    def ProcessVisibilityExtents(self,numrolls=None,transforms=None,extents=None,sphere=None,conedirangles=None):
         """See :ref:`module-visualfeedback-processvisibilityextents`
         """
         cmd = 'ProcessVisibilityExtents '
-        if localtargetcenter is not None:
-            cmd += 'localtargetcenter %.15e %.15e %.15e '%(localtargetcenter[0],localtargetcenter[1],localtargetcenter[2])
         if numrolls is not None:
             cmd += 'numrolls %d '%numrolls
         if transforms is not None:
@@ -99,10 +99,6 @@ class VisualFeedback:
             cmd += 'sphere %d %d ' % (sphere[0], len(sphere) - 1)
             for s in sphere[1:]:
                 cmd += '%.15e ' % s
-        elif invertsphere is not None:
-            cmd += 'invertsphere %d %d ' % (invertsphere[0], len(invertsphere) - 1)
-            for s in invertsphere[1:]:
-                cmd += '%.15e ' % s
         if conedirangles is not None:
             for conedirangle in conedirangles:
                 cmd += 'conedirangle %.15e %.15e %.15e '%(conedirangle[0],conedirangle[1],conedirangle[2])
@@ -110,7 +106,7 @@ class VisualFeedback:
         if res is None:
             raise PlanningError()
         visibilitytransforms = numpy.array([numpy.float(s) for s in res.split()],numpy.float)
-        return numpy.reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
+        return numpy.reshape(visibilitytransforms,(len(visibilitytransforms)//7,7))
     def SetCameraTransforms(self,transforms,mindist=None):
         """See :ref:`module-visualfeedback-setcameratransforms`
         """
@@ -141,9 +137,11 @@ class VisualFeedback:
         for i in range(7):
             cmd += str(pose[i]) + ' '
         res = self.prob.SendCommand(cmd)
+        log.info('result of compute visible conf: %s' % res)
         if res is None:
             raise PlanningError()
-        return numpy.array([float(s) for s in res.split()])
+        return res
+
     def SampleVisibilityGoal(self,numsamples=None):
         """See :ref:`module-visualfeedback-samplevisibilitygoal`
         """
@@ -155,7 +153,7 @@ class VisualFeedback:
             raise PlanningError()
         samples = [float(s) for s in res.split()]
         returnedsamples = int(samples[0])
-        return numpy.reshape(numpy.array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
+        return numpy.reshape(numpy.array(samples[1:],float),(returnedsamples,(len(samples)-1)//returnedsamples))
     def MoveToObserveTarget(self,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
         """See :ref:`module-visualfeedback-movetoobservetarget`
         """

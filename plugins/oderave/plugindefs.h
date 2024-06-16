@@ -57,7 +57,6 @@
 #include <iostream>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_oderave", msgid)
 

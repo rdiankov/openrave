@@ -37,11 +37,13 @@ namespace ParabolicRampInternal {
 
 struct CheckReturn
 {
-    CheckReturn(int retcode = 0, Real fmult=1.0) : retcode(retcode), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false) {
+    CheckReturn(int retcode_ = 0, Real fmult=1.0, Real fvel=0, Real faccel=0) : retcode(retcode_), fTimeBasedSurpassMult(fmult), bDifferentVelocity(false), fMaxManipSpeed(fvel), fMaxManipAccel(faccel) {
     }
     int retcode; // one of CFO_X
     Real fTimeBasedSurpassMult; // if retcode == CFO_CheckTimeBasedConstraints, then the multiplier of |max|/|cur|
     bool bDifferentVelocity; ///< end in different velocity than desired
+    Real fMaxManipSpeed; ///< if > 0, then the computed max manip speed that the return was invalid with
+    Real fMaxManipAccel; ///< if > 0, then the computed max manip accel that the return was invalid with
 };
 
 /** @brief A base class for a feasibility checker.
@@ -61,7 +63,7 @@ public:
         // default
         return CheckReturn(ConfigFeasible(q1, dq1, options));
     }
-    
+
     /// \brief extra feasibility checks has different output ramps (in case there are constraints that have to be applied)
     virtual CheckReturn SegmentFeasible2(const Vector& q1, const Vector& q2, const Vector& dq1, const Vector& dq2, Real timeelapsed, int options, std::vector<ParabolicRampND>& outramps) {
         BOOST_ASSERT(0);
@@ -178,6 +180,7 @@ public:
     int OnlineShortcut(Real leadTime,Real padTime,RampFeasibilityChecker& check,RandomNumberGeneratorBase* rng);
 
     bool IsValid() const;
+    void Save(std::string filename) const;
 
     /// The joint limits (optional), velocity bounds, and acceleration bounds
     Vector xMin,xMax,velMax,accMax;

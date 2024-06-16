@@ -143,12 +143,14 @@ public:
         if( !!_pintchecker ) {
             _pintchecker->DestroyEnvironment();
         }
+        _handleRobotDOFChange.reset();
+        _probot.reset();
     }
 
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     {
         CollisionCheckerBase::Clone(preference, cloningoptions);
-        boost::shared_ptr<CacheCollisionChecker const> clone = boost::dynamic_pointer_cast<CacheCollisionChecker const> (preference);
+        OPENRAVE_SHARED_PTR<CacheCollisionChecker const> clone = OPENRAVE_DYNAMIC_POINTER_CAST<CacheCollisionChecker const> (preference);
 
         DestroyEnvironment();
 
@@ -229,8 +231,7 @@ public:
             ++_cachedcollisionhits;
             // in collision, create collision report
             if( !!report ) {
-                report->plink1 = robotlink;
-                report->plink2 = collidinglink;
+                report->AddLinkCollision(*robotlink, *collidinglink);
             }
             return true;
         } // (free configuration)
@@ -301,6 +302,9 @@ public:
         return _pintchecker->CheckCollision(ray, report);
     }
 
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
+        return _pintchecker->CheckCollision(trimesh, pbody, report);
+    }
 
     /// \brief collisionchecker checks if there is a configuration in _selfcache within the threshold, and if so, uses that information, if not, runs standard collisioncheck and stores the result.
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) {
@@ -350,8 +354,7 @@ public:
             ++_selfcachedcollisionhits;
             // in collision
             if( !!report ) {
-                report->plink1 = robotlink;
-                report->plink2 = collidinglink;
+                report->AddLinkCollision(*robotlink, *collidinglink);
             }
             return true;
         }
@@ -404,7 +407,7 @@ protected:
 
             _SetParams();
         }
-        
+
         // check if a selfcache for this robot exists on this disk
         std::string fulldirname = RaveFindDatabaseFile(("selfcache."+GetCacheHash()));
         if (fulldirname != "" && _selfcache->GetNumKnownNodes() == 0) {

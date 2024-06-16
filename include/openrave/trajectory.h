@@ -24,6 +24,14 @@
 
 namespace OpenRAVE {
 
+template <typename T> class RangeGenerator;
+
+/// \brief bitmask options for Init API.
+enum TrajectoryInitializationOptions
+{
+    TIO_ReserveTimeBasedVectors = 0x00000001, ///< If this is specified, reserve the time-based memories. If not specified, only reserve way-point-related memories. This is effective only when positive nWayPointsToReserve is given to Init argument.
+};
+
 /** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> \arch_trajectory
     \ingroup interfaces
  */
@@ -39,7 +47,13 @@ public:
         return PT_Trajectory;
     }
 
-    virtual void Init(const ConfigurationSpecification& spec) = 0;
+    /// \brief Initialize openrave trajectory. Many of APIs assume that this API is called beforehand.
+    /// \param[in] nWayPointsToReserve : number of way points to reserve. If nWayPointsToReserve is positive value, internal memories are reserved. Otherwise, not reserved. Note that the waypoint-related memories which might grow in runtime APIs are reserved by nWayPointsToReserve.
+    /// \param[in] options : options for Init. Please use TrajectoryInitializationOptions to specify the options.
+    virtual void Init(const ConfigurationSpecification& spec, const int nWayPointsToReserve=0, const int options=0) = 0;
+
+    /// \brief clears the waypoint data from the trajectory
+    virtual void ClearWaypoints() = 0;
 
     /** \brief Sets/inserts new waypoints in the same configuration specification as the trajectory.
 
@@ -58,6 +72,24 @@ public:
      */
     virtual void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite=false) = 0;
 
+    /** \brief Sets/inserts new waypoints in a \b user-given configuration specification.
+        \param index The index where to start modifying the trajectory.
+        \param pdata The data to insert, can represent multiple consecutive waypoints.
+        \param nDataElements The number of data to insert, can represent multiple consecutive waypoints. nDataElements/GetConfigurationSpecification().GetDOF() waypoints are added.
+        \param spec the specification in which the input data come in. Depending on what data is offered, some values of this trajectory's specification might not be initialized.
+        \param bOverwrite If true, will overwrite the waypoints starting at index, and will insert new waypoints only if end of trajectory is reached; if the input spec does not overwrite all the data of the trjectory spec, then the original trajectory data will not be overwritten. If false, will insert the points before index: a 0 index inserts the new data in the beginning, a GetNumWaypoints() index inserts the new data at the end.
+     */
+    virtual void Insert(size_t index, const dReal* pdata, size_t nDataElements, const ConfigurationSpecification& spec, bool bOverwrite=false) = 0;
+
+    /** \brief Sets/inserts new waypoints in the same configuration specification as the trajectory.
+
+        \param index The index where to start modifying the trajectory.
+        \param data The data to insert.
+        \param nDataElements The number of data to insert, can represent multiple consecutive waypoints. nDataElements/GetConfigurationSpecification().GetDOF() waypoints are added.
+        \param bOverwrite If true, will overwrite the waypoints starting at index, and will insert new waypoints only if end of trajectory is reached. If false, will insert the points before index: a 0 index inserts the new data in the beginning, a GetNumWaypoints() index inserts the new data at the end.
+     */
+    virtual void Insert(size_t index, const dReal* pdata, size_t nDataElements, bool bOverwrite=false) = 0;
+
     /// \brief removes a range of waypoints [startindex, endindex) removing starting at startindex and ending at the element before endindex.
     virtual void Remove(size_t startindex, size_t endindex) = 0;
 
@@ -74,18 +106,19 @@ public:
         \param data[out] the sampled point
         \param time[in] the time to sample
         \param spec[in] the specification format to return the data in
+        \param reintializeData[in] if true, then data will be reset with 0s before sampling the trajectory. Otherwise, the data will be used as is
      */
-    virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec) const;
+    virtual void Sample(std::vector<dReal>& data, dReal time, const ConfigurationSpecification& spec, bool reintializeData=true) const;
 
     /** \brief bulk samples the trajectory given a vector of times using the trajectory's specification.
-        
+
         \param data[out] the sampled points depending on the times
         \param times[in] the times to sample
      */
     virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times) const;
-    
+
     /** \brief bulk samples the trajectory given a vector of times and a specific configuration specification.
-        
+
         The default implementation is slow, so interface developers should override it.
         \param data[out] the sampled points for every time entry.
         \param times[in] the times to sample
@@ -93,6 +126,46 @@ public:
      */
     virtual void SamplePoints(std::vector<dReal>& data, const std::vector<dReal>& times, const ConfigurationSpecification& spec) const;
 
+    /** \brief bulk samples the trajectory evenly given a delta time using the trajectory's specification.
+
+        \param data[out] the sampled points depending on the times
+        \param deltatime[in] the delta time to sample
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+     */
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param startTime[in] start time to sample from
+        \param stopTime[in] stop time to sample to
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+     */
+    virtual void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const;
+
+    /** \brief bulk samples the trajectory evenly given a delta time and a specific configuration specification.
+
+        The default implementation is slow, so interface developers should override it.
+        \param data[out] the sampled points for every time entry.
+        \param deltatime[in] the delta time to sample
+        \param startTime[in] start time to sample from
+        \param stopTime[in] stop time to sample to
+        \param ensureLastPoint[in] if true, data at duration of trajectory is sampled
+        \param spec[in] the specification format to return the data in
+     */
+    virtual void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, const ConfigurationSpecification& spec) const;
     virtual const ConfigurationSpecification& GetConfigurationSpecification() const = 0;
 
     /// \brief return the number of waypoints
@@ -159,8 +232,14 @@ public:
     virtual void serialize(std::ostream& O, int options=0) const;
 
     /// \brief initialize the trajectory
-    virtual InterfaceBasePtr deserialize(std::istream& I);
+    virtual void deserialize(std::istream& I);
 
+    /// \brief initialize the trajectory via a raw pointer to memory
+    virtual void DeserializeFromRawData(const uint8_t* pdata, size_t nDataSize);
+
+    /// \brief Clone the contents of the given trajectory to the current trajectory.
+    /// \param preference the interface whose information to clone
+    /// \param cloningoptions mask of CloningOptions
     virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
 
     /// \brief swap the contents of the data between the two trajectories.
@@ -168,97 +247,6 @@ public:
     /// \param traj the trajrectory to swap data with. this->GetXMLId() == traj->GetXMLId() has to be met.
     /// This function is meant to be extremely fast with as few memory copies as possible.
     virtual void Swap(TrajectoryBasePtr traj) OPENRAVE_DUMMY_IMPLEMENTATION;
-
-    // Old Trajectory API
-
-    /// \deprecated (11/10/04), please use newer API!
-    class Point
-    {
-public:
-        Point() : time(0) {
-        }
-        Point(const std::vector<dReal>& newq, dReal newtime) : time(newtime) {
-            q = newq;
-        }
-        Point(const std::vector<dReal>& newq, const Transform& newtrans, dReal newtime) : time(newtime) {
-            q=newq;
-            trans=newtrans;
-        }
-        dReal time;
-        std::vector<dReal> q, qdot, qtorque;
-        Transform trans;
-        Vector linearvel, angularvel;
-    };
-
-    /// \deprecated (11/10/04)
-    typedef Point TPOINT RAVE_DEPRECATED;
-
-    /// \deprecated (11/10/04) see \ref Sample
-    virtual bool SampleTrajectory(dReal time, Point& tp) const RAVE_DEPRECATED;
-
-    /// \deprecated (11/10/04) use \ref GetWaypoints
-    virtual const std::vector<Point>& GetPoints() const RAVE_DEPRECATED;
-
-    /// \deprecated (11/10/04) use GetConfigurationSpecification().GetDOF()
-    inline int GetDOF() const RAVE_DEPRECATED {
-        return GetConfigurationSpecification().GetDOF();
-    }
-
-    /// \deprecated (11/10/04) see \ref GetDuration()
-    virtual dReal GetTotalDuration() const RAVE_DEPRECATED
-    {
-        return GetDuration();
-    }
-
-    /// \deprecated (11/10/04) see \ref serialize
-    virtual bool Write(std::ostream& O, int options) const RAVE_DEPRECATED {
-        serialize(O,options);
-        return true;
-    }
-
-    /// \deprecated (11/10/04) see \ref deserialize
-    virtual bool Read(std::istream& I, RobotBaseConstPtr) RAVE_DEPRECATED {
-        deserialize(I);
-        return true;
-    }
-
-    /// \deprecated (11/10/04)
-    virtual int GetInterpMethod() const RAVE_DEPRECATED {
-        return 0;
-    }
-
-    /// \deprecated (11/10/04) see \ref planningutils::RetimeActiveDOFTrajectory and planningutils::RetimeAffineTrajectory
-    virtual bool CalcTrajTiming(RobotBasePtr probot, int interp,  bool autocalc, bool activedof, dReal fmaxvelmult=1) RAVE_DEPRECATED;
-
-    /// \deprecated (11/10/04)
-    virtual void Clear() RAVE_DEPRECATED
-    {
-        Remove(0,GetNumWaypoints());
-    }
-
-    /// \deprecated (11/10/04)
-    virtual void AddPoint(const Point& p) RAVE_DEPRECATED;
-
-    /// \deprecated (11/10/04)
-    virtual void Reset(int dof) RAVE_DEPRECATED
-    {
-        Remove(0,GetNumWaypoints());
-    }
-
-    /// \deprecated (11/10/04)
-    static const int TO_OneLine RAVE_DEPRECATED = 1;
-    static const int TO_NoHeader RAVE_DEPRECATED = 2;
-    static const int TO_IncludeTimestamps RAVE_DEPRECATED = 4;
-    static const int TO_IncludeBaseTransformation RAVE_DEPRECATED = 8;
-    static const int TO_IncludeVelocities RAVE_DEPRECATED = 0x10;
-    static const int TO_IncludeTorques RAVE_DEPRECATED = 0x20;
-    static const int TO_InterpolationMask RAVE_DEPRECATED = 0x1c0;
-    static const int NONE RAVE_DEPRECATED = 0;
-    static const int LINEAR RAVE_DEPRECATED = 1;
-    static const int LINEAR_BLEND RAVE_DEPRECATED = 2;
-    static const int CUBIC RAVE_DEPRECATED = 3;
-    static const int QUINTIC RAVE_DEPRECATED = 4;
-    static const int NUM_METHODS RAVE_DEPRECATED = 5;
 
 protected:
     inline TrajectoryBasePtr shared_trajectory() {
@@ -268,17 +256,26 @@ protected:
         return boost::static_pointer_cast<TrajectoryBase const>(shared_from_this());
     }
 
+    /// \brief sample points in time range
+    ///
+    /// \param data[out] the sampled points for every time entry.
+    /// \param timeRange[in] time range to sample points at
+    template <typename T>
+    void _SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange) const;
+
+    /// \brief sample points in time range
+    ///
+    /// \param data[out] the sampled points for every time entry.
+    /// \param timeRange[in] time range to sample points at
+    /// \param spec[in] the specification to return the data in
+    template <typename T>
+    void _SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange, const ConfigurationSpecification& spec) const;
+
 private:
     virtual const char* GetHash() const {
         return OPENRAVE_TRAJECTORY_HASH;
     }
-
-    /// \deprecated (11/10/04), unfortunately necessary for back compat
-    mutable std::vector<Point> __vdeprecatedpoints;
 };
-
-/// \deprecated (11/10/04)
-typedef TrajectoryBase Trajectory RAVE_DEPRECATED;
 
 } // end namespace OpenRAVE
 

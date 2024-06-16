@@ -30,21 +30,21 @@ public:
         __description = ":Interface Author: Rosen Diankov\n\nInterface to `Indiana University Intelligent Motion Laboratory <http://www.iu.edu/~motion/software.html>`_ parabolic smoothing library (Kris Hauser).\n\n**Note:** The original trajectory will not be preserved at all, don't use this if the robot has to hit all points of the trajectory.\n";
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
         _numImportantDOF = 7;
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
     bool _InitPlan()
@@ -65,11 +65,11 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         BOOST_ASSERT(!!_parameters && !!ptraj);
         if( ptraj->GetNumWaypoints() < 2 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         // save velocities
@@ -146,7 +146,7 @@ public:
 
             PlannerProgress progress; progress._iteration=0;
             if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             int numshortcuts=0;
@@ -157,7 +157,7 @@ public:
 
             progress._iteration=1;
             if( _CallCallbacks(progress) == PA_Interrupt ) {
-                return PS_Interrupted;
+                return PlannerStatus(PS_Interrupted);
             }
 
             ConfigurationSpecification oldspec = parameters->_configurationspecification;
@@ -238,7 +238,7 @@ public:
                     _bUsePerturbation = true; // re-enable
                     progress._iteration=2;
                     if( _CallCallbacks(progress) == PA_Interrupt ) {
-                        return PS_Interrupted;
+                        return PlannerStatus(PS_Interrupted);
                     }
                 }
 
@@ -294,7 +294,7 @@ public:
             else {
                 RAVELOG_WARN(str(boost::format("parabolic planner failed: %s")%ex.what()));
             }
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
         RAVELOG_DEBUG(str(boost::format("path optimizing - computation time=%fs\n")%(0.001f*(float)(utils::GetMilliTime()-basetime))));
         return _ProcessPostPlanners(RobotBasePtr(),ptraj);

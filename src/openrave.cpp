@@ -22,15 +22,14 @@
 
 #include "libopenrave-core/openrave-core.h"
 #include <set>
+#include <thread>
 
 using namespace OpenRAVE;
 using namespace std;
 
 #include <stdio.h>
 #include <boost/shared_ptr.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/array.hpp>
-#include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <signal.h>
@@ -52,7 +51,7 @@ static bool bDisplayGUI = true, bShowGUI = true;
 static EnvironmentBasePtr s_penv;
 static ViewerBasePtr s_pviewer; ///< static viewer created by the main thread. need to quit from its main loop
 
-//static boost::shared_ptr<boost::thread> s_mainThread;
+//static boost::shared_ptr<std::thread> s_mainThread;
 static string s_sceneFile;
 static string s_saveScene; // if not NULL, saves the scene and exits
 static boost::shared_ptr<string> s_viewerName;
@@ -148,7 +147,7 @@ int main(int argc, char ** argv)
             i += 2;
         }
         else if((_stricmp(argv[i], "--module") == 0)||(_stricmp(argv[i], "-problem") == 0)) {
-            s_listModules.push_back(pair<string, string>(argv[i+1], ""));
+            s_listModules.emplace_back(argv[i+1], "");
             i += 2;
 
             if((i < argc)&&(argv[i][0] != '-')) {
@@ -275,7 +274,7 @@ int main(int argc, char ** argv)
 
     // mac osx requires the main thread to be the gui thread...
     //s_bThreadDestroyed = false;
-    //s_mainThread.reset(new boost::thread(boost::bind(MainOpenRAVEThread)));
+    //s_mainThread = boost::make_shared<std::thread>(std::bind(MainOpenRAVEThread));
     //s_mainThread->join();
     MainOpenRAVEThread();
     {
@@ -327,12 +326,12 @@ void MainOpenRAVEThread()
             if( s_bSetWindowPosition ) {
                 pviewer->Move(s_WindowPosX,s_WindowPosY);
             }
-            penv->AddViewer(pviewer);
+            penv->Add(pviewer, IAM_AllowRenaming, std::string());
         }
     }
 
     {
-        EnvironmentMutex::scoped_lock lock(penv->GetMutex());
+        EnvironmentLock lock(penv->GetMutex());
 
         if( s_sceneFile.size() > 0 ) {
             if( !penv->Load(s_sceneFile) ) {

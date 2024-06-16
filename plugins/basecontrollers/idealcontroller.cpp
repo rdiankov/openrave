@@ -15,8 +15,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/lexical_cast.hpp>
+
+using namespace boost::placeholders;
 
 class IdealController : public ControllerBase
 {
@@ -50,23 +52,23 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( flog.is_open() ) {
             flog.close();
         }
-        if( !!_probot ) {
+        if( !!robot ) {
             if( _bEnableLogging ) {
-                string filename = RaveGetHomeDirectory() + string("/") + _probot->GetName() + string(".traj.xml");
+                string filename = RaveGetHomeDirectory() + string("/") + robot->GetName() + string(".traj.xml");
                 flog.open(filename.c_str());
                 if( !flog ) {
                     RAVELOG_WARN(str(boost::format("failed to open %s\n")%filename));
                 }
-                //flog << "<" << GetXMLId() << " robot=\"" << _probot->GetName() << "\"/>" << endl;
+                //flog << "<" << GetXMLId() << " robot=\"" << robot->GetName() << "\"/>" << endl;
             }
             _dofindices = dofindices;
             _nControlTransformation = nControlTransformation;
             _dofcircular.resize(0);
             FOREACH(it,_dofindices) {
-                KinBody::JointPtr pjoint = _probot->GetJointFromDOFIndex(*it);
+                KinBody::JointPtr pjoint = robot->GetJointFromDOFIndex(*it);
                 _dofcircular.push_back(pjoint->IsCircular(*it-pjoint->GetDOFIndex()));
             }
-            _cblimits = _probot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&utils::sptr_from<IdealController>, weak_controller())));
+            _cblimits = robot->RegisterChangeCallback(KinBody::Prop_JointLimits|KinBody::Prop_JointAccelerationVelocityTorqueLimits,boost::bind(&IdealController::_SetJointLimits,boost::bind(&utils::sptr_from<IdealController>, weak_controller())));
             _SetJointLimits();
 
             if( _dofindices.size() > 0 ) {
@@ -74,7 +76,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                 _gjointvalues->offset = 0;
                 _gjointvalues->dof = _dofindices.size();
                 stringstream ss;
-                ss << "joint_values " << _probot->GetName();
+                ss << "joint_values " << robot->GetName();
                 FOREACHC(it, _dofindices) {
                     ss << " " << *it;
                 }
@@ -82,9 +84,9 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             }
             if( nControlTransformation ) {
                 _gtransform.reset(new ConfigurationSpecification::Group());
-                _gtransform->offset = _probot->GetDOF();
+                _gtransform->offset = robot->GetDOF();
                 _gtransform->dof = RaveGetAffineDOF(DOF_Transform);
-                _gtransform->name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+                _gtransform->name = str(boost::format("affine_transform %s %d")%robot->GetName()%DOF_Transform);
             }
         }
         _bPause = false;
@@ -119,14 +121,15 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         // this will also let it have consistent mechanics as SetPath
         // (there's a race condition we're avoiding where a user calls SetDesired and then state savers revert the robot)
         if( !_bPause ) {
-            EnvironmentMutex::scoped_lock lockenv(_probot->GetEnv()->GetMutex());
+            RobotBasePtr probot = _probot.lock();
+            EnvironmentLock lockenv(probot->GetEnv()->GetMutex());
             _vecdesired = values;
             if( _nControlTransformation ) {
                 if( !!trans ) {
                     _tdesired = *trans;
                 }
                 else {
-                    _tdesired = _probot->GetTransform();
+                    _tdesired = probot->GetTransform();
                 }
                 _SetDOFValues(_vecdesired,_tdesired,0);
             }
@@ -141,7 +144,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
     virtual bool SetPath(TrajectoryBaseConstPtr ptraj)
     {
         OPENRAVE_ASSERT_FORMAT0(!ptraj || GetEnv()==ptraj->GetEnv(), "trajectory needs to come from the same environment as the controller", ORE_InvalidArguments);
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         if( _bPause ) {
             RAVELOG_DEBUG("IdealController cannot start trajectories when paused\n");
             _ptraj.reset();
@@ -154,12 +157,13 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         _ptraj.reset();
 
         if( !!ptraj ) {
+            RobotBasePtr probot = _probot.lock();
             _samplespec._vgroups.resize(0);
             _bTrajHasJoints = false;
             if( !!_gjointvalues ) {
                 // have to reset the name since _gjointvalues can be using an old one
                 stringstream ss;
-                ss << "joint_values " << _probot->GetName();
+                ss << "joint_values " << probot->GetName();
                 FOREACHC(it, _dofindices) {
                     ss << " " << *it;
                 }
@@ -172,7 +176,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             _bTrajHasTransform = false;
             if( !!_gtransform ) {
                 // have to reset the name since _gtransform can be using an old one
-                _gtransform->name = str(boost::format("affine_transform %s %d")%_probot->GetName()%DOF_Transform);
+                _gtransform->name = str(boost::format("affine_transform %s %d")%probot->GetName()%DOF_Transform);
                 _bTrajHasTransform = ptraj->GetConfigurationSpecification().FindCompatibleGroup(_gtransform->name,false) != ptraj->GetConfigurationSpecification()._vgroups.end();
                 if( _bTrajHasTransform ) {
                     _samplespec._vgroups.push_back(*_gtransform);
@@ -187,7 +191,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                     stringstream ss(itgroup->name);
                     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                     if( itgroup->dof == 1 && tokens.size() >= 4 ) {
-                        if( tokens.at(2) == _probot->GetName() ) {
+                        if( tokens.at(2) == probot->GetName() ) {
                             KinBodyPtr pbody = GetEnv()->GetKinBody(tokens.at(1));
                             if( !!pbody ) {
                                 _samplespec._vgroups.push_back(*itgroup);
@@ -209,22 +213,22 @@ If SetDesired is called, only joint values will be set at every timestep leaving
                         }
                     }
                     else {
-                        RAVELOG_WARN(str(boost::format("robot %s invalid grabbody tokens: %s")%_probot->GetName()%ss.str()));
+                        RAVELOG_WARN(str(boost::format("robot %s invalid grabbody tokens: %s")%probot->GetName()%ss.str()));
                     }
                 }
                 else if( itgroup->name.size()>=4 && itgroup->name.substr(0,4) == "grab") {
                     stringstream ss(itgroup->name);
                     std::vector<std::string> tokens((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                    if( tokens.size() >= 2 && tokens[1] == _probot->GetName() ) {
+                    if( tokens.size() >= 2 && tokens[1] == probot->GetName() ) {
                         _samplespec._vgroups.push_back(*itgroup);
                         _samplespec._vgroups.back().offset = dof;
                         for(int idof = 0; idof < _samplespec._vgroups.back().dof; ++idof) {
-                            _vgrablinks.push_back(make_pair(dof+idof,boost::lexical_cast<int>(tokens.at(2+idof))));
+                            _vgrablinks.emplace_back(dof+idof, boost::lexical_cast<int>(tokens.at(2+idof)));
                         }
                         dof += _samplespec._vgroups.back().dof;
                     }
                     else {
-                        RAVELOG_WARN(str(boost::format("robot %s invalid grab tokens: %s")%_probot->GetName()%ss.str()));
+                        RAVELOG_WARN(str(boost::format("robot %s invalid grab tokens: %s")%probot->GetName()%ss.str()));
                     }
                 }
             }
@@ -235,7 +239,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             ptraj->Sample(v,0,_samplespec);
             if( _bTrajHasTransform ) {
                 Transform t;
-                _samplespec.ExtractTransform(t,v.begin(),_probot);
+                _samplespec.ExtractTransform(t,v.begin(),probot);
             }
 
             if( !!flog && _bEnableLogging ) {
@@ -255,9 +259,10 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         if( _bPause ) {
             return;
         }
-        boost::mutex::scoped_lock lock(_mutex);
+        std::lock_guard<std::mutex> lock(_mutex);
         TrajectoryBaseConstPtr ptraj = _ptraj; // because of multi-threading setting issues
         if( !!ptraj ) {
+            RobotBasePtr probot = _probot.lock();
             vector<dReal> sampledata;
             ptraj->Sample(sampledata,_fCommandTime,_samplespec);
 
@@ -279,26 +284,26 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             FOREACH(itgrabinfo,_vgrablinks) {
                 int bodyid = int(std::floor(sampledata.at(itgrabinfo->first)+0.5));
                 if( bodyid != 0 ) {
-                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentId(abs(bodyid));
+                    KinBodyPtr pbody = GetEnv()->GetBodyFromEnvironmentBodyIndex(abs(bodyid));
                     if( !pbody ) {
                         RAVELOG_WARN(str(boost::format("failed to find body id %d")%bodyid));
                         continue;
                     }
                     if( bodyid < 0 ) {
-                        if( !!_probot->IsGrabbing(pbody) ) {
+                        if( !!probot->IsGrabbing(*pbody) ) {
                             listrelease.push_back(pbody);
                         }
                     }
                     else {
-                        KinBody::LinkPtr pgrabbinglink = _probot->IsGrabbing(pbody);
+                        KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*pbody);
                         if( !!pgrabbinglink ) {
                             if( pgrabbinglink->GetIndex() != itgrabinfo->second ) {
                                 listrelease.push_back(pbody);
-                                listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                                listgrab.emplace_back(pbody, probot->GetLinks().at(itgrabinfo->second));
                             }
                         }
                         else {
-                            listgrab.push_back(make_pair(pbody,_probot->GetLinks().at(itgrabinfo->second)));
+                            listgrab.emplace_back(pbody, probot->GetLinks().at(itgrabinfo->second));
                         }
                     }
                 }
@@ -306,12 +311,12 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             FOREACH(itgrabinfo,_vgrabbodylinks) {
                 int dograb = int(std::floor(sampledata.at(itgrabinfo->offset)+0.5));
                 if( dograb <= 0 ) {
-                    if( !!_probot->IsGrabbing(itgrabinfo->pbody) ) {
+                    if( !!probot->IsGrabbing(*itgrabinfo->pbody) ) {
                         listrelease.push_back(itgrabinfo->pbody);
                     }
                 }
                 else {
-                    KinBody::LinkPtr pgrabbinglink = _probot->IsGrabbing(itgrabinfo->pbody);
+                    KinBody::LinkPtr pgrabbinglink = probot->IsGrabbing(*itgrabinfo->pbody);
                     if( !!pgrabbinglink ) {
                         listrelease.push_back(itgrabinfo->pbody);
                     }
@@ -322,17 +327,17 @@ If SetDesired is called, only joint values will be set at every timestep leaving
             vector<dReal> vdofvalues;
             if( _bTrajHasJoints && _dofindices.size() > 0 ) {
                 vdofvalues.resize(_dofindices.size());
-                _samplespec.ExtractJointValues(vdofvalues.begin(),sampledata.begin(), _probot, _dofindices, 0);
+                _samplespec.ExtractJointValues(vdofvalues.begin(),sampledata.begin(), probot, _dofindices, 0);
             }
 
             Transform t;
             if( _bTrajHasTransform && _nControlTransformation ) {
-                _samplespec.ExtractTransform(t,sampledata.begin(),_probot);
+                _samplespec.ExtractTransform(t,sampledata.begin(),probot);
                 if( vdofvalues.size() > 0 ) {
                     _SetDOFValues(vdofvalues,t, _fCommandTime > 0 ? fTimeElapsed : 0);
                 }
                 else {
-                    _probot->SetTransform(t);
+                    probot->SetTransform(t);
                 }
             }
             else if( vdofvalues.size() > 0 ) {
@@ -341,18 +346,18 @@ If SetDesired is called, only joint values will be set at every timestep leaving
 
             // always release after setting dof values
             FOREACH(itbody,listrelease) {
-                _probot->Release(*itbody);
+                probot->Release(**itbody);
             }
             FOREACH(itindex,listgrabindices) {
                 const GrabBody& grabinfo = _vgrabbodylinks.at(*itindex);
-                KinBody::LinkPtr plink = _probot->GetLinks().at(grabinfo.robotlinkindex);
+                KinBody::LinkPtr plink = probot->GetLinks().at(grabinfo.robotlinkindex);
                 if( !!grabinfo.trelativepose ) {
                     grabinfo.pbody->SetTransform(plink->GetTransform() * *grabinfo.trelativepose);
                 }
-                _probot->Grab(grabinfo.pbody, plink);
+                probot->Grab(grabinfo.pbody, plink, rapidjson::Value());
             }
             FOREACH(it,listgrab) {
-                _probot->Grab(it->first,it->second);
+                probot->Grab(it->first,it->second, rapidjson::Value());
             }
             // set _bIsDone after all computation is done!
             _bIsDone = bIsDone;
@@ -382,7 +387,7 @@ If SetDesired is called, only joint values will be set at every timestep leaving
         return _fCommandTime;
     }
     virtual RobotBasePtr GetRobot() const {
-        return _probot;
+        return _probot.lock();
     }
 
 private:
@@ -411,10 +416,10 @@ private:
     }
 
     inline boost::shared_ptr<IdealController> shared_controller() {
-        return boost::dynamic_pointer_cast<IdealController>(shared_from_this());
+        return boost::static_pointer_cast<IdealController>(shared_from_this());
     }
     inline boost::shared_ptr<IdealController const> shared_controller_const() const {
-        return boost::dynamic_pointer_cast<IdealController const>(shared_from_this());
+        return boost::static_pointer_cast<IdealController const>(shared_from_this());
     }
     inline boost::weak_ptr<IdealController> weak_controller() {
         return shared_controller();
@@ -422,80 +427,90 @@ private:
 
     virtual void _SetJointLimits()
     {
-        if( !!_probot ) {
-            _probot->GetDOFLimits(_vlower[0],_vupper[0]);
-            _probot->GetDOFVelocityLimits(_vupper[1]);
-            _probot->GetDOFAccelerationLimits(_vupper[2]);
+        RobotBasePtr probot = _probot.lock();
+        if( !!probot ) {
+            probot->GetDOFLimits(_vlower[0],_vupper[0]);
+            probot->GetDOFVelocityLimits(_vupper[1]);
+            probot->GetDOFAccelerationLimits(_vupper[2]);
         }
     }
 
     virtual void _SetDOFValues(const std::vector<dReal>&values, dReal timeelapsed)
     {
+        RobotBasePtr probot = _probot.lock();
+        
         vector<dReal> prevvalues, curvalues, curvel;
-        _probot->GetDOFValues(prevvalues);
+        probot->GetDOFValues(prevvalues);
         curvalues = prevvalues;
-        _probot->GetDOFVelocities(curvel);
+        probot->GetDOFVelocities(curvel);
         Vector linearvel, angularvel;
-        _probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
+        probot->GetLinks().at(0)->GetVelocity(linearvel,angularvel);
         int i = 0;
         FOREACH(it,_dofindices) {
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
-        _CheckLimits(prevvalues, curvalues, timeelapsed);
-        _probot->SetDOFValues(curvalues,true);
-        _probot->SetDOFVelocities(curvel,linearvel,angularvel);
-        _CheckConfiguration();
+        _CheckLimits(probot, prevvalues, curvalues, timeelapsed);
+        probot->SetDOFValues(curvalues,true);
+        probot->SetDOFVelocities(curvel,linearvel,angularvel);
+        _CheckConfiguration(probot);
     }
     virtual void _SetDOFValues(const std::vector<dReal>&values, const Transform &t, dReal timeelapsed)
     {
+        RobotBasePtr probot = _probot.lock();
         BOOST_ASSERT(_nControlTransformation);
         vector<dReal> prevvalues, curvalues, curvel;
-        _probot->GetDOFValues(prevvalues);
+        probot->GetDOFValues(prevvalues);
         curvalues = prevvalues;
-        _probot->GetDOFVelocities(curvel);
+        probot->GetDOFVelocities(curvel);
         int i = 0;
         FOREACH(it,_dofindices) {
             curvalues.at(*it) = values.at(i++);
             curvel.at(*it) = 0;
         }
-        _CheckLimits(prevvalues, curvalues, timeelapsed);
-        _probot->SetDOFValues(curvalues,t, true);
-        _probot->SetDOFVelocities(curvel,Vector(),Vector());
-        _CheckConfiguration();
+        _CheckLimits(probot, prevvalues, curvalues, timeelapsed);
+        probot->SetDOFValues(curvalues,t, true);
+        probot->SetDOFVelocities(curvel,Vector(),Vector());
+        _CheckConfiguration(probot);
     }
 
-    void _CheckLimits(std::vector<dReal>& prevvalues, std::vector<dReal>&curvalues, dReal timeelapsed)
+    void _CheckLimits(RobotBasePtr probot, std::vector<dReal>& prevvalues, std::vector<dReal>&curvalues, dReal timeelapsed)
     {
         for(size_t i = 0; i < _vlower[0].size(); ++i) {
             if( !_dofcircular[i] ) {
+                if( std::isnan(curvalues.at(i)) ) {
+                    continue;
+                }
                 if( curvalues.at(i) < _vlower[0][i]-g_fEpsilonJointLimit ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %e < %e, time=%f")%_probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
+                    _ReportError(str(boost::format("robot %s dof %d is violating lower limit %e < %e, time=%f")%probot->GetName()%i%_vlower[0][i]%curvalues[i]%_fCommandTime));
                 }
                 if( curvalues.at(i) > _vupper[0][i]+g_fEpsilonJointLimit ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %e > %e, time=%f")%_probot->GetName()%i%_vupper[0][i]%curvalues[i]%_fCommandTime));
+                    _ReportError(str(boost::format("robot %s dof %d is violating upper limit %e > %e, time=%f")%probot->GetName()%i%_vupper[0][i]%curvalues[i]%_fCommandTime));
                 }
             }
         }
         if( timeelapsed > 0 ) {
             vector<dReal> vdiff = curvalues;
-            _probot->SubtractDOFValues(vdiff,prevvalues);
+            probot->SubtractDOFValues(vdiff,prevvalues);
             for(size_t i = 0; i < _vupper[1].size(); ++i) {
+                if( std::isnan(vdiff.at(i)) ) {
+                    continue;
+                }
                 dReal maxallowed = timeelapsed * _vupper[1][i]+1e-6;
                 if( RaveFabs(vdiff.at(i)) > maxallowed ) {
-                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %.15e > %.15e, time=%f")%_probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed%_fCommandTime));
+                    _ReportError(str(boost::format("robot %s dof %d is violating max velocity displacement %.15e > %.15e, time=%f")%probot->GetName()%i%RaveFabs(vdiff.at(i))%maxallowed%_fCommandTime));
                 }
             }
         }
     }
 
-    void _CheckConfiguration()
+    void _CheckConfiguration(RobotBasePtr probot)
     {
         if( _bCheckCollision ) {
-            if( GetEnv()->CheckCollision(KinBodyConstPtr(_probot),_report) ) {
+            if( GetEnv()->CheckCollision(KinBodyConstPtr(probot),_report) ) {
                 _ReportError(str(boost::format("collsion in trajectory: %s, time=%f\n")%_report->__str__()%_fCommandTime));
             }
-            if( _probot->CheckSelfCollision(_report) ) {
+            if( probot->CheckSelfCollision(_report) ) {
                 _ReportError(str(boost::format("self collsion in trajectory: %s, time=%f\n")%_report->__str__()%_fCommandTime));
             }
         }
@@ -520,7 +535,7 @@ private:
         }
     }
 
-    RobotBasePtr _probot;               ///< controlled body
+    RobotBaseWeakPtr _probot;               ///< controlled body
     dReal _fSpeed;                    ///< how fast the robot should go
     TrajectoryBasePtr _ptraj;         ///< computed trajectory robot needs to follow in chunks of _pbody->GetDOF()
     bool _bTrajHasJoints, _bTrajHasTransform;
@@ -529,7 +544,7 @@ private:
     {
         GrabBody() : offset(0), robotlinkindex(0) {
         }
-        GrabBody(int offset, int robotlinkindex, KinBodyPtr pbody) : offset(offset), robotlinkindex(robotlinkindex), pbody(pbody) {
+        GrabBody(int offset_, int robotlinkindex_, KinBodyPtr pbody_) : offset(offset_), robotlinkindex(robotlinkindex_), pbody(pbody_) {
         }
         int offset;
         int robotlinkindex;
@@ -553,7 +568,7 @@ private:
     UserDataPtr _cblimits;
     ConfigurationSpecification _samplespec;
     boost::shared_ptr<ConfigurationSpecification::Group> _gjointvalues, _gtransform;
-    boost::mutex _mutex;
+    std::mutex _mutex;
 };
 
 ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput)

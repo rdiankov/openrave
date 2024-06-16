@@ -225,7 +225,7 @@ public:
         if(!!report ) {
             report->Reset(_options);
         }
-        if( pbody->IsAttached(plink->GetParent()) ) {
+        if( pbody->IsAttached(*plink->GetParent()) ) {
             return false;
         }
         _pactiverobot.reset();
@@ -264,7 +264,7 @@ public:
             }
             KinBodyPtr pbody2 = *itbody;
 
-            if(plink->GetParent()->IsAttached(KinBodyConstPtr(pbody2)) ) {
+            if(plink->GetParent()->IsAttached(*pbody2)) {
                 continue;
             }
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {
@@ -355,6 +355,12 @@ public:
         throw openrave_exception("PQP collision checker does not support ray collision queries\n");
     }
 
+    virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr())
+    {
+        RAVELOG_WARN("pqp does not support trimesh/body check\n");
+        return false;
+    }
+
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report)
     {
         if( pbody->GetLinks().size() <= 1 ) {
@@ -368,7 +374,7 @@ public:
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
-        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
         FOREACHC(itset, nonadjacent) {
             if( CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(*itset&0xffff)), KinBody::LinkConstPtr(pbody->GetLinks().at(*itset>>16)), report) ) {
                 RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%pbody->GetLinks().at(*itset&0xffff)->GetName()%pbody->GetLinks().at(*itset>>16)->GetName()));
@@ -393,7 +399,7 @@ public:
         if( (_options&OpenRAVE::CO_ActiveDOFs) && pbody->IsRobot() ) {
             adjacentoptions |= KinBody::AO_ActiveDOFs;
         }
-        const std::set<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
+        const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
         FOREACHC(itset, nonadjacent) {
             KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
@@ -445,7 +451,7 @@ private:
             }
             KinBodyPtr pbody2 = *itbody;
 
-            if(pbody1->IsAttached(KinBodyConstPtr(pbody2)) ) {
+            if(pbody1->IsAttached(*pbody2)) {
                 continue;
             }
             if( find(vbodyexcluded.begin(),vbodyexcluded.end(),pbody2) != vbodyexcluded.end() ) {
@@ -560,7 +566,8 @@ private:
         }
         // collision
         if(_benablecol) {
-            if( GetEnv()->HasRegisteredCollisionCallbacks() && !report ) {
+            const bool bUseCallbacks = !(_options & OpenRAVE::CO_IgnoreCallbacks) && GetEnv()->HasRegisteredCollisionCallbacks();
+            if( bUseCallbacks && !report ) {
                 report.reset(new CollisionReport());
                 report->Reset(_options);
             }
@@ -576,27 +583,27 @@ private:
                 PQP_Collide(&colres,R1,T1,m1.get(),R2,T2,m2.get());
 
                 if(colres.NumPairs() > 0) {
-                    report->plink1 = link1;
-                    report->plink2 = link2;
+                    int icollision = report->AddLinkCollision(*link1, *link2);
                     report->minDistance = 0;
                     bcollision = true;
-                }
 
-                for(int i = 0; i < colres.NumPairs(); i++) {
-                    u1 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3]],R1,T1);
-                    u2 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+1]],R1,T1);
-                    u3 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+2]],R1,T1);
+                    CollisionPairInfo& cpinfo = report->vCollisionInfos[icollision];
+                    for(int i = 0; i < colres.NumPairs(); i++) {
+                        u1 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3]],R1,T1);
+                        u2 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+1]],R1,T1);
+                        u3 = PQPRealToVector(link1->GetCollisionData().vertices[link1->GetCollisionData().indices[colres.Id1(i)*3+2]],R1,T1);
 
-                    v1=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3]],R2,T2);
-                    v2=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+1]],R2,T2);
-                    v3=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+2]],R2,T2);
+                        v1=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3]],R2,T2);
+                        v2=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+1]],R2,T2);
+                        v3=PQPRealToVector(link2->GetCollisionData().vertices[link2->GetCollisionData().indices[colres.Id2(i)*3+2]],R2,T2);
 
-                    if(TriTriCollision(u1,u2,u3,v1,v2,v3,contactpos,contactnorm)) {
-                        report->contacts.push_back(CollisionReport::CONTACT(contactpos,contactnorm,0.));
+                        if(TriTriCollision(u1,u2,u3,v1,v2,v3,contactpos,contactnorm)) {
+                            cpinfo.contacts.push_back(CONTACT(contactpos,contactnorm,0.));
+                        }
                     }
                 }
 
-                if( GetEnv()->HasRegisteredCollisionCallbacks() ) {
+                if( bUseCallbacks ) {
                     std::list<EnvironmentBase::CollisionCallbackFn> listcallbacks;
                     GetEnv()->GetRegisteredCollisionCallbacks(listcallbacks);
 
@@ -623,19 +630,21 @@ private:
             PQP_Distance(&disres,R1,T1,m1.get(),R2,T2,m2.get(),_rel_err,_abs_err);
             if(report->minDistance > (dReal) disres.Distance()) {
                 report->minDistance = (dReal) disres.Distance();
-                report->contacts.resize(1);
+                int icollision = report->AddLinkCollision(*link1, *link2);
+                CollisionPairInfo& cpinfo = report->vCollisionInfos[icollision];
+                cpinfo.contacts.resize(1);
                 Vector p1(disres.P1()[0],disres.P1()[1],disres.P1()[2]), p2(disres.P2()[0],disres.P2()[1],disres.P2()[2]);
                 p1 = PQPRealToVector(disres.P1(),R1,T1);
                 p2 = PQPRealToVector(disres.P2(),R2,T2);
                 dReal depth = RaveSqrt((p2-p1).lengthsqr3());
-                report->contacts.at(0).pos = p1;
-                report->contacts.at(0).depth = -depth;
-                if( depth > 0 )
-                    report->contacts.at(0).norm = (p2-p1)*(1/depth);
-                else
-                    report->contacts.at(0).norm = Vector(0,0,0);
-                report->plink1 = link1;
-                report->plink2 = link2;
+                cpinfo.contacts.at(0).pos = p1;
+                cpinfo.contacts.at(0).depth = -depth;
+                if( depth > 0 ) {
+                    cpinfo.contacts.at(0).norm = (p2-p1)*(1/depth);
+                }
+                else {
+                    cpinfo.contacts.at(0).norm = Vector(0,0,0);
+                }
             }
         }
 

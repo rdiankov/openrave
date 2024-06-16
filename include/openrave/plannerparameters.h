@@ -33,8 +33,8 @@ public:
     }
 
     dReal _fExploreProb; ///< explore close to the neighbors already added
-    int _nExpectedDataSize; ///< the expected number of nodes of the RRT tree to expand to before returning a solution. This allows the RRT tree to build up 
-    
+    int _nExpectedDataSize; ///< the expected number of nodes of the RRT tree to expand to before returning a solution. This allows the RRT tree to build up
+
 protected:
     bool _bProcessingExploration;
     // save the extra data to XML
@@ -199,7 +199,7 @@ protected:
             O << *it << " ";
         }
         O << "</grasps>" << std::endl;
-        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentId() : 0) << "</target>" << std::endl;
+        O << "<target>" << (!!_ptarget ? _ptarget->GetEnvironmentBodyIndex() : 0) << "</target>" << std::endl;
         O << "<numgradsamples>" << _nGradientSamples << "</numgradsamples>" << std::endl;
         O << "<visgraspthresh>" << _fVisibiltyGraspThresh << "</visgraspthresh>" << std::endl;
         O << "<graspdistthresh>" << _fGraspDistThresh << "</graspdistthresh>" << std::endl;
@@ -236,9 +236,9 @@ protected:
                 }
             }
             else if( name == "target" ) {
-                int id = 0;
-                _ss >> id;
-                _ptarget = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                _ptarget = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "numgradsamples" ) {
                 _ss >> _nGradientSamples;
@@ -282,6 +282,7 @@ public:
         _vXMLParameters.push_back("ftranslationstepmult");
         _vXMLParameters.push_back("fgraspingnoise");
         _vXMLParameters.push_back("vintersectplane");
+        _vXMLParameters.push_back("vordereddofindices");
         _bProcessingGrasp = false;
     }
 
@@ -304,6 +305,8 @@ public:
     dReal fgraspingnoise;     ///< random undeterministic noise to add to the target object, represents the max possible displacement of any point on the object (noise added after global direction and start have been determined)
     Vector vintersectplane; ///< if norm > 0, then the manipulator transform has to be on the plane for grabbing to work. This is mutually exclusive from the standoff.
 
+    std::vector<int> vordereddofindices; ///< if specified, will move fingers in this order instead of the order specified by robot->GetActiveDOFIndices().
+
 protected:
     EnvironmentBasePtr _penv;     ///< environment target belongs to
     bool _bProcessingGrasp;
@@ -314,7 +317,7 @@ protected:
             return false;
         }
         O << "<fstandoff>" << fstandoff << "</fstandoff>" << std::endl;
-        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentId()) << "</targetbody>" << std::endl;
+        O << "<targetbody>" << (int)(!targetbody ? 0 : targetbody->GetEnvironmentBodyIndex()) << "</targetbody>" << std::endl;
         O << "<ftargetroll>" << ftargetroll << "</ftargetroll>" << std::endl;
         O << "<vtargetdirection>" << vtargetdirection << "</vtargetdirection>" << std::endl;
         O << "<vtargetposition>" << vtargetposition << "</vtargetposition>" << std::endl;
@@ -334,6 +337,11 @@ protected:
         O << "<ftranslationstepmult>" << ftranslationstepmult << "</ftranslationstepmult>" << std::endl;
         O << "<fgraspingnoise>" << fgraspingnoise << "</fgraspingnoise>" << std::endl;
         O << "<vintersectplane>" << vintersectplane << "</vintersectplane>" << std::endl;
+        O << "<vordereddofindices>" << std::endl;
+        for(std::vector<int>::const_iterator it = vordereddofindices.begin(); it != vordereddofindices.end(); ++it) {
+            O << *it << " ";
+        }
+        O << "</vordereddofindices>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -355,7 +363,7 @@ protected:
             return PE_Support;
         }
 
-        static boost::array<std::string,17> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise","vintersectplane"}};
+        static boost::array<std::string,18> tags = {{"fstandoff","targetbody","ftargetroll","vtargetdirection","vtargetposition","vmanipulatordirection", "btransformrobot","breturntrajectory","bonlycontacttarget","btightgrasp","bavoidcontact","vavoidlinkgeometry","fcoarsestep","ffinestep","ftranslationstepmult","fgraspingnoise","vintersectplane","vordereddofindices"}};
         _bProcessingGrasp = find(tags.begin(),tags.end(),name) != tags.end();
         return _bProcessingGrasp ? PE_Support : PE_Pass;
     }
@@ -368,13 +376,16 @@ protected:
             if( name == "vavoidlinkgeometry" ) {
                 vavoidlinkgeometry = std::vector<std::string>((std::istream_iterator<std::string>(_ss)), std::istream_iterator<std::string>());
             }
+            else if( name == "vordereddofindices" ) {
+                vordereddofindices = std::vector<int>((std::istream_iterator<int>(_ss)), std::istream_iterator<int>());
+            }
             else if( name == "fstandoff") {
                 _ss >> fstandoff;
             }
             else if( name == "targetbody") {
-                int id = 0;
-                _ss >> id;
-                targetbody = _penv->GetBodyFromEnvironmentId(id);
+                int bodyIndex = 0;
+                _ss >> bodyIndex;
+                targetbody = _penv->GetBodyFromEnvironmentBodyIndex(bodyIndex);
             }
             else if( name == "ftargetroll") {
                 _ss >> ftargetroll;
@@ -441,11 +452,12 @@ typedef boost::shared_ptr<GraspParameters const> GraspParametersConstPtr;
 class OPENRAVE_API TrajectoryTimingParameters : public PlannerBase::PlannerParameters
 {
 public:
-    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _outputaccelchanges(true), _multidofinterp(0), verifyinitialpath(1), _bProcessing(false) {
+    TrajectoryTimingParameters() : _interpolation(""), _pointtolerance(0.2), _hastimestamps(false), _hasvelocities(false), _hasaccelerations(false), _outputaccelchanges(true), _multidofinterp(0), verifyinitialpath(1), _bProcessing(false) {
         _fStepLength = 0; // reset to 0 since it is being used
         _vXMLParameters.push_back("interpolation");
         _vXMLParameters.push_back("hastimestamps");
         _vXMLParameters.push_back("hasvelocities");
+        _vXMLParameters.push_back("hasaccelerations");
         _vXMLParameters.push_back("pointtolerance");
         _vXMLParameters.push_back("outputaccelchanges");
         _vXMLParameters.push_back("multidofinterp");
@@ -454,7 +466,7 @@ public:
 
     std::string _interpolation;
     dReal _pointtolerance; ///< multiple of dof resolutions to set on discretization tolerance
-    bool _hastimestamps, _hasvelocities;
+    bool _hastimestamps, _hasvelocities, _hasaccelerations;
     bool _outputaccelchanges; ///< if true, will output a waypoint every time a DOF changes its acceleration, this allows a trajectory be executed without knowing the max velocities/accelerations. If false, will just output the waypoints.
     int _multidofinterp; ///< if 1, will always force the max acceleration of the robot when retiming rather than using lesser acceleration whenever possible. if 0, will compute minimum acceleration. If 2, will match acceleration ramps of all dofs.
     int verifyinitialpath; ///< if 0 then does not verify whether the path given as input is in collision
@@ -469,6 +481,7 @@ protected:
         O << "<interpolation>" << _interpolation << "</interpolation>" << std::endl;
         O << "<hastimestamps>" << _hastimestamps << "</hastimestamps>" << std::endl;
         O << "<hasvelocities>" << _hasvelocities << "</hasvelocities>" << std::endl;
+        O << "<hasaccelerations>" << _hasvelocities << "</hasaccelerations>" << std::endl;
         O << "<pointtolerance>" << _pointtolerance << "</pointtolerance>" << std::endl;
         O << "<outputaccelchanges>" << _outputaccelchanges << "</outputaccelchanges>" << std::endl;
         O << "<multidofinterp>" << _multidofinterp << "</multidofinterp>" << std::endl;
@@ -491,7 +504,7 @@ protected:
         case PE_Ignore: return PE_Ignore;
         }
 
-        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp"||name=="verifyinitialpath";
+        _bProcessing = name=="interpolation" || name=="hastimestamps" || name=="hasvelocities" || name=="hasaccelerations" || name=="pointtolerance" || name=="outputaccelchanges" || name=="multidofinterp"||name=="verifyinitialpath";
         return _bProcessing ? PE_Support : PE_Pass;
     }
 
@@ -506,6 +519,9 @@ protected:
             }
             else if( name == "hasvelocities" ) {
                 _ss >> _hasvelocities;
+            }
+            else if( name == "hasaccelerations" ) {
+                _ss >> _hasaccelerations;
             }
             else if( name == "pointtolerance" ) {
                 _ss >> _pointtolerance;
@@ -537,7 +553,7 @@ typedef boost::shared_ptr<TrajectoryTimingParameters const> TrajectoryTimingPara
 class OPENRAVE_API ConstraintTrajectoryTimingParameters : public TrajectoryTimingParameters
 {
 public:
-    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), maxlinkaccel(0), maxmanipspeed(0), maxmanipaccel(0), vConstraintManipDir(0,0,1), vConstraintGlobalDir(0,0,1), fCosManipAngleThresh(-1), mingripperdistance(0), velocitydistancethresh(0), maxmergeiterations(1000), minswitchtime(0.2),nshortcutcycles(1), fSearchVelAccelMult(0.8), _bCProcessing(false) {
+    ConstraintTrajectoryTimingParameters() : TrajectoryTimingParameters(), maxlinkspeed(0), maxlinkaccel(0), maxmanipspeed(0), maxmanipaccel(0), vConstraintManipDir(0,0,1), vConstraintGlobalDir(0,0,1), fCosManipAngleThresh(-1), mingripperdistance(0), velocitydistancethresh(0), maxmergeiterations(1000), minswitchtime(0.2),nshortcutcycles(1), fSearchVelAccelMult(0.8), durationImprovementCutoffRatio(0.001), _bCProcessing(false) {
         _vXMLParameters.push_back("maxlinkspeed");
         _vXMLParameters.push_back("maxlinkaccel");
         _vXMLParameters.push_back("manipname");
@@ -552,6 +568,7 @@ public:
         _vXMLParameters.push_back("minswitchtime");
         _vXMLParameters.push_back("nshortcutcycles");
         _vXMLParameters.push_back("searchvelaccelmult");
+        _vXMLParameters.push_back("durationimprovementcutoffratio");
     }
 
     dReal maxlinkspeed; ///< max speed in m/s that any point on any link goes. 0 means no speed limit
@@ -563,7 +580,7 @@ public:
 
     Vector vConstraintManipDir, vConstraintGlobalDir; /// threshold the dot product between a direction on the manipulator and in the global world coordinate system. Use manipname
     dReal fCosManipAngleThresh; ///< cos of the angle threshold between vConstraintManipDir and vConstraintGlobalDir. dot(manipdir, manipdir) > cosmanipanglethresh. By default it is -1
-    
+
 
     dReal mingripperdistance; ///< minimum distance of the hand (manipulator grippers) to any object. 0 means disabled.
     dReal velocitydistancethresh; /// threshold for dot(Direction,Velocity)/MinDistance where Direction is between the closest contact points. 0 if disabled.
@@ -571,9 +588,10 @@ public:
     // merging waypoint related parameters
     int maxmergeiterations; ///< when merging several ramps together, the order that they are merged in depends. This parameters pecifies how many permutations to test before giving up.
     dReal minswitchtime; ///< the minimum time between switching accelerations of any joint (waypoints).
-    int nshortcutcycles; ///< number of times the shortcut cycle is repeted.
+    int nshortcutcycles; ///< the minimum number of times the shortcut cycle is repeated.
 
     dReal fSearchVelAccelMult; ///< a number in [0.0001,0.99999] that is the multipler of the velocity/acceleration limits when time-based constraints are invalidated (manip speed and/or dynamics). The closer to 1 it is, the more optimal the trajectory will be, but it will take more time to compute. A value around 0.5-0.8 is best.
+    dReal durationImprovementCutoffRatio; ///< Whenever shortcut is accepted, if change is less than diff/iterations, then do not do anymore shortcutting.
 
 protected:
     bool _bCProcessing;
@@ -596,6 +614,7 @@ protected:
         O << "<minswitchtime>" << minswitchtime << "</minswitchtime>" << std::endl;
         O << "<nshortcutcycles>" << nshortcutcycles << "</nshortcutcycles>" << std::endl;
         O << "<searchvelaccelmult>" << fSearchVelAccelMult << "</searchvelaccelmult>" << std::endl;
+        O << "<durationimprovementcutoffratio>" << durationImprovementCutoffRatio << "</durationimprovementcutoffratio>" << std::endl;
         if( !(options & 1) ) {
             O << _sExtraParameters << std::endl;
         }
@@ -613,7 +632,7 @@ protected:
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
         }
-        _bCProcessing = name=="maxlinkspeed" || name =="maxlinkaccel" || name=="manipname" || name=="maxmanipspeed" || name =="maxmanipaccel" || name=="mingripperdistance" || name=="velocitydistancethresh" || name=="maxmergeiterations" || name=="minswitchtime"|| name=="nshortcutcycles" || name=="constraintmanipdir" || name=="constraintglobaldir" || name=="cosmanipanglethresh" || name=="searchvelaccelmult";
+        _bCProcessing = name=="maxlinkspeed" || name =="maxlinkaccel" || name=="manipname" || name=="maxmanipspeed" || name =="maxmanipaccel" || name=="mingripperdistance" || name=="velocitydistancethresh" || name=="maxmergeiterations" || name=="minswitchtime"|| name=="nshortcutcycles" || name=="constraintmanipdir" || name=="constraintglobaldir" || name=="cosmanipanglethresh" || name=="searchvelaccelmult" || name=="durationimprovementcutoffratio";
         return _bCProcessing ? PE_Support : PE_Pass;
     }
 
@@ -652,6 +671,9 @@ protected:
             }
             else if( name == "searchvelaccelmult") {
                 _ss >> fSearchVelAccelMult;
+            }
+            else if( name == "durationimprovementcutoffratio" ) {
+                _ss >> durationImprovementCutoffRatio;
             }
             else if( name == "constraintmanipdir" ) {
                 _ss >> vConstraintManipDir;
@@ -778,12 +800,12 @@ public:
     dReal _fGoalBiasProb;
     int _nRRTExtentType; ///< the rrt extent type. if 0 then extend all the way to the sampled position. if 1, then just extend one step length before sampling again.
     int _nMinIterations; ///< minimum iterations to do before returning a result unless user passes a PA_ReturnWithAnySolution interrupt. When the iterations are done, the RRT will choose the goal with the minimum configuration distance from the initial to return. By defautl it is 0.
-    
+
 protected:
     bool _bProcessingBasic;
     virtual bool serialize(std::ostream& O, int options=0) const
     {
-        if( !PlannerParameters::serialize(O, options&~1) ) {
+        if( !RRTParameters::serialize(O, options&~1) ) {
             return false;
         }
         O << "<goalbias>" << _fGoalBiasProb << "</goalbias>" << std::endl;
@@ -801,7 +823,7 @@ protected:
         if( _bProcessingBasic ) {
             return PE_Ignore;
         }
-        switch( PlannerBase::PlannerParameters::startElement(name,atts) ) {
+        switch( RRTParameters::startElement(name,atts) ) {
         case PE_Pass: break;
         case PE_Support: return PE_Support;
         case PE_Ignore: return PE_Ignore;
@@ -831,7 +853,7 @@ protected:
         }
 
         // give a chance for the default parameters to get processed
-        return PlannerParameters::endElement(name);
+        return RRTParameters::endElement(name);
     }
 };
 

@@ -18,6 +18,8 @@
 
 #include <sstream>
 
+const osg::Node::NodeMask OSG_IS_PICKABLE_MASK = 0x2;
+
 namespace qtosgrave {
 
 /// \brief class to handle events with a pick
@@ -25,8 +27,8 @@ class OSGPickHandler : public osgGA::GUIEventHandler
 {
 public:
     /// select(node, modkeymask) where node is the ray-picked node, and modkeymask is the modifier key mask currently pressed
-    typedef boost::function<void (const osgUtil::LineSegmentIntersector::Intersection& , int, int)> HandleRayPickFn;
-    typedef boost::function<void()> DragFn;
+    typedef boost::function<void (const osgUtil::LineSegmentIntersector::Intersection&, int, int)> HandleRayPickFn;
+    typedef boost::function<void ()> DragFn;
 
     OSGPickHandler(const HandleRayPickFn& handleRayPickFn=HandleRayPickFn(), const DragFn& dragfn=DragFn());
     virtual ~OSGPickHandler();
@@ -37,7 +39,7 @@ public:
     /// \brief Active joint selection
     //void ActivateSelection(bool active);
     //bool IsSelectionActive() const { return _select; }
-    
+
 protected:
     virtual void _Pick(osg::ref_ptr<osgViewer::View> view, const osgGA::GUIEventAdapter& ea, int buttonPressed);
     HandleRayPickFn _handleRayPickFn;

@@ -1,10 +1,10 @@
-cmake_minimum_required (VERSION 2.6.3) # using import/export targets, 2.6.3 for open scene graph cmake files
+cmake_minimum_required (VERSION 3.0)
 project(OpenRAVE)
 set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 9)
+set (OPENRAVE_VERSION_MINOR 148)
 set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -16,6 +16,9 @@ cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
 
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
+endif()
 # Use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_SKIP_BUILD_RPATH  FALSE)
 
@@ -35,6 +38,7 @@ option(OPT_PLUGINS "Build the pluings" ON)
 option(OPT_DOUBLE_PRECISION "Use double precision" ON)
 option(OPT_ACCURATEMATH "Use accurate and robust math to account for floating-point errors" ON)
 option(OPT_PYTHON "Build python bindings" ON)
+option(OPT_PYTHON3 "Build python bindings" ON)
 option(OPT_OCTAVE "Build octave bindings" ON)
 option(OPT_MATLAB "Build matlab bindings" ON)
 option(OPT_STATIC "Build static libraries" OFF)
@@ -44,17 +48,33 @@ option(OPT_ODE_COLLISION "Use ODE collision checker if available" ON)
 option(OPT_FCL_COLLISION "Use FCL collision checker if available" ON)
 option(OPT_QTCOIN_VIEWER "Use QT/Coin Viewer if available" ON)
 option(OPT_QTOSG_VIEWER "Use QT/OpenSceneGraph Viewer if available" ON)
-option(OPT_EXTRA_ROBOTS "Install extra robots" ON)
 option(OPT_BUILD_PACKAGES "Set to ON to generate CPack configuration files and packaging targets" OFF)
 option(OPT_BUILD_PACKAGE_DEFAULT "Set to ON to generate a default openrave package that creates symlinks" ON)
 option(OPT_IKFAST_FLOAT32 "Set to ON to allow loading of ikfast shared objects compiled with 32bit float (64bit double is always supported regardless of this option)" ON)
 option(OPT_FLANN "Temporary switch to force building of flann" OFF)
 option(OPT_CBINDINGS "Build the C-bindings libraries libopenrave_c and libopenrave-core_c" ON)
 option(OPT_LOG4CXX "Use log4cxx for logging" ON)
+option(OPT_MSGPACK "Support msgpack format" ON)
+option(OPT_CURL "Use curl for downloading resources" ON)
+option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
+option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
+option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
+option(OPT_STATIC_PLUGINS "Statically compile in plugins" OFF)
+option(OPT_PIC "Build position independent code" ON)
+option(OPT_ENCRYPTION "Robot and KinBody encryption backed by GPG." ON)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ${OPT_PIC})
 
 set(PACKAGE_VERSION "0" CACHE STRING "the package-specific version used for uploading the sources")
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake")
 set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
+
+if (OPT_ENVIRONMENT_RECURSIVE_LOCK)
+  message(STATUS "using threads and synchronization primitives from std.")
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 1)
+else()
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 0)
+endif()
 
 if(OPT_DOUBLE_PRECISION)
   set(OPENRAVE_PRECISION 1)
@@ -64,6 +84,13 @@ else()
   set(OPENRAVE_PRECISION 0)
   set(CPACK_DEBIAN_PACKAGE_NAME "${CPACK_DEBIAN_PACKAGE_NAME}-sp")
   message(STATUS "Using single precision")
+endif()
+
+if (OPT_STATIC_PLUGINS)
+  set(OPT_PLUGINS OFF)
+  set(OPENRAVE_STATIC_PLUGINS 1)
+else()
+  set(OPENRAVE_STATIC_PLUGINS 0)
 endif()
 
 set(COMPONENT_PREFIX "${CPACK_DEBIAN_PACKAGE_NAME}-")
@@ -81,70 +108,9 @@ include(CheckCXXSourceRuns)
 include(CheckCXXCompilerFlag)
 include(CheckTypeSize)
 include(InstallSymlink)
+include(GNUInstallDirs)
 
 find_package(PkgConfig) # pkg_check_modules
-
-set(OPENRAVE_PYTHON_INSTALL_DIR)
-
-if( OPT_PYTHON )
-  include(FindPythonInterp)
-  ## check python
-  find_package(PythonLibs 2) # using PYTHON_INCLUDE_PATH instead of PYTHON_INCLUDE_DIRS?
-  if( NOT PYTHON_EXECUTABLE )
-    # look specifically for 2.6
-    find_program(PYTHON_EXECUTABLE NAMES python2.6 python PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\Python\\PythonCore\\2.6\\InstallPath])
-  endif()
-
-  # back compat?
-  if( NOT PYTHON_INCLUDE_DIRS )
-    set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_PATH})
-  endif()
-
-  if( PYTHON_EXECUTABLE )
-    get_filename_component(PYTHON_EXECUTABLE_NAME ${PYTHON_EXECUTABLE} NAME)
-    # architecture independent
-#    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(0)"
-#      OUTPUT_VARIABLE _python_sitepackage OUTPUT_STRIP_TRAILING_WHITESPACE
-#      RESULT_VARIABLE _python_failed0)
-#    # architexture dependent
-#    execute_process(
-#      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)"
-#      OUTPUT_VARIABLE _python_distpackage OUTPUT_STRIP_TRAILING_WHITESPACE
-#      RESULT_VARIABLE _python_failed1)
-    execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.get_include()"
-      OUTPUT_VARIABLE _python_numpy_include OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _python_failed0)
-    execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; from myrelpath import relpath; print relpath(get_python_lib(1,prefix='${CMAKE_INSTALL_PREFIX}'),'${CMAKE_INSTALL_PREFIX}')"
-      OUTPUT_VARIABLE OPENRAVE_PYTHON_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      RESULT_VARIABLE _python_failed2)
-
-    if( ${_python_failed0} EQUAL 0 AND ${_python_failed2} EQUAL 0 )
-      if( NOT IS_DIRECTORY "${_python_numpy_include}" )
-        set(PYTHON_EXECUTABLE)
-      else()
-        set(PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS} ${_python_numpy_include})
-      endif()
-
-      # get the major.minor python version
-      execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} -c "import sys; print('%d.%d'%sys.version_info[0:2])"
-        OUTPUT_VARIABLE _python_version OUTPUT_STRIP_TRAILING_WHITESPACE
-        RESULT_VARIABLE _python_failed)
-      if( ${_python_failed} EQUAL 0 )
-        string(REGEX REPLACE "[\r\n]" "" PYTHON_MAJORMINOR_VERSION "${_python_version}")
-      else()
-        message(STATUS "failed to get python version")
-      endif()
-    else()
-      message(STATUS "failed to get python site-package directories via get_python_lib")
-      set(PYTHON_EXECUTABLE)
-    endif()
-  endif()
-endif()
 
 if( WIN32 )
   # does not support symlinks
@@ -156,11 +122,9 @@ endif()
 set(OPENRAVE_SHARE_DIR "share/openrave-${OPENRAVE_SOVERSION}" CACHE PATH "Relative path for shared OpenRAVE data")
 set(OPENRAVE_DATA_INSTALL_DIR "${OPENRAVE_SHARE_DIR}" CACHE PATH "Scene and robot files installation directory")
 set(OPENRAVE_PLUGINS_INSTALL_DIR "lib${LIB_SUFFIX}/openrave${OPENRAVE_SOVERSION}-plugins" CACHE PATH "OpenRAVE plugins installation directory")
-set(OPENRAVEPY_INSTALL_DIR "${OPENRAVE_PYTHON_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings (openravepy) installation directory")
 set(OPENRAVE_LOCALE_INSTALL_DIR "share/locale" CACHE PATH "Relative path for OpenRAVE translation files")
 set(OPENRAVE_OCTAVE_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/octave" CACHE PATH "OpenRAVE Octave bindings installation directory")
 set(OPENRAVE_MATLAB_INSTALL_DIR "${OPENRAVE_SHARE_DIR}/matlab" CACHE PATH "OpenRAVE MATLAB bindings installation directory")
-set(OPENRAVE_CMAKE_INSTALL_DIR "openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" CACHE STRING "Directory to install the cmake config files.")
 set(OPENRAVE_INCLUDE_INSTALL_DIR "openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}" CACHE STRING "Directory name for header files")
 if( UNIX OR CYGWIN)
   # cache has to be STRING instead of PATH for path to remain relative
@@ -169,30 +133,42 @@ endif()
 
 set(OPENRAVE_PLUGINS_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PLUGINS_INSTALL_DIR}" CACHE PATH "Absolute dir for plugins on target OS path, used to write to header file")
 set(OPENRAVE_DATA_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_DATA_INSTALL_DIR}" CACHE PATH "Absolute dir for data on target OS path, used to write to header file")
-set(OPENRAVE_PYTHON_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PYTHON_INSTALL_DIR}" CACHE PATH "Absolute dir for python on target OS path, used to write to header file")
 set(OPENRAVE_LOCALE_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_LOCALE_INSTALL_DIR}" CACHE PATH "Absolute dir for translation files on target OS path, used to write to header file")
 
 # The RPATH to be used when installing
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" "${OPENRAVE_PLUGINS_INSTALL_ABSOLUTE_DIR}")
 
-#define OPENRAVE_PLUGINS_INSTALL_DIR 
-#define OPENRAVE_DATA_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_DATA_INSTALL_DIR@"
-#define OPENRAVE_PYTHON_INSTALL_DIR "@CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON_INSTALL_DIR@"
-
-
-message(STATUS "installing to ${CMAKE_INSTALL_PREFIX}, python exe ${PYTHON_EXECUTABLE}, python subdir is ${OPENRAVE_PYTHON_INSTALL_DIR}, program suffix is '${OPENRAVE_BIN_SUFFIX}'")
-
 set(CMAKE_TRY_COMPILE_CONFIGURATION Release CACHE STRING "very important to only test release since default is debug, and it usually reuquires special libraries")
+set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(OPENRAVEPY_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_BINARY_DIR}/python/bindings/include ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include)
+
+message(STATUS "CMAKE_INSTALL_PREFIX          = ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "PYTHON_EXECUTABLE             = ${PYTHON_EXECUTABLE}")
+message(STATUS "OPENRAVE_BIN_SUFFIX           = ${OPENRAVE_BIN_SUFFIX}")
+message(STATUS "OPENRAVE_INCLUDE_LOCAL_DIRS   = ${OPENRAVE_INCLUDE_LOCAL_DIRS}")
+message(STATUS "OPENRAVEPY_INCLUDE_LOCAL_DIRS = ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}")
+
+# need this in the very first include, otherwise openrave plugins can accidentaly compile with a system-installed openrave headers.
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS}) # needed since plugins include openrave/openrave.h
+
 set(REQUIRED_INCLUDES "" CACHE STRING "Includes to always force  when compiling")
 include_directories(${REQUIRED_INCLUDES})
 
 set(COMPILER_IS_CLANG FALSE)
-if( CMAKE_CXX_COMPILER MATCHES "clang[\\+]*" )
+if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
   set(COMPILER_IS_CLANG TRUE)
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  add_definitions("-fno-strict-aliasing -Wall")
+  add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
+  add_definitions("-Werror=return-type")
+endif()
+
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
+  add_definitions("-Werror=return-local-addr")
+elseif( COMPILER_IS_CLANG )
+  add_definitions("-Werror=return-stack-address")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
@@ -224,18 +200,11 @@ else()
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" LINKER_HAS_VISIBILITY_INLINES_HIDDEN)
 endif()
 
-if( UNIX OR CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  set(STDC_LIBRARY stdc++)
-else()
-  set(STDC_LIBRARY)
-endif()
-
 if( APPLE OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # apple doesn't have 64bit versions of file opening functions, so add them
   add_definitions(-Dfopen64=fopen -Dfseeko64=fseeko -Dfseek64=fseek -Dftell64=ftell -Dftello64=ftello)
 endif()
 
-set(OPENRAVE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(OPENRAVE_CORE_INCLUDE_LOCAL_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src/libopenrave-core)
 set(OPENRAVE_LINK_DIRS "")
 
@@ -296,93 +265,13 @@ else()
   set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}" CACHE STRING "Suffix to append to library names")
 endif()
 
-# only look for installed boost if not an old version of msvc
-if(NOT MSVC71 AND NOT MSVC80)
-  if( NOT $ENV{BOOST_INCLUDEDIR} STREQUAL "" )
-    set(Boost_INCLUDE_DIR $ENV{BOOST_INCLUDEDIR})
-  endif()
-  if( NOT $ENV{BOOST_LIBRARYDIR} STREQUAL "" )
-    set(Boost_LIBRARY_DIRS $ENV{BOOST_LIBRARYDIR})
-  endif()
-  set(Boost_ADDITIONAL_VERSIONS "1.46.1" "1.45" "1.44" "1.43" "1.42" "1.41" "1.40" "1.39" "1.38" "1.37.0" "1.37" "1.35.0" "1.34.1" "1.34.0" "1.34" "1.33.1" "1.33.0" "1.33" ${Boost_ADDITIONAL_VERSIONS})
-  find_package(Boost COMPONENTS regex filesystem system python thread iostreams date_time)
-else()
-  # have to rely on local boost and a hack
-  add_definitions(-DTEMP_SPIRIT_HACK)
-endif()
-
-if( Boost_FOUND )
-  include_directories(${Boost_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
-elseif(Boost_VERSION AND NOT "${Boost_VERSION}" STREQUAL "0")
-  include_directories(${Boost_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
-elseif( MSVC )
-  # to facilitate compilation, visual studio libraries are included locally
-  message(STATUS "using local boost libraries for MSVC")
-  set(BOOST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/msvc_boost")
-  set(Boost_FOUND 1)
-  set(Boost_INCLUDE_DIRS "${BOOST_ROOT}")
-  set(Boost_INCLUDE_DIR "${BOOST_ROOT}")
-  set(Boost_LIBRARY_DIRS "${BOOST_ROOT}/lib")
-  set(Boost_REGEX_FOUND 0)
-  set(Boost_FILESYSTEM_FOUND 1)
-  set(Boost_IOSTREAMS_FOUND 1)
-  set(Boost_SYSTEM_FOUND 1)
-  set(Boost_PYTHON_FOUND 1)
-  set(Boost_THREAD_FOUND 1)
-  set(Boost_DATE_TIME_FOUND 1)
-  set(Boost_SIGNALS_FOUND 1)
-  set(Boost_VERSION "104400")
-  # have to add to required flags for applications that will test linking with boost
-  set(CMAKE_REQUIRED_FLAGS "-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB")
-  set(Boost_DATE_TIME_LIBRARY "${Boost_LIBRARY_DIRS}/boost_date_time-${MSVC_PREFIX}-mt-1_44.lib")
-  set(Boost_THREAD_LIBRARY "${Boost_LIBRARY_DIRS}/boost_thread-${MSVC_PREFIX}-mt-1_44.lib")
-  set(Boost_SYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_system-${MSVC_PREFIX}-mt-1_44.lib")
-  set(Boost_FILESYSTEM_LIBRARY "${Boost_LIBRARY_DIRS}/boost_filesystem-${MSVC_PREFIX}-mt-1_44.lib")
-  set(Boost_PYTHON_LIBRARY "${Boost_LIBRARY_DIRS}/boost_python-${MSVC_PREFIX}-mt-1_44.lib")
-  set(Boost_IOSTREAMS_LIBRARY "${Boost_LIBRARY_DIRS}/boost_iostreams-${MSVC_PREFIX}-mt-1_44.lib")
-  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.dll")
-  install(DIRECTORY "${Boost_LIBRARY_DIRS}/" DESTINATION lib${LIB_SUFFIX} COMPONENT ${COMPONENT_PREFIX}dev FILES_MATCHING PATTERN "*-${MSVC_PREFIX}-*.lib")
-  install(DIRECTORY "${Boost_INCLUDE_DIR}/boost" DESTINATION include COMPONENT ${COMPONENT_PREFIX}dev)
-  include_directories(${Boost_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${Boost_LIBRARY_DIRS})
-else()
-  message(FATAL_ERROR "Could not find boost libraries!")
-endif()
-
-message(STATUS "found boost version: ${Boost_VERSION}")
-if( NOT Boost_THREAD_LIBRARY OR NOT Boost_DATE_TIME_LIBRARY )
-  message(FATAL_ERROR "boost thread and date_time libraries are necessary")
-endif()
-if( OPT_PYTHON AND MSVC AND Boost_VERSION GREATER 104600 AND PYTHON_MAJORMINOR_VERSION STRGREATER "2.6")
-  message(STATUS "Boost python library ${Boost_PYTHON_LIBRARY} might not be compiled for Python ${PYTHON_MAJORMINOR_VERSION}")
-endif()
-    
-set(OPENRAVE_BOOST_INCLUDE_DIRS)
-foreach(idir ${Boost_INCLUDE_DIRS})
-  if( MSVC )
-    set(OPENRAVE_BOOST_INCLUDE_DIRS "${OPENRAVE_BOOST_INCLUDE_DIRS} /I\"${idir}\"")
-  else()
-    set(OPENRAVE_BOOST_INCLUDE_DIRS "${OPENRAVE_BOOST_INCLUDE_DIRS} -I${idir}")
-  endif()
-endforeach()
-
-set(OPENRAVE_BOOST_LIB_DIRS)
-foreach(ldir ${Boost_LIBRARY_DIRS})
-  if( MSVC )
-    set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} /LIBPATH:\"${ldir}\"")
-  else()
-    set(OPENRAVE_BOOST_LIB_DIRS "${OPENRAVE_BOOST_LIB_DIRS} -L${ldir}")
-  endif()
-endforeach()
+find_package(Boost REQUIRED COMPONENTS filesystem system thread iostreams)
+set(OPENRAVE_BOOST_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
+set(OPENRAVE_BOOST_LIB_DIRS ${Boost_LIBRARY_DIRS})
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG )
-  add_definitions(-fPIC) # this is a very important switch and some libraries seem now to have it....
-  set(EXTRA_COMPILE_FLAGS "-fPIC")
   set(NATIVE_COMPILE_FLAGS "" CACHE STRING "compilation flags to pass to tools that are executed at build-time. For example '-march=native -mtune=native'. By default this is empty.")
 else()
-  set(EXTRA_COMPILE_FLAGS "")
   set(NATIVE_COMPILE_FLAGS "")
 endif()
 
@@ -439,6 +328,7 @@ add_custom_command(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/plugininfo.h)
 
 add_custom_target(interfacehashes_target ALL DEPENDS ${interfacehashes_h} ${EXTRA_MSVC_DEPEND})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/interfacehashes.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
 
 # math libraries
 find_package(GMP)
@@ -454,21 +344,13 @@ endif()
 find_package(MPFI)
 
 
-if( OPT_ACCURATEMATH AND NOT MSVC )
+if( OPT_ACCURATEMATH AND NOT MSVC AND NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES aarch64 )
   check_library_exists(crlibm crlibm_init "" CRLIBM_FOUND_LIB)
   check_include_file(crlibm.h HAVE_CRLIBM_H)
   if(NOT CRLIBM_FOUND_LIB OR NOT HAVE_CRLIBM_H)
     message(STATUS "Using local crlibm")
     add_subdirectory(3rdparty/crlibm-1.0beta4)
-    set(CRLIBM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/crlibm-1.0beta4")
-    set(NATIVE_CRLIBM_LIBRARY crlibm-native)
-  else()
-    set(NATIVE_CRLIBM_LIBRARY crlibm)
   endif()
-  set(CRLIBM_FOUND 1)
-  set(CRLIBM_LIBRARY crlibm)
-else()
-  set(CRLIBM_FOUND 0)
 endif()
 
 #if( MSVC )
@@ -500,52 +382,44 @@ if( ASSIMP_FOUND )
   endif()
 endif()
 
-if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
-  check_cxx_source_runs("
-  int main()
-  {
-    int a = 0;
-    int*pa = &a;
-    asm(\".intel_syntax\\\\n\"
-	\"mov %%rax, %0\\\\n\"
-    \"mov %%eax, [%%rax]\\\\n\"
-    \".att_syntax\\\\n\"
-    : : \"r\"(pa) : \"%rax\");
-    return 0;
-  }"
-  IS_X86_64)
-
-  if( IS_X86_64 )
-    add_definitions("-D__x86_64__")
-  endif()
-else()
-  set(IS_X86_64 0)
-endif()
-
 check_library_exists(rt clock_gettime "" CLOCK_GETTIME_FOUND)
 if( CLOCK_GETTIME_FOUND )
   add_definitions(-DCLOCK_GETTIME_FOUND)
 endif()
 
-find_package(LibXml2)
-
-if( LIBXML2_FOUND )
-  include_directories(${LIBXML2_INCLUDE_DIR})
-  add_definitions(${LIBXML2_DEFINITIONS})
-  message(STATUS "libxml2 found")
+find_package(RapidJSON)
+if( RAPIDJSON_FOUND )
+  include_directories(${RAPIDJSON_INCLUDES})
 else()
-  if( MSVC )
-    set(LIBXML2_LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/lib/libxml2-${MSVC_PREFIX}-mt.lib)
-    set(LIBXML2_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/include)
-    set(LIBXML2_DEFINITIONS)
-    set(LIBXML2_FOUND 1)
-    include_directories(${LIBXML2_INCLUDE_DIR})
-    # have to copy the DLLs, but not the other stuff in the lib dir
-    file(GLOB libxml_dlls "${CMAKE_CURRENT_SOURCE_DIR}/msvc_libxml2/lib/*-${MSVC_PREFIX}-*.dll")
-    install(FILES ${libxml_dlls} DESTINATION bin COMPONENT ${COMPONENT_PREFIX}base)
+  message(FATAL_ERROR "rapidjson library not found")
+endif()
+
+add_library(openrave-msgpack INTERFACE IMPORTED)
+find_package(msgpack-cxx 6.0.0)
+if (NOT msgpack-cxx_FOUND)
+  pkg_check_modules(msgpack msgpack)
+  target_link_libraries(openrave-msgpack INTERFACE ${msgpack_LIBRARIES})
+else()
+  message(STATUS "msgpack-cxx ${msgpack-cxx_VERSION}")
+  target_link_libraries(openrave-msgpack INTERFACE msgpack-cxx)
+endif()
+if (msgpack-cxx_FOUND OR msgpack_FOUND)
+  set(OPENRAVE_MSGPACK 1)
+else()
+  if (OPT_MSGPACK)
+    message(FATAL_ERROR "msgpack feature was requested but msgpack libraries could not be found.")
   else()
-    message(FATAL_ERROR "Could not find libxml2")
+    set(OPENRAVE_MSGPACK 0)
   endif()
+endif()
+
+find_package(LibXml2 REQUIRED)
+
+add_library(openrave_gpgme IMPORTED INTERFACE)
+if (OPT_ENCRYPTION)
+  find_package(Gpgmepp 1.13 REQUIRED)
+  target_link_libraries(openrave_gpgme INTERFACE Gpgmepp)
+  target_compile_definitions(openrave_gpgme INTERFACE "OPENRAVE_ENCRYPTION=1")
 endif()
 
 # for qtcoin plugin.
@@ -558,9 +432,9 @@ if( WIN32 )
   endif()
 endif()
 
-find_package(Qt4 COMPONENTS QtCore QtGui QtDeclarative)
-if (NOT QT_FOUND)
-  message(STATUS "WARNING: Qt4 not found, is your QTDIR enviornment variable set?")
+find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
+if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND))
+  message(STATUS "WARNING: Qt5 not found, is your QTDIR enviornment variable set?")
   find_package(Qt5Core)
   find_package(Qt5Gui)
   if( Qt5Core_FOUND AND Qt5Gui_FOUND )
@@ -569,8 +443,6 @@ if (NOT QT_FOUND)
     message(STATUS "Disabling QtCoin GUI plugin")
   endif()
 endif ()
-
-link_directories(${OPENRAVE_LINK_DIRS})
 
 # always include libpcrecpp since we need it for URL parsing
 pkg_check_modules(libpcrecpp libpcrecpp)
@@ -587,6 +459,8 @@ if( NOT libpcrecpp_FOUND )
   message(STATUS "System pcre not found, using local from sources")
   # include the local pcre
   add_subdirectory(3rdparty/pcre-8.02)
+
+  set(libpcrecpp_FOUND 1)
 endif()
 
 if( OPT_COLLADA )
@@ -596,6 +470,16 @@ if( OPT_COLLADA )
   endif()
   #find_package(COLLADA_DOM 2.4 COMPONENTS 1.5 1.4 PATHS ${COLLADA_PATH})
   find_package(COLLADA_DOM 2.3 COMPONENTS 1.5 PATHS ${COLLADA_PATH})
+
+  if( COLLADA_DOM_FOUND )
+    if( COLLADA_DOM_VERSION VERSION_LESS "2.5.0" )
+      message(STATUS "collada version ${COLLADA_DOM_VERSION} does not support write to memory")
+      set(COLLADA_SUPPORT_WRITE_MEMORY 0)
+    else()
+      message(STATUS "collada version ${COLLADA_DOM_VERSION} supports write to memory")
+      set(COLLADA_SUPPORT_WRITE_MEMORY 1)
+    endif()
+  endif()
   
   find_package(ZLIB)
   if( NOT ZLIB_FOUND )
@@ -643,17 +527,26 @@ set(IVCON_LIBRARY ivcon)
 set(IVCON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ivcon")
 
 ## check qhull library
-check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
-check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
-if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
-  set(QHULL_FOUND 1)
-  set(QHULL_INCLUDE_DIR)
+check_library_exists(qhull_r qh_new_qhull "" QHULL_REENTRANT_FOUND_LIB)
+check_include_file(libqhull_r/libqhull_r.h HAVE_QHULL_REENTRANT_H)
+if( QHULL_REENTRANT_FOUND_LIB AND HAVE_QHULL_REENTRANT_H )
+    set(QHULL_FOUND 1)
+    set(QHULL_USE_REENTRANT 1)
+    set(QHULL_INCLUDE_DIR)
+    message(STATUS "Use reentrant qhull")
 else()
-  # have to compile from sources
-  message(STATUS "compiling local qhull library")
-  add_subdirectory(3rdparty/qhull)
-  set(QHULL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
-  set(QHULL_FOUND 1)
+  check_library_exists(qhull qh_new_qhull "" QHULL_FOUND_LIB)
+  check_include_file(qhull/qhull_a.h HAVE_QHULL_H)
+  if( QHULL_FOUND_LIB AND HAVE_QHULL_H )
+    set(QHULL_FOUND 1)
+    set(QHULL_INCLUDE_DIR)
+  else()
+    # have to compile from sources
+    message(STATUS "compiling local qhull library")
+    add_subdirectory(3rdparty/qhull)
+    set(QHULL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty")
+    set(QHULL_FOUND 1)
+  endif()
 endif()
 
 ## check ANN library
@@ -706,14 +599,20 @@ endif()
 #endif()
 
 # function expression parser library
-find_package(FPARSER 4.4.3)
-if( NOT FPARSER_FOUND )
+find_package(fparser 4.5)
+if( fparser_FOUND )
+    message(STATUS "Found fparser, version ${fparser_VERSION}")
+    set(FPARSER_INCLUDE_DIRS "${fparser_INCLUDE_DIR}")
+    set(FPARSER_LIBRARIES "${fparser_LIBRARY}")
+    set(FPARSER_CXX_FLAGS "${fparser_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
+    set(FPARSER_LINK_FLAGS "${fparser_LINK_FLAGS}")
+else()
   if( PKG_CONFIG_FOUND )
     pkg_search_module(FPARSER fparser)
   endif()
   if( NOT FPARSER_FOUND )
     message(STATUS "compiling local fparser library")
-    add_subdirectory(3rdparty/fparser-4.5)
+    add_subdirectory(3rdparty/fparser-4.5.2)
     set(FPARSER_CXX_FLAGS "${FPARSER_CXX_FLAGS} -DOPENRAVE_FPARSER_SETEPSILON")
   else()
     set(FPARSER_CXX_FLAGS "${FPARSER_CFLAGS}")
@@ -746,6 +645,17 @@ if( OPT_LOG4CXX )
   endif()
 endif()
 
+# libcurl for downloading resources
+set(OPENRAVE_CURL 0)
+set(OPENRAVE_CURL_LIBRARIES)
+if( OPT_CURL )
+  find_package(CURL)
+  if ( CURL_FOUND )
+    set(OPENRAVE_CURL_LIBRARIES ${CURL_LIBRARIES})
+    set(OPENRAVE_CURL 1)
+  endif()
+endif()
+
 link_directories(${OPENRAVE_LINK_DIRS})
 
 message(STATUS "compiling local convexdecomposition library")
@@ -758,45 +668,60 @@ else()
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
-include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+  add_definitions(-DHAVE_BOOST_FILESYSTEM)
+endif()
 
 add_subdirectory(src)
 add_subdirectory(octave_matlab)
 add_subdirectory(locale)
 
-if(OPT_PYTHON AND PYTHON_EXECUTABLE)
-  set(OPENRAVE_USE_LOCAL_SYMPY 1)
-  if( PYTHON_EXECUTABLE )
-    # get the sympy version
-    execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sympy; print sympy.__version__"
-      OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
-      RESULT_VARIABLE _sympy_version_failed)
-    if( ${_sympy_version_failed} EQUAL 0 )
-      string(REGEX REPLACE "[\r\n]" "" _sympy_version "${_sympy_version}")
-      message(STATUS "Found sympy version '${_sympy_version}'")
-      if( "${_sympy_version}" VERSION_GREATER "0.6.3" OR "${_sympy_version}" VERSION_EQUAL "0.6.3" )
-        set(OPENRAVE_USE_LOCAL_SYMPY 0)
-        if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
-          message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
-        else()
-          message(STATUS "Assuming sympy version 0.7.x or greater")
-        endif()
-      endif()
-    else()
-      message(STATUS "failed to find python sympy system installation")
-    endif()
-  endif()
+# Python version agnostic
+if( NOT WIN32 AND OPENRAVE_BIN_SUFFIX )
+  set(OPENRAVEPY_VER_NAME "_openravepy_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
+else()
+  set(OPENRAVEPY_VER_NAME "_openravepy_")
+endif()
 
-      # check if sympy substitution is ok
-#      execute_process(
-#        COMMAND ${PYTHON_EXECUTABLE} -c "import sympy, sys;  x=sympy.Symbol('x'); sys.exit((x**3).subs(x**2,sympy.Symbol('y')) != x**3)"
-#        OUTPUT_VARIABLE _sympy_check OUTPUT_STRIP_TRAILING_WHITESPACE
-#        RESULT_VARIABLE _sympy_check_failed)
-#      if( ${_sympy_check_failed} EQUAL 0 )
-#        set(OPENRAVE_USE_LOCAL_SYMPY 0)
-#      else()
+if (OPT_PYTHON)
+  find_package(Python2 2.7 REQUIRED COMPONENTS Interpreter Development NumPy)
+  message(STATUS "Python 2 version is ${Python2_VERSION}")
+  execute_process(
+    COMMAND ${Python2_EXECUTABLE} -c "import distutils.sysconfig as sysconf; import os; \
+      print(os.path.relpath(sysconf.get_python_lib(1, prefix='${CMAKE_INSTALL_PREFIX}'), '${CMAKE_INSTALL_PREFIX}'))"
+      OUTPUT_VARIABLE OPENRAVE_PYTHON2_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  message(STATUS "Python2 site-packages path is ${OPENRAVE_PYTHON2_INSTALL_DIR}")
+  set(OPENRAVEPY2_INSTALL_DIR "${OPENRAVE_PYTHON2_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python bindings installation directory")
+  set(OPENRAVEPY2_VER_INSTALL_DIR "${OPENRAVEPY2_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
+
+  # Backward compat
+  set(OPENRAVE_PYTHON_INSTALL_DIR ${OPENRAVE_PYTHON2_INSTALL_DIR})
+  set(OPENRAVEPY_INSTALL_DIR      ${OPENRAVEPY2_INSTALL_DIR})
+  set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY2_VER_INSTALL_DIR})
+  set(PYTHON_EXECUTABLE           ${Python2_EXECUTABLE})
+
+  # get the sympy version
+  execute_process(
+    COMMAND ${Python2_EXECUTABLE} -c "import sympy; print(sympy.__version__)"
+    OUTPUT_VARIABLE _sympy_version OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE _sympy_version_failed
+  )
+  set(OPENRAVE_USE_LOCAL_SYMPY 1)
+  if( ${_sympy_version_failed} EQUAL 0 )
+    message(STATUS "Found sympy version '${_sympy_version}'")
+    if( "${_sympy_version}" VERSION_GREATER "0.6.3" OR "${_sympy_version}" VERSION_EQUAL "0.6.3" )
+      set(OPENRAVE_USE_LOCAL_SYMPY 0)
+      if( "${_sympy_version}" VERSION_LESS "0.6.7" OR "${_sympy_version}" VERSION_EQUAL "0.6.7" )
+        message(STATUS "Found sympy version 0.6.x, will patch this instead of installing local version")
+      else()
+        message(STATUS "Assuming sympy version 0.7.x or greater")
+      endif()
+    endif()
+  else()
+      message(STATUS "failed to find python sympy system installation")
+  endif()
 
   if( OPENRAVE_USE_LOCAL_SYMPY )
     message(STATUS "System sympy (v=${_sympy_version}) is not right version, using local sympy")
@@ -807,18 +732,99 @@ if(OPT_PYTHON AND PYTHON_EXECUTABLE)
         COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_CURRENT_SOURCE_DIR}/sympy_0.7.1.tgz"
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
     endif()
-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE)
+    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/sympy" DESTINATION ${OPENRAVE_PYTHON2_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python PATTERN ".svn" EXCLUDE)
   endif()
 
-  set( USE_OPENRAVEPY 1)
-  if( NOT WIN32 AND OPENRAVE_BIN_SUFFIX )
-    set(OPENRAVEPY_VER_NAME "_openravepy_${OPENRAVE_VERSION_MAJOR}_${OPENRAVE_VERSION_MINOR}")
+  add_library(openravepy2_meta INTERFACE)
+  target_include_directories(openravepy2_meta INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/python/bindings/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/python/bindings/include>
+    $<BUILD_INTERFACE:${OPENRAVE_INCLUDE_LOCAL_DIRS}>
+    $<BUILD_INTERFACE:${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY2_VER_INSTALL_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}>
+  )
+  install(TARGETS openravepy2_meta EXPORT openrave-targets)
+
+  set(PYBIND11_NOPYTHON ON)
+  find_package(pybind11 2.9.2) # 2.9.2 is the last version of pybind11 to support Python 2.
+
+  if (pybind11_FOUND)
+    target_link_libraries(openravepy2_meta INTERFACE rt Python2::Module Python2::NumPy pybind11::module libopenrave libopenrave-core)
+    target_compile_options(openravepy2_meta INTERFACE "-fvisibility=hidden") # pybind11 requires less visibility
+    target_compile_definitions(openravepy2_meta INTERFACE "OPENRAVE_CORE_DLL=1" "USE_PYBIND11_PYTHON_BINDINGS=1")
+    set(USE_PYBIND11_PYTHON_BINDINGS ON)
   else()
-    set(OPENRAVEPY_VER_NAME "_openravepy_")
+    find_package(Boost REQUIRED COMPONENTS python thread)
+    target_link_libraries(openravepy2_meta INTERFACE rt Python2::Module Python2::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
+    target_compile_definitions(openravepy2_meta INTERFACE "OPENRAVE_CORE_DLL=1")
+    set(USE_PYBIND11_PYTHON_BINDINGS OFF)
   endif()
-  set(OPENRAVEPY_VER_INSTALL_DIR "${OPENRAVEPY_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
-  add_subdirectory(python)
 endif()
+
+if (OPT_PYTHON3)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development NumPy)
+  message(STATUS "Python 3 version is ${Python3_VERSION}")
+  execute_process(
+    COMMAND ${Python3_EXECUTABLE} -c "import distutils.sysconfig as sysconf; import os; \
+      print(os.path.relpath(sysconf.get_python_lib(1, prefix='${CMAKE_INSTALL_PREFIX}'), '${CMAKE_INSTALL_PREFIX}'))"
+      OUTPUT_VARIABLE OPENRAVE_PYTHON3_INSTALL_DIR OUTPUT_STRIP_TRAILING_WHITESPACE
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  )
+  message(STATUS "Python3 site-packages path is ${OPENRAVE_PYTHON3_INSTALL_DIR}")
+  set(OPENRAVEPY3_INSTALL_DIR "${OPENRAVE_PYTHON3_INSTALL_DIR}/openravepy" CACHE PATH "OpenRAVE Python3 bindings installation directory")
+  set(OPENRAVEPY3_VER_INSTALL_DIR "${OPENRAVEPY3_INSTALL_DIR}/${OPENRAVEPY_VER_NAME}") # used by openrave-config.cmake
+
+  # Set only if Python2 is not enabled.
+  if (NOT OPT_PYTHON)
+    set(OPENRAVE_PYTHON_INSTALL_DIR ${OPENRAVE_PYTHON3_INSTALL_DIR})
+    set(OPENRAVEPY_INSTALL_DIR      ${OPENRAVEPY3_INSTALL_DIR})
+    set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY3_VER_INSTALL_DIR})
+    set(PYTHON_EXECUTABLE           ${Python3_EXECUTABLE})
+  endif()
+
+  add_library(openravepy3_meta INTERFACE)
+  target_include_directories(openravepy3_meta INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/python/bindings/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/python/bindings/include>
+    $<BUILD_INTERFACE:${OPENRAVE_INCLUDE_LOCAL_DIRS}>
+    $<BUILD_INTERFACE:${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${OPENRAVEPY3_VER_INSTALL_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}>
+  )
+  install(TARGETS openravepy3_meta EXPORT openrave-targets)
+
+  set(PYBIND11_NOPYTHON ON)
+  find_package(pybind11 2.9.2) # 2.9.2 is the last version of pybind11 to support Python 2.
+
+  if (pybind11_FOUND)
+    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Module Python3::NumPy pybind11::module libopenrave libopenrave-core)
+    target_compile_options(openravepy3_meta INTERFACE "-fvisibility=hidden") # pybind11 requires less visibility
+    target_compile_definitions(openravepy3_meta INTERFACE "OPENRAVE_CORE_DLL=1" "USE_PYBIND11_PYTHON_BINDINGS=1")
+    set(USE_PYBIND11_PYTHON3_BINDINGS ON)
+  else()
+    find_package(Boost REQUIRED COMPONENTS python thread)
+    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Module Python3::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
+    target_compile_definitions(openravepy3_meta INTERFACE "OPENRAVE_CORE_DLL=1")
+    set(USE_PYBIND11_PYTHON3_BINDINGS OFF)
+  endif()
+endif()
+
+if (OPT_PYTHON OR OPT_PYTHON3)
+  add_subdirectory(python)
+  if (pybind11_FOUND)
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include/openravepy/pybind11 DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openravepy)
+  else()
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/bindings/include/openravepy/boostpython DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openravepy)
+  endif()
+endif()
+
+set(OPENRAVE_PYTHON_INSTALL_ABSOLUTE_DIR "${CMAKE_INSTALL_PREFIX}/${OPENRAVE_PYTHON_INSTALL_DIR}" CACHE PATH "Absolute dir for python on target OS path, used to write to header file")
+message(STATUS "OPENRAVE_PYTHON_INSTALL_DIR   = ${OPENRAVE_PYTHON_INSTALL_DIR}")
 
 # plugins have to be after python since they could use openravepy extensions
 if(OPT_PLUGINS)
@@ -837,13 +843,36 @@ endif()
 if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
   # create all the directories ahead of time, or otherwise WORKING_DIRECTORY will not work
   install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/bin COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig COMMAND ${CMAKE_COMMAND} -E make_directory \${CMAKE_INSTALL_PREFIX}/${BASH_COMPLETION_DIR})" COMPONENT openrave)
-  InstallSymlink(${CMAKE_INSTALL_PREFIX}/bin/openrave${OPENRAVE_BIN_SUFFIX}-config ${CMAKE_INSTALL_PREFIX}/bin/openrave-config)
+  InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-config ${CMAKE_INSTALL_PREFIX}/bin/openrave-config)
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" IMMEDIATE @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-config-version.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" IMMEDIATE @ONLY)
+# Write and install cmake export control files
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/openrave-config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake
+  INSTALL_DESTINATION
+    ${CMAKE_INSTALL_LIBDIR}/cmake/openrave-${OPENRAVE_SOVERSION}
+  PATH_VARS
+    RAPIDJSON_INCLUDES
+)
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake
+  VERSION "${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH}"
+  COMPATIBILITY AnyNewerVersion
+)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/openrave-${OPENRAVE_SOVERSION})
+install(EXPORT openrave-targets NAMESPACE OpenRAVE:: FILE openrave-targets.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/openrave-${OPENRAVE_SOVERSION})
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave-config.cmake" "${CMAKE_CURRENT_BINARY_DIR}/openrave-config-version.cmake" DESTINATION "lib${LIB_SUFFIX}/cmake/${OPENRAVE_CMAKE_INSTALL_DIR}" COMPONENT ${COMPONENT_PREFIX}dev)
+# Install header files
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/openrave/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
+if (OPT_CBINDINGS)
+  install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/openrave_c/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave_c)
+endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h IMMEDIATE @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave)
+install(FILES COPYING LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR})
 
 if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave_completion.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave_completion.bash" @ONLY IMMEDIATE)
@@ -853,9 +882,9 @@ if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave-core.pc.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" @ONLY IMMEDIATE)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/openrave${OPENRAVE_BIN_SUFFIX}-core.pc" DESTINATION lib${LIB_SUFFIX}/pkgconfig COMPONENT ${COMPONENT_PREFIX}dev)
   if( OPT_BUILD_PACKAGE_DEFAULT AND OPENRAVE_BIN_SUFFIX )
-    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave.pc)
+    InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave.pc)
 
-    InstallSymlink(${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave${OPENRAVE_BIN_SUFFIX}-core.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave-core.pc)
+    InstallSymlink(openrave${OPENRAVE_BIN_SUFFIX}-core.pc ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}/pkgconfig/openrave-core.pc)
 
 
     if( BASH_COMPLETION_DIR )
@@ -873,18 +902,6 @@ if( UNIX OR CYGWIN)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/openrave.bash.in" "${CMAKE_CURRENT_BINARY_DIR}/openrave.bash" IMMEDIATE @ONLY)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openrave.bash DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
 endif()
-
-file(GLOB rave_header_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave/*.h)
-install(FILES ${rave_header_files} ${interfacehashes_h} ${CMAKE_CURRENT_BINARY_DIR}/include/openrave/config.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave COMPONENT ${COMPONENT_PREFIX}dev)
-if( OPT_CBINDINGS )
-  file(GLOB rave_cheader_files ${CMAKE_CURRENT_SOURCE_DIR}/include/openrave_c/*.h)
-  install(FILES ${rave_cheader_files} DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/openrave_c COMPONENT ${COMPONENT_PREFIX}cbindings-dev)
-endif()
-
-install(FILES rave/rave.h rave/plugin.h DESTINATION include/${OPENRAVE_INCLUDE_INSTALL_DIR}/rave COMPONENT ${COMPONENT_PREFIX}dev) # deprecated
-install(FILES COPYING LICENSE.lgpl LICENSE.apache DESTINATION ${OPENRAVE_SHARE_DIR} COMPONENT ${COMPONENT_PREFIX}base)
-
-#install(EXPORT openrave-targets DESTINATION lib/cmake/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 
 # add make uninstall capability
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/modules-cmake/cmake_uninstall.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake" IMMEDIATE @ONLY)
@@ -927,7 +944,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   # add once infinite precision computations are enabled:
   # libmpfr-dev libgmp3-dev libmpfi-dev libgmpxx4ldbl python-gmpy
   # plugins:
-  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev libqt4-dev qt4-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
+  set(CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU ${CPACK_DEBIAN_BUILD_DEPENDS_UBUNTU} libboost-iostreams-dev libboost-regex-dev qtbase5-dev qtbase5-dev-tools libqhull-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libsoqt4-dev "assimp-dev|libassimp-dev" libbullet-dev)# libopenscenegraph-dev)
 
   # debian
   set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)

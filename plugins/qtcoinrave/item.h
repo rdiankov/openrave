@@ -126,7 +126,7 @@ protected:
     };
 
     inline boost::shared_ptr<KinBodyItem> shared_kinbody() {
-        return boost::dynamic_pointer_cast<KinBodyItem>(shared_from_this());
+        return boost::static_pointer_cast<KinBodyItem>(shared_from_this());
     }
     inline boost::weak_ptr<KinBodyItem> weak_kinbody() {
         return shared_kinbody();
@@ -200,7 +200,7 @@ protected:
     vector<dReal> _vjointvalues;
     vector<Transform> _vtrans;
     std::vector<dReal> _vdofbranches;
-    mutable boost::mutex _mutexjoints;
+    mutable std::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
 };
 

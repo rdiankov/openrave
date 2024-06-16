@@ -126,7 +126,7 @@ public:
 
     /// extends toward pNewConfig
     /// \return true if extension reached pNewConfig
-    virtual ExtendType Extend(const std::vector<dReal>& pTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false) = 0;
+    virtual ExtendType Extend(const std::vector<dReal>& pTargetConfig, NodeBasePtr& lastnode, bool bOneStep, int constraintFilterOptions=0xffff|CFO_FillCheckedConfiguration) = 0;
 
     /// \brief the dof configured for
     virtual int GetDOF() = 0;
@@ -179,6 +179,7 @@ public:
         }
         _planner = planner;
         _distmetricfn = distmetricfn;
+        _fStepLength = fStepLength;
         _dof = dof;
         _vNewConfig.resize(dof);
         _vDeltaConfig.resize(dof);
@@ -192,6 +193,7 @@ public:
         if( enclevel >= (int)_vsetLevelNodes.size() ) {
             _vsetLevelNodes.resize(enclevel+1);
         }
+        _constraintreturn.reset(new ConstraintFilterReturn());
     }
 
     virtual void Reset()
@@ -214,7 +216,7 @@ public:
 
     inline dReal _ComputeDistance(const dReal* config0, const dReal* config1) const
     {
-        return _distmetricfn(VectorWrapper<const dReal>(config0, config0+_dof), VectorWrapper<dReal>(config1, config1+_dof));
+        return _distmetricfn(VectorWrapper<dReal>(config0, config0+_dof), VectorWrapper<dReal>(config1, config1+_dof));
     }
 
     inline dReal _ComputeDistance(const dReal* config0, const std::vector<dReal>& config1) const
@@ -303,7 +305,7 @@ public:
         RAVELOG_VERBOSE("computed in %fs", (1e-9*(utils::GetNanoPerformanceTime()-starttime)));
     }
 
-    virtual ExtendType Extend(const vector<dReal>& vTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false)
+    virtual ExtendType Extend(const vector<dReal>& vTargetConfig, NodeBasePtr& lastnode, bool bOneStep=false, int constraintFilterOptions=0xffff|CFO_FillCheckedConfiguration)
     {
         // get the nearest neighbor
         std::pair<NodePtr, dReal> nn = _FindNearestNode(vTargetConfig);
@@ -343,7 +345,7 @@ public:
                 }
                 return ET_Failed;
             }
-            if( !params->_neighstatefn(_vNewConfig,_vDeltaConfig,_fromgoal ? NSO_GoalToInitial : 0) ) {
+            if( params->_neighstatefn(_vNewConfig,_vDeltaConfig,(_fromgoal ? NSO_GoalToInitial : 0)|NSO_FromPathSampling) == NSS_Failed ) {
                 if(bHasAdded) {
                     return ET_Sucess;
                 }
@@ -358,25 +360,87 @@ public:
                 return ET_Failed;
             }
 
+            // necessary to pass in _constraintreturn since _neighstatefn can have constraints and it can change the interpolation. Use _constraintreturn->_bHasRampDeviatedFromInterpolation to figure out if something changed.
             if( _fromgoal ) {
-                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd) != 0 ) {
+                if( params->CheckPathAllConstraints(_vNewConfig, _vCurConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenEnd, constraintFilterOptions|CFO_FromPathSampling, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
             else {
-                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
+                if( params->CheckPathAllConstraints(_vCurConfig, _vNewConfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, constraintFilterOptions|CFO_FromPathSampling, _constraintreturn) != 0 ) {
                     return bHasAdded ? ET_Sucess : ET_Failed;
                 }
             }
 
-            NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
-            if( !!pnewnode ) {
-                pnode = pnewnode;
-                lastnode = pnode;
-                bHasAdded = true;
-                if( bOneStep ) {
-                    return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
+            // if( IS_DEBUGLEVEL(Level_Verbose) ) {
+            //     std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+            //     ss << "successfully connected _vCurConfig=[";
+            //     for(size_t itempdof = 0; itempdof < _vCurConfig.size(); ++itempdof ) {
+            //         if( itempdof > 0 ) {
+            //             ss << ", ";
+            //         }
+            //         ss << _vCurConfig[itempdof];
+            //     }
+            //     ss << "]; _vNewConfig=[";
+            //     for(size_t itempdof = 0; itempdof < _vNewConfig.size(); ++itempdof ) {
+            //         if( itempdof > 0 ) {
+            //             ss << ", ";
+            //         }
+            //         ss << _vNewConfig[itempdof];
+            //     }
+            //     ss << "]";
+            //     RAVELOG_VERBOSE(ss.str());
+            // }
+            // dReal currentDistance =  _ComputeDistance(&_vCurConfig[0], _vNewConfig);
+
+            int iAdded = 0;
+            if( _constraintreturn->_bHasRampDeviatedFromInterpolation ) {
+                // Since the path checked by CheckPathAllConstraints can be different from a straight line segment connecting _vNewConfig and _vCurConfig, we add all checked configurations along the checked segment to the tree.
+                if( _fromgoal ) {
+                    // Need to add nodes to the tree starting from the one closest to the nearest neighbor. Since _fromgoal is true, the closest one is the last config in _constraintreturn->_configurations
+                    for(int iconfig = ((int)_constraintreturn->_configurations.size()) - _dof; iconfig >= 0; iconfig -= _dof) {
+                        std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
+                        NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                        if( !!pnewnode ) {
+                            bHasAdded = true;
+                            pnode = pnewnode;
+                            lastnode = pnode;
+                            ++iAdded;
+                        }
+                        else {
+                            // RAVELOG_DEBUG_FORMAT("_constraintreturn has %d configurations, numadded=%d, _fromgoal=%d", (_constraintreturn->_configurations.size()/_dof)%iAdded%_fromgoal);
+                            break;
+                        }
+                    }
                 }
+                else {
+                    for(int iconfig = 0; iconfig+_dof-1 < (int)_constraintreturn->_configurations.size(); iconfig += _dof) {
+                        std::copy(_constraintreturn->_configurations.begin() + iconfig, _constraintreturn->_configurations.begin() + iconfig + _dof, _vNewConfig.begin());
+                        NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                        if( !!pnewnode ) {
+                            bHasAdded = true;
+                            pnode = pnewnode;
+                            lastnode = pnode;
+                            ++iAdded;
+                        }
+                        else {
+                            // RAVELOG_DEBUG_FORMAT("_constraintreturn has %d configurations, numadded=%d, _fromgoal=%d", (_constraintreturn->_configurations.size()/_dof)%iAdded%_fromgoal);
+                            break;
+                        }
+                    }
+                }
+            }
+            else {
+                NodePtr pnewnode = _InsertNode(pnode, _vNewConfig, 0); ///< set userdata to 0
+                if( !!pnewnode ) {
+                    pnode = pnewnode;
+                    lastnode = pnode;
+                    bHasAdded = true;
+                }
+            }
+
+            if( bHasAdded && bOneStep ) {
+                return ET_Connected; // is it ok to return ET_Connected rather than ET_Sucess. BasicRRT relies on ET_Connected
             }
             _vCurConfig.swap(_vNewConfig);
         }
@@ -543,6 +607,10 @@ public:
         }
     }
 
+    const ConstraintFilterReturnPtr& GetConstraintReport() const {
+        return _constraintreturn;
+    }
+
 private:
     static int GetNewStaticId() {
         static int s_id = 0;
@@ -620,7 +688,7 @@ private:
                     if( !bestnode.first || (curdist < bestnode.second && bestnode.first->_usenn)) {
                         bestnode = make_pair(*itchild, curdist);
                     }
-                    _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
+                    _vNextLevelNodes.emplace_back(*itchild,  curdist);
                     if( minchilddist > curdist ) {
                         minchilddist = curdist;
                     }
@@ -655,7 +723,14 @@ private:
             _vCurrentLevelNodes[0].first = *_vsetLevelNodes.at(_EncodeLevel(_maxlevel)).begin();
             _vCurrentLevelNodes[0].second = _ComputeDistance(_vCurrentLevelNodes[0].first->q, config);
             int nParentFound = _InsertRecursive(newnode, _vCurrentLevelNodes, _maxlevel, _fMaxLevelBound);
-            BOOST_ASSERT(nParentFound!=0);
+            if( nParentFound == 0 ) {
+                // could possibly happen with circulr joints, still need to take a look at correct fix (see #323)
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                FOREACHC(it, config) {
+                    ss << *it << ",";
+                }
+                throw OPENRAVE_EXCEPTION_FORMAT("Could not insert config=[%s] inside the cover tree, perhaps cover tree _maxdistance=%f is not enough from the root", ss.str()%_maxdistance, ORE_Assert);
+            }
             if( nParentFound < 0 ) {
                 return NodePtr();
             }
@@ -664,6 +739,13 @@ private:
         return newnode;
     }
 
+    /// \brief the recursive function that inserts a configuration into the cache tree
+    ///
+    /// \param[in] nodein the input node to insert
+    /// \param[in] vCurrentLevelNodes the tree nodes at "level" with the respecitve distances computed for them
+    /// \param[in] currentlevel the current level traversing
+    /// \param[in] fLevelBound pow(_base, level)
+    /// \return 1 if point is inserted and parent found. 0 if no parent found and point is not inserted. -1 if parent found but point not inserted since it is close to _mindistance
     int _InsertRecursive(NodePtr nodein, const std::vector< std::pair<NodePtr, dReal> >& vCurrentLevelNodes, int currentlevel, dReal fLevelBound)
     {
 #ifdef _DEBUG
@@ -707,7 +789,7 @@ private:
                     FOREACHC(itchild, itcurrentnode->first->_vchildren) {
                         dReal curdist = _ComputeDistance(nodein, *itchild);
                         if( curdist <= fLevelBound*_fBaseChildMult ) {
-                            _vNextLevelNodes.push_back(make_pair(*itchild, curdist));
+                            _vNextLevelNodes.emplace_back(*itchild,  curdist);
                         }
                     }
                 }
@@ -868,7 +950,7 @@ private:
         std::vector<NodePtr>& vNextLevelNodes = vvCoverSetNodes[coverindex];
         vNextLevelNodes.resize(0);
 
-        bool bfound = false;
+        //bool bfound = false;
         FOREACH(itcurrentnode, vvCoverSetNodes.at(coverindex-1)) {
             // only take the children whose distances are within the bound
             if( setLevelRawChildren.find(*itcurrentnode) != setLevelRawChildren.end() ) {
@@ -882,7 +964,7 @@ private:
                         if( (*itcurrentnode)->_hasselfchild && _ComputeDistance(*itcurrentnode, *itchild) <= _mindistance) {
                             (*itcurrentnode)->_hasselfchild = 0;
                         }
-                        bfound = true;
+                        //bfound = true;
                         //break;
                     }
                     else {
@@ -991,6 +1073,7 @@ private:
     set<NodePtr> _setchildcache;
     vector<dReal> _vNewConfig, _vDeltaConfig, _vCurConfig;
     mutable vector<dReal> _vTempConfig;
+    ConstraintFilterReturnPtr _constraintreturn;
 
     mutable std::vector< std::pair<NodePtr, dReal> > _vCurrentLevelNodes, _vNextLevelNodes;
     mutable std::vector< std::vector<NodePtr> > _vvCacheNodes;

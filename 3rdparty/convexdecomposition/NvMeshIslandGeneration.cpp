@@ -430,36 +430,36 @@ public:
       while ( !mEdgeCheckQueue.empty() )
       {
 
-        EdgeCheck e = mEdgeCheckQueue.popBack();
+        EdgeCheck eCheck = mEdgeCheckQueue.popBack();
 
         // Process all triangles which share this edge
-        Edge *edge = locateSharedEdge(e.mEdge);
+        Edge *edge = locateSharedEdge(eCheck.mEdge);
 
         while ( edge )
         {
-          Triangle *t = edge->mParent;
-          assert(!t->mConsumed);
-          i->add(t,mTriangles);
-          removeTriangle(t); // remove this triangle from the triangle-edges hashmap
+          Triangle *triangle = edge->mParent;
+          assert(!triangle->mConsumed);
+          i->add(triangle,mTriangles);
+          removeTriangle(triangle); // remove this triangle from the triangle-edges hashmap
 
           // now keep adding to this island until we can no longer walk any shared edges..
 
-          if ( edge != t->mEdges[0] )
+          if ( edge != triangle->mEdges[0] )
           {
-            addEdgeCheck(t,t->mEdges[0]);
+            addEdgeCheck(triangle,triangle->mEdges[0]);
           }
 
-          if ( edge != t->mEdges[1] )
+          if ( edge != triangle->mEdges[1] )
           {
-            addEdgeCheck(t,t->mEdges[1]);
+            addEdgeCheck(triangle,triangle->mEdges[1]);
           }
 
-          if ( edge != t->mEdges[2] )
+          if ( edge != triangle->mEdges[2] )
           {
-            addEdgeCheck(t,t->mEdges[2]);
+            addEdgeCheck(triangle,triangle->mEdges[2]);
           }
 
-          edge = locateSharedEdge(e.mEdge); // keep going until all shared edges have been processed!
+          edge = locateSharedEdge(eCheck.mEdge); // keep going until all shared edges have been processed!
         }
 
       }

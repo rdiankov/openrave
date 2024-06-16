@@ -14,15 +14,17 @@
 """Misc openravepy functions. Need to explicitly import to use them.
 """
 from __future__ import with_statement # for python 2.5
-from . import openravepy_int, openravepy_ext
+from . import openravepy_int, openravepy_ext, OpenRAVEException
 import os.path
 from sys import platform as sysplatformname
+from sys import version_info
 from sys import stdout
 import numpy
+import six
 try:
     from itertools import izip
 except ImportError:
-    pass
+    izip = zip
 
 try:
     from threading import Thread
@@ -58,7 +60,9 @@ except ImportError:
         return curdir if not rel_list else join(*rel_list)
 
 def LoadTrajectoryFromFile(env,trajfile,trajtype=''):
-    return openravepy_int.RaveCreateTrajectory(env,trajtype).deserialize(open(trajfile,'r').read())
+    traj = openravepy_int.RaveCreateTrajectory(env,trajtype)
+    traj.LoadFromFile(trajfile)
+    return traj
 
 def InitOpenRAVELogging(stream=stdout):
     """Sets the python logging **openravepy** scope to the same debug level as OpenRAVE and initializes handles if they are not present
@@ -68,9 +72,12 @@ def InitOpenRAVELogging(stream=stdout):
     log.setLevel(levelmap[openravepy_int.RaveGetDebugLevel()&0xffff])
     if len(log.handlers) == 0:
         try:
-            import codecs
-            colorize=__import__('logutils.colorize',fromlist=['colorize'])
-            handler = colorize.ColorizingStreamHandler(codecs.getwriter('utf-8')(stream))
+            from logutils import colorize
+            if stream.encoding is not None and version_info >= (2, 7):
+                handler = colorize.ColorizingStreamHandler(stream)
+            else:
+                import codecs
+                handler = colorize.ColorizingStreamHandler(codecs.getwriter('utf-8')(stream))
             handler.level_map[logging.DEBUG] =(None, 'green', False)
             handler.level_map[logging.INFO] = (None, None, False)
             handler.level_map[logging.WARNING] = (None, 'yellow', False)
@@ -100,7 +107,7 @@ def SetViewerUserThread(env,viewername,userfn):
         userfn()
     # add the viewer before starting the user function
     env.Add(viewer)
-    threading = __import__('threading')
+    import threading
     Thread = threading.Thread
     def localuserfn(userfn,viewer):
         try:
@@ -142,7 +149,7 @@ class OpenRAVEGlobalArguments:
         ogroup.add_option('--module', action="append",type='string',dest='_modules',default=[],nargs=2,
                           help='module to load, can specify multiple modules. Two arguments are required: "name" "args".')
         ogroup.add_option('--level','-l','--log_level', action="store",type='string',dest='_level',default=None,
-                          help='Debug level, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems())))
+                          help='Debug level')#, one of (%s)'%(','.join(str(debugname).lower() for debuglevel,debugname in openravepy_int.DebugLevel.values.items())))
         if testmode:
             ogroup.add_option('--testmode', action="store_true",dest='testmode',default=False,
                               help='if set, will run the program in a finite amount of time and spend computation time validating results. Used for testing')
@@ -151,7 +158,7 @@ class OpenRAVEGlobalArguments:
     def parseGlobal(options,**kwargs):
         """Parses all global options independent of the environment"""
         if options._level is not None:
-            for debuglevel,debugname in openravepy_int.DebugLevel.values.iteritems():
+            for debuglevel,debugname in openravepy_int.DebugLevel.values.items():
                 if (not options._level.isdigit() and options._level.lower() == debugname.name.lower()) or (options._level.isdigit() and int(options._level) == int(debuglevel)):
                     openravepy_int.RaveSetDebugLevel(debugname)
                     break
@@ -166,28 +173,28 @@ class OpenRAVEGlobalArguments:
                 cc = openravepy_int.RaveCreateCollisionChecker(env,options._collision)
                 if cc is not None:
                     env.SetCollisionChecker(cc)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         try:
             if options._physics:
                 ph = openravepy_int.RaveCreatePhysicsEngine(env,options._physics)
                 if ph is not None:
                     env.SetPhysicsEngine(ph)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         try:
             if options._server:
                 sr = openravepy_int.RaveCreateModule(env,options._server)
                 if sr is not None:
                     env.Add(sr,True,'%d'%options._serverport)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
         for name,args in options._modules:
             try:
                 module = openravepy_int.RaveCreateModule(env,name)
                 if module is not None:
                     env.Add(module,True,args)
-            except openravepy_ext.openrave_exception, e:
+            except OpenRAVEException as e:
                 log.warn(e)
         try:
             viewername=None
@@ -201,7 +208,7 @@ class OpenRAVEGlobalArguments:
                 return viewername
             elif viewername is not None:
                 env.SetViewer(viewername)
-        except openravepy_ext.openrave_exception, e:
+        except OpenRAVEException as e:
             log.warn(e)
             
     @staticmethod
@@ -234,7 +241,7 @@ class OpenRAVEGlobalArguments:
             openravepy_int.RaveLoadPlugin(plugin)
         OpenRAVEGlobalArguments.parseGlobal(options,**kwargs)
         if createenv is None:
-            raise openravepy_ext.openrave_exception('failed to create environment')
+            raise OpenRAVEException('failed to create environment')
         env = createenv()
         viewername = OpenRAVEGlobalArguments.parseEnvironment(options,env,returnviewer=True,**kwargs)
         SetViewerUserThread(env,viewername,lambda: userfn(env,options))
@@ -280,7 +287,7 @@ def ComputeGeodesicSphereMesh(radius=1.0,level=2):
 
 def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     """draws xyz coordinate system around target.
-
+    
     :param env: Environment
     :param target: can be a 7 element pose, 4x4 matrix, or the name of a kinbody in the environment
     :param dist: how far the lines extend from the origin
@@ -288,10 +295,19 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     :param colormode: optionally override default color mode of rgb to cmy
     :param coloradd: an optional 3-element vector for 
     """
-    if isinstance(target,basestring):
-        T = self.env.GetKinBody(target).GetTransform()
+    if isinstance(target,six.string_types):
+        T = env.GetKinBody(target).GetTransform()
+    elif hasattr(target,'GetTransform'):
+        T = target.GetTransform()
+    elif hasattr(target,'GetTransform6D'):
+        T = target.GetTransform6D()
+    elif hasattr(target,'GetTransformPose'):
+        T = openravepy_int.matrixFromPose(target.GetTransformPose())
     elif len(target) == 7:
         T = openravepy_int.matrixFromPose(target)
+    elif isinstance(target,list):
+        return [DrawAxes(env,subtarget,dist,linewidth,colormode,coloradd) for subtarget in target]
+    
     else:
         T = numpy.array(target)
     if colormode == 'cmy':
@@ -302,9 +318,20 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
         colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)
 
+def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0]),color=numpy.array([0,0,0,1]),height=0.05):
+    """draws a string label at position specified by worldPosition.
+    
+    :param env: Environment
+    :param label: string to be used in the label
+    :param worldPosition: a 3-element vector for positional offset relative to the root world transform
+    :param color: a 4-element vector defining the color of the label
+    :param height: height of characters
+    """
+    return env.drawlabel(label, worldPosition, color, height)
+
 def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     """draws an IkParameterization
-
+    
     """
     if ikparam.GetType() == openravepy_int.IkParameterizationType.Transform6D:
         return DrawAxes(env,ikparam.GetTransform6DPose(),dist,linewidth,coloradd)
@@ -328,6 +355,19 @@ def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
         T = openravepy_int.matrixFromAxisAngle([0,0,angle])
         T[0:3,3] = pos
         return DrawAxes(env,T,dist,linewidth,coloradd)
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
+        pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
+        #T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        T = openravepy_int.matrixFromAxisAngle([angle, 0,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationZAxisAngleYNorm4D:
+        pos,angle = ikparam.GetTranslationZAxisAngleYNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,angle,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
     
     else:
         raise NotImplemented('iktype %s'%str(ikparam.GetType()))
@@ -373,7 +413,14 @@ def DrawIkparam2(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     
     elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationYAxisAngleXNorm4D:
         pos,angle = ikparam.GetTranslationYAxisAngleXNorm4D()
-        T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        #T = numpy.dot([[1,0,0,0],[0,0,1,0],[0,-1,0,0],[0,0,0,1]], openravepy_int.matrixFromAxisAngle([angle, 0,0]))
+        T = openravepy_int.matrixFromAxisAngle([angle, 0,0])
+        T[0:3,3] = pos
+        return [DrawAxes(env,T,dist,linewidth,coloradd)]
+
+    elif ikparam.GetType() == openravepy_int.IkParameterizationType.TranslationZAxisAngleYNorm4D:
+        pos,angle = ikparam.GetTranslationZAxisAngleYNorm4D()
+        T = openravepy_int.matrixFromAxisAngle([0,angle,0])
         T[0:3,3] = pos
         return [DrawAxes(env,T,dist,linewidth,coloradd)]
     
@@ -385,7 +432,7 @@ def DrawCircle(env, center, normal, radius, linewidth=1, colors=None):
     R = openravepy_int.matrixFromQuat(openravepy_int.quatRotateDirection([0,0,1],normal))
     right = R[0:3,0]*radius
     up = R[0:3,1]*radius
-    return env.drawlinestrip(c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
+    return env.drawlinestrip(numpy.c_[numpy.dot(numpy.transpose([numpy.cos(angles)]), [right]) + numpy.dot(numpy.transpose([numpy.sin(angles)]), [up]) + numpy.tile(center, (len(angles),1))], linewidth, colors=colors)
 
 def ComputeBoxMesh(extents):
     """Computes a box mesh"""
@@ -415,7 +462,6 @@ def ComputeCylinderYMesh(radius,height,angledelta=0.1):
         iprev = i
     return vertices,numpy.array(indices)
 
-
 def TSP(solutions,distfn=None):
     """solution to travelling salesman problem. orders the set of solutions such that visiting them one after another is fast.
     """
@@ -424,6 +470,7 @@ def TSP(solutions,distfn=None):
         distfn = lambda x,y: sum((x-y)**2)
     
     newsolutions = numpy.array(solutions)
+    newindices = numpy.arange(len(solutions))
     for i in range(newsolutions.shape[0]-2):
         n = newsolutions.shape[0]-i-1
         dists = [distfn(newsolutions[i,:],newsolutions[j,:]) for j in range(i+1,newsolutions.shape[0])]
@@ -431,7 +478,8 @@ def TSP(solutions,distfn=None):
         sol = numpy.array(newsolutions[i+1,:])
         newsolutions[i+1,:] = newsolutions[minind,:]
         newsolutions[minind,:] = sol
-    return newsolutions
+        newindices[i+1], newindices[minind] = newindices[minind], newindices[i+1]
+    return newsolutions, newindices
 
 def sequence_cross_product(*sequences):
     """iterates through the cross product of all items in the sequences"""
@@ -540,7 +588,7 @@ class SpaceSamplerExtra:
             mult = 1
             for i in range(maxiter):
                 oddbits += (indices&1)*mult
-                evenbits += mult*((indices&2)/2)
+                evenbits += mult*((indices&2)//2)
                 indices >>= 2
                 mult *= 2
             self.faceindices = [oddbits+evenbits,oddbits-evenbits]

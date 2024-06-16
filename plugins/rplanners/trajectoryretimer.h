@@ -17,8 +17,11 @@
 #define OPENRAVE_TRAJECTORY_RETIMER
 
 #include "openraveplugindefs.h"
+#include "manipconstraints.h"
 
 #define _(msgid) OpenRAVE::RaveGetLocalizedTextForDomain("openrave_plugins_rplanners", msgid)
+
+namespace rplanners {
 
 class TrajectoryRetimer : public PlannerBase
 {
@@ -26,7 +29,7 @@ protected:
     class GroupInfo
     {
 public:
-        GroupInfo(int degree, const ConfigurationSpecification::Group& gpos, const ConfigurationSpecification::Group &gvel) : degree(degree), gpos(gpos), gvel(gvel), orgposoffset(-1), orgveloffset(-1) {
+        GroupInfo(int degree_, const ConfigurationSpecification::Group& gpos_, const ConfigurationSpecification::Group &gvel_) : degree(degree_), gpos(gpos_), gvel(gvel_), orgposoffset(-1), orgveloffset(-1) {
         }
         virtual ~GroupInfo() {
         }
@@ -44,27 +47,28 @@ public:
     TrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv)
     {
         __description = ":Interface Author: Rosen Diankov\nTrajectory re-timing without modifying any of the points. Overwrites the velocities and timestamps.";
+        _bmanipconstraints = false;
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         params->Validate();
-        _parameters.reset(new TrajectoryTimingParameters());
+        _parameters.reset(new ConstraintTrajectoryTimingParameters());
         _parameters->copy(params);
         // reset the cache
         _cachedoldspec = ConfigurationSpecification();
         _cachednewspec = ConfigurationSpecification();
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        _parameters.reset(new TrajectoryTimingParameters());
+        EnvironmentLock lock(GetEnv()->GetMutex());
+        _parameters.reset(new ConstraintTrajectoryTimingParameters());
         isParameters >> *_parameters;
         _parameters->Validate();
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
     virtual bool _InitPlan()
@@ -81,6 +85,15 @@ public:
         for(size_t i = 0; i < _vimaxaccel.size(); ++i) {
             _vimaxaccel[i] = 1/_parameters->_vConfigAccelerationLimit[i];
         }
+        _bmanipconstraints = _parameters->manipname.size() > 0 && (_parameters->maxmanipspeed>0 || _parameters->maxmanipaccel>0);
+        // initialize workspace constraints on manipulators
+        if(_bmanipconstraints ) {
+            if( !_manipconstraintchecker ) {
+                _manipconstraintchecker.reset(new ManipConstraintChecker(GetEnv()));
+            }
+            _manipconstraintchecker->Init(_parameters->manipname, _parameters->_configurationspecification, _parameters->maxmanipspeed, _parameters->maxmanipaccel);
+        }
+
         return _SupportInterpolation();
     }
 
@@ -88,38 +101,41 @@ public:
         return _parameters;
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         // TODO there's a lot of info that is being recomputed which could be cached depending on the configurationspace of the incoming trajectory
         BOOST_ASSERT(!!_parameters && !!ptraj && ptraj->GetEnv()==GetEnv());
         BOOST_ASSERT(_parameters->GetDOF() == _parameters->_configurationspecification.GetDOF());
         std::vector<ConfigurationSpecification::Group>::const_iterator itoldgrouptime = ptraj->GetConfigurationSpecification().FindCompatibleGroup("deltatime",false);
         if( _parameters->_hastimestamps && itoldgrouptime == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
-            RAVELOG_WARN("trajectory does not have timestamps, even though parameters say timestamps are needed\n");
-            return PS_Failed;
+            std::string description = str(boost::format("env=%s, trajectory does not have timestamps, even though parameters say timestamps are needed")%GetEnv()->GetNameId());
+            RAVELOG_WARN(description);
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
         size_t numpoints = ptraj->GetNumWaypoints();
         if( numpoints == 0 ) {
             // there's nothing to retime...
-            return PS_Failed;
+            std::string description = str(boost::format("env=%s, there's nothing to retime")%GetEnv()->GetNameId());
+            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
         }
         ConfigurationSpecification velspec = _parameters->_configurationspecification.ConvertToVelocitySpecification();
         if( _parameters->_hasvelocities ) {
             // check that all velocity groups are there
             FOREACH(itgroup,velspec._vgroups) {
                 if(ptraj->GetConfigurationSpecification().FindCompatibleGroup(*itgroup,true) == ptraj->GetConfigurationSpecification()._vgroups.end() ) {
-                    RAVELOG_WARN(str(boost::format("trajectory does not have velocity group '%s', even though parameters say is needed")%itgroup->name));
-                    return PS_Failed;
+                    std::string description = str(boost::format("env=%s, trajectory does not have velocity group '%s', even though parameters say is needed")%GetEnv()->GetNameId()%itgroup->name);
+                    RAVELOG_WARN(description);
+                    return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                 }
             }
         }
 
         ConfigurationSpecification newspec = _parameters->_configurationspecification;
         newspec.AddDerivativeGroups(1,false);
-        bool bWritingAcceleration = false;
+        //bool bWritingAcceleration = false;
         if( _parameters->_interpolation == "quadric" || _parameters->_interpolation == "quintic" ) {
             newspec.AddDerivativeGroups(2,false);
-            bWritingAcceleration = true;
+            //bWritingAcceleration = true;
         }
         newspec.AddDeltaTimeGroup();
         ptraj->GetWaypoints(0,numpoints,_vdiffdata, _parameters->_configurationspecification);
@@ -129,13 +145,13 @@ public:
                 dReal lower = _parameters->_vConfigLowerLimit.at(j), upper = _parameters->_vConfigUpperLimit.at(j);
                 if( _vdiffdata.at(i+j) < lower ) {
                     if( _vdiffdata.at(i+j) < lower-g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"),(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"),GetEnv()->GetId()%(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%lower,ORE_InconsistentConstraints);
                     }
                     _vdiffdata.at(i+j) = lower;
                 }
                 else if( _vdiffdata.at(i+j) > upper ) {
                     if( _vdiffdata.at(i+j) > upper+g_fEpsilonJointLimit ) {
-                        throw OPENRAVE_EXCEPTION_FORMAT(_("upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"),(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"),GetEnv()->GetId()%(i/_parameters->GetDOF())%j%_vdiffdata.at(i+j)%upper,ORE_InconsistentConstraints);
                     }
                     _vdiffdata.at(i+j) = upper;
                 }
@@ -320,11 +336,12 @@ public:
                         // positions, velocities, and timestamps already filled, so check everything
                         FOREACH(itfn, _listcheckvelocityfns) {
                             if( !(*itfn)(itdataprev, itdata, 7) ) {
-                                RAVELOG_VERBOSE_FORMAT("point %d/%d has unreachable velocity", i%numpoints);
+                                std::string description = str(boost::format("env=%s, point %d/%d has unreachable velocity")%GetEnv()->GetNameId()%i%numpoints);
+                                RAVELOG_VERBOSE(description);
                                 if( IS_DEBUGLEVEL(Level_Verbose) ) {
                                     (*itfn)(itdataprev, itdata, 7);
                                 }
-                                return PS_Failed;
+                                return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                             }
                         }
                     }
@@ -332,8 +349,9 @@ public:
                         FOREACH(itmin, _listmintimefns) {
                             dReal fgrouptime = (*itmin)(itorgdiff, itdataprev, itdata,bUseEndVelocity);
                             if( fgrouptime < 0 ) {
-                                RAVELOG_VERBOSE_FORMAT("point %d/%d has uncomputable minimum time, possibly due to boundary constraints", i%numpoints);
-                                return PS_Failed;
+                                std::string description = str(boost::format("env=%s, point %d/%d has uncomputable minimum time, possibly due to boundary constraints")%GetEnv()->GetNameId()%i%numpoints);
+                                RAVELOG_VERBOSE(description);
+                                return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                             }
 
                             if( _parameters->_fStepLength > 0 ) {
@@ -351,8 +369,9 @@ public:
                         if( _parameters->_hastimestamps ) {
                             if( *(itdata+_timeoffset) < mintime-g_fEpsilonJointLimit ) {
                                 // this is a commonly occuring message in planning
-                                RAVELOG_VERBOSE(str(boost::format("point %d/%d has unreachable minimum time %e > %e")%i%numpoints%(*(itdata+_timeoffset))%mintime));
-                                return PS_Failed;
+                                std::string description = str(boost::format("env=%s, point %d/%d has unreachable minimum time %e > %e")%GetEnv()->GetNameId()%i%numpoints%(*(itdata+_timeoffset))%mintime);
+                                RAVELOG_VERBOSE(description);
+                                return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                             }
                         }
                         else {
@@ -361,8 +380,9 @@ public:
                         if( _parameters->_hasvelocities ) {
                             FOREACH(itfn,_listcheckvelocityfns) {
                                 if( !(*itfn)(itdataprev, itdata, 6) ) {
-                                    RAVELOG_WARN(str(boost::format("point %d/%d has unreachable velocity")%i%numpoints));
-                                    return PS_Failed;
+                                    std::string description = str(boost::format("env=%s, point %d/%d has unreachable velocity")%GetEnv()->GetNameId()%i%numpoints);
+                                    RAVELOG_WARN(description);
+                                    return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                                 }
                             }
                         }
@@ -376,8 +396,9 @@ public:
                     FOREACH(itfn,_listwritefns) {
                         // because the initial time for each ramp could have been stretched to accomodate other points, it is possible for this to fail
                         if( !(*itfn)(itorgdiff, itdataprev, itdata) ) {
-                            RAVELOG_VERBOSE_FORMAT("point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.", i%numpoints%(*(itdata+_timeoffset)));
-                            return PS_Failed;
+                            std::string description = str(boost::format("env=%s, point %d/%d has unreachable new time %es, probably due to acceleration limtis violated.")%GetEnv()->GetNameId()%i%numpoints%(*(itdata+_timeoffset)));
+                            RAVELOG_VERBOSE(description);
+                            return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
                         }
                     }
                     itdataprev = itdata;
@@ -385,11 +406,12 @@ public:
             }
             catch (const std::exception& ex) {
                 string filename = str(boost::format("%s/failedsmoothing%d.xml")%RaveGetHomeDirectory()%(RaveRandomInt()%10000));
-                RAVELOG_WARN(str(boost::format("parabolic planner failed: %s, writing original trajectory to %s")%ex.what()%filename));
+                std::string description = str(boost::format("env=%s, parabolic planner failed: %s, writing original trajectory to %s")%GetEnv()->GetNameId()%ex.what()%filename);
+                RAVELOG_WARN(description);
                 ofstream f(filename.c_str());
                 f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
                 ptraj->serialize(f);
-                return PS_Failed;
+                return OPENRAVE_PLANNER_STATUS(description, PS_Failed);
             }
         }
         else {
@@ -401,8 +423,8 @@ public:
 
         _WriteTrajectory(ptraj,_cachednewspec, _vdata);
         // happens too often for debug message?
-        //RAVELOG_VERBOSE(str(boost::format("%s path duration=%es, timestep=%es")%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
-        return PS_HasSolution;
+        //RAVELOG_VERBOSE(str(boost::format("env=%d, %s path duration=%es, timestep=%es")%GetEnv()->GetId()%GetXMLId()%ptraj->GetDuration()%_parameters->_fStepLength));
+        return OPENRAVE_PLANNER_STATUS(PS_HasSolution);
     }
 
 protected:
@@ -417,7 +439,7 @@ protected:
     }
 
     virtual bool _SupportInterpolation() = 0;
-    
+
     /// \brief compute the minimum time to achieve the point. returns a mintime>=0 if successeeded, otherwise returns value < 0.
     virtual dReal _ComputeMinimumTimeJointValues(GroupInfoConstPtr info, std::vector<dReal>::const_iterator itorgdiff, std::vector<dReal>::const_iterator itdataprev, std::vector<dReal>::const_iterator itdata, bool bUseEndVelocity) = 0;
     /// \brief given the delta time, compute the velocities in the data
@@ -456,7 +478,8 @@ protected:
         ptraj->Insert(0,data);
     }
 
-    TrajectoryTimingParametersPtr _parameters;
+    ConstraintTrajectoryTimingParametersPtr _parameters;
+    boost::shared_ptr<ManipConstraintChecker> _manipconstraintchecker;
 
     // caching
     ConfigurationSpecification _cachedoldspec, _cachednewspec; ///< the configuration specification that the cached structures have been set for
@@ -470,6 +493,10 @@ protected:
     int _timeoffset;
     std::list<GroupInfoPtr> _listgroupinfo;
     vector<dReal> _vtempdata0, _vtempdata1;
+
+    bool _bmanipconstraints; /// if true, check workspace manip constraints
 };
+
+} // end namespace rplanners
 
 #endif

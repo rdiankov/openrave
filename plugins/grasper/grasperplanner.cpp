@@ -36,13 +36,16 @@ public:
     GrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _report(new CollisionReport()) {
         __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\n\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
     }
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = pbase;
 
         if( _robot->GetActiveDOF() <= 0 ) {
-            return false;
+            std::stringstream ss;
+            ss << "env=" << GetEnv()->GetNameId()
+               << " robot \"" << _robot->GetName() << "\" has active dof(" << _robot->GetActiveDOF() << ") <= 0";
+            return PlannerStatus(ss.str(), PS_Failed);
         }
 
         _parameters.reset(new GraspParameters(GetEnv()));
@@ -55,21 +58,21 @@ public:
         FOREACH(itavoid,_parameters->vavoidlinkgeometry) {
             KinBody::LinkPtr plink = _robot->GetLink(*itavoid);
             if( !plink ) {
-                RAVELOG_WARN(str(boost::format("failed to find avoiding link\n")%*itavoid));
+                RAVELOG_WARN(str(boost::format("failed to find avoiding link %s")%*itavoid));
                 continue;
             }
             _vAvoidLinkGeometry.push_back(plink);
         }
 
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
-    PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if(!_parameters) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         RobotBase::RobotStateSaver saver(_robot);
         RobotBase::ManipulatorPtr pmanip = _robot->GetActiveManipulator();
 
@@ -83,7 +86,7 @@ public:
             else {
                 spec = _robot->GetActiveConfigurationSpecification();
                 if( spec.GetDOF() == 0 ) {
-                    return PS_Failed;
+                    return PlannerStatus(PS_Failed);
                 }
                 ptraj->Init(spec);
             }
@@ -145,7 +148,7 @@ public:
                 AABB ab;
                 {
                     // have to compute in the target's coordinate system since aabb extents change
-                    KinBody::KinBodyStateSaver saver(_parameters->targetbody);
+                    KinBody::KinBodyStateSaver saver756(_parameters->targetbody);
                     _parameters->targetbody->SetTransform(Transform());
                     ab = _parameters->targetbody->ComputeAABB();
                 }
@@ -157,6 +160,15 @@ public:
         }
 
         vapproachdir = (tTargetOffset*tTarget).rotate(_parameters->vtargetdirection);
+
+        std::vector<int> vordereddofindices;
+        if( _parameters->vordereddofindices.size() == _robot->GetActiveDOFIndices().size() ) {
+            vordereddofindices = _parameters->vordereddofindices;
+        }
+        else {
+            vordereddofindices = _robot->GetActiveDOFIndices();
+        }
+        // will also need a mapping between vordereddofindices and vactivedofindices
 
         if( _parameters->btransformrobot ) {
             _robot->SetTransform(Transform());     // this is necessary to reset any 'randomness' introduced from the current state
@@ -269,8 +281,9 @@ public:
         if( _robot->GetAffineDOF() ) {
             int ct = _MoveStraight(ptraj, vapproachdir, dofvals, CT_RegularCollision);
             if( ct & CT_NothingHit ) {
-                RAVELOG_DEBUG("robot did not hit anything, planner failing...\n");
-                return PS_Failed;
+                std::string description = "robot did not hit anything, planner failing...\n";
+                RAVELOG_DEBUG(description);
+                return PlannerStatus(description, PS_Failed);
             }
 
             dReal* pX = NULL, *pY = NULL, *pZ = NULL;
@@ -380,8 +393,9 @@ public:
             // check that anything that should be avoided is not hit
             if( ct&CT_AvoidLinkHit ) {
                 string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
-                RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s, target=%s\n")%_report->__str__()%targetname));
-                return PS_Failed;
+                std::string description = str(boost::format("hit link that needed to be avoided: %s, target=%s\n")%_report->__str__()%targetname);
+                RAVELOG_VERBOSE(description);
+                return PlannerStatus(description, PS_Failed, _report);
             }
         }
 
@@ -396,7 +410,7 @@ public:
             for(size_t i = 0; i < _robot->GetActiveDOFIndices().size(); ++i) {
                 FOREACHC(itmanip, _robot->GetManipulators()) {
                     BOOST_ASSERT((*itmanip)->GetChuckingDirection().size() == (*itmanip)->GetGripperIndices().size());
-                    vector<dReal>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
+                    vector<int>::const_iterator itchucking = (*itmanip)->GetChuckingDirection().begin();
                     FOREACHC(itgripper,(*itmanip)->GetGripperIndices()) {
                         if(( *itchucking != 0) &&( *itgripper == _robot->GetActiveDOFIndices().at(i)) ) {
                             vchuckingdir.at(i) = *itchucking;
@@ -409,12 +423,18 @@ public:
         }
 
         //close the fingers one by one
-        for(size_t ifing = 0; ifing < _robot->GetActiveDOFIndices().size(); ifing++) {
-            if( vchuckingdir.at(ifing) == 0 ) {
+        for(size_t ifing = 0; ifing < vordereddofindices.size(); ifing++) {
+            std::vector<int>::const_iterator itindex = std::find(_robot->GetActiveDOFIndices().begin(), _robot->GetActiveDOFIndices().end(), vordereddofindices[ifing]);
+            BOOST_ASSERT(itindex != _robot->GetActiveDOFIndices().end());
+            int iindex = itindex - _robot->GetActiveDOFIndices().begin();
+            // Now we have that vordereddofindices[ifing] = vactivedofindices[iindex]; So can access upperlim, lowerlim, etc. with iindex
+
+            if( vchuckingdir.at(iindex) == 0 ) {
                 // not a real joint, so skip
                 continue;
             }
-            int nDOFIndex = _robot->GetActiveDOFIndices().at(ifing);
+            // int nDOFIndex = _robot->GetActiveDOFIndices().at(ifing);
+            int nDOFIndex = vordereddofindices.at(ifing);
             dReal fmult = 1;
             KinBody::JointPtr pjoint = _robot->GetJointFromDOFIndex(nDOFIndex);
             if( pjoint->IsPrismatic(nDOFIndex-pjoint->GetDOFIndex()) ) {
@@ -424,7 +444,7 @@ public:
 
             bool collision = false;
             bool coarse_pass = true;     ///this parameter controls the coarseness of the step
-            int num_iters = (int)((vupperlim[ifing] - vlowerlim[ifing])/step_size+0.5)+1;
+            int num_iters = (int)((vupperlim[iindex] - vlowerlim[iindex])/step_size+0.5)+1;
             if( num_iters <= 1 ) {
                 num_iters = 2; // need at least 2 iterations because of coarse/fine step tuning
             }
@@ -435,19 +455,20 @@ public:
                 RAVELOG_DEBUG(str(boost::format("gripper initially in collision: %s\n")%_report->__str__()));
                 if( _parameters->bavoidcontact ) {
                     string targetname = !_parameters->targetbody ? string() : _parameters->targetbody->GetName();
-                    RAVELOG_WARN(str(boost::format("gripper in collision without moving and bavoidcontact==True. target=%s, contact=%s\n")%targetname%_report->__str__()));
-                    return PS_Failed;
+                    std::string description = str(boost::format("gripper in collision without moving and bavoidcontact==True. target=%s, contact=%s\n")%targetname%_report->__str__());
+                    RAVELOG_WARN(description);
+                    return PlannerStatus(description, PS_Failed, _report);
                 }
                 continue;
             }
 
             while(num_iters-- > 0) {
                 // set manip joints that haven't been covered so far
-                if( (vchuckingdir[ifing] > 0 && dofvals[ifing] > vupperlim[ifing]+step_size ) || ( vchuckingdir[ifing] < 0 && dofvals[ifing] < vlowerlim[ifing]-step_size ) ) {
+                if( (vchuckingdir[iindex] > 0 && dofvals[iindex] > vupperlim[iindex]+step_size ) || ( vchuckingdir[iindex] < 0 && dofvals[iindex] < vlowerlim[iindex]-step_size ) ) {
                     break;
                 }
 
-                dofvals[ifing] += vchuckingdir[ifing] * step_size;
+                dofvals[iindex] += vchuckingdir[iindex] * step_size;
                 _robot->SetActiveDOFValues(dofvals,KinBody::CLA_CheckLimitsSilent);
                 _robot->GetActiveDOFValues(dofvals);
                 ct = _CheckCollision(KinBody::JointConstPtr(pjoint),KinBodyPtr());
@@ -456,21 +477,22 @@ public:
                         //coarse step collided, back up and shrink step
                         coarse_pass = false;
                         // move back one step before switching to smaller step size
-                        dofvals[ifing] -= vchuckingdir[ifing] * step_size;
+                        dofvals[iindex] -= vchuckingdir[iindex] * step_size;
                         num_iters = (int)(step_size/(_parameters->ffinestep*fmult))+1;
                         step_size = _parameters->ffinestep*fmult;
                         continue;
                     }
                     else {
                         if( ct & CT_AvoidLinkHit ) {
-                            RAVELOG_VERBOSE(str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__()));
-                            return PS_Failed;
+                            std::string description = str(boost::format("hit link that needed to be avoided: %s\n")%_report->__str__());
+                            RAVELOG_VERBOSE(description);
+                            return PlannerStatus(description, PS_Failed, _report);
                         }
 
                         int linkindex = (ct&CT_LinkMask)>>CT_LinkMaskShift;
                         KinBody::LinkPtr plink = _robot->GetLinks().at(linkindex);
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            RAVELOG_VERBOSE(str(boost::format("Collision (0x%x) of link %s using joint %s(%d), value=%f [%s]\n")%ct%plink->GetName()%pjoint->GetName()%nDOFIndex%dofvals[ifing]%_report->__str__()));
+                            RAVELOG_VERBOSE(str(boost::format("Collision (0x%x) of link %s using joint %s(%d), value=%f [%s]\n")%ct%plink->GetName()%pjoint->GetName()%nDOFIndex%dofvals[iindex]%_report->__str__()));
                             stringstream ss; ss << "Transform: " << plink->GetTransform() << "Joint Vals: ";
                             for(int vi = 0; vi < _robot->GetActiveDOF(); vi++) {
                                 ss << dofvals[vi] << " ";
@@ -480,7 +502,7 @@ public:
                         }
 
                         if( (ct & CT_SelfCollision) || _parameters->bavoidcontact ) {
-                            dofvals[ifing] -= vchuckingdir[ifing] * step_size;
+                            dofvals[iindex] -= vchuckingdir[iindex] * step_size;
                             break;
                         }
                         nLinksCollideObstacle++;
@@ -503,8 +525,9 @@ public:
         for(int q = 0; q < (int)_vlinks.size(); q++) {
             int ct = _CheckCollision(KinBody::LinkConstPtr(_vlinks[q]), KinBodyPtr());
             if( ct & CT_AvoidLinkHit ) {
-                RAVELOG_VERBOSE("grasp planner hit link that needed to be avoided\n");
-                return PS_Failed;
+                std::string description = "grasp planner hit link that needed to be avoided\n";
+                RAVELOG_VERBOSE(description);
+                return PlannerStatus(description, PS_Failed);
             }
             if( ct & CT_SelfCollision ) {
                 RAVELOG_VERBOSE("grasp planner ignoring last point\n");
@@ -519,7 +542,7 @@ public:
         }
 
         RAVELOG_VERBOSE("grasp planner finishing\n");
-        return ptraj->GetNumWaypoints() > 0 ? PS_HasSolution : PS_Failed;     // only return true if there is at least one valid pose!
+        return ptraj->GetNumWaypoints() > 0 ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);     // only return true if there is at least one valid pose!
     }
 
     virtual int _CheckCollision(KinBody::JointConstPtr pjoint, KinBodyPtr targetbody)
@@ -544,23 +567,44 @@ public:
             bcollision = GetEnv()->CheckCollision(plink,_report);
         }
         if( bcollision ) {
-            if( (!!_report->plink1 && _report->plink1->GetParent() == _parameters->targetbody) || (!!_report->plink2 && _report->plink2->GetParent() == _parameters->targetbody) ) {
-                ct |= CT_TargetCollision;
-            }
-            else {
-                ct |= CT_EnvironmentCollision;
-            }
-            FOREACH(itavoid,_vAvoidLinkGeometry) {
-                if(( *itavoid == _report->plink1) ||( *itavoid == _report->plink2) ) {
-                    ct |= CT_AvoidLinkHit;
-                    break;
-                }
-            }
+            for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision ) {
+                const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
 
-            if( _parameters->bonlycontacttarget ) {
-                // check if hit anything besides the target
-                if( (!!_report->plink1 &&( _report->plink1->GetParent() != plink->GetParent()) &&( _report->plink1->GetParent() != _parameters->targetbody) ) || (!!_report->plink2 &&( _report->plink2->GetParent() != plink->GetParent()) &&( _report->plink2->GetParent() != _parameters->targetbody) ) ) {
-                    ct |= CT_AvoidLinkHit;
+                bool bTargetCollision1 = false, bTargetCollision2 = false;
+                if( !!_parameters->targetbody ) {
+                    const std::string& targetname = _parameters->targetbody->GetName();
+                    bTargetCollision1 = cpinfo.CompareFirstBodyName(targetname) == 0;
+                    bTargetCollision2 = cpinfo.CompareSecondBodyName(targetname) == 0;
+                }
+                if( bTargetCollision1 || bTargetCollision2 ) {
+                    ct |= CT_TargetCollision;
+                }
+                else {
+                    ct |= CT_EnvironmentCollision;
+                }
+
+                if( cpinfo.CompareFirstBodyName(_robot->GetName()) == 0 ) {
+                    for(KinBody::LinkPtr& pavoidlink : _vAvoidLinkGeometry) {
+                        if( cpinfo.CompareFirstLinkName(pavoidlink->GetName()) == 0 ) {
+                            ct |= CT_AvoidLinkHit;
+                            break;
+                        }
+                    }
+                }
+                if( cpinfo.CompareSecondBodyName(_robot->GetName()) == 0 ) {
+                    for(KinBody::LinkPtr& pavoidlink : _vAvoidLinkGeometry) {
+                        if( cpinfo.CompareSecondLinkName(pavoidlink->GetName()) == 0 ) {
+                            ct |= CT_AvoidLinkHit;
+                            break;
+                        }
+                    }
+                }
+
+                if( _parameters->bonlycontacttarget ) {
+                    // check if hit anything besides the target
+                    if( (cpinfo.CompareFirstBodyName(plink->GetParent()->GetName()) != 0 && !bTargetCollision1) || (cpinfo.CompareSecondBodyName(plink->GetParent()->GetName()) != 0 && !bTargetCollision2) ) {
+                        ct |= CT_AvoidLinkHit;
+                    }
                 }
             }
 

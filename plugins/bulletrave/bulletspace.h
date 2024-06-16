@@ -15,7 +15,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Contributors: 2010 Nick Hillier, Katrina Monkley CSIRO Autonomous Systems Lab, 2010-2011 Max Argus
-// 		 2013 Theodoros Stouraitis and Praveen Ramanujam
+//       2013 Theodoros Stouraitis and Praveen Ramanujam
 
 #ifndef OPENRAVE_BULLET_SPACE
 #define OPENRAVE_BULLET_SPACE
@@ -178,6 +178,8 @@ private:
                     // cylinder axis aligned to Y
                     child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
                     break;
+                case GT_ConicalFrustum:
+                case GT_Axial:
                 case GT_TriMesh: {
                     if( geom->GetCollisionMesh().indices.size() >= 3 ) {
                         btTriangleMesh* ptrimesh = new btTriangleMesh();
@@ -237,12 +239,12 @@ private:
             if( _bPhysics ) {
                 // set the mass and inertia and extract the eigenvectors of the tensor
                 btVector3 localInertia = GetBtVector((*itlink)->GetPrincipalMomentsOfInertia());
-		
+
                 dReal mass = (*itlink)->GetMass();
-                // -> bullet expects static objects to have zero mass                
-		if((*itlink)->IsStatic()){
-			mass = 0;
-		}
+                // -> bullet expects static objects to have zero mass
+                if((*itlink)->IsStatic()) {
+                    mass = 0;
+                }
                 if( mass < 0 ) {
                     RAVELOG_WARN(str(boost::format("body %s:%s mass is %f. filling dummy values")%pbody->GetName()%(*itlink)->GetName()%mass));
                     mass = 1e-7;
@@ -266,8 +268,8 @@ private:
             // Static rigidbodies: zero mass, cannot move but just collide
             // Kinematic rigidbodies: zero mass, can be animated by the user, but there will be only one-way interaction
             link->obj->setCollisionFlags((*itlink)->IsStatic() ? btCollisionObject::CF_KINEMATIC_OBJECT : 0);
-           // --> check for static
-           if( _bPhysics && !(*itlink)->IsStatic() ) {
+            // --> check for static
+            if( _bPhysics && !(*itlink)->IsStatic() ) {
                 _worlddynamics->addRigidBody(link->_rigidbody.get());
             }
             else {
@@ -358,7 +360,7 @@ private:
                     int minindex = min(plink0->GetIndex(), plink1->GetIndex());
                     int maxindex = max(plink0->GetIndex(), plink1->GetIndex());
 
-                    bool bIgnoreCollision = pbody->GetAdjacentLinks().find(minindex|(maxindex<<16)) != pbody->GetAdjacentLinks().end() || plink0->IsRigidlyAttached(plink0);
+                    bool bIgnoreCollision = pbody->AreAdjacentLinks(minindex, maxindex) || plink0->IsRigidlyAttached(plink0);
                     _worlddynamics->addConstraint(joint.get(), bIgnoreCollision);
                     pinfo->_mapjoints[*itjoint] = joint;
                 }
@@ -429,8 +431,8 @@ private:
         return btVector3(v.x,v.y,v.z);
     }
     bool IsInitialized() {
-       		// return !!_world;
-		return !!_worlddynamics;
+        // return !!_world;
+        return !!_worlddynamics;
     }
 
 
@@ -454,7 +456,7 @@ private:
 
     virtual void GeometryChangedCallback(KinBodyWeakPtr _pbody)
     {
-        EnvironmentMutex::scoped_lock lock(_penv->GetMutex());
+        EnvironmentLock lock(_penv->GetMutex());
         KinBodyPtr pbody(_pbody);
         KinBodyInfoPtr pinfo = GetInfo(pbody);
         if( !pinfo ) {

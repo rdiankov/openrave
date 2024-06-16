@@ -57,9 +57,10 @@
 #include <iostream>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 using namespace std;
+using namespace boost::placeholders;
 using namespace OpenRAVE;
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
@@ -95,6 +96,12 @@ inline std::ostream& SerializeValues(std::ostream& O, const std::vector<dReal>& 
         }
         O << values[i];
     }
+    return O;
+}
+
+inline std::ostream& SerializeTransform(std::ostream& O, const Transform& t, char delim=',')
+{
+    O << t.rot.x << delim << t.rot.y << delim << t.rot.z << delim << t.rot.w << delim << t.trans.x << delim << t.trans.y << delim << t.trans.z;
     return O;
 }
 

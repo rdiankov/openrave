@@ -308,9 +308,9 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
 
     // Planning Methods
     ///< manipulator state is also set
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset();
         Destroy();
         _robot = pbase;
@@ -341,26 +341,24 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
 
         _parameters=parameters;
         nIndex = 0;
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
-    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj)
+    virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
     {
         if( !_parameters ) {
-            return PS_Failed;
+            return PlannerStatus("parameters are not set", PS_Failed);
         }
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
-        Destroy();
 
         RobotBase::RobotStateSaver saver(_robot);
         Node* pcurrent=NULL, *pbest = NULL;
 
         if( _parameters->CheckPathAllConstraints(_parameters->vinitialconfig,_parameters->vinitialconfig,std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart) != 0 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         if( _parameters->SetStateValues(_parameters->vinitialconfig) != 0 ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
         pcurrent = CreateNode(0, NULL, _parameters->vinitialconfig);
 
@@ -431,7 +429,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         }
 
         if( !pbest ) {
-            return PS_Failed;
+            return PlannerStatus(PS_Failed);
         }
 
         RAVELOG_DEBUG("Path found, final node: %f, %f\n", pbest->fcost, pbest->ftotal-pbest->fcost);
@@ -471,7 +469,7 @@ Rosen Diankov, James Kuffner. \"Randomized Statistical Path Planning. Intl. Conf
         }
 
         _ProcessPostPlanners(_robot,ptraj);
-        return PS_HasSolution;
+        return PlannerStatus(PS_HasSolution);
     }
 
     int GetTotalNodes() {

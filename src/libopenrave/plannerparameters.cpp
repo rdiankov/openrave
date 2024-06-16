@@ -19,7 +19,23 @@
 #include <openrave/plannerparameters.h>
 #include <openrave/xmlreaders.h>
 
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/archive/iterators/ostream_iterator.hpp>
+#include <sstream>
+#include <string>
+
 namespace OpenRAVE {
+
+namespace bai = boost::archive::iterators;
+typedef bai::base64_from_binary<    // convert binary values to base64 characters
+        bai::transform_width<   // retrieve 6 bit integers from a sequence of 8 bit bytes
+            const char *,
+            6,
+            8
+            >
+        > base64_text;
 
 WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr penv) : maxdeviationangle(0.15*PI), maintaintiming(false), greedysearch(true), ignorefirstcollision(0), ignorefirstcollisionee(0), ignorelastcollisionee(0), minimumcompletetime(0), _penv(penv), _bProcessing(false) {
     _vXMLParameters.push_back("maxdeviationangle");
@@ -29,7 +45,6 @@ WorkspaceTrajectoryParameters::WorkspaceTrajectoryParameters(EnvironmentBasePtr 
     _vXMLParameters.push_back("ignorefirstcollisionee");
     _vXMLParameters.push_back("ignorelastcollisionee");
     _vXMLParameters.push_back("minimumcompletetime");
-    _vXMLParameters.push_back("workspacetraj"); // back-compat
     _vXMLParameters.push_back("workspacetrajectory");
 }
 
@@ -47,9 +62,17 @@ bool WorkspaceTrajectoryParameters::serialize(std::ostream& O, int options) cons
     O << "<ignorelastcollisionee>" << ignorelastcollisionee << "</ignorelastcollisionee>" << std::endl;
     O << "<minimumcompletetime>" << minimumcompletetime << "</minimumcompletetime>" << std::endl;
     if( !!workspacetraj ) {
-        O << "<workspacetrajectory>";
-        workspacetraj->serialize(O);
-        O << "</workspacetrajectory>" << std::endl;
+        O << "<workspacetrajectory><![CDATA[";
+
+        std::stringstream ssbinarytraj;
+        workspacetraj->serialize(ssbinarytraj);
+        std::string sbinarytraj = ssbinarytraj.str();
+        std::copy(
+            base64_text(sbinarytraj.c_str()),
+            base64_text(sbinarytraj.c_str() + sbinarytraj.size()),
+            ostream_iterator<char>(O)
+            );
+        O << "]]></workspacetrajectory>" << std::endl;
     }
     if( !(options & 1) ) {
         O << _sExtraParameters << endl;
@@ -73,12 +96,12 @@ BaseXMLReader::ProcessElement WorkspaceTrajectoryParameters::startElement(const 
     case PE_Support: return PE_Support;
     case PE_Ignore: return PE_Ignore;
     }
-    if( name == "workspacetrajectory" ) {
-        _pcurreader.reset(new xmlreaders::TrajectoryReader(_penv,workspacetraj,atts));
-        _bProcessing = false;
-        return PE_Support;
-    }
-    _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="ignorefirstcollisionee" || name=="ignorelastcollisionee" || name=="minimumcompletetime" || name=="workspacetraj";
+//    if( name == "workspacetrajectory" ) {
+//        _pcurreader.reset(new xmlreaders::TrajectoryReader(_penv,workspacetraj,atts));
+//        _bProcessing = false;
+//        return PE_Support;
+//    }
+    _bProcessing = name=="maxdeviationangle" || name=="maintaintiming" || name=="greedysearch" || name=="ignorefirstcollision" || name=="ignorefirstcollisionee" || name=="ignorelastcollisionee" || name=="minimumcompletetime" || name=="workspacetrajectory";
     return _bProcessing ? PE_Support : PE_Pass;
 }
 
@@ -88,10 +111,10 @@ bool WorkspaceTrajectoryParameters::endElement(const std::string& name)
     // _ss is an internal stringstream that holds the data of the tag
     if( !!_pcurreader ) {
         if( _pcurreader->endElement(name) ) {
-            xmlreaders::TrajectoryReaderPtr ptrajreader = boost::dynamic_pointer_cast<xmlreaders::TrajectoryReader>(_pcurreader);
-            if( !!ptrajreader ) {
-                workspacetraj = ptrajreader->GetTrajectory();
-            }
+//            xmlreaders::TrajectoryReaderPtr ptrajreader = boost::dynamic_pointer_cast<xmlreaders::TrajectoryReader>(_pcurreader);
+//            if( !!ptrajreader ) {
+//                workspacetraj = ptrajreader->GetTrajectory();
+//            }
             _pcurreader.reset();
         }
         return false;
@@ -118,11 +141,15 @@ bool WorkspaceTrajectoryParameters::endElement(const std::string& name)
         else if( name == "minimumcompletetime" ) {
             _ss >> minimumcompletetime;
         }
-        else if( name == "workspacetraj" ) {
+        else if( name == "workspacetrajectory" ) {
             if( !workspacetraj ) {
                 workspacetraj = RaveCreateTrajectory(_penv,"");
             }
-            workspacetraj->deserialize(_ss);
+            std::stringstream ssbinarytraj;
+            typedef bai::transform_width<bai::binary_from_base64<const char *>, 8, 6> base64_dec;
+            std::string s = _ss.str();
+            std::copy(base64_dec(s.data()), base64_dec(s.data()+s.size()), std::ostream_iterator<char>(ssbinarytraj));
+            workspacetraj->deserialize(ssbinarytraj);
         }
         else {
             RAVELOG_WARN(str(boost::format("unknown tag %s\n")%name));

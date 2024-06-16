@@ -12,7 +12,6 @@ list(REMOVE_ITEM CPP_SOURCES ${C_FLANN})
 list(REMOVE_ITEM C_SOURCES ${CPP_FLANN})
 
 add_library(flann_cpp_s STATIC ${CPP_SOURCES})
-set_target_properties(flann_cpp_s PROPERTIES COMPILE_FLAGS -fPIC)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_COMPILER_IS_GNUCC)
     add_library(flann_cpp SHARED "")
@@ -29,7 +28,6 @@ set_target_properties(flann_cpp PROPERTIES
 
 if (BUILD_C_BINDINGS)
     add_library(flann_s STATIC ${C_SOURCES})
-    set_target_properties(flann_s PROPERTIES COMPILE_FLAGS -fPIC)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_COMPILER_IS_GNUCC)
         add_library(flann SHARED "")

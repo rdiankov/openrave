@@ -33,6 +33,7 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/function.hpp>
 #include <boost/assert.hpp>
+#include <openrave/smart_ptr.h>
 
 #include <time.h>
 
@@ -81,6 +82,11 @@ inline uint64_t GetNanoTime()
 
 inline static uint64_t GetNanoPerformanceTime() {
     return GetNanoTime();
+}
+
+inline uint64_t GetMonotonicTime()
+{
+    return GetMicroTime();
 }
 
 #else
@@ -142,6 +148,17 @@ inline static uint64_t GetNanoPerformanceTime()
 #endif
 }
 
+inline uint64_t GetMonotonicTime()
+{
+#if defined(CLOCK_GETTIME_FOUND) && (POSIX_TIMERS > 0 || _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    return (uint64_t)start.tv_sec * 1000000 + (uint64_t)start.tv_nsec / 1000;
+#else
+    return GetMicroTime();
+#endif
+}
+
 #endif
 
 struct null_deleter
@@ -158,7 +175,7 @@ template <class T> boost::shared_ptr<T> sptr_from(boost::weak_ptr<T> const& wpt)
 template<typename T>
 struct index_cmp
 {
-    index_cmp(const T arr) : arr(arr) {
+    index_cmp(const T arr_) : arr(arr_) {
     }
     bool operator()(const size_t a, const size_t b) const
     {
@@ -287,17 +304,15 @@ inline T ClampOnRange(T value, T min, T max)
 template <typename T>
 inline T NormalizeCircularAngle(T theta, T min, T max)
 {
+    T range = max-min;
+    BOOST_ASSERT(range>0);
     if (theta < min) {
-        T range = max-min;
-        BOOST_ASSERT(range>0);
         theta += range;
         while (theta < min) {
             theta += range;
         }
     }
     else if (theta > max) {
-        T range = max-min;
-        BOOST_ASSERT(range>0);
         theta -= range;
         while (theta > max) {
             theta -= range;

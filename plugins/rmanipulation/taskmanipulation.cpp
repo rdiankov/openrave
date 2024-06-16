@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
 #define GRASPTHRESH2 dReal(0.002f)
 
 struct GRASPGOAL
@@ -176,7 +179,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
             RAVELOG_WARN("could not find an rrt planner\n");
             return -1;
         }
-        RAVELOG_DEBUG(str(boost::format("using %s planner\n")%plannername));
+        RAVELOG_DEBUG_FORMAT("env=%d, using %s planner", GetEnv()->GetId()%plannername);
 
         if( graspername.size() > 0 ) {
             _pGrasperPlanner = RaveCreatePlanner(GetEnv(),graspername);
@@ -193,7 +196,7 @@ Task-based manipulation planning involving target objects. A lot of the algorith
 
     virtual bool SendCommand(std::ostream& sout, std::istream& sinput)
     {
-        EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
+        EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = GetEnv()->GetRobot(_strRobotName);
         return ModuleBase::SendCommand(sout,sinput);
     }
@@ -338,14 +341,14 @@ public:
         void SwitchPadded() {
             if( !_bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to padded robot\n");
-                _pbody->SetLinkGeometriesFromGroup(_sPaddedGeometryGroup);
+                _pbody->SetLinkGeometriesFromGroup(_sPaddedGeometryGroup, false);
                 _bPadded = true;
             }
         }
         void SwitchRegular() {
             if( _bPadded && _sPaddedGeometryGroup.size() > 0 ) {
                 RAVELOG_DEBUG("switching to regular robot\n");
-                _pbody->SetLinkGeometriesFromGroup("self");
+                _pbody->SetLinkGeometriesFromGroup("self", false);
                 _bPadded = false;
             }
         }
@@ -383,7 +386,7 @@ protected:
         dReal fRRTStepLength = 0; // if > 0, then user set
 
         // indices into the grasp table
-        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1, iGraspFinalFingers=-1, iChuckingDirection=-1;
+        int iGraspDir = -1, iGraspPos = -1, iGraspRoll = -1, iGraspPreshape = -1, iGraspStandoff = -1, imanipulatordirection = -1, iGraspFinalFingers=-1, iChuckingDirection=-1, iGraspTranslationOffset=-1;
         int iGraspTransform = -1;     // if >= 0, use the grasp transform to check for collisions
         int iGraspTransformNoCol = -1;
         int iStartCountdown = 40;
@@ -441,8 +444,9 @@ protected:
             else if( cmd == "ichuckingdirection" ) {
                 sinput >> iChuckingDirection;
             }
-            else if( cmd == "igrasptrans" ) {
-                sinput >> vLocalGraspTranslationOffset.x >> vLocalGraspTranslationOffset.y >> vLocalGraspTranslationOffset.z;
+            else if( cmd == "igrasptranslationoffset" ) {
+                sinput >> iGraspTranslationOffset;
+                //sinput >> vLocalGraspTranslationOffset.x >> vLocalGraspTranslationOffset.y >> vLocalGraspTranslationOffset.z;
             }
             else if( cmd == "steplength" ) {
                 sinput >> fRRTStepLength;
@@ -524,7 +528,7 @@ protected:
             return false;
         }
 
-        if( pmanip->IsGrabbing(ptarget) ) {
+        if( pmanip->IsGrabbing(*ptarget) ) {
             throw OPENRAVE_EXCEPTION_FORMAT("manipulator %s is already grasping %s", pmanip->GetName()%ptarget->GetName(),ORE_InvalidArguments);
         }
         RobotBase::RobotStateSaver saver(_robot);
@@ -703,7 +707,10 @@ protected:
                     graspparams->vmanipulatordirection = Vector(pgrasp[imanipulatordirection], pgrasp[imanipulatordirection+1], pgrasp[imanipulatordirection+2]);
                 }
                 else {
-                    graspparams->vmanipulatordirection = pmanip->GetDirection();
+                    graspparams->vmanipulatordirection = pmanip->GetLocalToolDirection();
+                }
+                if( iGraspTranslationOffset >= 0 ) {
+                    RAVELOG_WARN("igrasptranslationoffset not supported yet\n");
                 }
                 graspparams->btransformrobot = true;
                 graspparams->breturntrajectory = false;
@@ -721,12 +728,12 @@ protected:
                     }
                 }
                 
-                if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
+                if( !_pGrasperPlanner->InitPlan(_robot,graspparams).HasSolution() ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
                 
-                if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+                if( !_pGrasperPlanner->PlanPath(_phandtraj).HasSolution() ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
@@ -741,7 +748,7 @@ protected:
                     vglobalpalmdir = transTarg.rotate(Vector(pgrasp[iGraspDir], pgrasp[iGraspDir+1], pgrasp[iGraspDir+2]));
                 }
                 else {
-                    vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetDirection());
+                    vglobalpalmdir = pmanip->GetTransform().rotate(pmanip->GetLocalToolDirection());
                 }
 
                 // move back a little if robot/target in collision
@@ -801,7 +808,7 @@ protected:
 
                 if( pmanip->GetIkSolver()->Supports(IKP_TranslationDirection5D) ) {
                     // get a valid transformation
-                    tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetDirection())));
+                    tGoalEndEffector.SetTranslationDirection5D(RAY(tgoal.trans,tgoal.rotate(pmanip->GetLocalToolDirection())));
                     if( !pmanip->FindIKSolution(tGoalEndEffector,IKFO_CheckEnvCollisions, ikreturn) ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: ik 5d failed reason 0x%x")%igrasp%ikreturn->_action));
                         continue; // failed
@@ -810,7 +817,7 @@ protected:
                 }
                 else if( pmanip->GetIkSolver()->Supports(IKP_Transform6D) ) {
                     tGoalEndEffector.SetTransform6D(tgoal);
-                    KinBody::KinBodyStateSaver saver(ptarget,KinBody::Save_LinkEnable);
+                    KinBody::KinBodyStateSaver statesaver(ptarget,KinBody::Save_LinkEnable);
                     ptarget->Enable(false);
                     if( pmanip->CheckEndEffectorCollision(tgoal,report) ) {
                         RAVELOG_DEBUG(str(boost::format("grasp %d: in collision (%s)\n")%igrasp%report->__str__()));
@@ -841,7 +848,7 @@ protected:
                 }
                 else {
                     if( tApproachEndEffector.GetType() == IKP_Transform6D ) {
-                        vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetDirection());
+                        vglobalpalmdir = tApproachEndEffector.GetTransform6D().rotate(pmanip->GetLocalToolDirection());
                     }
                     else {
                         vglobalpalmdir = tApproachEndEffector.GetTranslationDirection5D().dir;
@@ -1068,11 +1075,11 @@ protected:
             _robot->SetDOFValues(vinsertconfiguration);
             _robot->GetActiveDOFValues(vtrajdata);
 
-            vector<int> vindices(_robot->GetDOF());
-            for(size_t i = 0; i < vindices.size(); ++i) {
-                vindices[i] = i;
+            vector<int> indices(_robot->GetDOF());
+            for(size_t i = 0; i < indices.size(); ++i) {
+                indices[i] = i;
             }
-            ptrajfinal->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecificationIndices(vindices));
+            ptrajfinal->Insert(0,vCurRobotValues,_robot->GetConfigurationSpecificationIndices(indices));
             planningutils::InsertActiveDOFWaypointWithRetiming(0, vtrajdata, std::vector<dReal>(), ptrajfinal, _robot, _fMaxVelMult);
         }
 
@@ -1113,7 +1120,13 @@ protected:
         Vector direction;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = directions[index];
+            }
+        }
 
         vector<dReal> voffset;
         string cmd;
@@ -1188,12 +1201,12 @@ protected:
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
         ptraj->Insert(0,graspparams->vinitialconfig); // have to add the first point
 
-        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+        if( !graspplanner->InitPlan(_robot, graspparams).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1233,9 +1246,13 @@ protected:
         KinBodyPtr ptarget;
         RobotBase::ManipulatorConstPtr pmanip = _robot->GetActiveManipulator();
         boost::shared_ptr<GraspParameters> graspparams(new GraspParameters(GetEnv()));
-        graspparams->vgoalconfig = pmanip->GetChuckingDirection();
-        FOREACH(it,graspparams->vgoalconfig) {
-            *it = -*it;
+
+        {
+            const std::vector<int>& directions = pmanip->GetChuckingDirection();
+            graspparams->vgoalconfig.resize(directions.size());
+            for (size_t index = 0; index < directions.size(); ++index) {
+                graspparams->vgoalconfig[index] = -directions[index];
+            }
         }
         string cmd;
         while(!sinput.eof()) {
@@ -1319,16 +1336,17 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
-
-        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner init", GetEnv()->GetNameId());
+        if( !graspplanner->InitPlan(_robot, graspparams).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
-
-        if( !graspplanner->PlanPath(ptraj) ) {
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner start to plan", GetEnv()->GetNameId());
+        if( !graspplanner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
+        //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner plan finished", GetEnv()->GetNameId());
 
         if( ptraj->GetNumWaypoints() == 0 ) {
             return false;
@@ -1342,7 +1360,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1352,12 +1369,11 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
         if( !!ptarget ) {
-            _robot->Release(ptarget);
+            _robot->Release(*ptarget);
             ptraj->GetWaypoint(-1,q,_robot->GetActiveConfigurationSpecification());
             _robot->SetActiveDOFValues(q);
             if( GetEnv()->CheckCollision(KinBodyConstPtr(_robot),KinBodyConstPtr(ptarget)) ) {
@@ -1466,12 +1482,12 @@ protected:
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
 
-        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+        if( !graspplanner->InitPlan(_robot, graspparams).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj) ) {
+        if( !graspplanner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1488,7 +1504,6 @@ protected:
             }
         }
 
-        bool bForceRetime = false;
         {
             // check final trajectory for colliding points
             RobotBase::RobotStateSaver saver2(_robot);
@@ -1498,7 +1513,6 @@ protected:
                 RAVELOG_WARN("robot final configuration is in collision\n");
                 _robot->GetActiveDOFValues(q);
                 ptraj->Insert(ptraj->GetNumWaypoints(),q,_robot->GetActiveConfigurationSpecification());
-                bForceRetime = true;
             }
         }
 
@@ -1508,10 +1522,10 @@ protected:
 
 protected:
     inline boost::shared_ptr<TaskManipulation> shared_problem() {
-        return boost::dynamic_pointer_cast<TaskManipulation>(shared_from_this());
+        return boost::static_pointer_cast<TaskManipulation>(shared_from_this());
     }
     inline boost::shared_ptr<TaskManipulation const> shared_problem_const() const {
-        return boost::dynamic_pointer_cast<TaskManipulation const>(shared_from_this());
+        return boost::static_pointer_cast<TaskManipulation const>(shared_from_this());
     }
 
     /// \brief grasps using the list of grasp goals. Removes all the goals that the planner planned with
@@ -1721,13 +1735,13 @@ protected:
 
         stringstream ss;
         for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !_pRRTPlanner->InitPlan(_robot, params) ) {
+            if( !_pRRTPlanner->InitPlan(_robot, params).HasSolution() ) {
                 RAVELOG_WARN("InitPlan failed\n");
                 ptraj.reset();
                 return ptraj;
             }
 
-            if( _pRRTPlanner->PlanPath(ptraj) ) {
+            if( _pRRTPlanner->PlanPath(ptraj).HasSolution() ) {
                 stringstream sinput; sinput << "GetGoalIndex";
                 _pRRTPlanner->SendCommand(ss,sinput);
                 ss >> nGoalIndex;     // extract the goal index
@@ -1759,27 +1773,31 @@ protected:
 
     IkReturn _FilterIkForGrasping(std::vector<dReal>& vsolution, RobotBase::ManipulatorConstPtr pmanip, const IkParameterization &ikparam, KinBodyPtr ptarget)
     {
-        if( _robot->IsGrabbing(ptarget) ) {
+        if( _robot->IsGrabbing(*ptarget) ) {
             return IKRA_Success;
         }
         if( ikparam.GetType() != IKP_Transform6D ) {
             // only check end effector if not trasform 6d
             if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), _report) ) {
                 // if any of the collisions is the target
-                if( (!!_report->plink1 && _report->plink1->GetParent() == ptarget) || (!!_report->plink2 && _report->plink2->GetParent() == ptarget) ) {
-                    // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
-                }
-                else {
-                    if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                        std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-                        ss << "grasper planner CheckEndEffectorCollision: " << _report->__str__() << ", manipvalues=[";
-                        FOREACHC(it, vsolution) {
-                            ss << *it << ", ";
-                        }
-                        ss << "]";
-                        RAVELOG_VERBOSE(ss.str());
+                for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision) {
+                    const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
+                    if( cpinfo.CompareFirstBodyName(ptarget->GetName()) == 0 || cpinfo.CompareSecondBodyName(ptarget->GetName()) == 0 ) {
+                        
+                        // ignore since the collision is with the grabbing target, perhaps there should be a configurable option for this?
                     }
-                    return IKRA_Reject;
+                    else {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            std::stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+                            ss << "grasper planner CheckEndEffectorCollision: (" << cpinfo.bodyLinkGeom1Name << ")x(" << cpinfo.bodyLinkGeom2Name << "), manipvalues=[";
+                            FOREACHC(it, vsolution) {
+                                ss << *it << ", ";
+                            }
+                            ss << "]";
+                            RAVELOG_VERBOSE(ss.str());
+                        }
+                        return IKRA_Reject;
+                    }
                 }
             }
             return IKRA_Success;
@@ -1800,12 +1818,12 @@ protected:
             graspparams->btightgrasp = false;
             graspparams->bavoidcontact = true;
             // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
-            if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
+            if( !_pGrasperPlanner->InitPlan(_robot,graspparams).HasSolution() ) {
                 RAVELOG_DEBUG("grasper planner InitPlan failed\n");
                 return IKRA_Reject;
             }
 
-            if( !_pGrasperPlanner->PlanPath(_phandtraj) ) {
+            if( !_pGrasperPlanner->PlanPath(_phandtraj).HasSolution() ) {
                 RAVELOG_DEBUG("grasper planner PlanPath failed\n");
                 return IKRA_Reject;
             }
