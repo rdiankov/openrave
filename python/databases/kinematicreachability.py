@@ -381,7 +381,7 @@ class ReachabilityModel(DatabaseGenerator):
             src = mlab.pipeline.scalar_field(r_[zeros((1,)+reachability3d.shape[1:]),reachability3d[xrange,:,:],zeros((1,)+reachability3d.shape[1:])])
             
         for i,c in enumerate(contours):
-            mlab.pipeline.iso_surface(src,contours=[c],opacity=min(1,0.7*c if opacity is None else opacity[i]))
+            mlab.pipeline.iso_surface(src,contours=[c],opacity=minimum(1,0.7*c if opacity is None else opacity[i]))
         #mlab.pipeline.volume(mlab.pipeline.scalar_field(reachability3d*100))
         if showrobot:
             with self.robot:

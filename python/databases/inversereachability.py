@@ -213,7 +213,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             kdtree = kinematicreachability.ReachabilityModel.QuaternionKDTree(searchtrans,1.0/self.rotweight)
             transdensity = kdtree.kFRSearchArray(searchtrans,0.25*quateucdist2,0,quatthresh*0.2)[2]
             basetrans = basetrans[argsort(-transdensity),:]
-            Nminimum = max(Nminimum,4)
+            Nminimum = maximum(Nminimum,4)
             # find all equivalence classes
             quatrolls = array([quatFromAxisAngle(array((0,0,1)),roll) for roll in arange(0,2*pi,quatthresh*0.5)])
             self.equivalenceclasses = []
@@ -223,7 +223,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                 querypoints = c_[quatArrayTMult(quatrolls, searchtrans[0][0:4]),tile(searchtrans[0][4:],(len(quatrolls),1))]
                 foundindices = zeros(len(searchtrans),bool)
                 for querypoint in querypoints:
-                    k = min(len(searchtrans),1000)
+                    k = minimum(len(searchtrans),1000)
                     neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,k,quatthresh*0.01)
                     if k < kball:
                         neighs,dists,kball = kdtree.kFRSearchArray(reshape(querypoint,(1,5)),quateucdist2,kball,quatthresh*0.01)
@@ -376,7 +376,7 @@ class InverseReachabilityModel(DatabaseGenerator):
             # find the closest cluster
             logll = quatArrayTDist(qnormalized[0],self.equivalencemeans[:,0:4])**2*self.equivalenceweights[:,0] + (posetarget[6]-self.equivalencemeans[:,4])**2*self.equivalenceweights[:,1] + self.equivalenceoffset
             bestindex = argmax(logll)
-            highestlogll = max(highestlogll,logll[bestindex])
+            highestlogll = maximum(highestlogll,logll[bestindex])
             if logll[bestindex] <logllthresh:
                 continue
             graspindices.append(graspindex)
