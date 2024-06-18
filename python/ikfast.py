@@ -8211,9 +8211,16 @@ class IKFastSolver(AutoReloader):
                     break
                 coeffs.append(value)
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
-                if len(coeffs) == 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
-                    coeffs = None
-                    break
+                #from IPython import embed;embed()
+                if len(coeffs) == 1:
+                    def cmp(a,b):
+                        return (a > b) - (a < b)
+                    cmpValue = cmp(type(Abs(coeffs[0])), Float)
+                    #if not isinstance(coeffs[0], (Float, Integer)):
+                    #    from IPython import embed;embed()
+                    if cmpValue != 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
+                        coeffs = None
+                        break
             if coeffs is None:
                 continue
             if not all([c.is_number for c in coeffs]):
