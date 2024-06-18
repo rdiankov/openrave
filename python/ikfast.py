@@ -314,7 +314,8 @@ def trigsimp_expanded(expr, **opts):
 
 # changes to sympy:
 curdir = os.path.dirname(os.path.abspath(__file__))
-execfile(os.path.join(curdir, 'sympy_compat.py'))
+with open(os.path.join(curdir, 'sympy_compat.py')) as sympyCompatFile:
+    exec(sympyCompatFile.read())
 
 # def custom_trigsimp_nonrecursive(expr, deep=False):
 #     """
