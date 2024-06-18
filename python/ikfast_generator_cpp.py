@@ -634,12 +634,12 @@ int main(int argc, char** argv)
         
         usedvars = []
         for var in node.solvejointvars:
-            usedvars += [var[0].name,'c'+var[0].name,'s'+var[0].name,'ht'+var[0].name]
+            usedvars += [var[0].name,'c'+var[0].name,'s'+var[0].name,'ht'+var[0].name,'t'+var[0].name]
             # if the variable becomes free need the multiplier
             usedvars.append('%smul'%var[0].name)
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            usedvars += [name,'c'+name,'s'+name,'ht'+name]
+            usedvars += [name,'c'+name,'s'+name,'ht'+name,'t'+name]
 
         for i in range(3):
             if userotation & (1<<i):
@@ -710,7 +710,7 @@ int main(int argc, char** argv)
         fcode = ''
         for i in range(len(node.freejointvars)):
             name = node.freejointvars[i][0].name
-            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]), ht%s=tan(pfree[%d]*0.5);\n'%(name,i,name,i,name,i,name,i)
+            fcode += '%s=pfree[%d]; c%s=cos(pfree[%d]); s%s=sin(pfree[%d]), ht%s=tan(pfree[%d]*0.5), t%s=tan(pfree[%d]);\n'%(name,i,name,i,name,i,name,i,name,i)
         for i in range(3):
             for j in range(3):
                 fcode += "r%d%d = eerot[%d*3+%d];\n"%(i,j,i,j)
@@ -1252,6 +1252,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code.write('if( %svalid[ii%s] && IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH )\n{\n    %svalid[ii%s]=false; _i%s[1] = ii%s; break; \n}\n'%(name,name,name,name,name,name,name,name,name,name,name,name,name,name))
         code.write('}\n')
         code.write('%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n'%(name,name,name,name,name,name,name,name,name))
+        code.write('t%s = IKtan(%s);\n'%(name,name))
         if node.AddHalfTanValue:
             code.write('ht%s = IKtan(%s/2);\n'%(name,name))
         if node.getEquationsUsed() is not None and len(node.getEquationsUsed()) > 0:
@@ -1331,6 +1332,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += 'if( %svalid[ii%s] && IKabs(c%sarray[i%s]-c%sarray[ii%s]) < IKFAST_SOLUTION_THRESH && IKabs(s%sarray[i%s]-s%sarray[ii%s]) < IKFAST_SOLUTION_THRESH )\n{\n    %svalid[ii%s]=false; _i%s[1] = ii%s; break; \n}\n'%(name,name,name,name,name,name,name,name,name,name,name,name,name,name)
         code += '}\n'
         code += '%s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n\n'%(name,name,name,name,name,name,name,name,name)
+        code += 't%s = IKtan(%s);\n'%(name,name)
         if AddHalfTanValue:
             code += 'ht%s = IKtan(%s/2);\n'%(name,name)
         self.dictequations = origequations
@@ -1392,6 +1394,7 @@ IkReal r00 = 0, r11 = 0, r22 = 0;
         code += 'for(int i%s = 0; i%s < numsolutions; ++i%s)\n    {\n'%(name,name,name)
         code += 'if( !%svalid[i%s] )\n{\n    continue;\n}\n'%(name,name)
         code += '    %s = %sarray[i%s]; c%s = c%sarray[i%s]; s%s = s%sarray[i%s];\n'%(name,name,name,name,name,name,name,name,name)
+        code += 't%s = IKtan(%s);\n'%(name,name)
         if node.AddHalfTanValue:
             code += 'ht%s = IKtan(%s/2);\n'%(name,name)
         code += '\n'
