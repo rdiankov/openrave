@@ -202,10 +202,11 @@ except:
 
 import numpy # required for fast eigenvalue computation
 from sympy import *
-if sympy_version > '0.7.1':
-    _zeros, _ones = zeros, ones
-    zeros = lambda args: _zeros(*args)
-    ones = lambda args: _ones(*args)
+# if sympy_version > '0.7.1':
+#     _zeros, _ones = zeros, ones
+#     zeros = lambda args: _zeros(*args)
+#     ones = lambda args: _ones(*args)
+
 try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
 except ImportError:
