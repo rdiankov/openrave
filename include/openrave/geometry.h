@@ -233,12 +233,12 @@ public:
     }
 
     template <typename U>
-    bool operator==(const RaveVector<U>& r) const{
+    bool operator==(const RaveVector<U>& r) const {
         return x == r.x && y == r.y && z == r.z && w == r.w;
     }
 
     template <typename U>
-    bool operator!=(const RaveVector<U>& r) const{
+    bool operator!=(const RaveVector<U>& r) const {
         return x != r.x || y != r.y || z != r.z || w != r.w;
     }
 
@@ -484,17 +484,17 @@ public:
         return *this;
     }
 
-    inline bool operator== (const RaveTransform<T>& right) const{
+    inline bool operator== (const RaveTransform<T>& right) const {
         return trans == right.trans && rot == right.rot;
     }
-    inline bool operator!= (const RaveTransform<T>& right) const{
+    inline bool operator!= (const RaveTransform<T>& right) const {
         return !operator==(right);
     }
 
     /// \brief return true if any element of transform is different by mor ethan epsilon, otherwise false.
     inline bool CompareTransform(const RaveTransform<T>& rhs, T epsilon) const {
         return RaveFabs(trans.x - rhs.trans.x) > epsilon || RaveFabs(trans.y - rhs.trans.y) > epsilon || RaveFabs(trans.z - rhs.trans.z) > epsilon ||
-           RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
+               RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
     }
 
     inline RaveTransform<T> inverse() const {
@@ -844,6 +844,13 @@ public:
     }
 
     template <typename U>
+    inline RaveAxisAlignedBox<T>& operator=(const RaveAxisAlignedBox<U>&r) {
+        pos = r.pos;
+        extents = r.extents;
+        return *this;
+    }
+
+    template <typename U>
     inline RaveAxisAlignedBox<T> GetCombined(const RaveAxisAlignedBox<U>& rhs) const
     {
         RaveVector<T> lower = pos - extents;
@@ -901,12 +908,19 @@ public:
     RaveOrientedBox(const RaveTransform<T>& vtransform, const RaveVector<T>& vextents) : transform(vtransform), extents(vextents) {
     }
 
-    template<typename U> 
+    template <typename U>
+    inline RaveOrientedBox<T>& operator=(const RaveOrientedBox<U>&r) {
+        transform = r.transform;
+        extents = r.extents;
+        return *this;
+    }
+
+    template<typename U>
     inline bool operator==(const RaveOrientedBox<U>& other) const {
         return transform == other.transform && extents == other.extents;
     }
 
-    template<typename U> 
+    template<typename U>
     inline bool operator!=(const RaveOrientedBox<U>& other) const {
         return !operator==(other);
     }
@@ -936,10 +950,10 @@ public:
 
     RaveVector<T> v1, v2, v3;          //!< the vertices of the triangle
 
-    const RaveVector<T>& operator[] (int i) const {
+    inline const RaveVector<T>& operator[] (int i) const {
         return (&v1)[i];
     }
-    RaveVector<T>& operator[] (int i)       {
+    inline RaveVector<T>& operator[] (int i)       {
         return (&v1)[i];
     }
 
@@ -986,12 +1000,12 @@ public:
     template<typename U>
     bool operator==(const RaveCameraIntrinsics<U>& r) const {
         return distortion_model == r.distortion_model
-            && distortion_coeffs == r.distortion_coeffs
-            && focal_length == r.focal_length
-            && fx == r.fx
-            && fy == r.fy
-            && cx == r.cx
-            && cy == r.cy;
+               && distortion_coeffs == r.distortion_coeffs
+               && focal_length == r.focal_length
+               && fx == r.fx
+               && fy == r.fy
+               && cx == r.cx
+               && cy == r.cy;
     }
 
     template<typename U>
