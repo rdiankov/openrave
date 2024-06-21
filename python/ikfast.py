@@ -276,6 +276,7 @@ except ImportError:
             else:
                 return
 
+import six
 import logging
 log = logging.getLogger('openravepy.ikfast')
 
@@ -1342,16 +1343,14 @@ class IKFastSolver(AutoReloader):
     tjX - tan of joint angle    
     """
 
+    @six.python_2_unicode_compatible
     class CannotSolveError(Exception):
         """thrown when ikfast fails to solve a particular set of equations with the given knowns and unknowns
         """
         def __init__(self,value=u''):
             self.value = value
-        def __unicode__(self):
-            return u'%s: %s'%(self.__class__.__name__, self.value)
-        
         def __str__(self):
-            return unicode(self).encode('utf-8')
+            return u'%s: %s'%(self.__class__.__name__, self.value)
         
         def __repr__(self):
             return '<%s(%r)>'%(self.__class__.__name__, self.value)

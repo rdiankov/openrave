@@ -158,6 +158,7 @@ from os import getcwd, remove
 import distutils
 from distutils import ccompiler
 from optparse import OptionParser
+import six
 
 from itertools import permutations, combinations
 
@@ -169,16 +170,14 @@ except:
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
+@six.python_2_unicode_compatible
 class InverseKinematicsError(Exception):
     def __init__(self,parameter=u''):
-        self.parameter = unicode(parameter)
-        
-    def __unicode__(self):
-        s = u'Inverse Kinematics Error\n%s'%self.parameter
-        return s
+        self.parameter = parameter
         
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        s = u'Inverse Kinematics Error\n%s'%self.parameter
+        return s
     
     def __repr__(self):
         return '<openravepy.databases.inversekinematics.InverseKinematicsError(%r)>'%(self.parameter)
