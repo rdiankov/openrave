@@ -214,7 +214,7 @@ import numpy # required for fast eigenvalue computation
 
 try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
-    mpmath.mp.eps = 1e-10  # sometimes mpmath.polyroots does not converge well, relax the threshold
+    mpmath.mp.eps = 1e-9  # sometimes mpmath.polyroots does not converge well, relax the threshold
 except ImportError:
     pass
 
