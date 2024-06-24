@@ -840,7 +840,12 @@ class RaveAxisAlignedBox
 public:
     RaveAxisAlignedBox() {
     }
-    RaveAxisAlignedBox(const RaveVector<T>&vpos, const RaveVector<T>&vextents) : pos(vpos), extents(vextents) {
+
+    template<typename U>
+    RaveAxisAlignedBox(const RaveVector<U>&vpos, const RaveVector<U>&vextents) : pos(vpos), extents(vextents) {
+    }
+    template<typename U>
+    RaveAxisAlignedBox(const RaveAxisAlignedBox<U>& rhs) : pos(rhs.pos), extents(rhs.extents) {
     }
 
     template <typename U>
