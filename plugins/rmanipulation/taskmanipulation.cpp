@@ -728,12 +728,12 @@ protected:
                     }
                 }
                 
-                if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
+                if( !_pGrasperPlanner->InitPlan(_robot,graspparams).HasSolution() ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
                 
-                if( !_pGrasperPlanner->PlanPath(_phandtraj).GetStatusCode() ) {
+                if( !_pGrasperPlanner->PlanPath(_phandtraj).HasSolution() ) {
                     RAVELOG_DEBUG("grasper planner failed: %d\n", igrasp);
                     continue;
                 }
@@ -1201,12 +1201,12 @@ protected:
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
         ptraj->Insert(0,graspparams->vinitialconfig); // have to add the first point
 
-        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+        if( !graspplanner->InitPlan(_robot, graspparams).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
+        if( !graspplanner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1337,12 +1337,12 @@ protected:
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
         //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner init", GetEnv()->GetNameId());
-        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+        if( !graspplanner->InitPlan(_robot, graspparams).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
         //RAVELOG_VERBOSE_FORMAT("env=%s, grasp planner start to plan", GetEnv()->GetNameId());
-        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
+        if( !graspplanner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1482,12 +1482,12 @@ protected:
         graspparams->bonlycontacttarget = false;
         graspparams->bavoidcontact = true;
 
-        if( !graspplanner->InitPlan(_robot, graspparams) ) {
+        if( !graspplanner->InitPlan(_robot, graspparams).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
-        if( !graspplanner->PlanPath(ptraj).GetStatusCode() ) {
+        if( !graspplanner->PlanPath(ptraj).HasSolution() ) {
             RAVELOG_WARN("PlanPath failed\n");
             return false;
         }
@@ -1735,13 +1735,13 @@ protected:
 
         stringstream ss;
         for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !_pRRTPlanner->InitPlan(_robot, params) ) {
+            if( !_pRRTPlanner->InitPlan(_robot, params).HasSolution() ) {
                 RAVELOG_WARN("InitPlan failed\n");
                 ptraj.reset();
                 return ptraj;
             }
 
-            if( _pRRTPlanner->PlanPath(ptraj).GetStatusCode() ) {
+            if( _pRRTPlanner->PlanPath(ptraj).HasSolution() ) {
                 stringstream sinput; sinput << "GetGoalIndex";
                 _pRRTPlanner->SendCommand(ss,sinput);
                 ss >> nGoalIndex;     // extract the goal index
@@ -1818,12 +1818,12 @@ protected:
             graspparams->btightgrasp = false;
             graspparams->bavoidcontact = true;
             // TODO: in order to reproduce the same exact conditions as the original grasp, have to also transfer the step sizes
-            if( !_pGrasperPlanner->InitPlan(_robot,graspparams) ) {
+            if( !_pGrasperPlanner->InitPlan(_robot,graspparams).HasSolution() ) {
                 RAVELOG_DEBUG("grasper planner InitPlan failed\n");
                 return IKRA_Reject;
             }
 
-            if( !_pGrasperPlanner->PlanPath(_phandtraj).GetStatusCode() ) {
+            if( !_pGrasperPlanner->PlanPath(_phandtraj).HasSolution() ) {
                 RAVELOG_DEBUG("grasper planner PlanPath failed\n");
                 return IKRA_Reject;
             }
