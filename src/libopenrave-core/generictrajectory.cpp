@@ -562,7 +562,7 @@ public:
     void serialize(std::ostream& O, int options) const override
     {
         dReal fUnitScale = 1.0;
-        if( options & 0x8000 ) {
+        if( options & TSO_SerializeAsXML ) {
             TrajectoryBase::serialize(O, options);
         }
         else {
