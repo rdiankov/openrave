@@ -24,6 +24,7 @@ try:
 except ImportError:
     izip = zip
 
+import functools
 import nose
 from nose.tools import assert_raises
 import fnmatch
@@ -130,6 +131,18 @@ def locate(pattern, root=os.curdir):
     for path, dirs, files in os.walk(os.path.abspath(root)):
         for filename in fnmatch.filter(files, pattern):
             yield os.path.join(path, filename)
+
+def expected_failure(test):
+    # https://stackoverflow.com/a/9615578
+    @functools.wraps(test)
+    def inner(*args, **kwargs):
+        try:
+            test(*args, **kwargs)
+        except Exception:
+            raise nose.SkipTest
+        else:
+            raise AssertionError('Failure expected')
+    return inner
 
 class EnvironmentSetup(object):
     __name__='openrave_common_test'
