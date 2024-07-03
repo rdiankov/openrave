@@ -101,4 +101,5 @@ jobs:
       # setup-python does not look at /usr/local/lib
       # todo: check other tests
       run: |
-        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/src python3 -m nose test/test_controller.py
+        cd test
+        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/../src python3 -m nose test_controller.py
