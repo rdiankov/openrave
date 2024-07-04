@@ -203,6 +203,10 @@ class TestIkSolver(EnvironmentSetup):
             assert(ikparam2.GetCustomValues('myparam3_transform=ikparam_') is None)
 
             T = matrixFromAxisAngle([0,1,0])
+            # rotation matrix columns are slightly off from unit length, so normalize. otherwise assert(str(ikparam3pickled) == str(ikparam3)) later fails
+            for xyz in range(3):
+                T[:3,xyz] /= linalg.norm(T[:3,xyz])
+
             T[0:3,3] = [0.5,0.2,0.8]
             ikparam3=ikparam.Transform(T)
             assert(transdist(ikparam3.GetCustomValues('myparam0_transform=direction_'),dot(T[0:3,0:3],d)) <= g_epsilon)
@@ -248,7 +252,7 @@ class TestIkSolver(EnvironmentSetup):
             assert(transdist(newtransvelocity, dot(T[0:3,0:3],transvelocity)) <= g_epsilon)
 
             # test pickling
-            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3), 2)
+            ikparam3pickled = pickle.loads(pickle.dumps(ikparam3, 2))
             assert(str(ikparam3pickled) == str(ikparam3))
 
     def test_ikfastrobotsolutions(self):
