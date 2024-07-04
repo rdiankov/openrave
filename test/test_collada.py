@@ -253,7 +253,7 @@ class TestCOLLADA(EnvironmentSetup):
         env.Reset()
         env2.Reset()
         
-        assert(env.Load('robots/schunk-lwa3.zae'))
+        assert(env.Load('../src/robots/schunk-lwa3.zae'))
         robot=env.GetRobots()[0]
         env.Save('test_externalref_joints.dae',Environment.SelectionOptions.Everything,{'externalref':'*', 'openravescheme':'testscheme', 'skipwrite':'geometry'})
         with open('test_externalref_joints.dae','r') as f:
