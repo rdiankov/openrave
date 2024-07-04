@@ -370,8 +370,7 @@ class RunPlanning(EnvironmentSetup):
 
     def test_movebase(self):
         env=self.env
-        xml = """
-<robot name="diffdrive_caster">
+        xml = """<robot name="diffdrive_caster">
   <kinbody>
     <body name="base" type="static">
       <mass type="box">
