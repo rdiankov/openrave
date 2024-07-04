@@ -93,7 +93,6 @@ class TestEnvironment(EnvironmentSetup):
         body.SetName(name)
         env.Add(body)
         assert(body.GetName()==name)
-        assert(unicode(body.GetName())==name)
 
         # openrave_config = Popen(['openrave-config','--share-dir'],stdout=PIPE)
         # share_dir = openrave_config.communicate()[0].decode('utf-8').strip()
@@ -118,12 +117,12 @@ class TestEnvironment(EnvironmentSetup):
         robot=self.LoadRobotData(robotxml)
         assert(robot.GetName() == robotname)
         assert(robot.GetLinks()[0].GetName() == linkname)
-        assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
+        assert(robot.GetName().encode('euc-jp') == robotname.encode('euc-jp'))
         env.Remove(robot)
 
         robot=self.LoadRobotData(robotxml)
         assert(robot.GetName() == robotname)
-        assert(unicode(robot.GetName()).encode('euc-jp') == robotname.encode('euc-jp'))
+        assert(robot.GetName().encode('euc-jp') == robotname.encode('euc-jp'))
         assert(robot.GetLinks()[0].GetName() == linkname)
                     
     def test_cloneplan(self):
