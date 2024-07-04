@@ -30,7 +30,7 @@ jobs:
     - name: Set up Python modules
       run: |
         python3 -m pip install nose==1.3.7 six==1.16.0
-        python3 -m pip install numpy==1.26.4 IPython==8.14.0
+        python3 -m pip install numpy==1.24.4 IPython==8.14.0
         python3 -m pip install mpmath==0.19 sympy==1.11.1
         python3 -m pip install scipy==1.10.1
     - name: Install RapidJSON
@@ -102,4 +102,4 @@ jobs:
       # todo: check other tests
       run: |
         cd test
-        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/../src python3 -m nose test_controller.py
+        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/../src python3 -m nose test_binary_trajectory.py test_collada.py test_collision.py test_configurationcache.py test_controller.py test_environment.py test_geometry.py test_iksolver.py test_kinematics.py test_physics.py test_planning.py test_robot.py test_sampling.py test_trajectory.py test_viewer.py
