@@ -32,6 +32,11 @@ enum TrajectoryInitializationOptions
     TIO_ReserveTimeBasedVectors = 0x00000001, ///< If this is specified, reserve the time-based memories. If not specified, only reserve way-point-related memories. This is effective only when positive nWayPointsToReserve is given to Init argument.
 };
 
+enum TrajectorySerializeOptions
+{
+    TSO_SerializeAsXML = 0x8000, ///< On GenericTrajectory::serialize, if this is specified, the trajectory will serialized as XML, otherwise binary ortraj.
+};
+
 /** \brief <b>[interface]</b> Encapsulate a time-parameterized trajectories of robot configurations. <b>If not specified, method is not multi-thread safe.</b> \arch_trajectory
     \ingroup interfaces
  */
