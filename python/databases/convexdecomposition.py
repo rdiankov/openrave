@@ -71,7 +71,6 @@ if not __openravepy_build_doc__:
 
 from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose
 from numpy.linalg import norm
-from numpy.core.umath_tests import inner1d
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
@@ -83,6 +82,11 @@ import time
 import os.path
 from os import makedirs
 from optparse import OptionParser
+import six
+
+def inner1d(arr1, arr2):
+    # https://github.com/numpy/numpy/issues/10815#issuecomment-376847774
+    return (arr1 * arr2).sum(axis=1)
 
 try:
     from itertools import izip
@@ -105,13 +109,12 @@ try:
 except Exception as e:
     print('failed to import convexdecompositionpy %r'%e)
 
+@six.python_2_unicode_compatible
 class ConvexDecompositionError(Exception):
     def __init__(self,msg=u''):
         self.msg = msg
-    def __unicode__(self):
-        return u'Convex Decomposition Error: %s'%self.msg
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return u'Convex Decomposition Error: %s'%self.msg
 
 class ConvexDecompositionModel(DatabaseGenerator):
     """Computes the convex decomposition of all of the robot's links"""

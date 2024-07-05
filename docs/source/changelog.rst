@@ -3,6 +3,13 @@
 ChangeLog
 #########
 
+Version 0.148.1
+===============
+
+- Allow initializing bounding box types from different types.
+- Update ikfast to use newer version of sympy.
+- Relax mpmath eps so that polyroots converge better.
+  
 Version 0.148.0
 ===============
 
