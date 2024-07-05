@@ -71,7 +71,6 @@ if not __openravepy_build_doc__:
 
 from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose
 from numpy.linalg import norm
-from numpy.core.umath_tests import inner1d
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
 from ..openravepy_int import KinBody, RaveFindDatabaseFile, RaveDestroy, Environment, TriMesh, RaveCreateModule, GeometryType, RaveGetDefaultViewerType
@@ -84,6 +83,10 @@ import os.path
 from os import makedirs
 from optparse import OptionParser
 import six
+
+def inner1d(arr1, arr2):
+    # https://github.com/numpy/numpy/issues/10815#issuecomment-376847774
+    return (arr1 * arr2).sum(axis=1)
 
 try:
     from itertools import izip
