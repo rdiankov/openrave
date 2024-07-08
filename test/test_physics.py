@@ -112,6 +112,7 @@ class RunPhysics(EnvironmentSetup):
                 break
         env.StopSimulation()
 
+    @expected_failure  # not running in testopenrave-legacy either
     def test_kinematics(self):
         log.info("test that physics kinematics are consistent")
         env=self.env

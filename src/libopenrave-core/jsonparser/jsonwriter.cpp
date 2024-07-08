@@ -15,7 +15,9 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "jsoncommon.h"
+#include "stringutils.h"
 
+#include <boost/interprocess/streams/vectorstream.hpp>
 #include <openrave/openravejson.h>
 #include <openrave/openravemsgpack.h>
 #include <fstream>
@@ -68,7 +70,7 @@ protected:
         _rEnvironment.SetObject();
         if (listbodies.size() > 0) {
             EnvironmentBaseConstPtr penv = listbodies.front()->GetEnv();
-            OpenRAVE::orjson::SetJsonValueByKey(_rEnvironment, "unit", penv->GetUnit(), _allocator);
+            OpenRAVE::orjson::SetJsonValueByKey(_rEnvironment, "unitInfo", penv->GetUnitInfo(), _allocator);
             dReal fUnitScale = 1.0;
 
             FOREACHC(itbody, listbodies) {
@@ -91,13 +93,13 @@ protected:
 
                     if (!pBody->IsRobot()) {
                         KinBody::KinBodyInfo info;
-                        pBody->ExtractInfo(info);
+                        pBody->ExtractInfo(info, EIO_Everything);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         info.SerializeJSON(bodyValue, _allocator, fUnitScale);
                     } else {
                         RobotBasePtr pRobot = RaveInterfaceCast<RobotBase>(pBody);
                         RobotBase::RobotBaseInfo info;
-                        pRobot->ExtractInfo(info);
+                        pRobot->ExtractInfo(info, EIO_Everything);
                         info._referenceUri = _CanonicalizeURI(info._referenceUri);
                         FOREACH(itConnectedBodyInfo, info._vConnectedBodyInfos) {
                             (*itConnectedBodyInfo)->_uri = _CanonicalizeURI((*itConnectedBodyInfo)->_uri);
@@ -153,30 +155,13 @@ protected:
         }
     }
 
-    /// \brief get the scheme of the uri, e.g. file: or openrave:
-    void _ParseURI(const std::string& uri, std::string& scheme, std::string& path, std::string& fragment)
-    {
-        path = uri;
-        size_t hashindex = path.find_last_of('#');
-        if (hashindex != std::string::npos) {
-            fragment = path.substr(hashindex + 1);
-            path = path.substr(0, hashindex);
-        }
-
-        size_t colonindex = path.find_first_of(':');
-        if (colonindex != std::string::npos) {
-            scheme = path.substr(0, colonindex);
-            path = path.substr(colonindex + 1);
-        }
-    }
-
     std::string _CanonicalizeURI(const std::string& uri)
     {
         if (uri.empty()) {
             return uri;
         }
         std::string scheme, path, fragment;
-        _ParseURI(uri, scheme, path, fragment);
+        ParseURI(uri.c_str(), scheme, path, fragment);
 
         if (_vForceResolveOpenRAVEScheme.size() > 0 && scheme == "file") {
             // check if inside an openrave path, and if so, return the openrave relative directory instead using "openrave:"
@@ -191,11 +176,8 @@ protected:
 
         // fix extension, replace dae with json
         // this is done for ease of migration
-        size_t len = path.size();
-        if (len >= sizeof(".dae") - 1) {
-            if (path[len - 4] == '.' && ::tolower(path[len - 3]) == 'd' && ::tolower(path[len - 2]) == 'a' && ::tolower(path[len - 1]) == 'e') {
-                path = path.substr(0, path.size() - (sizeof(".dae") - 1)) + ".json";
-            }
+        if (RemoveSuffix(path, ".dae")) {
+            path += ".json";
         }
 
         std::string newuri = scheme + ":" + path;
@@ -216,31 +198,13 @@ protected:
 void RaveWriteJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofstream(filename.c_str());
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(penv);
-    OpenRAVE::orjson::DumpJson(doc, ofstream);
-}
-
-void RaveWriteJSONFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
-{
-    std::ofstream ofstream(filename.c_str());
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(pbody);
-    OpenRAVE::orjson::DumpJson(doc, ofstream);
+    RaveWriteJSONStream(penv, ofstream, atts, alloc);
 }
 
 void RaveWriteJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofstream(filename.c_str());
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(listbodies);
-    OpenRAVE::orjson::DumpJson(doc, ofstream);
+    RaveWriteJSONStream(listbodies, ofstream, atts, alloc);
 }
 
 void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
@@ -248,14 +212,6 @@ void RaveWriteJSONStream(EnvironmentBasePtr penv, ostream& os, const AttributesL
     rapidjson::Document doc(&alloc);
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
-    OpenRAVE::orjson::DumpJson(doc, os);
-}
-
-void RaveWriteJSONStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
-{
-    rapidjson::Document doc(&alloc);
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(pbody);
     OpenRAVE::orjson::DumpJson(doc, os);
 }
 
@@ -275,14 +231,6 @@ void RaveWriteJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, con
     OpenRAVE::orjson::DumpJson(doc, output);
 }
 
-void RaveWriteJSONMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
-{
-    rapidjson::Document doc(&alloc);
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(pbody);
-    OpenRAVE::orjson::DumpJson(doc, output);
-}
-
 void RaveWriteJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
@@ -297,12 +245,6 @@ void RaveWriteJSON(EnvironmentBasePtr penv, rapidjson::Value& rEnvironment, rapi
     jsonwriter.Write(penv);
 }
 
-void RaveWriteJSON(KinBodyPtr pbody, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
-{
-    EnvironmentJSONWriter jsonwriter(atts, rEnvironment, allocator);
-    jsonwriter.Write(pbody);
-}
-
 void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Value& rEnvironment, rapidjson::Document::AllocatorType& allocator, const AttributesList& atts)
 {
     EnvironmentJSONWriter jsonwriter(atts, rEnvironment, allocator);
@@ -312,31 +254,13 @@ void RaveWriteJSON(const std::list<KinBodyPtr>& listbodies, rapidjson::Value& rE
 void RaveWriteMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofstream(filename.c_str());
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(penv);
-    OpenRAVE::MsgPack::DumpMsgPack(doc, ofstream);
-}
-
-void RaveWriteMsgPackFile(KinBodyPtr pbody, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
-{
-    std::ofstream ofstream(filename.c_str());
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(pbody);
-    OpenRAVE::MsgPack::DumpMsgPack(doc, ofstream);
+    RaveWriteMsgPackStream(penv, ofstream, atts, alloc);
 }
 
 void RaveWriteMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     std::ofstream ofstream(filename.c_str());
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(listbodies);
-    OpenRAVE::MsgPack::DumpMsgPack(doc, ofstream);
+    RaveWriteMsgPackStream(listbodies, ofstream, atts, alloc);
 }
 
 void RaveWriteMsgPackStream(EnvironmentBasePtr penv, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
@@ -345,15 +269,6 @@ void RaveWriteMsgPackStream(EnvironmentBasePtr penv, ostream& os, const Attribut
 
     EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
     jsonwriter.Write(penv);
-    OpenRAVE::MsgPack::DumpMsgPack(doc, os);
-}
-
-void RaveWriteMsgPackStream(KinBodyPtr pbody, ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
-{
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(pbody);
     OpenRAVE::MsgPack::DumpMsgPack(doc, os);
 }
 
@@ -374,15 +289,6 @@ void RaveWriteMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, 
     OpenRAVE::MsgPack::DumpMsgPack(doc, output);
 }
 
-void RaveWriteMsgPackMemory(KinBodyPtr pbody, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
-{
-    rapidjson::Document doc(&alloc);
-
-    EnvironmentJSONWriter jsonwriter(atts, doc, doc.GetAllocator());
-    jsonwriter.Write(pbody);
-    OpenRAVE::MsgPack::DumpMsgPack(doc, output);
-}
-
 void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
 {
     rapidjson::Document doc(&alloc);
@@ -392,5 +298,126 @@ void RaveWriteMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector
     OpenRAVE::MsgPack::DumpMsgPack(doc, output);
 }
 
+void RaveWriteEncryptedJSONFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::ofstream ofs(filename, std::ios::binary);
+    RaveWriteEncryptedJSONStream(std::move(penv), ofs, atts, alloc);
 }
 
+void RaveWriteEncryptedJSONFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::ofstream ofs(filename, std::ios::binary);
+    RaveWriteEncryptedJSONStream(listbodies, ofs, atts, alloc);
+}
+
+void RaveWriteEncryptedJSONMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>> vs(std::ios::binary);
+    RaveWriteEncryptedJSONStream(std::move(penv), vs, atts, alloc);
+    vs.swap_vector(output);
+}
+
+void RaveWriteEncryptedJSONMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    using vectorstream = ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>>;
+    vectorstream vs(std::ios::binary);
+    RaveWriteEncryptedJSONStream(listbodies, vs, atts, alloc);
+    vs.swap_vector(output);
+}
+
+void RaveWriteEncryptedJSONStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::unordered_set<std::string> keyIds;
+    for (const std::pair<std::string, std::string>& attribute : atts) {
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
+            break;
+        }
+    }
+
+    std::stringstream ss;
+    RaveWriteJSONStream(penv, ss, atts, alloc);
+    if (!GpgEncrypt(ss, os, keyIds)) {
+        RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
+    }
+}
+
+void RaveWriteEncryptedJSONStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::unordered_set<std::string> keyIds;
+    for (const std::pair<std::string, std::string>& attribute : atts) {
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
+            break;
+        }
+    }
+
+    std::stringstream ss;
+    RaveWriteJSONStream(listbodies, ss, atts, alloc);
+    if (!GpgEncrypt(ss, os, keyIds)) {
+        RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
+    }
+}
+
+void RaveWriteEncryptedMsgPackFile(EnvironmentBasePtr penv, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::ofstream ofs(filename, std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(std::move(penv), ofs, atts, alloc);
+}
+
+void RaveWriteEncryptedMsgPackFile(const std::list<KinBodyPtr>& listbodies, const std::string& filename, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::ofstream ofs(filename, std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(listbodies, ofs, atts, alloc);
+}
+
+void RaveWriteEncryptedMsgPackMemory(EnvironmentBasePtr penv, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>> vs(std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(std::move(penv), vs, atts, alloc);
+    vs.swap_vector(output);
+}
+
+void RaveWriteEncryptedMsgPackMemory(const std::list<KinBodyPtr>& listbodies, std::vector<char>& output, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    using vectorstream = ::boost::interprocess::basic_vectorstream<std::vector<char>, std::char_traits<char>>;
+    vectorstream vs(std::ios::binary);
+    RaveWriteEncryptedMsgPackStream(listbodies, vs, atts, alloc);
+    vs.swap_vector(output);
+}
+
+void RaveWriteEncryptedMsgPackStream(EnvironmentBasePtr penv, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::unordered_set<std::string> keyIds;
+    for (const std::pair<std::string, std::string>& attribute : atts) {
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
+            break;
+        }
+    }
+
+    std::stringstream ss;
+    RaveWriteMsgPackStream(penv, ss, atts, alloc);
+    if (!GpgEncrypt(ss, os, keyIds)) {
+            RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
+    }
+}
+
+void RaveWriteEncryptedMsgPackStream(const std::list<KinBodyPtr>& listbodies, std::ostream& os, const AttributesList& atts, rapidjson::Document::AllocatorType& alloc)
+{
+    std::unordered_set<std::string> keyIds;
+    for (const std::pair<std::string, std::string>& attribute : atts) {
+        if (attribute.first == "gpgkeyid") {
+            keyIds.emplace(attribute.second);
+            break;
+        }
+    }
+
+    std::stringstream ss;
+    RaveWriteMsgPackStream(listbodies, ss, atts, alloc);
+    if (!GpgEncrypt(ss, os, keyIds)) {
+            RAVELOG_ERROR("Failed to encrypt file, check GPG keys.");
+    }
+}
+
+}

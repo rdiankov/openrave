@@ -330,7 +330,7 @@ public:
         params->SetRobotActiveJoints(_robot);
         _robot->GetActiveDOFValues(params->vinitialconfig);
 
-        if( !_planner->InitPlan(_robot, params) ) {
+        if( !_planner->InitPlan(_robot, params).HasSolution() ) {
             RAVELOG_WARN("InitPlan failed\n");
             return false;
         }
@@ -350,7 +350,7 @@ public:
         ptraj->GetWaypoint(-1,vdata,_robot->GetConfigurationSpecification());
         _robot->SetConfigurationValues(vdata.begin(),true);
 
-        vector< pair<CollisionReport::CONTACT,int> > contacts;
+        vector< pair<CONTACT,int> > contacts;
         if( bComputeStableContacts ) {
             Vector vworlddirection = !params->targetbody ? params->vtargetdirection : params->targetbody->GetTransform().rotate(params->vtargetdirection);
             _GetStableContacts(contacts, vworlddirection, friction);
@@ -363,12 +363,21 @@ public:
             FOREACHC(itlink, vlinks) {
                 if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), _report) ) {
                     RAVELOG_VERBOSE(str(boost::format("contact %s\n")%_report->__str__()));
-                    FOREACH(itcontact,_report->contacts) {
-                        if( _report->plink1 != *itlink ) {
-                            itcontact->norm = -itcontact->norm;
-                            itcontact->depth = -itcontact->depth;
+                    for( int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision) {
+                        const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
+                        bool bFirstMatchesRobot = cpinfo.CompareFirstBodyName(_robot->GetName()) == 0;
+                        for(const CONTACT& c : cpinfo.contacts) {
+                            if( bFirstMatchesRobot ) {
+                                contacts.emplace_back(c, (*itlink)->GetIndex());
+                            }
+                            else {
+                                CONTACT flipped;
+                                flipped.pos = c.pos;
+                                flipped.norm = -c.norm;
+                                flipped.depth = -c.depth;
+                                contacts.emplace_back(flipped, (*itlink)->GetIndex());
+                            }
                         }
-                        contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                     }
                 }
             }
@@ -401,7 +410,7 @@ public:
         GRASPANALYSIS analysis;
         if( bComputeForceClosure ) {
             try {
-                vector<CollisionReport::CONTACT> c(contacts.size());
+                vector<CONTACT> c(contacts.size());
                 for(size_t i = 0; i < c.size(); ++i) {
                     c[i] = contacts[i].first;
                 }
@@ -463,7 +472,7 @@ public:
         _robot->Enable(false);
         targetbody->Enable(true);
 
-        vector<CollisionReport::CONTACT> vpoints;
+        vector<CONTACT> vpoints;
         BoxSample(targetbody,vpoints,nDistMapSamples,vmapcenter);
         //DeterministicallySample(targetbody, vpoints, 4, vmapcenter);
 
@@ -512,7 +521,7 @@ public:
             }
         }
 
-        vector< pair<CollisionReport::CONTACT,int> > contacts;
+        vector< pair<CONTACT,int> > contacts;
         _GetStableContacts(contacts, direction, mu);
         FOREACH(itcontact,contacts) {
             Vector pos = itcontact->first.pos, norm = itcontact->first.norm;
@@ -703,7 +712,7 @@ public:
 
         // results
         // contact points
-        vector< pair<CollisionReport::CONTACT,int> > contacts;
+        vector< pair<CONTACT,int> > contacts;
         dReal mindist, volume;
         Transform transfinal;
         vector<dReal> finalshape;
@@ -905,7 +914,7 @@ public:
             }
             sout << (*itresult)->contacts.size() << " ";
             FOREACH(itc, (*itresult)->contacts) {
-                const CollisionReport::CONTACT& c = itc->first;
+                const CONTACT& c = itc->first;
                 sout << c.pos.x << " " << c.pos.y << " " << c.pos.z << " " << c.norm.x << " " << c.norm.y << " " << c.norm.z << " ";
             }
         }
@@ -986,11 +995,11 @@ public:
                 ptraj->Init(probot->GetActiveConfigurationSpecification());
 
                 // InitPlan/PlanPath
-                if( !planner->InitPlan(probot, params) ) {
+                if( !planner->InitPlan(probot, params).HasSolution() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
-                if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+                if( !planner->PlanPath(ptraj).HasSolution() ) {
                     RAVELOG_DEBUG(str(boost::format("grasp %d: grasper planner failed")%grasp_params->id));
                     continue;
                 }
@@ -1005,12 +1014,21 @@ public:
                 FOREACHC(itlink, vlinks) {
                     if( pcloneenv->CheckCollision(KinBody::LinkConstPtr(*itlink), KinBodyConstPtr(params->targetbody), report) ) {
                         RAVELOG_VERBOSE(str(boost::format("contact %s\n")%report->__str__()));
-                        FOREACH(itcontact,report->contacts) {
-                            if( report->plink1 != *itlink ) {
-                                itcontact->norm = -itcontact->norm;
-                                itcontact->depth = -itcontact->depth;
+                        for(int icollision = 0; icollision < report->nNumValidCollisions; ++icollision) {
+                            const CollisionPairInfo& cpinfo = report->vCollisionInfos[icollision];
+                            bool bFirstMatchesRobot = cpinfo.CompareFirstBodyName(probot->GetName()) == 0;
+                            for(const CONTACT& c : cpinfo.contacts) {
+                                if( bFirstMatchesRobot ) {
+                                    grasp_params->contacts.emplace_back(c, (*itlink)->GetIndex());
+                                }
+                                else {
+                                    CONTACT flipped;
+                                    flipped.pos = c.pos;
+                                    flipped.norm = -c.norm;
+                                    flipped.depth = -c.depth;
+                                    grasp_params->contacts.emplace_back(flipped, (*itlink)->GetIndex());
+                                }
                             }
-                            grasp_params->contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
                         }
                     }
                 }
@@ -1042,7 +1060,7 @@ public:
                 GRASPANALYSIS analysis;
                 if( worker_params->bComputeForceClosure ) {
                     try {
-                        vector<CollisionReport::CONTACT> c(grasp_params->contacts.size());
+                        vector<CONTACT> c(grasp_params->contacts.size());
                         for(size_t i = 0; i < c.size(); ++i) {
                             c[i] = grasp_params->contacts[i].first;
                         }
@@ -1070,11 +1088,11 @@ public:
                         probot->SetActiveDOFs(worker_params->vactiveindices,worker_params->affinedofs,worker_params->affineaxis);
                         params->vinitialconfig.resize(0);
                         ptraj->Init(probot->GetActiveConfigurationSpecification());
-                        if( !planner->InitPlan(probot, params) ) {
+                        if( !planner->InitPlan(probot, params).HasSolution() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
-                        if( !planner->PlanPath(ptraj).GetStatusCode() ) {
+                        if( !planner->PlanPath(ptraj).HasSolution() ) {
                             RAVELOG_VERBOSE(str(boost::format("grasp %d: grasping noise planner failed")%grasp_params->id));
                             break;
                         }
@@ -1213,7 +1231,7 @@ protected:
         }
     }
 
-    void SampleObject(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int N, Vector graspcenter)
+    void SampleObject(KinBodyPtr pbody, vector<CONTACT>& vpoints, int N, Vector graspcenter)
     {
         RAY r;
         Vector com = graspcenter;
@@ -1233,8 +1251,10 @@ protected:
             r.dir *= 1000;
 
             if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                vpoints[i].norm = _report->contacts.at(0).norm;
-                vpoints[i].pos = _report->contacts.at(0).pos + 0.001f * vpoints[i].norm;     // extrude a little
+                BOOST_ASSERT(_report->nNumValidCollisions>0);
+                const CollisionPairInfo& cpinfo = _report->vCollisionInfos[0];
+                vpoints[i].norm = cpinfo.contacts.at(0).norm;
+                vpoints[i].pos = cpinfo.contacts.at(0).pos + 0.001f * vpoints[i].norm;     // extrude a little
                 vpoints[i].depth = 0;
                 i++;
             }
@@ -1244,7 +1264,7 @@ protected:
     }
 
     // generates samples across a geodesic sphere (the higher the level, the higher the number of points
-    void DeterministicallySample(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int levels, Vector graspcenter)
+    void DeterministicallySample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int levels, Vector graspcenter)
     {
         RAY r;
         TriMesh tri;
@@ -1261,10 +1281,12 @@ protected:
             r.dir *= 1000;
 
             r.pos = com - 10.0f*r.dir;
-            CollisionReport::CONTACT p;
+            CONTACT p;
             if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                p.norm = -_report->contacts.at(0).norm;    //-r.dir//_report->contacts.at(0).norm1;
-                p.pos = _report->contacts.at(0).pos + 0.001f * p.norm;     // extrude a little
+                BOOST_ASSERT(_report->nNumValidCollisions>0);
+                const CollisionPairInfo& cpinfo = _report->vCollisionInfos[0];
+                p.norm = -cpinfo.contacts.at(0).norm;    //-r.dir//_report->contacts.at(0).norm1;
+                p.pos = cpinfo.contacts.at(0).pos + 0.001f * p.norm;     // extrude a little
                 p.depth = 0;
                 vpoints.push_back(p);
             }
@@ -1375,11 +1397,11 @@ protected:
         tri = *pcur;
     }
 
-    void BoxSample(KinBodyPtr pbody, vector<CollisionReport::CONTACT>& vpoints, int num_samples, Vector center)
+    void BoxSample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int num_samples, Vector center)
     {
         RAY r;
         TriMesh tri;
-        CollisionReport::CONTACT p;
+        CONTACT p;
         dReal ffar = 1.0f;
 
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
@@ -1417,8 +1439,10 @@ protected:
                     }
 
                     if( GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), _report) ) {
-                        p.norm = -_report->contacts.at(0).norm;    //-r.dir//_report->contacts.at(0).norm1;
-                        p.pos = _report->contacts.at(0).pos;    // + 0.001f * p.norm; // extrude a little
+                        BOOST_ASSERT(_report->nNumValidCollisions>0);
+                        const CollisionPairInfo& cpinfo = _report->vCollisionInfos[0];
+                        p.norm = -cpinfo.contacts.at(0).norm;    //-r.dir//_report->contacts.at(0).norm1;
+                        p.pos = cpinfo.contacts.at(0).pos;    // + 0.001f * p.norm; // extrude a little
                         p.depth = 0;
                         vpoints.push_back(p);
                     }
@@ -1432,7 +1456,7 @@ protected:
     // computes a distance map. For every point, samples many vectors around the point's normal such that angle
     // between normal and sampled vector doesn't exceeed fTheta. Returns the minimum distance.
     // vpoints needs to already be initialized
-    void _ComputeDistanceMap(vector<CollisionReport::CONTACT>& vpoints, dReal fTheta)
+    void _ComputeDistanceMap(vector<CONTACT>& vpoints, dReal fTheta)
     {
         dReal fCosTheta = RaveCos(fTheta);
         int N;
@@ -1481,7 +1505,7 @@ protected:
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
     }
 
-    void _GetStableContacts(vector< pair<CollisionReport::CONTACT,int> >& contacts, const Vector& direction, dReal mu)
+    void _GetStableContacts(vector< pair<CONTACT,int> >& contacts, const Vector& direction, dReal mu)
     {
         BOOST_ASSERT(mu>0);
         RAVELOG_DEBUG("Starting GetStableContacts...\n");
@@ -1504,61 +1528,70 @@ protected:
         std::vector<dReal> J;
         FOREACHC(itlink,_robot->GetLinks()) {
             if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(*itlink), _report) )  {
-                RAVELOG_DEBUG(str(boost::format("contact %s:%s with %s:%s\n")%_report->plink1->GetParent()->GetName()%_report->plink1->GetName()%_report->plink2->GetParent()->GetName()%_report->plink2->GetName()));
-                FOREACH(itcontact, _report->contacts) {
-                    if( _report->plink1 != *itlink )
-                        itcontact->norm = -itcontact->norm;
-
-                    Vector deltaxyz;
-                    //check if this link is the base link, if so there will be no Jacobian
-                    if(( *itlink == _robot->GetLinks().at(0)) || (!!_robot->GetActiveManipulator() &&( *itlink == _robot->GetActiveManipulator()->GetBase()) ) ) {
-                        deltaxyz = direction;
-                    }
-                    else {
-                        //calculate the jacobian for the contact point as if were part of the link
-                        Transform pointTm;
-                        pointTm.trans = itcontact->pos;
-                        _robot->CalculateJacobian((*itlink)->GetIndex(), pointTm.trans, J);
-
-                        //get the vector of delta xyz induced by a small squeeze for all joints relevant manipulator joints
-                        for(int j = 0; j < 3; j++) {
-                            for(int k = 0; k < _robot->GetDOF(); k++)
-                                deltaxyz[j] += J.at(j*_robot->GetDOF() + k)*chuckingdir.at(k);
+                RAVELOG_DEBUG_FORMAT("env=%s, contact %s", GetEnv()->GetNameId()%_report->__str__());
+                for( int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision) {
+                    const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
+                    bool bFirstMatchesRobot = cpinfo.CompareFirstBodyName(_robot->GetName()) == 0;
+                    for(const CONTACT& contact : cpinfo.contacts) {
+                        Vector norm = contact.norm;
+                        if( !bFirstMatchesRobot ) {
+                            norm = -contact .norm;
                         }
-                    }
 
-                    //if ilink is degenerate to base link (no joint between them), deltaxyz will be 0 0 0
-                    //so treat it as if it were part of the base link
-                    if(deltaxyz.lengthsqr3() < 1e-7f) {
-                        RAVELOG_WARN(str(boost::format("degenerate link at %s")%(*itlink)->GetName()));
-                        deltaxyz = direction;
-                    }
-
-                    deltaxyz.normalize3();
-
-                    if( IS_DEBUGLEVEL(Level_Debug) ) {
-                        stringstream ss;
-                        ss << "link " << (*itlink)->GetIndex() << " delta XYZ: ";
-                        for(int q = 0; q < 3; q++) {
-                            ss << deltaxyz[q] << " ";
+                        Vector deltaxyz;
+                        //check if this link is the base link, if so there will be no Jacobian
+                        if(( *itlink == _robot->GetLinks().at(0)) || (!!_robot->GetActiveManipulator() &&( *itlink == _robot->GetActiveManipulator()->GetBase()) ) ) {
+                            deltaxyz = direction;
                         }
-                        ss << endl;
-                        RAVELOG_DEBUG(ss.str());
-                    }
+                        else {
+                            //calculate the jacobian for the contact point as if were part of the link
+                            Transform pointTm;
+                            pointTm.trans = contact.pos;
+                            _robot->CalculateJacobian((*itlink)->GetIndex(), pointTm.trans, J);
 
-                    // determine if contact is stable (if angle is obtuse, can't be in friction cone)
-                    dReal fsin2 = itcontact->norm.cross(deltaxyz).lengthsqr3();
-                    dReal fcos = itcontact->norm.dot3(deltaxyz);
-                    bool bstable = fcos > 0 && fsin2 <= fcos*fcos*mu*mu;
-                    if(bstable) {
-                        contacts.emplace_back(*itcontact, (*itlink)->GetIndex());
+                            //get the vector of delta xyz induced by a small squeeze for all joints relevant manipulator joints
+                            for(int j = 0; j < 3; j++) {
+                                for(int k = 0; k < _robot->GetDOF(); k++)
+                                    deltaxyz[j] += J.at(j*_robot->GetDOF() + k)*chuckingdir.at(k);
+                            }
+                        }
+
+                        //if ilink is degenerate to base link (no joint between them), deltaxyz will be 0 0 0
+                        //so treat it as if it were part of the base link
+                        if(deltaxyz.lengthsqr3() < 1e-7f) {
+                            RAVELOG_WARN(str(boost::format("degenerate link at %s")%(*itlink)->GetName()));
+                            deltaxyz = direction;
+                        }
+
+                        deltaxyz.normalize3();
+
+                        if( IS_DEBUGLEVEL(Level_Debug) ) {
+                            stringstream ss;
+                            ss << "link " << (*itlink)->GetIndex() << " delta XYZ: ";
+                            for(int q = 0; q < 3; q++) {
+                                ss << deltaxyz[q] << " ";
+                            }
+                            ss << endl;
+                            RAVELOG_DEBUG(ss.str());
+                        }
+
+                        // determine if contact is stable (if angle is obtuse, can't be in friction cone)
+                        dReal fsin2 = norm.cross(deltaxyz).lengthsqr3();
+                        dReal fcos = norm.dot3(deltaxyz);
+                        bool bstable = fcos > 0 && fsin2 <= fcos*fcos*mu*mu;
+                        if(bstable) {
+                            contacts.emplace_back(contact, (*itlink)->GetIndex());
+                            if( !bFirstMatchesRobot ) {
+                                contacts.back().first.norm = -contacts.back().first.norm;
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts, dReal mu, int Nconepoints)
+    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CONTACT>& contacts, dReal mu, int Nconepoints)
     {
         if( mu == 0 ) {
             return _AnalyzeContacts3D(contacts);
@@ -1566,7 +1599,7 @@ protected:
 
         if( contacts.size() > 16 ) {
             // try reduce time by computing a subset of the points
-            vector<CollisionReport::CONTACT> reducedcontacts;
+            vector<CONTACT> reducedcontacts;
             reducedcontacts.reserve(16);
             for(size_t i = 0; i < reducedcontacts.capacity(); ++i) {
                 reducedcontacts.push_back( contacts.at((i*contacts.size())/reducedcontacts.capacity()) );
@@ -1586,7 +1619,7 @@ protected:
             fang += fdeltaang;
         }
 
-        vector<CollisionReport::CONTACT> newcontacts;
+        vector<CONTACT> newcontacts;
         newcontacts.reserve(contacts.size()*Nconepoints);
         FOREACHC(itcontact,contacts) {
             // find a coordinate system where z is the normal
@@ -1594,13 +1627,13 @@ protected:
             Vector right(torient.m[0],torient.m[4],torient.m[8]);
             Vector up(torient.m[1],torient.m[5],torient.m[9]);
             FOREACH(it,vsincos) {
-                newcontacts.push_back(CollisionReport::CONTACT(itcontact->pos, (itcontact->norm + mu*it->first*right + mu*it->second*up).normalize3(),0));
+                newcontacts.push_back(CONTACT(itcontact->pos, (itcontact->norm + mu*it->first*right + mu*it->second*up).normalize3(),0));
             }
         }
         return _AnalyzeContacts3D(newcontacts);
     }
 
-    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CollisionReport::CONTACT>& contacts)
+    virtual GRASPANALYSIS _AnalyzeContacts3D(const vector<CONTACT>& contacts)
     {
         if( contacts.size() < 7 ) {
             RAVELOG_DEBUG("need at least 7 contact wrenches to have force closure in 3D\n");

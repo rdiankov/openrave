@@ -26,10 +26,10 @@
 namespace openravepy {
 using py::object;
 
-class PyRobotBase : public PyKinBody
+class OPENRAVEPY_API PyRobotBase : public PyKinBody
 {
 public:
-    class PyRobotBaseInfo : public PyKinBodyInfo
+    class OPENRAVEPY_API PyRobotBaseInfo : public PyKinBodyInfo
     {
 public:
         PyRobotBaseInfo();
@@ -55,7 +55,7 @@ protected:
     RobotBasePtr _probot;
 public:
     RobotBasePtr GetRobot();
-    class PyManipulator
+    class OPENRAVEPY_API PyManipulator
     {
         RobotBase::ManipulatorPtr _pmanip;
         PyEnvironmentBasePtr _pyenv;
@@ -71,6 +71,7 @@ public:
 
         object GetVelocity() const;
 
+        std::string GetId() const;
         object GetName() const;
 
         void SetName(const std::string& s);
@@ -95,8 +96,6 @@ public:
         object GetLocalToolTransformPose();
         void SetLocalToolTransform(object otrans);
         void SetLocalToolDirection(object odirection);
-        void SetClosingDirection(object oclosingdirection);
-        void SetChuckingDirection(object ochuckingdirection);
         py::array_int GetGripperJoints();
         py::array_int GetGripperIndices();
         py::array_int GetArmJoints();
@@ -117,21 +116,33 @@ public:
 
         bool _FindIKSolution(const IkParameterization& ikparam, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
         bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<dReal>& solution, int filteroptions, bool releasegil) const;
-        bool _FindIKSolution(const IkParameterization& ikparam, int filteroptions, IkReturn& ikreturn, bool releasegil) const;
-        bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturn& ikreturn, bool releasegil) const;
+        bool _FindIKSolution(const IkParameterization& ikparam, int filteroptions, IkReturn& ikreturn, bool releasegil, IkFailureAccumulatorBasePtr paccumulator=nullptr) const;
+        bool _FindIKSolution(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, IkReturn& ikreturn, bool releasegil, IkFailureAccumulatorBasePtr paccumulator=nullptr) const;
 
         bool _FindIKSolutions(const IkParameterization& ikparam, std::vector<std::vector<dReal> >& solutions, int filteroptions, bool releasegil) const;
         bool _FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, std::vector<std::vector<dReal> >& solutions, int filteroptions, bool releasegil) const;
-        bool _FindIKSolutions(const IkParameterization& ikparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil) const;
-        bool _FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil) const;
+        bool _FindIKSolutions(const IkParameterization& ikparam, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorBasePtr paccumulator=nullptr) const;
+        bool _FindIKSolutions(const IkParameterization& ikparam, const std::vector<dReal>& vFreeParameters, int filteroptions, std::vector<IkReturnPtr>& vikreturns, bool releasegil, IkFailureAccumulatorBasePtr paccumulator=nullptr) const;
 
-        object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
+        /// \brief FindIKSolution finds an ik solution corresponding to the given ikparam.
+        ///
+        /// \param[in] oparam The ik parameter to find a solution for.
+        /// \param[in] filteroptions One of IkFilterOptions.
+        /// \param[in] ikreturn If true, the returned value will be a PyIkReturn. If false, the returned value will be an ik solution, i.e. an array of robot configuration (None if no ik solutions exist).
+        /// \param[in] releasegil
+        /// \param[in] PyIkFailureAccumulatorBasePtr If given and ikreturn=true, will fill in failure information (if any) in the returned PyIkReturn.
+        object FindIKSolution(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorBasePtr=nullptr) const;
+        object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorBasePtr=nullptr) const;
 
-        object FindIKSolution(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
-
-        object FindIKSolutions(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
-
-        object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false) const;
+        /// \brief FindIKSolutions finds ik solutions corresponding to the given ikparam.
+        ///
+        /// \param[in] oparam The ik parameter to find solutions for.
+        /// \param[in] filteroptions One of IkFilterOptions
+        /// \param[in] ikreturn If true, the returned value will be a list of PyIkReturns. If false, the returned value will be an array of ik solutions.
+        /// \param[in] releasegil
+        /// \param[in] PyIkFailureAccumulatorBasePtr If given and ikreturn=true, the returned list will include PyIkReturns that store failure information (if any). Otherwise, (when ikreturn=true) the returned list only contains PyIkReturns corresponding to valid ik solutions.
+        object FindIKSolutions(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorBasePtr=nullptr) const;
+        object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorBasePtr=nullptr) const;
 
         object GetIkParameterization(object oparam, bool inworld=true);
 
@@ -190,6 +201,7 @@ public:
         object GetTransform() const;
         object GetTransformPose() const;
         PyRobotBasePtr GetRobot() const;
+        std::string GetId() const;
         object GetName() const;
 
         object GetData();
@@ -223,7 +235,8 @@ public:
         virtual ~PyConnectedBody();
         RobotBase::ConnectedBodyPtr GetConnectedBody() const;
 
-        object GetName();
+        std::string GetId() const;
+        object GetName() const;
 
         object GetInfo();
 
@@ -442,7 +455,7 @@ public:
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
     bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
 
-    py::object ExtractInfo() const;
+    py::object ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
 
     virtual std::string __repr__();
     virtual std::string __str__();

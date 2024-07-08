@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <cstring>
+#include <sstream>
 
 #include <boost/format.hpp>
 
@@ -31,8 +32,10 @@ namespace OpenRAVE {
 enum LengthUnit : int8_t
 {
     LU_Meter = 0,
-    LU_Centimeter = -1,
+    LU_Decimeter = -1,
+    LU_Centimeter = -2,
     LU_Millimeter = -3,
+    LU_DeciMillimeter = -4,
     LU_Micrometer = -6,
     LU_Nanometer = -9,
     LU_Inch = 0x10,
@@ -42,6 +45,7 @@ enum LengthUnit : int8_t
 OPENRAVE_API const char* GetLengthUnitString(LengthUnit unit);
 
 OPENRAVE_API LengthUnit GetLengthUnitFromString(const char* pLengthUnit, LengthUnit defaultLengthUnit);
+OPENRAVE_API LengthUnit GetLengthUnitFromString(const std::string& pLengthUnit, LengthUnit defaultLengthUnit);
 
 /// \brief mass unit
 enum MassUnit : int8_t
@@ -55,49 +59,71 @@ enum MassUnit : int8_t
 OPENRAVE_API const char* GetMassUnitString(MassUnit unit);
 
 OPENRAVE_API MassUnit GetMassUnitFromString(const char* pMassUnit, MassUnit defaultMassUnit);
+OPENRAVE_API MassUnit GetMassUnitFromString(const std::string& pMassUnit, MassUnit defaultMassUnit);
 
-/// \brief time unit
-enum TimeUnit : int8_t
+/// \brief time duration unit
+enum TimeDurationUnit : int8_t
 {
-    TU_Second = 0,
-    TU_Millisecond = -3,
-    TU_Microsecond = -6,
-    TU_Nanosecond = -9,
-    TU_Picosecond = -12,
+    TDU_Second = 0,
+    TDU_Millisecond = -3,
+    TDU_Microsecond = -6,
+    TDU_Nanosecond = -9,
+    TDU_Picosecond = -12,
 };
 
-OPENRAVE_API const char* GetTimeUnitString(TimeUnit unit);
+OPENRAVE_API const char* GetTimeDurationUnitString(TimeDurationUnit unit);
 
-OPENRAVE_API TimeUnit GetTimeUnitFromString(const char* pTimeUnit, TimeUnit defaultTimeUnit);
+OPENRAVE_API TimeDurationUnit GetTimeDurationUnitFromString(const char* pTimeDurationUnit, TimeDurationUnit defaultTimeDurationUnit);
+OPENRAVE_API TimeDurationUnit GetTimeDurationUnitFromString(const std::string& pTimeDurationUnit, TimeDurationUnit defaultTimeDurationUnit);
 
 /// \brief angle unit
 enum AngleUnit : int8_t
 {
     AU_Radian = 0,
-    AU_Degree = 1
+    AU_Degree = 1,
+    AU_Centidegree = -2,
 };
 
 OPENRAVE_API const char* GetAngleUnitString(AngleUnit unit);
 
 OPENRAVE_API AngleUnit GetAngleUnitFromString(const char* pAngleUnit, AngleUnit defaultAngleUnit);
+OPENRAVE_API AngleUnit GetAngleUnitFromString(const std::string& pAngleUnit, AngleUnit defaultAngleUnit);
+
+/// \brief time stamp unit
+enum TimeStampUnit : int8_t
+{
+    TSU_SecondsFromLinuxEpoch = 0,
+    TSU_MillisecondsFromLinuxEpoch = -3,
+    TSU_MicrosecondsFromLinuxEpoch = -6,
+    TSU_ISO8601 = 0x10,
+};
+
+OPENRAVE_API const char* GetTimeStampUnitString(TimeStampUnit unit);
+
+OPENRAVE_API TimeStampUnit GetTimeStampUnitFromString(const char* pTimeStampUnit, TimeStampUnit defaultTimeStampUnit);
+OPENRAVE_API TimeStampUnit GetTimeStampUnitFromString(const std::string& pTimeStampUnit, TimeStampUnit defaultTimeStampUnit);
 
 /// \brief holds a struct of unit of the fundamental types so users know which they are working with.
-class OPENRAVE_API UnitInfo
+class __attribute__((aligned(8))) OPENRAVE_API UnitInfo
 {
 public:
     inline bool operator==(const UnitInfo& rhs) const {
-        return lengthUnit == rhs.lengthUnit && massUnit == rhs.massUnit && timeUnit == rhs.timeUnit && angleUnit == rhs.angleUnit;
+        return *reinterpret_cast<const uint64_t*>(this) == *reinterpret_cast<const uint64_t*>(&rhs);
     }
     inline bool operator!=(const UnitInfo& rhs) const {
-        return lengthUnit != rhs.lengthUnit || massUnit != rhs.massUnit || timeUnit != rhs.timeUnit || angleUnit != rhs.angleUnit;
+        return *reinterpret_cast<const uint64_t*>(this) != *reinterpret_cast<const uint64_t*>(&rhs);
     }
 
-    LengthUnit lengthUnit = LU_Millimeter;
-    MassUnit massUnit = MU_Gram;
-    TimeUnit timeUnit = TU_Second;
-    AngleUnit angleUnit = AU_Degree;
+    LengthUnit lengthUnit = LU_Millimeter; ///< standard in industrial applications
+    MassUnit massUnit = MU_Kilogram; ///< SI unit
+    TimeDurationUnit timeDurationUnit = TDU_Second; ///< SI unit
+    AngleUnit angleUnit = AU_Degree; ///< easier to set for users
+    TimeStampUnit timeStampUnit = TSU_MicrosecondsFromLinuxEpoch; ///< good default for integer storage
+    uint8_t reserved5 = 0;
+    uint8_t reserved6 = 0;
+    uint8_t reserved7 = 0;
 };
-BOOST_STATIC_ASSERT(sizeof(UnitInfo)==4);
+BOOST_STATIC_ASSERT(sizeof(UnitInfo) == sizeof(uint64_t));
 
 //
 // Length
@@ -111,10 +137,10 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "m") == 0 ) {
         return T(1.0);
     }
-    if (strcmp(pUnit, "mm") == 0 ) {
+    if (strcmp(pUnit, "mm") == 0 || strcmp(pUnit, "millimeter") == 0 ) {
         return T(1000.0);
     }
-    if (strcmp(pUnit, "um") == 0 ) {
+    if (strcmp(pUnit, "um") == 0 || strcmp(pUnit, "micrometer") == 0 ) {
         return T(1e6);
     }
     if (strcmp(pUnit, "nm") == 0 ) {
@@ -123,14 +149,20 @@ inline T GetLengthUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "cm") == 0 ) {
         return T(100.0);
     }
+    if (strcmp(pUnit, "dm") == 0 ) {
+        return T(10.0);
+    }
     if (strcmp(pUnit, "in") == 0 || strcmp(pUnit, "inch") == 0 ) {
         return T(39.370078740157481); // 25.4 mm/in
     }
-    if (strcmp(pUnit, "ft") == 0 || strcmp(pUnit, "foot") == 0 ) {
+    if (strcmp(pUnit, "ft") == 0 || strcmp(pUnit, "foot") == 0 || strcmp(pUnit, "feet") == 0 ) {
         return T(3.2808398950131235); // 304.8 mm/ft
     }
     if (strcmp(pUnit, "meter") == 0 ) {
         return T(1.0);
+    }
+    if (strcmp(pUnit, "dmm") == 0 ) {
+        return T(1e4);
     }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported length unit '%s'", pUnit, ORE_LengthUnitInvalid);
@@ -143,7 +175,7 @@ inline T GetLengthUnitStandardValue(const std::string& s) {
 
 // \brief how many units in a meter
 template <typename T>
-inline T GetLengthUnitStandardValue(const LengthUnit unit)
+constexpr inline T GetLengthUnitStandardValue(const LengthUnit unit)
 {
     if( unit == OpenRAVE::LU_Meter ) {
         return T(1.0);
@@ -158,6 +190,9 @@ inline T GetLengthUnitStandardValue(const LengthUnit unit)
         return T(1e9);
     }
     if( unit == OpenRAVE::LU_Centimeter ) {
+        return T(100.0);
+    }
+    if( unit == OpenRAVE::LU_Decimeter ) {
         return T(10.0);
     }
     if( unit == OpenRAVE::LU_Inch ) {
@@ -166,8 +201,12 @@ inline T GetLengthUnitStandardValue(const LengthUnit unit)
     if( unit == OpenRAVE::LU_Foot ) {
         return T(3.2808398950131235); // 304.8 mm/ft
     }
+    if( unit == OpenRAVE::LU_DeciMillimeter ) {
+        return T(1e4);
+    }
 
     throw OPENRAVE_EXCEPTION_FORMAT("Unsupported length unit '%s'", GetLengthUnitString(unit), ORE_LengthUnitInvalid);
+    return T{};
 }
 
 template <typename T>
@@ -176,6 +215,7 @@ inline T GetLengthUnitConversionScale(const std::string &sourceLengthUnit, const
     if( sourceLengthUnit == targetLengthUnit ) {
         return T(1.0);
     }
+
     return GetLengthUnitStandardValue<T>(targetLengthUnit) / GetLengthUnitStandardValue<T>(sourceLengthUnit);
 }
 
@@ -210,7 +250,7 @@ inline T GetMassUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "lb") == 0 ) {
         return T(0.002204622621848776);
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", pUnit, ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", pUnit, ORE_MassUnitInvalid);
 }
 
 template <typename T>
@@ -220,7 +260,7 @@ inline T GetMassUnitStandardValue(const std::string& s) {
 
 // \brief how many units in a gram
 template <typename T>
-inline T GetMassUnitStandardValue(const MassUnit unit)
+constexpr inline T GetMassUnitStandardValue(const MassUnit unit)
 {
     if( unit == OpenRAVE::MU_Gram ) {
         return T(1.0);
@@ -235,7 +275,8 @@ inline T GetMassUnitStandardValue(const MassUnit unit)
         return T(0.002204622621848776);
     }
 
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", GetMassUnitString(unit), ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported mass unit '%s'", GetMassUnitString(unit), ORE_MassUnitInvalid);
+    return T{};
 }
 
 template <typename T>
@@ -244,6 +285,7 @@ inline T GetMassUnitConversionScale(const std::string &sourceMassUnit, const std
     if( sourceMassUnit == targetMassUnit ) {
         return T(1.0);
     }
+
     return GetMassUnitStandardValue<T>(targetMassUnit) / GetMassUnitStandardValue<T>(sourceMassUnit);
 }
 
@@ -258,12 +300,12 @@ inline T GetMassUnitConversionScale(const MassUnit sourceMassUnit, const MassUni
 }
 
 //
-// Time
+// Time Duration
 //
 
 // \brief how many units in a second
 template <typename T>
-inline T GetTimeUnitStandardValue(const char* pUnit)
+inline T GetTimeDurationUnitStandardValue(const char* pUnit)
 {
     // ordered from most likely
     if (strcmp(pUnit, "s") == 0 ) {
@@ -281,56 +323,57 @@ inline T GetTimeUnitStandardValue(const char* pUnit)
     if (strcmp(pUnit, "ps") == 0 ) {
         return T(1e12);
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time unit '%s'", pUnit, ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time duration unit '%s'", pUnit, ORE_TimeDurationUnitInvalid);
 }
 
 template <typename T>
-inline T GetTimeUnitStandardValue(const std::string& s) {
-    return GetTimeUnitStandardValue<T>(s.c_str());
+inline T GetTimeDurationUnitStandardValue(const std::string& s) {
+    return GetTimeDurationUnitStandardValue<T>(s.c_str());
 }
 
 // \brief how many units in a second
 template <typename T>
-inline T GetTimeUnitStandardValue(const TimeUnit unit)
+constexpr inline T GetTimeDurationUnitStandardValue(const TimeDurationUnit unit)
 {
-    if( unit == OpenRAVE::TU_Second ) {
+    if( unit == OpenRAVE::TDU_Second ) {
         return T(1.0);
     }
-    if( unit == OpenRAVE::TU_Millisecond ) {
+    if( unit == OpenRAVE::TDU_Millisecond ) {
         return T(1e3);
     }
-    if( unit == OpenRAVE::TU_Microsecond ) {
+    if( unit == OpenRAVE::TDU_Microsecond ) {
         return T(1e6);
     }
-    if( unit == OpenRAVE::TU_Nanosecond ) {
+    if( unit == OpenRAVE::TDU_Nanosecond ) {
         return T(1e9);
     }
-    if( unit == OpenRAVE::TU_Picosecond ) {
+    if( unit == OpenRAVE::TDU_Picosecond ) {
         return T(1e12);
     }
 
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time unit '%s'", GetTimeUnitString(unit), ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported time duration unit '%s'", GetTimeDurationUnitString(unit), ORE_TimeDurationUnitInvalid);
+    return T{};
 }
 
 template <typename T>
-inline T GetTimeUnitConversionScale(const std::string &sourceTimeUnit, const std::string &targetTimeUnit)
+inline T GetTimeDurationUnitConversionScale(const std::string &sourceTimeDurationUnit, const std::string &targetTimeDurationUnit)
 {
-    if( sourceTimeUnit == targetTimeUnit ) {
+    if( sourceTimeDurationUnit == targetTimeDurationUnit ) {
         return T(1.0);
     }
-    return GetTimeUnitStandardValue<T>(targetTimeUnit) / GetTimeUnitStandardValue<T>(sourceTimeUnit);
+
+    return GetTimeDurationUnitStandardValue<T>(targetTimeDurationUnit) / GetTimeDurationUnitStandardValue<T>(sourceTimeDurationUnit);
 }
 
 template <typename T>
-inline T GetTimeUnitConversionScale(const TimeUnit sourceTimeUnit, const TimeUnit targetTimeUnit)
+inline T GetTimeDurationUnitConversionScale(const TimeDurationUnit sourceTimeDurationUnit, const TimeDurationUnit targetTimeDurationUnit)
 {
-    if( sourceTimeUnit == targetTimeUnit ) {
+    if( sourceTimeDurationUnit == targetTimeDurationUnit ) {
         return T(1.0);
     }
 
-    return GetTimeUnitStandardValue<T>(targetTimeUnit) / GetTimeUnitStandardValue<T>(sourceTimeUnit);
+    return GetTimeDurationUnitStandardValue<T>(targetTimeDurationUnit) / GetTimeDurationUnitStandardValue<T>(sourceTimeDurationUnit);
 }
-
 
 //
 // Angle
@@ -345,9 +388,12 @@ inline T GetAngleUnitStandardValue(const char* pUnit)
         return T(1.0);
     }
     if (strcmp(pUnit, "deg") == 0 ) {
-        return T(0.017453292519943295);
+        return T(57.29577951308232);
     }
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_LengthUnitInvalid);
+    if (strcmp(pUnit, "cdeg") == 0 ) {
+        return T(5729.577951308232);
+    }
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", pUnit, ORE_AngleUnitInvalid);
 }
 
 template <typename T>
@@ -357,16 +403,20 @@ inline T GetAngleUnitStandardValue(const std::string& s) {
 
 // \brief how many units in a radian
 template <typename T>
-inline T GetAngleUnitStandardValue(const AngleUnit unit)
+constexpr inline T GetAngleUnitStandardValue(const AngleUnit unit)
 {
     if( unit == OpenRAVE::AU_Radian ) {
         return T(1.0);
     }
     if( unit == OpenRAVE::AU_Degree ) {
-        return T(0.017453292519943295);
+        return T(57.29577951308232);
+    }
+    if( unit == OpenRAVE::AU_Centidegree ) {
+        return T(5729.577951308232);
     }
 
-    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_LengthUnitInvalid);
+    throw OPENRAVE_EXCEPTION_FORMAT("Unsupported angle unit '%s'", GetAngleUnitString(unit), ORE_AngleUnitInvalid);
+    return T{};
 }
 
 template <typename T>
@@ -375,6 +425,7 @@ inline T GetAngleUnitConversionScale(const std::string &sourceAngleUnit, const s
     if( sourceAngleUnit == targetAngleUnit ) {
         return T(1.0);
     }
+
     return GetAngleUnitStandardValue<T>(targetAngleUnit) / GetAngleUnitStandardValue<T>(sourceAngleUnit);
 }
 
@@ -387,7 +438,6 @@ inline T GetAngleUnitConversionScale(const AngleUnit sourceAngleUnit, const Angl
 
     return GetAngleUnitStandardValue<T>(targetAngleUnit) / GetAngleUnitStandardValue<T>(sourceAngleUnit);
 }
-
 
 } // end namespace OpenRAVE
 

@@ -23,43 +23,50 @@
 namespace openravepy {
 using py::object;
 
-class PyCollisionReport
+struct PYCONTACT
+{
+    PYCONTACT();
+    PYCONTACT(const CONTACT& c);
+
+    std::string __str__() const;
+    object __unicode__() const;
+    object pos = py::none_();
+    object norm = py::none_();
+    dReal depth;
+};
+
+class OPENRAVEPY_API PyCollisionPairInfo
+{
+public:
+    PyCollisionPairInfo(const CollisionPairInfo& cpinfo);
+    std::string __str__() const;
+    object __unicode__() const;
+
+    py::object ExtractFirstBodyLinkGeomNames();
+    py::object ExtractSecondBodyLinkGeomNames();
+
+    std::string bodyLinkGeom1Name;
+    std::string bodyLinkGeom2Name;
+    py::list contacts;
+};
+
+class OPENRAVEPY_API PyCollisionReport
 {
 public:
     PyCollisionReport();
-    PyCollisionReport(CollisionReportPtr report);
-    virtual ~PyCollisionReport();
+    PyCollisionReport(const CollisionReport& report);
 
-    struct PYCONTACT
-    {
-        PYCONTACT();
-        PYCONTACT(const CollisionReport::CONTACT& c);
+    void Init(const CollisionReport& report);
 
-        std::string __str__();
-        object __unicode__();
-        object pos = py::none_();
-        object norm = py::none_();
-        dReal depth;
-    };
-
-    void init(PyEnvironmentBasePtr pyenv);
-
-    std::string __str__();
-    object __unicode__();
+    std::string __str__() const;
+    object __unicode__() const;
     void Reset(int coloptions=0);
 
-    int options;
-    object plink1 = py::none_();
-    object plink2 = py::none_();
-    object pgeom1 = py::none_();
-    object pgeom2 = py::none_();
-    py::list vLinkColliding;
-    py::list vGeometryContacts;
-    dReal minDistance;
-    int numWithinTol;
-    py::list contacts;
-    uint32_t nKeepPrevious;
-    CollisionReportPtr report;
+    py::list collisionInfos; // list of PyCollisionPairInfo
+    int options = 0;
+    OpenRAVE::dReal minDistance = 1e20;
+    int numWithinTol = 0;
+    uint32_t nKeepPrevious = 0;
 };
 
 } // namespace openravepy

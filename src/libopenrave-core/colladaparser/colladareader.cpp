@@ -265,7 +265,7 @@ public:
         _bReadGeometryGroups = false;
         _bExtractConnectedBodies = bExtractConnectedBodies;
         _bMustResolveURI = false;
-        _fGlobalScale = 1.0/penv->GetUnit().second;
+        _fGlobalScale = GetLengthUnitStandardValue<dReal>(penv->GetUnitInfo().lengthUnit);
         _fGeomScale = 1.0;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
@@ -421,7 +421,7 @@ public:
 
     bool _InitPostOpen(const AttributesList& atts)
     {
-        _fGlobalScale = 1.0/_penv->GetUnit().second;
+        _fGlobalScale = GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit);
         _bBackCompatValuesInRadians = false;
         if( !!_dom->getAsset() ) {
             // do not modify _fGlobalScale here since _GetUnitScale propagates up the hierarchy
@@ -1771,6 +1771,9 @@ public:
                                             }
                                             else if( pchild->getElementName() == std::string("robotControllerAxisOffset") ) {
                                                 jci.robotControllerAxisOffset.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisManufacturerCode") ) {
+                                                jci.robotControllerAxisManufacturerCode.at(ijointaxis) = std::string(pchild->getCharData());
                                             }
                                             else if( pchild->getElementName() == std::string("robotControllerAxisProductCode") ) {
                                                 jci.robotControllerAxisProductCode.at(ijointaxis) = std::string(pchild->getCharData());
@@ -5804,11 +5807,11 @@ private:
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
-            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second * _fGeomScale;
+            return pextra->getAsset()->getUnit()->getMeter() * GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit) * _fGeomScale;
         }
         domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
         if (!!passet && !!passet->getUnit()) {
-            return passet->getUnit()->getMeter() / _penv->GetUnit().second * _fGeomScale;
+            return passet->getUnit()->getMeter() * GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit) * _fGeomScale;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);

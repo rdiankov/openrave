@@ -52,7 +52,9 @@ enum PlannerStatusCode
     PS_HasSolution = 1, ///< planner succeeded
     PS_Interrupted = 2, ///< planning was interrupted, but can be resumed by calling PlanPath again
     PS_InterruptedWithSolution = 3, ///< planning was interrupted, but a valid path/solution was returned. Can call PlanPath again to refine results
-    PS_FailedDueToCollision = 0x00030000, ///< planner failed due to collision constraints
+    PS_FailedDueToEnvCollision = 0x00010000, ///< planner failed due to env collision constraints
+    PS_FailedDueToSelfCollision = 0x00020000, ///< planner failed due to self collision constraints
+    PS_FailedDueToCollision = (PS_FailedDueToEnvCollision|PS_FailedDueToSelfCollision), ///< planner failed due to any collision constraints
     PS_FailedDueToInitial = 0x00040000, ///< failed due to initial configurations
     PS_FailedDueToGoal = 0x00080000, ///< failed due to goal configurations
     PS_FailedDueToKinematics = 0x00100000, ///< failed due to kinematics constraints
@@ -566,6 +568,8 @@ public:
     PlannerStatus(const std::string& description, const uint32_t statusCode, CollisionReportPtr& report);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, CollisionReportPtr& report);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const IkParameterization& ikparam, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices);
+    PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues);
     PlannerStatus(const std::string& description, const uint32_t statusCode, const std::vector<dReal>& jointValues, CollisionReportPtr& report);
 
@@ -589,15 +593,16 @@ public:
 
     PlannerParametersConstPtr parameters;   ///< parameters used in the planner
     std::string description;                ///< Optional, the description of how/why the error happended. Displayed to the user by the UI. It will automatically be filled with a generic message corresponding to statusCode if not provided.
-    uint32_t statusCode;                    // combination of PS_X fields (PlannerStatusCode)
+    uint32_t statusCode=0;                    // combination of PS_X fields (PlannerStatusCode)
     IkParameterization ikparam;             // Optional, the ik parameter that failed to find a solution.
     std::vector<dReal> jointValues;         // Optional, the robot's joint values in rad or m
-    CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contents contacts information.
+    CollisionReportPtr report;              ///< Optional,  collision report at the time of the error. Ideally should contain contacts information.
     std::string errorOrigin;                // Auto, a string representing the code path of the error.
+    std::vector<AccumulatorIndex> vIkFailureInfoIndices; ///< Optional, indices of the ikFailureInfos collected from the run.
 
-    std::map< std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int > mCollidingLinksCount; // Counter for colliding links
-    uint32_t numPlannerIterations; ///< number of planner iterations before failure
-    uint64_t elapsedPlanningTimeUS; ///< us, elapsed time of the planner
+    std::map< std::pair<std::string,std::string>, unsigned int > mCollidingLinksCount; // Counter for colliding body/link/geoms
+    uint32_t numPlannerIterations=0; ///< number of planner iterations before failure
+    uint64_t elapsedPlanningTimeUS=0; ///< us, elapsed time of the planner
 };
 
 #define OPENRAVE_PLANNER_STATUS(...) PlannerStatus(__VA_ARGS__).SetErrorOrigin(str(boost::format("[%s:%d %s] ")%OpenRAVE::RaveGetSourceFilename(__FILE__)%__LINE__%__FUNCTION__)).SetPlannerParameters(_parameters);
@@ -644,7 +649,7 @@ public:
         \param robot main robot to be used for planning
         \param params The parameters of the planner, any class derived from PlannerParameters can be passed. The planner should copy these parameters for future instead of storing the pointer.
      */
-    virtual bool InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
+    virtual PlannerStatus InitPlan(RobotBasePtr robot, PlannerParametersConstPtr params) = 0;
 
     /** \brief Setup scene, robot, and properties of the plan, and reset all structures with pparams.
 
@@ -653,7 +658,7 @@ public:
         pass information to planners without excplicitly knowning the format/internal structures used
         \return true if plan is initialized successfully and initial conditions are satisfied.
      */
-    virtual bool InitPlan(RobotBasePtr robot, std::istream& isParameters);
+    virtual PlannerStatus InitPlan(RobotBasePtr robot, std::istream& isParameters);
 
     /** \brief Executes the main planner trying to solve for the goal condition.
 
@@ -679,6 +684,9 @@ public:
      */
     virtual UserDataPtr RegisterPlanCallback(const PlanCallbackFn& callbackfn);
 
+    /// \brief sets the ik failure accumulator to use when running functions
+    virtual void SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailureAccumulator);
+        
 protected:
     inline PlannerBasePtr shared_planner() {
         return boost::static_pointer_cast<PlannerBase>(shared_from_this());

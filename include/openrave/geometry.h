@@ -233,12 +233,12 @@ public:
     }
 
     template <typename U>
-    bool operator==(const RaveVector<U>& r) const{
+    bool operator==(const RaveVector<U>& r) const {
         return x == r.x && y == r.y && z == r.z && w == r.w;
     }
 
     template <typename U>
-    bool operator!=(const RaveVector<U>& r) const{
+    bool operator!=(const RaveVector<U>& r) const {
         return x != r.x || y != r.y || z != r.z || w != r.w;
     }
 
@@ -484,17 +484,17 @@ public:
         return *this;
     }
 
-    inline bool operator== (const RaveTransform<T>& right) const{
+    inline bool operator== (const RaveTransform<T>& right) const {
         return trans == right.trans && rot == right.rot;
     }
-    inline bool operator!= (const RaveTransform<T>& right) const{
+    inline bool operator!= (const RaveTransform<T>& right) const {
         return !operator==(right);
     }
 
     /// \brief return true if any element of transform is different by mor ethan epsilon, otherwise false.
     inline bool CompareTransform(const RaveTransform<T>& rhs, T epsilon) const {
         return RaveFabs(trans.x - rhs.trans.x) > epsilon || RaveFabs(trans.y - rhs.trans.y) > epsilon || RaveFabs(trans.z - rhs.trans.z) > epsilon ||
-           RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
+               RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
     }
 
     inline RaveTransform<T> inverse() const {
@@ -840,7 +840,19 @@ class RaveAxisAlignedBox
 public:
     RaveAxisAlignedBox() {
     }
-    RaveAxisAlignedBox(const RaveVector<T>&vpos, const RaveVector<T>&vextents) : pos(vpos), extents(vextents) {
+
+    template<typename U>
+    RaveAxisAlignedBox(const RaveVector<U>&vpos, const RaveVector<U>&vextents) : pos(vpos), extents(vextents) {
+    }
+    template<typename U>
+    RaveAxisAlignedBox(const RaveAxisAlignedBox<U>& rhs) : pos(rhs.pos), extents(rhs.extents) {
+    }
+
+    template <typename U>
+    inline RaveAxisAlignedBox<T>& operator=(const RaveAxisAlignedBox<U>&r) {
+        pos = r.pos;
+        extents = r.extents;
+        return *this;
     }
 
     template <typename U>
@@ -896,12 +908,24 @@ public:
     RaveTransform<T> transform;
     RaveVector<T> extents;
 
-    template<typename U> 
+    RaveOrientedBox() {
+    }
+    RaveOrientedBox(const RaveTransform<T>& vtransform, const RaveVector<T>& vextents) : transform(vtransform), extents(vextents) {
+    }
+
+    template <typename U>
+    inline RaveOrientedBox<T>& operator=(const RaveOrientedBox<U>&r) {
+        transform = r.transform;
+        extents = r.extents;
+        return *this;
+    }
+
+    template<typename U>
     inline bool operator==(const RaveOrientedBox<U>& other) const {
         return transform == other.transform && extents == other.extents;
     }
 
-    template<typename U> 
+    template<typename U>
     inline bool operator!=(const RaveOrientedBox<U>& other) const {
         return !operator==(other);
     }
@@ -931,10 +955,10 @@ public:
 
     RaveVector<T> v1, v2, v3;          //!< the vertices of the triangle
 
-    const RaveVector<T>& operator[] (int i) const {
+    inline const RaveVector<T>& operator[] (int i) const {
         return (&v1)[i];
     }
-    RaveVector<T>& operator[] (int i)       {
+    inline RaveVector<T>& operator[] (int i)       {
         return (&v1)[i];
     }
 
@@ -981,12 +1005,12 @@ public:
     template<typename U>
     bool operator==(const RaveCameraIntrinsics<U>& r) const {
         return distortion_model == r.distortion_model
-            && distortion_coeffs == r.distortion_coeffs
-            && focal_length == r.focal_length
-            && fx == r.fx
-            && fy == r.fy
-            && cx == r.cx
-            && cy == r.cy;
+               && distortion_coeffs == r.distortion_coeffs
+               && focal_length == r.focal_length
+               && fx == r.fx
+               && fy == r.fy
+               && cx == r.cx
+               && cy == r.cy;
     }
 
     template<typename U>
@@ -1932,6 +1956,23 @@ inline RaveOrientedBox<T> OrientedBoxFromAABB(const RaveAxisAlignedBox<T>& ab, c
     return OrientedBoxFromAABB(ab,RaveTransform<T>(t));
 }
 
+/// \brief projects an obb along the world axes
+///
+/// \ingroup geometric_primitives
+template <typename T>
+inline RaveAxisAlignedBox<T> AABBFromOrientedBox(const RaveOrientedBox<T>& obb)
+{
+    const RaveTransformMatrix<T> rotationMatrix = matrixFromQuat(obb.transform.rot);
+    RaveVector<T> newExtents(0, 0, 0);
+    for (size_t iRow = 0; iRow < 3; ++iRow) {
+        for (size_t iCol = 0; iCol < 3; ++iCol) {
+            newExtents[iRow] += RaveFabs(rotationMatrix.m[4 * iRow + iCol]) * obb.extents[iCol];
+        }
+    }
+    const RaveAxisAlignedBox<T> ab(obb.transform.trans, newExtents);
+    return ab;
+}
+
 /// \brief Transforms an oriented bounding box.
 ///
 /// \ingroup geometric_primitives
@@ -1964,146 +2005,129 @@ inline obb<T> TransformOBB(const RaveTransformMatrix<T>& t, const obb<T>& o)
     return newobb;
 }
 
-/// projects an obb along the world axes
-//void AABBFromOBB(const OBB& obb, DXVEC3& vMin, DXVEC3& vMax)
-//{
-//	vMax.x = fabsf(obb.vRight.x) * obb.vExtents.x + fabsf(obb.vUp.x) * obb.vExtents.y + fabsf(obb.vDir.x) * obb.vExtents.z;
-//	vMax.y = fabsf(obb.vRight.y) * obb.vExtents.x + fabsf(obb.vUp.y) * obb.vExtents.y + fabsf(obb.vDir.y) * obb.vExtents.z;
-//	vMax.z = fabsf(obb.vRight.z) * obb.vExtents.x + fabsf(obb.vUp.z) * obb.vExtents.y + fabsf(obb.vDir.z) * obb.vExtents.z;
-//
-//	vMin = obb.vPos - vMax;
-//	vMax += obb.vPos;
-//}
+/// \brief Test collision between two axis-aligned bounding boxes.
+///
+/// \ingroup geometric_primitives
+template <typename T> RAVE_DEPRECATED
+inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2) {
+    return CheckAABBCollision(ab1, ab2);
+}
 
 /// \brief Test collision between two axis-aligned bounding boxes.
 ///
 /// \ingroup geometric_primitives
 template <typename T>
-inline bool AABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2)
+inline bool CheckAABBCollision(const RaveAxisAlignedBox<T>& ab1, const RaveAxisAlignedBox<T>& ab2)
 {
     RaveVector<T> v = ab1.pos-ab2.pos;
     return MATH_FABS(v.x) <= ab1.extents.x+ab2.extents.x && MATH_FABS(v.y) <= ab1.extents.y+ab2.extents.y && MATH_FABS(v.z) <= ab1.extents.z+ab2.extents.z;
 }
 
-//bool AABBOBBTest(const AABB& a, const OBB& o)
-//{
-//	DXVEC3 vd = o.vPos - a.vPos;
-//	float r01, r;
-//
-//	// test the 3 axes of the AABB
-//
-//	// A0
-//	if(a.vExtents.x + o.vExtents.x * fabsf(o.vRight.x) + o.vExtents.y * fabsf(o.vUp.x) +
-//		o.vExtents.z * fabsf(o.vDir.x) < fabsf(vd.x)) return false;
-//	// A1
-//	if(a.vExtents.y + o.vExtents.x * fabsf(o.vRight.y) + o.vExtents.y * fabsf(o.vUp.y) +
-//		o.vExtents.z * fabsf(o.vDir.y) < fabsf(vd.y)) return false;
-//	// A2
-//	if(a.vExtents.z + o.vExtents.x * fabsf(o.vRight.z) + o.vExtents.y * fabsf(o.vUp.z) +
-//		o.vExtents.z * fabsf(o.vDir.z) < fabsf(vd.z)) return false;
-//
-//	// test the 3 axes of the OBB
-//
-//	// B0
-//	if(a.vExtents.x * fabsf(o.vRight.x) + a.vExtents.y * fabsf(o.vRight.y) +
-//		a.vExtents.z * fabsf(o.vRight.z) + o.vExtents.x <
-//		fabsf(D3DXVec3Dot(&o.vRight, &vd)) ) return false;
-//	// B1
-//	if(a.vExtents.x * fabsf(o.vUp.x) + a.vExtents.y * fabsf(o.vUp.y) +
-//		a.vExtents.z * fabsf(o.vUp.z) + o.vExtents.y <
-//		fabsf(D3DXVec3Dot(&o.vUp, &vd)) ) return false;
-//	// B2
-//	if(a.vExtents.x * fabsf(o.vDir.x) + a.vExtents.y * fabsf(o.vDir.y) +
-//		a.vExtents.z * fabsf(o.vDir.z) + o.vExtents.z <
-//		fabsf(D3DXVec3Dot(&o.vDir, &vd)) ) return false;
-//
-//	// test the 9 different cross products (from different combinations of the axes)
-//	// A0 x B0   (0, -b0.z, b0.y)
-//	r01 = a.vExtents.y * fabsf(o.vRight.z) + a.vExtents.z * fabsf(o.vRight.y) +
-//		o.vExtents.y * fabsf(o.vDir.x) + o.vExtents.z * fabsf(o.vUp.x);
-//	r = fabsf( o.vRight.y * vd.z - o.vRight.z * vd.y);
-//	if(r01 < r) return false;
-//
-//	// A0 x B1 (0, -b1.z, b1.y)
-//	r01 = a.vExtents.y * fabsf(o.vUp.z) + a.vExtents.z * fabsf(o.vUp.y) +
-//		o.vExtents.x * fabsf(o.vDir.x) + o.vExtents.z * fabsf(o.vRight.x);
-//	r = fabsf( o.vUp.y * vd.z - o.vUp.z * vd.y);
-//	if(r01 < r) return false;
-//
-//	// A0 x B2 (0, -b2.z, b2.y)
-//	r01 = a.vExtents.y * fabsf(o.vDir.z) + a.vExtents.z * fabsf(o.vDir.y) +
-//		o.vExtents.x * fabsf(o.vUp.x) + o.vExtents.y * fabsf(o.vRight.x);
-//	r = fabsf( o.vDir.y * vd.z - o.vDir.z * vd.y);
-//	if(r01 < r) return false;
-//
-//	// A1 x B0 (b0.z, 0, -b0.x)
-//	r01 = a.vExtents.x * fabsf(o.vRight.z) + a.vExtents.z * fabsf(o.vRight.x) +
-//		o.vExtents.y * fabsf(o.vDir.y) + o.vExtents.z * fabsf(o.vUp.y);
-//	r = fabsf( o.vRight.z * vd.x - o.vRight.x * vd.z);
-//	if(r01 < r) return false;
-//
-//	// A1 x B1 (b1.z, 0, -b1.x)
-//	r01 = a.vExtents.x * fabsf(o.vUp.z) + a.vExtents.z * fabsf(o.vUp.x) +
-//		o.vExtents.x * fabsf(o.vDir.y) + o.vExtents.z * fabsf(o.vRight.y);
-//	r = fabsf( o.vUp.z * vd.x - o.vUp.x * vd.z);
-//	if(r01 < r) return false;
-//
-//	// A1 x B2 (b2.z, 0, -b2.x)
-//	r01 = a.vExtents.x * fabsf(o.vDir.z) + a.vExtents.z * fabsf(o.vDir.x) +
-//		o.vExtents.x * fabsf(o.vUp.y) + o.vExtents.y * fabsf(o.vRight.y);
-//	r = fabsf( o.vDir.z * vd.x - o.vDir.x * vd.z);
-//	if(r01 < r) return false;
-//
-//	// A2 x B0 (-b0.y, b0.x, 0)
-//	r01 = a.vExtents.x * fabsf(o.vRight.y) + a.vExtents.y * fabsf(o.vRight.x) +
-//		o.vExtents.y * fabsf(o.vDir.z) + o.vExtents.z * fabsf(o.vUp.z);
-//	r = fabsf( o.vRight.x * vd.y - o.vRight.y * vd.x);
-//	if(r01 < r) return false;
-//
-//	// A2 x B1 (-b1.y, b1.x, 0)
-//	r01 = a.vExtents.x * fabsf(o.vUp.y) + a.vExtents.y * fabsf(o.vUp.x) +
-//		o.vExtents.x * fabsf(o.vDir.z) + o.vExtents.z * fabsf(o.vRight.z);
-//	r = fabsf( o.vUp.x * vd.y - o.vUp.y * vd.x);
-//	if(r01 < r) return false;
-//
-//	// A2 x B2 (-b2.y, b2.x, 0)
-//	r01 = a.vExtents.x * fabsf(o.vDir.y) + a.vExtents.y * fabsf(o.vDir.x) +
-//		o.vExtents.x * fabsf(o.vUp.z) + o.vExtents.y * fabsf(o.vRight.z);
-//	r = fabsf( o.vDir.x * vd.y - o.vDir.y * vd.x);
-//	if(r01 < r) return false;
-//
-//	return true;
-//}
-//
-//bool OBBOBBTest(const OBB& o1, const OBB& o2)
-//{
-//	// convert to AABB and OBB
-//	AABB ab(DXVEC3(0.0f, 0.0f, 0.0f), o1.vExtents);
-//	OBB obb;
-//
-//	// position
-//	ab.vPos = o2.vPos - o1.vPos;
-//	obb.vPos.x = D3DXVec3Dot(&o1.vRight, &ab.vPos);
-//	obb.vPos.y = D3DXVec3Dot(&o1.vUp, &ab.vPos);
-//	obb.vPos.z = D3DXVec3Dot(&o1.vDir, &ab.vPos);
-//	ab.vPos.x = ab.vPos.y = ab.vPos.z = 0.0f;
-//
-//	obb.vRight.x = D3DXVec3Dot(&o1.vRight, &o2.vRight);
-//	obb.vRight.y = D3DXVec3Dot(&o1.vUp, &o2.vRight);
-//	obb.vRight.z = D3DXVec3Dot(&o1.vDir, &o2.vRight);
-//
-//	obb.vUp.x = D3DXVec3Dot(&o1.vRight, &o2.vUp);
-//	obb.vUp.y = D3DXVec3Dot(&o1.vUp, &o2.vUp);
-//	obb.vUp.z = D3DXVec3Dot(&o1.vDir, &o2.vUp);
-//
-//	obb.vDir.x = D3DXVec3Dot(&o1.vRight, &o2.vDir);
-//	obb.vDir.y = D3DXVec3Dot(&o1.vUp, &o2.vDir);
-//	obb.vDir.z = D3DXVec3Dot(&o1.vDir, &o2.vDir);
-//
-//	obb.vExtents = o2.vExtents;
-//
-//	return AABBOBBTest(ab, obb);
-//}
+/// \brief Test collision between two oriented bounding boxes.
+template <typename T>
+inline bool CheckOBBCollision(const RaveOrientedBox<T>& obb1, const RaveOrientedBox<T>& obb2)
+{
+    const RaveTransform<T> relativeTransform = obb1.transform.inverse() * obb2.transform;
+    return CheckBoxAtOriginAndOBBCollision(obb1.extents, RaveOrientedBox<T>(relativeTransform, obb2.extents));
+}
+
+/// \brief Test collision between an axis-aligned bounding box and an oriented bounding box.
+template <typename T>
+inline bool CheckAABBAndOBBCollision(const RaveAxisAlignedBox<T>& ab, const RaveOrientedBox<T>& obb)
+{
+    const RaveTransform<T> relativeTransform(obb.transform.rot, obb.transform.trans - ab.pos);
+    return CheckBoxAtOriginAndOBBCollision(ab.extents, RaveOrientedBox<T>(relativeTransform, obb.extents));
+}
+
+/// \brief Test collision between an axis-aligned bounding box located at world origin and an oriented bounding box.
+/// using Separating Axis Theorem.
+/// S. Gottschalk, M.C. Lin, D. Manocha. OBBTree: A Hierarchical Structure for Rapid Interference Detection. In Proceedings of SIGGRAPH '96.
+template <typename T>
+inline bool CheckBoxAtOriginAndOBBCollision(const RaveVector<T>& extents, const RaveOrientedBox<T>& obb)
+{
+    const RaveVector<T>& relativeCenter = obb.transform.trans;
+    const RaveTransformMatrix<T> relativeRotationMatrix = matrixFromQuat(obb.transform.rot);
+    // rotation matrix
+    // 0 1 2
+    // 4 5 6
+    // 8 9 10
+    const std::array<RaveVector<T>, 3> relativeCoordinateAxes = {
+        RaveVector<T>(relativeRotationMatrix.m[0], relativeRotationMatrix.m[4], relativeRotationMatrix.m[8]),
+        RaveVector<T>(relativeRotationMatrix.m[1], relativeRotationMatrix.m[5], relativeRotationMatrix.m[9]),
+        RaveVector<T>(relativeRotationMatrix.m[2], relativeRotationMatrix.m[6], relativeRotationMatrix.m[10])
+    };
+    const std::array<RaveVector<T>, 3> absRelativeCoordinateAxes = {
+        RaveVector<T>(MATH_FABS(relativeCoordinateAxes[0].x), MATH_FABS(relativeCoordinateAxes[0].y), MATH_FABS(relativeCoordinateAxes[0].z)),
+        RaveVector<T>(MATH_FABS(relativeCoordinateAxes[1].x), MATH_FABS(relativeCoordinateAxes[1].y), MATH_FABS(relativeCoordinateAxes[1].z)),
+        RaveVector<T>(MATH_FABS(relativeCoordinateAxes[2].x), MATH_FABS(relativeCoordinateAxes[2].y), MATH_FABS(relativeCoordinateAxes[2].z))
+    };
+
+    // centerDistanceInSeparatingAxis = |dot(separatingAxis, relativeCenter)|
+    // box1ExtentsInSeparatingAxis = dot(|separatingAxis|, extents)
+    // box2ExtentsInSeparatingAxis = dot(|separatingAxis in box2 frame|, obb.extents) = dot(|relativeRotationMatrix^T separatingAxis|, obb.extents)
+
+    // 3 separating axes from box1 represented by extents: [1, 0, 0]^T, [0, 1, 0]^T, [0, 0, 1]^T
+    for (size_t iAxis = 0; iAxis < 3; ++iAxis) {
+        const T centerDistanceInSeparatingAxis = MATH_FABS(relativeCenter[iAxis]);
+        const T box1ExtentsInSeparatingAxis = extents[iAxis]; // always positive
+        T box2ExtentsInSeparatingAxis = 0;
+        for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
+            box2ExtentsInSeparatingAxis += absRelativeCoordinateAxes[iXYZ][iAxis] * obb.extents[iXYZ];
+        }
+        if (centerDistanceInSeparatingAxis > box1ExtentsInSeparatingAxis + box2ExtentsInSeparatingAxis) {
+            return false;
+        }
+    }
+    // 3 separating axes from box2 represented by obb
+    for (size_t iAxis = 0; iAxis < 3; ++iAxis) {
+        const T centerDistanceInSeparatingAxis = MATH_FABS(relativeCoordinateAxes[iAxis].dot3(relativeCenter));
+        T box1ExtentsInSeparatingAxis = 0;
+        for (size_t iXYZ = 0; iXYZ < 3; ++iXYZ) {
+            box1ExtentsInSeparatingAxis += absRelativeCoordinateAxes[iAxis][iXYZ] * extents[iXYZ];
+        }
+        const T box2ExtentsInSeparatingAxis = obb.extents[iAxis];
+        if (centerDistanceInSeparatingAxis > box1ExtentsInSeparatingAxis + box2ExtentsInSeparatingAxis) {
+            return false;
+        }
+    }
+
+    // 9 separating axes
+    // relativeRotationMatrix^T separatingAxis can be simplified even for these 9 separating axes using that the rotation matrix of box1 is an identity matrix. It requires to read the original paper to understand this optimization.
+    for (size_t iAxisForBox1 = 0; iAxisForBox1 < 3; ++iAxisForBox1) {
+        for (size_t iAxisForBox2 = 0; iAxisForBox2 < 3; ++iAxisForBox2) {
+            T centerDistanceInSeparatingAxis = 0;
+            T box1ExtentsInSeparatingAxis = 0;
+            if (iAxisForBox1 == 0) { // 1st element of separatingAxis is 0 when iAxisForBox1 is 0
+                centerDistanceInSeparatingAxis =    -relativeCoordinateAxes[iAxisForBox2].z *    relativeCenter.y +    relativeCoordinateAxes[iAxisForBox2].y * relativeCenter.z;
+                box1ExtentsInSeparatingAxis    =  absRelativeCoordinateAxes[iAxisForBox2].z *           extents.y + absRelativeCoordinateAxes[iAxisForBox2].y *        extents.z;
+            }
+            else if (iAxisForBox1 == 1) { // 2nd element of separatingAxis is 0 when iAxisForBox1 is 1
+                centerDistanceInSeparatingAxis =    -relativeCoordinateAxes[iAxisForBox2].x *    relativeCenter.z +    relativeCoordinateAxes[iAxisForBox2].z * relativeCenter.x;
+                box1ExtentsInSeparatingAxis    =  absRelativeCoordinateAxes[iAxisForBox2].x *           extents.z + absRelativeCoordinateAxes[iAxisForBox2].z *        extents.x;
+            }
+            else if (iAxisForBox1 == 2) { // 3rd element of separatingAxis is 0 when iAxisForBox1 is 2
+                centerDistanceInSeparatingAxis =    -relativeCoordinateAxes[iAxisForBox2].y *    relativeCenter.x +    relativeCoordinateAxes[iAxisForBox2].x * relativeCenter.y;
+                box1ExtentsInSeparatingAxis    =  absRelativeCoordinateAxes[iAxisForBox2].y *           extents.x + absRelativeCoordinateAxes[iAxisForBox2].x *        extents.y;
+            }
+            centerDistanceInSeparatingAxis = MATH_FABS(centerDistanceInSeparatingAxis);
+
+            T box2ExtentsInSeparatingAxis = 0;
+            if (iAxisForBox2 == 0) { // 1st element of relativeRotationMatrix^T separatingAxis is 0 when iAxisForBox2 is 0
+                box2ExtentsInSeparatingAxis =       absRelativeCoordinateAxes[2][iAxisForBox1] *    obb.extents.y + absRelativeCoordinateAxes[1][iAxisForBox1] *   obb.extents.z;
+            }
+            else if (iAxisForBox2 == 1) { // 2nd element of relativeRotationMatrix^T separatingAxis is 0 when iAxisForBox2 is 1
+                box2ExtentsInSeparatingAxis =       absRelativeCoordinateAxes[0][iAxisForBox1] *    obb.extents.z + absRelativeCoordinateAxes[2][iAxisForBox1] *   obb.extents.x;
+            }
+            else if (iAxisForBox2 == 2) { // 3rd element of relativeRotationMatrix^T separatingAxis is 0 when iAxisForBox2 is 2
+                box2ExtentsInSeparatingAxis =       absRelativeCoordinateAxes[1][iAxisForBox1] *    obb.extents.x + absRelativeCoordinateAxes[0][iAxisForBox1] *   obb.extents.y;
+            }
+            if (centerDistanceInSeparatingAxis > box1ExtentsInSeparatingAxis + box2ExtentsInSeparatingAxis) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
 
 //AABB AABBUnion(const AABB& ab1, AABB& ab2)
 //{

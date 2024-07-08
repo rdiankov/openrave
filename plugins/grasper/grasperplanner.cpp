@@ -36,13 +36,16 @@ public:
     GrasperPlanner(EnvironmentBasePtr penv, std::istream& sinput) : PlannerBase(penv), _report(new CollisionReport()) {
         __description = ":Interface Authors: Rosen Diankov, Dmitry Berenson\n\nSimple planner that performs a follow and squeeze operation of a robotic hand.";
     }
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _robot = pbase;
 
         if( _robot->GetActiveDOF() <= 0 ) {
-            return false;
+            std::stringstream ss;
+            ss << "env=" << GetEnv()->GetNameId()
+               << " robot \"" << _robot->GetName() << "\" has active dof(" << _robot->GetActiveDOF() << ") <= 0";
+            return PlannerStatus(ss.str(), PS_Failed);
         }
 
         _parameters.reset(new GraspParameters(GetEnv()));
@@ -61,7 +64,7 @@ public:
             _vAvoidLinkGeometry.push_back(plink);
         }
 
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
     PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
@@ -564,23 +567,44 @@ public:
             bcollision = GetEnv()->CheckCollision(plink,_report);
         }
         if( bcollision ) {
-            if( (!!_report->plink1 && _report->plink1->GetParent() == _parameters->targetbody) || (!!_report->plink2 && _report->plink2->GetParent() == _parameters->targetbody) ) {
-                ct |= CT_TargetCollision;
-            }
-            else {
-                ct |= CT_EnvironmentCollision;
-            }
-            FOREACH(itavoid,_vAvoidLinkGeometry) {
-                if(( *itavoid == _report->plink1) ||( *itavoid == _report->plink2) ) {
-                    ct |= CT_AvoidLinkHit;
-                    break;
-                }
-            }
+            for(int icollision = 0; icollision < _report->nNumValidCollisions; ++icollision ) {
+                const CollisionPairInfo& cpinfo = _report->vCollisionInfos[icollision];
 
-            if( _parameters->bonlycontacttarget ) {
-                // check if hit anything besides the target
-                if( (!!_report->plink1 &&( _report->plink1->GetParent() != plink->GetParent()) &&( _report->plink1->GetParent() != _parameters->targetbody) ) || (!!_report->plink2 &&( _report->plink2->GetParent() != plink->GetParent()) &&( _report->plink2->GetParent() != _parameters->targetbody) ) ) {
-                    ct |= CT_AvoidLinkHit;
+                bool bTargetCollision1 = false, bTargetCollision2 = false;
+                if( !!_parameters->targetbody ) {
+                    const std::string& targetname = _parameters->targetbody->GetName();
+                    bTargetCollision1 = cpinfo.CompareFirstBodyName(targetname) == 0;
+                    bTargetCollision2 = cpinfo.CompareSecondBodyName(targetname) == 0;
+                }
+                if( bTargetCollision1 || bTargetCollision2 ) {
+                    ct |= CT_TargetCollision;
+                }
+                else {
+                    ct |= CT_EnvironmentCollision;
+                }
+
+                if( cpinfo.CompareFirstBodyName(_robot->GetName()) == 0 ) {
+                    for(KinBody::LinkPtr& pavoidlink : _vAvoidLinkGeometry) {
+                        if( cpinfo.CompareFirstLinkName(pavoidlink->GetName()) == 0 ) {
+                            ct |= CT_AvoidLinkHit;
+                            break;
+                        }
+                    }
+                }
+                if( cpinfo.CompareSecondBodyName(_robot->GetName()) == 0 ) {
+                    for(KinBody::LinkPtr& pavoidlink : _vAvoidLinkGeometry) {
+                        if( cpinfo.CompareSecondLinkName(pavoidlink->GetName()) == 0 ) {
+                            ct |= CT_AvoidLinkHit;
+                            break;
+                        }
+                    }
+                }
+
+                if( _parameters->bonlycontacttarget ) {
+                    // check if hit anything besides the target
+                    if( (cpinfo.CompareFirstBodyName(plink->GetParent()->GetName()) != 0 && !bTargetCollision1) || (cpinfo.CompareSecondBodyName(plink->GetParent()->GetName()) != 0 && !bTargetCollision2) ) {
+                        ct |= CT_AvoidLinkHit;
+                    }
                 }
             }
 

@@ -16,9 +16,10 @@ from openravepy import *
 from numpy import *
 from optparse import OptionParser
 import os, sys, operator
-import scipy
+# import scipy
+import imageio
 import shutil
-import pysvn
+# import pysvn
 from openravepy import ikfast
 
 imagedir = 'images/robots'
@@ -73,6 +74,8 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
         else:
             print('processing %s'%robotname)
             env.AddRobot(robot)
+            roboturl = robot.GetXMLFilename()
+            '''
             try:
                 entry = pysvn.Client().info(robot.GetXMLFilename())
                 roboturl = str(entry.url)
@@ -83,6 +86,7 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
                     roboturl = str(entry.url)
                 except pysvn.ClientError:
                     pass
+            '''
                 
             # transform the robot so we don't render it at its axis aligned (white robots completely disappear)
             #robot.SetTransform(matrixFromQuat(quatRotateDirection([-1,0,0],[-1,1,0.5])))
@@ -109,7 +113,7 @@ def buildrobot(outputdir, env, robotfilename, robotstats,buildoptions):
             Ix = viewer.GetCameraImage(width=width,height=height,transform=Tx,K=K)
             Ty=transformLookat(lookat=zeros(3),camerapos=array([0.0,-1.0,0])*L,cameraup=[0,0,-1])
             Iy = viewer.GetCameraImage(width=width,height=height,transform=Ty,K=K)
-            scipy.misc.pilutil.imsave(os.path.join(imagedir,imagename),hstack([Iall,Ix,Iy]))
+            imageio.imsave(os.path.join(imagedir,imagename),hstack([Iall,Ix,Iy]))
 
     print('writing %s'%robotname)
     robotlink = 'robot-'+robotname
@@ -370,4 +374,6 @@ if __name__ == "__main__":
         viewer.SendCommand('SetFiguresInCamera 1')
         build(allstats,buildoptions,options.outputdir,env)
     finally:
-        RaveDestroy()
+        print('ikdatabase built')
+        exit()
+        # RaveDestroy()

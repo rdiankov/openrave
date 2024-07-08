@@ -257,9 +257,14 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
 
     // add the message texts
     SoSeparator* pmsgsep = new SoSeparator();
-    SoTranslation* pmsgtrans0 = new SoTranslation();
-    pmsgtrans0->translation.setValue(SbVec3f(-0.978f,0.93f,0));
-    pmsgsep->addChild(pmsgtrans0);
+
+    _messageFont = new SoFont();
+    _messageFont->size = 10;
+    pmsgsep->addChild(_messageFont);
+
+    _messageBaseTranslation = new SoTranslation();
+    _messageBaseTranslation->translation.setValue(SbVec3f(-0.978f,0.874f,0));
+    pmsgsep->addChild(_messageBaseTranslation);
     SoBaseColor* pcolor0 = new SoBaseColor();
     pcolor0->rgb.setValue(0.0f,0.0f,0.0f);
     pmsgsep->addChild(pcolor0);
@@ -267,7 +272,7 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     pmsgsep->addChild(_messageNodes[0]);
 
     _messageShadowTranslation = new SoTranslation();
-    _messageShadowTranslation->translation.setValue(SbVec3f(-0.002f,0.032f,0));
+    _messageShadowTranslation->translation.setValue(SbVec3f(-0.002f,0.0540f,0));
     pmsgsep->addChild(_messageShadowTranslation);
     SoBaseColor* pcolor1 = new SoBaseColor();
     pcolor1->rgb.setValue(0.99f,0.99f,0.99f);
@@ -275,7 +280,11 @@ void QtCoinViewer::_InitConstructor(std::istream& sinput)
     _messageNodes[1] = new SoText2();
     pmsgsep->addChild(_messageNodes[1]);
 
-    _ivRoot->addChild(pmsgsep);
+    _messageSwitch = new SoSwitch();
+    _messageSwitch->whichChild.setValue(SO_SWITCH_ALL);
+    _messageSwitch->addChild(pmsgsep);
+
+    _ivRoot->addChild(_messageSwitch);
     _ivRoot->addChild(_ivCamera);
 
     SoEventCallback * ecb = new SoEventCallback;
@@ -633,6 +642,114 @@ void QtCoinViewer::SetName(const string& ptitle)
 void QtCoinViewer::_SetName(const string& ptitle)
 {
     setWindowTitle(ptitle.c_str());
+}
+
+void QtCoinViewer::SetUserText(const string& userText)
+{
+    _userText = userText;
+}
+
+class SetTextSizeMessage : public QtCoinViewer::EnvMessage
+{
+public:
+    SetTextSizeMessage(QtCoinViewerPtr pviewer, void** ppreturn, double size)
+        : EnvMessage(pviewer, ppreturn, false), _textSize(size) {
+    }
+
+    virtual void viewerexecute() {
+        QtCoinViewerPtr pviewer = _pviewer.lock();
+        if( !pviewer ) {
+            return;
+        }
+        pviewer->_SetTextSize(_textSize);
+        EnvMessage::viewerexecute();
+    }
+
+private:
+    double _textSize;
+};
+
+void QtCoinViewer::SetTextSize(double size)
+{
+    if (_timerSensor->isScheduled() && _bUpdateEnvironment) {
+        EnvMessagePtr pmsg(new SetTextSizeMessage(shared_viewer(), (void**)NULL, size));
+        pmsg->callerexecute(false);
+    }
+}
+
+void QtCoinViewer::_SetTextSize(double size)
+{
+    if ( size >= 0 ) {
+        // TODO: use a font that does not rely on hardcoded breakpoints
+        // move down to next text size breakpoint so that message shadow aligns nicely
+        _messageFont->size = _GetTextBaseSize(size);
+        // hide HUD text if requested size is 0
+        _messageSwitch->whichChild.setValue(size == 0 ? SO_SWITCH_NONE : SO_SWITCH_ALL);
+        // adjust the text offsets
+        _messageBaseTranslation->translation.setValue(_GetMessageBaseTranslation());
+        _messageShadowTranslation->translation.setValue(_GetMessageShadowTranslation());
+    }
+}
+
+// determines a text size that works best with the default qtcoin font (one of 10px, 14px, 18px, 26px)
+// \param size requested text size
+double QtCoinViewer::_GetTextBaseSize(double size)
+{
+    if (size < 14.0) {
+        return 10.0;
+    }
+    if (size < 18.0) {
+        return 14.0;
+    }
+    if (size < 26.0) {
+        return 18.0;
+    }
+    return 26.0;
+}
+
+// based on the current font size of HUD text, computes the 3D offset of the black message "base"
+// node relative to the center of the text plane such that the message aligns nicely with
+// the upper left corner across all preset text sizes
+SbVec3f QtCoinViewer::_GetMessageBaseTranslation()
+{
+    SbViewportRegion v = _pviewer->getViewportRegion();
+    float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
+    float size = _messageFont->size.getValue();
+    // magic window-size-independent constants that ensure that all preset text sizes
+    // are roughly vertically aligned by the top of the first line
+    if (size < 14.0f) {
+        return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.07f*fhratio),0);
+    }
+    if (size < 18.0f) {
+        return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.082f*fhratio),0);
+    }
+    if (size < 26.0f) {
+        return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.106f*fhratio),0);
+    }
+    return SbVec3f(-1.0f+(0.022f*fwratio),1.0f-(0.126f*fhratio),0);
+}
+
+// based on the current font size of HUD text, computes the 3D offset of the white message "shadow"
+// node relative to the message "base" node such that the shadow lies roughly one pixel leftward
+// and upward of the base message, helping to create a shading effect that improves overall HUD text
+// visibility
+SbVec3f QtCoinViewer::_GetMessageShadowTranslation()
+{
+    SbViewportRegion v = _pviewer->getViewportRegion();
+    float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
+    float size = _messageFont->size.getValue();
+    // magic window-size-independent constants that ensure that the message shadow
+    // sits roughly one pixel above the base message text
+    if (size < 14.0f) {
+        return SbVec3f(-0.002f*fwratio,(0.032f*fhratio)*(size/10.0f),0);
+    }
+    if (size < 18.0f) {
+        return SbVec3f(-0.002f*fwratio,(0.0448f*fhratio)*(size/14.0f),0);
+    }
+    if (size < 26.0f) {
+        return SbVec3f(-0.002f*fwratio,(0.0540f*fhratio)*(size/18.0f),0);
+    }
+    return SbVec3f(-0.002f*fwratio,(0.0777f*fhratio)*(size/26.0f),0);
 }
 
 bool QtCoinViewer::LoadModel(const string& pfilename)
@@ -2791,10 +2908,13 @@ void QtCoinViewer::AdvanceFrame(bool bForward)
             _pdragger->GetMessage(ss);
         }
 
-        // adjust the shadow text
-        SbViewportRegion v = _pviewer->getViewportRegion();
-        float fwratio = 964.0f/v.getWindowSize()[0], fhratio = 688.0f/v.getWindowSize()[1];
-        _messageShadowTranslation->translation.setValue(SbVec3f(-0.002f*fwratio,0.032f*fhratio,0));
+        if (_userText.size() > 0 ) {
+            ss << _userText << endl;
+        }
+
+        // adjust the text offsets
+        _messageBaseTranslation->translation.setValue(_GetMessageBaseTranslation());
+        _messageShadowTranslation->translation.setValue(_GetMessageShadowTranslation());
 
         // search for all new lines
         string msg = ss.str();

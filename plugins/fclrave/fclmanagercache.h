@@ -141,6 +141,11 @@ public:
         return _lastSyncTimeStamp;
     }
 
+    inline bool IsValid() const
+    {
+        return !_ptrackingbody.expired(); // expired is slightly faster than lock
+    }
+
     void PrintStatus(uint32_t debuglevel)
     {
         if( IS_DEBUGLEVEL(debuglevel) ) {
@@ -209,6 +214,9 @@ private:
     std::vector<int> _vecAttachedEnvBodyIndicesCache;
 
     bool _bTrackActiveDOF; ///< if true and _ptrackingbody is valid, then should be tracking the active dof of the _ptrackingbody
+
+    /// Scratch buffer for use in EnsureBodies. Cached to reduce allocations on repeat calls.
+    std::vector<CollisionObjectPtr> _ensureBodiesCollisionObjectsCache;
 
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
     void SaveCollisionObjectDebugInfos() {

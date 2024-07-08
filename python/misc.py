@@ -17,6 +17,7 @@ from __future__ import with_statement # for python 2.5
 from . import openravepy_int, openravepy_ext, OpenRAVEException
 import os.path
 from sys import platform as sysplatformname
+from sys import version_info
 from sys import stdout
 import numpy
 import six
@@ -71,9 +72,12 @@ def InitOpenRAVELogging(stream=stdout):
     log.setLevel(levelmap[openravepy_int.RaveGetDebugLevel()&0xffff])
     if len(log.handlers) == 0:
         try:
-            import codecs
-            colorize=__import__('logutils.colorize',fromlist=['colorize'])
-            handler = colorize.ColorizingStreamHandler(codecs.getwriter('utf-8')(stream))
+            from logutils import colorize
+            if stream.encoding is not None and version_info >= (2, 7):
+                handler = colorize.ColorizingStreamHandler(stream)
+            else:
+                import codecs
+                handler = colorize.ColorizingStreamHandler(codecs.getwriter('utf-8')(stream))
             handler.level_map[logging.DEBUG] =(None, 'green', False)
             handler.level_map[logging.INFO] = (None, None, False)
             handler.level_map[logging.WARNING] = (None, 'yellow', False)
@@ -103,7 +107,7 @@ def SetViewerUserThread(env,viewername,userfn):
         userfn()
     # add the viewer before starting the user function
     env.Add(viewer)
-    threading = __import__('threading')
+    import threading
     Thread = threading.Thread
     def localuserfn(userfn,viewer):
         try:
@@ -314,15 +318,16 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
         colors = numpy.minimum(1.0, numpy.maximum(0.0, colors + numpy.tile(coloradd,(len(colors),1))))
     return env.drawlinelist(numpy.array([T[0:3,3],T[0:3,3]+T[0:3,0]*dist,T[0:3,3],T[0:3,3]+T[0:3,1]*dist,T[0:3,3],T[0:3,3]+T[0:3,2]*dist]),linewidth,colors=colors)
 
-def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0]),color=numpy.array([0,0,0,1])):
+def DrawLabel(env,label="Label",worldPosition=numpy.array([0,0,0]),color=numpy.array([0,0,0,1]),height=0.05):
     """draws a string label at position specified by worldPosition.
     
     :param env: Environment
     :param label: string to be used in the label
     :param worldPosition: a 3-element vector for positional offset relative to the root world transform
     :param color: a 4-element vector defining the color of the label
+    :param height: height of characters
     """
-    return env.drawlabel(label, worldPosition, color)
+    return env.drawlabel(label, worldPosition, color, height)
 
 def DrawIkparam(env,ikparam,dist=1.0,linewidth=1,coloradd=None):
     """draws an IkParameterization
@@ -583,7 +588,7 @@ class SpaceSamplerExtra:
             mult = 1
             for i in range(maxiter):
                 oddbits += (indices&1)*mult
-                evenbits += mult*((indices&2)/2)
+                evenbits += mult*((indices&2)//2)
                 indices >>= 2
                 mult *= 2
             self.faceindices = [oddbits+evenbits,oddbits-evenbits]

@@ -53,12 +53,12 @@
 #include <algorithm>
 #include <complex>
 
-#define _MAKEDATA(n) __itend__##n
+#define _MAKEDATA(n) __itend__ ## n
 #define MAKEDATA(n) _MAKEDATA(n)
 #define MAKEVAR MAKEDATA(__LINE__)
 
-#define FOREACH(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; (it)++)
-#define FOREACH_NOINC(it, v) for(typeof((v).begin())it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; )
+#define FOREACH(it, v) for(typeof((v).begin()) it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; (it)++)
+#define FOREACH_NOINC(it, v) for(typeof((v).begin()) it = (v).begin(), MAKEVAR=(v).end(); it != MAKEVAR; )
 
 #define FOREACHC FOREACH
 #define FOREACHC_NOINC FOREACH_NOINC
@@ -139,7 +139,7 @@ namespace OpenRAVE {
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);
 static const dReal g_fEpsilonJointLimit = RavePow(g_fEpsilon,0.8);
-static const dReal g_fEpsilonEvalJointLimit = RavePow(g_fEpsilon,0.7);
+static const dReal g_fEpsilonEvalJointLimit = RavePow(g_fEpsilon,0.65);
 
 template <typename T>
 class TransformSaver
@@ -510,7 +510,7 @@ void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<
             }
         }
     }
-    
+
     // here we allow items with empty id to be created because
     // when we load things from json, some id could be missing on file
     // and for the partial update case, the id should be non-empty
@@ -670,6 +670,8 @@ inline void CopyRapidJsonDoc(const rapidjson::Value& source, rapidjson::Document
     dest = rapidjson::Document(); // to reset the allocator
     dest.CopyFrom(source, dest.GetAllocator());
 }
+
+OPENRAVE_API int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime);
 
 } // end OpenRAVE namespace
 

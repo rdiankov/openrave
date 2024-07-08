@@ -21,7 +21,7 @@
 #include <openrave/utils.h>
 
 namespace openravepy {
-class PyStateRestoreContextBase
+class OPENRAVEPY_API PyStateRestoreContextBase
 {
 public:
     PyStateRestoreContextBase() {
@@ -40,7 +40,7 @@ public:
 
 /// \brief simple wrapper around a save state that manages  enter/exit scope
 template <typename T, typename U>
-class PyStateRestoreContext : public PyStateRestoreContextBase
+class OPENRAVEPY_API PyStateRestoreContext : public PyStateRestoreContextBase
 {
     T _state;
 public:
@@ -85,10 +85,10 @@ public:
     }
 };
 
-class PyKinBody : public PyInterfaceBase
+class OPENRAVEPY_API PyKinBody : public PyInterfaceBase
 {
 public:
-    class PyGrabbedInfo
+    class OPENRAVEPY_API PyGrabbedInfo
     {
 public:
         PyGrabbedInfo();
@@ -194,7 +194,7 @@ public:
     bool InitFromGeometries(py::object ogeometries, const std::string& uri=std::string());
     void InitFromLinkInfos(py::object olinkinfos, const std::string& uri=std::string());
     bool Init(py::object olinkinfos, py::object ojointinfos, const std::string& uri=std::string());
-    void SetLinkGeometriesFromGroup(const std::string& geomname);
+    void SetLinkGeometriesFromGroup(const std::string& geomname, const bool propagateGroupNameToSelfCollisionChecker);
     void SetLinkGroupGeometries(const std::string& geomname, py::object olinkgeometryinfos);
     void SetName(const std::string& name);
     py::object GetName() const;
@@ -264,6 +264,7 @@ public:
     py::object ComputeAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
     py::object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, py::object otransform, bool bEnabledOnlyLinks=false);
     py::object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false);
+    dReal GetMass() const;
     py::object GetCenterOfMass() const;
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -329,6 +330,7 @@ public:
     int DoesAffect(int jointindex, int linkindex ) const;
     int DoesDOFAffectLink(int dofindex, int linkindex ) const;
     py::object GetURI() const;
+    py::object GetReferenceURI() const;
     py::object GetNonAdjacentLinks() const;
     py::object GetNonAdjacentLinks(int adjacentoptions) const;
     void SetAdjacentLinks(int linkindex0, int linkindex1);
@@ -341,8 +343,10 @@ public:
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
     py::object GetAssociatedFileEntries() const;
+    int64_t GetLastModifiedAtUS() const;
+    int64_t GetRevisionId() const;
 
-    py::object ExtractInfo() const;
+    py::object ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
 
     PyInterfaceBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);

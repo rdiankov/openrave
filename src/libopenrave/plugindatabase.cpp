@@ -244,7 +244,11 @@ void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool 
     if (fs::is_empty(path)) {
         return;
     } else if (fs::is_directory(path)) {
-        for (const auto entry : fs::directory_iterator(path, fs::directory_options::skip_permission_denied)) {
+#if BOOST_VERSION >= 107200
+        for (const fs::directory_entry& entry : fs::directory_iterator(path, fs::directory_options::skip_permission_denied)) {
+#else
+        for (const fs::directory_entry& entry : fs::directory_iterator(path)) {
+#endif
             if (fs::is_directory(entry) && recurse) {
                 _LoadPluginsFromPath(entry.path().string(), true);
             } else {

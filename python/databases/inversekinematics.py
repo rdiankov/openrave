@@ -133,7 +133,7 @@ Reference
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database inversekinematics --help
+.. shell-block:: python3 -m openravepy --database inversekinematics --help
 
 Class Definitions
 -----------------
@@ -158,6 +158,9 @@ from os import getcwd, remove
 import distutils
 from distutils import ccompiler
 from optparse import OptionParser
+import six
+
+from itertools import permutations, combinations
 
 try:
     import cPickle as pickle
@@ -167,11 +170,12 @@ except:
 import logging
 log = logging.getLogger('openravepy.'+__name__.split('.',2)[-1])
 
+@six.python_2_unicode_compatible
 class InverseKinematicsError(Exception):
     def __init__(self,parameter=u''):
-        self.parameter = unicode(parameter)
+        self.parameter = parameter
         
-    def __unicode__(self):
+    def __str__(self):
         s = u'Inverse Kinematics Error\n%s'%self.parameter
         return s
         
@@ -241,11 +245,20 @@ class InverseKinematicsModel(DatabaseGenerator):
                     raise InverseKinematicsError(u'link %s part of IK chain cannot be declared static'%link)
         try:
             self.ikfast = __import__('openravepy.ikfast',fromlist=['openravepy'])
+            self.ikfastVersion = self.ikfast.__version__
         except ImportError as e:
-            log.warn('failed to import ikfast, so reverting to older version: %s',e)
-            self.ikfast = __import__('openravepy.ikfast_sympy0_6',fromlist=['openravepy'])
-        for handler in log.handlers:
-            self.ikfast.log.addHandler(handler)
+            try:
+                log.warn('failed to import ikfast, so reverting to older version: %s',e)
+                self.ikfast = __import__('openravepy.ikfast_sympy0_6',fromlist=['openravepy'])
+                self.ikfastVersion = self.ikfast.__version__
+            except ImportError:
+                log.warn('ikfast module is not available, cannot generate new solver (existing solvers can be still loaded)')
+                self.ikfast = None
+                self.ikfastVersion = '0x1000004c'
+
+        if self.ikfast is not None:
+            for handler in log.handlers:
+                self.ikfast.log.addHandler(handler)
         self.ikfastproblem = RaveCreateModule(self.env,'ikfast')
         if self.ikfastproblem is not None:
             self.env.Add(self.ikfastproblem)
@@ -347,7 +360,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             return True
         return self.setrobot(freeinc,*args,**kwargs)
     def getversion(self):
-        return int(self.ikfast.__version__, 16)
+        return int(self.ikfastVersion, 16)
     def getikname(self):
         return 'ikfast ikfast.%s.%s.%s'%(self.manip.GetInverseKinematicsStructureHash(self.iktype),str(self.iktype),self.manip.GetName())
 
@@ -561,7 +574,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         index = -1
         allfreeindices = None
         while True:
-            basename = 'ikfast%s.%s.%s.'%(self.ikfast.__version__,self.iktype,platform.machine()) + '_'.join(str(ind) for ind in sorted(solveindices))
+            basename = 'ikfast%s.%s.%s.'%(self.ikfastVersion,self.iktype,platform.machine()) + '_'.join(str(ind) for ind in sorted(solveindices))
             if len(freeindices)>0:
                 basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
             filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetInverseKinematicsStructureHash(self.iktype),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
@@ -572,7 +585,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             dofexpected = IkParameterization.GetDOFFromType(self.iktype)
             if allfreeindices is None:
                 if self.manip.GetArmDOF() > dofexpected:
-                    allfreeindices = [f for f in self.ikfast.permutations(self.manip.GetArmIndices(),self.manip.GetArmDOF()-dofexpected)]
+                    allfreeindices = [f for f in permutations(self.manip.GetArmIndices(),self.manip.GetArmDOF()-dofexpected)]
                 else:
                     allfreeindices = []
             if index >= len(allfreeindices):
@@ -615,7 +628,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 freeindicesstrings.append(['',[]])
 
             for freeindicesstring, fi in freeindicesstrings:
-                basename = 'ikfast%s.%s.'%(self.ikfast.__version__,self.iktype)
+                basename = 'ikfast%s.%s.'%(self.ikfastVersion,self.iktype)
                 basename += '_'.join(str(ind) for ind in sorted(solveindices))
                 basename += freeindicesstring
                 basename += '.pp'
@@ -627,7 +640,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             # user did not specify a set of freeindices, so the expected behavior is to search for the next loadable one
             index += 1
             dofexpected = IkParameterization.GetDOFFromType(self.iktype)
-            allfreeindices = [f for f in self.ikfast.combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
+            allfreeindices = [f for f in combinations(self.manip.GetArmIndices(),len(self.manip.GetArmIndices())-dofexpected)]
             if index >= len(allfreeindices):
                 break
             freeindices = allfreeindices[index]
@@ -708,6 +721,8 @@ class InverseKinematicsModel(DatabaseGenerator):
         :param ikfastmaxcasedepth: the max level of degenerate cases to solve for
         :param avoidPrismaticAsFree: if True for redundant manipulators, will attempt to avoid setting prismatic joints as free joints.
         """
+        if self.ikfast is None:
+            raise RuntimeError('ikfast is not available, cannot generate new iksolver')
         self.iksolver = None
         if iktype is not None:
             self.iktype = iktype

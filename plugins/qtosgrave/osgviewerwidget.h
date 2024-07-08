@@ -40,6 +40,12 @@ using namespace OpenRAVE;
 class OpenRAVETracker;
 class OpenRAVETrackball;
 
+const float MAX_CAMERA_DISTANCE = 1e10;
+
+inline float ClampDistance(float distance) {
+    return (distance > MAX_CAMERA_DISTANCE) ? MAX_CAMERA_DISTANCE : distance;
+}
+
 /// \brief  Class of the openscene graph 3d viewer
 class QOSGViewerWidget : public QOpenGLWidget
 {
@@ -47,7 +53,7 @@ public:
 
     QOSGViewerWidget(EnvironmentBasePtr penv, const std::string &userdatakey,
                      const boost::function<bool(int)> &onKeyDown = boost::function<bool(int)>(),
-                     double metersinunit = 1, QWidget *parent = 0);
+                     QWidget *parent = 0);
 
     virtual ~QOSGViewerWidget();
 
@@ -127,6 +133,9 @@ public:
 
     /// \brief called when the qt window size changes
     void SetViewport(int width, int height);
+
+    /// \brief sets the HUD text size, scaled off of devicePixelRatio
+    void SetHUDTextSize(double size);
 
     /// \brief gets the screen offset of HUD text (default with no control buttons is (10.0, 0.0))
     osg::Vec2 GetHUDTextOffset();
@@ -226,9 +235,9 @@ protected:
     void _GetRAVEEnvironmentUpVector(osg::Vec3d& upVector);
 
     /// \brief Create Open GL Context
-    osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h, double metersinunit);
+    osg::ref_ptr<osg::Camera> _CreateCamera(int x, int y, int w, int h);
 
-    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h, double metersinunit);
+    osg::ref_ptr<osg::Camera> _CreateHUDCamera(int x, int y, int w, int h);
 
 
     /// \brief Find joint into OpenRAVE core
@@ -266,7 +275,7 @@ protected:
 
     /// \brief performs a a pan translation of both camera and focal point position.
     /// \param camSpacePanDirection is the pan direction in camera space to apply to camera and focal point.
-    /// \param delta is how much to translate in worlds units (see _metersinunit and QOSGViewerWidget() constructor)
+    /// \param delta is how much to translate in worlds units
     void _PanCameraTowardsDirection(double delta, const osg::Vec3d& camSpacePanDirection);
 
     /// \brief Create a dragger with a name given
@@ -337,7 +346,6 @@ protected:
 
     QTimer _timer; ///< Timer for repaint
     EnvironmentBasePtr _penv;
-    double _metersinunit; //< current meter unit to be used in all transformations and calculations
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)
     bool _bLightOn; ///< whether lights are on or not
@@ -346,6 +354,7 @@ protected:
                    ///  causing getProjectionMatrixAsXXX to return negative
                    ///  values. Therefore, we manage zNear ourselves
     double _currentOrthoFrustumSize; ///< coordinate for the right vertical clipping plane 
+    double _hudTextSize; ///< size of HUD text, scaled off of devicePixelRatio
 
     void GetSwitchedButtonValue(unsigned int &button);
 

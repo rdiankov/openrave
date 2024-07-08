@@ -19,11 +19,68 @@
 
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
+#include <boost/scoped_ptr.hpp>
+
+#include <condition_variable>
 
 namespace openravepy {
 using py::object;
 
-class PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentBase>
+/// \brief manages all the viewers created through SetViewer into a single thread
+class ViewerManager
+{
+    /// \brief info about the viewer to create or that is created
+    struct ViewerInfo
+    {
+        EnvironmentBasePtr _penv;
+        std::string _viewername;
+        ViewerBasePtr _pviewer; /// the created viewer, managed by _RunViewerThread
+        std::condition_variable _cond;  ///< notify when viewer thread is done processing and has initialized _pviewer
+        bool _bShowViewer = false; ///< true if should show the viewer when initially created
+        bool _bFailed = false; ///< if true, failed adding the viewer once, so do not try again
+        bool _bDestroyed = false; ///< if true, then viewer is already destroyed
+    };
+    typedef OPENRAVE_SHARED_PTR<ViewerInfo> ViewerInfoPtr;
+public:
+    ViewerManager();
+
+    virtual ~ViewerManager();
+
+    static ViewerManager& GetInstance();
+
+    /// \brief adds a viewer to the environment whose GUI thread will be managed by _RunViewerThread.
+    ///
+    /// Try to block until viewer is created, unless main thread is already taken up.
+    /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
+    void AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists);
+
+    /// \brief if removed, returns true
+    bool RemoveViewer(ViewerBasePtr pviewer);
+
+    /// \brief if anything removed, returns true
+    bool RemoveViewersOfEnvironment(EnvironmentBasePtr penv);
+
+    void Initialize();
+    void Destroy();
+
+protected:
+    void _RunViewerThread();
+
+    static void _InitializeSingleton();
+
+    OPENRAVE_SHARED_PTR<std::thread> _threadviewer;
+    std::mutex _mutexViewer;
+    std::condition_variable _conditionViewer;
+    std::list<ViewerInfoPtr> _listviewerinfos;
+
+    bool _bShutdown = false; ///< if true, shutdown everything
+    bool _bInMain = false; ///< if true, viewer thread is running a main function
+
+    static boost::scoped_ptr<ViewerManager> _singleton; ///< singleton
+    static std::once_flag _onceInitialize; ///< makes sure initialization is atomic
+};
+
+class OPENRAVEPY_API PyEnvironmentBase : public OPENRAVE_ENABLE_SHARED_FROM_THIS<PyEnvironmentBase>
 {
     std::mutex _envmutex;
     std::list<OPENRAVE_SHARED_PTR<EnvironmentLock> > _listenvlocks, _listfreelocks;
@@ -127,7 +184,7 @@ public:
     bool Load(const std::string &filename);
     bool Load(const std::string &filename, object odictatts);
     bool LoadURI(const std::string &filename, object odictatts=py::none_());
-    py::object LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_());
+    py::object LoadJSON(py::object oEnvInfo, UpdateFromInfoMode updateMode, object odictatts=py::none_(), const std::string &uri = "");
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
@@ -139,12 +196,13 @@ public:
     //@{
     object ReadRobotURI(const std::string &filename);
     object ReadRobotURI(const std::string &filename, object odictatts);
-    object ReadRobotData(const std::string &data);
-    object ReadRobotData(const std::string &data, object odictatts);
+    object ReadRobotData(const std::string &data, object odictatts=py::none_(), const std::string&uri=std::string());
+    object ReadRobotJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
     object ReadKinBodyURI(const std::string &filename);
     object ReadKinBodyURI(const std::string &filename, object odictatts);
     object ReadKinBodyData(const std::string &data);
     object ReadKinBodyData(const std::string &data, object odictatts);
+    object ReadKinBodyJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
     //@}
@@ -155,7 +213,7 @@ public:
     object ReadTrimeshData(const std::string& data, const std::string& formathint);
     object ReadTrimeshData(const std::string& data, const std::string& formathint, object odictatts);
 
-    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs="");
+    void Add(PyInterfaceBasePtr pinterface, py::object addMode=py::none_(), const std::string& cmdargs=std::string());
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);
@@ -176,7 +234,7 @@ public:
     object GetBodyFromEnvironmentId(int id);
     object GetBodyFromEnvironmentBodyIndex(int id);
     object GetBodiesFromEnvironmentBodyIndices(object bodyIndices);
-    
+
     int GetMaxEnvironmentBodyIndex();
 
     int AddModule(PyModuleBasePtr prob, const std::string &args);
@@ -234,7 +292,7 @@ public:
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
     /// returns the number of vectors
-    static size_t _getListVector(object odata, std::vector<RaveVector<float>>& vvectors);
+    static size_t _getListVector(object odata, std::vector<RaveVector<float> >& vvectors);
 
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
@@ -246,7 +304,7 @@ public:
 
     object drawarrow(object op1, object op2, float linewidth=0.002, object ocolor=py::none_());
 
-    object drawlabel(const std::string &label, object worldPosition, object ocolor=py::none_());
+    object drawlabel(const std::string &label, object worldPosition, object ocolor=py::none_(), float height=0.05);
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
     object drawboxarray(object opos, object oextents, object ocolor=py::none_());
@@ -264,6 +322,7 @@ public:
     object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_());
 
     object GetBodies();
+    int GetNumBodies();
 
     object GetRobots();
 
@@ -293,8 +352,10 @@ public:
     object GetUserData() const;
 
     void SetUnit(std::string unitname, dReal unitmult);
+    void SetUnitInfo(const UnitInfo& unitInfo);
 
     object GetUnit() const;
+    UnitInfo GetUnitInfo() const;
     int GetId() const;
 
     object ExtractInfo() const;

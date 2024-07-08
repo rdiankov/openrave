@@ -38,7 +38,7 @@ public:
 
     std::string uri; ///< canonicalized uri of the download
     CURL* curl = nullptr; ///< the curl handle for this download
-    rapidjson::StringBuffer buffer; ///< buffer used to receive downloaded data
+    std::string buffer; ///< buffer used to receive downloaded data
     rapidjson::Document* pDoc = nullptr; ///< if non-null, the caller-supplied document to put results into
     uint64_t startTimestampUS = 0; ///< start timestamp in microseconds
 };
@@ -77,12 +77,12 @@ public:
     /// \param uri URI to download
     /// \param doc rapidjson document to store the downloaded and parsed document
     /// \param timeoutUS timeout in microseconds to wait for download to finish
-    void Download(const std::string& uri, rapidjson::Document& doc, uint64_t timeoutUS = 10000000);
+    void Download(const char* pUri, rapidjson::Document& doc, uint64_t timeoutUS = 10000000);
 
     /// \brief Queues uri to download
     /// \param uri URI to download
-    void QueueDownloadURI(const std::string& uri) {
-        _QueueDownloadURI(uri, nullptr);
+    void QueueDownloadURI(const char* pUri) {
+        _QueueDownloadURI(pUri, nullptr);
     }
 
     /// \brief Downloads all reference uris in the supplied env info, as well as all their further references
@@ -96,10 +96,10 @@ public:
 protected: 
 
     /// \brief Queue uri to be downloaded, optionally supply a rapidjson document to be used to store result
-    void _QueueDownloadURI(const std::string& uri, rapidjson::Document* pDoc);
+    void _QueueDownloadURI(const char* pUri, rapidjson::Document* pDoc);
 
     /// \brief Returns true if the referenceUri is a valid URI that can be loaded
-    bool _IsExpandableReferenceUri(const std::string& referenceUri) const;
+    bool _IsExpandableReferenceUri(const char* pReferenceUri) const;
 
     JSONDownloader& _downloader; ///< reference to JSONDownloader instance
 

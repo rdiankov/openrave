@@ -34,6 +34,7 @@ void KinBody::LinkInfo::Reset()
     _mapIntParameters.clear();
     _mapStringParameters.clear();
     _vForcedAdjacentLinks.clear();
+    _mReadableInterfaces.clear();
     _bStatic = false;
     _bIsEnabled = false;
     _bIgnoreSelfCollision = false;
@@ -200,6 +201,17 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         value.AddMember("geometries", geometriesValue, allocator);
     }
 
+    if (!_mReadableInterfaces.empty()) {
+        rapidjson::Value rReadableInterfaces;
+        rReadableInterfaces.SetObject();
+        for (std::map<std::string, ReadablePtr>::const_iterator it = _mReadableInterfaces.begin(); it != _mReadableInterfaces.end(); it++) {
+            rapidjson::Value rReadable;
+            it->second->SerializeJSON(rReadable, allocator, fUnitScale, options);
+            orjson::SetJsonValueByKey(rReadableInterfaces, it->first.c_str(), rReadable, allocator);
+        }
+        value.AddMember("readableInterfaces", std::move(rReadableInterfaces), allocator);
+    }
+
     // if(_mapExtraGeometries.size() > 0 ) {
     //     rapidjson::Value extraGeometriesValue;
     //     extraGeometriesValue.SetObject();
@@ -319,6 +331,12 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         }
     }
 
+    if (value.HasMember("readableInterfaces") && value["readableInterfaces"].IsObject()) {
+        for (rapidjson::Value::ConstMemberIterator it = value["readableInterfaces"].MemberBegin(); it != value["readableInterfaces"].MemberEnd(); ++it) {
+            _DeserializeReadableInterface(it->name.GetString(), it->value, fUnitScale);
+        }
+    }
+
     _mapExtraGeometries.clear();
     // if (value.HasMember("extraGeometries")) {
     //     for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
@@ -340,6 +358,29 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     orjson::LoadJsonValueByKey(value, "isSelfCollisionIgnored", _bIgnoreSelfCollision);
 }
 
+void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale) {
+    std::map<std::string, ReadablePtr>::iterator itReadable = _mReadableInterfaces.find(id);
+    ReadablePtr pReadable;
+    if(itReadable != _mReadableInterfaces.end()) {
+        pReadable = itReadable->second;
+    }
+    // NOTE: we use PT_KinBody (for now) for the following reasons:
+    // 1. Link shares the same set of readable plugins as KinBody
+    // 2. It might be confusing to add PT_Link since it is not an interface type
+    BaseJSONReaderPtr pReader = RaveCallJSONReader(PT_KinBody, id, pReadable, AttributesList());
+    if (!!pReader) {
+        pReader->DeserializeJSON(rReadable, fUnitScale);
+        _mReadableInterfaces[id] = pReader->GetReadable();
+        return;
+    }
+    if (rReadable.IsString()) {
+        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString()));
+        _mReadableInterfaces[id] = pStringReadable;
+        return;
+    }
+    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
+}
+
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
     return _id == other._id
            && _name == other._name
@@ -354,6 +395,7 @@ bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {
            && _bStatic == other._bStatic
            && _bIsEnabled == other._bIsEnabled
            && _bIgnoreSelfCollision == other._bIgnoreSelfCollision
+           && _mReadableInterfaces == other._mReadableInterfaces
            && AreVectorsDeepEqual(_vgeometryinfos, other._vgeometryinfos);
 }
 
@@ -686,59 +728,65 @@ std::pair<Vector,Vector> KinBody::Link::GetVelocity() const
     return velocities;
 }
 
-KinBody::Link::GeometryPtr KinBody::Link::GetGeometry(int index)
+KinBody::GeometryPtr KinBody::Link::GetGeometry(int index) const
 {
     return _vGeometries.at(index);
 }
 
-void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
+KinBody::GeometryPtr KinBody::Link::GetGeometry(const string_view geomname) const
 {
-    _vGeometries.resize(geometries.size());
-    for(size_t i = 0; i < geometries.size(); ++i) {
-        _vGeometries[i].reset(new Geometry(shared_from_this(),*geometries[i]));
-        if( bForceRecomputeMeshCollision || _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
+    if( !geomname.empty() ) {
+        for(const KinBody::GeometryPtr& pgeom : _vGeometries) {
+            if( pgeom->GetName() == geomname ) {
+                return pgeom;
+            }
+        }
+    }
+    return KinBody::GeometryPtr();
+}
+
+void KinBody::Link::_InitGeometriesInternal(bool bForceRecomputeMeshCollision) {
+    for(GeometryPtr& pgeom : _vGeometries) {
+        if( bForceRecomputeMeshCollision || pgeom->GetCollisionMesh().vertices.size() == 0 ) {
             if( !bForceRecomputeMeshCollision ) {
                 RAVELOG_VERBOSE("geometry has empty collision mesh\n");
             }
-            _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
+            pgeom->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
         }
     }
     _info._mapExtraGeometries.clear();
     // have to reset the self group! cannot use geometries directly since we require exclusive access to the GeometryInfo objects
     std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
-    for(size_t i = 0; i < vgeometryinfos.size(); ++i) {
-        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-        *vgeometryinfos[i] = _vGeometries[i]->_info;
+    for(int index = 0; index < (int)vgeometryinfos.size(); ++index) {
+        vgeometryinfos[index].reset(new KinBody::GeometryInfo());
+        *vgeometryinfos[index] = _vGeometries[index]->_info;
     }
-    SetGroupGeometries("self", vgeometryinfos);
-    _Update();
+
+    // SetGroupGeometries calls PostprocessChangedParameters on the parent, which would increment the body update stamp, and then we would invoke PostprocessChangedParameters _again_ in _Update here, resulting in duplicated work in callbacks.
+    // Coalesce these update calls into one by calling the NoPostprocess version and adding the Prop_LinkGeometryGroup flag to our main _Update call instead.
+    _SetGroupGeometriesNoPostprocess("self", vgeometryinfos);
+    _Update(/* parametersChanged */ true, /* extraParametersChanged */ Prop_LinkGeometryGroup);
+}
+
+void KinBody::Link::InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision)
+{
+    int index = 0;
+    _vGeometries.resize(geometries.size());
+    for(KinBody::GeometryInfoConstPtr& pgeominfo : geometries) {
+        _vGeometries[index++].reset(new KinBody::Link::Geometry(shared_from_this(), *pgeominfo));
+    }
+    _InitGeometriesInternal(bForceRecomputeMeshCollision);
 }
 
 void KinBody::Link::InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision)
 {
+    int index = 0;
     _vGeometries.resize(geometries.size());
-    size_t i = 0;
-    FOREACH(itinfo,geometries) {
-        _vGeometries[i].reset(new Geometry(shared_from_this(),*itinfo));
-        if( bForceRecomputeMeshCollision || _vGeometries[i]->GetCollisionMesh().vertices.size() == 0 ) {
-            if( !bForceRecomputeMeshCollision ) {
-                RAVELOG_VERBOSE("geometry has empty collision mesh\n");
-            }
-            _vGeometries[i]->InitCollisionMesh(); // have to initialize the mesh since some plugins might not understand all geometry types
-        }
-        ++i;
+    for(KinBody::GeometryInfo& geominfo : geometries) {
+        _vGeometries[index++].reset(new KinBody::Link::Geometry(shared_from_this(), geominfo));
     }
-    _info._mapExtraGeometries.clear();
-    // have to reset the self group!
-    std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
-    vgeometryinfos.resize(_vGeometries.size());
-    for(i = 0; i < vgeometryinfos.size(); ++i) {
-        vgeometryinfos[i].reset(new KinBody::GeometryInfo());
-        *vgeometryinfos[i] = _vGeometries[i]->_info;
-    }
-    SetGroupGeometries("self", vgeometryinfos);
-    _Update();
+    _InitGeometriesInternal(bForceRecomputeMeshCollision);
 }
 
 void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
@@ -769,22 +817,31 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
 {
     std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::const_iterator it = _info._mapExtraGeometries.find(groupname);
     if( it == _info._mapExtraGeometries.end() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group '%s' does not exist for link '%s', current number of geometries=%d, numGroups=%d, isEnabled=%d."), groupname%GetName()%_vGeometries.size()%_info._mapExtraGeometries.size()%_info._bIsEnabled, ORE_InvalidArguments);
+        std::stringstream ssGroupNames;
+        for(const std::pair< const std::string, std::vector<KinBody::GeometryInfoPtr> >& grouppair : _info._mapExtraGeometries) {
+            ssGroupNames << grouppair.first << ", ";
+        }
+        throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, geometry group '%s' does not exist for body '%s' link '%s', current number of geometries=%d, extra groups=[%s], isEnabled=%d."), GetParent()->GetEnv()->GetNameId()%groupname%GetParent()->GetName()%GetName()%_vGeometries.size()%ssGroupNames.str()%_info._bIsEnabled, ORE_InvalidArguments);
     }
     return it->second;
 }
 
-void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
     FOREACH(itgeominfo, geometries) {
-        if( !(*itgeominfo) ) {
+        if (!(*itgeominfo)) {
             int igeominfo = itgeominfo - geometries.begin();
-            throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo%GetParent()->GetName(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo % GetParent()->GetName(), ORE_InvalidArguments);
         }
     }
-    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname,std::vector<KinBody::GeometryInfoPtr>())).first;
+    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
-    std::copy(geometries.begin(),geometries.end(),it->second.begin());
+    std::copy(geometries.begin(), geometries.end(), it->second.begin());
+}
+
+void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+{
+    _SetGroupGeometriesNoPostprocess(groupname, geometries);
     GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
@@ -980,6 +1037,11 @@ bool KinBody::Link::IsRigidlyAttached(const Link &link) const
     return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),link.GetIndex()) != _vRigidlyAttachedLinks.end();
 }
 
+bool KinBody::Link::IsRigidlyAttached(const int linkIndex) const
+{
+    return find(_vRigidlyAttachedLinks.begin(),_vRigidlyAttachedLinks.end(),linkIndex) != _vRigidlyAttachedLinks.end();
+}
+
 void KinBody::Link::UpdateInfo()
 {
     // always have to recompute the geometries
@@ -1000,6 +1062,16 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
     for (size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         info._vgeometryinfos[i].reset(new KinBody::GeometryInfo());
         _vGeometries[i]->ExtractInfo(*info._vgeometryinfos[i]);
+    }
+    {
+        boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
+        FOREACHC(it, GetReadableInterfaces()) {
+            if (!!it->second) {
+                // make a copy of the readable interface
+                // caller may modify and call UpdateFromInfo with modified readable interfaces
+                info._mReadableInterfaces[it->first] = it->second->CloneSelf();
+            }
+        }
     }
 }
 
@@ -1119,6 +1191,11 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         updateFromInfoResult = UFIR_Success;
     }
 
+    if ( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
+        RAVELOG_VERBOSE_FORMAT("link %s updated due to readable interface change", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
     return updateFromInfoResult;
 }
 
@@ -1129,8 +1206,22 @@ void KinBody::Link::_Update(bool parameterschanged, uint32_t extraParametersChan
         _collision = _vGeometries.at(0)->GetCollisionMesh();
     }
     else {
+        // Clear the existing collision volume data
         _collision.vertices.resize(0);
         _collision.indices.resize(0);
+
+        // Do a quick precalculation of the new collision volume total size so we can reduce allocs in Append
+        unsigned totalVertices = 0, totalIndices = 0;
+        FOREACH(itgeom,_vGeometries) {
+            totalVertices += (*itgeom)->GetCollisionMesh().vertices.size();
+            totalIndices += (*itgeom)->GetCollisionMesh().indices.size();
+        }
+
+        // Pre-size the vertex/index vectors for the final volume size
+        _collision.vertices.reserve(totalVertices);
+        _collision.indices.reserve(totalIndices);
+
+        // Actually go through and transform/insert our collision geometries
         FOREACH(itgeom,_vGeometries) {
             _collision.Append((*itgeom)->GetCollisionMesh(),(*itgeom)->GetTransform());
         }

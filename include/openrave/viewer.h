@@ -174,6 +174,10 @@ public:
         SetName(ptitle);
     }
 
+    virtual void SetUserText(const std::string& userText) OPENRAVE_DUMMY_IMPLEMENTATION;
+
+    virtual void SetTextSize(double size) OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /// \brief controls showing the viewer.
     ///
     /// \param showtype If zero, will hide all viewers. If != 0, should show viewers (dependent on plugin could have different meanings)
@@ -207,7 +211,7 @@ protected:
     virtual GraphHandlePtr drawlinelist(const float* ppoints, int numPoints, int stride, float fwidth, const float* colors) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     virtual GraphHandlePtr drawarrow(const RaveVector<float>& p1, const RaveVector<float>& p2, float fwidth, const RaveVector<float>& color) OPENRAVE_DUMMY_IMPLEMENTATION;
-    virtual GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1)) OPENRAVE_DUMMY_IMPLEMENTATION;
+    virtual GraphHandlePtr drawlabel(const std::string& label, const RaveVector<float>& worldPosition, const RaveVector<float>& color = RaveVector<float>(0,0,0,1), float height = 0.05) OPENRAVE_DUMMY_IMPLEMENTATION;
 
     virtual GraphHandlePtr drawbox(const RaveVector<float>& vpos, const RaveVector<float>& vextents) OPENRAVE_DUMMY_IMPLEMENTATION;
     virtual GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) OPENRAVE_DUMMY_IMPLEMENTATION;

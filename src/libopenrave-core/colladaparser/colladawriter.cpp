@@ -428,9 +428,9 @@ private:
             contribAuthor->setValue(author.c_str());
 
             domAsset::domUnitRef units = daeSafeCast<domAsset::domUnit>( asset->add( COLLADA_ELEMENT_UNIT ) );
-            std::pair<std::string, dReal> unit = _penv->GetUnit();
-            units->setMeter(unit.second);
-            units->setName(unit.first.c_str());
+            UnitInfo unitInfo = _penv->GetUnitInfo();
+            units->setMeter(1.0 / GetLengthUnitStandardValue<dReal>(unitInfo.lengthUnit));
+            units->setName(OpenRAVE::GetLengthUnitString(unitInfo.lengthUnit));
 
             domAsset::domUp_axisRef zup = daeSafeCast<domAsset::domUp_axis>( asset->add( COLLADA_ELEMENT_UP_AXIS ) );
             zup->setValue(UP_AXIS_Z_UP);
@@ -1720,6 +1720,9 @@ private:
                             daeElementRef param_robotControllerAxisOffset = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisOffset");
                             param_robotControllerAxisOffset->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisOffset->setCharData(boost::lexical_cast<std::string>(pjoint->_info._jci_robotcontroller->robotControllerAxisOffset[iaxis]).c_str());
+                            daeElementRef param_robotControllerAxisManufacturerCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisManufacturerCode");
+                            param_robotControllerAxisManufacturerCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisManufacturerCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisManufacturerCode[iaxis].c_str());
                             daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
                             param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
@@ -2136,6 +2139,7 @@ private:
                 pcylinder->add("height")->setCharData(boost::lexical_cast<std::string>(geom->GetCylinderHeight()));
                 break;
             }
+            case GT_Axial:
             case GT_None:
             case GT_TriMesh:
                 // don't add anything

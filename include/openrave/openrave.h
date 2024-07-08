@@ -55,6 +55,12 @@
 #include <set>
 #include <string>
 
+#if  __cplusplus >= 201703L
+#include <string_view>
+#else
+#include <boost/utility/string_view.hpp>
+#endif
+
 #include <iomanip>
 #include <fstream>
 #include <sstream>
@@ -104,6 +110,12 @@ namespace OpenRAVE {
 #include <openrave/logging.h>
 
 namespace OpenRAVE {
+
+#if  __cplusplus >= 201703L
+using string_view = std::string_view;
+#else
+using string_view = ::boost::string_view;
+#endif
 
 #if OPENRAVE_PRECISION // 1 if double precision
 typedef double dReal;
@@ -226,6 +238,7 @@ enum InterfaceType
 };
 
 class CollisionReport;
+class ReadablesContainer;
 class InterfaceBase;
 class IkSolverBase;
 class TrajectoryBase;
@@ -244,10 +257,14 @@ class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
+class IkFailureInfo;
+class IkFailureAccumulatorBase;
 class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
+typedef boost::shared_ptr<ReadablesContainer> ReadablesContainerPtr;
+typedef boost::shared_ptr<ReadablesContainer const> ReadablesContainerConstPtr;
 typedef boost::shared_ptr<InterfaceBase> InterfaceBasePtr;
 typedef boost::shared_ptr<InterfaceBase const> InterfaceBaseConstPtr;
 typedef boost::weak_ptr<InterfaceBase> InterfaceBaseWeakPtr;
@@ -299,6 +316,8 @@ typedef boost::weak_ptr<Readable> ReadableWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
+typedef boost::shared_ptr<IkFailureInfo> IkFailureInfoPtr;
+typedef boost::shared_ptr<IkFailureAccumulatorBase> IkFailureAccumulatorBasePtr;
 
 class BaseXMLReader;
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
@@ -1167,6 +1186,14 @@ public:
         }
     }
 
+    void Reset() {
+        _transform.identity();
+        _type = IKP_None;
+        _id.clear();
+        _name.clear();
+        _mapCustomData.clear();
+    }
+
     inline IkParameterizationType GetType() const {
         return _type;
     }
@@ -1602,7 +1629,8 @@ public:
     /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
     /// Does not support custom data
     /// Don't normalize quaternions since it could hold velocity data.
-    inline void GetValues(std::vector<dReal>::iterator itvalues) const
+    template<typename OutputIterator>
+    inline void GetValues(OutputIterator itvalues) const
     {
         switch(_type & ~IKP_VelocityDataBit) {
         case IKP_Transform6D:
@@ -1687,7 +1715,8 @@ public:
     /// \brief sets a serialized set of values for the IkParameterization
     ///
     /// Function does not handle custom data. Don't normalize quaternions since it could hold velocity data.
-    inline void SetValues(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
+    template<typename InputIterator>
+    inline void SetValues(InputIterator itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
         const bool isVelocity = _type & IKP_VelocityDataBit;
@@ -1783,7 +1812,8 @@ public:
         }
     }
 
-    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype) {
+    template<typename InputIterator>
+    inline void Set(InputIterator itvalues, IkParameterizationType iktype) {
         SetValues(itvalues,iktype);
     }
 
@@ -2474,6 +2504,8 @@ public:
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
+
+    void SerializeJSON(rapidjson::Value& rTriMesh, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);

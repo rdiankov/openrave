@@ -28,7 +28,7 @@ class OpenRAVEFunctionParserReal;
 typedef boost::shared_ptr< OpenRAVEFunctionParserReal > OpenRAVEFunctionParserRealPtr;
 
 /// \brief Result of UpdateFromInfo() call
-enum UpdateFromInfoResult
+enum UpdateFromInfoResult : uint8_t
 {
     UFIR_NoChange = 0, ///< Nothing changed
     UFIR_Success = 1, ///< Updated successfully
@@ -36,8 +36,15 @@ enum UpdateFromInfoResult
     UFIR_RequireReinitialize = 3, ///< Failed to update, require InitFromInfo() to be called before update can succeed
 };
 
+enum ExtractInfoOptions : uint8_t
+{
+    EIO_Everything = 0, ///< extract everything
+    EIO_SkipDOFValues = 1, ///< extracts everything but dof values, this allows extraction even when body is not added to the environment
+};
+
 /// \brief The type of geometry primitive.
-enum GeometryType {
+enum GeometryType : uint8_t
+{
     GT_None = 0,
     GT_Box = 1,
     GT_Sphere = 2,
@@ -46,9 +53,14 @@ enum GeometryType {
     GT_Container=5, ///< a container shaped geometry that has inner and outer extents. container opens on +Z. The origin is at the bottom of the base.
     GT_Cage=6, ///< a container shaped geometry with removable side walls. The side walls can be on any of the four sides. The origin is at the bottom of the base. The inner volume of the cage is measured from the base to the highest wall.
     GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
+    GT_Axial = 8, ///< a geometry defined by many slices along an axis, oriented towards z-axis
+    GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
 };
 
-enum DynamicsConstraintsType {
+OPENRAVE_API const char* GetGeometryTypeString(GeometryType geometryType);
+
+enum DynamicsConstraintsType : int8_t
+{
     DC_Unknown = -1, ///< constraints type is not set.
     DC_IgnoreTorque        = 0, ///< Do no check torque limits
     DC_NominalTorque       = 1, ///< Compute and check torque limits using nominal torque
@@ -57,7 +69,8 @@ enum DynamicsConstraintsType {
 
 OPENRAVE_API const char* GetDynamicsConstraintsTypeString(DynamicsConstraintsType type);
 
-enum JointControlMode {
+enum JointControlMode : uint8_t
+{
     JCM_None = 0, ///< unspecified
     JCM_RobotController = 1, ///< joint controlled by the robot controller
     JCM_IO = 2,              ///< joint controlled by I/O signals
@@ -144,7 +157,8 @@ public:
     boost::array<int16_t, 3> robotControllerAxisIndex = {-1, -1, -1}; ///< indicates which DOF in the robot controller controls which joint axis (up to the DOF of the joint). -1 if not specified/not valid.
     boost::array<dReal, 3> robotControllerAxisMult = {1.0, 1.0, 1.0}; ///< indicates the multiplier to convert the joint values from the environment units to the robot controller units, per joint axis. (valueInRobotControllerUnits - robotControllerAxisOffset) / robotControllerAxisMult = valueInEnvUnits
     boost::array<dReal, 3> robotControllerAxisOffset = {0.0, 0.0, 0.0}; ///< indicates the offset, in the robot controller units, that should be applied to the joint values, per joint axis.
-    boost::array<std::string, 3> robotControllerAxisProductCode = {"", "", ""}; ///< indicates the product codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices. it is different from ElectricMotorActuatorInfo::model_type, which is the name of the motor type attached to the servo devices.
+    boost::array<std::string, 3> robotControllerAxisManufacturerCode = {"", "", ""}; ///< indicates the manufacturer (vendor) codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices.
+    boost::array<std::string, 3> robotControllerAxisProductCode = {"", "", ""}; ///< indicates the product codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices. This is usually determined by each manufacturer. Manufacturer code and product code together makes a globally unique identification in the protocol. This is different from ElectricMotorActuatorInfo::model_type, which is the name of the motor type attached to the servo devices.
 };
 typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
 
@@ -346,6 +360,7 @@ public:
                    && _vGeomData3 == other._vGeomData3
                    && _vGeomData4 == other._vGeomData4
                    && _vSideWalls == other._vSideWalls
+                   && _vAxialSlices == other._vAxialSlices
                    && _vDiffuseColor == other._vDiffuseColor
                    && _vAmbientColor == other._vAmbientColor
                    && _meshcollision == other._meshcollision
@@ -392,14 +407,27 @@ public:
         inline dReal GetSphereRadius() const {
             return _vGeomData.x;
         }
+
         inline dReal GetCylinderRadius() const {
             return _vGeomData.x;
         }
         inline dReal GetCylinderHeight() const {
             return _vGeomData.y;
         }
-        inline const Vector& GetBoxExtents() const {
+        inline dReal GetConicalFrustumTopRadius() const {
+            return _vGeomData.x;
+        }
+        inline dReal GetConicalFrustumBottomRadius() const {
+            return _vGeomData.y;
+        }
+        inline dReal GetConicalFrustumHeight() const {
+            return _vGeomData.z;
+        }
+        inline const Vector& GetBoxExtents() const { // deprecated?
             return _vGeomData;
+        }
+        inline void SetBoxHalfExtents(const Vector& halfExtents) {
+            _vGeomData = halfExtents;
         }
         inline const Vector& GetBoxHalfExtents() const {
             return _vGeomData;
@@ -407,6 +435,10 @@ public:
 
         inline const Vector& GetCageBaseHalfExtents() const {
             return _vGeomData;
+        }
+
+        inline void SetCageBaseHalfExtents(const Vector& halfExtents) {
+            _vGeomData = halfExtents;
         }
 
         /// \brief compute the inner empty volume in the geometry coordinate system
@@ -443,6 +475,7 @@ public:
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
+        ///< for conical frustum, first 3 values are top radius, bottom radius, height
         /// for boxes, first 3 values are half extents. For containers, the first 3 values are the full outer extents.
         /// For GT_Cage, this is the base box extents with the origin being at the -Z center.
         Vector _vGeomData;
@@ -555,6 +588,51 @@ public:
         /// \brief Generates the calibration board's dot grid mesh based on calibration board settings
         void GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation=1) const;
 
+
+        /// \brief A slice used to construct axial geometry.
+        struct AxialSlice
+        {
+            dReal zOffset; ///< z coordinate of the axial slice
+            dReal radius; ///< radius of the axial slice
+
+            int Compare(const AxialSlice& rhs, dReal fUnitScale=1.0, dReal fEpsilon=10e-7) const;
+            bool operator==(const AxialSlice& other) const {
+                return zOffset == other.zOffset && radius == other.radius;
+            }
+            bool operator!=(const AxialSlice& other) const {
+                return !operator==(other);
+            }
+            bool operator<(const AxialSlice& other) const {
+                return zOffset < other.zOffset;
+            }
+        };
+
+        /// \brief An axial geometry representation
+        ///
+        /// An axial might look like drawing below.
+        /// The dotted lines represents the z and y axes. Each row
+        /// represents an axial slice.
+        ///
+        /// There has to be at least two axial slices in an axial,
+        /// which are called top and bottom axial slices.
+        ///
+        /// If the radius of the top and bottom slices are the same,
+        /// the resulting shape is essentially a cylinder.
+        ///
+        /// The axial slices stored in this vector are not sorted by
+        /// the z coordinate.
+        ///
+        ///         z
+        ///         :
+        ///      ___:___
+        ///  ...|...:...|... y
+        ///     |   :   |
+        ///      \__:__/
+        ///         :
+        ///         :
+        ///
+        std::vector<AxialSlice> _vAxialSlices;
+
         enum GeometryInfoField : uint32_t
         {
             GIF_Transform = (1 << 0), // _t field
@@ -648,16 +726,25 @@ public:
         }
 
         inline dReal GetSphereRadius() const {
-            return _info._vGeomData.x;
+            return _info.GetSphereRadius();
         }
         inline dReal GetCylinderRadius() const {
-            return _info._vGeomData.x;
+            return _info.GetCylinderRadius();
         }
         inline dReal GetCylinderHeight() const {
-            return _info._vGeomData.y;
+            return _info.GetCylinderHeight();
+        }
+        inline dReal GetConicalFrustumTopRadius() const {
+            return _info.GetConicalFrustumTopRadius();
+        }
+        inline dReal GetConicalFrustumBottomRadius() const {
+            return _info.GetConicalFrustumBottomRadius();
+        }
+        inline dReal GetConicalFrustumHeight() const {
+            return _info.GetConicalFrustumHeight();
         }
         inline const Vector& GetBoxExtents() const {
-            return _info._vGeomData;
+            return _info.GetBoxExtents();
         }
         inline const Vector& GetContainerOuterExtents() const {
             return _info.GetContainerOuterExtents();
@@ -694,6 +781,9 @@ public:
         }
         inline const Vector& GetPositiveCropContainerEmptyMargins() const {
             return _info._vPositiveCropContainerEmptyMargins;
+        }
+        inline int GetNumberOfAxialSlices() const {
+            return _info._vAxialSlices.size();
         }
 
         /// \brief returns the local collision mesh
@@ -922,6 +1012,7 @@ public:
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
         /// force the following links to be treated as adjacent to this link
         std::vector<std::string> _vForcedAdjacentLinks; // link names. sorted.
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
         /// \brief Indicates a static body that does not move with respect to the root link.
         ///
         //// Static should be used when an object has infinite mass and
@@ -936,7 +1027,7 @@ public:
 
         enum LinkInfoField : uint32_t
         {
-            LIF_Transform = (1 << 0), // _t field
+            LIF_Transform = 0x1, // _t field
         };
 
         inline const Transform& GetTransform() const {
@@ -969,6 +1060,9 @@ private:
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
+        /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
+        void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
+
         friend class Link;
         friend class KinBody;
         friend class RobtBase;
@@ -977,7 +1071,7 @@ private:
     typedef boost::shared_ptr<LinkInfo const> LinkInfoConstPtr;
 
     /// \brief A rigid body holding all its collision and rendering data.
-    class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>
+    class OPENRAVE_API Link : public boost::enable_shared_from_this<Link>, public ReadablesContainer
     {
 public:
         Link(KinBodyPtr parent);         ///< pass in a ODE world
@@ -1174,7 +1268,9 @@ public:
         inline const std::vector<GeometryPtr>& GetGeometries() const {
             return _vGeometries;
         }
-        GeometryPtr GetGeometry(int index);
+        GeometryPtr GetGeometry(int index) const;
+
+        GeometryPtr GetGeometry(const string_view geomame) const;
 
         /// \brief inits the current geometries with the new geometry info.
         ///
@@ -1184,6 +1280,13 @@ public:
         void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
         void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
+private:
+        /// \brief _vGeometries is expected to be filled with the new Geometries already. This will initialize them.
+        ///
+        /// This is an internal method to provide a common implementation to the public InitGeometries API.
+        void _InitGeometriesInternal(bool bForceRecomputeMeshCollision);
+
+public:
         /// \brief adds geometry info to all the current geometries and possibly stored extra group geometries
         ///
         /// Will store the geometry pointer to use for later, so do not modify after this.
@@ -1219,6 +1322,13 @@ public:
         /// any be careful not to modify the geometries afterwards
         void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
+private:
+        /// \brief stores geometries for later retrieval
+        ///
+        /// This call is identical to SetGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
+        void _SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+
+public:
         /// \brief returns the number of geometries stored from a particular key
         ///
         /// \return if -1, then the geometries are not in _mapExtraGeometries, otherwise the number
@@ -1233,11 +1343,17 @@ public:
         /// \return true if the normal is changed to face outside of the shape
         bool ValidateContactNormal(const Vector& position, Vector& normal) const;
 
-        /// \brief returns true if plink is rigidily attahced to this link.
         bool IsRigidlyAttached(boost::shared_ptr<Link const> plink) const RAVE_DEPRECATED {
             return IsRigidlyAttached(*plink);
         }
+
+        /// \brief returns true if link is rigidily attahced to this link.
+        ///
+        /// \param link Assumes link shares the same parent as this link.
         bool IsRigidlyAttached(const Link &link) const;
+
+        /// \brief returns true if linkIndex (index into the parent's _veclinks) is rigidily attahced to this link.
+        bool IsRigidlyAttached(const int linkIndex) const;
 
         /// \brief Gets all the rigidly attached links to linkindex, also adds the link to the list.
         ///
@@ -1506,6 +1622,7 @@ public:
         std::map<std::string, std::vector<dReal> > _mapFloatParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::vector<int> > _mapIntParameters; ///< custom key-value pairs that could not be fit in the current model
         std::map<std::string, std::string > _mapStringParameters; ///< custom key-value pairs that could not be fit in the current model
+        std::map<std::string, ReadablePtr> _mReadableInterfaces; ///< readable interface mapping
 
         ElectricMotorActuatorInfoPtr _infoElectricMotor;
 
@@ -1524,13 +1641,15 @@ public:
         JointControlInfo_RobotControllerPtr _jci_robotcontroller; ///< valid if controlMode==JCM_RobotController
         JointControlInfo_IOPtr _jci_io; ///< valid if controlMode==JCM_IO
         JointControlInfo_ExternalDevicePtr _jci_externaldevice; ///< valid if controlMode==JCM_ExternalDevice
+        /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
+        void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
     };
 
     typedef boost::shared_ptr<JointInfo> JointInfoPtr;
     typedef boost::shared_ptr<JointInfo const> JointInfoConstPtr;
 
     /// \brief Information about a joint that controls the relationship between two links.
-    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>
+    class OPENRAVE_API Joint : public boost::enable_shared_from_this<Joint>, public ReadablesContainer
     {
 public:
         /// \deprecated 12/10/19
@@ -2287,7 +2406,8 @@ private:
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of KinBodyInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
 
 protected:
-        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& value, dReal fUnitScale);
+        /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
+        virtual void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
 
         friend class KinBody; ///< for changing _modifiedFields
 
@@ -2303,7 +2423,7 @@ protected:
 public:
         KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
         virtual ~KinBodyStateSaver();
-        inline KinBodyPtr GetBody() const {
+        inline const KinBodyPtr& GetBody() const {
             return _pbody;
         }
 
@@ -2425,8 +2545,6 @@ private:
     /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
     /// \param visible if true, will be rendered in the scene
     /// \param uri the new URI to set for the interface
-    virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri=std::string());
-    virtual bool InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
     virtual bool InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri=std::string());
 
     /// \brief initializes an complex kinematics body with links and joints
@@ -2448,10 +2566,11 @@ private:
     /// \brief Sets new geometries for all the links depending on the stored extra geometries each link has.
     ///
     /// \param name The name of the extra geometries group stored in each link.
+    /// \param propagateGroupNameToSelfCollisionChecker It true, propagate this geometry group change to self collision checker. It is always propagated to env collision checker.
     /// The geometries can be set while the body is added to the environment. No other information will be touched.
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     /// \throw If any links do not have the particular geometry, an exception will be raised.
-    virtual void SetLinkGeometriesFromGroup(const std::string& name);
+    virtual void SetLinkGeometriesFromGroup(const std::string& name, const bool propagateGroupNameToSelfCollisionChecker);
 
     /// \brief Stores geometries for later retrieval for all the links at the same time.
     ///
@@ -2473,8 +2592,13 @@ private:
     virtual void SetId(const std::string& newid);
 
     /// \brief Unique name of the body.
-    const std::string& GetId() const {
+    inline const std::string& GetId() const {
         return _id;
+    }
+
+    /// \brief Unique name of the body.
+    inline const std::string& GetReferenceURI() const {
+        return _referenceUri;
     }
 
     /// Methods for accessing basic information about joints
@@ -2693,8 +2817,15 @@ private:
     /// \param dofindex the degree of freedom index
     bool IsDOFPrismatic(int dofindex) const;
 
-    /// return a pointer to the link with the given name
-    LinkPtr GetLink(const std::string& name) const;
+    /// \brief return a pointer to the link with the given name
+    LinkPtr GetLink(const std::string& linkname) const;
+
+    LinkPtr GetLink(const string_view linkname) const;
+
+    LinkPtr GetLink(const char* plinkname) const;
+
+    /// \brief return the link index that matches the name. -1 if did not find
+    int GetLinkIndex(const string_view name) const;
 
     /// Updates the bounding box and any other parameters that could have changed by a simulation step
     virtual void SimulationStep(dReal fElapsedTime);
@@ -2813,7 +2944,10 @@ private:
     AABB ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname, bool bEnabledOnlyLinks=false) const;
     AABB ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, const Transform& tBody, bool bEnabledOnlyLinks=false) const;
 
-    /// \brief Return the center of mass of entire robot in the world coordinate system.
+    /// \brief Returns the total mass of entire body.
+    dReal GetMass() const;
+
+    /// \brief Return the center of mass of entire body in the world coordinate system.
     Vector GetCenterOfMass() const;
 
     /// \brief Enables or disables all the links.
@@ -3386,6 +3520,22 @@ private:
      */
     void GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const;
 
+    inline int64_t GetLastModifiedAtUS() {
+        return _lastModifiedAtUS;
+    }
+
+    inline void SetLastModifiedAtUS(int64_t lastModifiedAtUS) {
+        _lastModifiedAtUS = lastModifiedAtUS;
+    }
+
+    inline int64_t GetRevisionId() {
+        return _revisionId;
+    }
+
+    inline void SetRevisionId(int64_t revisionId) {
+        _revisionId = revisionId;
+    }
+
     //@}
 
     /// only used for hashes...
@@ -3399,7 +3549,10 @@ private:
     }
 
     /// \brief similar to GetInfo, but creates a copy of an up-to-date info, safe for caller to manipulate
-    virtual void ExtractInfo(KinBodyInfo& info);
+    ///
+    /// if bSkipDOFValues is false, body needs to be added to the environment in order to work.
+    /// \param bSkipDOFValues if true, then will skip extracting the DOF values of the kinbody and initializing _dofValues. This allows the fucntion to be called even if the body is not added to the environment.
+    virtual void ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromKinBodyInfo(const KinBodyInfo& info);
@@ -3484,6 +3637,9 @@ protected:
     /// \brief Update transforms and velocities of the grabbed bodies
     void _UpdateGrabbedBodies();
 
+    /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
+    std::vector<GrabbedPtr>::iterator _RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed);
+
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
 
@@ -3562,6 +3718,8 @@ protected:
     Transform _baseLinkInBodyTransform; ///< the transform of the base link in the body coordinate frame. The body transform returned is baselink->GetTransform() * _baseLinkInBodyTransform.inverse(). When setting a transform, the base link transform becomes body->GetTransform() * _baseLinkInBodyTransform
     Transform _invBaseLinkInBodyTransform; ///< _baseLinkInBodyTransform.inverse() for speedup
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
+    int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
+    int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
 
 private:
     mutable std::vector<dReal> _vTempJoints;

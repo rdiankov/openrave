@@ -75,7 +75,7 @@ PyPlannerStatus::PyPlannerStatus(const PlannerStatus& status) {
     }
     else {
         //_report = status._report->__str__();
-        report = py::to_object(openravepy::toPyCollisionReport(status.report, NULL));
+        report = py::to_object(openravepy::toPyCollisionReport(*status.report));
     }
 
     ikparam = toPyIkParameterization(status.ikparam);
@@ -303,13 +303,13 @@ bool PyPlannerBase::InitPlan(PyRobotBasePtr pyrobot, PyPlannerParametersPtr ppar
     if( releasegil ) {
         statesaver.reset(new openravepy::PythonThreadSaver());
     }
-    return _pplanner->InitPlan(probot,parameters);
+    return _pplanner->InitPlan(probot,parameters).HasSolution();
 }
 
 bool PyPlannerBase::InitPlan(PyRobotBasePtr pbase, const string& params)
 {
     std::stringstream ss(params);
-    return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss);
+    return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss).HasSolution();
 }
 
 object PyPlannerBase::PlanPath(PyTrajectoryBasePtr pytraj, bool releasegil)
