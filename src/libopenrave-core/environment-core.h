@@ -2970,7 +2970,8 @@ public:
                 }
             }
         }
-        std::vector<int> vUsedBodyIndices; // used indices of vBodies
+
+        std::unordered_set<int> usedBodyIndicesSet; // used indices of vBodies
 
         // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
         for(int inputBodyIndex = 0; inputBodyIndex < (int)info._vBodyInfos.size(); ++inputBodyIndex) {
@@ -2991,7 +2992,7 @@ public:
                     //bodyIndex = inputBodyIndex;
                     // search only in the unprocessed part of vBodies
                     for(int ibody = 0; ibody < (int)vBodies.size(); ++ibody) {
-                        if( find(vUsedBodyIndices.begin(), vUsedBodyIndices.end(), ibody) != vUsedBodyIndices.end() ) {
+                        if (usedBodyIndicesSet.find(ibody) != usedBodyIndicesSet.end()) {
                             continue;
                         }
                         const KinBodyPtr& pbody = vBodies[ibody];
@@ -3081,7 +3082,7 @@ public:
                     }
 
                     if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-                        vUsedBodyIndices.push_back(nMatchingIndex);
+                        usedBodyIndicesSet.emplace(nMatchingIndex);
                     }
                 }
             }
@@ -3228,13 +3229,13 @@ public:
 
                 if( bodyIndex >= 0 ) {
                     if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-                        vUsedBodyIndices.push_back(bodyIndex);
+                        usedBodyIndicesSet.emplace(bodyIndex);
                     }
                     vBodies.insert(vBodies.begin()+bodyIndex, pNewBody);
                 }
                 else {
                     if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-                        vUsedBodyIndices.push_back(vBodies.size());
+                        usedBodyIndicesSet.emplace(vBodies.size());
                     }
                     vBodies.push_back(pNewBody);
                 }
