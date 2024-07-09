@@ -3513,6 +3513,8 @@ private:
      */
     void ResetGrabbed(const std::vector<GrabbedInfoConstPtr>& vGrabbedInfos);
 
+    void UpdateGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGrabbedInfos);
+
     /** \brief returns all the links of grabber (this body) that are being ignored (self-collision) by the grabbed body.
 
         \param[in] body the grabbed body
@@ -3682,6 +3684,7 @@ protected:
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
     std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+    std::map<std::string, int> _mapGrabbedBodyNameIndex;
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
