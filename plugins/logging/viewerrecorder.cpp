@@ -58,6 +58,7 @@ public:
 extern "C" {
 #ifdef HAVE_NEW_FFMPEG
 #include <libavformat/avformat.h>
+#include <libavformat/version.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #else
@@ -69,9 +70,10 @@ extern "C" {
 class VideoGlobalState
 {
 public:
-    VideoGlobalState()
-    {
+    VideoGlobalState() {
+#if defined(LIBAVFORMAT_VERSION_MAJOR ) && LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
         av_register_all();
+#endif
     }
     virtual ~VideoGlobalState() {
     }
