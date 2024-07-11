@@ -26,7 +26,12 @@ if (Qt5Core_FOUND AND Qt5Gui_FOUND AND SoQt_FOUND AND Coin_FOUND)
   qt5_wrap_cpp(MOC_OUTPUT_FILES ${QTCOIN_MOCS})
 
   check_include_file(X11/Xlib.h HAVE_X11_XLIB_H)
-
+  if (Boost_MINOR_VERSION LESS 65)
+    QT4_WRAP_CPP(MOC_OUTPUT_FILES ${QTCOIN_MOCS} OPTIONS -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION) #for boost previous to 1.65.1
+  else(Boost_MINOR_VERSION LESS 65)
+    QT4_WRAP_CPP(MOC_OUTPUT_FILES ${QTCOIN_MOCS} OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION -DBOOST_LEXICAL_CAST_INCLUDED -DBOOST_NEXT_PRIOR_HPP_INCLUDED -DBOOST_TYPE_TRAITS_HPP -D_SYS_SYSMACROS_H_OUTER) #for boost 1.65.1
+  endif(Boost_MINOR_VERSION LESS 65)
+  
    # build sources, moc'd sources, and rcc'd sources
   add_library(qtcoinrave SHARED ivselector.cpp item.cpp qtcoinviewer.cpp qtcoinrave.cpp ${MOC_OUTPUT_FILES} item.h ivselector.h qtcoin.h qtcoinviewer.h qtcameraviewer.h ivmodelloader.cpp)
 
