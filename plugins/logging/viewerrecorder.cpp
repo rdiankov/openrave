@@ -724,7 +724,6 @@ protected:
     {
         OPENRAVE_ASSERT_OP_FORMAT0(bits,==,24,"START_AVI only supports 24bits",ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT0(filename.size(),>,0,"filename needs to be valid",ORE_InvalidArguments);
-        AVCodecContext *codec_ctx;
         AVCodec *codec;
 
         bool bFixH264 = false;
@@ -781,7 +780,11 @@ protected:
 #endif
         BOOST_ASSERT(!!_stream);
 
-        codec_ctx = _stream->codec;
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        AVCodecParameters *codec_ctx = _stream->codecpar;
+#else
+        AVCodecContext *codec_ctx = _stream->codec;
+#endif
         codec_ctx->codec_id = video_codec;
 #ifdef HAS_AVMEDIA_TYPE_VIDEO
         codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
