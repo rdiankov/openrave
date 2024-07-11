@@ -695,7 +695,7 @@ protected:
 
 
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
-        while (fmt = av_muxer_iterate(&muxerIterateData)) {
+        while ((fmt = av_muxer_iterate(&muxerIterateData))) {
 #else
         while (fmt != NULL) {
 #endif
@@ -751,7 +751,7 @@ protected:
             BOOST_ASSERT(!!_output);
         } else {
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
-            while (fmt = av_muxer_iterate(&muxerIterateData)) {
+            while ((fmt = av_muxer_iterate(&muxerIterateData))) {
 #else
             while (fmt != NULL) {
 #endif
