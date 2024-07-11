@@ -747,7 +747,7 @@ protected:
 
         _output = NULL;
         if ( bFixH264 ) {
-            avformat_alloc_output_context2(&_output, NULL, "mp4", NULL);
+            avformat_alloc_output_context2(&_output, NULL, "mp4", filename.c_str());
             BOOST_ASSERT(!!_output);
         } else {
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
@@ -765,14 +765,11 @@ protected:
 #endif
             }
             BOOST_ASSERT(!!fmt);
-            _output = avformat_alloc_context();
             BOOST_ASSERT(!!_output);
-            _output->oformat = fmt;
+            avformat_alloc_output_context2(&_output, fmt, "mp4", filename.c_str());
         }
 
         _frameindex = 0;
-        
-        snprintf(_output->filename, sizeof(_output->filename), "%s", filename.c_str());
 
         codec = avcodec_find_encoder(video_codec);
         BOOST_ASSERT(!!codec);
@@ -818,7 +815,7 @@ protected:
         }
 #endif
 
-        RAVELOG_DEBUG(str(boost::format("opening %s, w:%d h:%dx fps:%f, codec: %s")%_output->filename%width%height%frameRate%codec->name));
+        RAVELOG_DEBUG(str(boost::format("opening %s, w:%d h:%dx fps:%f, codec: %s")%filename%width%height%frameRate%codec->name));
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
         AVDictionary * RetunedAVDic=NULL;
