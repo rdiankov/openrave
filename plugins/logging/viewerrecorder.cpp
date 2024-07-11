@@ -684,12 +684,21 @@ protected:
         if( !s_pVideoGlobalState ) {
             s_pVideoGlobalState.reset(new VideoGlobalState());
         }
-#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        AVOutputFormat *fmt;
+        void *muxerIterateData = nullptr;
+#elif LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else
         AVOutputFormat *fmt = first_oformat;
 #endif
+
+
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        while (fmt = av_muxer_iterate(&muxerIterateData)) {
+#else
         while (fmt != NULL) {
+#endif
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
             if( fmt->video_codec != AV_CODEC_ID_NONE && !!fmt->name ) {
 #else
@@ -704,7 +713,9 @@ protected:
                 }
                 sout << fmt->video_codec << " " << mime_type << " " << fmt->name << endl;
             }
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
             fmt = fmt->next;
+#endif
         }
         return true;
     }
@@ -725,7 +736,10 @@ protected:
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
-#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        AVOutputFormat *fmt;
+        void *muxerIterateData = nullptr;
+#elif LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else
         AVOutputFormat *fmt = first_oformat;
@@ -736,11 +750,19 @@ protected:
             avformat_alloc_output_context2(&_output, NULL, "mp4", NULL);
             BOOST_ASSERT(!!_output);
         } else {
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+            while (fmt = av_muxer_iterate(&muxerIterateData)) {
+#else
             while (fmt != NULL) {
+#endif
                 if (fmt->video_codec == video_codec) {
                     break;
                 }
+#if LIBAVFORMAT_VERSION_INT >= (52<<16) && LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
+                fmt = av_oformat_next(fmt);
+#elif LIBAVFORMAT_VERSION_INT < (52<<16)
                 fmt = fmt->next;
+#endif
             }
             BOOST_ASSERT(!!fmt);
             _output = avformat_alloc_context();
