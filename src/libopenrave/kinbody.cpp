@@ -275,72 +275,117 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
-        size_t iGrabbed = 0;
-        for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it, ++iGrabbed) {
-            //UpdateOrCreateInfo(*it, _vGrabbedInfos, fUnitScale, options);
+
+        // Create quick lookup tables for our grabbed indices by name/id
+        // For common access patterns, updating grabbed is purely append, so the cost of scanning outweighs the cost of rebuild on delete.
+        std::unordered_map<std::string, decltype(_vGrabbedInfos)::size_type> grabbedIndexById;
+        std::unordered_map<std::string, decltype(_vGrabbedInfos)::size_type> grabbedIndexByName;
+        for (decltype(_vGrabbedInfos)::size_type i = 0; i < _vGrabbedInfos.size(); i++) {
+            const GrabbedInfo& grabInfo = *_vGrabbedInfos[i];
+            grabbedIndexByName[grabInfo._grabbedname] = i;
+            if (!grabInfo._id.empty()) {
+                grabbedIndexById[grabInfo._id] = i;
+            }
+        }
+
+        // TODO(ross): extract
+        auto RenumberSubsequentIndices = [&](decltype(grabbedIndexById)::mapped_type index) {
+            for (decltype(grabbedIndexById)::value_type& indexPair : grabbedIndexById) {
+                if (indexPair.second >= index) {
+                    indexPair.second--;
+                }
+            }
+            for (decltype(grabbedIndexByName)::value_type& indexPair : grabbedIndexByName) {
+                if (indexPair.second >= index) {
+                    indexPair.second--;
+                }
+            }
+        };
+
+        for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it) {
+            // For all entries in the grabbed json:
+            // - If there already exists a grab entry with a matching ID, update that entry
+            //    - If there exist any entries with matching name but _not_ matching ID, delete those entries
+            // - If there is a matching grab entry by name, update that entry
+            // - If no matching entries and the item is deleted, do nothing (stays deleted)
+            // - If no matching entries and the item is live, create a new grabbed info
+
+
+            // Extract the parameters we care about
             const rapidjson::Value& rGrabbed = *it;
             std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "id");
             bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(rGrabbed, "__deleted__", false);
-            std::vector<GrabbedInfoPtr>::iterator itMatchingId = _vGrabbedInfos.end();
-            std::vector<GrabbedInfoPtr>::iterator itMatchingName = _vGrabbedInfos.end();
-            if (!id.empty()) {
-                // only try to find old info if id is not empty
-                FOREACH(itInfo, _vGrabbedInfos) {
-                    if ((*itInfo)->_id == id) {
-                        itMatchingId = itInfo;
-                        break;
-                    }
-                }
-            }
-
             std::string grabbedName = OpenRAVE::orjson::GetStringJsonValueByKey(rGrabbed, "grabbedName");
-            // only try to find old info if id is not empty
-            FOREACH(itInfo, _vGrabbedInfos) {
-                if ((*itInfo)->_grabbedname == grabbedName) {
-                    itMatchingName = itInfo;
-                    if( id.empty() ) {
-                        id = (*itInfo)->_id;
-                    }
-                    break;
-                }
+
+            // Look up whether we have existing grab infos for this name / id
+            decltype(grabbedIndexById)::iterator grabInfoItByName = grabbedIndexByName.find(grabbedName);
+            decltype(grabbedIndexById)::iterator grabInfoItById = grabbedIndexById.end();
+            if (!id.empty()) {
+                grabInfoItById = grabbedIndexById.find(id);
             }
 
             // here we allow items with empty id to be created because
             // when we load things from json, some id could be missing on file
             // and for the partial update case, the id should be non-empty
-            if (itMatchingId != _vGrabbedInfos.end()) {
+            if (grabInfoItById != grabbedIndexById.end()) {
                 if (isDeleted) {
-                    _vGrabbedInfos.erase(itMatchingId);
+                    // Remove this grab from the grab set
+                    _vGrabbedInfos.erase(_vGrabbedInfos.begin() + grabInfoItById->second);
+
+                    // Force a rebuild of all subsequent IDs
+                    RenumberSubsequentIndices(grabInfoItById->second);
+
+                    // Done processing this entry
                     continue;
                 }
-                (*itMatchingId)->DeserializeJSON(rGrabbed, fUnitScale, options);
 
-                if( itMatchingId != itMatchingName && itMatchingName != _vGrabbedInfos.end() ) {
-                    // there is another entry with matching name, so remove it
-                    _vGrabbedInfos.erase(itMatchingName);
+                // Update the existing grab info with this new json
+                GrabbedInfo& grabInfo = *_vGrabbedInfos[grabInfoItById->second];
+                grabInfo.DeserializeJSON(rGrabbed, fUnitScale, options);
+
+                // If there existed a _different_ grab info with the same name but different ID, delete it
+                if (grabInfoItByName != grabbedIndexByName.end() && grabInfoItByName->second != grabInfoItById->second) {
+                    _vGrabbedInfos.erase(_vGrabbedInfos.begin() + grabInfoItByName->second);
+
+                    // Force a rebuild of all subsequent IDs
+                    RenumberSubsequentIndices(grabInfoItByName->second);
                 }
                 continue;
             }
 
-            if( itMatchingName != _vGrabbedInfos.end() ) {
+            // Check if we matched any existing grab infos by name
+            if (grabInfoItByName != grabbedIndexByName.end()) {
+                // If it's deleted, remove it from the grab list
                 if (isDeleted) {
-                    _vGrabbedInfos.erase(itMatchingId);
+                    _vGrabbedInfos.erase(_vGrabbedInfos.begin() + grabInfoItByName->second);
+
+                    // Force a rebuild of all subsequent IDs
+                    RenumberSubsequentIndices(grabInfoItByName->second);
                     continue;
                 }
-                (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
-                (*itMatchingName)->_id = id;
+
+                // If it exists, update it with the new json
+                GrabbedInfo& grabInfo = *_vGrabbedInfos[grabInfoItByName->second];
+                grabInfo.DeserializeJSON(rGrabbed, fUnitScale, options);
                 continue;
             }
 
+            // If this entry is deleted and doesn't exist, we're all set
             if (isDeleted) {
-                // ignore
                 continue;
             }
 
+            // Otherwise, create a new grab entry for it
             GrabbedInfoPtr pNewInfo(new GrabbedInfo());
             pNewInfo->DeserializeJSON(rGrabbed, fUnitScale, options);
             pNewInfo->_id = id;
-            _vGrabbedInfos.push_back(pNewInfo);
+
+            // Emplace the entry in our grab info list and also ensure we update the LUTs with the new mapping
+            grabbedIndexByName[grabbedName] = _vGrabbedInfos.size();
+            if (!id.empty()) {
+                grabbedIndexById[id] = _vGrabbedInfos.size();
+            }
+            _vGrabbedInfos.emplace_back(std::move(pNewInfo));
         }
     }
 
@@ -457,7 +502,7 @@ void KinBody::Destroy()
     if( GetEnvironmentBodyIndex() != 0 ) {
         RAVELOG_DEBUG_FORMAT("env=%s, destroying body '%s' with bodyIndex=%d while it is still in the environment.", GetEnv()->GetNameId()%GetName()%GetEnvironmentBodyIndex());
     }
-    
+
     ReleaseAllGrabbed();
     if( _listAttachedBodies.size() > 0 ) {
         // could be in the environment destructor?
@@ -6157,7 +6202,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._dofValues.clear();
 
     if( !(options & EIO_SkipDOFValues) ) {
-        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized    
+        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized
         std::vector<dReal> vDOFValues;
         GetDOFValues(vDOFValues);
         for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
