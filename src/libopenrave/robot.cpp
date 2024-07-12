@@ -121,7 +121,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
             continue;
         }
 
-        // update objects recursively 
+        // update objects recursively
         orjson::UpdateJsonByKey(docGripperInfo, memberName.c_str(), it->value, docGripperInfo.GetAllocator());
 
     }
