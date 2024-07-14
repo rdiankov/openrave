@@ -643,9 +643,7 @@ protected:
     AVStream *_stream;
     AVFrame *_picture;
     AVFrame *_yuv420p;
-#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
     AVCodecContext* _codec_ctx;
-#endif
     char *_picture_buf, *_outbuf;
     int _picture_size;
     int _outbuf_size;
