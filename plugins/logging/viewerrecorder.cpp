@@ -783,7 +783,7 @@ protected:
         _frameindex = 0;
 
         using MaybeConstAVCodePtr = decltype(avcodec_find_encoder(video_codec));
-        MaybeConstAVCodePtr *codec = avcodec_find_encoder(video_codec);
+        MaybeConstAVCodePtr codec = avcodec_find_encoder(video_codec);
         BOOST_ASSERT(!!codec);
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)     
