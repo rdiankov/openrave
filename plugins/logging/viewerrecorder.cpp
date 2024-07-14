@@ -692,7 +692,7 @@ protected:
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
         void *muxerIterateData = nullptr;
         using MaybeConstAVOutputFormatPtr = decltype(av_muxer_iterate(&muxerIterateData));
-        MaybeConstAVOutputFormatPtr *fmt;
+        MaybeConstAVOutputFormatPtr fmt;
 #elif LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else
