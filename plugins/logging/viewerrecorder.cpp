@@ -835,7 +835,7 @@ protected:
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
         AVDictionary * RetunedAVDic=NULL;
-        if (avcodec_open2(codec_ctx, codec, &RetunedAVDic) < 0) {
+        if (avcodec_open2(_codec_ctx, codec, &RetunedAVDic) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("Unable to open codec",ORE_Assert);
         }
 
@@ -846,7 +846,7 @@ protected:
         _bWroteURL = true;
         avformat_write_header(_output,NULL);
 #else
-        if (avcodec_open(codec_ctx, codec) < 0) {
+        if (avcodec_open(_codec_ctx, codec) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("Unable to open codec",ORE_Assert);
         }
 
@@ -881,9 +881,9 @@ protected:
         BOOST_ASSERT(!!_picture_buf);
 
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, AV_PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
 #else
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
 #endif
     }
 
