@@ -933,7 +933,9 @@ protected:
         av_init_packet(&pkt);
         int ret = avcodec_encode_video2(_codec_ctx, &pkt, _yuv420p, &got_packet);
         if( ret < 0 ) {
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
+            av_packet_unref(&pkt);
+#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
             av_free_packet(&pkt);
 #else
             av_destruct_packet(&pkt);
