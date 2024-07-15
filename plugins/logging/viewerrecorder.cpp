@@ -794,9 +794,9 @@ protected:
 
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
         _codec_ctx = avcodec_alloc_context3(codec);
-        avcodec_parameters_to_context(_codec_ctx, _codec_ctxpar);
+        avcodec_parameters_to_context(_codec_ctx, _stream->codecpar);
 #else
-        _codec_ctx = _codec_ctx;
+        _codec_ctx = _stream->codec;
 #endif
         _codec_ctx->codec_id = video_codec;
 #ifdef HAS_AVMEDIA_TYPE_VIDEO
@@ -873,9 +873,9 @@ protected:
         BOOST_ASSERT(!!_outbuf);
 
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+        _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
 #else
-        _picture_size = avpicture_get_size(PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+        _picture_size = avpicture_get_size(PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
 #endif
         _picture_buf = (char*)malloc(_picture_size);
         BOOST_ASSERT(!!_picture_buf);
