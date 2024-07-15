@@ -165,20 +165,23 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
             pbody->_UpdateGrabbedBodies();
         }
     }
-    if( _options & Save_LinkTransformation ) {
-        pbody->SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
-//        if( IS_DEBUGLEVEL(Level_Warn) ) {
-//            stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
-//            ss << "restoring kinbody " << pbody->GetName() << " to values=[";
-//            std::vector<dReal> values;
-//            pbody->GetDOFValues(values);
-//            FOREACH(it,values) {
-//                ss << *it << ", ";
-//            }
-//            ss << "]";
-//            RAVELOG_WARN(ss.str());
-//        }
+
+    if (_options & Save_LinkTransformation) {
+        pbody->SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues, /* skipGrabbedBodies */ _options & Save_LinkTransformationSkipGrabbedBodies);
+
+        // if( IS_DEBUGLEVEL(Level_Warn) ) {
+        //     stringstream ss; ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);
+        //     ss << "restoring kinbody " << pbody->GetName() << " to values=[";
+        //     std::vector<dReal> values;
+        //     pbody->GetDOFValues(values);
+        //     FOREACH(it,values) {
+        //         ss << *it << ", ";
+        //     }
+        //     ss << "]";
+        //     RAVELOG_WARN(ss.str());
+        // }
     }
+
     if( _options & Save_LinkEnable ) {
         // should first enable before calling the parameter callbacks
         bool bchanged = false;

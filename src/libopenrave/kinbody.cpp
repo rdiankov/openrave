@@ -1439,7 +1439,7 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
 }
 
 // like apply transform except everything is relative to the first frame
-void KinBody::SetTransform(const Transform& bodyTransform)
+void KinBody::SetTransform(const Transform& bodyTransform, bool skipUpdateGrabbedBodies)
 {
     if( _veclinks.size() == 0 ) {
         return;
@@ -1450,7 +1450,12 @@ void KinBody::SetTransform(const Transform& bodyTransform)
     FOREACH(itlink, _veclinks) {
         (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
     }
-    _UpdateGrabbedBodies();
+
+    // For performance reasons, it may be desirable to not update the grabbed bodies if the link transform is changed only to measure intra-body parameters
+    if (!skipUpdateGrabbedBodies) {
+        _UpdateGrabbedBodies();
+    }
+
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
@@ -2076,7 +2081,7 @@ Vector KinBody::GetCenterOfMass() const
     return center;
 }
 
-void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
+void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies, bool skipUpdateGrabbedBodies)
 {
     if( RaveGetDebugLevel() & Level_VerifyPlans ) {
         RAVELOG_WARN("SetLinkTransformations should be called with doflastsetvalues, re-setting all values\n");
@@ -2095,11 +2100,16 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& vbodies)
             (*itjoint)->_doflastsetvalues[i] = (*itjoint)->GetValue(i);
         }
     }
-    _UpdateGrabbedBodies();
+
+    // For performance reasons, it may be desirable to not update the grabbed bodies if the link transform is changed only to measure intra-body parameters
+    if (!skipUpdateGrabbedBodies) {
+        _UpdateGrabbedBodies();
+    }
+
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
-void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues)
+void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues, bool skipUpdateGrabbedBodies)
 {
     OPENRAVE_ASSERT_OP_FORMAT(transforms.size(), >=, _veclinks.size(), "env=%s, not enough links %d<%d", GetEnv()->GetNameId()%transforms.size()%_veclinks.size(),ORE_InvalidArguments);
     vector<Transform>::const_iterator it;
@@ -2112,7 +2122,12 @@ void KinBody::SetLinkTransformations(const std::vector<Transform>& transforms, c
             (*itjoint)->_doflastsetvalues[i] = doflastsetvalues.at((*itjoint)->GetDOFIndex()+i);
         }
     }
-    _UpdateGrabbedBodies();
+
+    // For performance reasons, it may be desirable to not update the grabbed bodies if the link transform is changed only to measure intra-body parameters
+    if (!skipUpdateGrabbedBodies) {
+        _UpdateGrabbedBodies();
+    }
+
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
@@ -6219,14 +6234,14 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._transform = GetTransform();
 
     // in order for link transform comparision to make sense
-    KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
+    KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation | Save_LinkTransformationSkipGrabbedBodies);
     boost::shared_ptr<void> restoreTransformEvenWhenBodyIsNotAddedToEnv = nullptr;
-    if( (options & EIO_SkipDOFValues) && GetEnvironmentBodyIndex() == 0 ) {
+    if ((options & EIO_SkipDOFValues) && GetEnvironmentBodyIndex() == 0) {
         RAVELOG_WARN("resetting DOF to zeros");
-        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*) 0, std::bind(&KinBody::SetTransform, this, std::cref(info._transform)));
+        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*)0, std::bind(&KinBody::SetTransform, this, std::cref(info._transform), /* skipUpdateGrabbedBodies */ false));
     }
 
-    SetTransform(Transform()); // so that base link is at exactly _baseLinkInBodyTransform
+    SetTransform(Transform(), /* skipUpdateGrabbedBodies */ true); // so that base link is at exactly _baseLinkInBodyTransform
     vector<dReal> vZeros(GetDOF(), 0);
     SetDOFValues(vZeros, KinBody::CLA_Nothing);
 
