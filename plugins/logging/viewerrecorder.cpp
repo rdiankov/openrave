@@ -741,8 +741,9 @@ protected:
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
-        const AVOutputFormat *fmt;
         void *muxerIterateData = nullptr;
+        using MaybeConstAVOutputFormatPtr = decltype(av_muxer_iterate(&muxerIterateData));
+        MaybeConstAVOutputFormatPtr *fmt;
 #elif LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else
@@ -771,8 +772,6 @@ protected:
             BOOST_ASSERT(!!fmt);
             BOOST_ASSERT(!!_output);
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
-            // At this version, avformat_alloc_output_context2 accepts a const AVOutputFormat*,
-            // but there are earlier versions that take a mutable pointer here.
             avformat_alloc_output_context2(&_output, fmt, "mp4", filename.c_str());
 #else
             _output = avformat_alloc_context();
