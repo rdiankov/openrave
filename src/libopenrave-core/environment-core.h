@@ -3488,11 +3488,13 @@ protected:
         }
         KinBody& body = *pbodyref;
         const std::string& name = body.GetName();
-        // before deleting, make sure no other bodies are grabbing it!!
-        for (KinBodyPtr& potherbody : _vecbodies) {
-            if( !!potherbody && potherbody->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%potherbody->GetName());
-                potherbody->Release(body);
+
+        // Before deleting, make sure no other bodies are grabbing the invalidated body
+        for (KinBodyWeakPtr& pOtherWeakBody : body._listAttachedBodies) { // TODO(ross): valid to assume that the attached body list is initialized here?
+            KinBodyPtr pOtherBody = pOtherWeakBody.lock();
+            if (!!pOtherBody && pOtherBody->IsGrabbing(body)) {
+                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%pOtherBody->GetName());
+                pOtherBody->Release(body);
             }
         }
 
