@@ -946,7 +946,9 @@ protected:
                 _codec_ctx->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
             if( av_write_frame(_output, &pkt) < 0) {
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
+                av_packet_unref(&pkt);
+#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
                 av_free_packet(&pkt);
 #else
                 av_destruct_packet(&pkt);
@@ -954,7 +956,10 @@ protected:
                 throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
             }
         }
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
+
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
+        av_packet_unref(&pkt);
+#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
         av_free_packet(&pkt);
 #else
         av_destruct_packet(&pkt);
