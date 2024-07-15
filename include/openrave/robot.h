@@ -1003,16 +1003,16 @@ private:
     void SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklimits = CLA_CheckLimits, const std::vector<int>& dofindices = std::vector<int>()) override;
     void SetDOFValues(const std::vector<dReal>& vJointValues, const Transform& transbase, uint32_t checklimits = CLA_CheckLimits) override;
 
-    void SetLinkTransformations(const std::vector<Transform>& transforms) override;
-    void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues) override;
+    void SetLinkTransformations(const std::vector<Transform>& transforms, bool skipUpdateGrabbedBodies = false) override;
+    void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues, bool skipUpdateGrabbedBodies = false) override;
 
     bool SetVelocity(const Vector& linearvel, const Vector& angularvel) override;
     void SetDOFVelocities(const std::vector<dReal>& dofvelocities, const Vector& linearvel, const Vector& angularvel,uint32_t checklimits = 1) override;
     void SetDOFVelocities(const std::vector<dReal>& dofvelocities, uint32_t checklimits = 1, const std::vector<int>& dofindices = std::vector<int>()) override;
 
     /// \see SetTransform
-    /// Also transforms the robot and updates the attached sensors and grabbed bodies.
-    void SetTransform(const Transform& trans) override;
+    /// Also transforms the robot and updates the attached sensors and grabbed bodies (unless skipUpdateGrabbedBodies is specified).
+    void SetTransform(const Transform& trans, bool skipUpdateGrabbedBodies = false) override;
 
     /** Methods using the active degrees of freedoms of the robot. Active DOFs are a way for the
         user to specify degrees of freedom of interest for a current execution block. All planners

@@ -2340,19 +2340,22 @@ private:
     /// \brief Parameters passed into the state savers to control what information gets saved.
     enum SaveParameters
     {
-        Save_LinkTransformation              = 0x00000001, ///< [default] save link transformations and joint branches
-        Save_LinkEnable                      = 0x00000002, ///< [default] save link enable states
-        Save_LinkVelocities                  = 0x00000004, ///< save the link velocities
-        Save_JointMaxVelocityAndAcceleration = 0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
-        Save_JointWeights                    = 0x00000010, ///< saves the dof weights
-        Save_JointLimits                     = 0x00000020, ///< saves the dof limits
-        Save_JointResolutions                = 0x00000040, ///< saves the dof resolutions
-        Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
-        Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
-        Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
-        Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
-        Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
+        Save_LinkTransformation                     = 0x00000001, ///< [default] save link transformations and joint branches
+        Save_LinkEnable                             = 0x00000002, ///< [default] save link enable states
+        Save_LinkVelocities                         = 0x00000004, ///< save the link velocities
+        Save_JointMaxVelocityAndAcceleration        = 0x00000008, ///< save the max joint velocities and accelerations for the controller DOF
+        Save_JointWeights                           = 0x00000010, ///< saves the dof weights
+        Save_JointLimits                            = 0x00000020, ///< saves the dof limits
+        Save_JointResolutions                       = 0x00000040, ///< saves the dof resolutions
+        Save_LinkTransformationSkipGrabbedBodies    = 0x00000080, ///< Extra option for Save_LinkTransformation that skips altering the transform of grabbed bodies.
+                                                                  ///< This flag has no effect if Save_LinkTransformation is not also specified.
+
+        Save_ActiveDOF                              = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
+        Save_ActiveManipulator                      = 0x00020000, ///< [robot only], saves the active manipulator
+        Save_GrabbedBodies                          = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_ActiveManipulatorToolTransform         = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
+        Save_ManipulatorsToolTransform              = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
+        Save_ConnectedBodies                        = 0x00200000, ///< [robot only], saves the connected body states
     };
 
     /// \brief info structure used to initialize a kinbody
@@ -2910,12 +2913,13 @@ private:
     /** \en \brief set the transform of the first link (the rest of the links are computed based on the joint values).
 
         \param transform affine transformation
+        \param skipUpdateGrabbedBodies if true, the transforms of all grabbed bodies will _not_ be updated with the new link transform
 
         \ja \brief 胴体の絶対姿勢を設定、残りのリンクは運動学の構造に従って変換される．
 
         \param transform 変換行列
      */
-    virtual void SetTransform(const Transform& transform);
+    virtual void SetTransform(const Transform& transform, bool skipUpdateGrabbedBodies = false);
 
     /// \brief Return an axis-aligned bounding box of the entire object in the world coordinate system.
     ///
@@ -2994,12 +2998,12 @@ private:
     }
 
     /// \brief sets the transformations of all the links at once
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, bool skipUpdateGrabbedBodies = false);
 
     /// \brief sets the transformations of all the links and dof branches at once.
     ///
     /// Using dof branches allows the full joint state to be recovered
-    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues);
+    virtual void SetLinkTransformations(const std::vector<Transform>& transforms, const std::vector<dReal>& doflastsetvalues, bool skipUpdateGrabbedBodies = false);
 
     /// \brief sets the link velocities
     virtual void SetLinkVelocities(const std::vector<std::pair<Vector,Vector> >& velocities);

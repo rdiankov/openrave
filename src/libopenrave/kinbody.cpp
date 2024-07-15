@@ -245,6 +245,17 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     }
 }
 
+// Given a map type where the mapped value is an integer, decrement all mapped values >= index by one
+template <typename MapT>
+static void _RenumberSubsequentMapIndices(MapT& map, size_t index)
+{
+    for (typename MapT::value_type& indexPair : map) {
+        if (indexPair.second >= index) {
+            indexPair.second--;
+        }
+    }
+}
+
 void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options)
 {
     if (value.HasMember("__isPartial__") ) {
@@ -277,7 +288,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
 
         // Create quick lookup tables for our grabbed indices by name/id
-        // For common access patterns, updating grabbed is purely append, so the cost of scanning outweighs the cost of rebuild on delete.
+        // For common access patterns, updating grabbed is purely append, so the cost of repeatedly scanning a vector to test presence outweighs the cost of rebuilding lookup tables in the event of a deletion
         std::unordered_map<std::string, decltype(_vGrabbedInfos)::size_type> grabbedIndexById;
         std::unordered_map<std::string, decltype(_vGrabbedInfos)::size_type> grabbedIndexByName;
         for (decltype(_vGrabbedInfos)::size_type i = 0; i < _vGrabbedInfos.size(); i++) {
@@ -288,19 +299,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
             }
         }
 
-        // TODO(ross): extract
-        auto RenumberSubsequentIndices = [&](decltype(grabbedIndexById)::mapped_type index) {
-            for (decltype(grabbedIndexById)::value_type& indexPair : grabbedIndexById) {
-                if (indexPair.second >= index) {
-                    indexPair.second--;
-                }
-            }
-            for (decltype(grabbedIndexByName)::value_type& indexPair : grabbedIndexByName) {
-                if (indexPair.second >= index) {
-                    indexPair.second--;
-                }
-            }
-        };
 
         for (rapidjson::Value::ConstValueIterator it = value["grabbed"].Begin(); it != value["grabbed"].End(); ++it) {
             // For all entries in the grabbed json:
@@ -333,7 +331,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                     _vGrabbedInfos.erase(_vGrabbedInfos.begin() + grabInfoItById->second);
 
                     // Force a rebuild of all subsequent IDs
-                    RenumberSubsequentIndices(grabInfoItById->second);
+                    _RenumberSubsequentMapIndices(grabbedIndexById, grabInfoItById->second);
+                    _RenumberSubsequentMapIndices(grabbedIndexByName, grabInfoItById->second);
 
                     // Done processing this entry
                     continue;
@@ -348,7 +347,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                     _vGrabbedInfos.erase(_vGrabbedInfos.begin() + grabInfoItByName->second);
 
                     // Force a rebuild of all subsequent IDs
-                    RenumberSubsequentIndices(grabInfoItByName->second);
+                    _RenumberSubsequentMapIndices(grabbedIndexById, grabInfoItByName->second);
+                    _RenumberSubsequentMapIndices(grabbedIndexByName, grabInfoItByName->second);
                 }
                 continue;
             }
@@ -360,7 +360,8 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
                     _vGrabbedInfos.erase(_vGrabbedInfos.begin() + grabInfoItByName->second);
 
                     // Force a rebuild of all subsequent IDs
-                    RenumberSubsequentIndices(grabInfoItByName->second);
+                    _RenumberSubsequentMapIndices(grabbedIndexById, grabInfoItByName->second);
+                    _RenumberSubsequentMapIndices(grabbedIndexByName, grabInfoItByName->second);
                     continue;
                 }
 
