@@ -185,6 +185,15 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
     if (rEnvInfo.HasMember("bodies")) {
         _vBodyInfos.reserve(_vBodyInfos.size() + rEnvInfo["bodies"].Size());
         const rapidjson::Value& rBodies = rEnvInfo["bodies"];
+
+        // Build quick lookup tables of bodies by name / ID
+        std::unordered_map<std::string, size_t> bodyIndexByBodyName;
+        std::unordered_map<std::string, size_t> bodyIndexByBodyId;
+        for (size_t i = 0; i < _vBodyInfos.size(); i++) {
+            bodyIndexByBodyName[_vBodyInfos[i]->_id] = i;
+            bodyIndexByBodyId[_vBodyInfos[i]->_name] = i;
+        }
+
         for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
             const rapidjson::Value& rKinBodyInfo = rBodies[iInputBodyIndex];
 
@@ -200,22 +209,18 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
             }
             else if (!id.empty()) {
                 // only try to find old info if id is not empty
-                FOREACH(itBodyInfo, _vBodyInfos) {
-                    if ((*itBodyInfo)->_id == id ) {
-                        itExistingBodyInfo = itBodyInfo;
-                        break;
-                    }
+                decltype(bodyIndexByBodyId)::iterator bodyLookupIt = bodyIndexByBodyId.find(id);
+                if (bodyLookupIt != bodyIndexByBodyId.end()) {
+                    itExistingBodyInfo = _vBodyInfos.begin() + bodyLookupIt->second;
                 }
             }
             else {
                 // id is empty, try finding the existing one from a matching name
                 rapidjson::Value::ConstMemberIterator itName = rKinBodyInfo.FindMember("name");
                 if( itName != rKinBodyInfo.MemberEnd() && itName->value.IsString() ) {
-                    FOREACH(itBodyInfo, _vBodyInfos) {
-                        if ((*itBodyInfo)->_name.compare(itName->value.GetString()) == 0) {
-                            itExistingBodyInfo = itBodyInfo;
-                            break;
-                        }
+                    decltype(bodyIndexByBodyName)::iterator bodyLookupIt = bodyIndexByBodyName.find(id);
+                    if (bodyLookupIt != bodyIndexByBodyName.end()) {
+                        itExistingBodyInfo = _vBodyInfos.begin() + bodyLookupIt->second;
                     }
                 }
             }
@@ -238,7 +243,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                         pRobotBaseInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                         if (!pRobotBaseInfo->_name.empty()) {
                             pRobotBaseInfo->_id = id;
+
+                            // Add this new entry to our lookup table
+                            bodyIndexByBodyName[pRobotBaseInfo->_name] = _vBodyInfos.size();
+                            bodyIndexByBodyId[id] = _vBodyInfos.size();
+
                             _vBodyInfos.push_back(pRobotBaseInfo);
+
                             RAVELOG_VERBOSE_FORMAT("created new robot id='%s'", id);
                         } else {
                             RAVELOG_WARN_FORMAT("new robot id='%s' does not have a name, so skip creating", id);
@@ -246,12 +257,41 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     }
                     continue;
                 }
+
                 // in case same id exists before
                 if (isDeleted) {
                     RAVELOG_VERBOSE_FORMAT("deleted robot id ='%s'", id);
+
+                    // Get the offset of this entry and remove it from our lookup tables / renumber all subsequent entries
+                    const size_t offset = std::distance(_vBodyInfos.begin(), itExistingBodyInfo);
+                    for (decltype(bodyIndexByBodyId)::iterator it = bodyIndexByBodyId.begin(); it != bodyIndexByBodyId.end(); /* nop */) {
+                        // If this was the entry for the item to be removed, remove this cache entry
+                        if (it->second == offset) {
+                            it = bodyIndexByBodyId.erase(it);
+                            continue;
+                        }
+                        // If this entry was after the removed entry, shift it down to compensate
+                        else if (it->second >offset) {
+                            it->second--;
+                        }
+                    }
+                    for (decltype(bodyIndexByBodyName)::iterator it = bodyIndexByBodyName.begin(); it != bodyIndexByBodyName.end(); /* nop */) {
+                        // If this was the entry for the item to be removed, remove this cache entry
+                        if (it->second == offset) {
+                            it = bodyIndexByBodyName.erase(it);
+                            continue;
+                        }
+                        // If this entry was after the removed entry, shift it down to compensate
+                        else if (it->second >offset) {
+                            it->second--;
+                        }
+                    }
+
                     _vBodyInfos.erase(itExistingBodyInfo);
+
                     continue;
                 }
+
                 KinBody::KinBodyInfoPtr pKinBodyInfo = *itExistingBodyInfo;
                 RobotBase::RobotBaseInfoPtr pRobotBaseInfo = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(pKinBodyInfo);
                 if (!pRobotBaseInfo) {
@@ -274,7 +314,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                         pKinBodyInfo->DeserializeJSON(rKinBodyInfo, fUnitScale, options);
                         if (!pKinBodyInfo->_name.empty()) {
                             pKinBodyInfo->_id = id;
+
+                            // Add this new entry to our lookup table
+                            bodyIndexByBodyName[pKinBodyInfo->_name] = _vBodyInfos.size();
+                            bodyIndexByBodyId[id] = _vBodyInfos.size();
+
                             _vBodyInfos.push_back(pKinBodyInfo);
+
                             RAVELOG_VERBOSE_FORMAT("created new body id='%s'", id);
                         } else {
                             RAVELOG_WARN_FORMAT("new body id='%s' does not have a name, so skip creating", id);
@@ -285,7 +331,34 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                 // in case same id exists before
                 if (isDeleted) {
                     RAVELOG_VERBOSE_FORMAT("deleted body id='%s'", id);
+
+                    // Get the offset of this entry and remove it from our lookup tables / renumber all subsequent entries
+                    const size_t offset = std::distance(_vBodyInfos.begin(), itExistingBodyInfo);
+                    for (decltype(bodyIndexByBodyId)::iterator it = bodyIndexByBodyId.begin(); it != bodyIndexByBodyId.end(); /* nop */) {
+                        // If this was the entry for the item to be removed, remove this cache entry
+                        if (it->second == offset) {
+                            it = bodyIndexByBodyId.erase(it);
+                            continue;
+                        }
+                        // If this entry was after the removed entry, shift it down to compensate
+                        else if (it->second >offset) {
+                            it->second--;
+                        }
+                    }
+                    for (decltype(bodyIndexByBodyName)::iterator it = bodyIndexByBodyName.begin(); it != bodyIndexByBodyName.end(); /* nop */) {
+                        // If this was the entry for the item to be removed, remove this cache entry
+                        if (it->second == offset) {
+                            it = bodyIndexByBodyName.erase(it);
+                            continue;
+                        }
+                        // If this entry was after the removed entry, shift it down to compensate
+                        else if (it->second >offset) {
+                            it->second--;
+                        }
+                    }
+
                     _vBodyInfos.erase(itExistingBodyInfo);
+
                     continue;
                 }
                 KinBody::KinBodyInfoPtr pKinBodyInfo = *itExistingBodyInfo;
