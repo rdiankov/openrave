@@ -2390,6 +2390,9 @@ public:
 
         boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 
+        /// Monotonic counter that increments every time the set of bodies grabbed by this body changes
+        uint64_t _grabInfoUpdateStamp = 0;
+
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
@@ -3688,6 +3691,10 @@ protected:
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
     std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+
+    /// Monotonic counter that increments every time the set of grabbed bodies changes
+    /// This changes only if the total set of grabbed body names changes - it does not change if the transform of those bodies is altered.
+    uint64_t _grabInfoUpdateStamp = 0;
 
     /// Quick lookup map of body name -> indexed into _vGrabbedBodies of the matching grab entry
     using MapGrabbedBodyNameIndex = std::unordered_map<std::string, std::vector<GrabbedPtr>::size_type>;

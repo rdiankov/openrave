@@ -788,6 +788,10 @@ std::string KinBody::GrabbedInfo::GetGrabbedInfoHash() const
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGrabbedInfos)
 {
 
+    // Track whether any of our mutation actually modifies the final set of grabbed bodies
+    // This does not track whether the transform of those grabbed bodies changes - only if we added or removed unique body names to the set of grabbed bodies
+    bool didMutateGrabbedBodiesList = false;
+
     // First pass: remove all existing grabs that are no longer valid per the new list of grab infos
     {
         // New copies of _vGrabbedBodies / grabbed body index by name
@@ -822,6 +826,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             }
 
             // If the body this grab info referenced is already deleted, nothing to be done
+            // Don't count this as mutating the grabbed body state, as the body had already vanished
             KinBodyPtr pGrabbedBody = grabInfo->_pGrabbedBody.lock();
             if (!pGrabbedBody) {
                 continue;
@@ -829,6 +834,9 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
 
             // If the body is valid, detach it
             _RemoveAttachedBody(*pGrabbedBody);
+
+            // Flag that we have altered the grab state
+            didMutateGrabbedBodiesList = true;
         }
 
         // Now that we have filtered out all of the dead grabs, latch the set of still-active grabs back to our master list
@@ -882,6 +890,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Does this map to an existing grab?
         const MapGrabbedBodyNameIndex::iterator existingGrabIndexIt = _mapGrabbedBodyNameIndex.find(pGrabbedInfo->_grabbedname);
         size_t grabIndex = -1;
+        bool isNewlyGrabbedBody = false;
         if (existingGrabIndexIt != _mapGrabbedBodyNameIndex.end()) {
             grabIndex = existingGrabIndexIt->second;
         }
@@ -890,6 +899,8 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             grabIndex = _vGrabbedBodies.size();
             _mapGrabbedBodyNameIndex[pBody->GetName()] = grabIndex;
             _vGrabbedBodies.emplace_back(new Grabbed(pBody, pGrabbingLink));
+            didMutateGrabbedBodiesList = true;
+            isNewlyGrabbedBody = true;
         }
 
         // Update the grab object with the ancillary grab info
@@ -906,11 +917,19 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         velocity.first += velocity.second.cross(tBody.trans - tGrabbingLink.trans);
         pBody->SetVelocity(velocity.first, velocity.second);
 
-        _AttachBody(pBody);
+        // Only attach the body again if it's actually a new body
+        if (isNewlyGrabbedBody) {
+            _AttachBody(pBody);
+        }
     }
 
     // Now that we have finished processing all of the grab changes, invoke any register grab callbacks
     _PostprocessChangedParameters(Prop_RobotGrabbed);
+
+    // If we changed the set of grabbed body names, update the grab body stamp
+    if (didMutateGrabbedBodiesList) {
+        _grabInfoUpdateStamp++;
+    }
 }
 
 void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const

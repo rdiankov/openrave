@@ -134,6 +134,7 @@ void KinBody::KinBodyInfo::Reset()
     _prAssociatedFileEntries.reset();
     _isRobot = false;
     _isPartial = true;
+    _grabInfoUpdateStamp = 0;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -196,6 +197,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         }
         rKinBodyInfo.AddMember("grabbed", rGrabbedInfoValues, allocator);
     }
+    orjson::SetJsonValueByKey(rKinBodyInfo, "grabInfoUpdateStamp", _grabInfoUpdateStamp, allocator);
 
     if (_vLinkInfos.size() > 0) {
         rapidjson::Value rLinkInfoValues;
@@ -284,6 +286,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
     orjson::LoadJsonValueByKey(value, "isRobot", _isRobot);
 
+    orjson::LoadJsonValueByKey(value, "grabInfoUpdateStamp", _grabInfoUpdateStamp);
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
 
@@ -6230,6 +6233,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 
     info._vGrabbedInfos.clear();
     GetGrabbedInfo(info._vGrabbedInfos);
+    info._grabInfoUpdateStamp = _grabInfoUpdateStamp;
 
     info._transform = GetTransform();
 
