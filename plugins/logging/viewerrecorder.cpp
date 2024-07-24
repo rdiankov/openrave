@@ -873,19 +873,17 @@ protected:
         _outbuf = (char*)malloc(_outbuf_size);
         BOOST_ASSERT(!!_outbuf);
 
-        typedef int (*AvPictureSizeGetter) (AVPixelFormat, int, int);
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 63, 100)
-        AvPictureSizeGetter getPictureSize = av_image_get_buffer_size;
-#else
-        AvPictureSizeGetter getPictureSize = avpicture_get_size;
-#endif
         AVPixelFormat yuv420pFmt;
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
         yuv420pFmt = AV_PIX_FMT_YUV420P;
 #else
         yuv420pFmt = PIX_FMT_YUV420P;
 #endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 63, 100)
+        _picture_size = av_image_get_buffer_size(yuv420pFmt, _codec_ctx->width, _codec_ctx->height, 0);
+#else
         _picture_size = avpicture_get_size(yuv420pFmt, _codec_ctx->width, _codec_ctx->height);
+#endif
         _picture_buf = (char*)malloc(_picture_size);
         BOOST_ASSERT(!!_picture_buf);
 
