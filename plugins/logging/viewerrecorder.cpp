@@ -939,18 +939,20 @@ protected:
 
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
+        typedef void (*PacketFreer) (AVPacket*);
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
+        PacketFreer freePacket = av_packet_unref;
+#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
+        PacketFreer freePacket = av_free_packet;
+#else
+        PacketFreer freePacket = av_destruct_packet;
+#endif
         int got_packet = 0;
         AVPacket pkt;
         av_init_packet(&pkt);
         int ret = avcodec_encode_video2(_codec_ctx, &pkt, _yuv420p, &got_packet);
         if( ret < 0 ) {
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
-            av_packet_unref(&pkt);
-#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
-            av_free_packet(&pkt);
-#else
-            av_destruct_packet(&pkt);
-#endif
+            freePacket(&pkt);
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
         }
         if( got_packet ) {
@@ -959,25 +961,13 @@ protected:
                 _codec_ctx->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
             if( av_write_frame(_output, &pkt) < 0) {
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
-                av_packet_unref(&pkt);
-#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
-                av_free_packet(&pkt);
-#else
-                av_destruct_packet(&pkt);
-#endif
+                freePacket(&pkt);
                 throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
             }
         }
 
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
-        av_packet_unref(&pkt);
-#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
-        av_free_packet(&pkt);
-#else
-        av_destruct_packet(&pkt);
-#endif
-#else
+        freePacket(&pkt);
+#else // LIBAVFORMAT_VERSION_INT < (54<<16)
         int size = avcodec_encode_video(_codec_ctx, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
         if (size < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("error encoding frame",ORE_Assert);
