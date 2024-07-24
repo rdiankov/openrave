@@ -68,6 +68,25 @@ extern "C" {
 #endif
 }
 
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 37, 100)
+namespace {
+
+int avcodec_encode_video2(AVCodecContext* avctx, AVPacket* avpkt, const AVFrame* frame, int* got_packet_ptr) {
+    int avResult = avcodec_send_frame(avctx, frame);
+    if (avResult < 0) {
+        return avResult;
+    }
+    avResult = avcode_receive_packet(avctx, pkt);
+    if (avResult < 0) {
+        return avResult;
+    }
+    *got_packet_ptr = 1;
+}
+
+}
+
+#endif
+
 class VideoGlobalState
 {
 public:
