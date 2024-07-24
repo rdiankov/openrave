@@ -888,7 +888,7 @@ protected:
         BOOST_ASSERT(!!_picture_buf);
 
 // Using this version so that we can also pass 0 for automatic alignment selection.
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(55.77.101)
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(55, 77, 101)
         _yuv420p->format = yuv420pFmt;
         _yuv420p->width = _codec_ctx->width;
         _yuv420p->height = _codec_ctx->height;
