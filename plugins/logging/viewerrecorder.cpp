@@ -59,6 +59,7 @@ extern "C" {
 #ifdef HAVE_NEW_FFMPEG
 #include <libavformat/avformat.h>
 #include <libavformat/version.h>
+#include <libavutil/imgutils.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #else
@@ -872,6 +873,12 @@ protected:
         _outbuf = (char*)malloc(_outbuf_size);
         BOOST_ASSERT(!!_outbuf);
 
+        typedef int (*AvPictureSizeGetter) (AVPixelFormat, int, int);
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 63, 100)
+        AvPictureSizeGetter getPictureSize = av_image_get_buffer_size;
+#else
+        AvPictureSizeGetter getPictureSize = avpicture_get_size;
+#endif
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
         _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
 #else
