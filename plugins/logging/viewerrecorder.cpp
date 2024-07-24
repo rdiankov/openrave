@@ -879,18 +879,24 @@ protected:
 #else
         AvPictureSizeGetter getPictureSize = avpicture_get_size;
 #endif
+        AVPixelFormat yuv420pFmt;
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
+        yuv420pFmt = AV_PIX_FMT_YUV420P;
 #else
-        _picture_size = avpicture_get_size(PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
+        yuv420pFmt = PIX_FMT_YUV420P;
 #endif
+        _picture_size = avpicture_get_size(yuv420pFmt, _codec_ctx->width, _codec_ctx->height);
         _picture_buf = (char*)malloc(_picture_size);
         BOOST_ASSERT(!!_picture_buf);
 
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, AV_PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
+// Using this version so that we can also pass 0 for automatic alignment selection.
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(55.77.101)
+        _yuv420p->format = yuv420pFmt;
+        _yuv420p->width = _codec_ctx->width;
+        _yuv420p->height = _codec_ctx->height;
+        av_frame_get_buffer(_yuv420p, 0);
 #else
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, _codec_ctx->width, _codec_ctx->height);
+        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, yuv420pFmt, _codec_ctx->width, _codec_ctx->height);
 #endif
     }
 
