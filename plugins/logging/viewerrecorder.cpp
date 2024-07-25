@@ -71,7 +71,7 @@ extern "C" {
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 37, 100)
 namespace {
 
-int avcodec_encode_video2(AVCodecContext* avctx, AVPacket* avpkt, const AVFrame* frame, int* got_packet_ptr) {
+int openRaveEncodeVideo(AVCodecContext* avctx, AVPacket* avpkt, const AVFrame* frame, int* got_packet_ptr) {
     int avResult = avcodec_send_frame(avctx, frame);
     if (avResult < 0) {
         return avResult;
@@ -970,7 +970,11 @@ protected:
         int got_packet = 0;
         AVPacket pkt;
         av_init_packet(&pkt);
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 37, 100)
+        int ret = openRaveEncodeVideo(_codec_ctx, &pkt, _yuv420p, &got_packet);
+#else
         int ret = avcodec_encode_video2(_codec_ctx, &pkt, _yuv420p, &got_packet);
+#endif
         if( ret < 0 ) {
             freePacket(&pkt);
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
