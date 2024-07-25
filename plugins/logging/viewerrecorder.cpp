@@ -980,10 +980,12 @@ protected:
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
         }
         if( got_packet ) {
+#if LIBAVCODEC_VERSION_MAJOR < 59
             if( _codec_ctx->coded_frame) {
                 _codec_ctx->coded_frame->pts       = pkt.pts;
                 _codec_ctx->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
+#endif
             if( av_write_frame(_output, &pkt) < 0) {
                 freePacket(&pkt);
                 throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
