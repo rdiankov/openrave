@@ -81,6 +81,7 @@ int avcodec_encode_video2(AVCodecContext* avctx, AVPacket* avpkt, const AVFrame*
         return avResult;
     }
     *got_packet_ptr = 1;
+    return avResult;
 }
 
 }
