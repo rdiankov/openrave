@@ -968,8 +968,16 @@ protected:
         PacketFreer freePacket = av_destruct_packet;
 #endif
         int got_packet = 0;
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 133, 100)
+        AVPacket* allocatedPacket = av_packet_alloc();
+        if (allocatedPacket == nullptr) {
+            throw OPENRAVE_EXCEPTION_FORMAT("failed to allocate an AVPacket", ORE_Assert);
+        }
+        AVPacket& pkt = *allocatedPacket;
+#else
         AVPacket pkt;
         av_init_packet(&pkt);
+#endif
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 37, 100)
         int ret = openRaveEncodeVideo(_codec_ctx, &pkt, _yuv420p, &got_packet);
 #else
