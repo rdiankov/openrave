@@ -76,7 +76,7 @@ int avcodec_encode_video2(AVCodecContext* avctx, AVPacket* avpkt, const AVFrame*
     if (avResult < 0) {
         return avResult;
     }
-    avResult = avcode_receive_packet(avctx, avpkt);
+    avResult = avcodec_receive_packet(avctx, avpkt);
     if (avResult < 0) {
         return avResult;
     }
