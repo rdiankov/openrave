@@ -212,24 +212,28 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         value.AddMember("readableInterfaces", std::move(rReadableInterfaces), allocator);
     }
 
-    // if(_mapExtraGeometries.size() > 0 ) {
-    //     rapidjson::Value extraGeometriesValue;
-    //     extraGeometriesValue.SetObject();
-    //     FOREACHC(im, _mapExtraGeometries) {
-    //         rapidjson::Value geometriesValue;
-    //         geometriesValue.SetArray();
-    //         FOREACHC(iv, im->second){
-    //             if(!!(*iv))
-    //             {
-    //                 rapidjson::Value geometryValue;
-    //                 (*iv)->SerializeJSON(geometryValue, allocator);
-    //                 geometriesValue.PushBack(geometryValue, allocator);
-    //             }
-    //         }
-    //         extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
-    //     }
-    //     value.AddMember("extraGeometries", extraGeometriesValue, allocator);
-    // }
+    // TODO revive
+    if(_mapExtraGeometries.size() > 0 ) {
+        rapidjson::Value extraGeometriesValue;
+        extraGeometriesValue.SetObject();
+        FOREACHC(im, _mapExtraGeometries) {
+            if( im->first == _currentGeometryGroupName) {
+                continue;
+            }
+            rapidjson::Value geometriesValue;
+            geometriesValue.SetArray();
+            FOREACHC(iv, im->second){
+                if(!!(*iv))
+                {
+                    rapidjson::Value geometryValue;
+                    (*iv)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
+                    geometriesValue.PushBack(geometryValue, allocator);
+                }
+            }
+            extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
+        }
+        value.AddMember("extraGeometries", extraGeometriesValue, allocator);
+    }
 
     orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
     orjson::SetJsonValueByKey(value, "isEnabled", _bIsEnabled, allocator);
@@ -338,20 +342,21 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     }
 
     _mapExtraGeometries.clear();
-    // if (value.HasMember("extraGeometries")) {
-    //     for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
-    //         if (_mapExtraGeometries.find(it->name.GetString()) == _mapExtraGeometries.end()) {
-    //             _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
-    //         }
-    //         std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
-    //         vgeometries.reserve(it->value.Size() + vgeometries.size());
-    //         size_t iGeometry = 0;
-    //         for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
-    //             std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-    //             UpdateOrCreateInfoWithNameCheck(*im, id, vgeometries, "name", fUnitScale);
-    //         }
-    //     }
-    // }
+    // TODO : Need?
+    if (value.HasMember("extraGeometries")) {
+        for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
+            if (_mapExtraGeometries.find(it->name.GetString()) == _mapExtraGeometries.end()) {
+                _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
+            }
+            std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
+            vgeometries.reserve(it->value.Size() + vgeometries.size());
+            size_t iGeometry = 0;
+            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
+                std::string id = orjson::GetStringJsonValueByKey(*im, "id");
+                UpdateOrCreateInfoWithNameCheck(*im, vgeometries, "name", fUnitScale, options);
+            }
+        }
+    }
 
     orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
     orjson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
@@ -802,6 +807,7 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
         }
         pvinfos = &it->second;
     }
+    _info._currentGeometryGroupName = groupname;
     _vGeometries.resize(pvinfos->size());
     for(size_t i = 0; i < pvinfos->size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*pvinfos->at(i)));

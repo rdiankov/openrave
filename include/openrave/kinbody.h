@@ -992,8 +992,9 @@ public:
         }
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
-        /// extra-purpose geometries like
+        /// extra-purpose geometries like. the user can store any pairs of group geometry name and extra geometries. For example,
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
+        /// safety_xx - safety geometry.
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
         ///\brief unique id of the link
@@ -1059,6 +1060,7 @@ private:
         Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
         uint32_t _modifiedFields = 0xffffffff; ///< a bitmap of LinkInfoField, for supported fields, indicating which fields are touched, otherwise they can be skipped in UpdateFromInfo. By default, assume all fields are modified.
+        std::string _currentGeometryGroupName; ///< currently set geometry group name
 
         /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
         void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
