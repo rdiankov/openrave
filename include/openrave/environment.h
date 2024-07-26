@@ -134,9 +134,18 @@ public:
     /// \name Collision specific functions.
     /// \anchor env_collision_checking
     //@{
-    /// set the global environment collision checker
+
+    /// \brief Set the default global environment collision checker
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker)=0;
+
+    /// \brief Set the global environment collision checker by geometry group name
+    virtual bool SetCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr pchecker)=0;
+
+    /// \brief Get the default global environment collision checker
     virtual CollisionCheckerBasePtr GetCollisionChecker() const =0;
+
+    /// \brief Get the default global environment collision checker by geometry group name
+    virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& name) const =0;
 
     /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
