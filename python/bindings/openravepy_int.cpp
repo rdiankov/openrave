@@ -1333,10 +1333,22 @@ bool PyEnvironmentBase::SetCollisionChecker(PyCollisionCheckerBasePtr pchecker)
 {
     return _penv->SetCollisionChecker(openravepy::GetCollisionChecker(pchecker));
 }
+
+bool PyEnvironmentBase::SetCollisionCheckerByGroupName(const std::string& name, PyCollisionCheckerBasePtr pchecker)
+{
+    return _penv->SetCollisionCheckerByGroupName(name, openravepy::GetCollisionChecker(pchecker));
+}
+
 object PyEnvironmentBase::GetCollisionChecker()
 {
     return py::to_object(openravepy::toPyCollisionChecker(_penv->GetCollisionChecker(), shared_from_this()));
 }
+
+object PyEnvironmentBase::GetCollisionCheckerByGroupName(const std::string& name)
+{
+    return py::to_object(openravepy::toPyCollisionChecker(_penv->GetCollisionCheckerByGroupName(name), shared_from_this()));
+}
+
 bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1)
 {
     CHECK_POINTER(pbody1);
@@ -3652,7 +3664,9 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("Clone",pclone, PY_ARGS("reference","options") DOXY_FN(EnvironmentBase,Clone))
                      .def("Clone",pclonename, PY_ARGS("reference", "clonedEnvName", "options") DOXY_FN(EnvironmentBase,Clone))
                      .def("SetCollisionChecker",&PyEnvironmentBase::SetCollisionChecker, PY_ARGS("collisionchecker") DOXY_FN(EnvironmentBase,SetCollisionChecker))
+                     .def("SetCollisionCheckerByGroupName",&PyEnvironmentBase::SetCollisionCheckerByGroupName, PY_ARGS("name","collisionchecker") DOXY_FN(EnvironmentBase,SetCollisionCheckerByGroupName))
                      .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
+                     .def("GetCollisionCheckerByGroupName",&PyEnvironmentBase::GetCollisionCheckerByGroupName, DOXY_FN(EnvironmentBase,GetCollisionCheckerByGroupName))
                      .def("CheckCollision",pcolb, PY_ARGS("body") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbr, PY_ARGS("body","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbb, PY_ARGS("body1","body2") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; KinBodyConstPtr; CollisionReportPtr"))

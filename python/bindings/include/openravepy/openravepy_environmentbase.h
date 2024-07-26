@@ -144,7 +144,9 @@ public:
     void Clone(PyEnvironmentBasePtr pyreference, const std::string& clonedEnvName, int options);
 
     bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker);
+    bool SetCollisionCheckerByGroupName(const std::string& name, PyCollisionCheckerBasePtr pchecker);
     object GetCollisionChecker();
+    object GetCollisionCheckerByGroupName(const std::string& name);
     bool CheckCollision(PyKinBodyPtr pbody1);
     bool CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport);
 
