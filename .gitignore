@@ -8,3 +8,9 @@ msvc_soqt/
 src/models/
 
 myrelpath.pyc
+
+/build*/
+/.vs/
+/.vscode/
+/__pycache__/
+/sympy/

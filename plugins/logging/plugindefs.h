@@ -57,7 +57,6 @@
 #include <iostream>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 
 using namespace std;

@@ -1036,7 +1036,7 @@ class IKFastSolver(AutoReloader):
             self.htvar = Symbol("ht%s"%var.name)
             self.vars = [self.var,self.svar,self.cvar,self.tvar,self.htvar]
             self.subs = [(cos(self.var),self.cvar),(sin(self.var),self.svar),(tan(self.var),self.tvar),(tan(self.var/2),self.htvar)]
-            self.subsinv = [(self.cvar,cos(self.var)),(self.svar, sin(self.var)),(self.tvar,tan(self.tvar))]
+            self.subsinv = [(self.cvar,cos(self.var)),(self.svar, sin(self.var)),(self.tvar,tan(self.var))]
         def getsubs(self,value):
             return [(self.var,value)]+[(s,v.subs(self.var,value).evalf()) for v,s in self.subs]
 
@@ -4830,7 +4830,7 @@ class IKFastSolver(AutoReloader):
                 
                 # ignore any equations with degree 3 or more
                 if Poly(enew,varsym.svar).degree > maxdegree or Poly(enew,varsym.cvar).degree > maxdegree:
-                    log.debug('ignoring equation: ',enew)
+                    log.debug('ignoring equation: %r',enew)
                     continue
                 
                 if Poly(enew,varsym.svar).coeff() == S.Zero or Poly(enew,varsym.cvar) == S.Zero or Poly(enew,varsym.var) == S.Zero:

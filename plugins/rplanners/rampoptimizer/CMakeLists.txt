@@ -6,46 +6,20 @@ install(TARGETS rampoptimizer DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPON
 
 add_dependencies(rampoptimizer interfacehashes_target)		
 
-# python bindings
-if( HAVE_ALL_PYTHON_HEADERS )
-  # include
-  include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
-    ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}
-  )
+if (OPT_PYTHON)
+    add_library(openravepy_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
+    target_link_libraries(openravepy_rampoptimizer PRIVATE boost_assertion_failed PUBLIC rampoptimizer openravepy_int openravepy2_meta)
+    set_target_properties(openravepy_rampoptimizer PROPERTIES PREFIX "")
+    install(TARGETS openravepy_rampoptimizer DESTINATION ${OPENRAVEPY2_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+endif()
 
-  # link
-  set(OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES openravepy_int rampoptimizer ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
-  if(NOT USE_PYBIND11_PYTHON_BINDINGS)
-    set(OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES ${OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES} ${Boost_PYTHON_LIBRARY})
-  endif()
-
-  add_library(openravepy_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
-
-  target_link_libraries(openravepy_rampoptimizer PUBLIC ${OPENRAVEPY_RAMPOPTIMIZER_LINKED_LIBRARIES} PRIVATE boost_assertion_failed)
-
-  set(OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS "")
-  if(USE_PYBIND11_PYTHON_BINDINGS)
-    message(STATUS "Build openravepy_rampoptimizer with pybind11")
-    find_package(pybind11 REQUIRED)
-    set(OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS "${OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS} -DUSE_PYBIND11_PYTHON_BINDINGS")
-    if(PYBIND11_PYTHON_BINDINGS_DEBUG)
-      set(OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS "${OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS} -g -O0")
-    else()
-      set(OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS "${OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS} -g0 -O3")
-    endif()
-    # pybind11 requires less visibility
-    set(OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS "${OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS} -fvisibility=hidden")
-  else()
-    message(STATUS "Build openravepy_rampoptimizer with Boost.Python")
-  endif()
-
-  set_target_properties(openravepy_rampoptimizer
-    PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_RAMPOPTIMIZER_COMPILE_FLAGS}"
-  )
-  if( WIN32 )
-    set_target_properties(openravepy_rampoptimizer PROPERTIES SUFFIX ".pyd")
-  endif()
-  install(TARGETS openravepy_rampoptimizer DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
-else()
-  message(STATUS "HAVE_ALL_PYTHON_HEADERS = ${HAVE_ALL_PYTHON_HEADERS}; do not build openravepy_rampoptimizer")
+if (OPT_PYTHON3)
+    add_library(openravepy3_rampoptimizer SHARED openravepy_rampoptimizer.cpp)
+    target_link_libraries(openravepy3_rampoptimizer PRIVATE boost_assertion_failed PUBLIC rampoptimizer openravepy3_int openravepy3_meta)
+    set_target_properties(openravepy3_rampoptimizer PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY "python3"
+        OUTPUT_NAME "openravepy_rampoptimizer"
+    )
+    install(TARGETS openravepy3_rampoptimizer DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 endif()

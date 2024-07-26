@@ -35,7 +35,7 @@ OPENRAVE_API void DumpMsgPack(const rapidjson::Value& value, std::vector<char>& 
 
 OPENRAVE_API void ParseMsgPack(rapidjson::Document& d, const std::string& str);
 OPENRAVE_API void ParseMsgPack(rapidjson::Document& d, std::istream& is);
-
+OPENRAVE_API void ParseMsgPack(rapidjson::Document& d, const void* data, size_t size);
 } // namespace MsgPack
 
 } // namespace OpenRAVE

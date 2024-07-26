@@ -424,6 +424,35 @@ void RobotBase::ConnectedBody::ExtractInfo(RobotBase::ConnectedBodyInfo& info) c
 {
     // TODO: extract info from connectedbody to make extra geometry working
     info = _info;
+
+    for(size_t iLinkInfo = 0; iLinkInfo < _info._vLinkInfos.size(); ++iLinkInfo) {
+        info._vLinkInfos[iLinkInfo].reset(new KinBody::LinkInfo());
+        *info._vLinkInfos[iLinkInfo] = *_info._vLinkInfos[iLinkInfo];
+        for(size_t iGeometryInfo = 0; iGeometryInfo < _info._vLinkInfos[iLinkInfo]->_vgeometryinfos.size(); ++iGeometryInfo){
+            info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo].reset(new KinBody::GeometryInfo());
+            *info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo] = *_info._vLinkInfos[iLinkInfo]->_vgeometryinfos[iGeometryInfo];
+        }
+    }
+
+    for(size_t iJointInfo = 0; iJointInfo < _info._vJointInfos.size(); ++iJointInfo) {
+        info._vJointInfos[iJointInfo].reset(new KinBody::JointInfo());
+        *info._vJointInfos[iJointInfo] = *_info._vJointInfos[iJointInfo];
+    }
+
+    for(size_t iManipulatorInfo = 0; iManipulatorInfo < _info._vManipulatorInfos.size(); ++iManipulatorInfo) {
+        info._vManipulatorInfos[iManipulatorInfo].reset(new RobotBase::ManipulatorInfo());
+        *info._vManipulatorInfos[iManipulatorInfo] = *_info._vManipulatorInfos[iManipulatorInfo];
+    }
+
+    for(size_t iAttachedSensorInfo = 0; iAttachedSensorInfo < _info._vAttachedSensorInfos.size(); ++iAttachedSensorInfo) {
+        info._vAttachedSensorInfos[iAttachedSensorInfo].reset(new RobotBase::AttachedSensorInfo());
+        *info._vAttachedSensorInfos[iAttachedSensorInfo] = *_info._vAttachedSensorInfos[iAttachedSensorInfo];
+    }
+
+    for(size_t iGripperInfo = 0; iGripperInfo < _info._vGripperInfos.size(); ++iGripperInfo) {
+        info._vGripperInfos[iGripperInfo].reset(new RobotBase::GripperInfo());
+        *info._vGripperInfos[iGripperInfo] = *_info._vGripperInfos[iGripperInfo];
+    }
 }
 
 UpdateFromInfoResult RobotBase::ConnectedBody::UpdateFromInfo(const RobotBase::ConnectedBodyInfo& info)
@@ -968,7 +997,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 }
             }
 
-            // look recursively for fields that end in "linkname" and "toolnames" (case insensitive) and resolve their names
+            // look recursively for fields that end in "linkname(s)", "toolname(s)" and "jointname(s)" (case insensitive) and resolve their names
             if(connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo.IsObject()) {
                 rapidjson::Document newGripperInfoDoc;
                 newGripperInfoDoc.CopyFrom(connectedBodyInfo._vGripperInfos[iGripperInfo]->_docGripperInfo, newGripperInfoDoc.GetAllocator());
@@ -977,6 +1006,10 @@ void RobotBase::_ComputeConnectedBodiesInformation()
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("links")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);  // deprecated. only for commpatibility.
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("toolname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
                 RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("toolnames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("jointname")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("jointnames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("grippername")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
+                RecursivePrefixMatchingField(connectedBody._nameprefix, boost::bind(MatchFieldsCaseInsensitive, _1, std::string("grippernames")), newGripperInfoDoc, newGripperInfoDoc.GetAllocator(), false);
                 pnewgripperInfo->_docGripperInfo.Swap(newGripperInfoDoc);
             }
             else {
@@ -995,7 +1028,7 @@ void RobotBase::_ComputeConnectedBodiesInformation()
         KinBody::JointInfo& dummyJointInfo = connectedBody._pDummyJointCache->_info;
         dummyJointInfo._name = connectedBody._dummyPassiveJointName;
         dummyJointInfo._bIsActive = false;
-        dummyJointInfo._type = KinBody::JointType::JointPrismatic;
+        dummyJointInfo._type = KinBody::JointType::JointRevolute;
         dummyJointInfo._vmaxaccel[0] = 0.0;
         dummyJointInfo._vmaxvel[0] = 0.0;
         dummyJointInfo._vupperlimit[0] = 0;
@@ -1117,6 +1150,9 @@ bool RobotBase::SetConnectedBodyActiveStates(const std::vector<int8_t>& activest
     bool bChanged = false;
     for(size_t iconnectedbody = 0; iconnectedbody < _vecConnectedBodies.size(); ++iconnectedbody) {
         bChanged |= _vecConnectedBodies[iconnectedbody]->SetActive(activestates[iconnectedbody]);
+    }
+    if (bChanged) {
+        __hashKinematicsGeometryDynamics.resize(0);
     }
     return bChanged;
 }

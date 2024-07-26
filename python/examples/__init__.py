@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Examples showing common planning and usage scenarios.
 
 Unlike the tutorials, python examples are installed with openravepy and their list can be retrieved with:

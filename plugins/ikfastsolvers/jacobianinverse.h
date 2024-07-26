@@ -110,9 +110,9 @@ public:
     int ComputeSolution(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         // check if manip's iksolver suppports this ikgoal type
-        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
-        }
+//        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+//            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator '%s' does not support iktype 0x%x."),manip.GetIkSolver()%manip.GetName()%ikgoal.GetType(),ORE_InvalidArguments);
+//        }
 
         RobotBasePtr probot = manip.GetRobot();
         uint32_t checklimits = bIgnoreJointLimits ? OpenRAVE::KinBody::CLA_Nothing : OpenRAVE::KinBody::CLA_CheckLimitsSilent; // if not ignoring limits, silently clamp the values to their limits.
@@ -144,7 +144,7 @@ public:
         T firsterror2 = totalerror21;
         T besterror2 = totalerror21;
         _lasterror2 = totalerror21;
-        int armdof = manip.GetArmDOF();
+        //int armdof = manip.GetArmDOF();
         std::vector<dReal>& vbest = _cachevbest; vbest = vsolution;
         std::vector<dReal>& vnew = _cachevnew; vnew = vsolution;
         bool bSuccess = false;
@@ -307,9 +307,9 @@ public:
     int ComputeSolutionTranslation(const IkParameterization& ikgoal, const RobotBase::Manipulator& manip, std::vector<dReal>& vsolution, bool bIgnoreJointLimits=false)
     {
         // check if manip's iksolver suppports this ikgoal type
-        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator %s do not support "),manip.GetIkSolver()%manip.GetName(),ORE_InvalidArguments);
-        }
+//        if (! manip.GetIkSolver()->Supports(ikgoal.GetType())) {
+//            throw OPENRAVE_EXCEPTION_FORMAT(_("iksolver %s of manipulator '%s' do not support iktype 0x%x"),manip.GetIkSolver()%manip.GetName()%ikgoal.GetIkType(),ORE_InvalidArguments);
+//        }
 
         _goalIkp = ikgoal;
         
@@ -571,7 +571,7 @@ public:
                 break;
             }
         default:
-            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam %s."),ikpcur.GetName(),ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT(_("unsupported ikparam '%s'."),ikpcur.GetTypeString(),ORE_InvalidArguments);
             break;
         };
         return totalerror2;

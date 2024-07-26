@@ -27,6 +27,7 @@ except NameError:
     __builtins__['__openravepy_build_doc__'] = False
 
 import sys
+import six
 
 from .openravepy_int import *
 from .openravepy_int import __version__
@@ -103,6 +104,8 @@ else:
             self._pimpl = app_error
         def __str__( self ):
             return self._pimpl.message
+        def __repr__( self ):
+            return self._pimpl.__repr__()
         def __getattribute__(self, attr):
             my_pimpl = super(boost_filesystem_error, self).__getattribute__("_pimpl")
             try:
@@ -117,6 +120,7 @@ else:
 
 openrave_exception = OpenRAVEException # for back compat
 
+@six.python_2_unicode_compatible
 class PlanningError(Exception):
     def __init__(self,parameter=u'', recoverySuggestions=None):
         """:param recoverySuggestions: list of unicode suggestions to fix or recover from the error
@@ -128,19 +132,16 @@ class PlanningError(Exception):
         if recoverySuggestions is None:
             self.recoverySuggestions = []
         else:
-            self.recoverySuggestions = [unicode(s) for s in recoverySuggestions]
+            self.recoverySuggestions = [six.text_type(s) for s in recoverySuggestions]
             
-    def __unicode__(self):
+    def __str__(self):
         s = u'Planning Error\n%s'%self.parameter
         if len(self.recoverySuggestions) > 0:
             s += u'\nRecovery Suggestions:\n'
             for suggestion in self.recoverySuggestions:
-                s += u'- %s\n'%unicode(suggestion)
+                s += u'- %s\n'%six.text_type(suggestion)
             s += u'\n'
         return s
-        
-    def __str__(self):
-        return unicode(self).encode('utf-8')
     
     def __repr__(self):
         return '<openravepy.PlanningError(%r,%r)>'%(self.parameter,self.recoverySuggestions)

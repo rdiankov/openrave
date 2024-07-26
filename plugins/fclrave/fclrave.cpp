@@ -13,27 +13,41 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "fclrave.h"
 #include "plugindefs.h"
-
 #include "fclcollision.h"
 
-#include <openrave/plugin.h>
+const std::string FCLRavePlugin::_pluginname = "FCLRavePlugin";
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+FCLRavePlugin::FCLRavePlugin()
 {
+    _interfaces[OpenRAVE::PT_CollisionChecker].push_back("fcl_");
+}
 
+FCLRavePlugin::~FCLRavePlugin() {}
+
+OpenRAVE::InterfaceBasePtr FCLRavePlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
+{
     if( type == OpenRAVE::PT_CollisionChecker && interfacename == "fcl_" ) {
-        return InterfaceBasePtr(new fclrave::FCLCollisionChecker(penv, sinput));
+        return boost::make_shared<fclrave::FCLCollisionChecker>(penv, sinput);
     }
-
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& FCLRavePlugin::GetInterfaces() const
 {
-    info.interfacenames[OpenRAVE::PT_CollisionChecker].push_back("fcl_");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& FCLRavePlugin::GetPluginName() const
 {
+    return _pluginname;
 }
+
+#if !OPENRAVE_STATIC_PLUGINS
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new FCLRavePlugin();
+}
+
+#endif // OPENRAVE_STATIC_PLUGINS

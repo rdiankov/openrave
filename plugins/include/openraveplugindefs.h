@@ -57,9 +57,10 @@
 #include <iostream>
 
 #include <boost/assert.hpp>
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 using namespace std;
+using namespace boost::placeholders;
 using namespace OpenRAVE;
 
 static const dReal g_fEpsilonLinear = RavePow(g_fEpsilon,0.9);

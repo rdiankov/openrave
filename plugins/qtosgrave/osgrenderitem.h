@@ -189,6 +189,9 @@ public:
     /// \brief loads the OSG nodes and also sets _osgWorldTransform's userdata to point to this item
     virtual void Load();
 
+    /// \brief mark crop margin to be rendered
+    void SetCropContainerMarginsVisible(const std::string& linkName, const std::string& geometryName, const std::string& cropContainerMarginsType, bool visible);
+
 protected:
     /// \brief Calculate per-face normals from face vertices.
     //osg::ref_ptr<osg::Vec3Array> _GenerateNormals(const TriMesh&);
@@ -212,6 +215,12 @@ protected:
     vector<Transform> _vtrans;
     mutable std::mutex _mutexjoints;
     UserDataPtr _geometrycallback, _drawcallback;
+
+    std::set<std::pair<std::string, std::string> > _visibleCropContainerMargins; ///< set of (linkName, geometryName) that identifies which crop container margins to render
+    std::set<std::pair<std::string, std::string> > _visibleCropContainerEmptyMargins; ///< set of (linkName, geometryName) that identifies which crop container empty margins to render
+
+    GraphHandlePtr _cropContainerMarginsLabel; ///< handle for the label "Crop container margins"
+    GraphHandlePtr _cropContainerEmptyMarginsLabel; ///< handle for the label "Crop container empty margins"
 
 private:
     /// \brief Print matrix
@@ -262,6 +271,8 @@ private:
     std::vector< EE > _vEndEffectors, _vAttachedSensors;
     RobotBasePtr _probot;
 };
+
+void DrawCropContainerMargins(OSGGroupPtr pgeometrydata, const float zOffset, const Vector& innerExtents, const Vector& negativeCropContainerMargins, const Vector& positiveCropContainerMargins, const RaveVector<float>& color, float transparency);
 
 #ifdef RAVE_REGISTER_BOOST
 #include BOOST_TYPEOF_INCREMENT_REGISTRATION_GROUP()

@@ -142,7 +142,7 @@ Here's a short list of features of the grasper planner and problem interfaces:
 Command-line
 ------------
 
-.. shell-block:: openrave.py --database grasping --help
+.. shell-block:: python3 -m openravepy --database grasping --help
 
 Class Definitions
 -----------------

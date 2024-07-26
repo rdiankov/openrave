@@ -14,32 +14,59 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#include "rplannersrave.h"
+
 #include "openraveplugindefs.h"
 #include "rrt.h"
 
-#include <openrave/plugin.h>
-
-PlannerBasePtr CreateShortcutLinearPlanner(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateGraspGradientPlanner(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateRandomizedAStarPlanner(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateWorkspaceTrajectoryTracker(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateLinearSmoother(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateConstraintParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateShortcutLinearPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+//OpenRAVE::PlannerBasePtr CreateGraspGradientPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateRandomizedAStarPlanner(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateWorkspaceTrajectoryTracker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateLinearSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateConstraintParabolicSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 
 namespace rplanners {
-PlannerBasePtr CreateParabolicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateParabolicSmoother2(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateLinearTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateParabolicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateParabolicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateCubicTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateCubicTrajectoryRetimer2(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateCubicSmoother(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateQuinticSmoother(EnvironmentBasePtr penv, std::istream& sinput);
-PlannerBasePtr CreateQuinticTrajectoryRetimer(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicSmoother2(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateLinearTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateParabolicTrajectoryRetimer2(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateCubicTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateCubicTrajectoryRetimer2(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateCubicSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateQuinticSmoother(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::PlannerBasePtr CreateQuinticTrajectoryRetimer(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 }
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+const std::string RPlannersPlugin::_pluginname = "RPlannersPlugin";
+
+RPlannersPlugin::RPlannersPlugin()
+{
+    _interfaces[PT_Planner].push_back("RAStar");
+    _interfaces[PT_Planner].push_back("BiRRT");
+    _interfaces[PT_Planner].push_back("BasicRRT");
+    _interfaces[PT_Planner].push_back("ExplorationRRT");
+    _interfaces[PT_Planner].push_back("GraspGradient");
+    _interfaces[PT_Planner].push_back("shortcut_linear");
+    _interfaces[PT_Planner].push_back("LinearTrajectoryRetimer");
+    _interfaces[PT_Planner].push_back("ParabolicTrajectoryRetimer");
+    _interfaces[PT_Planner].push_back("ParabolicTrajectoryRetimer2");
+    _interfaces[PT_Planner].push_back("CubicTrajectoryRetimer");
+    _interfaces[PT_Planner].push_back("CubicTrajectoryRetimer2");
+    _interfaces[PT_Planner].push_back("WorkspaceTrajectoryTracker");
+    _interfaces[PT_Planner].push_back("LinearSmoother");
+    _interfaces[PT_Planner].push_back("ParabolicSmoother");
+    _interfaces[PT_Planner].push_back("ParabolicSmoother2");
+    _interfaces[PT_Planner].push_back("ConstraintParabolicSmoother");
+    _interfaces[PT_Planner].push_back("CubicSmoother");
+    _interfaces[PT_Planner].push_back("QuinticSmoother");
+    _interfaces[PT_Planner].push_back("QuinticTrajectoryRetimer");
+}
+
+RPlannersPlugin::~RPlannersPlugin() {}
+
+OpenRAVE::InterfaceBasePtr RPlannersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
     case PT_Planner:
@@ -47,21 +74,21 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
             return CreateRandomizedAStarPlanner(penv,sinput);
         }
         else if( interfacename == "birrt") {
-            return InterfaceBasePtr(new BirrtPlanner(penv));
+            return boost::make_shared<BirrtPlanner>(penv);
         }
         else if( interfacename == "rbirrt") {
             RAVELOG_WARN("rBiRRT is deprecated, use BiRRT\n");
-            return InterfaceBasePtr(new BirrtPlanner(penv));
+            return boost::make_shared<BirrtPlanner>(penv);
         }
         else if( interfacename == "basicrrt") {
-            return InterfaceBasePtr(new BasicRrtPlanner(penv));
+            return boost::make_shared<BasicRrtPlanner>(penv);
         }
         else if( interfacename == "explorationrrt" ) {
-            return InterfaceBasePtr(new ExplorationPlanner(penv));
+            return boost::make_shared<ExplorationPlanner>(penv);
         }
-        else if( interfacename == "graspgradient" ) {
-            return CreateGraspGradientPlanner(penv,sinput);
-        }
+        //else if( interfacename == "graspgradient" ) {
+        //    return CreateGraspGradientPlanner(penv,sinput);
+        //}
         else if( interfacename == "shortcut_linear" ) {
             return CreateShortcutLinearPlanner(penv,sinput);
         }
@@ -108,32 +135,19 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& RPlannersPlugin::GetInterfaces() const
 {
-    info.interfacenames[PT_Planner].push_back("RAStar");
-    info.interfacenames[PT_Planner].push_back("BiRRT");
-    info.interfacenames[PT_Planner].push_back("BasicRRT");
-    info.interfacenames[PT_Planner].push_back("ExplorationRRT");
-    info.interfacenames[PT_Planner].push_back("GraspGradient");
-    info.interfacenames[PT_Planner].push_back("shortcut_linear");
-    info.interfacenames[PT_Planner].push_back("LinearTrajectoryRetimer");
-    info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer");
-    info.interfacenames[PT_Planner].push_back("ParabolicTrajectoryRetimer2");
-    info.interfacenames[PT_Planner].push_back("CubicTrajectoryRetimer");
-    info.interfacenames[PT_Planner].push_back("CubicTrajectoryRetimer2");
-    info.interfacenames[PT_Planner].push_back("WorkspaceTrajectoryTracker");
-    info.interfacenames[PT_Planner].push_back("LinearSmoother");
-    info.interfacenames[PT_Planner].push_back("ParabolicSmoother");
-    info.interfacenames[PT_Planner].push_back("ParabolicSmoother2");
-    info.interfacenames[PT_Planner].push_back("ConstraintParabolicSmoother");
-    info.interfacenames[PT_Planner].push_back("CubicSmoother");
-    info.interfacenames[PT_Planner].push_back("QuinticSmoother");
-    info.interfacenames[PT_Planner].push_back("QuinticTrajectoryRetimer");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& RPlannersPlugin::GetPluginName() const
 {
+    return _pluginname;
+}
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new RPlannersPlugin();
 }

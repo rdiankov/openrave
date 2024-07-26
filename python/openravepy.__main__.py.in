@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from __future__ import with_statement # for python 2.5
+__author__ = 'Rosen Diankov'
+__copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
+__license__ = 'Apache License, Version 2.0'
+
+import sys
+import time
+import readline
+from types import ModuleType
+from numpy import *
+from OpenGL import GL
+from optparse import OptionParser
+
+if __name__ == "__main__":
+    __builtins__.__openravepy_version__ = '@OPENRAVE_SOVERSION@'
+
+try:
+    import openravepy
+except ImportError:
+    print("openravepy is not set into PYTHONPATH env variable, attempting to add")
+    # use openrave-config to get the correct install path
+    from subprocess import Popen, PIPE
+    try:
+        openrave_config = Popen(['openrave-config','--python-dir'],stdout=PIPE)
+        openravepy_path = openrave_config.communicate()
+        if openrave_config.returncode != 0:
+            raise OSError('bad args')
+            
+        sys.path.append(openravepy_path[0].strip())
+    except OSError:
+        import os, platform
+        from distutils.sysconfig import get_python_lib
+        if sys.platform.startswith('win') or platform.system().lower() == 'windows':
+            # in windows so add the default openravepy installation
+            allnames = os.listdir('C:\\Program Files')
+            possibledirs = [os.path.join('C:\\Program Files',name) for name in allnames if name.startswith('openrave')]
+            if len(possibledirs) > 0:
+                sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
+    import openravepy
+
+from openravepy import *
+from openravepy.misc import OpenRAVEGlobalArguments
+
+def vararg_callback(option, opt_str, value, parser):
+    assert value is None
+    value = parser.rargs[:]
+    del parser.rargs[:len(value)]
+    setattr(parser.values, option.dest, value)
+
+def main():
+    global openravepy
+    global type
+    parser = OptionParser(description='OpenRAVE %s'%openravepy.__version__,version=openravepy.__version__,
+                          usage='%prog [options] [loadable openrave xml/robot files...]')
+    OpenRAVEGlobalArguments.addOptions(parser,testmode=False)
+    parser.add_option('--database', action="callback",callback=vararg_callback, dest='database',default=None,
+                      help='If specified, the next arguments will be used to call a database generator from the openravepy.databases module. The first argument is used to find the database module. For example: openrave@OPENRAVE_SOVERSION@.py --database grasping --robot=robots/pr2-beta-sim.robot.xml')
+    parser.add_option('--example', action="callback",callback=vararg_callback, dest='example',default=None,
+                      help='If specified, the next arguments will be used to call an example from the openravepy.examples module. The first argument is used to find the example moduel. For example: openrave@OPENRAVE_SOVERSION@.py --example graspplanning --scene=data/lab1.env.xml')
+    parser.add_option('--ipython', '-i',action="store_true",dest='ipython',default=False,
+                      help='if true will drop into the ipython interpreter rather than spin')
+    parser.add_option('--pythoncmd','-p',action='store',type='string',dest='pythoncmd',default=None,
+                      help='Execute a python command after all loading is done and before the drop to interpreter check. The variables available to use are: "env","robots","robot". It is possible to quit the program after the command is executed by adding a "sys.exit(0)" at the end of the command.')
+    parser.add_option('--openravescheme', action='store',type='string',dest='openravescheme',default=None,
+                      help='Specify openravescheme for external reference.')
+    parser.add_option('--listinterfaces', action="store",type='string',dest='listinterfaces',default=None,
+                      help='List the provided interfaces of a particular type from all plugins.' 
+                      # Possible values are: %s.'%(', '.join(type.name for type in InterfaceType.values.values()))
+                      )
+    parser.add_option('--listplugins', action="store_true",dest='listplugins',default=False,
+                      help='List all plugins and the interfaces they provide.')
+    parser.add_option('--listdatabases',action='store_true',dest='listdatabases',default=False,
+                      help='Lists the available core database generators')
+    parser.add_option('--listexamples',action='store_true',dest='listexamples',default=False,
+                      help='Lists the available examples.')
+    (options, args) = parser.parse_args()
+    try:
+        if options.listdatabases:
+            for name in dir(databases):
+                if not name.startswith('__'):
+                    try:
+                        m=__import__('openravepy.databases.'+name)
+                        if type(m) is ModuleType:
+                            print(name)
+                    except ImportError as e:
+                        print(e)
+            
+            RaveDestroy()        
+            sys.exit(0)
+        if options.listexamples:
+            import openravepy.examples
+            for name in dir(openravepy.examples):
+                if not name.startswith('__'):
+                    try:
+                        m=__import__('openravepy.examples.'+name)
+                        if type(m) is ModuleType:
+                            print(name)
+                    except ImportError as e:
+                        print(e)
+            
+            RaveDestroy()        
+            sys.exit(0)
+            
+        if options.database is not None:
+            args = options.database[0].split() + options.database[1:] # the first arg might also include the options
+            try:
+                database=getattr(databases,args[0])
+            except (AttributeError,IndexError):
+                print('bad database generator, current list of executable generators are:')
+                for name in dir(databases):
+                    if not name.startswith('__'):
+                        try:
+                            m=__import__('openravepy.databases.'+name)
+                            if type(m) is ModuleType:
+                                print(name)
+                        except ImportError:
+                            pass
+
+                RaveDestroy()
+                sys.exit(1)
+                
+            database.run(args=args)
+            RaveDestroy()
+            sys.exit(0)
+
+        if options.example is not None:
+            args = options.example[0].split() + options.example[1:] # the first arg might also include the options
+            try:
+                import openravepy.examples
+                example = getattr(openravepy.examples,args[0])
+            except (AttributeError,IndexError):
+                print('bad example, current list of executable examples are:')
+                for name in dir(openravepy.examples):
+                    if not name.startswith('__'):
+                        try:
+                            m=__import__('openravepy.examples.'+name)
+                            if type(m) is ModuleType:
+                                print(name)
+                        except ImportError:
+                            pass
+
+                RaveDestroy()
+                sys.exit(1)
+                
+            example.run(args=args)
+            RaveDestroy()
+            sys.exit(0)
+
+        level = DebugLevel.Info
+        if options.listinterfaces is not None or options.listplugins:
+            level = DebugLevel.Error
+        RaveInitialize(True,level=level)
+        if options.listinterfaces is not None:
+            interfaces = RaveGetLoadedInterfaces()
+            for type,names in interfaces.items():
+                if options.listinterfaces.lower() == str(type).lower():
+                    for name in names:
+                        print(name)
+                    break
+
+            RaveDestroy()
+            sys.exit(0)
+        if options.listplugins:
+            plugins = RaveGetPluginInfo()
+            interfacenames = dict()
+            for type in InterfaceType.values.values():
+                interfacenames[type] = []
+            for pluginname,info in plugins:
+                for type,names in info.interfacenames:
+                    interfacenames[type] += [(n,pluginname) for n in names]
+            print('Number of plugins: %d'%len(plugins))
+            for type,names in interfacenames.items():
+                print('%s: %d'%(str(type),len(names)))
+                names.sort()
+                for interfacename,pluginname in names:
+                    print('  %s - %s'%(interfacename,pluginname))
+            RaveDestroy()
+            sys.exit(0)
+        env,viewername = OpenRAVEGlobalArguments.parseAndCreate(options,defaultviewer=True,returnviewer=True)
+        try:
+            # load files after viewer is loaded since they may contain information about where to place the camera
+            for arg in args:
+                if options.openravescheme is None:
+                    env.Load(arg)
+                else:
+                    env.Load(arg,{'openravescheme':options.openravescheme})
+            if options.pythoncmd is not None:
+                eval(compile(options.pythoncmd,'<string>','exec'))
+            viewer = None
+            if viewername is not None:
+                if sys.platform.startswith('darwin'):
+                    viewer = RaveCreateViewer(env,viewername)
+                    env.Add(viewer)
+                else:
+                    # create in a separate thread for windows and linux since the signals do not get messed up
+                    env.SetViewer(viewername)
+
+            ipythonthread = None
+            if options.ipython:
+
+                api_version = None
+                import IPython
+                if IPython.__version__.startswith("0.10"):
+                    api_version = '0.10'
+                elif IPython.__version__.startswith("0.11"):
+                    api_version = '0.11'
+                elif IPython.__version__.startswith("0.12"):
+                    api_version = '0.12'
+                elif IPython.__version__.startswith("0.13"):
+                    api_version = '0.13'   
+
+                # start ipython in a separate thread
+                def ipythonthreadfn(env):
+                    try:
+                        with env:
+                            robots=env.GetRobots()
+                            robot=None
+                            if len(robots) > 0:
+                                # get robot that has largest DOF
+                                for testrobot in robots:
+                                    if robot is None or robot.GetDOF() < testrobot.GetDOF():
+                                        robot = testrobot
+                            bodies=env.GetBodies()
+                            body=None if len(bodies) == 0 else bodies[0]
+                        if api_version == '0.10':
+                            ipshell = IPython.Shell.IPShellEmbed(argv='',banner = 'OpenRAVE %s dropping into IPython, variables: env, robot, body'%openravepy.__version__,exit_msg = 'Leaving Interpreter and closing program.')
+                            ipshell(local_ns=locals())
+#                             from IPython.config.loader import Config
+#                             cfg = Config()
+#                             cfg.InteractiveShellEmbed.local_ns = locals()
+#                             cfg.InteractiveShellEmbed.global_ns = globals()
+#                             #IPython.embed(config=cfg, banner2 = 'OpenRAVE %s dropping into IPython, variables: env, robot, body'%openravepy.__version__)
+#                             from IPython.frontend.terminal.embed import InteractiveShellEmbed
+#                             ipshell = InteractiveShellEmbed(config=cfg)
+                        elif api_version == '0.12' or api_version == '0.13':
+                            from IPython import embed
+                            embed()
+                        else: # later versions of ipython 1.1+
+                            from IPython.terminal import embed; ipshell=embed.InteractiveShellEmbed.instance(config=embed.load_default_config())(local_ns=locals())
+                    finally:
+                        # ipython exited. if viewer is valid, then exit the viewer also
+                        if viewer is not None:
+                            viewer.quitmainloop()
+                    
+                if viewer is None:
+                    ipythonthreadfn(env)
+                else:
+                    import threading
+                    from threading import Thread
+                    ipythonthread = Thread(target=ipythonthreadfn,args=(env,))
+                    ipythonthread.start()
+
+                    # find the thread id
+                    sig_thread_id = 0
+                    for tid, tobj in threading._active.items():
+                        if tobj is ipythonthread:
+                            sig_thread_id = tid
+                            break
+                    viewer.main(True,sig_thread_id)
+                    # join ipython thread
+                    ipythonthread.join()
+            else:
+                if viewer is not None:
+                    viewer.main(True)
+                else:
+                    # infinite loop until a KeyboardInterrupt
+                    while True:
+                        time.sleep(1.0)
+        finally:
+            env.Destroy()
+    finally:
+        RaveDestroy()
+
+if __name__ == "__main__":
+    main()

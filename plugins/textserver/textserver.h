@@ -21,6 +21,9 @@
 #include <mutex>
 #include <openrave/planningutils.h>
 #include <cstdlib>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -63,7 +66,7 @@ public:
             if( bInit )
                 Close();
         }
-        bool Accept(int server_sockfd)
+        bool Accept(int server_sockfd_)
         {
             if( bInit )
                 Close();
@@ -71,14 +74,14 @@ public:
             bool success = true;
 
             //signal(SIGCHLD, SIG_IGN);
-            //RAVELOG(L"server waiting for connection, %d\n", server_sockfd);
+            //RAVELOG(L"server waiting for connection, %d\n", server_sockfd_);
 
             //	char str[sizeof(server_address)+1];
             //	memcpy(str, &server_address, sizeof(server_address));
             //	str[sizeof(server_address)] = 0;
 
             client_len = sizeof(client_address);
-            client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_address, (socklen_t*)&client_len);
+            client_sockfd = accept(server_sockfd_, (struct sockaddr *)&client_address, (socklen_t*)&client_len);
 
             if( client_sockfd == -1 ) {
                 success = false;
@@ -2081,20 +2084,22 @@ protected:
                 os << "0 ";
             }
         }
-        int bodyindex = 0;
-        if( !!preport->plink1 &&( preport->plink1->GetParent() != pbody) ) {
-            bodyindex = preport->plink1->GetParent()->GetEnvironmentBodyIndex();
-        }
-        if( !!preport->plink2 &&( preport->plink2->GetParent() != pbody) ) {
-            bodyindex = preport->plink2->GetParent()->GetEnvironmentBodyIndex();
-        }
-        os << bodyindex << " ";
 
-        if( bgetcontacts ) {
-            FOREACH(itc,preport->contacts) {
-                os << itc->pos.x << " " << itc->pos.y << " " << itc->pos.z << " " << itc->norm.x << " " << itc->norm.y << " " << itc->norm.z << " " << itc->depth << " ";
-            }
-        }
+        os << preport->__str__();
+//        int bodyindex = 0;
+//        if( !!preport->plink1 &&( preport->plink1->GetParent() != pbody) ) {
+//            bodyindex = preport->plink1->GetParent()->GetEnvironmentBodyIndex();
+//        }
+//        if( !!preport->plink2 &&( preport->plink2->GetParent() != pbody) ) {
+//            bodyindex = preport->plink2->GetParent()->GetEnvironmentBodyIndex();
+//        }
+//        os << bodyindex << " ";
+//
+//        if( bgetcontacts ) {
+//            FOREACH(itc,preport->contacts) {
+//                os << itc->pos.x << " " << itc->pos.y << " " << itc->pos.z << " " << itc->norm.x << " " << itc->norm.y << " " << itc->norm.z << " " << itc->depth << " ";
+//            }
+//        }
 
         return true;
     }
@@ -2129,11 +2134,14 @@ protected:
                 bcollision = GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), preport);
             }
             if(bcollision) {
-                BOOST_ASSERT(preport->contacts.size()>0);
-                CollisionReport::CONTACT& c = preport->contacts.front();
+                //BOOST_ASSERT(preport->contacts.size()>0);
+                //CONTACT& c = preport->contacts.front();
                 os << "1 ";
-                info.push_back(c.pos.x); info.push_back(c.pos.y); info.push_back(c.pos.z);
-                info.push_back(c.norm.x); info.push_back(c.norm.y); info.push_back(c.norm.z);
+                for(int i = 0; i < 6; ++i) {
+                    info.push_back(0);
+                }
+                //info.push_back(c.pos.x); info.push_back(c.pos.y); info.push_back(c.pos.z);
+                //info.push_back(c.norm.x); info.push_back(c.norm.y); info.push_back(c.norm.z);
             }
             else {
                 os << "0 ";

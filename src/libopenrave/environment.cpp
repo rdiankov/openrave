@@ -19,6 +19,8 @@
 EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo()
 {
     _gravity = Vector(0,0,-9.797930195020351);
+    _unitInfo.lengthUnit = LU_Meter;
+    _unitInfo.angleUnit = AU_Radian;
 }
 
 EnvironmentBase::EnvironmentBaseInfo::EnvironmentBaseInfo(const EnvironmentBaseInfo& other)
@@ -63,7 +65,7 @@ void EnvironmentBase::EnvironmentBaseInfo::SerializeJSON(rapidjson::Value& rEnvI
     if( !_description.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "description", _description, allocator);
     }
-    orjson::SetJsonValueByKey(rEnvInfo, "unit", _unit, allocator);
+    orjson::SetJsonValueByKey(rEnvInfo, "unitInfo", _unitInfo, allocator);
     orjson::SetJsonValueByKey(rEnvInfo, "gravity", _gravity, allocator);
     if( !_referenceUri.empty() ) {
         orjson::SetJsonValueByKey(rEnvInfo, "referenceUri", _referenceUri, allocator);
@@ -121,7 +123,13 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
     }
 
     if (rEnvInfo.HasMember("unit")) {
-        orjson::LoadJsonValueByKey(rEnvInfo, "unit", _unit);
+        std::pair<std::string, dReal> unit;
+        orjson::LoadJsonValueByKey(rEnvInfo, "unit", unit);
+        _unitInfo.lengthUnit = GetLengthUnitFromString(unit.first, LU_Meter);
+    }
+
+    if (rEnvInfo.HasMember("unitInfo")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "unitInfo", _unitInfo);
     }
 
     if (rEnvInfo.HasMember("keywords")) {
@@ -140,6 +148,19 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
     if (rEnvInfo.HasMember("gravity")) {
         orjson::LoadJsonValueByKey(rEnvInfo, "gravity", _gravity);
+    }
+
+    {
+        rapidjson::Value::ConstMemberIterator itModifiedAt = rEnvInfo.FindMember("modifiedAt");
+        if( itModifiedAt != rEnvInfo.MemberEnd() && itModifiedAt->value.IsString() ) {
+            const char *const modifiedAt = itModifiedAt->value.GetString();
+            if ( modifiedAt != nullptr ) {
+                _lastModifiedAtUS = ConvertIsoFormatDateTimeToLinuxTimeUS(modifiedAt);
+            }
+        }
+    }
+    if (rEnvInfo.HasMember("revisionId")) {
+        orjson::LoadJsonValueByKey(rEnvInfo, "revisionId", _revisionId);
     }
 
     if (rEnvInfo.HasMember("uint64Parameters") && rEnvInfo["uint64Parameters"].IsArray()) {
@@ -186,6 +207,18 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
                     }
                 }
             }
+            else {
+                // id is empty, try finding the existing one from a matching name
+                rapidjson::Value::ConstMemberIterator itName = rKinBodyInfo.FindMember("name");
+                if( itName != rKinBodyInfo.MemberEnd() && itName->value.IsString() ) {
+                    FOREACH(itBodyInfo, _vBodyInfos) {
+                        if ((*itBodyInfo)->_name.compare(itName->value.GetString()) == 0) {
+                            itExistingBodyInfo = itBodyInfo;
+                            break;
+                        }
+                    }
+                }
+            }
 
             if( itExistingBodyInfo != _vBodyInfos.end() ) {
                 isExistingRobot = !!OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotBaseInfo>(*itExistingBodyInfo);
@@ -194,7 +227,6 @@ void EnvironmentBase::EnvironmentBaseInfo::DeserializeJSONWithMapping(const rapi
 
             // here we allow body infos with empty id to be created because
             // when we load things from json, some id could be missing on file
-            // and for the partial update case, the id should be non-empty
 
             bool isRobot = orjson::GetJsonValueByKey<bool>(rKinBodyInfo, "isRobot", isExistingRobot);
             RAVELOG_VERBOSE_FORMAT("body id='%s', isRobot=%d", id%isRobot);

@@ -3,9 +3,431 @@
 ChangeLog
 #########
 
+Version 0.148.1
+===============
 
-Version 0.9.0 Development
-=========================
+- Allow initializing bounding box types from different types.
+- Update ikfast to use newer version of sympy.
+- Relax mpmath eps so that polyroots converge better.
+  
+Version 0.148.0
+===============
+
+- Fix treating PlannerStatus::statusCode as boolean
+- Let InitPlan return PlannerStatus for better diagnosis  
+
+Version 0.147.0
+===============
+
+- Update API to enable to reserve way points memories in `TrajectoryBase::Init` and implement it in `GenericTrajectory`.
+
+Version 0.146.0
+===============
+
+- Officially support `chuckingDirection` in `gripperInfo` to deprecate gripper settings in `ManipulatorInfo`. Now it's recommended to use GripperInfo for `chuckingDirection` and `gripperJointNames`.
+- `Manipulator` has caches for `chuckingDirection` and `gripperJointNames` independent from those in `ManipulatorInfo`. Those in Manipulator are determined both by `GripperInfo` and `ManipulatorInfo`.
+- Keep code in `ManipulatorInfo` for backward compatibility purpose.
+- Deprecate the unused API for Manipulator about chucking. Remove `SetClosingDirection` and `SetChuckingDirection`, since these seem unused.
+
+Note for backward compatibility
+-------------------------------
+
+If loading scenes saved by the old openrave on the latest openrave, it requires the code in `ManipulatorInfo`. In addition, some of the downstream code uses `AddManipulator` to define temporary manipulator, and it requires setting in `ManipulatorInfo`. Thus, this MR keeps the infomration in `ManipulatorInfo`. Instead, `Manipulator` class has its own caches. That way, if the openrave loads the cleanly-migrated scene (e.g. setting is only in `GripperInfo`) and saves it, it keeps clean (e.g. `ManipulatorInfo` does not have settings).
+
+Version 0.145.0
+===============
+
+- Rename TimeUnit into TimeDurationUnit and create a new TimeStampUnit
+
+Version 0.144.4
+===============
+
+- Optimize processing of ignore links for grabbed bodies.
+
+Version 0.144.3
+===============
+
+- Maintain the grabbing state while updating environment through notifier.
+
+Version 0.144.2
+===============
+
+- Implement `env.drawarrow` for the qtosg viewer.
+
+Version 0.144.1
+===============
+
+- bug fix in `VectorBackedMap::Insert`.
+
+Version 0.144.0
+===============
+
+- Reduce memory usage by `IkFailureInfo`.
+
+Version 0.143.4
+===============
+
+- Fix environment viewers did not start because RaveDestroy() stopped the thread for viewers and RaveInitialize() did not restart it.
+
+Version 0.143.3
+===============
+
+- Fix python management of environment viewers to be safe. All resources will remain used solely by the viewer thread.
+- Fix Manipulator's `GetArmDOFValues` and `GetGripperDOFValues` so that they return an empty vector when the respective vindices is empty instead of returning the entire robot dof values.
+
+Version 0.143.2
+===============
+
+* Speed up `poseTransformPoints` by taking advantage of contiguous numpy array when extracting values from inputs as well as caching intermediate values for transform computation.
+
+Version 0.143.1
+===============
+
+- Instead of unconditionally resetting BodyState in _UpdatePublishedBodies, first test whether the state has already been initialized from the given body / update stamp. If it has, skip re-extracting all data. Since bodies are in a relatively stable order, this significantly improves average-case performance.
+- Add centidegree unit definition.
+- Cache the absence of collision bodies for a kinbody in the FCL collision manager, improving collision checking performance
+
+Version 0.143.0
+===============
+
+- Allow env.drawlabel to specify size of characters.
+
+Version 0.142.1
+===============
+
+* Clamp camera distance in the viewer to prevent invalid values in the published state
+
+Version 0.142.0
+===============
+
+- Add robotControllerAxisManufacturerCode so that servo drives from different manufacturer connected to daisy chain can be handled.
+- Fix unbounded growth of _vmimic
+* Add ViewerBase::SetUserText to customize HUD text size
+
+Version 0.141.2
+===============
+
+* Fix the issue that second-to-last configuration along the given path segment may not be checked in `Check` function.
+
+Version 0.141.1
+===============
+
+* Fix the issue that some robot configurations might not be checked in `Check` function.
+
+Version 0.141.0
+===============
+
+- Add IkFailureAccumulatorBase to allow for cache of IK failure data and statistics gathering.
+
+Version 0.140.0
+===============
+
+- Cleanup CollisionReport to be more memory efficient and unify single collision vs all collisions.
+
+- Add IkFilterInfo and IkFailureAccumulator to allow for fast accumulation of IK failures.
+
+Version 0.139.2
+===============
+
+* Fix link traversal order when calculating internal shortest path information
+
+Version 0.139.1
+===============
+
+* Add new interpolation type of "max"
+* Ignore NaN in joint values to preserve the old joint value
+* Support NaN in xml deserialization
+
+Version 0.139.0
+===============
+
+* Initialization of internal costs in KinBodies now only considers links that are part of a joint
+* Trimesh construction in KinBodies optimized to reduce reallocs
+* FCLRave no longer re-initializes all callbacks on link state change
+* Calls to `KinBody::Link::InitGeometries` no longer generate two update generations for `_PostprocessChangedParameters`, allowing for a reduction in callback overhead
+* FCLRave geometry callbacks now only update when the link has actually changed
+* Costly-in-aggregate `std::bind` calls to handle exceptions in FCLRave replaced with scoped cleanup classes
+
+Version 0.138.0
+===============
+
+* Added new apis efficient sampling of trajectory range
+Version 0.137.0
+===============
+
+* Add `GetId` to python bindings
+
+Version 0.136.1
+===============
+
+* Exclude virtual links (links with no geometries) from jittering computation
+
+Version 0.136.0
+===============
+
+* Set correct geometry group name for fclspace
+
+Version 0.135.2
+===============
+
+* Fix the issue that grabbed bodies are not checked for collision when their grabbing links are not collision-enabled.
+
+Version 0.135.1
+===============
+
+* Fixed a dictionary inside gripperInfo be wiped out after modification. 
+* Optimize collision checking by FCL for GeometryType.Container and GeometryType.Cage.
+
+Version 0.135.0
+===============
+
+* Add an OBB intersection check function
+
+Version 0.134.2
+===============
+
+* Fixed ExtractAll not returning removed bodies correctly
+
+Version 0.134.1
+===============
+
+* Fixed QtCoinViewer SetUserText, fixing compilation
+
+Version 0.134.0
+===============
+
+* Add AABBFromOrientedBox
+
+* Add ViewerBase::SetUserText
+
+Version 0.133.3
+===============
+
+* Fix changing bias for the configuration jitterer and support more dofs than the arm joints.
+* Fix `KinBody::RegrabAll` to not accidentally invalidate `Grabbed::_setGrabberLinkIndicesToIgnore`.
+
+Version 0.133.2
+===============
+
+* Fix not initializing grabbed bodies to self-collision checker when cloning KinBody, restoring grabbed state from the state saver.
+* Fix cloning _listNonCollidingLinksWhenGrabbed to different env
+
+Version 0.133.1
+===============
+
+* Fix cache of FCLCollisionManagerInstance for self-collision checker wasn't cleared for previously grabbed bodies even when they were removed from the env.
+
+* Fix initializing _listNonCollidingLinksWhenGrabbed based on incorrect grabbed bodies when grabbed bodies are shuffled between creation of Grabbed and Grabbed::ComputeListNonCollidingLinks.
+
+Version 0.133.0
+===============
+
+* Fix nonAdjacentLinks and _listNonCollidingLinksWhenGrabbed were affected by collision callbacks.
+
+Version 0.132.0
+===============
+
+* Fix bugs around multiple grabbed bodies
+  1. Self-collision between grabbed bodies were checked even after the grabbed body was released under the certain condition.
+  2. When cloning a kinbody with multiple grabbed bodies, `Grabbed::_listNonCollidingLinksWhenGrabbed` was not copied properly. caused `std::vector` range error.
+* When loading connected body, also have to prefix "grippername" and "grippernames"
+
+Version 0.131.2
+===============
+
+* Python binding of CheckCollisionRays takes checkPreemptFn to allow for early canceling.
+
+Version 0.131.1
+===============
+
+* Optimization on Jitterers
+
+Version 0.131.0
+===============
+
+* Add GPG capability to decrypt scenes when loading.
+
+Version 0.130.3
+===============
+
+* Initialize __mapReadableInterfaces on InitFromXXX functions such as InitFromKinBodyInfo
+
+Version 0.130.2
+===============
+
+* Initialize __mapReadableInterfaces on InitFromKinBodyInfo
+
+Version 0.130.1
+===============
+
+* Export some of major openravepy symbols so that user can call python from c++ with openrave major classes
+
+Version 0.130.0
+===============
+
+* Add KinBody::GetMass
+
+Version 0.129.1
+===============
+
+* Support 2**64-1 python integer to rapidjson.
+
+Version 0.129.0
+===============
+
+* Support readable interfaces for joints.
+
+Version 0.128.0
+===============
+
+* Extract the readable interface management into `ReadablesContainer`, and have both KinBody and Link derive from it.
+
+Version 0.126.0
+===============
+
+* Add :meth:`ExtractInfoOptions` to `KinBody.ExtractInfo` to allow getting an info without having the body be added to the environment.
+
+Version 0.125.0
+===============
+
+* Revert cylinder changes.
+* Add ConicalFrustum geometry.
+
+Version 0.124.1
+===============
+
+* Fix condition in GetCylinderRadius warning message.
+
+Version 0.124.0
+===============
+
+* Replace unit with UnitInfo object
+
+Version 0.123.1
+===============
+
+* Add backward compatibility to deserialize OpenRAVE::geometry::RaveOrientedBox<T>
+
+* Add "axial" geometry type.
+    
+Version 0.123.0
+===============
+
+* Add conical frustum geometry support (extending current cylinder).
+
+Version 0.122.1
+===============
+
+* Fix LoadJsonValue(rValue, std::vector<Transform>) not compiling
+
+Version 0.122.0
+===============
+
+* Add Reset function in IkParameterization
+
+Version 0.121.2
+===============
+
+* Remove leftover RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
+Version 0.121.1
+===============
+
+* Improved message in openravejson.h
+
+Version 0.121.0
+===============
+
+* Add a modifiedAt field for KinBody and EnvironmentInfo that tracks the modifiedAt on the filename.
+
+Version 0.120.0
+===============
+
+* Add optional uri argument for LoadJSON
+* Add ReadRobotJSON and ReadKinBodyJSON
+
+Version 0.119.8
+===============
+
+* Remove RemoveKinBody calls from EnvironmentBase::Read[xxx] functions
+
+Version 0.119.7
+===============
+
+* Support loading kinbody data with a references chain of 3 layers or more.
+
+Version 0.119.6
+===============
+
+* Add excludeBodyId option to JSON reader
+
+Version 0.119.5
+===============
+
+* Instead of sampling and rejecting times, directly sample times in `ParabolicSmoother2`.
+
+Version 0.119.4
+===============
+
+* support std::vector<OpenRAVE::RaveVector<T>> serialization
+
+Version 0.119.3
+===============
+
+* Expose ConvertUnitScale to python
+
+Version 0.119.1
+===============
+
+* Fix not considering rotor inertia in inverse dynamics when velocity is 0
+
+Version 0.119.0
+===============
+
+* Add OpenRAVE units enums and helper functions
+
+Version 0.118.0
+===============
+
+* kinematics geometry dynamics hash cache is not properly invalidated when connected body active state cahnges
+
+Version 0.117.0
+===============
+
+* Add a command to toggle crop container margins visibility
+
+* Render crop container margins as colored boxes, add corresponding labels
+
+* Fix transparency rendering logic in OSG
+
+Version 0.116.0
+===============
+
+* Add GeomeryInfo::GetSideWallExists
+
+Version 0.115.1
+===============
+
+Python
+------
+
+* Add conversion python bindings override
+
+Version 0.115.0
+===============
+
+* Allow KinBody::Geometry.InitFromGeometries to be called with a vector of GeometryInfo objects.
+
+Version 0.114.1
+===============
+
+Core
+----
+
+* Allow updating of environment objects via JSON Reader (via `.Environment.DeserializeJSONWithMapping`) where only **name** specified, but not **id**.
+
+Version 0.9.0
+=============
 
 Git Commit: **Unreleased**
 

@@ -31,22 +31,22 @@ public:
     virtual ~ShortcutLinearPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr params) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         _parameters->copy(params);
         _probot = pbase;
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, std::istream& isParameters) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new TrajectoryTimingParameters());
         isParameters >> *_parameters;
         _probot = pbase;
-        return _InitPlan();
+        return _InitPlan() ? PlannerStatus(PS_HasSolution) : PlannerStatus(PS_Failed);
     }
 
     bool _InitPlan()
@@ -197,7 +197,6 @@ protected:
         int nrejected = 0;
         int iiter = parameters->_nMaxIterations;
         int itercount = 0;
-        int numiters = (int)parameters->_nMaxIterations;
         std::vector<dReal> vnewconfig0(dof), vnewconfig1(dof);
 
         int numshortcuts = 0; // keep track of the number of successful shortcuts

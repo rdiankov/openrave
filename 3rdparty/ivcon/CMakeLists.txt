@@ -1,5 +1,5 @@
 include_directories(${OPENRAVE_INCLUDE_LOCAL_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 add_library(ivcon STATIC ivcon.cpp)
-set_target_properties(ivcon PROPERTIES COMPILE_FLAGS "${EXTRA_COMPILE_FLAGS} ${Boost_CFLAGS}")
+set_target_properties(ivcon PROPERTIES COMPILE_FLAGS "${Boost_CFLAGS}")
 target_link_libraries(ivcon ${Boost_THREAD_LIBRARY})

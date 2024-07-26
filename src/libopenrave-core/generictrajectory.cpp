@@ -217,7 +217,7 @@ public:
         return it1->second < it2->second;
     }
 
-    void Init(const ConfigurationSpecification& spec) override
+    void Init(const ConfigurationSpecification& spec, const int nWayPointsToReserve=0, const int options=0) override
     {
         if( _bInit  && _spec == spec ) {
             // already init
@@ -248,6 +248,15 @@ public:
         _vdeltainvtime.clear();
         _bChanged = true;
         _bSamplingVerified = false;
+        // reserve
+        if( nWayPointsToReserve > 0 ) {
+            _vtrajdata.reserve(nWayPointsToReserve*_spec.GetDOF()); // see also GetNumWaypoints API.
+            if( options & TIO_ReserveTimeBasedVectors ) { // only if this option is specified, reserve the time-related vectors, since these are only necessary when the Sample-related APIs are called. If such APIs are not called, the user might want to skip the unnecessary memory allocation.
+                _vaccumtime.reserve(nWayPointsToReserve);
+                _vdeltainvtime.reserve(nWayPointsToReserve);
+            }
+        }
+        // finally set init flag
         _bInit = true;
     }
 
@@ -264,61 +273,69 @@ public:
 
     void Insert(size_t index, const std::vector<dReal>& data, bool bOverwrite) override
     {
+        Insert (index, data.data(), data.size(), bOverwrite);
+    }
+
+
+    void Insert(size_t index, const dReal* pdata, size_t nDataElements, bool bOverwrite) override
+    {
         BOOST_ASSERT(_bInit);
-        if( data.size() == 0 ) {
+        if( nDataElements == 0 ) {
             return;
         }
         BOOST_ASSERT(_spec.GetDOF()>0);
-        OPENRAVE_ASSERT_FORMAT((data.size()%_spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%_spec.GetDOF(), ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT((nDataElements%_spec.GetDOF()) == 0, "%d does not divide dof %d", nDataElements%_spec.GetDOF(), ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP(index*_spec.GetDOF(),<=,_vtrajdata.size());
         if( bOverwrite && index*_spec.GetDOF() < _vtrajdata.size() ) {
-            size_t copysize = min(data.size(),_vtrajdata.size()-index*_spec.GetDOF());
-            std::copy(data.begin(),data.begin()+copysize,_vtrajdata.begin()+index*_spec.GetDOF());
-            if( copysize < data.size() ) {
-                _vtrajdata.insert(_vtrajdata.end(),data.begin()+copysize,data.end());
+            const size_t copysize = min(nDataElements, _vtrajdata.size()-index*_spec.GetDOF());
+            std::copy(pdata, pdata+copysize, _vtrajdata.begin()+index*_spec.GetDOF());
+            if( copysize < nDataElements ) {
+                _vtrajdata.insert(_vtrajdata.end(), pdata+copysize, pdata+nDataElements);
             }
         }
         else {
-            _vtrajdata.insert(_vtrajdata.begin()+index*_spec.GetDOF(),data.begin(),data.end());
+            _vtrajdata.insert(_vtrajdata.begin()+index*_spec.GetDOF(), pdata, pdata+nDataElements);
         }
         _bChanged = true;
     }
 
     void Insert(size_t index, const std::vector<dReal>& data, const ConfigurationSpecification& spec, bool bOverwrite) override
     {
+        Insert (index, data.data(), data.size(), spec, bOverwrite);
+    }
+
+    void Insert(size_t index, const dReal* pdata, size_t nDataElements, const ConfigurationSpecification& spec, bool bOverwrite) override
+    {
         BOOST_ASSERT(_bInit);
-        if( data.size() == 0 ) {
+        if( nDataElements == 0 ) {
             return;
         }
         BOOST_ASSERT(spec.GetDOF()>0);
-        OPENRAVE_ASSERT_FORMAT((data.size()%spec.GetDOF()) == 0, "%d does not divide dof %d", data.size()%spec.GetDOF(), ORE_InvalidArguments);
+        OPENRAVE_ASSERT_FORMAT((nDataElements%spec.GetDOF()) == 0, "%d does not divide dof %d", nDataElements%spec.GetDOF(), ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP(index*_spec.GetDOF(),<=,_vtrajdata.size());
         if( _spec == spec ) {
-            Insert(index,data,bOverwrite);
+            Insert(index, pdata, nDataElements, bOverwrite);
         }
         else {
             std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator > vconvertgroups(_spec._vgroups.size());
             for(size_t i = 0; i < vconvertgroups.size(); ++i) {
                 vconvertgroups[i] = spec.FindCompatibleGroup(_spec._vgroups[i]);
             }
-            size_t numpoints = data.size()/spec.GetDOF();
+            size_t numpoints = nDataElements/spec.GetDOF();
             size_t sourceindex = 0;
             std::vector<dReal>::iterator ittargetdata;
-            std::vector<dReal>::const_iterator itsourcedata;
             if( bOverwrite && index*_spec.GetDOF() < _vtrajdata.size() ) {
                 size_t copyelements = min(numpoints,_vtrajdata.size()/_spec.GetDOF()-index);
                 ittargetdata = _vtrajdata.begin()+index*_spec.GetDOF();
-                itsourcedata = data.begin();
-                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,copyelements,false);
+                _ConvertData(ittargetdata, pdata, vconvertgroups, spec, copyelements, false);
                 sourceindex = copyelements*spec.GetDOF();
                 index += copyelements;
             }
-            if( sourceindex < data.size() ) {
-                size_t numelements = (data.size()-sourceindex)/spec.GetDOF();
+            if( sourceindex < nDataElements ) {
+                size_t numelements = (nDataElements-sourceindex)/spec.GetDOF();
                 std::vector<dReal> vtemp(numelements*_spec.GetDOF());
                 ittargetdata = vtemp.begin();
-                itsourcedata = data.begin()+sourceindex;
-                _ConvertData(ittargetdata,itsourcedata,vconvertgroups,spec,numelements,true);
+                _ConvertData(ittargetdata, pdata+sourceindex, vconvertgroups, spec, numelements, true);
                 _vtrajdata.insert(_vtrajdata.begin()+index*_spec.GetDOF(),vtemp.begin(),vtemp.end());
             }
             _bChanged = true;
@@ -432,64 +449,7 @@ public:
 
     void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint) const override
     {
-        BOOST_ASSERT(_bInit);
-        BOOST_ASSERT(_timeoffset>=0);
-        _ComputeInternal();
-        OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
-        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
-            _VerifySampling();
-        }
-
-        const dReal duration = GetDuration();
-        int numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
-        if (ensureLastPoint && (numPoints - 1) * deltatime + g_fEpsilon < duration) {
-            numPoints++;
-        }
-
-        int dof = GetConfigurationSpecification().GetDOF();
-        //std::vector<dReal> dataPerTimestep(dof,0);
-        data.resize(dof*numPoints);
-
-        const std::vector<dReal>::const_iterator begin = _vaccumtime.begin();
-        std::vector<dReal>::const_iterator it = begin;
-
-        std::vector<dReal>::iterator itdata = data.begin();
-
-        for(int i = 0; i < numPoints; ++i, itdata += dof) {
-            dReal sampletime = i * deltatime;
-            if( sampletime >= duration ) {
-                std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
-            }
-            else {
-                // knowing time always increases, it is safe to search in [it, end] instead of [begin, end]
-                it = std::lower_bound(it, _vaccumtime.cend(), sampletime);
-
-                if( it == begin ) {
-                    std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),itdata);
-                    *(itdata + _timeoffset) = sampletime;
-                }
-                else {
-                    size_t index = it - begin;
-                    dReal timeFromLowerWaypoint = sampletime - _vaccumtime.at(index-1);
-                    dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
-                    // unfortunately due to floating-point error timeFromLowerWaypoint might not be in the range [0, waypointdeltatime], so double check!
-                    if( timeFromLowerWaypoint < 0 ) {
-                        // most likely small epsilon
-                        timeFromLowerWaypoint = 0;
-                    }
-                    else if( timeFromLowerWaypoint > waypointdeltatime ) {
-                        timeFromLowerWaypoint = waypointdeltatime;
-                    }
-                    for(size_t j = 0; j < _vgroupinterpolators.size(); ++j) {
-                        if( !!_vgroupinterpolators[j] ) {
-                            _vgroupinterpolators[j](index-1, timeFromLowerWaypoint, itdata);
-                        }
-                    }
-                    // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
-                    *(itdata + _timeoffset) = timeFromLowerWaypoint;
-                }
-            }
-        }
+        return _SampleRangeSameDeltaTime(data, deltatime, 0, GetDuration(), ensureLastPoint);
     }
 
     void SamplePointsSameDeltaTime(std::vector<dReal>& data, dReal deltatime, bool ensureLastPoint, const ConfigurationSpecification& spec) const override
@@ -501,6 +461,34 @@ public:
 
         std::vector<dReal> dataInSourceSpec; // TODO perhaps not a good idea to create a separate vector like this...
         SamplePointsSameDeltaTime(dataInSourceSpec, deltatime, ensureLastPoint);
+
+        int dofSourceSpec = _spec.GetDOF();
+        OPENRAVE_ASSERT_OP(dataInSourceSpec.size() % dofSourceSpec,==, 0);
+        int numPoints = dataInSourceSpec.size() / dofSourceSpec;
+        int dof = spec.GetDOF();
+        data.resize(dof*numPoints);
+
+        ConfigurationSpecification::ConvertData(data.begin(),
+                                                spec,
+                                                dataInSourceSpec.begin(),
+                                                _spec,
+                                                numPoints,
+                                                GetEnv());
+    }
+
+    void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const override
+    {
+        return _SampleRangeSameDeltaTime(data, deltatime, startTime, stopTime, ensureLastPoint);
+    }
+
+    void SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, const ConfigurationSpecification& spec) const override
+    {
+        // avoid unnecessary computation if spec is same as this->_spec
+        if (spec == _spec) {
+            return SampleRangeSameDeltaTime(data, deltatime, startTime, stopTime, ensureLastPoint);
+        }
+        std::vector<dReal> dataInSourceSpec; // TODO perhaps not a good idea to create a separate vector like this...
+        SampleRangeSameDeltaTime(dataInSourceSpec, deltatime, startTime, stopTime, ensureLastPoint);
 
         int dofSourceSpec = _spec.GetDOF();
         OPENRAVE_ASSERT_OP(dataInSourceSpec.size() % dofSourceSpec,==, 0);
@@ -574,7 +562,7 @@ public:
     void serialize(std::ostream& O, int options) const override
     {
         dReal fUnitScale = 1.0;
-        if( options & 0x8000 ) {
+        if( options & TSO_SerializeAsXML ) {
             TrajectoryBase::serialize(O, options);
         }
         else {
@@ -874,11 +862,11 @@ public:
     }
 
 protected:
-    void _ConvertData(std::vector<dReal>::iterator ittargetdata, std::vector<dReal>::const_iterator itsourcedata, const std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator >& vconvertgroups, const ConfigurationSpecification& spec, size_t numelements, bool filluninitialized)
+    void _ConvertData(std::vector<dReal>::iterator ittargetdata, const dReal* psourcedata, const std::vector< std::vector<ConfigurationSpecification::Group>::const_iterator >& vconvertgroups, const ConfigurationSpecification& spec, size_t numelements, bool filluninitialized)
     {
         for(size_t igroup = 0; igroup < vconvertgroups.size(); ++igroup) {
             if( vconvertgroups[igroup] != spec._vgroups.end() ) {
-                ConfigurationSpecification::ConvertGroupData(ittargetdata+_spec._vgroups[igroup].offset, _spec.GetDOF(), _spec._vgroups[igroup], itsourcedata+vconvertgroups[igroup]->offset, spec.GetDOF(), *vconvertgroups[igroup],numelements,GetEnv(),filluninitialized);
+                ConfigurationSpecification::ConvertGroupData(ittargetdata+_spec._vgroups[igroup].offset, _spec.GetDOF(), _spec._vgroups[igroup], psourcedata+vconvertgroups[igroup]->offset, spec.GetDOF(), *vconvertgroups[igroup],numelements,GetEnv(),filluninitialized);
             }
             else if( filluninitialized ) {
                 vector<dReal> vdefaultvalues(_spec._vgroups[igroup].dof,0);
@@ -1064,6 +1052,9 @@ protected:
                 _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
                 _vgroupvalidators[i] = boost::bind(&GenericTrajectory::_ValidateSextic,this,boost::ref(_spec._vgroups[i]),_1,_2);
                 nNeedNeighboringInfo = 3;
+            }
+            if( interpolation == "max" ) {
+                _vgroupinterpolators[i] = boost::bind(&GenericTrajectory::_InterpolateMax,this,boost::ref(_spec._vgroups[i]),_1,_2,_3);
             }
             else if( interpolation == "" ) {
                 // if there is no interpolation, default to "next". deltatime is such a group, but that is overwritten
@@ -1676,6 +1667,14 @@ protected:
         }
     }
 
+    void _InterpolateMax(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime, const std::vector<dReal>::iterator& itdata)
+    {
+        size_t offset = ipoint*_spec.GetDOF()+g.offset;
+        for(int i = 0; i < g.dof; ++i) {
+            *(itdata + g.offset+i) = std::max(_vtrajdata[offset+i], _vtrajdata[_spec.GetDOF()+offset+i]);
+        }
+    }
+
     void _ValidateLinear(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
         size_t offset = ipoint*_spec.GetDOF();
@@ -1732,6 +1731,79 @@ protected:
 
     void _ValidateSextic(const ConfigurationSpecification::Group& g, size_t ipoint, dReal deltatime)
     {
+    }
+
+    void _SampleRangeSameDeltaTime(std::vector<dReal>& data, dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const
+    {
+        BOOST_ASSERT(_bInit);
+        BOOST_ASSERT(_timeoffset>=0);
+        OPENRAVE_ASSERT_OP_FORMAT0(startTime,>=,0, "start time needs to be non-negative", ORE_InvalidArguments);
+        OPENRAVE_ASSERT_OP_FORMAT0(stopTime,>=,startTime, "stop time needs to be at least start time", ORE_InvalidArguments);
+
+        _ComputeInternal();
+        OPENRAVE_ASSERT_OP_FORMAT0((int)_vtrajdata.size(),>=,_spec.GetDOF(), "trajectory needs at least one point to sample from", ORE_InvalidArguments);
+        if( IS_DEBUGLEVEL(Level_Verbose) || (RaveGetDebugLevel() & Level_VerifyPlans) ) {
+            _VerifySampling();
+        }
+
+        const dReal trajDuration = GetDuration();
+        int numPoints = 0;
+        {
+            const dReal duration = stopTime - startTime;
+            numPoints = int(ceil(duration / deltatime)); // ceil to make it behave same way as numpy arange(0, duration, deltatime)
+            if (ensureLastPoint && (numPoints - 1) * deltatime + g_fEpsilon < duration) {
+                numPoints++;
+            }
+        }
+        int dof = GetConfigurationSpecification().GetDOF();
+        //std::vector<dReal> dataPerTimestep(dof,0);
+        data.resize(dof*numPoints);
+
+        const std::vector<dReal>::const_iterator begin = _vaccumtime.begin();
+        std::vector<dReal>::const_iterator it = begin;
+
+        std::vector<dReal>::iterator itdata = data.begin();
+
+        for(int i = 0; i < (ensureLastPoint ? numPoints-1 : numPoints); ++i, itdata += dof) {
+            const dReal sampletime = startTime + i * deltatime;
+            if( sampletime >= trajDuration ) {
+                std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
+            }
+            else {
+                // knowing time always increases, it is safe to search in [it, end] instead of [begin, end]
+                it = std::lower_bound(it, _vaccumtime.cend(), sampletime);
+
+                if( it == begin ) {
+                    std::copy(_vtrajdata.begin(),_vtrajdata.begin()+_spec.GetDOF(),itdata);
+                    *(itdata + _timeoffset) = sampletime;
+                }
+                else {
+                    size_t index = it - begin;
+                    dReal timeFromLowerWaypoint = sampletime - _vaccumtime.at(index-1);
+                    dReal waypointdeltatime = _vtrajdata.at(_spec.GetDOF()*index + _timeoffset);
+                    // unfortunately due to floating-point error timeFromLowerWaypoint might not be in the range [0, waypointdeltatime], so double check!
+                    if( timeFromLowerWaypoint < 0 ) {
+                        // most likely small epsilon
+                        timeFromLowerWaypoint = 0;
+                    }
+                    else if( timeFromLowerWaypoint > waypointdeltatime ) {
+                        timeFromLowerWaypoint = waypointdeltatime;
+                    }
+                    for(size_t j = 0; j < _vgroupinterpolators.size(); ++j) {
+                        if( !!_vgroupinterpolators[j] ) {
+                            _vgroupinterpolators[j](index-1, timeFromLowerWaypoint, itdata);
+                        }
+                    }
+                    // should return the sample time relative to the last endpoint so it is easier to re-insert in the trajectory
+                    *(itdata + _timeoffset) = timeFromLowerWaypoint;
+                }
+            }
+        }
+
+        if (ensureLastPoint) {
+            // copy the last point, itdata should point to that
+            std::copy(_vtrajdata.end() - _spec.GetDOF(), _vtrajdata.end(), itdata);
+        }
     }
 
     ConfigurationSpecification _spec;

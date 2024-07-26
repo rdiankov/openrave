@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// Copyright (C) 2006-2012 Rosen Diankov <rosen.diankov@gmail.com>
+// Copyright (C) 2006-2023
 //
 // This file is part of OpenRAVE.
 // OpenRAVE is free software: you can redistribute it and/or modify
@@ -55,6 +55,12 @@
 #include <set>
 #include <string>
 
+#if  __cplusplus >= 201703L
+#include <string_view>
+#else
+#include <boost/utility/string_view.hpp>
+#endif
+
 #include <iomanip>
 #include <fstream>
 #include <sstream>
@@ -89,6 +95,7 @@
 
 #include <openrave/smart_ptr.h>
 #include <openrave/openraveexception.h>
+#include <openrave/units.h>
 
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
@@ -103,6 +110,12 @@ namespace OpenRAVE {
 #include <openrave/logging.h>
 
 namespace OpenRAVE {
+
+#if  __cplusplus >= 201703L
+using string_view = std::string_view;
+#else
+using string_view = ::boost::string_view;
+#endif
 
 #if OPENRAVE_PRECISION // 1 if double precision
 typedef double dReal;
@@ -225,6 +238,7 @@ enum InterfaceType
 };
 
 class CollisionReport;
+class ReadablesContainer;
 class InterfaceBase;
 class IkSolverBase;
 class TrajectoryBase;
@@ -243,10 +257,14 @@ class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
+class IkFailureInfo;
+class IkFailureAccumulatorBase;
 class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
 typedef boost::shared_ptr<CollisionReport const> CollisionReportConstPtr;
+typedef boost::shared_ptr<ReadablesContainer> ReadablesContainerPtr;
+typedef boost::shared_ptr<ReadablesContainer const> ReadablesContainerConstPtr;
 typedef boost::shared_ptr<InterfaceBase> InterfaceBasePtr;
 typedef boost::shared_ptr<InterfaceBase const> InterfaceBaseConstPtr;
 typedef boost::weak_ptr<InterfaceBase> InterfaceBaseWeakPtr;
@@ -298,6 +316,8 @@ typedef boost::weak_ptr<Readable> ReadableWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
+typedef boost::shared_ptr<IkFailureInfo> IkFailureInfoPtr;
+typedef boost::shared_ptr<IkFailureAccumulatorBase> IkFailureAccumulatorBasePtr;
 
 class BaseXMLReader;
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
@@ -538,7 +558,7 @@ typedef geometry::RaveAxisAlignedBox<dReal> AABB;
 typedef geometry::ray<dReal> RAY;
 typedef geometry::RaveOrientedBox<dReal> OrientedBox;
 typedef geometry::RaveAxisAlignedBox<dReal> AxisAlignedBox;
-    
+
 // for compatibility
 //@{
 using mathextra::dot2;
@@ -858,7 +878,7 @@ protected:
         \param timederivative the number of times to take the time derivative of the position
      */
     ConfigurationSpecification ConvertToDerivativeSpecification(uint32_t timederivative=1) const;
-    
+
     /// \brief returns a new specification of just particular time-derivative groups.
     ///
     /// \param timederivative the time derivative to query groups from. 0 is positions/joint values, 1 is velocities, 2 is accelerations, etc
@@ -995,7 +1015,7 @@ protected:
         \param[out] usedconfigindices for every used index, returns the first configuration space index it came from
      */
     void ExtractUsedIndices(KinBodyConstPtr pbody, std::vector<int>& useddofindices, std::vector<int>& usedconfigindices) const;
-    
+
     /** \brief extracts all the unique dof indices that the configuration holds for a particular body
 
         \param[in] pBodyName the name of the body to query for
@@ -1031,6 +1051,21 @@ protected:
         \throw openrave_exception throw f groups are incompatible
      */
     static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, std::vector<dReal>::const_iterator itsourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
+
+    /** \brief given two compatible groups, convers data represented in the source group to data represented in the target group
+
+        \param ittargetdata iterator pointing to start of target group data that should be overwritten
+        \param targetstride the number of elements that to go from the next target point. Necessary if numpoints > 1.
+        \param gtarget the target configuration group
+        \param psourcedata pointer to start of source group data that should be read
+        \param sourcestride the number of elements that to go from the next source point. Necessary if numpoints > 1.
+        \param gsource the source configuration group
+        \param numpoints the number of points to convert. The target and source strides are gtarget.dof and gsource.dof
+        \param penv [optional] The environment which might be needed to fill in unknown data. Assumes environment is locked.
+        \param filluninitialized If there exists target groups that cannot be initialized, then will set default values using the current environment. For example, the current joint values of the body will be used.
+        \throw openrave_exception throw f groups are incompatible
+     */
+    static void ConvertGroupData(std::vector<dReal>::iterator ittargetdata, size_t targetstride, const Group& gtarget, const dReal* psourcedata, size_t sourcestride, const Group& gsource, size_t numpoints, EnvironmentBaseConstPtr penv, bool filluninitialized = true);
 
     /** \brief Converts from one specification to another.
 
@@ -1151,12 +1186,20 @@ public:
         }
     }
 
+    void Reset() {
+        _transform.identity();
+        _type = IKP_None;
+        _id.clear();
+        _name.clear();
+        _mapCustomData.clear();
+    }
+
     inline IkParameterizationType GetType() const {
         return _type;
     }
 
     /// \brief returns a string version of \ref GetType
-    inline const std::string& GetName() const;
+    inline const std::string& GetTypeString() const;
 
     /// \brief Returns the minimum degree of freedoms required for the IK type. Does \b not count custom data.
     static int GetDOF(IkParameterizationType type) {
@@ -1201,11 +1244,11 @@ public:
     inline void SetDirection3D(const Vector& dir) {
         _type = IKP_Direction3D; _transform.rot = dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetRay4D(const RAY& ray) {
         _type = IKP_Ray4D; _transform.trans = ray.pos; _transform.rot = ray.dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetLookat3D(const Vector& trans) {
         _type = IKP_Lookat3D; _transform.trans = trans;
     }
@@ -1213,11 +1256,11 @@ public:
     inline void SetLookat3D(const RAY& ray) {
         _type = IKP_Lookat3D; _transform.trans = ray.pos; _transform.rot = ray.dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetTranslationDirection5D(const RAY& ray) {
         _type = IKP_TranslationDirection5D; _transform.trans = ray.pos; _transform.rot = ray.dir;
         ENSURE_3DVEC_UNIT_LENGTH(_transform.rot);
-     }
+    }
     inline void SetTranslationXY2D(const Vector& trans) {
         _type = IKP_TranslationXY2D; _transform.trans.x = trans.x; _transform.trans.y = trans.y; _transform.trans.z = 0; _transform.trans.w = 0;
     }
@@ -1586,7 +1629,8 @@ public:
     /// The container the iterator points to needs to have \ref GetNumberOfValues() available.
     /// Does not support custom data
     /// Don't normalize quaternions since it could hold velocity data.
-    inline void GetValues(std::vector<dReal>::iterator itvalues) const
+    template<typename OutputIterator>
+    inline void GetValues(OutputIterator itvalues) const
     {
         switch(_type & ~IKP_VelocityDataBit) {
         case IKP_Transform6D:
@@ -1671,7 +1715,8 @@ public:
     /// \brief sets a serialized set of values for the IkParameterization
     ///
     /// Function does not handle custom data. Don't normalize quaternions since it could hold velocity data.
-    inline void SetValues(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype)
+    template<typename InputIterator>
+    inline void SetValues(InputIterator itvalues, IkParameterizationType iktype)
     {
         _type = iktype;
         const bool isVelocity = _type & IKP_VelocityDataBit;
@@ -1767,7 +1812,8 @@ public:
         }
     }
 
-    inline void Set(std::vector<dReal>::const_iterator itvalues, IkParameterizationType iktype) {
+    template<typename InputIterator>
+    inline void Set(InputIterator itvalues, IkParameterizationType iktype) {
         SetValues(itvalues,iktype);
     }
 
@@ -2190,6 +2236,7 @@ public:
         std::swap(_transform, r._transform);
         std::swap(_type, r._type);
         std::swap(_id, r._id);
+        std::swap(_name, r._name);
         _mapCustomData.swap(r._mapCustomData);
     }
 
@@ -2197,8 +2244,12 @@ public:
 
     void DeserializeJSON(const rapidjson::Value& rIkParameterization, dReal fUnitScale=1.0);
 
+    /// \brief converts the unit scale of the geometry
+    void ConvertUnitScale(dReal fUnitScale);
+
     bool operator==(const IkParameterization& other) const {
         return _id == other._id
+               && _name == other._name
                && _type == other._type
                && _transform == other._transform
                && _mapCustomData == other._mapCustomData;
@@ -2213,9 +2264,18 @@ public:
         return _id;
     }
 
+    /// \brief return a user-specified name for this ik parameter
+    inline const std::string& GetName() const {
+        return _name;
+    }
+
     /// \brief Sets the id for ikparam, used by scene lodaer
     void SetId(const std::string& id) {
         _id = id;
+    }
+
+    void SetName(const std::string& name) {
+        _name = name;
     }
 
 protected:
@@ -2326,7 +2386,8 @@ protected:
     ///< for IKP_Transform6D, rot is a unit length quaternion
     Transform _transform;
     IkParameterizationType _type;
-    std::string _id;
+    std::string _id; ///< the unique id used for tracking the resource
+    std::string _name; ///< the user-specified name used for targetting and displaying
 
     std::map<std::string, std::vector<dReal> > _mapCustomData;
 
@@ -2444,6 +2505,8 @@ public:
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
 
+    void SerializeJSON(rapidjson::Value& rTriMesh, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
+
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);
 
@@ -2475,10 +2538,6 @@ enum DOFAffine
     DOF_RotationMask=(DOF_RotationAxis|DOF_Rotation3D|DOF_RotationQuat), ///< mask for all bits representing 3D rotations
     DOF_Transform = (DOF_XYZ|DOF_RotationQuat), ///< translate and rotate freely in 3D space
 };
-
-/** \brief returns a string representation of the error code
- */
-OPENRAVE_API const char* RaveGetErrorCodeString(OpenRAVEErrorCode error);
 
 /** \brief Given a mask of affine dofs and a dof inside that mask, returns the index where the value could be found.
 
@@ -2872,28 +2931,8 @@ inline bool RaveParseDirectories(const char* pdirs, std::vector<std::string>& vd
     return true;
 }
 
-/// \brief Create the interfaces, see \ref CreateInterfaceValidated.
-/// \ingroup plugin_exports
-typedef InterfaceBasePtr (*PluginExportFn_OpenRAVECreateInterface)(InterfaceType type, const std::string& name, const char* pluginhash, const char* envhash, EnvironmentBasePtr env);
-
-/// \brief Called to fill information about the plugin, see \ref GetPluginAttributesValidated.
-/// \ingroup plugin_exports
-typedef bool (*PluginExportFn_OpenRAVEGetPluginAttributes)(PLUGININFO* pinfo, int size, const char* infohash);
-
-/// \brief Called before plugin is unloaded from openrave. See \ref DestroyPlugin.
-/// \ingroup plugin_exports
-typedef void (*PluginExportFn_DestroyPlugin)();
-
-/// \brief Called when OpenRAVE global runtime is finished initializing. See \ref OnRaveInitialized
-/// \ingroup plugin_exports
-typedef void (*PluginExportFn_OnRaveInitialized)();
-
-/// \brief Called when OpenRAVE global runtime is about to be destroyed. See \ref OnRavePreDestroy.
-/// \ingroup plugin_exports
-typedef void (*PluginExportFn_OnRavePreDestroy)();
-
 // define inline functions
-const std::string& IkParameterization::GetName() const
+const std::string& IkParameterization::GetTypeString() const
 {
     std::map<IkParameterizationType,std::string>::const_iterator it = RaveGetIkParameterizationMap().find(_type);
     if( it != RaveGetIkParameterizationMap().end() ) {

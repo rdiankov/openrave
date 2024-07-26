@@ -64,6 +64,12 @@ while test $# -gt 0; do
     --python-dir)
       echo @CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON_INSTALL_DIR@
       ;;
+    --python2-dir)
+      echo @CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON2_INSTALL_DIR@
+      ;;
+    --python3-dir)
+      echo @CMAKE_INSTALL_PREFIX@/@OPENRAVE_PYTHON3_INSTALL_DIR@
+      ;;
     --octave-dir)
       echo @CMAKE_INSTALL_PREFIX@/@OPENRAVE_OCTAVE_INSTALL_DIR@
       ;;

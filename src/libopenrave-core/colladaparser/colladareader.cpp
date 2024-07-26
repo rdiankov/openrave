@@ -265,7 +265,7 @@ public:
         _bReadGeometryGroups = false;
         _bExtractConnectedBodies = bExtractConnectedBodies;
         _bMustResolveURI = false;
-        _fGlobalScale = 1.0/penv->GetUnit().second;
+        _fGlobalScale = GetLengthUnitStandardValue<dReal>(penv->GetUnitInfo().lengthUnit);
         _fGeomScale = 1.0;
         _bBackCompatValuesInRadians = false;
         if( sizeof(daeFloat) == 4 ) {
@@ -421,7 +421,7 @@ public:
 
     bool _InitPostOpen(const AttributesList& atts)
     {
-        _fGlobalScale = 1.0/_penv->GetUnit().second;
+        _fGlobalScale = GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit);
         _bBackCompatValuesInRadians = false;
         if( !!_dom->getAsset() ) {
             // do not modify _fGlobalScale here since _GetUnitScale propagates up the hierarchy
@@ -705,7 +705,7 @@ public:
                                                         }
                                                     }
                                                 }
-                                                pbody->Grab(link->GetParent(),ref_link, setRobotLinksToIgnore);
+                                                pbody->Grab(link->GetParent(), ref_link, setRobotLinksToIgnore, rapidjson::Value());
                                             }
                                             else {
                                                 RAVELOG_WARN(str(boost::format("%s needs to be a robot in order to grab")%ref_link->GetParent()->GetName()));
@@ -1750,12 +1750,34 @@ public:
                                         if( pchild->getElementName() == std::string("controllerType") ) {
                                             jci.controllerType = pchild->getCharData();
                                         }
-                                        else if( pchild->getElementName() == std::string("robotControllerAxisIndex") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                        else {
+                                            int ijointaxis = -1;
+                                            try {
+                                                ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            }
+                                            catch(const boost::bad_lexical_cast&) {
+                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"));
                                                 continue;
                                             }
-                                            jci.robotControllerAxisIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
+                                                RAVELOG_VERBOSE_FORMAT("skip reading axis at index %d since joint dof size is %d", ijointaxis%pjoint->GetDOF());
+                                                continue;
+                                            }
+                                            if( pchild->getElementName() == std::string("robotControllerAxisIndex") ) {
+                                                jci.robotControllerAxisIndex.at(ijointaxis) = boost::lexical_cast<int>(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisMult") ) {
+                                                jci.robotControllerAxisMult.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisOffset") ) {
+                                                jci.robotControllerAxisOffset.at(ijointaxis) = boost::lexical_cast<dReal>(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisManufacturerCode") ) {
+                                                jci.robotControllerAxisManufacturerCode.at(ijointaxis) = std::string(pchild->getCharData());
+                                            }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisProductCode") ) {
+                                                jci.robotControllerAxisProductCode.at(ijointaxis) = std::string(pchild->getCharData());
+                                            }
                                         }
                                     }
                                     continue;
@@ -1768,51 +1790,43 @@ public:
                                         daeElementRef pchild = pelt->getChildren()[ieltcontent];
                                         if( pchild->getElementName() == std::string("deviceType") ) {
                                             jci.deviceType = boost::lexical_cast<int>(pchild->getCharData());
-                                        }
-                                        else if( pchild->getElementName() == std::string("moveIONames") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                        } else {
+                                            int ijointaxis = -1;
+                                            try {
+                                                ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
+                                            }
+                                            catch(const boost::bad_lexical_cast&) {
+                                                RAVELOG_WARN_FORMAT("in jointcontrolinfo_robotcontroller, failed to parse %s to int", pchild->getAttribute("axis"));
+                                                continue;
+                                            }
                                             if( ijointaxis > pjoint->GetDOF() - 1 ) {
                                                 continue;
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.moveIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("upperLimitIONames") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            if( pchild->getElementName() == std::string("moveIONames") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.moveIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.upperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("upperLimitSensorIsOn") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            else if( pchild->getElementName() == std::string("upperLimitIONames") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.upperLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.upperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("lowerLimitIONames") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            else if( pchild->getElementName() == std::string("upperLimitSensorIsOn") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.upperLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.lowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
-                                        }
-                                        else if( pchild->getElementName() == std::string("lowerLimitSensorIsOn") ) {
-                                            int ijointaxis = boost::lexical_cast<int>(pchild->getAttribute("axis"));
-                                            if( ijointaxis > pjoint->GetDOF() - 1 ) {
-                                                continue;
+                                            else if( pchild->getElementName() == std::string("lowerLimitIONames") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.lowerLimitIONames.at(ijointaxis) = std::vector<std::string>((istream_iterator<std::string>(ss)), istream_iterator<std::string>());
                                             }
-                                            ss.clear();
-                                            ss.str(pchild->getCharData());
-                                            jci.lowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                            else if( pchild->getElementName() == std::string("lowerLimitSensorIsOn") ) {
+                                                ss.clear();
+                                                ss.str(pchild->getCharData());
+                                                jci.lowerLimitSensorIsOn.at(ijointaxis) = std::vector<uint8_t>((istream_iterator<int>(ss)), istream_iterator<int>());
+                                            }
                                         }
                                     }
                                     continue;
@@ -5793,11 +5807,11 @@ private:
         // getChild could be optimized since asset tag is supposed to appear as the first element
         domExtraRef pextra = daeSafeCast<domExtra> (pelt->getChild("extra"));
         if( !!pextra && !!pextra->getAsset() && !!pextra->getAsset()->getUnit() ) {
-            return pextra->getAsset()->getUnit()->getMeter()/_penv->GetUnit().second * _fGeomScale;
+            return pextra->getAsset()->getUnit()->getMeter() * GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit) * _fGeomScale;
         }
         domAssetRef passet = daeSafeCast<domAsset>(pelt->getChild("asset"));
         if (!!passet && !!passet->getUnit()) {
-            return passet->getUnit()->getMeter() / _penv->GetUnit().second * _fGeomScale;
+            return passet->getUnit()->getMeter() * GetLengthUnitStandardValue<dReal>(_penv->GetUnitInfo().lengthUnit) * _fGeomScale;
         }
         if( !!pelt->getParent() ) {
             return _GetUnitScale(pelt->getParent(),startscale);

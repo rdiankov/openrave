@@ -15,6 +15,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "commonmanipulation.h"
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 /// samples rays from the projected OBB and returns true if the test function returns true
 /// for all the rays. Otherwise, returns false
@@ -421,30 +424,33 @@ private:
                 return true;         // not supposed to happen, but it is OK
             }
 
+            BOOST_ASSERT(_report->IsValid());
+            const CollisionPairInfo& cpinfo = _report->vCollisionInfos.at(0);
+            
             //            RaveVector<float> vpoints[2];
             //            vpoints[0] = r.pos;
             //            vpoints[1] = _report.contacts[0].pos;
             //            _vf->_robot->GetEnv()->drawlinestrip(vpoints[0],2,16,1.0f,Vector(0,0,1));
-            if( !(!!_report->plink1 &&( _report->plink1->GetParent() == _ptargetbox) ) ) {
-                if( _report->contacts.size() > 0 ) {
-                    Vector vv = _report->contacts.at(0).pos;
-                    RAVELOG_VERBOSE_FORMAT("bad collision: %s: %f %f %f", _report->__str__()%vv.x%vv.y%vv.z);
+            if( cpinfo.CompareFirstBodyName(_ptargetbox->GetName()) != 0 ) {
+                if( cpinfo.contacts.size() > 0 ) {
+                    Vector vv = cpinfo.contacts.at(0).pos;
+                    RAVELOG_VERBOSE_FORMAT("bad collision: (%s)x(%s): %f %f %f", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%vv.x%vv.y%vv.z);
                 }
                 else {
-                    RAVELOG_VERBOSE_FORMAT("bad collision: %s", _report->__str__());
+                    RAVELOG_VERBOSE_FORMAT("bad collision: (%s)x(%s)", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name);
                 }
             }
-            if( !!_report->plink1 ) {
-                if( _report->plink1->GetParent() == _ptargetbox ) {
+            if( !cpinfo.bodyLinkGeom1Name.empty() ) {
+                if( cpinfo.CompareFirstBodyName(_ptargetbox->GetName()) == 0 ) {
                     // colliding with intended target box, so not being occluded
                     return true;
                 }
-                else if( _report->plink1 == _vf->_targetlink ) {
+                else if( cpinfo.CompareFirstBodyName(_vf->_targetlink->GetParent()->GetName()) == 0 && cpinfo.CompareFirstLinkName(_vf->_targetlink->GetName()) == 0 ) {
                     // the original link is returned, have to check if the collision point is within _ptargetbox since we could be targeting one specific geometry rather than others.
-                    if( _report->contacts.size() > 0 ) {
+                    if( cpinfo.contacts.size() > 0 ) {
                         // transform the contact point into the target link coordinate system
                         Transform ttarget = _vf->_targetlink->GetTransform();
-                        Vector vintargetlink = ttarget.inverse()*_report->contacts.at(0).pos;
+                        Vector vintargetlink = ttarget.inverse()*cpinfo.contacts.at(0).pos;
                         // if vertex is inside any of the OBBs, then return true. Note: assumes that the original geometries are a box
                         bool bInside = false;
                         FOREACH(itobb, _vTargetLocalOBBs) {
@@ -464,10 +470,7 @@ private:
                     }
                 }
                 else{
-                    std::string linkname = _report->plink1->GetName();
-                    std::string bodyname = _report->plink1->GetParent()->GetName();
-                    errormsg = bodyname + "/" + linkname;
-                    RAVELOG_VERBOSE_FORMAT("Ray hit a non-target body and link named %s, reject.", errormsg);
+                    RAVELOG_VERBOSE_FORMAT("Ray hit a non-target body and link: (%s)x(%x), reject.", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name);
                     return false;
                 }
             }
@@ -492,15 +495,40 @@ private:
         CollisionAction _IgnoreCollisionCallback(CollisionReportPtr preport, bool IsCalledFromPhysicsEngine)
         {
             if( _bSamplingRays ) {
-                if( !!preport->plink1 ) {
-                    if(  !preport->plink1->IsVisible() || preport->plink1->GetParent() == _vf->_sensorrobot ) {
-                        return CA_Ignore;
+                int numIgnore = 0;
+                for(int icollision = 0; icollision < preport->nNumValidCollisions; ++icollision) {
+                    const CollisionPairInfo& cpinfo = preport->vCollisionInfos[icollision];
+                    string_view bodyname, linkname;
+                    if( !cpinfo.bodyLinkGeom1Name.empty() ) {
+                        if( cpinfo.CompareFirstBodyName(_vf->_sensorrobot->GetName()) == 0 ) {
+                            numIgnore++;
+                            continue;
+                        }
+                        cpinfo.ExtractFirstBodyLinkNames(bodyname, linkname);
+                        if( !linkname.empty() ) {
+                            if( !_vf->GetEnv()->GetKinBody(bodyname)->GetLink(linkname)->IsVisible() ) {
+                                numIgnore++;
+                                continue;
+                            }
+                        }
+                    }
+                    if( !cpinfo.bodyLinkGeom2Name.empty() ) {
+                        if( cpinfo.CompareSecondBodyName(_vf->_sensorrobot->GetName()) == 0 ) {
+                            numIgnore++;
+                            continue;
+                        }
+                        cpinfo.ExtractSecondBodyLinkNames(bodyname, linkname);
+                        if( !linkname.empty() ) {
+                            if( !_vf->GetEnv()->GetKinBody(bodyname)->GetLink(linkname)->IsVisible() ) {
+                                numIgnore++;
+                                continue;
+                            }
+                        }
                     }
                 }
-                if( !!preport->plink2 ) {
-                    if( !preport->plink2->IsVisible() || preport->plink2->GetParent() == _vf->_sensorrobot ) {
-                        return CA_Ignore;
-                    }
+
+                if( numIgnore == preport->nNumValidCollisions ) {
+                    return CA_Ignore;
                 }
             }
             return CA_DefaultAction;
@@ -1379,11 +1407,11 @@ Visibility computation checks occlusion with other objects using ray sampling in
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = utils::GetMicroTime();
         for(int iter = 0; iter < 1; ++iter) {
-            if( !planner->InitPlan(_robot, params) ) {
+            if( !planner->InitPlan(_robot, params).HasSolution() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
-            if( planner->PlanPath(ptraj).GetStatusCode() ) {
+            if( planner->PlanPath(ptraj).HasSolution() ) {
                 bSuccess = true;
                 RAVELOG_INFOA("finished planning\n");
                 break;
@@ -1497,12 +1525,12 @@ Visibility computation checks occlusion with other objects using ray sampling in
         bool bSuccess = false;
         RAVELOG_INFOA("starting planning\n");
         uint64_t starttime = utils::GetMicroTime();
-        if( !planner->InitPlan(_robot, params) ) {
+        if( !planner->InitPlan(_robot, params).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
-        if( planner->PlanPath(ptraj).GetStatusCode() ) {
+        if( planner->PlanPath(ptraj).HasSolution() ) {
             bSuccess = true;
         }
         else {

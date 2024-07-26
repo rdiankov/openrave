@@ -260,8 +260,11 @@ void KinBodyItem::Load()
                     psep->addChild(cy);
                     break;
                 }
+                case GT_ConicalFrustum:
+                case GT_Axial:
                 case GT_Cage:
                 case GT_Container:
+                case GT_CalibrationBoard:
                 case GT_TriMesh: {
                     // actually don't set to dual-sided rendering since flipped triangles can cause problems with collision and user should know about it
                     //phints->shapeType = SoShapeHints::UNKNOWN_SHAPE_TYPE; // set to render for both faces

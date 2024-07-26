@@ -13,7 +13,7 @@ void OSGLODLabel::SetFont(osgText::Font* font) {
 }
 
 // OSG text label that scales by camera distance and also disappears if far away enough
-OSGLODLabel::OSGLODLabel(const std::string& label, osg::ref_ptr<osgText::Font> font) : osg::LOD() {
+OSGLODLabel::OSGLODLabel(const std::string& label, const RaveVector<float>& color, float height, osg::ref_ptr<osgText::Font> font) : osg::LOD() {
     /* Transform structure of an OSGLODLabel:
     *
     * [Target Transform (usually the global transform)]
@@ -42,11 +42,11 @@ OSGLODLabel::OSGLODLabel(const std::string& label, osg::ref_ptr<osgText::Font> f
 
     // Set up other text element properties
     text->setText(label);
-    text->setCharacterSize(0.05);
+    text->setCharacterSize(height);
     text->setAutoRotateToScreen(true);
     text->setPosition( osg::Vec3( 0.0, 0.0, 0.0 ) );
     text->setDrawMode( osgText::Text::TEXT );
-    text->setColor(osg::Vec4(0,0,0,1));
+    text->setColor( osg::Vec4(color.x, color.y, color.z, color.w) );
     text->setBackdropColor( osg::Vec4( 1.0, 1.0f, 1.0f, 1.0f ) );
     text->setBackdropType( osgText::Text::OUTLINE );
     text->setAlignment( osgText::Text::CENTER_CENTER );

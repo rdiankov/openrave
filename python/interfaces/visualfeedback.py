@@ -105,8 +105,8 @@ class VisualFeedback:
         res = self.prob.SendCommand(cmd)
         if res is None:
             raise PlanningError()
-        visibilitytransforms = numpy.array([numpy.float(s) for s in res.split()],numpy.float)
-        return numpy.reshape(visibilitytransforms,(len(visibilitytransforms)/7,7))
+        visibilitytransforms = numpy.array([float(s) for s in res.split()],float)
+        return numpy.reshape(visibilitytransforms,(len(visibilitytransforms)//7,7))
     def SetCameraTransforms(self,transforms,mindist=None):
         """See :ref:`module-visualfeedback-setcameratransforms`
         """
@@ -153,7 +153,7 @@ class VisualFeedback:
             raise PlanningError()
         samples = [float(s) for s in res.split()]
         returnedsamples = int(samples[0])
-        return numpy.reshape(numpy.array(samples[1:],float),(returnedsamples,(len(samples)-1)/returnedsamples))
+        return numpy.reshape(numpy.array(samples[1:],float),(returnedsamples,(len(samples)-1)//returnedsamples))
     def MoveToObserveTarget(self,affinedofs=None,smoothpath=None,planner=None,sampleprob=None,maxiter=None,execute=None,outputtraj=None):
         """See :ref:`module-visualfeedback-movetoobservetarget`
         """

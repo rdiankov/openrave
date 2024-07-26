@@ -70,6 +70,8 @@ public:
     virtual ~PyLaserGeomData();
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
+
+    std::string hardware_id;
     py::tuple min_angle = py::make_tuple(0.0, 0.0);
     py::tuple max_angle = py::make_tuple(0.0, 0.0);
     py::tuple resolution;
@@ -304,7 +306,7 @@ public:
     object GetTransform();
     object GetTransformPose();
 
-    object GetName();
+    object GetName() const;
 
     void SetName(const std::string& name);
 

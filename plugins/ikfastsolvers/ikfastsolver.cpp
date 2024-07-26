@@ -18,13 +18,15 @@
 
 #include "plugindefs.h"
 
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/lexical_cast.hpp>
 
 #ifdef OPENRAVE_HAS_LAPACK
 #include "jacobianinverse.h"
 #endif
+
+using namespace boost::placeholders;
 
 template <typename IkReal>
 class IkFastSolver : public IkSolverBase
@@ -545,60 +547,77 @@ protected:
             }
         }
 
+        CollisionAction _CheckCollisionPair(const CollisionPairInfo& cpinfo)
+        {
+            bool bChildLink1 = cpinfo.FindFirstMatchingLinkIndex(_vchildlinks) >= 0;
+            bool bChildLink2 = cpinfo.FindSecondMatchingLinkIndex(_vchildlinks) >= 0;
+            bool bIndependentLink1 = cpinfo.FindFirstMatchingLinkIndex(_vindependentlinks) >= 0;
+            bool bIndependentLink2 = cpinfo.FindSecondMatchingLinkIndex(_vindependentlinks) >= 0;
+            if( !_bCheckEndEffectorEnvCollision ) {
+                if( (bChildLink1 && !bIndependentLink2) || (bChildLink2 && bIndependentLink1) ) {
+                    // end effector colliding with environment
+                    return CA_Ignore;
+                }
+            }
+            if( !_bCheckEndEffectorSelfCollision ) {
+                if( (bChildLink1&&bIndependentLink2) || (bChildLink2&&bIndependentLink1) ) {
+                    // child+independent link when should be ignore end-effector collisions
+                    return CA_Ignore;
+                }
+            }
+
+            // check for attached bodies of the child links
+            if( !bIndependentLink2 && !bChildLink2 && !cpinfo.bodyLinkGeom2Name.empty() ) {
+                FOREACH(it,_listGrabbedSavedStates) {
+                    const KinBodyPtr& pbody = it->GetBody();
+                    if( !!pbody && cpinfo.CompareSecondBodyName(pbody->GetName()) == 0 /*equal*/ ) {
+                        if( !_bCheckEndEffectorEnvCollision ) {
+                            // if bodyLinkGeom1Name is not part of the robot, then ignore.
+                            if( cpinfo.bodyLinkGeom1Name.empty() || cpinfo.CompareFirstBodyName(_probot->GetName()) != 0 ) {
+                                return CA_Ignore;
+                            }
+                        }
+                        // otherwise counted as self-collision since a part of this end effector
+                        if( !_bCheckEndEffectorSelfCollision ) {
+                            return CA_Ignore;
+                        }
+                    }
+                }
+            }
+            if( !bIndependentLink1 && !bChildLink1 && !cpinfo.bodyLinkGeom1Name.empty() ) {
+                FOREACH(it,_listGrabbedSavedStates) {
+                    const KinBodyPtr& pbody = it->GetBody();
+                    if( !!pbody && cpinfo.CompareFirstBodyName(pbody->GetName()) == 0 /*equal*/ ) {
+                        if( !_bCheckEndEffectorEnvCollision ) {
+                            // if plink2 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
+                            if( cpinfo.bodyLinkGeom2Name.empty() || cpinfo.CompareSecondBodyName(_probot->GetName()) != 0 ) {
+                                return CA_Ignore;
+                            }
+                        }
+                        // otherwise counted as self-collision since a part of this end effector
+                        if( !_bCheckEndEffectorSelfCollision ) {
+                            return CA_Ignore;
+                        }
+                    }
+                }
+            }
+
+            return CA_DefaultAction;
+        }
+
         CollisionAction _CollisionCallback(CollisionReportPtr report, bool IsCalledFromPhysicsEngine)
         {
             if( !_bCheckEndEffectorEnvCollision || !_bCheckEndEffectorSelfCollision ) {
-                bool bChildLink1 = find(_vchildlinks.begin(),_vchildlinks.end(),report->plink1) != _vchildlinks.end();
-                bool bChildLink2 = find(_vchildlinks.begin(),_vchildlinks.end(),report->plink2) != _vchildlinks.end();
-                bool bIndependentLink1 = find(_vindependentlinks.begin(),_vindependentlinks.end(),report->plink1) != _vindependentlinks.end();
-                bool bIndependentLink2 = find(_vindependentlinks.begin(),_vindependentlinks.end(),report->plink2) != _vindependentlinks.end();
-                if( !_bCheckEndEffectorEnvCollision ) {
-                    if( (bChildLink1 && !bIndependentLink2) || (bChildLink2 && bIndependentLink1) ) {
-                        // end effector colliding with environment
-                        return CA_Ignore;
-                    }
-                }
-                if( !_bCheckEndEffectorSelfCollision ) {
-                    if( (bChildLink1&&bIndependentLink2) || (bChildLink2&&bIndependentLink1) ) {
-                        // child+independent link when should be ignore end-effector collisions
-                        return CA_Ignore;
+                int numIgnore = 0;
+                for(int icollision = 0; icollision < report->nNumValidCollisions; ++icollision) {
+                    CollisionAction action = _CheckCollisionPair(report->vCollisionInfos[icollision]);
+                    if( action == CA_Ignore ) {
+                        numIgnore += 1;
                     }
                 }
 
-                // check for attached bodies of the child links
-                if( !bIndependentLink2 && !bChildLink2 && !!report->plink2 ) {
-                    KinBodyPtr pcolliding = report->plink2->GetParent();
-                    FOREACH(it,_listGrabbedSavedStates) {
-                        if( it->GetBody() == pcolliding ) {
-                            if( !_bCheckEndEffectorEnvCollision ) {
-                                // if plink1 is not part of the robot, then ignore.
-                                if( !report->plink1 || report->plink1->GetParent() != _probot ) {
-                                    return CA_Ignore;
-                                }
-                            }
-                            // otherwise counted as self-collision since a part of this end effector
-                            if( !_bCheckEndEffectorSelfCollision ) {
-                                return CA_Ignore;
-                            }
-                        }
-                    }
-                }
-                if( !bIndependentLink1 && !bChildLink1 && !!report->plink1 ) {
-                    KinBodyPtr pcolliding = report->plink1->GetParent();
-                    FOREACH(it,_listGrabbedSavedStates) {
-                        if( it->GetBody() == pcolliding ) {
-                            if( !_bCheckEndEffectorEnvCollision ) {
-                                // if plink2 is not part of the robot, then ignore. otherwise it needs to be counted as self-collision
-                                if( !report->plink2 || report->plink2->GetParent() != _probot ) {
-                                    return CA_Ignore;
-                                }
-                            }
-                            // otherwise counted as self-collision since a part of this end effector
-                            if( !_bCheckEndEffectorSelfCollision ) {
-                                return CA_Ignore;
-                            }
-                        }
-                    }
+                if( numIgnore > 0 && numIgnore == report->nNumValidCollisions ) {
+                    return CA_Ignore;
                 }
             }
             return CA_DefaultAction;
@@ -1180,6 +1199,7 @@ protected:
                 RAY r = param.GetTranslationDirection5D();
                 IkReal eetrans[3] = {(IkReal)r.pos.x, (IkReal)r.pos.y, (IkReal)r.pos.z};
                 IkReal eerot[9] = {(IkReal)r.dir.x, (IkReal)r.dir.y, (IkReal)r.dir.z, 0,0,0,0,0,0};
+                //RAVELOG_INFO_FORMAT("translationdirection5d: %.17e %.17e %.17e %.17e 0 0 0 %.17e 0 0 0 %.17e", r.dir.x%r.dir.y%r.dir.z%r.pos.x%r.pos.y%r.pos.z);
                 bool bret = _ikfunctions->_ComputeIk2(eetrans, eerot, vfree.size()>0 ? &vfree[0] : NULL, solutions, &pmanip);
                 if( !bret ) {
 #ifdef OPENRAVE_HAS_LAPACK
@@ -1581,59 +1601,66 @@ protected:
             stateCheck.SetSelfCollisionState();
             if( probot->CheckSelfCollision(ptempreport) ) {
                 if( !!ptempreport ) {
-                    if( !!ptempreport->plink1 && !!ptempreport->plink2 && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
-                        // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
-                        // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
-                        KinBody::LinkConstPtr potherlink;
-                        if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink1) != _vindependentlinks.end() ) {
-                            potherlink = ptempreport->plink2;
-                        }
-                        else if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink2) != _vindependentlinks.end() ) {
-                            potherlink = ptempreport->plink1;
-                        }
-
-                        if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
-                            for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
-                                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
-
-                                    stateCheck.numImpossibleSelfCollisions++;
-                                    RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
-                                    if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
-                                        RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
-                                        return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
-                                    }
-                                    else {
-                                        break;
-                                    }
-                                }
+                    if( ptempreport->IsValid() && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
+                        for(int icollision = 0; icollision < ptempreport->nNumValidCollisions; ++icollision) {
+                            const CollisionPairInfo& cpinfo = ptempreport->vCollisionInfos[icollision];
+                            
+                            // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
+                            // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
+                            string_view otherBodyName, otherLinkName;
+                            if( cpinfo.FindFirstMatchingLinkIndex(_vindependentlinks) >= 0 ) {
+                                cpinfo.ExtractSecondBodyLinkNames(otherBodyName, otherLinkName);
                             }
-                        }
-
-                        if( _vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() && _numBacktraceLinksForSelfCollisionWithFree > 0 ) {
-                            // check
-                            potherlink.reset();
-                            if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink1) != _vIndependentLinksIncludingFreeJoints.end() ) {
-                                potherlink = ptempreport->plink2;
-                            }
-                            else if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink2) != _vIndependentLinksIncludingFreeJoints.end() ) {
-                                potherlink = ptempreport->plink1;
+                            else if( cpinfo.FindSecondMatchingLinkIndex(_vindependentlinks) >= 0 ) {
+                                cpinfo.ExtractFirstBodyLinkNames(otherBodyName, otherLinkName);
                             }
 
-                            if( !!potherlink ) {
-                                //bool bRigidlyAttached = false;
-                                for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                            if( !otherLinkName.empty() && probot->GetName() == otherBodyName && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
+                                int nOtherLinkIndex = probot->GetLinkIndex(otherLinkName);
+                                for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(nOtherLinkIndex) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
-                                        RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        RAVELOG_VERBOSE_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed, attempts=%d", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
                                         if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
-                                            RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                            RAVELOG_DEBUG_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed, giving up after %d attempts", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
                                             return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
                                         }
                                         else {
                                             break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if( _vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() && _numBacktraceLinksForSelfCollisionWithFree > 0 ) {
+                                // check
+                                otherBodyName = string_view();
+                                otherLinkName = string_view();
+                                if( cpinfo.FindFirstMatchingLinkIndex(_vIndependentLinksIncludingFreeJoints) >= 0 ) {
+                                    cpinfo.ExtractSecondBodyLinkNames(otherBodyName, otherLinkName);
+                                }
+                                else if( cpinfo.FindSecondMatchingLinkIndex(_vIndependentLinksIncludingFreeJoints) >= 0 ) {
+                                    cpinfo.ExtractFirstBodyLinkNames(otherBodyName, otherLinkName);
+                                }
+
+                                if( !otherLinkName.empty() && probot->GetName() == otherBodyName ) {
+                                    //bool bRigidlyAttached = false;
+                                    int nOtherLinkIndex = probot->GetLinkIndex(otherLinkName);
+                                    for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                        KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                        if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(nOtherLinkIndex) ) {
+
+                                            stateCheck.numImpossibleSelfCollisions++;
+                                            RAVELOG_VERBOSE_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed, attempts=%d", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
+                                            if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                                RAVELOG_DEBUG_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
+                                                return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                            }
+                                            else {
+                                                break;
+                                            }
                                         }
                                     }
                                 }
@@ -1690,15 +1717,17 @@ protected:
                 if( paramnewglobal.GetType() == IKP_TranslationDirection5D ) {
                     // colliding and 5d,so check if colliding with end effector. If yes, then register as part of the stateCheck
                     bool bIsEndEffectorCollision = false;
-                    FOREACHC(itcollidingpairs, ptempreport->vLinkColliding) {
-                        if( itcollidingpairs->first->GetParent() == probot ) {
-                            if( find(_vchildlinkindices.begin(), _vchildlinkindices.end(), itcollidingpairs->first->GetIndex()) != _vchildlinkindices.end() ) {
+                    for(int icollision = 0; icollision < ptempreport->nNumValidCollisions; ++icollision) {
+                        const CollisionPairInfo& cpinfo = ptempreport->vCollisionInfos[icollision];
+                        
+                        if( cpinfo.CompareFirstBodyName(probot->GetName()) == 0 ) {
+                            if( cpinfo.FindFirstMatchingLinkIndex(_vchildlinks) >= 0 ) {
                                 bIsEndEffectorCollision = true;
                                 break;
                             }
                         }
-                        if( itcollidingpairs->second->GetParent() == probot ) {
-                            if( find(_vchildlinkindices.begin(), _vchildlinkindices.end(), itcollidingpairs->second->GetIndex()) != _vchildlinkindices.end() ) {
+                        if( cpinfo.CompareSecondBodyName(probot->GetName()) == 0 ) {
+                            if( cpinfo.FindSecondMatchingLinkIndex(_vchildlinks) >= 0 ) {
                                 bIsEndEffectorCollision = true;
                                 break;
                             }
@@ -2022,59 +2051,65 @@ protected:
             stateCheck.SetSelfCollisionState();
             if( probot->CheckSelfCollision(ptempreport) ) {
                 if( !!ptempreport ) {
-                    if( !!ptempreport->plink1 && !!ptempreport->plink2 && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
-                        // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
-                        // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
-                        KinBody::LinkConstPtr potherlink;
-                        if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink1) != _vindependentlinks.end() ) {
-                            potherlink = ptempreport->plink2;
-                        }
-                        else if( find(_vindependentlinks.begin(), _vindependentlinks.end(), ptempreport->plink2) != _vindependentlinks.end() ) {
-                            potherlink = ptempreport->plink1;
-                        }
-
-                        if( !!potherlink && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
-                            for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
-                                KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
-
-                                    stateCheck.numImpossibleSelfCollisions++;
-                                    RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
-                                    if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
-                                        RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
-                                        return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
-                                    }
-                                    else {
-                                        break;
-                                    }
-                                }
+                    if( ptempreport->IsValid() && (paramnewglobal.GetType() == IKP_Transform6D || paramnewglobal.GetDOF() >= pmanip->GetArmDOF()) ) {
+                        for(int icollision = 0; icollision < ptempreport->nNumValidCollisions; ++icollision) {
+                            const CollisionPairInfo& cpinfo = ptempreport->vCollisionInfos[icollision];
+                            // ik constraints the robot pretty well, so any self-collisions might mean the IK itself is impossible.
+                            // check if self-colliding with non-moving part and a link that is pretty high in the chain, then perhaps we should give up...?
+                            string_view otherBodyName, otherLinkName;
+                            if( cpinfo.FindFirstMatchingLinkIndex(_vindependentlinks) >= 0 ) {
+                                cpinfo.ExtractSecondBodyLinkNames(otherBodyName, otherLinkName);
                             }
-                        }
-
-                        if( _vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() && _numBacktraceLinksForSelfCollisionWithFree > 0 ) {
-                            // check
-                            potherlink.reset();
-                            if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink1) != _vIndependentLinksIncludingFreeJoints.end() ) {
-                                potherlink = ptempreport->plink2;
-                            }
-                            else if( find(_vIndependentLinksIncludingFreeJoints.begin(), _vIndependentLinksIncludingFreeJoints.end(), ptempreport->plink2) != _vIndependentLinksIncludingFreeJoints.end() ) {
-                                potherlink = ptempreport->plink1;
+                            else if( cpinfo.FindSecondMatchingLinkIndex(_vindependentlinks) >= 0 ) {
+                                cpinfo.ExtractFirstBodyLinkNames(otherBodyName, otherLinkName);
                             }
 
-                            if( !!potherlink ) {
-                                //bool bRigidlyAttached = false;
-                                for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                            if( !otherLinkName.empty() && probot->GetName() == otherBodyName && _numBacktraceLinksForSelfCollisionWithNonMoving > 0 ) {
+                                int nOtherLinkIndex = probot->GetLinkIndex(otherLinkName);
+                                for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithNonMoving; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
                                     KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
-                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(*potherlink) ) {
+                                    if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(nOtherLinkIndex) ) {
 
                                         stateCheck.numImpossibleSelfCollisions++;
-                                        RAVELOG_VERBOSE_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed, attempts=%d", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                        RAVELOG_VERBOSE_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed, attempts=%d", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
                                         if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
-                                            RAVELOG_DEBUG_FORMAT("self-collision with links %s and %s most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", ptempreport->plink1->GetName()%ptempreport->plink2->GetName()%stateCheck.numImpossibleSelfCollisions);
+                                            RAVELOG_DEBUG_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed, giving up after %d attempts", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
                                             return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
                                         }
                                         else {
                                             break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if( _vindependentlinks.size() != _vIndependentLinksIncludingFreeJoints.size() && _numBacktraceLinksForSelfCollisionWithFree > 0 ) {
+                                // check
+                                otherBodyName = string_view();
+                                otherLinkName = string_view();
+                                if( cpinfo.FindFirstMatchingLinkIndex(_vIndependentLinksIncludingFreeJoints) >= 0 ) {
+                                    cpinfo.ExtractSecondBodyLinkNames(otherBodyName, otherLinkName);
+                                }
+                                else if( cpinfo.FindSecondMatchingLinkIndex(_vIndependentLinksIncludingFreeJoints) >= 0 ) {
+                                    cpinfo.ExtractFirstBodyLinkNames(otherBodyName, otherLinkName);
+                                }
+                                
+                                if( !otherLinkName.empty() && probot->GetName() == otherBodyName ) {
+                                    //bool bRigidlyAttached = false;
+                                    int nOtherLinkIndex = probot->GetLinkIndex(otherLinkName);
+                                    for(int itestdof = (int)pmanip->GetArmIndices().size()-_numBacktraceLinksForSelfCollisionWithFree; itestdof < (int)pmanip->GetArmIndices().size(); ++itestdof) {
+                                        KinBody::JointPtr pjoint = probot->GetJointFromDOFIndex(pmanip->GetArmIndices()[itestdof]);
+                                        if( !!pjoint->GetHierarchyParentLink() && pjoint->GetHierarchyParentLink()->IsRigidlyAttached(nOtherLinkIndex) ) {
+
+                                            stateCheck.numImpossibleSelfCollisions++;
+                                            RAVELOG_VERBOSE_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed, attempts=%d", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
+                                            if( stateCheck.numImpossibleSelfCollisions > 16 ) { // not sure what a good threshold is here
+                                                RAVELOG_DEBUG_FORMAT("self-collision with '%s' and '%s' most likely means IK itself will not succeed for these free parameters, giving up after %d attempts", cpinfo.bodyLinkGeom1Name%cpinfo.bodyLinkGeom2Name%stateCheck.numImpossibleSelfCollisions);
+                                                return static_cast<IkReturnAction>(retactionall|IKRA_RejectSelfCollision|IKRA_Quit);
+                                            }
+                                            else {
+                                                break;
+                                            }
                                         }
                                     }
                                 }
@@ -2091,15 +2126,15 @@ protected:
                 // only check if the end-effector position is fully determined from the ik
                 if( paramnewglobal.GetType() == IKP_Transform6D ) {// || (int)pmanip->GetArmIndices().size() <= paramnewglobal.GetDOF() ) {
                     if( pmanip->CheckEndEffectorCollision(pmanip->GetTransform(), ptempreport) ) {
-                        if( !!ptempreport ) {
+                        if( !!ptempreport  && ptempreport->IsValid() ) {
                             stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
                             ss << "env=" << GetEnv()->GetId() << ", ikfast collision " << ptempreport->__str__() << " ";
-                            if( !!ptempreport->plink1 ) {
-                                ss << "num1=" << ptempreport->plink1->GetCollisionData().vertices.size() << " ";
-                            }
-                            if( !!ptempreport->plink2 ) {
-                                ss << "num2=" << ptempreport->plink2->GetCollisionData().vertices.size() << " ";
-                            }
+//                            if( !!ptempreport->plink1 ) {
+//                                ss << "num1=" << ptempreport->plink1->GetCollisionData().vertices.size() << " ";
+//                            }
+//                            if( !!ptempreport->plink2 ) {
+//                                ss << "num2=" << ptempreport->plink2->GetCollisionData().vertices.size() << " ";
+//                            }
                             ss << "; colvalues=[";
                             std::vector<dReal> vallvalues;
                             probot->GetDOFValues(vallvalues);

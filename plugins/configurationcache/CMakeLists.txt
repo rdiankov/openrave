@@ -6,46 +6,20 @@ target_link_libraries(configurationcache PRIVATE boost_assertion_failed PUBLIC l
 set_target_properties(configurationcache PROPERTIES COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS}" LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
 install(TARGETS configurationcache DESTINATION ${OPENRAVE_PLUGINS_INSTALL_DIR} COMPONENT ${PLUGINS_BASE})
 
-# python bindings
-if( OPT_PYTHON AND HAVE_ALL_PYTHON_HEADERS )
-  # include
-  include_directories(${PYTHON_INCLUDE_PATH} ${PYTHON_INCLUDE_DIRS}
-    ${OPENRAVE_CORE_INCLUDE_LOCAL_DIRS} ${OPENRAVEPY_INCLUDE_LOCAL_DIRS}
-  )
+if (OPT_PYTHON)
+    add_library(openravepy_configurationcache SHARED openravepy_configurationcache.cpp)
+    target_link_libraries(openravepy_configurationcache PRIVATE boost_assertion_failed PUBLIC configurationcache openravepy_int openravepy2_meta)
+    set_target_properties(openravepy_configurationcache PROPERTIES PREFIX "")
+    install(TARGETS openravepy_configurationcache DESTINATION ${OPENRAVEPY2_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
+endif()
 
-  # link
-  set(OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES openravepy_int configurationcache ${PYTHON_LIBRARIES} ${Boost_THREAD_LIBRARY} ${LAPACK_LIBRARIES})
-  if(NOT USE_PYBIND11_PYTHON_BINDINGS)
-    set(OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES ${OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES} ${Boost_PYTHON_LIBRARY})
-  endif()
-
-  add_library(openravepy_configurationcache SHARED openravepy_configurationcache.cpp)
-
-  target_link_libraries(openravepy_configurationcache PRIVATE boost_assertion_failed PUBLIC ${OPENRAVEPY_CONFIGURATIONCACHE_LINKED_LIBRARIES})
-
-  set(OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS "")
-  if(USE_PYBIND11_PYTHON_BINDINGS)
-    message(STATUS "Build openravepy_configurationcache with pybind11")
-    find_package(pybind11 REQUIRED)
-    set(OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS "${OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS} -DUSE_PYBIND11_PYTHON_BINDINGS")
-    if(PYBIND11_PYTHON_BINDINGS_DEBUG)
-      set(OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS "${OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS} -g -O0")
-    else()
-      set(OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS "${OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS} -g0 -O3")
-    endif()
-    # pybind11 requires less visibility
-    set(OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS "${OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS} -fvisibility=hidden")
-  else()
-    message(STATUS "Build openravepy_configurationcache with Boost.Python")
-  endif()
-
-  set_target_properties(openravepy_configurationcache
-    PROPERTIES PREFIX "" COMPILE_FLAGS "${OPENRAVEPY_CONFIGURATIONCACHE_COMPILE_FLAGS}"
-  )
-  if( WIN32 )
-    set_target_properties(openravepy_configurationcache PROPERTIES SUFFIX ".pyd")
-  endif()
-  install(TARGETS openravepy_configurationcache DESTINATION ${OPENRAVEPY_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
-else()
-  message(STATUS "HAVE_ALL_PYTHON_HEADERS = ${HAVE_ALL_PYTHON_HEADERS}; do not build openravepy_configurationcache")
+if (OPT_PYTHON3)
+    add_library(openravepy3_configurationcache SHARED openravepy_configurationcache.cpp)
+    target_link_libraries(openravepy3_configurationcache PRIVATE boost_assertion_failed PUBLIC configurationcache openravepy3_int openravepy3_meta)
+    set_target_properties(openravepy3_configurationcache PROPERTIES
+        PREFIX ""
+        LIBRARY_OUTPUT_DIRECTORY "python3"
+        OUTPUT_NAME "openravepy_configurationcache"
+    )
+    install(TARGETS openravepy3_configurationcache DESTINATION ${OPENRAVEPY3_VER_INSTALL_DIR} COMPONENT ${COMPONENT_PREFIX}python)
 endif()

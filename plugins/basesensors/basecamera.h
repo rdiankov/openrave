@@ -196,7 +196,7 @@ public:
         _Reset();
     }
 
-    virtual int Configure(ConfigureCommand command, bool blocking)
+    virtual int Configure(ConfigureCommand command, bool blocking) override
     {
         switch(command) {
         case CC_PowerOn:
@@ -260,14 +260,14 @@ public:
         _dataviewer.reset();
     }
 
-    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry)
+    virtual void SetSensorGeometry(SensorGeometryConstPtr pgeometry) override
     {
         OPENRAVE_ASSERT_OP(pgeometry->GetType(), ==, ST_Camera );
         *_pgeom = *boost::static_pointer_cast<CameraGeomData const>(pgeometry);
         _Reset();
     }
 
-    virtual bool SimulationStep(dReal fTimeElapsed)
+    virtual bool SimulationStep(dReal fTimeElapsed) override
     {
         boost::shared_ptr<CameraSensorData> pdata = _pdata;
 
@@ -292,7 +292,7 @@ public:
         return true;
     }
 
-    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type)
+    virtual SensorGeometryConstPtr GetSensorGeometry(SensorType type) override
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             CameraGeomData* pgeom = new CameraGeomData();
@@ -302,7 +302,7 @@ public:
         return SensorGeometryConstPtr();
     }
 
-    virtual SensorDataPtr CreateSensorData(SensorType type)
+    virtual SensorDataPtr CreateSensorData(SensorType type) override
     {
         if(( type == ST_Invalid) ||( type == ST_Camera) ) {
             return SensorDataPtr(boost::shared_ptr<CameraSensorData>(new CameraSensorData()));
@@ -310,7 +310,7 @@ public:
         return SensorDataPtr();
     }
 
-    virtual bool GetSensorData(SensorDataPtr psensordata)
+    virtual bool GetSensorData(SensorDataPtr psensordata) override
     {
         if( _bPower &&( psensordata->GetType() == ST_Camera) ) {
             std::lock_guard<std::mutex> lock(_mutexdata);
@@ -322,7 +322,7 @@ public:
         return false;
     }
 
-    virtual bool Supports(SensorType type) {
+    virtual bool Supports(SensorType type) override {
         return type == ST_Camera;
     }
 
@@ -363,16 +363,16 @@ public:
         return false;
     }
 
-    virtual void SetTransform(const Transform& trans)
+    virtual void SetTransform(const Transform& trans) override
     {
         _trans = trans;
     }
 
-    virtual const Transform& GetTransform() {
+    virtual const Transform& GetTransform() override {
         return _trans;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions)
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override
     {
         SensorBase::Clone(preference,cloningoptions);
         boost::shared_ptr<BaseCameraSensor const> r = boost::dynamic_pointer_cast<BaseCameraSensor const>(preference);

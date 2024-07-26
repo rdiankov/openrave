@@ -16,6 +16,9 @@
 #include "commonmanipulation.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 class BaseManipulation : public ModuleBase
 {
@@ -322,13 +325,13 @@ protected:
             return false;
         }
 
-        if( !planner->InitPlan(robot, params) ) {
+        if( !planner->InitPlan(robot, params).HasSolution() ) {
             RAVELOG_ERROR("InitPlan failed\n");
             return false;
         }
 
         TrajectoryBasePtr poutputtraj = RaveCreateTrajectory(GetEnv(),"");
-        if( !planner->PlanPath(poutputtraj).GetStatusCode() ) {
+        if( !planner->PlanPath(poutputtraj).HasSolution() ) {
             return false;
         }
         if( params->ignorefirstcollision == 0 && (RaveGetDebugLevel() & Level_VerifyPlans) ) {
@@ -521,12 +524,12 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
         bool bSuccess = false;
         for(int itry = 0; itry < nMaxTries; ++itry) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).HasSolution() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
 
-            if( !rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
+            if( !rrtplanner->PlanPath(ptraj).HasSolution() ) {
                 RAVELOG_WARN("PlanPath failed\n");
             }
             else {
@@ -852,12 +855,12 @@ protected:
         RAVELOG_DEBUG("starting planning\n");
 
         for(int iter = 0; iter < nMaxTries; ++iter) {
-            if( !rrtplanner->InitPlan(robot, params) ) {
+            if( !rrtplanner->InitPlan(robot, params).HasSolution() ) {
                 RAVELOG_ERROR("InitPlan failed\n");
                 return false;
             }
 
-            if( rrtplanner->PlanPath(ptraj).GetStatusCode() ) {
+            if( rrtplanner->PlanPath(ptraj).HasSolution() ) {
                 bSuccess = true;
                 RAVELOG_DEBUG("finished planning\n");
                 break;
@@ -1093,7 +1096,7 @@ protected:
         }
 
         RAVELOG_DEBUG(str(boost::format("robot %s:%s grabbing body %s...\n")%robot->GetName()%robot->GetActiveManipulator()->GetEndEffector()->GetName()%ptarget->GetName()));
-        robot->Grab(ptarget);
+        robot->Grab(ptarget, rapidjson::Value());
         return true;
     }
 

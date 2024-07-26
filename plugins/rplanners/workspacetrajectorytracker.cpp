@@ -46,7 +46,7 @@ Planner Parameters\n\
     virtual ~WorkspaceTrajectoryTracker() {
     }
 
-    virtual bool InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params)
+    virtual PlannerStatus InitPlan(RobotBasePtr probot, PlannerParametersConstPtr params) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
 
@@ -56,8 +56,9 @@ Planner Parameters\n\
         _manip = _robot->GetActiveManipulator();
 
         if( (int)_manip->GetArmIndices().size() != parameters->GetDOF() ) {
-            RAVELOG_WARN("parameter configuraiton space must be the robot's active manipulator\n");
-            return false;
+            const std::string msg = "parameter configuraiton space must be the robot's active manipulator\n";
+            RAVELOG_WARN(msg);
+            return PlannerStatus(msg, PS_Failed);
         }
 
         if( !parameters->workspacetraj ||( parameters->workspacetraj->GetDuration() == 0) ||( parameters->workspacetraj->GetNumWaypoints() == 0) ) {
@@ -74,7 +75,6 @@ Planner Parameters\n\
                     RAVELOG_ERROR("failed to set state values\n");
                     return false;
                 }
-                Transform tstate = _manip->GetTransform();
                 _robot->SetActiveDOFs(_manip->GetArmIndices());
                 _robot->GetActiveDOFValues(dummyvalues);
                 for(size_t j = 0; j < dummyvalues.size(); ++j) {
@@ -83,8 +83,9 @@ Planner Parameters\n\
                     KinBody::JointPtr pjoint = _robot->GetJointFromDOFIndex(dofindex);
                     dReal diff = RaveFabs(pjoint->SubtractValue(dummyvalues.at(j), testvalues[i]->at(j), dofindex-pjoint->GetDOFIndex()));
                     if( diff > g_fEpsilonLinear ) {
-                        RAVELOG_ERROR(str(boost::format("parameter configuration space does not match active manipulator, dof %d=%f!\n")%j%RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j))));
-                        return false;
+                        const std::string msg(str(boost::format("parameter configuration space does not match active manipulator, dof %d=%f!\n")%j%RaveFabs(dummyvalues.at(j) - testvalues[i]->at(j))));
+                        RAVELOG_ERROR(msg);
+                        return PlannerStatus(msg, PS_Failed);
                     }
                 }
             }
@@ -103,12 +104,14 @@ Planner Parameters\n\
         // validate the initial state if one exists
         if( parameters->vinitialconfig.size() > 0 ) {
             if( (int)parameters->vinitialconfig.size() != parameters->GetDOF() ) {
-                RAVELOG_ERROR(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
-                return false;
+                const std::string msg(str(boost::format("initial config wrong dim: %d\n")%parameters->vinitialconfig.size()));
+                RAVELOG_ERROR(msg);
+                return PlannerStatus(msg, PS_Failed);
             }
             if( parameters->SetStateValues(parameters->vinitialconfig) ) {
-                RAVELOG_WARN("initial state cannot be set\n");
-                return false;
+                const std::string msg("initial state cannot be set\n");
+                RAVELOG_WARN(msg);
+                return PlannerStatus(msg, PS_Failed);
             }
             //            if( !parameters->_checkpathconstraintsfn(parameters->vinitialconfig, parameters->vinitialconfig,IT_OpenStart,ConfigurationListPtr()) ) {
 
@@ -116,18 +119,20 @@ Planner Parameters\n\
         }
 
         if( !_manip->GetIkSolver() ) {
-            RAVELOG_ERROR(str(boost::format("manipulator %s does not have ik solver set\n")%_manip->GetName()));
-            return false;
+            const std::string msg(str(boost::format("manipulator %s does not have ik solver set\n")%_manip->GetName()));
+            RAVELOG_ERROR(msg);
+            return PlannerStatus(msg, PS_Failed);
         }
 
         if( !_manip->GetIkSolver()->Supports(IKP_Transform6D) ) {
-            RAVELOG_ERROR(str(boost::format("WorkspaceTrajectoryTracker: unsupported iktype for manipulator %s")%_manip->GetName()));
-            return false;
+            const std::string msg(str(boost::format("WorkspaceTrajectoryTracker: unsupported iktype for manipulator %s")%_manip->GetName()));
+            RAVELOG_ERROR(msg);
+            return PlannerStatus(msg, PS_Failed);
         }
 
         _retimerplanner = RaveCreatePlanner(GetEnv(),"lineartrajectoryretimer");
         _parameters = parameters;
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr poutputtraj, int planningoptions) override
@@ -167,7 +172,7 @@ Planner Parameters\n\
             }
         }
 
-        dReal fstarttime = 0, fendtime = workspacetraj->GetDuration();
+        dReal fstarttime = 0;
         bool bPrevInCollision = true;
         list<Transform> listtransforms;
         dReal ftime = 0;
@@ -183,7 +188,6 @@ Planner Parameters\n\
                 }
                 if( !bPrevInCollision ) {
                     if( ftime >= minimumcompletetime ) {
-                        fendtime = ftime;
                         break;
                     }
                 }
@@ -261,7 +265,6 @@ Planner Parameters\n\
                 else {
                     if( !bPrevInCollision ) {
                         if( ftime >= minimumcompletetime ) {
-                            fendtime = ftime;
                             break;
                         }
                     }
@@ -285,7 +288,7 @@ Planner Parameters\n\
             return PlannerStatus("bPrevInCollision" ,PS_Failed);
         }
 
-        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters) || !_retimerplanner->PlanPath(poutputtraj).GetStatusCode() ) {
+        if( !_retimerplanner->InitPlan(RobotBasePtr(),_parameters).HasSolution() || !_retimerplanner->PlanPath(poutputtraj).HasSolution() ) {
             return PlannerStatus(PS_Failed);
         }
 

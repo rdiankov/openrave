@@ -12,17 +12,28 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#include "plugindefs.h"
-#include <openrave/plugin.h>
+#include "basecontrollers.h"
+#include <openrave/openrave.h>
 
-ControllerBasePtr CreateIdealController(EnvironmentBasePtr penv, std::istream& sinput);
-ControllerBasePtr CreateIdealVelocityController(EnvironmentBasePtr penv, std::istream& sinput);
-ControllerBasePtr CreateRedirectController(EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ControllerBasePtr CreateIdealController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ControllerBasePtr CreateIdealVelocityController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
+OpenRAVE::ControllerBasePtr CreateRedirectController(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput);
 
-InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string& interfacename, std::istream& sinput, EnvironmentBasePtr penv)
+const std::string BaseControllersPlugin::_pluginname = "BaseControllersPlugin";
+
+BaseControllersPlugin::BaseControllersPlugin()
+{
+    _interfaces[OpenRAVE::PT_Controller].push_back("IdealController");
+    _interfaces[OpenRAVE::PT_Controller].push_back("IdealVelocityController");
+    _interfaces[OpenRAVE::PT_Controller].push_back("RedirectController");
+}
+
+BaseControllersPlugin::~BaseControllersPlugin() {}
+
+OpenRAVE::InterfaceBasePtr BaseControllersPlugin::CreateInterface(OpenRAVE::InterfaceType type, const std::string& interfacename, std::istream& sinput, OpenRAVE::EnvironmentBasePtr penv)
 {
     switch(type) {
-    case PT_Controller:
+    case OpenRAVE::PT_Controller:
         if( interfacename == "idealcontroller") {
             return CreateIdealController(penv,sinput);
         }
@@ -36,16 +47,23 @@ InterfaceBasePtr CreateInterfaceValidated(InterfaceType type, const std::string&
     default:
         break;
     }
-    return InterfaceBasePtr();
+    return OpenRAVE::InterfaceBasePtr();
 }
 
-void GetPluginAttributesValidated(PLUGININFO& info)
+const RavePlugin::InterfaceMap& BaseControllersPlugin::GetInterfaces() const
 {
-    info.interfacenames[PT_Controller].push_back("IdealController");
-    info.interfacenames[PT_Controller].push_back("IdealVelocityController");
-    info.interfacenames[PT_Controller].push_back("RedirectController");
+    return _interfaces;
 }
 
-OPENRAVE_PLUGIN_API void DestroyPlugin()
+const std::string& BaseControllersPlugin::GetPluginName() const
 {
+    return _pluginname;
 }
+
+#if !OPENRAVE_STATIC_PLUGINS
+
+OPENRAVE_PLUGIN_API RavePlugin* CreatePlugin() {
+    return new BaseControllersPlugin();
+}
+
+#endif // OPENRAVE_STATIC_PLUGINS
