@@ -21,7 +21,9 @@ namespace OpenRAVE {
 bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
     if( !collisionchecker ) {
-        collisionchecker = _selfcollisionchecker;
+        if( _vSelfCollisionCheckers.size() > 0 ) {
+            collisionchecker = _vSelfCollisionCheckers.front();
+        }
         if( !collisionchecker ) {
             collisionchecker = GetEnv()->GetCollisionChecker();
             if( !collisionchecker ) {
@@ -412,7 +414,7 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
 
 bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
 {
-    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr pchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
     CollisionReportKeepSaver reportsaver(report);
     if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
@@ -459,7 +461,7 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
 
 bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
-    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr pchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
     CollisionReportKeepSaver reportsaver(report);
     if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {

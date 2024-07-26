@@ -493,7 +493,8 @@ void KinBody::Destroy()
     _pManageData.reset();
 
     _ResetInternalCollisionCache();
-    _selfcollisionchecker.reset();
+    _vSelfCollisionCheckerGroupNames.clear();
+    _vSelfCollisionCheckers.clear();
 
     __hashKinematicsGeometryDynamics.resize(0);
     ClearReadableInterfaces();
@@ -707,8 +708,9 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
     _ResetInternalCollisionCache();
 
     GetEnv()->GetCollisionChecker()->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
-    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() && propagateGroupNameToSelfCollisionChecker ) {
-        _selfcollisionchecker->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
+    CollisionCheckerBasePtr pSelfCollisionChecker = GetSelfCollisionChecker();
+    if( !!pSelfCollisionChecker && pSelfCollisionChecker != GetEnv()->GetCollisionChecker() && propagateGroupNameToSelfCollisionChecker ) {
+        pSelfCollisionChecker->SetBodyGeometryGroup(shared_kinbody_const(), geomname);
     }
 }
 
@@ -4085,19 +4087,35 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
 
 void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
 {
-    if( _selfcollisionchecker != collisionchecker ) {
-        _selfcollisionchecker = collisionchecker;
-        // reset the internal cache
-        _ResetInternalCollisionCache();
-        if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
-            // collision checking will not be automatically updated with environment calls, so need to do this manually
-            _selfcollisionchecker->InitKinBody(shared_kinbody());
+    if( _vSelfCollisionCheckers.empty() ) {
+        _vSelfCollisionCheckerGroupNames.push_back(""); // TODO
+        _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
+    }
+    _SetSelfCollisionChecker(_vSelfCollisionCheckers.front(), collisionchecker, GetEnv()->GetCollisionChecker(), true, true);
+}
 
-            // self collision checker initializes internal data structure at the time of grab, so need to do it here for newly set self collision checker.
-            std::vector<KinBodyPtr> vGrabbed;
-            GetGrabbed(vGrabbed);
-            for (const KinBodyPtr& pgrabbed : vGrabbed) {
-                _selfcollisionchecker->InitKinBody(pgrabbed);
+void KinBody::_SetSelfCollisionChecker(CollisionCheckerBasePtr& selfCollisionChecker,
+                                       const CollisionCheckerBasePtr& collisionchecker,
+                                       const CollisionCheckerBasePtr& envCollisionChecker,
+                                       const bool bResetInternalCache, const bool bInitGrabbedBodies)
+{
+    if( selfCollisionChecker != collisionchecker ) {
+        selfCollisionChecker = collisionchecker;
+        if( bResetInternalCache ) {
+            // reset the internal cache
+            _ResetInternalCollisionCache();
+        }
+        if( !!selfCollisionChecker && selfCollisionChecker != envCollisionChecker ) {
+            // collision checking will not be automatically updated with environment calls, so need to do this manually
+            selfCollisionChecker->InitKinBody(shared_kinbody());
+
+            if( bInitGrabbedBodies ) {
+                // self collision checker initializes internal data structure at the time of grab, so need to do it here for newly set self collision checker.
+                std::vector<KinBodyPtr> vGrabbed;
+                GetGrabbed(vGrabbed);
+                for (const KinBodyPtr& pgrabbed : vGrabbed) {
+                    selfCollisionChecker->InitKinBody(pgrabbed);
+                }
             }
         }
     }
@@ -4105,7 +4123,7 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
 
 CollisionCheckerBasePtr KinBody::GetSelfCollisionChecker() const
 {
-    return _selfcollisionchecker;
+    return _vSelfCollisionCheckers.size() > 0 ? _vSelfCollisionCheckers.front() : CollisionCheckerBasePtr();
 }
 
 
@@ -5577,7 +5595,7 @@ private:
         // Check for colliding link pairs given the initial pose _vInitialLinkTransformations
         // this is actually weird, we need to call the individual link collisions on a const body. in order to pull this off, we need to be very careful with the body state.
         TransformsSaver saver(shared_kinbody_const());
-        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+        CollisionCheckerBasePtr collisionchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
         CollisionOptionsStateSaver colsaver(collisionchecker, CO_IgnoreCallbacks); // have to reset the collision options
         for(size_t i = 0; i < _veclinks.size(); ++i) {
             boost::static_pointer_cast<Link>(_veclinks[i])->_info._t = _vInitialLinkTransformations.at(i);
@@ -5876,23 +5894,33 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     } // end if not Clone_IgnoreGrabbedBodies
 
     // Clone self-collision checker
-    _selfcollisionchecker.reset();
-    if( !!r->_selfcollisionchecker ) {
-        _selfcollisionchecker = RaveCreateCollisionChecker(GetEnv(), r->_selfcollisionchecker->GetXMLId());
-        _selfcollisionchecker->SetCollisionOptions(r->_selfcollisionchecker->GetCollisionOptions());
-        _selfcollisionchecker->SetGeometryGroup(r->_selfcollisionchecker->GetGeometryGroup());
-        if( GetEnvironmentBodyIndex() != 0 ) {
-            // This body has been added to the environment already so can call InitKinBody.
-            _selfcollisionchecker->InitKinBody(shared_kinbody());
+    _vSelfCollisionCheckerGroupNames.clear();
+    _vSelfCollisionCheckers.clear();
+    _vSelfCollisionCheckerGroupNames = r->_vSelfCollisionCheckerGroupNames;
+    bool bIsDefaultSelfCollisionChecker = true;
+    for(CollisionCheckerBasePtr pOrgChecker : r->_vSelfCollisionCheckers) {
+        if( !!pOrgChecker ) {
+            CollisionCheckerBasePtr pNewChecker = RaveCreateCollisionChecker(GetEnv(), pOrgChecker->GetXMLId());
+            pNewChecker->SetCollisionOptions(pOrgChecker->GetCollisionOptions());
+            pNewChecker->SetGeometryGroup(pOrgChecker->GetGeometryGroup());
+            if( GetEnvironmentBodyIndex() != 0 ) {
+                // This body has been added to the environment already so can call InitKinBody.
+                pNewChecker->InitKinBody(shared_kinbody());
+            }
+            else {
+                // InitKinBody will be called when the body is added to the environment.
+            }
+
+            if( bIsDefaultSelfCollisionChecker ) {
+                // have to also call InitKinBody to grabbed bodies.
+                for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
+                    KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+                    pNewChecker->InitKinBody(pGrabbedBody);
+                }
+            }
+            _vSelfCollisionCheckers.push_back(pNewChecker);
         }
-        else {
-            // InitKinBody will be called when the body is added to the environment.
-        }
-        // have to also call InitKinBody to grabbed bodies.
-        for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
-            KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
-            _selfcollisionchecker->InitKinBody(pGrabbedBody);
-        }
+        bIsDefaultSelfCollisionChecker = false;
     }
 
     // can copy the generator, but not the functions! use SetKinematicsGenerator

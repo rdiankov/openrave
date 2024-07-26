@@ -3661,6 +3661,11 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    void _SetSelfCollisionChecker(CollisionCheckerBasePtr& selfCollisionChecker,
+                                  const CollisionCheckerBasePtr& collisionchecker,
+                                  const CollisionCheckerBasePtr& envCollisionChecker,
+                                  const bool bResetInternalCache, const bool bInitGrabbedBodies);
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
@@ -3701,7 +3706,8 @@ protected:
 
 
     ConfigurationSpecification _spec;
-    CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
+    std::vector<std::string> _vSelfCollisionCheckerGroupNames; //< group names of collision checkers used. "" group is for regular
+    std::vector<CollisionCheckerBasePtr> _vSelfCollisionCheckers; //< vector of collision checkers. size and order are same as _vCollisionCheckerGroupNames.
 
     KinematicsGeneratorPtr _pKinematicsGenerator; ///< holds the generator for kinematics. KinBody calls it everytime its kinematics change
     KinematicsFunctionsPtr _pCurrentKinematicsFunctions; ///< currently generated kinematics functions

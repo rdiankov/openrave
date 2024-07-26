@@ -289,9 +289,9 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     pGrabbed->_tRelative = tGrabbingLink.inverse() * tGrabbedBody;
     pGrabbed->_setGrabberLinkIndicesToIgnore = setGrabberLinksToIgnore;
 
-    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+    if( _vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front() && _vSelfCollisionCheckers.front() != GetEnv()->GetCollisionChecker() ) {
         // collision checking will not be automatically updated with environment calls, so need to do this manually
-        _selfcollisionchecker->InitKinBody(pGrabbedBody);
+        _vSelfCollisionCheckers.front()->InitKinBody(pGrabbedBody);
     }
 
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
@@ -397,7 +397,7 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
 
 void KinBody::RegrabAll()
 {
-    CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr collisionchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
     CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
 
     size_t numGrabbed = _vGrabbedBodies.size();
@@ -781,7 +781,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
 {
     ReleaseAllGrabbed();
     if( vGrabbedInfos.size() > 0 ) {
-        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+        CollisionCheckerBasePtr collisionchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
         CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
         FOREACHC(itGrabbedInfo, vGrabbedInfos) {
             GrabbedInfoConstPtr pGrabbedInfo = *itGrabbedInfo;
@@ -801,9 +801,9 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
                 continue;
             }
 
-            if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
+            if( _vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front() && _vSelfCollisionCheckers.front() != GetEnv()->GetCollisionChecker() ) {
                 // collision checking will not be automatically updated with environment calls, so need to do this manually
-                _selfcollisionchecker->InitKinBody(pBody);
+                _vSelfCollisionCheckers.front()->InitKinBody(pBody);
             }
 
             if( pBody->GetLinks().size() == 0 ) {
