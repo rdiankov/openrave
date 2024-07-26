@@ -108,6 +108,7 @@ FCLCollisionChecker::FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std:
     // TODO : Consider removing these which could be more harmful than anything else
     RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::SetBroadphaseAlgorithmCommand, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
     RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
+    RegisterCommand("GetEnvBodiesInfoFromFCLSpace", boost::bind(&FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace, this, _1, _2), "get");
 
     RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
 
@@ -1326,6 +1327,59 @@ void FCLCollisionChecker::_PrintCollisionManagerInstanceLE(const KinBody::Link& 
         RAVELOG_WARN_FORMAT("env=%s, self=%d, link %s:%s (enabled=%d) ", GetEnv()->GetNameId()%_bIsSelfCollisionChecker%link.GetParent()->GetName()%link.GetName()%link.IsEnabled());
         _bParentlessCollisionObject = false;
     }
+}
+
+bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& sinput)
+{
+    sout << "[";
+    int iBody = 0;
+    for (const KinBodyConstPtr& pbody : _fclspace->GetEnvBodies()) {
+        if( !pbody ) {
+            continue;
+        }
+        const FCLKinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
+        if ( !pinfo ) {
+            continue;
+        }
+        if( iBody > 0 ) {
+            sout << ",";
+        }
+        iBody++;
+        sout << "{\"links\":[";
+        int iLink = 0;
+        for(const boost::shared_ptr<FCLSpace::FCLKinBodyInfo::LinkInfo>& linkinfo : pinfo->vlinks ) {
+            if( !linkinfo ) {
+                continue;
+            }
+            if ( iLink > 0 ) {
+                sout << ",";
+            }
+            iLink++;
+            sout << "{\"name\":\"" << linkinfo->bodylinkname << "\",";
+            sout << "\"numGeometries\":" << linkinfo->vgeoms.size();
+            // sout << "\"geometries\": [";
+            // int iGeom = 0;
+            // for( const TransformCollisionPair& geom : linkinfo->vgeoms) {
+            //     if ( !geom.second ) {
+            //         continue;
+            //     }
+            //     const std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> ogeominfo = GetCollisionGeometry(*(geom.second));
+            //     if( !ogeominfo.second ) {
+            //         continue;
+            //     }
+            //     if ( iGeom > 0 ) {
+            //         sout << ",";
+            //     }
+            //     iGeom++;
+            //     sout << "\"" << ogeominfo.second->GetName() << "\"";
+            // }
+            // sout << "]}";
+            sout << "}";
+        }
+        sout << "]}";
+    }
+    sout << "]";
+    return !!sinput;
 }
 
 } // namespace fclrave
