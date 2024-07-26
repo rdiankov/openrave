@@ -267,8 +267,9 @@ public:
         _bRealTime = true;
         _bEnableSimulation = true;     // need to start by default
 
-        if( !_pCurrentChecker ) {
-            _pCurrentChecker = RaveCreateCollisionChecker(shared_from_this(), "GenericCollisionChecker");
+        if( _vCollisionCheckers.empty() ) {
+            _vCollisionCheckers.push_back(RaveCreateCollisionChecker(shared_from_this(), "GenericCollisionChecker"));
+            _vCollisionCheckerGroupNames.push_back("");
         }
         if( !_pPhysicsEngine ) {
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(), "GenericPhysicsEngine");
@@ -375,8 +376,8 @@ public:
             if( !!_pPhysicsEngine ) {
                 _pPhysicsEngine->DestroyEnvironment();
             }
-            if( !!_pCurrentChecker ) {
-                _pCurrentChecker->DestroyEnvironment();
+            for(CollisionCheckerBasePtr& pChecker : _vCollisionCheckers) {
+                pChecker->DestroyEnvironment();
             }
 
             // clear internal interface lists, have to Destroy all kinbodys without locking _mutexInterfaces since some can hold BodyCallbackData, which requires to lock _mutexInterfaces
@@ -415,7 +416,7 @@ public:
         }
 
         // release all other interfaces, not necessary to hold a mutex?
-        _pCurrentChecker.reset();
+        _vCollisionCheckers.clear();
         _pPhysicsEngine.reset();
         RAVELOG_VERBOSE("Environment destroyed\n");
     }
@@ -438,8 +439,8 @@ public:
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->DestroyEnvironment();
         }
-        if( !!_pCurrentChecker ) {
-            _pCurrentChecker->DestroyEnvironment();
+        for(CollisionCheckerBasePtr& pChecker : _vCollisionCheckers) {
+            pChecker->DestroyEnvironment();
         }
 
         std::vector<KinBodyPtr> vcallbackbodies;
@@ -497,8 +498,8 @@ public:
         listModules.clear();
         listOwnedInterfaces.clear();
 
-        if( !!_pCurrentChecker ) {
-            _pCurrentChecker->InitEnvironment();
+        for(CollisionCheckerBasePtr& pChecker : _vCollisionCheckers) {
+            pChecker->InitEnvironment();
         }
         if( !!_pPhysicsEngine ) {
             _pPhysicsEngine->InitEnvironment();
@@ -1016,8 +1017,10 @@ public:
             _nBodiesModifiedStamp++;
         }
         pbody->_ComputeInternalInformation();
-        _pCurrentChecker->InitKinBody(pbody);
-        if( !!pbody->GetSelfCollisionChecker() && pbody->GetSelfCollisionChecker() != _pCurrentChecker ) {
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            pChecker->InitKinBody(pbody);
+        }
+        if( !!pbody->GetSelfCollisionChecker() && pbody->GetSelfCollisionChecker() != _vCollisionCheckers.front() ) {
             // also initialize external collision checker if specified for this body
             pbody->GetSelfCollisionChecker()->InitKinBody(pbody);
         }
@@ -1057,8 +1060,10 @@ public:
             _nBodiesModifiedStamp++;
         }
         robot->_ComputeInternalInformation(); // have to do this after _vecbodies is added since SensorBase::SetName can call EnvironmentBase::GetSensor to initialize itself
-        _pCurrentChecker->InitKinBody(robot);
-        if( !!robot->GetSelfCollisionChecker() && robot->GetSelfCollisionChecker() != _pCurrentChecker ) {
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            pChecker->InitKinBody(robot);
+        }
+        if( !!robot->GetSelfCollisionChecker() && robot->GetSelfCollisionChecker() != _vCollisionCheckers.front() ) {
             // also initialize external collision checker if specified for this body
             robot->GetSelfCollisionChecker()->InitKinBody(robot);
         }
@@ -1460,19 +1465,24 @@ public:
     virtual bool SetCollisionChecker(CollisionCheckerBasePtr pchecker) override
     {
         EnvironmentLock lockenv(GetMutex());
-        if( _pCurrentChecker == pchecker ) {
+        return SetCollisionCheckerByGroupName("", pchecker);
+    }
+
+    virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker)
+    {
+        if( pOutputChecker == pInputChecker ) {
             return true;
         }
-        if( !!_pCurrentChecker ) {
-            _pCurrentChecker->DestroyEnvironment();     // delete all resources
+        if( !!pOutputChecker ) {
+            pOutputChecker->DestroyEnvironment();     // delete all resources
         }
-        _pCurrentChecker = pchecker;
-        if( !_pCurrentChecker ) {
+        pOutputChecker = pInputChecker;
+        if( !pOutputChecker ) {
             RAVELOG_DEBUG("disabling collisions\n");
-            _pCurrentChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
+            pOutputChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
         }
         else {
-            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker", _pCurrentChecker->GetXMLId());
+            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker", pOutputChecker->GetXMLId());
             SharedLock lock132(_mutexInterfaces);
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
@@ -1481,18 +1491,50 @@ public:
                 pbody->_ResetInternalCollisionCache();
             }
         }
-        return _pCurrentChecker->InitEnvironment();
+        return pOutputChecker->InitEnvironment();
+    }
+
+    virtual bool SetCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr pChecker) override
+    {
+        EnvironmentLock lockenv(GetMutex());
+        const std::vector<std::string>::iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), name);
+        if( itName != _vCollisionCheckerGroupNames.end() ) {
+            const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
+            return _SetCollisionChecker(_vCollisionCheckers.at(iChecker), pChecker);
+        }
+        else {
+            _vCollisionCheckers.push_back(CollisionCheckerBasePtr());
+            _vCollisionCheckerGroupNames.push_back(name);
+            return _SetCollisionChecker(_vCollisionCheckers.back(), pChecker);
+        }
     }
 
     virtual CollisionCheckerBasePtr GetCollisionChecker() const {
-        return _pCurrentChecker;
+        return _vCollisionCheckers.front();
+    }
+
+    virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& name) const {
+        const std::vector<std::string>::const_iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), name);
+        if( itName != _vCollisionCheckerGroupNames.end() ) {
+            const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
+            return _vCollisionCheckers.at(iChecker);
+        }
+        else {
+            return CollisionCheckerBasePtr();
+        }
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
-        return _pCurrentChecker->CheckCollision(pbody1,report);
+        // TODO : collision option?
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(pbody1, report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report) override
@@ -1500,14 +1542,24 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         CHECK_COLLISION_BODY(pbody2);
-        return _pCurrentChecker->CheckCollision(pbody1,pbody2,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(pbody1,pbody2,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report ) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
-        return _pCurrentChecker->CheckCollision(plink,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(plink,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report) override
@@ -1515,7 +1567,12 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
         CHECK_COLLISION_BODY(plink2->GetParent());
-        return _pCurrentChecker->CheckCollision(plink1,plink2,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(plink1,plink2,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report) override
@@ -1523,52 +1580,93 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         CHECK_COLLISION_BODY(pbody);
-        return _pCurrentChecker->CheckCollision(plink,pbody,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(plink,pbody,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
-        return _pCurrentChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        return _pCurrentChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
-        return _pCurrentChecker->CheckCollision(ray,plink,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(ray,plink,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        return _pCurrentChecker->CheckCollision(ray,pbody,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(ray,pbody,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report) override
     {
-        return _pCurrentChecker->CheckCollision(ray,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(ray,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        return _pCurrentChecker->CheckCollision(trimesh,pbody,report);
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckCollision(trimesh,pbody,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        return _pCurrentChecker->CheckStandaloneSelfCollision(pbody,report);
+        // TODO : need to implement check self collision like this?
+        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+            if( pChecker->CheckStandaloneSelfCollision(pbody,report) ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual void StepSimulation(dReal fTimeStep) override
@@ -3496,12 +3594,12 @@ protected:
         }
 
         body.ReleaseAllGrabbed();
-        if( !!_pCurrentChecker ) {
-            _pCurrentChecker->RemoveKinBody(pbodyref);
+        if( !!_vCollisionCheckers.front() ) {
+            _vCollisionCheckers.front()->RemoveKinBody(pbodyref);
         }
         {
             CollisionCheckerBasePtr pSelfColChecker = body.GetSelfCollisionChecker();
-            if (!!pSelfColChecker && pSelfColChecker != _pCurrentChecker) {
+            if (!!pSelfColChecker && pSelfColChecker != _vCollisionCheckers.front() ) {
                 pSelfColChecker->RemoveKinBody(pbodyref);
             }
         }
@@ -3509,7 +3607,7 @@ protected:
         for (KinBodyPtr& potherbody : _vecbodies) {
             if( !!potherbody && pbodyref != potherbody ) {
                 CollisionCheckerBasePtr pOtherSelfColChecker = potherbody->GetSelfCollisionChecker();
-                if( !!pOtherSelfColChecker && pOtherSelfColChecker != _pCurrentChecker ) {
+                if( !!pOtherSelfColChecker && pOtherSelfColChecker != _vCollisionCheckers.front() ) {
                     pOtherSelfColChecker->RemoveKinBody(pbodyref); // should be okay to call RemoveKinBody even when the pbodyref has not been aeed to the pOtherSelfColChecker
                 }
             }
@@ -3639,7 +3737,7 @@ protected:
 
         bool bCollisionCheckerChanged = false;
         if( !!r->GetCollisionChecker() ) {
-            if( !bCheckSharedResources || (!!_pCurrentChecker && _pCurrentChecker->GetXMLId() != r->GetCollisionChecker()->GetXMLId()) ) {
+            if( !bCheckSharedResources || (!!_vCollisionCheckers.front() && _vCollisionCheckers.front()->GetXMLId() != r->GetCollisionChecker()->GetXMLId()) ) {
                 try {
                     CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId());
                     p->Clone(r->GetCollisionChecker(),options);
@@ -4439,7 +4537,8 @@ protected:
     uint64_t _nSimStartTime;
     int _nBodiesModifiedStamp;     ///< incremented every tiem bodies vector is modified
 
-    CollisionCheckerBasePtr _pCurrentChecker;
+    std::vector<std::string> _vCollisionCheckerGroupNames; //< group names of collision checkers used. "" group is for regular
+    std::vector<CollisionCheckerBasePtr> _vCollisionCheckers; //< vector of collision checkers. size and order are same as _vCollisionCheckerGroupNames.
     PhysicsEngineBasePtr _pPhysicsEngine;
 
     boost::shared_ptr<std::thread> _threadSimulation;                      ///< main loop for environment simulation
