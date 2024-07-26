@@ -971,7 +971,7 @@ protected:
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 133, 100)
         AVPacket* allocatedPacket = av_packet_alloc();
         if (allocatedPacket == nullptr) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed to allocate an AVPacket", ORE_Assert);
+            throw OPENRAVE_EXCEPTION_FORMAT0("failed to allocate an AVPacket", ORE_Assert);
         }
         AVPacket& pkt = *allocatedPacket;
 #else
