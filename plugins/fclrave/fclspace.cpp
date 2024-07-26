@@ -122,6 +122,9 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 }
             }
         }
+        else if ( _geometrygroup.size() > 0 ) {
+            // if _geometrygroup is not empty but no matching in body geometries, skip
+        }
         else {
             const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
             FOREACH(itgeom, vgeometries) {
