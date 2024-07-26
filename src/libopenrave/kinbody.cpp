@@ -5084,6 +5084,26 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
+    // special handling for "safety" geometry group
+    {
+        std::vector<std::string> vSafetyGroupNames;
+        FOREACH(itlink, _veclinks) {
+            FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometries) {
+                if( itExtraGeom->first.find("safety_") == 0 &&
+                    (std::find(vSafetyGroupNames.begin(), vSafetyGroupNames.end(), itExtraGeom->first) == vSafetyGroupNames.end()) ) {
+                    vSafetyGroupNames.push_back(itExtraGeom->first);
+                }
+            }
+        }
+        FOREACH(itName, vSafetyGroupNames) {
+            if( !GetEnv()->GetCollisionCheckerByGroupName(*itName) ) {
+                CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
+                pChecker->SetGeometryGroup(*itName);
+                GetEnv()->SetCollisionCheckerByGroupName(*itName, pChecker);
+            }
+        }
+    }
+
     _bAreAllJoints1DOFAndNonCircular = true;
     for (size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint) {
         if (_vecjoints[ijoint]->GetDOF() != 1 || _vecjoints[ijoint]->IsCircular()) {
