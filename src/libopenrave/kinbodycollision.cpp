@@ -18,8 +18,29 @@
 
 namespace OpenRAVE {
 
+bool KinBody::_CheckSelfCollisionSingle(const CollisionCheckerBasePtr& collisionchecker, CollisionReportPtr& report) const
+{
+    if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
+        if( !!report ) {
+            if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                std::vector<OpenRAVE::dReal> colvalues;
+                GetDOFValues(colvalues);
+                std::stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
+                FOREACHC(itval, colvalues) {
+                    ss << *itval << ",";
+                }
+                RAVELOG_VERBOSE_FORMAT("env=%s, self collision report=%s; colvalues=[%s]", GetEnv()->GetNameId()%report->__str__()%ss.str());
+            }
+        }
+        return true;
+        //bCollision = true;
+    }
+    return false;
+}
+
 bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
+    const bool bHasCollisionCheckerFromArgument = !!collisionchecker;
     if( !collisionchecker ) {
         if( _vSelfCollisionCheckers.size() > 0 ) {
             collisionchecker = _vSelfCollisionCheckers.front();
@@ -33,7 +54,15 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         }
         else {
             // have to set the same options as GetEnv()->GetCollisionChecker() since stuff like CO_ActiveDOFs is only set on the global checker
+            // TODO : no need of saver?
             collisionchecker->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
+            if( _vSelfCollisionCheckers.size() > 1 ) {
+                for(int iChecker = 1; iChecker < _vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
+                    if( !!_vSelfCollisionCheckers.at(iChecker) ) {
+                        _vSelfCollisionCheckers.at(iChecker)->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
+                    }
+                }
+            }
         }
     }
 
@@ -44,24 +73,21 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         report->nKeepPrevious = 1; // have to keep the previous since aggregating results
     }
 
-    bool bCollision = false;
-    if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
-        if( !!report ) {
-            if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                std::vector<OpenRAVE::dReal> colvalues;
-                GetDOFValues(colvalues);
-                std::stringstream ss; ss << std::setprecision(std::numeric_limits<OpenRAVE::dReal>::digits10+1);
-                FOREACHC(itval, colvalues) {
-                    ss << *itval << ",";
+    bool bCollision = _CheckSelfCollisionSingle(collisionchecker, report);
+    if( !bAllLinkCollisions && bCollision ) {
+        return true;
+    }
+    if( !bHasCollisionCheckerFromArgument && _vSelfCollisionCheckers.size() > 1 ) {
+        for(int iChecker = 1; iChecker < _vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
+            if( !!_vSelfCollisionCheckers.at(iChecker) ) {
+                if( _CheckSelfCollisionSingle(_vSelfCollisionCheckers.at(iChecker), report) ) {
+                    if( !bAllLinkCollisions ) {
+                        return true;
+                    }
+                    bCollision = true;
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%s, self collision report=%s; colvalues=[%s]", GetEnv()->GetNameId()%report->__str__()%ss.str());
             }
         }
-        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-            return true;
-        }
-
-        bCollision = true;
     }
 
     // if collision checker is set to distance checking, have to compare reports for the minimum distance

@@ -3666,6 +3666,8 @@ protected:
                                   const CollisionCheckerBasePtr& envCollisionChecker,
                                   const bool bResetInternalCache, const bool bInitGrabbedBodies);
 
+    bool _CheckSelfCollisionSingle(const CollisionCheckerBasePtr& collisionchecker, CollisionReportPtr& report) const;
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
