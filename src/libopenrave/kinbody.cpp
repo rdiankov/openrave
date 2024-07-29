@@ -4102,6 +4102,9 @@ void KinBody::SetSelfCollisionCheckerByGroupName(const std::string& name, Collis
         return _SetSelfCollisionChecker(_vSelfCollisionCheckers.at(iChecker), collisionchecker, GetEnv()->GetCollisionCheckerByGroupName(name), false, false); // TODO : differentiate "self"?
     }
     else {
+        if( name.size() > 0 ) { // TODO : "self"? or ""?
+            OPENRAVE_ASSERT_OP_FORMAT(_vSelfCollisionCheckers.size(), >, 0, "env='%s' body='%s' failed to add self collision checker by group name since there is no default self collision checker.", GetEnv()->GetNameId() % GetName(),ORE_InvalidArguments);
+        }
         _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
         _vSelfCollisionCheckerGroupNames.push_back(name);
         return _SetSelfCollisionChecker(_vSelfCollisionCheckers.back(), collisionchecker, GetEnv()->GetCollisionCheckerByGroupName(name), false, false); // TODO : differentiate "self"?
