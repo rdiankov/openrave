@@ -38,29 +38,33 @@ bool KinBody::_CheckSelfCollisionSingle(const CollisionCheckerBasePtr& collision
     return false;
 }
 
+void KinBody::_EnsureSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const
+{
+    if( _vSelfCollisionCheckers.size() > 0 ) {
+        vCheckers = _vSelfCollisionCheckers;
+    }
+    else {
+        GetEnv()->GetCollisionCheckers(vCheckers);
+    }
+}
+
 bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
     const bool bHasCollisionCheckerFromArgument = !!collisionchecker;
+    std::vector<CollisionCheckerBasePtr> vSelfCollisionCheckers;
     if( !collisionchecker ) {
-        if( _vSelfCollisionCheckers.size() > 0 ) {
-            collisionchecker = _vSelfCollisionCheckers.front();
-        }
-        if( !collisionchecker ) {
-            collisionchecker = GetEnv()->GetCollisionChecker();
-            if( !collisionchecker ) {
-                // no checker set
-                return false;
-            }
+        _EnsureSelfCollisionCheckers(vSelfCollisionCheckers);
+        if( vSelfCollisionCheckers.empty() || !vSelfCollisionCheckers.front() ) {
+            // no checker set
+            return false;
         }
         else {
             // have to set the same options as GetEnv()->GetCollisionChecker() since stuff like CO_ActiveDOFs is only set on the global checker
             // TODO : no need of saver?
-            collisionchecker->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
-            if( _vSelfCollisionCheckers.size() > 1 ) {
-                for(int iChecker = 1; iChecker < _vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
-                    if( !!_vSelfCollisionCheckers.at(iChecker) ) {
-                        _vSelfCollisionCheckers.at(iChecker)->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
-                    }
+            collisionchecker = vSelfCollisionCheckers.front();
+            for(int iChecker = 0; iChecker < (int)vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
+                if( !!vSelfCollisionCheckers.at(iChecker) ) {
+                    vSelfCollisionCheckers.at(iChecker)->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
                 }
             }
         }
@@ -77,10 +81,10 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     if( !bAllLinkCollisions && bCollision ) {
         return true;
     }
-    if( !bHasCollisionCheckerFromArgument && _vSelfCollisionCheckers.size() > 1 ) {
-        for(int iChecker = 1; iChecker < _vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
-            if( !!_vSelfCollisionCheckers.at(iChecker) ) {
-                if( _CheckSelfCollisionSingle(_vSelfCollisionCheckers.at(iChecker), report) ) {
+    if( !bHasCollisionCheckerFromArgument && vSelfCollisionCheckers.size() > 1 ) {
+        for(int iChecker = 1; iChecker < (int)vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
+            if( !!vSelfCollisionCheckers.at(iChecker) ) {
+                if( _CheckSelfCollisionSingle(vSelfCollisionCheckers.at(iChecker), report) ) {
                     if( !bAllLinkCollisions ) {
                         return true;
                     }
