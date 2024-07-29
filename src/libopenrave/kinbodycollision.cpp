@@ -269,11 +269,15 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Ki
     if( plink->IsEnabled() ) {
         boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         plink->SetTransform(tlinktrans);
-        if( pchecker->CheckCollision(LinkConstPtr(plink),pbody,report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
+        std::vector<CollisionCheckerBasePtr> vCheckers;
+        GetEnv()->GetCollisionCheckers(vCheckers);
+        for(CollisionCheckerBasePtr pCollisionChecker : vCheckers) {
+            if( pCollisionChecker->CheckCollision(LinkConstPtr(plink),pbody,report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
-            bincollision = true;
         }
     }
 
@@ -308,11 +312,15 @@ bool KinBody::CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, Collisio
     }
     bool bincollision = false;
     if( plink->IsEnabled() ) {
-        if( pchecker->CheckCollision(LinkConstPtr(plink),pbody,report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
+        std::vector<CollisionCheckerBasePtr> vCheckers;
+        GetEnv()->GetCollisionCheckers(vCheckers);
+        for(CollisionCheckerBasePtr pCollisionChecker : vCheckers) {
+            if( pCollisionChecker->CheckCollision(LinkConstPtr(plink),pbody,report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
-            bincollision = true;
         }
     }
 
@@ -348,11 +356,15 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Co
     if( plink->IsEnabled() ) {
         boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         plink->SetTransform(tlinktrans);
-        if( pchecker->CheckCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
+        std::vector<CollisionCheckerBasePtr> vCheckers;
+        GetEnv()->GetCollisionCheckers(vCheckers);
+        for(CollisionCheckerBasePtr pCollisionChecker : vCheckers) {
+            if( pCollisionChecker->CheckCollision(LinkConstPtr(plink),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
-            bincollision = true;
         }
     }
 
@@ -402,11 +414,15 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
     }
     bool bincollision = false;
     if( plink->IsEnabled() ) {
-        if( pchecker->CheckCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
+        std::vector<CollisionCheckerBasePtr> vCheckers;
+        GetEnv()->GetCollisionCheckers(vCheckers);
+        for(CollisionCheckerBasePtr pCollisionChecker : vCheckers) {
+            if( pCollisionChecker->CheckCollision(LinkConstPtr(plink),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
-            bincollision = true;
         }
     }
 
@@ -444,7 +460,11 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
 
 bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
 {
-    CollisionCheckerBasePtr pchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
+    std::vector<CollisionCheckerBasePtr> vSelfCheckers;
+    _EnsureSelfCollisionCheckers(vSelfCheckers);
+    OPENRAVE_ASSERT_OP_FORMAT(vSelfCheckers.size(), >, 0, "Cannot find self collision checkers for body='%s';env='%s'", GetName() % GetEnv()->GetNameId(), ORE_Failed);
+    CollisionCheckerBasePtr pchecker = vSelfCheckers.front();
+    OPENRAVE_ASSERT_FORMAT(!!pchecker, "The first self collision checker is null for body='%s';env='%s'", GetName() % GetEnv()->GetNameId(), ORE_Failed);
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
     CollisionReportKeepSaver reportsaver(report);
     if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
@@ -454,11 +474,13 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
     bool bincollision = false;
     LinkPtr plink = _veclinks.at(ilinkindex);
     if( plink->IsEnabled() ) {
-        if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
+        for(CollisionCheckerBasePtr pSelfChecker : vSelfCheckers) {
+            if( pSelfChecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
-            bincollision = true;
         }
     }
 
@@ -491,7 +513,11 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
 
 bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
-    CollisionCheckerBasePtr pchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
+    std::vector<CollisionCheckerBasePtr> vSelfCheckers;
+    _EnsureSelfCollisionCheckers(vSelfCheckers);
+    OPENRAVE_ASSERT_OP_FORMAT(vSelfCheckers.size(), >, 0, "Cannot find self collision checkers for body='%s';env='%s'", GetName() % GetEnv()->GetNameId(), ORE_Failed);
+    CollisionCheckerBasePtr pchecker = vSelfCheckers.front();
+    OPENRAVE_ASSERT_FORMAT(!!pchecker, "The first self collision checker is null for body='%s';env='%s'", GetName() % GetEnv()->GetNameId(), ORE_Failed);
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
     CollisionReportKeepSaver reportsaver(report);
     if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
@@ -503,11 +529,13 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans
     if( plink->IsEnabled() ) {
         boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(plink)); // gcc optimization bug when linksaver is on stack?
         plink->SetTransform(tlinktrans);
-        if( pchecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                return true;
+        for(CollisionCheckerBasePtr pSelfChecker : vSelfCheckers) {
+            if( pSelfChecker->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+                bincollision = true;
             }
-            bincollision = true;
         }
     }
 
