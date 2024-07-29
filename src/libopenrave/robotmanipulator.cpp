@@ -1041,11 +1041,14 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
     bool bincollision = false;
 
     // parameters used only when bIgnoreManipulatorLinks is true
-    CollisionCheckerBasePtr pselfchecker;
     std::vector<LinkPtr> vindependentinks;
+    std::vector<CollisionCheckerBasePtr> vSelfCheckers;
     if( bIgnoreManipulatorLinks ) {
         GetIndependentLinks(vindependentinks);
-        pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
+        probot->GetSelfCollisionCheckers(vSelfCheckers);
+        if( vSelfCheckers.empty() || !vSelfCheckers.front() ) {
+            probot->GetEnv()->GetCollisionCheckers(vSelfCheckers);
+        }
     }
 
     FOREACHC(itlink, probot->GetLinks()) {
@@ -1072,12 +1075,14 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
         if( bIgnoreManipulatorLinks ) {
             FOREACHC(itindependentlink,vindependentinks) {
                 if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                    if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                            RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
-                            return true;
+                    for(CollisionCheckerBasePtr pSelfChecker : vSelfCheckers) {
+                        if( pSelfChecker->CheckCollision(*itlink, *itindependentlink,report) ) {
+                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                                return true;
+                            }
+                            bincollision = true;
                         }
-                        bincollision = true;
                     }
                 }
             }
@@ -1111,11 +1116,14 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
     bool bincollision = false;
 
     // parameters used only when bIgnoreManipulatorLinks is true
-    CollisionCheckerBasePtr pselfchecker;
     std::vector<LinkPtr> vindependentinks;
+    std::vector<CollisionCheckerBasePtr> vSelfCheckers;
     if( bIgnoreManipulatorLinks ) {
         GetIndependentLinks(vindependentinks);
-        pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
+        probot->GetSelfCollisionCheckers(vSelfCheckers);
+        if( vSelfCheckers.empty() || !vSelfCheckers.front() ) {
+            probot->GetEnv()->GetCollisionCheckers(vSelfCheckers);
+        }
     }
 
     FOREACHC(itlink, probot->GetLinks()) {
@@ -1146,12 +1154,14 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
 
             FOREACHC(itindependentlink,vindependentinks) {
                 if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                    if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                            RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
-                            return true;
+                    for(CollisionCheckerBasePtr pSelfChecker : vSelfCheckers) {
+                        if( pSelfChecker->CheckCollision(*itlink, *itindependentlink,report) ) {
+                            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                                RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                                return true;
+                            }
+                            bincollision = true;
                         }
-                        bincollision = true;
                     }
                 }
             }
