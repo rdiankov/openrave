@@ -118,7 +118,7 @@ public:
         EnvironmentMutex::scoped_lock lock(GetEnv()->GetMutex());
         uint32_t basetime = utils::GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
 
         list<vector<dReal> > listbestpath, listpath;
         dReal bestgraspdist = 1e37f;

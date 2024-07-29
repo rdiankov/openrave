@@ -707,7 +707,7 @@ protected:
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IkReal> vfree(_vfreeparams.size());
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
         IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, q0, boost::bind(&IkFastSolver::_SolveSingle,shared_solver(), boost::ref(param),boost::ref(vfree),boost::ref(q0),filteroptions,ikreturn,boost::ref(stateCheck)), _vFreeInc);
         if( !!ikreturn ) {
             ikreturn->_action = retaction;
@@ -726,7 +726,7 @@ protected:
         probot->SetActiveDOFs(pmanip->GetArmIndices());
         std::vector<IkReal> vfree(_vfreeparams.size());
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
         IkReturnAction retaction = ComposeSolution(_vfreeparams, vfree, 0, vector<dReal>(), boost::bind(&IkFastSolver::_SolveAll,shared_solver(), param,boost::ref(vfree),filteroptions,boost::ref(vikreturns), boost::ref(stateCheck)), _vFreeInc);
         if( retaction & IKRA_Quit ) {
             return false;
@@ -754,7 +754,7 @@ protected:
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         }
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
         IkReturnAction retaction = _SolveSingle(param,vfree,q0,filteroptions,ikreturn,stateCheck);
         if( !!ikreturn ) {
             ikreturn->_action = retaction;
@@ -779,7 +779,7 @@ protected:
             vfree[i] = vFreeParameters[i]*(_qupper[_vfreeparams[i]]-_qlower[_vfreeparams[i]]) + _qlower[_vfreeparams[i]];
         }
         StateCheckEndEffector stateCheck(probot,_vchildlinks,_vindependentlinks,filteroptions);
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
         IkReturnAction retaction = _SolveAll(param,vfree,filteroptions,vikreturns, stateCheck);
         if( retaction & IKRA_Quit ) {
             return false;

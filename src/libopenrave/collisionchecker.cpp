@@ -653,4 +653,17 @@ CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
     _p->SetCollisionOptions(_oldoptions);
 }
 
+CollisionOptionsStateSaverAll::CollisionOptionsStateSaverAll(const EnvironmentBase& env, const int optionsToAdd, const bool required)
+{
+    std::vector<CollisionCheckerBasePtr> vCheckers;
+    env.GetCollisionCheckers(vCheckers);
+    for(const CollisionCheckerBasePtr& pChecker : vCheckers) {
+        _vSavers.emplace_back(pChecker, pChecker->GetCollisionOptions() | optionsToAdd, required);
+    }
+}
+
+CollisionOptionsStateSaverAll::~CollisionOptionsStateSaverAll()
+{
+}
+
 } // end namespace OpenRAVE

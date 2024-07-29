@@ -379,6 +379,20 @@ private:
 
 typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
 
+/// \brief Helper class to save and restore the collision options for all collision checkers in env. If options are not supported and required is true, throws an exception.
+class OPENRAVE_API CollisionOptionsStateSaverAll
+{
+public:
+    /// \brief Constructor
+    /// \param[in] env : Environment
+    /// \param[in] optionsToAdd : Additional options. Added by "|" operation. Different from CollisionOptionsStateSaver, add the additional options instead of absolute value of options, since the initial option for each checker might be different. TODO : do we need optionsToRemove argument?
+    /// \parma[in] required : If options are not supported and required is true, throws an exception.
+    CollisionOptionsStateSaverAll(const EnvironmentBase& env, const int optionsToAdd, const bool required=true);
+    virtual ~CollisionOptionsStateSaverAll();
+private:
+    std::vector<CollisionOptionsStateSaver> _vSavers; ///< vector of savers
+};
+
 /** \brief Helper class to save and restore the nKeepPrevious variable in a collision report. Should be used by anyone using multiple CheckCollision calls and aggregating results.
 
     Sample code would look like:

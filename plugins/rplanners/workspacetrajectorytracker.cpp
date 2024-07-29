@@ -147,7 +147,7 @@ Planner Parameters\n\
         uint32_t basetime = utils::GetMilliTime();
         RobotBase::RobotStateSaver savestate(_robot);
         _robot->SetActiveDOFs(_manip->GetArmIndices());     // should be set by user anyway, but this is an extra precaution
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
 
         if( poutputtraj->GetConfigurationSpecification().GetDOF() == 0 ) {
             poutputtraj->Init(_parameters->_configurationspecification);

@@ -285,7 +285,7 @@ protected:
         robot->SetActiveDOFs(pmanip->GetArmIndices());
         params->SetRobotActiveJoints(robot);
 
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(),CO_ActiveDOFs,false);
 
         if( !starteematrix ) {
             planningutils::JitterActiveDOF(robot,100);     // try to jitter out, don't worry if it fails
@@ -465,7 +465,7 @@ protected:
             params->_sPostProcessingParameters = _sPostProcessingParameters;
         }
 
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(),CO_ActiveDOFs,false);
 
         // make sure the initial and goal configs are not in collision
         vector<dReal> vonegoal(robot->GetActiveDOF());
@@ -776,7 +776,7 @@ protected:
             params->_sPostProcessingParameters = _sPostProcessingParameters;
         }
 
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(),CO_ActiveDOFs,false);
 
         if( constrainterrorthresh > 0 ) {
             RAVELOG_DEBUG("setting jacobian constraint function in planner parameters\n");

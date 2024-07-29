@@ -549,7 +549,7 @@ protected:
         std::vector<KinBody::LinkPtr> vmanipchildlinks;
         pmanip->GetChildLinks(vmanipchildlinks);
 
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
 
         vector<dReal> vinsertconfiguration; // configuration to add at the beginning of the trajectory, usually it is in collision
         // jitter again for initial collision
@@ -1195,7 +1195,7 @@ protected:
         graspparams->breturntrajectory = false;
         graspparams->bonlycontacttarget = false;
 
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
 
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
@@ -1309,7 +1309,7 @@ protected:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
 
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
 
         // have to add the first point
         vector<dReal> vinitialconfig;
@@ -1453,7 +1453,7 @@ protected:
         TrajectoryBasePtr ptraj = RaveCreateTrajectory(GetEnv(),"");
         ptraj->Init(_robot->GetActiveConfigurationSpecification());
 
-        CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
+        CollisionOptionsStateSaverAll optionstate(*GetEnv(), CO_ActiveDOFs,false);
 
         // have to add the first point
         vector<dReal> vinitialconfig;
