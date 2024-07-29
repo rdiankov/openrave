@@ -147,6 +147,9 @@ public:
     /// \brief Get the default global environment collision checker by geometry group name
     virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& name) const =0;
 
+    /// \brief Get all collision checkers in this env.
+    virtual void GetCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const =0;
+
     /// \see CollisionCheckerBase::CheckCollision(KinBodyConstPtr,CollisionReportPtr)
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report = CollisionReportPtr())=0;
 

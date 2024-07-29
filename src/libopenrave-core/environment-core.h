@@ -1524,6 +1524,10 @@ public:
         }
     }
 
+    virtual void GetCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const {
+        vCheckers = _vCollisionCheckers;
+    }
+
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());

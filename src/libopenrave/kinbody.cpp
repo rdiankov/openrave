@@ -4088,10 +4088,24 @@ void KinBody::_ComputeLinkAccelerations(const std::vector<dReal>& vDOFVelocities
 void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
 {
     if( _vSelfCollisionCheckers.empty() ) {
-        _vSelfCollisionCheckerGroupNames.push_back(""); // TODO
+        _vSelfCollisionCheckerGroupNames.push_back(""); // TODO : "self"? or ""?
         _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
     }
     _SetSelfCollisionChecker(_vSelfCollisionCheckers.front(), collisionchecker, GetEnv()->GetCollisionChecker(), true, true);
+}
+
+void KinBody::SetSelfCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr collisionchecker)
+{
+    const std::vector<std::string>::iterator itName = std::find(_vSelfCollisionCheckerGroupNames.begin(), _vSelfCollisionCheckerGroupNames.end(), name);
+    if( itName != _vSelfCollisionCheckerGroupNames.end() ) {
+        const size_t iChecker = std::distance(_vSelfCollisionCheckerGroupNames.begin(), itName);
+        return _SetSelfCollisionChecker(_vSelfCollisionCheckers.at(iChecker), collisionchecker, GetEnv()->GetCollisionCheckerByGroupName(name), false, false); // TODO : differentiate "self"?
+    }
+    else {
+        _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
+        _vSelfCollisionCheckerGroupNames.push_back(name);
+        return _SetSelfCollisionChecker(_vSelfCollisionCheckers.back(), collisionchecker, GetEnv()->GetCollisionCheckerByGroupName(name), false, false); // TODO : differentiate "self"?
+    }
 }
 
 void KinBody::_SetSelfCollisionChecker(CollisionCheckerBasePtr& selfCollisionChecker,
@@ -4126,6 +4140,10 @@ CollisionCheckerBasePtr KinBody::GetSelfCollisionChecker() const
     return _vSelfCollisionCheckers.size() > 0 ? _vSelfCollisionCheckers.front() : CollisionCheckerBasePtr();
 }
 
+void KinBody::GetSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const
+{
+    vCheckers = _vSelfCollisionCheckers;
+}
 
 void KinBody::_ComputeInternalInformation()
 {

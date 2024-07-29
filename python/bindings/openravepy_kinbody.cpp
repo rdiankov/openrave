@@ -3992,6 +3992,11 @@ void PyKinBody::SetSelfCollisionChecker(PyCollisionCheckerBasePtr pycollisionche
     _pbody->SetSelfCollisionChecker(openravepy::GetCollisionChecker(pycollisionchecker));
 }
 
+void PyKinBody::SetSelfCollisionCheckerByGroupName(const std::string& name, PyCollisionCheckerBasePtr pycollisionchecker)
+{
+    _pbody->SetSelfCollisionCheckerByGroupName(name, openravepy::GetCollisionChecker(pycollisionchecker));
+}
+
 PyInterfaceBasePtr PyKinBody::GetSelfCollisionChecker()
 {
     return openravepy::toPyCollisionChecker(_pbody->GetSelfCollisionChecker(), _pyenv);
@@ -6021,6 +6026,7 @@ void init_openravepy_kinbody()
 #endif
                          .def("GetDOFDynamicAccelerationJerkLimits",&PyKinBody::GetDOFDynamicAccelerationJerkLimits, PY_ARGS("dofPositions","dofVelocities") DOXY_FN(KinBody,ComputeDynamicLimits))
                          .def("SetSelfCollisionChecker",&PyKinBody::SetSelfCollisionChecker,PY_ARGS("collisionchecker") DOXY_FN(KinBody,SetSelfCollisionChecker))
+                         .def("SetSelfCollisionCheckerByGroupName",&PyKinBody::SetSelfCollisionCheckerByGroupName,PY_ARGS("name", "collisionchecker") DOXY_FN(KinBody,SetSelfCollisionCheckerByGroupName))
                          .def("GetSelfCollisionChecker", &PyKinBody::GetSelfCollisionChecker, /*PY_ARGS("collisionchecker")*/ DOXY_FN(KinBody,GetSelfCollisionChecker))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CheckSelfCollision", &PyKinBody::CheckSelfCollision,

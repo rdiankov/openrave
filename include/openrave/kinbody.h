@@ -3140,9 +3140,12 @@ private:
     /// This function allows self-collisions to use a different, un-padded geometry for self-collisions
     /// \param collisionchecker The new collision checker to use. If empty, will use the environment set collision checker.
     virtual void SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker);
+    virtual void SetSelfCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr collisionchecker);
 
     /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
     virtual CollisionCheckerBasePtr GetSelfCollisionChecker() const;
+
+    virtual void GetSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const;
 
     /// Collision checking utilities that use internal structures of the kinbody like grabbed info or the self-collision checker.
     /// @name Collision Checking Utilities
@@ -3667,6 +3670,8 @@ protected:
                                   const bool bResetInternalCache, const bool bInitGrabbedBodies);
 
     bool _CheckSelfCollisionSingle(const CollisionCheckerBasePtr& collisionchecker, CollisionReportPtr& report) const;
+
+    void _EnsureSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const;
 
     std::string _name; ///< name of body
 
