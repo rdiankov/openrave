@@ -655,15 +655,40 @@ CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
 
 CollisionOptionsStateSaverAll::CollisionOptionsStateSaverAll(const EnvironmentBase& env, const int optionsToAdd, const bool required)
 {
-    std::vector<CollisionCheckerBasePtr> vCheckers;
-    env.GetCollisionCheckers(vCheckers);
-    for(const CollisionCheckerBasePtr& pChecker : vCheckers) {
-        _vSavers.emplace_back(pChecker, pChecker->GetCollisionOptions() | optionsToAdd, required);
+    // initialize checkers and old options
+    env.GetCollisionCheckers(_vCheckers);
+    _vOldOptions.reserve(_vCheckers.size());
+    for(const CollisionCheckerBasePtr& pChecker : _vCheckers) {
+        _vOldOptions.push_back(pChecker->GetCollisionOptions());
+    }
+
+    // try setting
+    int iCheckerFailed = -1;
+    for(int iChecker = 0; iChecker < (int)_vCheckers.size(); ++iChecker) {
+        const int newOptions = _vOldOptions.at(iChecker) | optionsToAdd;
+        if( !_vCheckers.at(iChecker)->SetCollisionOptions(newOptions) && required ) {
+            iCheckerFailed = iChecker;
+            break;
+        }
+    }
+
+    // if failed, restore first, and the throw.
+    if( iCheckerFailed >= 0 ) {
+        _Restore();
+        throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%(_vOldOptions[iCheckerFailed] | optionsToAdd)%_vCheckers[iCheckerFailed]->GetXMLId()));
     }
 }
 
 CollisionOptionsStateSaverAll::~CollisionOptionsStateSaverAll()
 {
+    _Restore();
+}
+
+void CollisionOptionsStateSaverAll::_Restore()
+{
+    for(int iChecker = 0; iChecker < (int)_vCheckers.size(); ++iChecker) {
+        _vCheckers.at(iChecker)->SetCollisionOptions(_vOldOptions.at(iChecker));
+    }
 }
 
 } // end namespace OpenRAVE

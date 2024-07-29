@@ -390,7 +390,11 @@ public:
     CollisionOptionsStateSaverAll(const EnvironmentBase& env, const int optionsToAdd, const bool required=true);
     virtual ~CollisionOptionsStateSaverAll();
 private:
-    std::vector<CollisionOptionsStateSaver> _vSavers; ///< vector of savers
+    /// \brief restore the options. Assume _vOldOptions and _vCheckers have same sizes.
+    void _Restore();
+
+    std::vector<int> _vOldOptions; ///< vector of options
+    std::vector<CollisionCheckerBasePtr> _vCheckers; ///< vector of checkers
 };
 
 /** \brief Helper class to save and restore the nKeepPrevious variable in a collision report. Should be used by anyone using multiple CheckCollision calls and aggregating results.

@@ -54,6 +54,37 @@ class CollisionOptionsStateSaver(object):
         if self.oldoptions is not None:
             self.checker.SetCollisionOptions(self.oldoptions)
 
+class CollisionOptionsStateSaverAll(object):
+    """Saves/restores the state of the collision checker options for all checkers in env.
+    """
+    def __init__(self,env,optionsToAdd=None,required=True):
+        self.checkers = env.GetCollisionCheckers()
+        self.oldoptions = None
+        self.optionsToAdd = optionsToAdd
+        self.required = required
+
+    def __enter__(self):
+        if self.optionsToAdd is not None:
+            self.oldoptions = [checker.GetCollisionOptions() for checker in self.checkers]
+            failedMessage = None
+            for oldoption, checker in zip(self.oldoptions, self.checkers):
+                newOptions = checker.GetCollisionOptions() | optionsToAdd
+                success = checker.SetCollisionOptions(newOptions)
+                if not success and self.required:
+                    failedMessage = 'Failed to set options 0x%x on checker %s'%(newOptions,str(checker.GetXMLId()))
+                    break
+            if failedMessage is not None:
+                self._Restore()
+                raise ValueError(failedMessage)
+
+    def __exit__(self, type, value, traceback):
+        if self.oldoptions is not None:
+            self._Restore()
+
+    def _Restore(self):
+        for oldoption, checker in zip(self.oldoptions, self.checkers):
+            checker.SetCollisionOptions(oldoption)
+
 def with_destroy(fn):
     """a decorator that always calls openravepy_int.RaveDestroy at the function end"""
     def newfn(*args,**kwargs):
