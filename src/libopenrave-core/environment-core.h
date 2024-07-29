@@ -1477,7 +1477,7 @@ public:
         return SetCollisionCheckerByGroupName("", pchecker);
     }
 
-    virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker)
+    virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker, const std::string& name)
     {
         if( pOutputChecker == pInputChecker ) {
             return true;
@@ -1491,7 +1491,7 @@ public:
             pOutputChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
         }
         else {
-            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker", pOutputChecker->GetXMLId());
+            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker with groupname='%s'", pOutputChecker->GetXMLId() % name);
             SharedLock lock132(_mutexInterfaces);
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
@@ -1509,7 +1509,7 @@ public:
         const std::vector<std::string>::iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), name);
         if( itName != _vCollisionCheckerGroupNames.end() ) {
             const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
-            return _SetCollisionChecker(_vCollisionCheckers.at(iChecker), pChecker);
+            return _SetCollisionChecker(_vCollisionCheckers.at(iChecker), pChecker, name);
         }
         else {
             if( name.size() > 0 ) { // TODO : "self"? or ""?
@@ -1517,7 +1517,7 @@ public:
             }
             _vCollisionCheckers.push_back(CollisionCheckerBasePtr());
             _vCollisionCheckerGroupNames.push_back(name);
-            return _SetCollisionChecker(_vCollisionCheckers.back(), pChecker);
+            return _SetCollisionChecker(_vCollisionCheckers.back(), pChecker, name);
         }
     }
 
