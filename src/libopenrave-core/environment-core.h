@@ -417,6 +417,7 @@ public:
 
         // release all other interfaces, not necessary to hold a mutex?
         _vCollisionCheckers.clear();
+        _vCollisionCheckerGroupNames.clear();
         _pPhysicsEngine.reset();
         RAVELOG_VERBOSE("Environment destroyed\n");
     }
@@ -3683,7 +3684,7 @@ protected:
 
         std::lock_guard<std::mutex> lockinit(_mutexInit);
         if( !bCheckSharedResources ) {
-            SetCollisionChecker(CollisionCheckerBasePtr());
+            SetCollisionChecker(CollisionCheckerBasePtr()); // note that _vCollisionCheckers and _vCollisionCheckerGroupNames are cleared in Destroy.
             SetPhysicsEngine(PhysicsEngineBasePtr());
         }
 
@@ -3754,16 +3755,23 @@ protected:
         EnvironmentLock lock(GetMutex());
 
         bool bCollisionCheckerChanged = false;
-        if( !!r->GetCollisionChecker() ) {
-            if( !bCheckSharedResources || (!!_vCollisionCheckers.front() && _vCollisionCheckers.front()->GetXMLId() != r->GetCollisionChecker()->GetXMLId()) ) {
-                try {
-                    CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),r->GetCollisionChecker()->GetXMLId());
-                    p->Clone(r->GetCollisionChecker(),options);
-                    SetCollisionChecker(p);
-                    bCollisionCheckerChanged = true;
-                }
-                catch(const std::exception& ex) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone collision checker '%s': %s"), r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+        std::vector<CollisionCheckerBasePtr> vInputCheckers;
+        r->GetCollisionCheckers(vInputCheckers);
+        if( vInputCheckers.size() > 0 && !!vInputCheckers.front() ) {
+            for(CollisionCheckerBasePtr pInputChecker : vInputCheckers) {
+                if( !!pInputChecker ) {
+                    CollisionCheckerBasePtr pTestChecker = GetCollisionCheckerByGroupName(pInputChecker->GetGeometryGroup());
+                    if( !bCheckSharedResources || (!!pTestChecker && pTestChecker->GetXMLId() != pInputChecker->GetXMLId()) || (!pTestChecker) ) {
+                        try {
+                            CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),pInputChecker->GetXMLId());
+                            p->Clone(pInputChecker,options);
+                            SetCollisionCheckerByGroupName(pInputChecker->GetGeometryGroup(), p);
+                            bCollisionCheckerChanged = true;
+                        }
+                        catch(const std::exception& ex) {
+                            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone collision checker '%s': %s"), r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
+                        }
+                    }
                 }
             }
         }
@@ -3902,7 +3910,9 @@ protected:
                     const int envBodyIndex = body.GetEnvironmentBodyIndex();
                     KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                     if( bCollisionCheckerChanged ) {
-                        GetCollisionChecker()->InitKinBody(pnewbody);
+                        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+                            pChecker->InitKinBody(pnewbody);
+                        }
                     }
                     if( bPhysicsEngineChanged ) {
                         GetPhysicsEngine()->InitKinBody(pnewbody);
@@ -3944,7 +3954,9 @@ protected:
                 const int envBodyIndex = body.GetEnvironmentBodyIndex();
                 KinBodyPtr pnewbody = _vecbodies.at(envBodyIndex);
                 pnewbody->_ComputeInternalInformation();
-                GetCollisionChecker()->InitKinBody(pnewbody);
+                for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
+                    pChecker->InitKinBody(pnewbody);
+                }
                 GetPhysicsEngine()->InitKinBody(pnewbody);
                 pnewbody->__hashKinematicsGeometryDynamics = body.__hashKinematicsGeometryDynamics;
                 if( pnewbody->IsRobot() ) {
