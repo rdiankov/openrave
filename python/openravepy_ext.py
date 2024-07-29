@@ -68,7 +68,7 @@ class CollisionOptionsStateSaverAll(object):
             self.oldoptions = [checker.GetCollisionOptions() for checker in self.checkers]
             failedMessage = None
             for oldoption, checker in zip(self.oldoptions, self.checkers):
-                newOptions = checker.GetCollisionOptions() | optionsToAdd
+                newOptions = checker.GetCollisionOptions() | self.optionsToAdd
                 success = checker.SetCollisionOptions(newOptions)
                 if not success and self.required:
                     failedMessage = 'Failed to set options 0x%x on checker %s'%(newOptions,str(checker.GetXMLId()))

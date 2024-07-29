@@ -147,6 +147,7 @@ public:
     bool SetCollisionCheckerByGroupName(const std::string& name, PyCollisionCheckerBasePtr pchecker);
     object GetCollisionChecker();
     object GetCollisionCheckerByGroupName(const std::string& name);
+    object GetCollisionCheckers();
     bool CheckCollision(PyKinBodyPtr pbody1);
     bool CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport);
 

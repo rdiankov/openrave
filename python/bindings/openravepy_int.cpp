@@ -1349,6 +1349,17 @@ object PyEnvironmentBase::GetCollisionCheckerByGroupName(const std::string& name
     return py::to_object(openravepy::toPyCollisionChecker(_penv->GetCollisionCheckerByGroupName(name), shared_from_this()));
 }
 
+object PyEnvironmentBase::GetCollisionCheckers()
+{
+    std::vector<CollisionCheckerBasePtr> vCheckers;
+    _penv->GetCollisionCheckers(vCheckers);
+    py::list ret;
+    for(const CollisionCheckerBasePtr& pChecker : vCheckers) {
+        ret.append(py::to_object(openravepy::toPyCollisionChecker(pChecker, shared_from_this())));
+    }
+    return ret;
+}
+
 bool PyEnvironmentBase::CheckCollision(PyKinBodyPtr pbody1)
 {
     CHECK_POINTER(pbody1);
@@ -3667,6 +3678,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("SetCollisionCheckerByGroupName",&PyEnvironmentBase::SetCollisionCheckerByGroupName, PY_ARGS("name","collisionchecker") DOXY_FN(EnvironmentBase,SetCollisionCheckerByGroupName))
                      .def("GetCollisionChecker",&PyEnvironmentBase::GetCollisionChecker, DOXY_FN(EnvironmentBase,GetCollisionChecker))
                      .def("GetCollisionCheckerByGroupName",&PyEnvironmentBase::GetCollisionCheckerByGroupName, DOXY_FN(EnvironmentBase,GetCollisionCheckerByGroupName))
+                     .def("GetCollisionCheckers",&PyEnvironmentBase::GetCollisionCheckers, DOXY_FN(EnvironmentBase,GetCollisionCheckers))
                      .def("CheckCollision",pcolb, PY_ARGS("body") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbr, PY_ARGS("body","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbb, PY_ARGS("body1","body2") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; KinBodyConstPtr; CollisionReportPtr"))

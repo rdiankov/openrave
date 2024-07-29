@@ -4002,6 +4002,17 @@ PyInterfaceBasePtr PyKinBody::GetSelfCollisionChecker()
     return openravepy::toPyCollisionChecker(_pbody->GetSelfCollisionChecker(), _pyenv);
 }
 
+object PyKinBody::GetSelfCollisionCheckers()
+{
+    std::vector<CollisionCheckerBasePtr> vCheckers;
+    _pbody->GetSelfCollisionCheckers(vCheckers);
+    py::list ret;
+    for(const CollisionCheckerBasePtr& pChecker : vCheckers) {
+        ret.append(openravepy::toPyCollisionChecker(pChecker, _pyenv));
+    }
+    return ret;
+}
+
 bool PyKinBody::CheckSelfCollision(PyCollisionReportPtr pyreport, PyCollisionCheckerBasePtr pycollisionchecker)
 {
     CollisionReport report;
@@ -6028,6 +6039,7 @@ void init_openravepy_kinbody()
                          .def("SetSelfCollisionChecker",&PyKinBody::SetSelfCollisionChecker,PY_ARGS("collisionchecker") DOXY_FN(KinBody,SetSelfCollisionChecker))
                          .def("SetSelfCollisionCheckerByGroupName",&PyKinBody::SetSelfCollisionCheckerByGroupName,PY_ARGS("name", "collisionchecker") DOXY_FN(KinBody,SetSelfCollisionCheckerByGroupName))
                          .def("GetSelfCollisionChecker", &PyKinBody::GetSelfCollisionChecker, /*PY_ARGS("collisionchecker")*/ DOXY_FN(KinBody,GetSelfCollisionChecker))
+                         .def("GetSelfCollisionCheckers", &PyKinBody::GetSelfCollisionCheckers, /*PY_ARGS("collisionchecker")*/ DOXY_FN(KinBody,GetSelfCollisionCheckers))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("CheckSelfCollision", &PyKinBody::CheckSelfCollision,
                               "report"_a = py::none_(), // PyCollisionReportPtr(),
