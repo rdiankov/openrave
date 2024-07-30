@@ -224,11 +224,10 @@ private:
 #endif
 
     static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2);
-    static LinkGeomPairs MakeLinkGeomPairs(LinkConstPtr plink1, LinkConstPtr plink2, GeometryConstPtr pgeom1, GeometryConstPtr pgeom2);
 
     std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> GetCollisionLink(const fcl::CollisionObject &collObj);
 
-    std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> GetCollisionGeometry(const fcl::CollisionObject &collObj);
+    FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* GetCollisionGeometry(const fcl::CollisionObject &collObj);
 
     inline BroadPhaseCollisionManagerPtr _CreateManager();
 
