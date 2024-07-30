@@ -26,11 +26,7 @@ void FCLSpace::FCLKinBodyInfo::Reset()
     _linkenablecallback.reset();
 }
 
-FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo() : bFromKinBodyGeometry(false)
-{
-}
-
-FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo(KinBody::GeometryPtr pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true)
+FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo()
 {
 }
 
@@ -106,7 +102,11 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 // or, should the collision report store names of body, link, and geom?
                 // also, currently there is no information about which geometry group was used for collision checking.
                 // It's usually obvious immediately after CheckCollision is called, but later on, it it is not that obvious collision report is computed with which geometry group.
-                pfclgeom->setUserData(nullptr);
+                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo());
+                pfclgeominfo->geomname = geominfo._name;
+                pfclgeom->setUserData(pfclgeominfo.get());
+                // save the pointers
+                linkinfo->vgeominfos.push_back(pfclgeominfo);
 
                 // We do not set the transformation here and leave it to _Synchronize
                 CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
@@ -135,8 +135,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 if( !pfclgeom ) {
                     continue;
                 }
-                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo(pgeom));
-                pfclgeominfo->bodylinkgeomname = pbody->GetName() + "/" + plink->GetName() + "/" + pgeom->GetName();
+                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo());
+                pfclgeominfo->geomname = geominfo._name;
                 pfclgeom->setUserData(pfclgeominfo.get());
                 // save the pointers
                 linkinfo->vgeominfos.push_back(pfclgeominfo);

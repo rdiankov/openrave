@@ -594,7 +594,7 @@ int CollisionReport::AddLinkCollision(const KinBody::Link& link1, const KinBody:
     return nNumValidCollisions++;
 }
 
-int CollisionReport::AddLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const KinBody::GeometryConstPtr& pgeom1, const KinBody::LinkConstPtr& plink2, const KinBody::GeometryConstPtr& pgeom2)
+int CollisionReport::AddLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const std::string& geomname1, const KinBody::LinkConstPtr& plink2, const std::string& geomname2)
 {
     // first write the collision as if it was unique
     if( nNumValidCollisions+1 >= (int)vCollisionInfos.size() ) {
@@ -603,10 +603,10 @@ int CollisionReport::AddLinkGeomCollision(const KinBody::LinkConstPtr& plink1, c
     CollisionPairInfo& addcpinfo = vCollisionInfos[nNumValidCollisions];
     addcpinfo.Reset(); // might be old data
     if( !!plink1 ) {
-        addcpinfo.SetFirstCollision(plink1->GetParent()->GetName(), plink1->GetName(), !!pgeom1 ? pgeom1->GetName() : std::string());
+        addcpinfo.SetFirstCollision(plink1->GetParent()->GetName(), plink1->GetName(), geomname1);
     }
     if( !!plink2 ) {
-        addcpinfo.SetSecondCollision(plink2->GetParent()->GetName(), plink2->GetName(), !!pgeom2 ? pgeom2->GetName() : std::string());
+        addcpinfo.SetSecondCollision(plink2->GetParent()->GetName(), plink2->GetName(), geomname2);
     }
 
     // now check if there exists one like it already
@@ -620,7 +620,7 @@ int CollisionReport::AddLinkGeomCollision(const KinBody::LinkConstPtr& plink1, c
     return nNumValidCollisions++;
 }
 
-int CollisionReport::SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const KinBody::GeometryConstPtr& pgeom1, const KinBody::LinkConstPtr& plink2, const KinBody::GeometryConstPtr& pgeom2)
+int CollisionReport::SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const std::string& geomname1, const KinBody::LinkConstPtr& plink2, const std::string& geomname2)
 {
     if( vCollisionInfos.size() == 0 ) {
         vCollisionInfos.resize(1);
@@ -628,10 +628,10 @@ int CollisionReport::SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, c
     CollisionPairInfo& addcpinfo = vCollisionInfos[0];
     addcpinfo.Reset(); // might be old data
     if( !!plink1 ) {
-        addcpinfo.SetFirstCollision(plink1->GetParent()->GetName(), plink1->GetName(), !!pgeom1 ? pgeom1->GetName() : std::string());
+        addcpinfo.SetFirstCollision(plink1->GetParent()->GetName(), plink1->GetName(), geomname1);
     }
     if( !!plink2 ) {
-        addcpinfo.SetSecondCollision(plink2->GetParent()->GetName(), plink2->GetName(), !!pgeom2 ? pgeom2->GetName() : std::string());
+        addcpinfo.SetSecondCollision(plink2->GetParent()->GetName(), plink2->GetName(), geomname2);
     }
     nNumValidCollisions = 1;
     return 0;

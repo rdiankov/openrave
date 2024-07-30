@@ -956,12 +956,13 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
     if( numContacts > 0 ) {
         if( !!pcb->_report ) {
             std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = GetCollisionLink(*o1), o2info = GetCollisionLink(*o2);
-            std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> o1geominfo = GetCollisionGeometry(*o1), o2geominfo = GetCollisionGeometry(*o2);
+            FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* o1geominfo = GetCollisionGeometry(*o1);
+            FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* o2geominfo = GetCollisionGeometry(*o2);
 
             LinkConstPtr& plink1 = o1info.second;
             LinkConstPtr& plink2 = o2info.second;
-            GeometryConstPtr& pgeom1 = o1geominfo.second;
-            GeometryConstPtr& pgeom2 = o2geominfo.second;
+            OPENRAVE_ASSERT_OP((!!o1geominfo), !=, 0);
+            OPENRAVE_ASSERT_OP((!!o2geominfo), !=, 0);
 
             // plink1 or plink2 can be None if object is standalone (ie coming from trimesh)
 
@@ -982,7 +983,7 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
 //            }
 
             _reportcache.Reset(_options);
-            int icollision = _reportcache.AddLinkGeomCollision(plink1, pgeom1, plink2, pgeom2);
+            int icollision = _reportcache.AddLinkGeomCollision(plink1, o1geominfo->geomname, plink2, o2geominfo->geomname);
             OpenRAVE::CollisionPairInfo& cpinfo = _reportcache.vCollisionInfos[icollision];
 
             // TODO : eliminate the contacts points (insertion sort (std::lower) + binary_search ?) duplicated
@@ -1013,10 +1014,10 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
 
             int inewcollision;
             if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                inewcollision = pcb->_report->AddLinkGeomCollision(plink1, pgeom1, plink2, pgeom2);
+                inewcollision = pcb->_report->AddLinkGeomCollision(plink1, o1geominfo->geomname, plink2, o2geominfo->geomname);
             }
             else {
-                inewcollision = pcb->_report->SetLinkGeomCollision(plink1, pgeom1, plink2, pgeom2);
+                inewcollision = pcb->_report->SetLinkGeomCollision(plink1, o1geominfo->geomname, plink2, o2geominfo->geomname);
             }
             
             OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
@@ -1162,16 +1163,6 @@ LinkPair FCLCollisionChecker::MakeLinkPair(LinkConstPtr plink1, LinkConstPtr pli
     }
 }
 
-LinkGeomPairs FCLCollisionChecker::MakeLinkGeomPairs(LinkConstPtr plink1, LinkConstPtr plink2, GeometryConstPtr pgeom1, GeometryConstPtr pgeom2)
-{
-    if( plink1.get() < plink2.get() ) {
-        return make_pair(make_pair(plink1, plink2), make_pair(pgeom1, pgeom2));
-    }
-    else {
-        return make_pair(make_pair(plink2, plink1), make_pair(pgeom2, pgeom1));
-    }
-}
-
 std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> FCLCollisionChecker::GetCollisionLink(const fcl::CollisionObject &collObj)
 {
     FCLSpace::FCLKinBodyInfo::LinkInfo* link_raw = static_cast<FCLSpace::FCLKinBodyInfo::LinkInfo *>(collObj.getUserData());
@@ -1189,20 +1180,10 @@ std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> FCLCollisionChecker
     return std::make_pair(link_raw, LinkConstPtr());
 }
 
-std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> FCLCollisionChecker::GetCollisionGeometry(const fcl::CollisionObject &collObj)
+FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* FCLCollisionChecker::GetCollisionGeometry(const fcl::CollisionObject &collObj)
 {
     const std::shared_ptr<const fcl::CollisionGeometry>& collgeom = collObj.collisionGeometry();
-    FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* geom_raw = static_cast<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo *>(collgeom->getUserData());
-    if( !!geom_raw ) {
-        const GeometryConstPtr pgeom = geom_raw->GetGeometry();
-        if( !pgeom ) {
-            if( geom_raw->bFromKinBodyGeometry ) {
-                RAVELOG_WARN_FORMAT("env=%s, The geom %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%geom_raw->bodylinkgeomname%_userdatakey);
-            }
-        }
-        return std::make_pair(geom_raw, pgeom);
-    }
-    return std::make_pair(geom_raw, GeometryConstPtr());
+    return static_cast<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo *>(collgeom->getUserData());
 }
 
 BroadPhaseCollisionManagerPtr FCLCollisionChecker::_CreateManager() {
@@ -1357,24 +1338,23 @@ bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& 
             iLink++;
             sout << "{\"name\":\"" << linkinfo->bodylinkname << "\",";
             sout << "\"numGeometries\":" << linkinfo->vgeoms.size();
-            // sout << "\"geometries\": [";
-            // int iGeom = 0;
-            // for( const TransformCollisionPair& geom : linkinfo->vgeoms) {
-            //     if ( !geom.second ) {
-            //         continue;
-            //     }
-            //     const std::pair<FCLSpace::FCLKinBodyInfo::FCLGeometryInfo*, GeometryConstPtr> ogeominfo = GetCollisionGeometry(*(geom.second));
-            //     if( !ogeominfo.second ) {
-            //         continue;
-            //     }
-            //     if ( iGeom > 0 ) {
-            //         sout << ",";
-            //     }
-            //     iGeom++;
-            //     sout << "\"" << ogeominfo.second->GetName() << "\"";
-            // }
-            // sout << "]}";
-            sout << "}";
+            sout << ",\"geometries\": [";
+            int iGeom = 0;
+            for( const TransformCollisionPair& geom : linkinfo->vgeoms) {
+                if ( !geom.second ) {
+                    continue;
+                }
+                FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* ogeominfo = GetCollisionGeometry(*(geom.second));
+                if( !ogeominfo ) {
+                    continue;
+                }
+                if ( iGeom > 0 ) {
+                    sout << ",";
+                }
+                iGeom++;
+                sout << "\"" << ogeominfo->geomname << "\"";
+            }
+            sout << "]}";
         }
         sout << "]}";
     }
