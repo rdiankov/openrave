@@ -3673,6 +3673,8 @@ protected:
 
     void _EnsureSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const;
 
+    void _GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupNames, const char* groupName) const;
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
