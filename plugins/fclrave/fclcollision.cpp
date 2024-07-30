@@ -1326,19 +1326,23 @@ bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& 
             sout << ",";
         }
         iBody++;
-        sout << "{\"links\":[";
+        sout << "{\"name\":\"" << pbody->GetName() << "\",";
+        sout << "\"links\":[";
         int iLink = 0;
         for(const boost::shared_ptr<FCLSpace::FCLKinBodyInfo::LinkInfo>& linkinfo : pinfo->vlinks ) {
             if( !linkinfo ) {
+                continue;
+            }
+            const LinkConstPtr plink = linkinfo->GetLink();
+            if( !plink ) {
                 continue;
             }
             if ( iLink > 0 ) {
                 sout << ",";
             }
             iLink++;
-            sout << "{\"name\":\"" << linkinfo->bodylinkname << "\",";
-            sout << "\"numGeometries\":" << linkinfo->vgeoms.size();
-            sout << ",\"geometries\": [";
+            sout << "{\"name\":\"" << plink->GetName() << "\",";
+            sout << "\"geometries\": [";
             int iGeom = 0;
             for( const TransformCollisionPair& geom : linkinfo->vgeoms) {
                 if ( !geom.second ) {
@@ -1352,7 +1356,7 @@ bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& 
                     sout << ",";
                 }
                 iGeom++;
-                sout << "\"" << ogeominfo->geomname << "\"";
+                sout << "{\"name\":\"" << ogeominfo->geomname << "\"}";
             }
             sout << "]}";
         }
