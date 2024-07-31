@@ -4091,7 +4091,7 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
         _vSelfCollisionCheckerGroupNames.push_back(""); // TODO : "self"? or ""?
         _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
     }
-    _SetSelfCollisionChecker(_vSelfCollisionCheckers.front(), collisionchecker, GetEnv()->GetCollisionChecker(), true, true);
+    _SetSelfCollisionChecker(_vSelfCollisionCheckers.front(), collisionchecker, true, true);
 }
 
 void KinBody::SetSelfCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr collisionchecker)
@@ -4099,7 +4099,7 @@ void KinBody::SetSelfCollisionCheckerByGroupName(const std::string& name, Collis
     const std::vector<std::string>::iterator itName = std::find(_vSelfCollisionCheckerGroupNames.begin(), _vSelfCollisionCheckerGroupNames.end(), name);
     if( itName != _vSelfCollisionCheckerGroupNames.end() ) {
         const size_t iChecker = std::distance(_vSelfCollisionCheckerGroupNames.begin(), itName);
-        return _SetSelfCollisionChecker(_vSelfCollisionCheckers.at(iChecker), collisionchecker, GetEnv()->GetCollisionCheckerByGroupName(name), false, false); // TODO : differentiate "self"?
+        return _SetSelfCollisionChecker(_vSelfCollisionCheckers.at(iChecker), collisionchecker, false, false); // TODO : differentiate "self"?
     }
     else {
         if( name.size() > 0 ) { // TODO : "self"? or ""?
@@ -4107,22 +4107,23 @@ void KinBody::SetSelfCollisionCheckerByGroupName(const std::string& name, Collis
         }
         _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
         _vSelfCollisionCheckerGroupNames.push_back(name);
-        return _SetSelfCollisionChecker(_vSelfCollisionCheckers.back(), collisionchecker, GetEnv()->GetCollisionCheckerByGroupName(name), false, false); // TODO : differentiate "self"?
+        return _SetSelfCollisionChecker(_vSelfCollisionCheckers.back(), collisionchecker, false, false); // TODO : differentiate "self"?
     }
 }
 
 void KinBody::_SetSelfCollisionChecker(CollisionCheckerBasePtr& selfCollisionChecker,
                                        const CollisionCheckerBasePtr& collisionchecker,
-                                       const CollisionCheckerBasePtr& envCollisionChecker,
                                        const bool bResetInternalCache, const bool bInitGrabbedBodies)
 {
+    std::vector<CollisionCheckerBasePtr> vEnvCheckers;
+    GetEnv()->GetCollisionCheckers(vEnvCheckers);
     if( selfCollisionChecker != collisionchecker ) {
         selfCollisionChecker = collisionchecker;
         if( bResetInternalCache ) {
             // reset the internal cache
             _ResetInternalCollisionCache();
         }
-        if( !!selfCollisionChecker && selfCollisionChecker != envCollisionChecker ) {
+        if( !!selfCollisionChecker && std::find(vEnvCheckers.begin(), vEnvCheckers.end(), selfCollisionChecker) == vEnvCheckers.end() ) {
             // collision checking will not be automatically updated with environment calls, so need to do this manually
             selfCollisionChecker->InitKinBody(shared_kinbody());
 

@@ -3666,7 +3666,6 @@ protected:
 
     void _SetSelfCollisionChecker(CollisionCheckerBasePtr& selfCollisionChecker,
                                   const CollisionCheckerBasePtr& collisionchecker,
-                                  const CollisionCheckerBasePtr& envCollisionChecker,
                                   const bool bResetInternalCache, const bool bInitGrabbedBodies);
 
     bool _CheckSelfCollisionSingle(const CollisionCheckerBasePtr& collisionchecker, CollisionReportPtr& report) const;

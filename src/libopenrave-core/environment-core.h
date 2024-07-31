@@ -1024,7 +1024,7 @@ public:
         std::vector<CollisionCheckerBasePtr> vSelfCollisionCheckers;
         pbody->GetSelfCollisionCheckers(vSelfCollisionCheckers);
         for(CollisionCheckerBasePtr pSelfChecker : vSelfCollisionCheckers) {
-            if( !!pSelfChecker && pSelfChecker != GetCollisionCheckerByGroupName(pSelfChecker->GetGeometryGroup()) ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
+            if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
                 // also initialize external collision checker if specified for this body
                 pSelfChecker->InitKinBody(pbody);
             }
@@ -1071,7 +1071,7 @@ public:
         std::vector<CollisionCheckerBasePtr> vSelfCollisionCheckers;
         robot->GetSelfCollisionCheckers(vSelfCollisionCheckers);
         for(CollisionCheckerBasePtr pSelfChecker : vSelfCollisionCheckers) {
-            if( !!pSelfChecker && pSelfChecker != GetCollisionCheckerByGroupName(pSelfChecker->GetGeometryGroup()) ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
+            if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
                 // also initialize external collision checker if specified for this body
                 pSelfChecker->InitKinBody(robot);
             }
@@ -3618,7 +3618,7 @@ protected:
         std::vector<CollisionCheckerBasePtr> vSelfCollisionCheckers;
         body.GetSelfCollisionCheckers(vSelfCollisionCheckers);
         for(CollisionCheckerBasePtr pSelfChecker : vSelfCollisionCheckers) {
-            if (!!pSelfChecker && pSelfChecker != GetCollisionCheckerByGroupName(pSelfChecker->GetGeometryGroup()) ) {
+            if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
                 pSelfChecker->RemoveKinBody(pbodyref);
             }
         }
