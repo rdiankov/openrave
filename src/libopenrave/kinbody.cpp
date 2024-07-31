@@ -4149,19 +4149,6 @@ void KinBody::GetSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCh
     vCheckers = _vSelfCollisionCheckers;
 }
 
-void KinBody::_GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupNames, const char* groupName) const
-{
-    vGroupNames.clear();
-    FOREACH(itlink, _veclinks) {
-        FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometries) {
-            if( itExtraGeom->first.find(groupName) == 0 &&
-                (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
-                vGroupNames.push_back(itExtraGeom->first);
-            }
-        }
-    }
-}
-
 void KinBody::_ComputeInternalInformation()
 {
     uint64_t starttime = utils::GetMicroTime();
@@ -5137,31 +5124,7 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    // special handling for "safety" geometry group
-    {
-        // for env-body safety geometries
-        std::vector<std::string> vSafetyGroupNames;
-        _GetGeometryGroupNamesInLinks(vSafetyGroupNames, "envsafety_");
-        FOREACH(itName, vSafetyGroupNames) {
-            if( !GetEnv()->GetCollisionCheckerByGroupName(*itName) ) {
-                CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
-                pChecker->SetGeometryGroup(*itName);
-                GetEnv()->SetCollisionCheckerByGroupName(*itName, pChecker);
-            }
-        }
-        // for safety geometries for self collision
-        _GetGeometryGroupNamesInLinks(vSafetyGroupNames, "selfsafety_");
-        if( vSafetyGroupNames.size() > 0 ) {
-            if( _vSelfCollisionCheckers.empty() ) {
-                SetSelfCollisionChecker(GetEnv()->GetCollisionChecker());
-                FOREACH(itName, vSafetyGroupNames) {
-                    CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
-                    pChecker->SetGeometryGroup(*itName);
-                    SetSelfCollisionCheckerByGroupName(*itName, pChecker);
-                }
-            }
-        }
-    }
+    _EnsureSafetyCollisionCheckers();
 
     _bAreAllJoints1DOFAndNonCircular = true;
     for (size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint) {
@@ -6013,6 +5976,10 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         parameters >>= 1;
         index += 1;
     }
+
+    if( !!(parameters & (Prop_LinkGeometryGroup|Prop_LinkGeometry)) ) {
+        _EnsureSafetyCollisionCheckers();
+    }
 }
 
 void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
@@ -6574,6 +6541,47 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
         if( !!_pCurrentKinematicsFunctions ) {
             RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
             _pCurrentKinematicsFunctions.reset();
+        }
+    }
+}
+
+void KinBody::_GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupNames, const char* groupName) const
+{
+    vGroupNames.clear();
+    FOREACH(itlink, _veclinks) {
+        FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometries) {
+            if( itExtraGeom->first.find(groupName) == 0 &&
+                (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
+                vGroupNames.push_back(itExtraGeom->first);
+            }
+        }
+    }
+}
+
+void KinBody::_EnsureSafetyCollisionCheckers()
+{
+    // special handling for "safety" geometry group. TODO : how to remove the unused extraGeometries. TODO : how to update the existing geometries.
+    // for env-body safety geometries
+    std::vector<std::string> vSafetyGroupNames;
+    _GetGeometryGroupNamesInLinks(vSafetyGroupNames, "envsafety_");
+    FOREACH(itName, vSafetyGroupNames) {
+        if( !GetEnv()->GetCollisionCheckerByGroupName(*itName) ) {
+            CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
+            pChecker->SetGeometryGroup(*itName);
+            GetEnv()->SetCollisionCheckerByGroupName(*itName, pChecker);
+        }
+    }
+
+    // for safety geometries for self collision
+    _GetGeometryGroupNamesInLinks(vSafetyGroupNames, "selfsafety_");
+    if( vSafetyGroupNames.size() > 0 ) {
+        if( _vSelfCollisionCheckers.empty() ) {
+            SetSelfCollisionChecker(GetEnv()->GetCollisionChecker());
+            FOREACH(itName, vSafetyGroupNames) {
+                CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
+                pChecker->SetGeometryGroup(*itName);
+                SetSelfCollisionCheckerByGroupName(*itName, pChecker);
+            }
         }
     }
 }
