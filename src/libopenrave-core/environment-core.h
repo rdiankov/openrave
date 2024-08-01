@@ -269,6 +269,7 @@ public:
 
         if( _vCollisionCheckers.empty() ) {
             _vCollisionCheckers.push_back(RaveCreateCollisionChecker(shared_from_this(), "GenericCollisionChecker"));
+            _vCollisionCheckerGroupNames.push_back("");
         }
         if( !_pPhysicsEngine ) {
             _pPhysicsEngine = RaveCreatePhysicsEngine(shared_from_this(), "GenericPhysicsEngine");
@@ -416,6 +417,7 @@ public:
 
         // release all other interfaces, not necessary to hold a mutex?
         _vCollisionCheckers.clear();
+        _vCollisionCheckerGroupNames.clear();
         _pPhysicsEngine.reset();
         RAVELOG_VERBOSE("Environment destroyed\n");
     }
@@ -1475,18 +1477,46 @@ public:
         return SetCollisionCheckerByGroupName("", pchecker);
     }
 
+    virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker, const std::string& name)
+    {
+        if( pOutputChecker == pInputChecker ) {
+            return true;
+        }
+        if( !!pOutputChecker ) {
+            pOutputChecker->DestroyEnvironment();     // delete all resources
+        }
+        pOutputChecker = pInputChecker;
+        if( !pOutputChecker ) {
+            RAVELOG_DEBUG("disabling collisions\n");
+            pOutputChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
+        }
+        else {
+            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker with groupname='%s'", pOutputChecker->GetXMLId() % name);
+            SharedLock lock132(_mutexInterfaces);
+            for (KinBodyPtr& pbody : _vecbodies) {
+                if (!pbody) {
+                    continue;
+                }
+                pbody->_ResetInternalCollisionCache();
+            }
+        }
+        return pOutputChecker->InitEnvironment();
+    }
+
     virtual bool SetCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr pChecker) override
     {
         EnvironmentLock lockenv(GetMutex());
-        std::vector<CollisionCheckerBasePtr>::iterator itChecker = _FindCollisionCheckerByGeometryGroup(_vCollisionCheckers, name);
-        if( itChecker != _vCollisionCheckers.end() ) {
-            return _SetCollisionChecker(*itChecker, pChecker, name);
+        const std::vector<std::string>::iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), name);
+        if( itName != _vCollisionCheckerGroupNames.end() ) {
+            const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
+            return _SetCollisionChecker(_vCollisionCheckers.at(iChecker), pChecker, name);
         }
         else {
             if( name.size() > 0 ) { // TODO : "self"? or ""?
                 OPENRAVE_ASSERT_OP_FORMAT(_vCollisionCheckers.size(), >, 0, "env='%s' failed to add collision checker by group name since there is no default collision checker.", GetNameId(),ORE_InvalidArguments);
             }
             _vCollisionCheckers.push_back(CollisionCheckerBasePtr());
+            _vCollisionCheckerGroupNames.push_back(name);
             return _SetCollisionChecker(_vCollisionCheckers.back(), pChecker, name);
         }
     }
@@ -1496,9 +1526,10 @@ public:
     }
 
     virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& name) const {
-        const std::vector<CollisionCheckerBasePtr>::const_iterator itChecker = _FindCollisionCheckerByGeometryGroup(_vCollisionCheckers, name);
-        if( itChecker != _vCollisionCheckers.end() ) {
-            return *itChecker;
+        const std::vector<std::string>::const_iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), name);
+        if( itName != _vCollisionCheckerGroupNames.end() ) {
+            const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
+            return _vCollisionCheckers.at(iChecker);
         }
         else {
             return CollisionCheckerBasePtr();
@@ -3713,7 +3744,7 @@ protected:
 
         std::lock_guard<std::mutex> lockinit(_mutexInit);
         if( !bCheckSharedResources ) {
-            SetCollisionChecker(CollisionCheckerBasePtr()); // note that _vCollisionCheckers is cleared in Destroy.
+            SetCollisionChecker(CollisionCheckerBasePtr()); // note that _vCollisionCheckers and _vCollisionCheckerGroupNames are cleared in Destroy.
             SetPhysicsEngine(PhysicsEngineBasePtr());
         }
 
@@ -4578,52 +4609,6 @@ protected:
         _prLoadEnvAlloc->Clear();
     }
 
-    virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker, const std::string& name)
-    {
-        if( pOutputChecker == pInputChecker ) {
-            return true;
-        }
-        if( !!pOutputChecker ) {
-            pOutputChecker->DestroyEnvironment();     // delete all resources
-        }
-        pOutputChecker = pInputChecker;
-        if( !pOutputChecker ) {
-            RAVELOG_DEBUG("disabling collisions\n");
-            pOutputChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
-        }
-        else {
-            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker with groupname='%s'", pOutputChecker->GetXMLId() % name);
-            SharedLock lock132(_mutexInterfaces);
-            for (KinBodyPtr& pbody : _vecbodies) {
-                if (!pbody) {
-                    continue;
-                }
-                pbody->_ResetInternalCollisionCache();
-            }
-        }
-        return pOutputChecker->InitEnvironment();
-    }
-
-    static std::vector<CollisionCheckerBasePtr>::iterator _FindCollisionCheckerByGeometryGroup(std::vector<CollisionCheckerBasePtr>& vCheckers, const std::string& name)
-    {
-        for(std::vector<CollisionCheckerBasePtr>::iterator itChecker = vCheckers.begin(); itChecker != vCheckers.end(); ++itChecker) {
-            if( (*itChecker)->GetGeometryGroup() == name ) {
-                return itChecker;
-            }
-        }
-        return vCheckers.end();
-    }
-
-    static std::vector<CollisionCheckerBasePtr>::const_iterator _FindCollisionCheckerByGeometryGroup(const std::vector<CollisionCheckerBasePtr>& vCheckers, const std::string& name)
-    {
-        for(std::vector<CollisionCheckerBasePtr>::const_iterator itChecker = vCheckers.begin(); itChecker != vCheckers.end(); ++itChecker) {
-            if( (*itChecker)->GetGeometryGroup() == name ) {
-                return itChecker;
-            }
-        }
-        return vCheckers.end();
-    }
-
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be nullptr, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces. [0] should always be kept null since 0 means no assignment.
 
     string_map<int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces.
@@ -4642,7 +4627,8 @@ protected:
     uint64_t _nSimStartTime;
     int _nBodiesModifiedStamp;     ///< incremented every tiem bodies vector is modified
 
-    std::vector<CollisionCheckerBasePtr> _vCollisionCheckers; //< vector of collision checkers. size and order are same as _vCollisionCheckerGroupNames. group names should be defined. "" group is for regular
+    std::vector<std::string> _vCollisionCheckerGroupNames; //< group names of collision checkers used. "" group is for regular
+    std::vector<CollisionCheckerBasePtr> _vCollisionCheckers; //< vector of collision checkers. size and order are same as _vCollisionCheckerGroupNames.
     PhysicsEngineBasePtr _pPhysicsEngine;
 
     boost::shared_ptr<std::thread> _threadSimulation;                      ///< main loop for environment simulation
