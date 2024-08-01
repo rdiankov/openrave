@@ -1514,12 +1514,17 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         // TODO : collision option?
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(pbody1, report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report) override
@@ -1527,24 +1532,34 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         CHECK_COLLISION_BODY(pbody2);
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(pbody1,pbody2,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report ) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink1, KinBody::LinkConstPtr plink2, CollisionReportPtr report) override
@@ -1552,12 +1567,17 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
         CHECK_COLLISION_BODY(plink2->GetParent());
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink1,plink2,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, KinBodyConstPtr pbody, CollisionReportPtr report) override
@@ -1565,80 +1585,115 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         CHECK_COLLISION_BODY(pbody);
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink,pbody,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(KinBodyConstPtr pbody, const std::vector<KinBodyConstPtr>& vbodyexcluded, const std::vector<KinBody::LinkConstPtr>& vlinkexcluded, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(const RAY& ray, KinBody::LinkConstPtr plink, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(ray,plink,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(ray,pbody,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report) override
     {
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(ray,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(trimesh,pbody,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report) override
@@ -1646,12 +1701,17 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         // TODO : need to implement check self collision like this?
+        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckStandaloneSelfCollision(pbody,report) ) {
-                return true;
+                if( !bAllLinkCollisions ) {
+                    return true;
+                }
+                bCollision = true;
             }
         }
-        return false;
+        return bCollision;
     }
 
     virtual void StepSimulation(dReal fTimeStep) override
