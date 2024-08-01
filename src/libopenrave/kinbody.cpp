@@ -6558,32 +6558,63 @@ void KinBody::_GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupName
     }
 }
 
+/// \brief remove matching collision checker from the given vCollisionCheckers.
+/// \param[in] prefix, vGeometryNamesToKeep : if the checker's groupname starts with the given prefix and exluded from vGeometryNamesToKeep, remove it. Note that if vGeometryNamesToKeep is empty, removes all checkers with prefix.
+static void _RemoveMatchingCollisionChecker(std::vector<CollisionCheckerBasePtr>& vCollisionCheckers,
+                                            std::vector<std::string>& vCollisionCheckerGroupNames,
+                                            const char* prefix, const std::vector<std::string>& vGeometryNamesToKeep)
+{
+    std::vector<CollisionCheckerBasePtr>::iterator itChecker = vCollisionCheckers.begin();
+    std::vector<std::string>::iterator itName = vCollisionCheckerGroupNames.begin();
+    while( itChecker != vCollisionCheckers.end() ) {
+        CollisionCheckerBasePtr& pChecker = *itChecker;
+        if( (pChecker->GetGeometryGroup().find(prefix) == 0) &&
+            (std::find(vGeometryNamesToKeep.begin(), vGeometryNamesToKeep.end(), pChecker->GetGeometryGroup()) == vGeometryNamesToKeep.end()) ) {
+            pChecker->DestroyEnvironment();
+            itChecker = vCollisionCheckers.erase(itChecker);
+            itName = vCollisionCheckerGroupNames.erase(itName);
+        }
+        else {
+            ++itChecker;
+            ++itName;
+        }
+    }
+}
+
 void KinBody::_EnsureSafetyCollisionCheckers()
 {
     // special handling for "safety" geometry group. TODO : how to remove the unused extraGeometries. TODO : how to update the existing geometries.
     // for env-body safety geometries
     std::vector<std::string> vSafetyGroupNames;
     _GetGeometryGroupNamesInLinks(vSafetyGroupNames, "envsafety_");
-    FOREACH(itName, vSafetyGroupNames) {
-        if( !GetEnv()->GetCollisionCheckerByGroupName(*itName) ) {
+    for(const std::string& groupName : vSafetyGroupNames) {
+        if( !GetEnv()->GetCollisionCheckerByGroupName(groupName) ) {
             CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
-            pChecker->SetGeometryGroup(*itName);
-            GetEnv()->SetCollisionCheckerByGroupName(*itName, pChecker);
+            pChecker->SetGeometryGroup(groupName);
+            GetEnv()->SetCollisionCheckerByGroupName(groupName, pChecker);
         }
     }
 
     // for safety geometries for self collision
-    _GetGeometryGroupNamesInLinks(vSafetyGroupNames, "selfsafety_");
+    constexpr char selfGeometryPrefix[] = "selfsafety_";
+    _GetGeometryGroupNamesInLinks(vSafetyGroupNames, selfGeometryPrefix);
     if( vSafetyGroupNames.size() > 0 ) {
+        // If the default checker does not exist, add it
         if( _vSelfCollisionCheckers.empty() ) {
             SetSelfCollisionChecker(GetEnv()->GetCollisionChecker());
-            FOREACH(itName, vSafetyGroupNames) {
+        }
+        // if does not exist, add the new self collision checker with safety groups
+        for(const std::string& groupName : vSafetyGroupNames) {
+            const std::vector<std::string>::iterator itName = std::find(_vSelfCollisionCheckerGroupNames.begin(), _vSelfCollisionCheckerGroupNames.end(), groupName);
+            if( itName == _vSelfCollisionCheckerGroupNames.end() ) {
                 CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
-                pChecker->SetGeometryGroup(*itName);
-                SetSelfCollisionCheckerByGroupName(*itName, pChecker);
+                pChecker->SetGeometryGroup(groupName);
+                SetSelfCollisionCheckerByGroupName(groupName, pChecker);
             }
         }
     }
+    // cleanup self collision checkers which is not in vSafetyGroupNames. if vSafetyGroupNames is empty, remove all checkers with "selfGeometryPrefix".
+    _RemoveMatchingCollisionChecker(_vSelfCollisionCheckers, _vSelfCollisionCheckerGroupNames, selfGeometryPrefix, vSafetyGroupNames);
 }
 
 } // end namespace OpenRAVE
