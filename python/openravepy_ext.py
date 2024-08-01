@@ -57,18 +57,21 @@ class CollisionOptionsStateSaver(object):
 class CollisionOptionsStateSaverAll(object):
     """Saves/restores the state of the collision checker options for all checkers in env.
     """
-    def __init__(self,env,optionsToAdd=None,required=True):
+    def __init__(self,env,optionsModification=None,required=True,modificationType=None):
         self.checkers = env.GetCollisionCheckers()
         self.oldoptions = None
-        self.optionsToAdd = optionsToAdd
+        self.optionsModification = optionsModification
         self.required = required
+        self.modificationType = modificationType
+        if self.modificationType is None:
+            self.modificationType = openravepy_int.CollisionOptionsModificationType.Add
 
     def __enter__(self):
-        if self.optionsToAdd is not None:
+        if self.optionsModification is not None:
             self.oldoptions = [checker.GetCollisionOptions() for checker in self.checkers]
             failedMessage = None
             for oldoption, checker in zip(self.oldoptions, self.checkers):
-                newOptions = checker.GetCollisionOptions() | self.optionsToAdd
+                newOptions = self._ComputeNewOption(oldoption, self.optionsModification, self.modificationType, checker)
                 success = checker.SetCollisionOptions(newOptions)
                 if not success and self.required:
                     failedMessage = 'Failed to set options 0x%x on checker %s'%(newOptions,str(checker.GetXMLId()))
@@ -84,6 +87,16 @@ class CollisionOptionsStateSaverAll(object):
     def _Restore(self):
         for oldoption, checker in zip(self.oldoptions, self.checkers):
             checker.SetCollisionOptions(oldoption)
+
+    def _ComputeNewOption(self, oldoption, optionsModification, modificationType, checker):
+        if modificationType == openravepy_int.CollisionOptionsModificationType.Add:
+            return oldoption | self.optionsModification
+        elif modificationType == openravepy_int.CollisionOptionsModificationType.Remove:
+            return oldoption & (~self.optionsModification)
+        elif modificationType == openravepy_int.CollisionOptionsModificationType.Set:
+            return self.optionsModification
+        else:
+            raise ValueError('Invalid CollisionOptionModificationType %r is supplied on checker %s'%(oldOptions,str(checker.GetXMLId())))
 
 def with_destroy(fn):
     """a decorator that always calls openravepy_int.RaveDestroy at the function end"""

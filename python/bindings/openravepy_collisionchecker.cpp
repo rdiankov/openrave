@@ -946,6 +946,19 @@ void init_openravepy_collisionchecker()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<CollisionOptionsModificationType>(m, "CollisionOptionsModificationType", py::arithmetic() DOXY_ENUM(CollisionOptionsModificationType))
+#else
+    enum_<CollisionOptionsModificationType>("CollisionOptionsModificationType" DOXY_ENUM(CollisionOptionsModificationType))
+#endif
+    .value("Add",COMT_Add)
+    .value("Remove",COMT_Remove)
+    .value("Set",COMT_Set)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .export_values()
+#endif
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
     // should this be inside CollisionReport, instead of module "m"?
     class_<PYCONTACT, OPENRAVE_SHARED_PTR<PYCONTACT> >(m, "Contact", DOXY_CLASS(CONTACT))
     .def(init<>())

@@ -379,19 +379,30 @@ private:
 
 typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
 
+/// \brief type used for CollisionOptionsStateSaverAll, about how the option from the argument is treated.
+enum CollisionOptionsModificationType
+{
+    COMT_Add = 0,    ///< add, e.g. SetCollisionOptions(GetCollisionOptions() | options)
+    COMT_Remove = 1, ///< remove, e.g. SetCollisionOptions(GetCollisionOptions() & (~options))
+    COMT_Set = 2,    ///< set, e.g. SetCollisionOptions(options)
+};
+
 /// \brief Helper class to save and restore the collision options for all collision checkers in env. If options are not supported and required is true, throws an exception.
 class OPENRAVE_API CollisionOptionsStateSaverAll
 {
 public:
     /// \brief Constructor
-    /// \param[in] env : Environment
-    /// \param[in] optionsToAdd : Additional options. Added by "|" operation. Different from CollisionOptionsStateSaver, add the additional options instead of absolute value of options, since the initial option for each checker might be different. TODO : do we need optionsToRemove argument?
+    /// \param[in] pEnv : Environment
+    /// \param[in] modificationType, options : modification type and modification for options.
     /// \parma[in] required : If options are not supported and required is true, throws an exception.
-    CollisionOptionsStateSaverAll(const EnvironmentBase& env, const int optionsToAdd, const bool required=true);
+    CollisionOptionsStateSaverAll(const EnvironmentBasePtr pEnv, const int options, const bool required=true, const CollisionOptionsModificationType modificationType=COMT_Add);
     virtual ~CollisionOptionsStateSaverAll();
 private:
     /// \brief restore the options. Assume _vOldOptions and _vCheckers have same sizes.
     void _Restore();
+
+    /// \brief compute the new options based on modificationType.
+    static int _ComputeNewOption(const int oldOptions, const int optionsModification, const CollisionOptionsModificationType modificationType);
 
     std::vector<int> _vOldOptions; ///< vector of options
     std::vector<CollisionCheckerBasePtr> _vCheckers; ///< vector of checkers
