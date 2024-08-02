@@ -343,23 +343,20 @@ public:
         }
 
         // have to remove any duplicate names, prioritize ones that have higher index
-        for(int iBody = 0; iBody+1 < (int) envInfo._vBodyInfos.size(); ++iBody) {
-            bool bFoundLast = false;
-            int iTest = envInfo._vBodyInfos.size()-1;
-            while(iTest > iBody) {
-                const std::string& bodyname = envInfo._vBodyInfos[iBody]->_name;
-                if( envInfo._vBodyInfos[iTest]->_name == bodyname ) {
-                    if( !bFoundLast ) {
-                        RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d and replace with %d with body name '%s'", _penv->GetId()%iBody%iTest%bodyname);
-                        envInfo._vBodyInfos[iBody] = envInfo._vBodyInfos[iTest];
-                        bFoundLast = true;
-                    }
-                    else {
-                        RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d with body name '%s'", _penv->GetId()%iTest%bodyname);
-                    }
-                    envInfo._vBodyInfos.erase(envInfo._vBodyInfos.begin()+iTest);
+        {
+            std::unordered_set<std::string> existingBodyNames;
+            for (ssize_t iBody = envInfo._vBodyInfos.size() - 1; iBody >= 0; iBody--) {
+                const std::string& bodyName = envInfo._vBodyInfos[iBody]->_name;
+
+                // If this is the first time we've seen this body, add the name to the existing name set and continue
+                if (existingBodyNames.find(bodyName) == existingBodyNames.end()) {
+                    existingBodyNames.emplace(bodyName);
+                    continue;
                 }
-                --iTest;
+
+                // If this body duplicates a body with a higher index, remove it
+                RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d with body name '%s'", _penv->GetId()%iBody%bodyName);
+                envInfo._vBodyInfos.erase(envInfo._vBodyInfos.begin() + iBody);
             }
         }
 
