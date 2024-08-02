@@ -40,7 +40,8 @@ jobs:
         cd rapidjson/build
         # there are no stable version available
         cmake .. -GNinja -DRAPIDJSON_HAS_STDSTRING=ON -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
-        ninja -j4 && sudo ninja install
+        ninja -j4
+        sudo ninja install
         cd ../..
     - name: Install ASSIMP
       run: |
@@ -49,7 +50,8 @@ jobs:
         cd assimp/build
         git checkout v5.2.5
         cmake .. -GNinja
-        ninja -j4 && sudo ninja install
+        ninja -j4
+        sudo ninja install
         cd ../..
     - name: Install Fcl
       run: |
@@ -58,7 +60,8 @@ jobs:
         cd fcl/build
         git checkout origin/trimeshContactPoints20200813
         cmake .. -GNinja -DFCL_BUILD_TESTS=OFF
-        ninja -j4 && sudo ninja install
+        ninja -j4
+        sudo ninja install
         cd ../..
     - name: Install Pybind11
       # Need patched version of pybind11:
@@ -77,7 +80,8 @@ jobs:
         git checkout ciel/v2.9_ty
 
         cmake .. -GNinja -DPYBIND11_TEST=OFF -DPythonLibsNew_FIND_VERSION=3
-        ninja -j4 && sudo ninja install
+        ninja -j4
+        sudo ninja install
         cd ../..
     - name: Install msgpack-c
       run: |
@@ -87,7 +91,8 @@ jobs:
         git checkout cpp-6.0.0
 
         cmake .. -GNinja -DMSGPACK_BUILD_EXAMPLES=OFF -DMSGPACK_BUILD_TESTS=OFF
-        ninja -j4 && sudo ninja install
+        ninja -j4
+        sudo ninja install
         cd ../..
     - name: Install
       run: |
@@ -95,7 +100,8 @@ jobs:
         mkdir -p build
         cd build
         cmake .. -GNinja -DUSE_PYBIND11_PYTHON_BINDINGS=ON -DOPT_PYTHON=OFF
-        ninja -j4 && sudo ninja install
+        ninja -j4
+        sudo ninja install
         cd ..
     - name: Basic Test
       # setup-python does not look at /usr/local/lib
