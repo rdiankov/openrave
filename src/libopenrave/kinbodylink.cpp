@@ -132,6 +132,11 @@ void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
     _vinertiamoments *= fUnitScale*fUnitScale;
 }
 
+static bool _IsDefaultGeometryGroupName(const std::string& geometryGroupName)
+{
+    return geometryGroupName.empty() || geometryGroupName == "self";
+}
+
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
@@ -216,9 +221,17 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     if(_mapExtraGeometries.size() > 0 ) {
         rapidjson::Value extraGeometriesValue;
         extraGeometriesValue.SetObject();
+        const bool bIsCurrentGeometryGroupDefault = _IsDefaultGeometryGroupName(_currentGeometryGroupName);
         FOREACHC(im, _mapExtraGeometries) {
-            if( im->first == _currentGeometryGroupName) {
-                continue;
+            if( bIsCurrentGeometryGroupDefault ) {
+                if( _IsDefaultGeometryGroupName(im->first) ) {
+                    continue;
+                }
+            }
+            else {
+                if( im->first == _currentGeometryGroupName) {
+                    continue;
+                }
             }
             rapidjson::Value geometriesValue;
             geometriesValue.SetArray();

@@ -122,10 +122,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 }
             }
         }
-        else if ( _geometrygroup.size() > 0 ) {
-            // if _geometrygroup is not empty but no matching in body geometries, skip
-        }
-        else {
+        else if ( _geometrygroup.empty() || _geometrygroup == "self" ) {
+            // if this checker is for default geometries checking, allow to check collision with geometries with other group names. let's say, allow to check with "padding" of robot and "self" of obstacle.
             const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
             FOREACH(itgeom, vgeometries) {
                 const KinBody::GeometryPtr& pgeom = *itgeom;
@@ -155,6 +153,9 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
             }
+        }
+        else {
+            // if not the default geometries checking, strictly check the geometry group name, so that the checking is done only among the geometries with the given group name.
         }
 
         if( linkinfo->vgeoms.size() == 0 ) {
