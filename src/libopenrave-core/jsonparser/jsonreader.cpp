@@ -29,7 +29,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
-#include <unordered_set>
+#include <boost/unordered_set.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -344,7 +344,7 @@ public:
 
         // have to remove any duplicate names, prioritize ones that have higher index
         {
-            std::unordered_set<std::string> existingBodyNames;
+            boost::unordered_set<string_view> existingBodyNames;
             for (ssize_t iBody = envInfo._vBodyInfos.size() - 1; iBody >= 0; iBody--) {
                 const std::string& bodyName = envInfo._vBodyInfos[iBody]->_name;
 
