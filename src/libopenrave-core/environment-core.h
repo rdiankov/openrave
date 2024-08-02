@@ -2970,7 +2970,9 @@ public:
                 }
             }
         }
-        std::vector<int> vUsedBodyIndices; // used indices of vBodies
+
+        // Set of indices that have already been used for vBodies
+        std::unordered_set<int> usedBodyIndexSet;
 
         // internally manipulates _vecbodies using _AddKinBody/_AddRobot/_RemoveKinBodyFromIterator
         for(int inputBodyIndex = 0; inputBodyIndex < (int)info._vBodyInfos.size(); ++inputBodyIndex) {
@@ -2990,8 +2992,8 @@ public:
                     // can be any of the bodies, but have to make sure not to overlap
                     //bodyIndex = inputBodyIndex;
                     // search only in the unprocessed part of vBodies
-                    for(int ibody = 0; ibody < (int)vBodies.size(); ++ibody) {
-                        if( find(vUsedBodyIndices.begin(), vUsedBodyIndices.end(), ibody) != vUsedBodyIndices.end() ) {
+                    for (int ibody = 0; ibody < (int)vBodies.size(); ++ibody) {
+                        if (usedBodyIndexSet.find(ibody) != usedBodyIndexSet.end()) {
                             continue;
                         }
                         const KinBodyPtr& pbody = vBodies[ibody];
@@ -3080,8 +3082,8 @@ public:
                         *itExisting = pTempBody;
                     }
 
-                    if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-                        vUsedBodyIndices.push_back(nMatchingIndex);
+                    if (updateMode == UFIM_OnlySpecifiedBodiesExact) {
+                        usedBodyIndexSet.emplace(nMatchingIndex);
                     }
                 }
             }
@@ -3226,15 +3228,15 @@ public:
                     _AddKinBody(pNewBody, IAM_AllowRenaming);
                 }
 
-                if( bodyIndex >= 0 ) {
-                    if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-                        vUsedBodyIndices.push_back(bodyIndex);
+                if (bodyIndex >= 0) {
+                    if (updateMode == UFIM_OnlySpecifiedBodiesExact) {
+                        usedBodyIndexSet.emplace(bodyIndex);
                     }
-                    vBodies.insert(vBodies.begin()+bodyIndex, pNewBody);
+                    vBodies.insert(vBodies.begin() + bodyIndex, pNewBody);
                 }
                 else {
-                    if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
-                        vUsedBodyIndices.push_back(vBodies.size());
+                    if (updateMode == UFIM_OnlySpecifiedBodiesExact) {
+                        usedBodyIndexSet.emplace(vBodies.size());
                     }
                     vBodies.push_back(pNewBody);
                 }
