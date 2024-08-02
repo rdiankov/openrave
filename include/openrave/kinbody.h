@@ -55,7 +55,7 @@ enum GeometryType : uint8_t
     GT_CalibrationBoard=7, ///< a box shaped geometry with grid of cylindrical dots of two sizes. The dots are always on the +z side of the box and are oriented towards z-axis.
     GT_Axial = 8, ///< a geometry defined by many slices along an axis, oriented towards z-axis
     GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
-    GT_Prism = 10, ///< Non-trimesh right prisms with arbitrary non-convex cross-section and infinite height, which represent “walls” or “safe zones”.
+    GT_Prism = 10, ///< Non-trimesh right prisms with arbitrary non-convex cross-section and infinite height, which represent “walls” or “safe zones”. _meshcollision.vertices[2 * i].xy describes the cross-section.
     GT_Capsule = 11, ///< Non-trimesh capsules (oriented towards z-axis), representing "robot link model" or "gripper model", which are able of degenerating to perfect spheres with the height tends to zero.
 };
 
