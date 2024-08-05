@@ -378,7 +378,9 @@ void KinBody::LinkInfo::_DeserializeReadableInterface(const std::string& id, con
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
+    JSONReadablePtr pReadableJSON(new JSONReadable(id, rReadable));
+    _mReadableInterfaces[id] = pReadableJSON;
+    // RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed, perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id);
 }
 
 bool KinBody::LinkInfo::operator==(const KinBody::LinkInfo& other) const {

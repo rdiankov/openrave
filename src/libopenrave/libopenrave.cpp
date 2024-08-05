@@ -2763,6 +2763,54 @@ bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitS
     return true;
 }
 
+JSONReadable::JSONReadable(const std::string& id, const rapidjson::Value& rValue) : Readable(id), _vAllocBuffer(4*1024, 0), _rAlloc(&_vAllocBuffer[0], _vAllocBuffer.size())
+{
+    _rValue.CopyFrom(rValue, _rAlloc);
+}
+
+JSONReadable::~JSONReadable()
+{
+}
+
+void JSONReadable::SetValue(const rapidjson::Value& rValue)
+{
+    _rAlloc.Clear();
+    _rValue.CopyFrom(rValue, _rAlloc);
+}
+
+rapidjson::Value& JSONReadable::GetValue()
+{
+    return _rValue;
+}
+
+const rapidjson::Value& JSONReadable::GetValue() const
+{
+    return _rValue;
+}
+
+rapidjson::Document::AllocatorType& JSONReadable::GetAllocator()
+{
+    return _rAlloc;
+}
+
+bool JSONReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
+{
+    return false;
+}
+
+bool JSONReadable::SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& rAlloc, dReal fUnitScale, int options) const
+{
+    rValue.CopyFrom(_rValue, rAlloc);
+    return true;
+}
+
+bool JSONReadable::DeserializeJSON(const rapidjson::Value& rValue, dReal fUnitScale)
+{
+    _rAlloc.Clear();
+    _rValue.CopyFrom(rValue, _rAlloc);
+    return true;
+}
+
 int64_t ConvertIsoFormatDateTimeToLinuxTimeUS(const char* pIsoFormatDateTime)
 {
     if (pIsoFormatDateTime == nullptr) {

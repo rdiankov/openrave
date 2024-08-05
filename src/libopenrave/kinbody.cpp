@@ -429,7 +429,9 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed for body '%s' (uri '%s'), perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id%_name%(_uri.empty() ? _referenceUri : _uri));
+    JSONReadablePtr pReadableJSON(new JSONReadable(id, rReadable));
+    _mReadableInterfaces[id] = pReadableJSON;
+    // RAVELOG_WARN_FORMAT("deserialize readable interface '%s' failed for body '%s' (uri '%s'), perhaps need to call 'RaveRegisterJSONReader' with the appropriate reader.", id%_name%(_uri.empty() ? _referenceUri : _uri));
 }
 
 KinBody::KinBody(InterfaceType type, EnvironmentBasePtr penv) : InterfaceBase(type, penv)

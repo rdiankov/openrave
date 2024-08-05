@@ -661,6 +661,46 @@ private:
 };
 typedef boost::shared_ptr<StringReadable> StringReadablePtr;
 
+class OPENRAVE_API JSONReadable : public Readable
+{
+public:
+    JSONReadable(const std::string& id, const rapidjson::Value& rValue);
+    virtual ~JSONReadable();
+
+    /// \brief sets new json value
+    void SetValue(const rapidjson::Value& rValue);
+
+    /// \brief gets a reference to the saved json value
+    rapidjson::Value& GetValue();
+    const rapidjson::Value& GetValue() const;
+
+    rapidjson::Document::AllocatorType& GetAllocator();
+
+    bool SerializeXML(BaseXMLWriterPtr wirter, int options=0) const override;
+    bool SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale=1.0, int options=0) const override;
+    bool DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale=1.0) override;
+    bool operator==(const Readable& other) const override {
+        if (GetXMLId() != other.GetXMLId()) {
+            return false;
+        }
+        const JSONReadable* pOther = dynamic_cast<const JSONReadable*>(&other);
+        if (!pOther) {
+            return false;
+        }
+        return _rValue == pOther->_rValue;
+    }
+
+    ReadablePtr CloneSelf() const override {
+        return ReadablePtr(new JSONReadable(GetXMLId(), _rValue));
+    }
+
+private:
+    std::vector<uint8_t> _vAllocBuffer; ///< buffer used for rapidjson allocator
+    rapidjson::MemoryPoolAllocator<> _rAlloc; ///< rapidjson allocator
+    rapidjson::Value _rValue;
+};
+typedef boost::shared_ptr<JSONReadable> JSONReadablePtr;
+
 /// \brief returns a string of the ik parameterization type names
 ///
 /// \param[in] alllowercase If 1, sets all characters to lower case. Otherwise can include upper case in order to match \ref IkParameterizationType definition.

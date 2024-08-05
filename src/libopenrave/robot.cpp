@@ -793,7 +793,9 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
         _mReadableInterfaces[id] = pReadableString;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
+    JSONReadablePtr pReadableJSON(new JSONReadable(id, rReadable));
+    _mReadableInterfaces[id] = pReadableJSON;
+    // RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
 }
 
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
