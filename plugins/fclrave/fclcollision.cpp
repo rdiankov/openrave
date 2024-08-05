@@ -961,8 +961,6 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
 
             LinkConstPtr& plink1 = o1info.second;
             LinkConstPtr& plink2 = o2info.second;
-            OPENRAVE_ASSERT_OP((!!o1geominfo), !=, 0);
-            OPENRAVE_ASSERT_OP((!!o2geominfo), !=, 0);
 
             // plink1 or plink2 can be None if object is standalone (ie coming from trimesh)
 
@@ -983,7 +981,7 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
 //            }
 
             _reportcache.Reset(_options);
-            int icollision = _reportcache.AddLinkGeomCollision(plink1, o1geominfo->geomname, plink2, o2geominfo->geomname);
+            int icollision = _reportcache.AddLinkGeomCollision(plink1, (!!o1geominfo ? o1geominfo->geomname : std::string()), plink2, (!!o2geominfo ? o2geominfo->geomname : std::string()));
             OpenRAVE::CollisionPairInfo& cpinfo = _reportcache.vCollisionInfos[icollision];
 
             // TODO : eliminate the contacts points (insertion sort (std::lower) + binary_search ?) duplicated
@@ -1014,10 +1012,10 @@ bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1
 
             int inewcollision;
             if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                inewcollision = pcb->_report->AddLinkGeomCollision(plink1, o1geominfo->geomname, plink2, o2geominfo->geomname);
+                inewcollision = pcb->_report->AddLinkGeomCollision(plink1, (!!o1geominfo ? o1geominfo->geomname : std::string()), plink2, (!!o2geominfo ? o2geominfo->geomname : std::string()));
             }
             else {
-                inewcollision = pcb->_report->SetLinkGeomCollision(plink1, o1geominfo->geomname, plink2, o2geominfo->geomname);
+                inewcollision = pcb->_report->SetLinkGeomCollision(plink1, (!!o1geominfo ? o1geominfo->geomname : std::string()), plink2, (!!o2geominfo ? o2geominfo->geomname : std::string()));
             }
             
             OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
