@@ -63,13 +63,19 @@ using namespace std;
 using namespace OpenRAVE;
 
 /// sets a new collision checker and resets to the old when destroyed
+/// so far, only the default checker is replaced and other checkers are not replaced.
+/// just in case, support all of checker's collision option saving.
 class CollisionCheckerMngr
 {
 public:
     CollisionCheckerMngr(EnvironmentBasePtr penv, const string& collisionchecker) : _penv(penv)
     {
         _pprevchecker = _penv->GetCollisionChecker();
-        _coloptions = _pprevchecker->GetCollisionOptions();
+        penv->GetCollisionCheckers(_vCheckers);
+        _vOldOptions.reserve(_vCheckers.size());
+        for(const CollisionCheckerBasePtr& pChecker : _vCheckers) {
+            _vOldOptions.push_back(pChecker->GetCollisionOptions());
+        }
 
         if( collisionchecker.size() > 0 ) {
             _pnewchecker = RaveCreateCollisionChecker(_penv,collisionchecker);
@@ -81,13 +87,16 @@ public:
     }
     ~CollisionCheckerMngr() {
         _penv->SetCollisionChecker(_pprevchecker);
-        _pprevchecker->SetCollisionOptions(_coloptions);
+        for(int iChecker = 0; iChecker < (int)_vCheckers.size(); ++iChecker) {
+            _vCheckers.at(iChecker)->SetCollisionOptions(_vOldOptions.at(iChecker));
+        }
     }
 private:
     EnvironmentBasePtr _penv;
     CollisionCheckerBasePtr _pnewchecker;
     CollisionCheckerBasePtr _pprevchecker;
-    int _coloptions;
+    std::vector<int> _vOldOptions; ///< vector of options
+    std::vector<CollisionCheckerBasePtr> _vCheckers; ///< checkers
 };
 
 #endif

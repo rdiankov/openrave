@@ -109,7 +109,11 @@ public:
         }
 
         CollisionCheckerMngr checkermngr(GetEnv(),"");
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
+        std::vector<CollisionCheckerBasePtr> vCollisionCheckers;
+        GetEnv()->GetCollisionCheckers(vCollisionCheckers);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(0);
+        }
 
         // do not disable any links of the robot here!
         KinBody::LinkPtr pbase;

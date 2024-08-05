@@ -357,7 +357,11 @@ public:
         }
         else {
             // calculate the contact normals
-            GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts);
+            std::vector<CollisionCheckerBasePtr> vCollisionCheckers;
+            GetEnv()->GetCollisionCheckers(vCollisionCheckers);
+            for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+                pChecker->SetCollisionOptions(CO_Contacts);
+            }
             std::vector<KinBody::LinkPtr> vlinks;
             _robot->GetActiveManipulator()->GetChildLinks(vlinks);
             FOREACHC(itlink, vlinks) {
@@ -381,7 +385,9 @@ public:
                     }
                 }
             }
-            GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
+            for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+                pChecker->SetCollisionOptions(0);
+            }
         }
 
         RAVELOG_VERBOSE(str(boost::format("number of contacts: %d\n")%contacts.size()));
@@ -472,12 +478,15 @@ public:
         _robot->Enable(false);
         targetbody->Enable(true);
 
+        std::vector<CollisionCheckerBasePtr> vCollisionCheckers;
+        GetEnv()->GetCollisionCheckers(vCollisionCheckers);
+
         vector<CONTACT> vpoints;
-        BoxSample(targetbody,vpoints,nDistMapSamples,vmapcenter);
+        BoxSample(targetbody,vpoints,nDistMapSamples,vmapcenter, vCollisionCheckers);
         //DeterministicallySample(targetbody, vpoints, 4, vmapcenter);
 
         targetbody->Enable(false);
-        _ComputeDistanceMap(vpoints, conewidth);
+        _ComputeDistanceMap(vpoints, conewidth, vCollisionCheckers);
         FOREACH(itpoint, vpoints) {
             sout << itpoint->depth << " " << itpoint->norm.x << " " << itpoint->norm.y << " " << itpoint->norm.z << " ";
             sout << itpoint->pos.x - vmapcenter.x << " " << itpoint->pos.y - vmapcenter.y << " " << itpoint->pos.z - vmapcenter.z << "\n";
@@ -1231,11 +1240,14 @@ protected:
         }
     }
 
-    void SampleObject(KinBodyPtr pbody, vector<CONTACT>& vpoints, int N, Vector graspcenter)
+    void SampleObject(KinBodyPtr pbody, vector<CONTACT>& vpoints, int N, Vector graspcenter, std::vector<CollisionCheckerBasePtr>& vCollisionCheckers)
     {
         RAY r;
         Vector com = graspcenter;
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
+        //GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(CO_Contacts|CO_Distance);
+        }
 
         vpoints.resize(N);
         int i = 0;
@@ -1260,18 +1272,22 @@ protected:
             }
         }
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(0);
+        }
     }
 
     // generates samples across a geodesic sphere (the higher the level, the higher the number of points
-    void DeterministicallySample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int levels, Vector graspcenter)
+    void DeterministicallySample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int levels, Vector graspcenter, std::vector<CollisionCheckerBasePtr>& vCollisionCheckers)
     {
         RAY r;
         TriMesh tri;
         Vector com = graspcenter;
         GenerateSphereTriangulation(tri,levels);
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(CO_Contacts|CO_Distance);
+        }
 
         // take the mean across every tri
         vpoints.reserve(tri.indices.size()/3);
@@ -1292,7 +1308,9 @@ protected:
             }
         }
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(0);
+        }
     }
 
     // generate a sphere triangulation starting with an icosahedron
@@ -1397,14 +1415,16 @@ protected:
         tri = *pcur;
     }
 
-    void BoxSample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int num_samples, Vector center)
+    void BoxSample(KinBodyPtr pbody, vector<CONTACT>& vpoints, int num_samples, Vector center, std::vector<CollisionCheckerBasePtr>& vCollisionCheckers)
     {
         RAY r;
         TriMesh tri;
         CONTACT p;
         dReal ffar = 1.0f;
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(CO_Contacts|CO_Distance);
+        }
         vpoints.reserve(num_samples);
 
         dReal counter = ffar/sqrt((dReal)num_samples/12);
@@ -1450,13 +1470,15 @@ protected:
             }
         }
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(0);
+        }
     }
 
     // computes a distance map. For every point, samples many vectors around the point's normal such that angle
     // between normal and sampled vector doesn't exceeed fTheta. Returns the minimum distance.
     // vpoints needs to already be initialized
-    void _ComputeDistanceMap(vector<CONTACT>& vpoints, dReal fTheta)
+    void _ComputeDistanceMap(vector<CONTACT>& vpoints, dReal fTheta, std::vector<CollisionCheckerBasePtr>& vCollisionCheckers)
     {
         dReal fCosTheta = RaveCos(fTheta);
         int N;
@@ -1465,7 +1487,9 @@ protected:
         }
         RAY r;
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Distance);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(CO_Distance);
+        }
 
         // set number of rays to randomly sample
         if( fTheta < 0.01f ) {
@@ -1502,7 +1526,9 @@ protected:
             vpoints[i].depth = fMinDist;
         }
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
+        for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+            pChecker->SetCollisionOptions(0);
+        }
     }
 
     void _GetStableContacts(vector< pair<CONTACT,int> >& contacts, const Vector& direction, dReal mu)
