@@ -2114,8 +2114,7 @@ protected:
         EnvironmentLock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
 
-        int oldoptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions();
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions|CO_Contacts);
+        CollisionOptionsStateSaverAll optionSaver(GetEnv(), CO_Contacts, false, COMT_Add);
 
         CollisionReportPtr preport(new CollisionReport());
         RAY r;
@@ -2151,7 +2150,6 @@ protected:
             }
         }
 
-        GetEnv()->GetCollisionChecker()->SetCollisionOptions(oldoptions);
         FOREACH(it, info) {
             os << *it << " ";
         }
