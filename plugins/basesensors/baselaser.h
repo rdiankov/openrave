@@ -224,7 +224,11 @@ public:
             Vector rotaxis(0,0,1);
             RAY r;
 
-            GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Distance);
+            std::vector<CollisionCheckerBasePtr> vCollisionCheckers;
+            GetEnv()->GetCollisionCheckers(vCollisionCheckers);
+            for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+                pChecker->SetCollisionOptions(CO_Distance);
+            }
             Transform t;
 
             {
@@ -271,7 +275,9 @@ public:
                 }
             }
 
-            GetEnv()->GetCollisionChecker()->SetCollisionOptions(0);
+            for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
+                pChecker->SetCollisionOptions(0);
+            }
 
             if( _bRenderData ) {
                 // If can render, check if some time passed before last update
