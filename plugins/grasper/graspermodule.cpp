@@ -964,9 +964,15 @@ public:
             Transform trobotstart = probot->GetTransform();
 
             // use CO_ActiveDOFs since might be calling FindIKSolution
-            int coloptions = GetEnv()->GetCollisionChecker()->GetCollisionOptions()|(worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0);
-            coloptions &= ~CO_Contacts;
-            pcloneenv->GetCollisionChecker()->SetCollisionOptions(coloptions|CO_Contacts);
+            std::vector<CollisionCheckerBasePtr> vCollisionCheckers, vClonedCollisionCheckers;
+            GetEnv()->GetCollisionCheckers(vCollisionCheckers);
+            pcloneenv->GetCollisionCheckers(vClonedCollisionCheckers);
+            std::vector<int> vCollisionOptions(vCollisionOptions.size());
+            for(int iChecker = 0; iChecker < (int)vCollisionOptions.size(); ++iChecker) {
+                vCollisionOptions[iChecker] = vCollisionCheckers[iChecker]->GetCollisionOptions()|(worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0);
+                vCollisionOptions[iChecker] &= ~CO_Contacts;
+                vClonedCollisionCheckers.at(iChecker)->SetCollisionOptions(vCollisionOptions[iChecker]|CO_Contacts);
+            }
 
             while(_bContinueWorker) {
                 {
@@ -1043,7 +1049,7 @@ public:
                 }
 
                 if ( worker_params->bCheckGraspIK ) {
-                    CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
+                    CollisionOptionsStateSaverAll optionstate(pcloneenv,vCollisionOptions,false); // remove contacts
                     Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                     RobotBase::RobotStateSaver linksaver(probot);
                     probot->SetTransform(trobotstart);
@@ -1108,7 +1114,7 @@ public:
                         BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
 
                         if ( worker_params->bCheckGraspIK ) {
-                            CollisionOptionsStateSaver optionstate(pcloneenv->GetCollisionChecker(),coloptions,false); // remove contacts
+                            CollisionOptionsStateSaverAll optionstate(pcloneenv,vCollisionOptions,false); // remove contacts
                             RobotBase::RobotStateSaver linksaver(probot);
                             ptraj->GetWaypoint(-1,vtrajpoint);
                             Transform t = probot->GetTransform();
