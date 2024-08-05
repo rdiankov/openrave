@@ -396,6 +396,13 @@ public:
     /// \param[in] modificationType, options : modification type and modification for options.
     /// \parma[in] required : If options are not supported and required is true, throws an exception.
     CollisionOptionsStateSaverAll(const EnvironmentBasePtr pEnv, const int options, const bool required=true, const CollisionOptionsModificationType modificationType=COMT_Add);
+
+    /// \brief Constructor
+    /// \param[in] pEnv : Environment
+    /// \param[in] vOptions : vector of options. size should be same as pEnv->GetCollisionCheckers(). order should be consistent with it.
+    /// \parma[in] required : If options are not supported and required is true, throws an exception.
+    CollisionOptionsStateSaverAll(const EnvironmentBasePtr pEnv, const std::vector<int>& vOptions, const bool required=true);
+
     virtual ~CollisionOptionsStateSaverAll();
 private:
     /// \brief restore the options. Assume _vOldOptions and _vCheckers have same sizes.
