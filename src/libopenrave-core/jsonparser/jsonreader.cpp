@@ -344,7 +344,8 @@ public:
 
         // have to remove any duplicate names, prioritize ones that have higher index
         {
-            boost::unordered_set<string_view> existingBodyNames;
+            boost::unordered_set<boost::string_view> existingBodyNames;
+            ssize_t validBodyCount = envInfo._vBodyInfos.size();
             for (ssize_t iBody = envInfo._vBodyInfos.size() - 1; iBody >= 0; iBody--) {
                 const std::string& bodyName = envInfo._vBodyInfos[iBody]->_name;
 
@@ -354,10 +355,14 @@ public:
                     continue;
                 }
 
-                // If this body duplicates a body with a higher index, remove it
+                // If this body duplicates a body with a higher index, remove it by swapping it to the end of our info list and decrementing the valid body count.
+                // This saves us having to shuffle all of the pointers down each time we call ::erase().
                 RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d with body name '%s'", _penv->GetId()%iBody%bodyName);
-                envInfo._vBodyInfos.erase(envInfo._vBodyInfos.begin() + iBody);
+                std::swap(envInfo._vBodyInfos[iBody], envInfo._vBodyInfos[--validBodyCount]);
             }
+
+            // Shrink our set of bodies to cut off the duplicate bodies, which are all past the validBodyCount index.
+            envInfo._vBodyInfos.resize(validBodyCount);
         }
 
         // clean up any invalid connected bodies
