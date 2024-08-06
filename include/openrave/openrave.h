@@ -664,6 +664,7 @@ typedef boost::shared_ptr<StringReadable> StringReadablePtr;
 class OPENRAVE_API JSONReadable : public Readable
 {
 public:
+    JSONReadable(const std::string& id);
     JSONReadable(const std::string& id, const rapidjson::Value& rValue);
     virtual ~JSONReadable();
 

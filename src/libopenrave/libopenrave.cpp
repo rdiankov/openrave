@@ -2763,6 +2763,10 @@ bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitS
     return true;
 }
 
+JSONReadable::JSONReadable(const std::string& id) : JSONReadable(id, rapidjson::Value())
+{
+}
+
 JSONReadable::JSONReadable(const std::string& id, const rapidjson::Value& rValue) : Readable(id), _vAllocBuffer(4*1024, 0), _rAlloc(&_vAllocBuffer[0], _vAllocBuffer.size())
 {
     _rValue.CopyFrom(rValue, _rAlloc);
