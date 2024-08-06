@@ -58,6 +58,8 @@ public:
 extern "C" {
 #ifdef HAVE_NEW_FFMPEG
 #include <libavformat/avformat.h>
+#include <libavformat/version.h>
+#include <libavutil/imgutils.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #else
@@ -66,12 +68,33 @@ extern "C" {
 #endif
 }
 
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 37, 100)
+namespace {
+
+int openRaveEncodeVideo(AVCodecContext* avctx, AVPacket* avpkt, const AVFrame* frame, int* got_packet_ptr) {
+    int avResult = avcodec_send_frame(avctx, frame);
+    if (avResult < 0) {
+        return avResult;
+    }
+    avResult = avcodec_receive_packet(avctx, avpkt);
+    if (avResult < 0) {
+        return avResult;
+    }
+    *got_packet_ptr = 1;
+    return avResult;
+}
+
+}
+
+#endif
+
 class VideoGlobalState
 {
 public:
-    VideoGlobalState()
-    {
+    VideoGlobalState() {
+#if defined(LIBAVFORMAT_VERSION_MAJOR ) && LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
         av_register_all();
+#endif
     }
     virtual ~VideoGlobalState() {
     }
@@ -641,6 +664,7 @@ protected:
     AVStream *_stream;
     AVFrame *_picture;
     AVFrame *_yuv420p;
+    AVCodecContext* _codec_ctx;
     char *_picture_buf, *_outbuf;
     int _picture_size;
     int _outbuf_size;
@@ -653,7 +677,11 @@ protected:
         free(_yuv420p); _yuv420p = NULL;
         free(_outbuf); _outbuf = NULL;
         if( !!_stream ) {
-            avcodec_close(_stream->codec);
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+            avcodec_free_context(&_codec_ctx);
+#else
+            avcodec_close(_codec_ctx);
+#endif
             _stream = NULL;
         }
 
@@ -682,12 +710,22 @@ protected:
         if( !s_pVideoGlobalState ) {
             s_pVideoGlobalState.reset(new VideoGlobalState());
         }
-#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        void *muxerIterateData = nullptr;
+        using MaybeConstAVOutputFormatPtr = decltype(av_muxer_iterate(&muxerIterateData));
+        MaybeConstAVOutputFormatPtr fmt;
+#elif LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else
         AVOutputFormat *fmt = first_oformat;
 #endif
+
+
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        while ((fmt = av_muxer_iterate(&muxerIterateData))) {
+#else
         while (fmt != NULL) {
+#endif
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
             if( fmt->video_codec != AV_CODEC_ID_NONE && !!fmt->name ) {
 #else
@@ -702,7 +740,9 @@ protected:
                 }
                 sout << fmt->video_codec << " " << mime_type << " " << fmt->name << endl;
             }
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
             fmt = fmt->next;
+#endif
         }
         return true;
     }
@@ -711,8 +751,6 @@ protected:
     {
         OPENRAVE_ASSERT_OP_FORMAT0(bits,==,24,"START_AVI only supports 24bits",ORE_InvalidArguments);
         OPENRAVE_ASSERT_OP_FORMAT0(filename.size(),>,0,"filename needs to be valid",ORE_InvalidArguments);
-        AVCodecContext *codec_ctx;
-        AVCodec *codec;
 
         bool bFixH264 = false;
 #if defined(LIBAVCODEC_VERSION_INT) && LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(54,25,0) // introduced at http://git.libav.org/?p=libav.git;a=commit;h=104e10fb426f903ba9157fdbfe30292d0e4c3d72
@@ -723,7 +761,10 @@ protected:
 #else
         CodecID video_codec = codecid == -1 ? CODEC_ID_MPEG4 : (CodecID)codecid;
 #endif
-#if LIBAVFORMAT_VERSION_INT >= (52<<16)
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 100)
+        void *muxerIterateData = nullptr;
+        const AVOutputFormat *fmt;
+#elif LIBAVFORMAT_VERSION_INT >= (52<<16)
         AVOutputFormat *fmt = av_oformat_next(NULL); //first_oformat;
 #else
         AVOutputFormat *fmt = first_oformat;
@@ -731,26 +772,38 @@ protected:
 
         _output = NULL;
         if ( bFixH264 ) {
-            avformat_alloc_output_context2(&_output, NULL, "mp4", NULL);
+            avformat_alloc_output_context2(&_output, NULL, "mp4", filename.c_str());
             BOOST_ASSERT(!!_output);
         } else {
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 100)
+            while ((fmt = av_muxer_iterate(&muxerIterateData))) {
+#else
             while (fmt != NULL) {
+#endif
                 if (fmt->video_codec == video_codec) {
                     break;
                 }
+#if LIBAVFORMAT_VERSION_INT >= (52<<16) && LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58, 9, 100)
+                fmt = av_oformat_next(fmt);
+#elif LIBAVFORMAT_VERSION_INT < (52<<16)
                 fmt = fmt->next;
+#endif
             }
             BOOST_ASSERT(!!fmt);
-            _output = avformat_alloc_context();
             BOOST_ASSERT(!!_output);
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 100)
+            // While the below does exist before 59.0.100, 59.0.100 makes const AVOutputFormat* work.
+            avformat_alloc_output_context2(&_output, fmt, "mp4", filename.c_str());
+#else
+            _output = avformat_alloc_context();
             _output->oformat = fmt;
+#endif
         }
 
         _frameindex = 0;
-        
-        snprintf(_output->filename, sizeof(_output->filename), "%s", filename.c_str());
 
-        codec = avcodec_find_encoder(video_codec);
+        using MaybeConstAVCodePtr = decltype(avcodec_find_encoder(video_codec));
+        MaybeConstAVCodePtr codec = avcodec_find_encoder(video_codec);
         BOOST_ASSERT(!!codec);
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)     
@@ -760,30 +813,35 @@ protected:
 #endif
         BOOST_ASSERT(!!_stream);
 
-        codec_ctx = _stream->codec;
-        codec_ctx->codec_id = video_codec;
-#ifdef HAS_AVMEDIA_TYPE_VIDEO
-        codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 9, 100)
+        _codec_ctx = avcodec_alloc_context3(codec);
+        avcodec_parameters_to_context(_codec_ctx, _stream->codecpar);
 #else
-        codec_ctx->codec_type = CODEC_TYPE_VIDEO;
+        _codec_ctx = _stream->codec;
 #endif
-        codec_ctx->bit_rate = 4000000;
-        codec_ctx->width = width;
-        codec_ctx->height = height;
+        _codec_ctx->codec_id = video_codec;
+#ifdef HAS_AVMEDIA_TYPE_VIDEO
+        _codec_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
+#else
+        _codec_ctx->codec_type = CODEC_TYPE_VIDEO;
+#endif
+        _codec_ctx->bit_rate = 4000000;
+        _codec_ctx->width = width;
+        _codec_ctx->height = height;
         if( RaveFabs(frameRate-29.97)<0.01 ) {
-            codec_ctx->time_base.num = 1001;
-            codec_ctx->time_base.den = 30000;
+            _codec_ctx->time_base.num = 1001;
+            _codec_ctx->time_base.den = 30000;
         }
         else {
-            codec_ctx->time_base.num = 1;
-            codec_ctx->time_base.den = (int)frameRate;
+            _codec_ctx->time_base.num = 1;
+            _codec_ctx->time_base.den = (int)frameRate;
         }
-        codec_ctx->gop_size = 10;
-        codec_ctx->max_b_frames = 1;
+        _codec_ctx->gop_size = 10;
+        _codec_ctx->max_b_frames = 1;
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+        _codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 #else
-        codec_ctx->pix_fmt = PIX_FMT_YUV420P;
+        _codec_ctx->pix_fmt = PIX_FMT_YUV420P;
 #endif
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
@@ -794,11 +852,11 @@ protected:
         }
 #endif
 
-        RAVELOG_DEBUG(str(boost::format("opening %s, w:%d h:%dx fps:%f, codec: %s")%_output->filename%width%height%frameRate%codec->name));
+        RAVELOG_DEBUG(str(boost::format("opening %s, w:%d h:%dx fps:%f, codec: %s")%filename%width%height%frameRate%codec->name));
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
         AVDictionary * RetunedAVDic=NULL;
-        if (avcodec_open2(codec_ctx, codec,&RetunedAVDic) < 0) {
+        if (avcodec_open2(_codec_ctx, codec, &RetunedAVDic) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("Unable to open codec",ORE_Assert);
         }
 
@@ -809,7 +867,7 @@ protected:
         _bWroteURL = true;
         avformat_write_header(_output,NULL);
 #else
-        if (avcodec_open(codec_ctx, codec) < 0) {
+        if (avcodec_open(_codec_ctx, codec) < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("Unable to open codec",ORE_Assert);
         }
 
@@ -835,18 +893,28 @@ protected:
         _outbuf = (char*)malloc(_outbuf_size);
         BOOST_ASSERT(!!_outbuf);
 
+        AVPixelFormat yuv420pFmt;
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        _picture_size = avpicture_get_size(AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+        yuv420pFmt = AV_PIX_FMT_YUV420P;
 #else
-        _picture_size = avpicture_get_size(PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+        yuv420pFmt = PIX_FMT_YUV420P;
+#endif
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 63, 100)
+        _picture_size = av_image_get_buffer_size(yuv420pFmt, _codec_ctx->width, _codec_ctx->height, 0);
+#else
+        _picture_size = avpicture_get_size(yuv420pFmt, _codec_ctx->width, _codec_ctx->height);
 #endif
         _picture_buf = (char*)malloc(_picture_size);
         BOOST_ASSERT(!!_picture_buf);
 
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, AV_PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+// Using this version so that we can also pass 0 for automatic alignment selection.
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(55, 77, 101)
+        _yuv420p->format = yuv420pFmt;
+        _yuv420p->width = _codec_ctx->width;
+        _yuv420p->height = _codec_ctx->height;
+        av_frame_get_buffer(_yuv420p, 0);
 #else
-        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, PIX_FMT_YUV420P, codec_ctx->width, codec_ctx->height);
+        avpicture_fill((AVPicture*)_yuv420p, (uint8_t*)_picture_buf, yuv420pFmt, _codec_ctx->width, _codec_ctx->height);
 #endif
     }
 
@@ -860,70 +928,81 @@ protected:
 
         // flip vertically
         static vector<char> newdata;
-        newdata.resize(_stream->codec->height*_stream->codec->width*3);
-        char* penddata = (char*)pdata + _stream->codec->height*_stream->codec->width*3;
+        newdata.resize(_codec_ctx->height*_codec_ctx->width*3);
+        char* penddata = (char*)pdata + _codec_ctx->height*_codec_ctx->width*3;
 
-        for(int i = 0; i < _stream->codec->height; ++i) {
-            memcpy(&newdata[i*_stream->codec->width*3], (char*)penddata - (i+1)*_stream->codec->width*3, _stream->codec->width*3);
+        for(int i = 0; i < _codec_ctx->height; ++i) {
+            memcpy(&newdata[i*_codec_ctx->width*3], (char*)penddata - (i+1)*_codec_ctx->width*3, _codec_ctx->width*3);
         }
 
         _picture->data[0] = (uint8_t*)&newdata[0];
-        _picture->linesize[0] = _stream->codec->width * 3;
+        _picture->linesize[0] = _codec_ctx->width * 3;
 
 #ifdef HAVE_NEW_FFMPEG
         struct SwsContext *img_convert_ctx;
 #if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, AV_PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+        img_convert_ctx = sws_getContext(_codec_ctx->width, _codec_ctx->height, AV_PIX_FMT_BGR24, _codec_ctx->width, _codec_ctx->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
 #else
-        img_convert_ctx = sws_getContext(_stream->codec->width, _stream->codec->height, PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
+        img_convert_ctx = sws_getContext(_codec_ctx->width, _codec_ctx->height, PIX_FMT_BGR24, _codec_ctx->width, _codec_ctx->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC /* flags */, NULL, NULL, NULL);
 #endif
-        if (!sws_scale(img_convert_ctx, _picture->data, _picture->linesize, 0, _stream->codec->height, _yuv420p->data, _yuv420p->linesize)) {
+        if (!sws_scale(img_convert_ctx, _picture->data, _picture->linesize, 0, _codec_ctx->height, _yuv420p->data, _yuv420p->linesize)) {
             sws_freeContext(img_convert_ctx);
             throw OPENRAVE_EXCEPTION_FORMAT0("ADD_FRAME sws_scale failed",ORE_Assert);
         }
 
         sws_freeContext(img_convert_ctx);
 #else
-        if( img_convert((AVPicture*)_yuv420p, PIX_FMT_YUV420P, (AVPicture*)_picture, PIX_FMT_BGR24, _stream->codec->width, _stream->codec->height) ) {
+        if( img_convert((AVPicture*)_yuv420p, PIX_FMT_YUV420P, (AVPicture*)_picture, PIX_FMT_BGR24, _codec_ctx->width, _codec_ctx->height) ) {
             throw OPENRAVE_EXCEPTION_FORMAT0("ADD_FRAME img_convert failed",ORE_Assert);
         }
 #endif
 
 
 #if LIBAVFORMAT_VERSION_INT >= (54<<16)
+        typedef void (*PacketFreer) (AVPacket*);
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 12, 100)
+        PacketFreer freePacket = av_packet_unref;
+#elif LIBAVFORMAT_VERSION_INT >= (55<<16)
+        PacketFreer freePacket = av_free_packet;
+#else
+        PacketFreer freePacket = av_destruct_packet;
+#endif
         int got_packet = 0;
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 133, 100)
+        AVPacket* allocatedPacket = av_packet_alloc();
+        if (allocatedPacket == nullptr) {
+            throw OPENRAVE_EXCEPTION_FORMAT0("failed to allocate an AVPacket", ORE_Assert);
+        }
+        AVPacket& pkt = *allocatedPacket;
+#else
         AVPacket pkt;
         av_init_packet(&pkt);
-        int ret = avcodec_encode_video2(_stream->codec, &pkt, _yuv420p, &got_packet);
-        if( ret < 0 ) {
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-            av_free_packet(&pkt);
-#else
-            av_destruct_packet(&pkt);
 #endif
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(57, 37, 100)
+        int ret = openRaveEncodeVideo(_codec_ctx, &pkt, _yuv420p, &got_packet);
+#else
+        int ret = avcodec_encode_video2(_codec_ctx, &pkt, _yuv420p, &got_packet);
+#endif
+        if( ret < 0 ) {
+            freePacket(&pkt);
             throw OPENRAVE_EXCEPTION_FORMAT("avcodec_encode_video2 failed with %d",ret,ORE_Assert);
         }
         if( got_packet ) {
-            if( _stream->codec->coded_frame) {
-                _stream->codec->coded_frame->pts       = pkt.pts;
-                _stream->codec->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
+#if LIBAVCODEC_VERSION_MAJOR < 59
+            if( _codec_ctx->coded_frame) {
+                _codec_ctx->coded_frame->pts       = pkt.pts;
+                _codec_ctx->coded_frame->key_frame = !!(pkt.flags & AV_PKT_FLAG_KEY);
             }
-            if( av_write_frame(_output, &pkt) < 0) {
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-                av_free_packet(&pkt);
-#else
-                av_destruct_packet(&pkt);
 #endif
+            if( av_write_frame(_output, &pkt) < 0) {
+                freePacket(&pkt);
                 throw OPENRAVE_EXCEPTION_FORMAT0("av_write_frame failed",ORE_Assert);
             }
         }
-#if LIBAVFORMAT_VERSION_INT >= (55<<16)
-        av_free_packet(&pkt);
-#else
-        av_destruct_packet(&pkt);
-#endif
-#else
-        int size = avcodec_encode_video(_stream->codec, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
+
+        freePacket(&pkt);
+#else // LIBAVFORMAT_VERSION_INT < (54<<16)
+        int size = avcodec_encode_video(_codec_ctx, (uint8_t*)_outbuf, _outbuf_size, _yuv420p);
         if (size < 0) {
             throw OPENRAVE_EXCEPTION_FORMAT0("error encoding frame",ORE_Assert);
         }
