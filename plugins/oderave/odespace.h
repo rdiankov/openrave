@@ -642,6 +642,10 @@ private:
         case OpenRAVE::GT_Cylinder:
             odegeom = dCreateCylinder(0,info._vGeomData.x,info._vGeomData.y);
             break;
+        case OpenRAVE::GT_Capsule:
+            odegeom = dCreateCapsule(0,info._vGeomData.x,info._vGeomData.y);
+            break;
+        case OpenRAVE::GT_Prism:
         case OpenRAVE::GT_ConicalFrustum:
         case OpenRAVE::GT_Axial:
         case OpenRAVE::GT_Container:
