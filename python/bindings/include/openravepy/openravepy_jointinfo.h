@@ -76,6 +76,9 @@ public:
     object GetConicalFrustumTopRadius() const;
     object GetConicalFrustumBottomRadius() const;
     object GetConicalFrustumHeight() const;
+    object GetPrismHeight() const;
+    object GetCapsuleRadius() const;
+    object GetCapsuleHeight() const;
     object GetCollisionMesh();
 
     std::string __repr__();
@@ -299,6 +302,9 @@ public:
     dReal GetConicalFrustumTopRadius() const;
     dReal GetConicalFrustumBottomRadius() const;
     dReal GetConicalFrustumHeight() const;
+    dReal GetPrismHeight() const;
+    dReal GetCapsuleRadius() const;
+    dReal GetCapsuleHeight() const;
     object GetBoxExtents() const;
     object GetContainerOuterExtents() const;
     object GetContainerInnerExtents() const;
