@@ -129,6 +129,7 @@ public:
             std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
             bool bFromKinBodyLink; ///< if true, then from kinbodylink. Otherwise from standalone object that does not have any KinBody associations
+            bool bFromExtraGeometries = false; ///< if true, geometries come from extraGeometries. otherwise, KinBody::Link::GetGeometries.
         };
 
         FCLKinBodyInfo() {}

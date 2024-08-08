@@ -120,6 +120,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 else {
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
+                linkinfo->bFromExtraGeometries = true;
             }
         }
         else if ( _geometrygroup.empty() || _geometrygroup == "self" ) {
@@ -153,6 +154,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
             }
+            linkinfo->bFromExtraGeometries = false;
         }
         else {
             // if not the default geometries checking, strictly check the geometry group name, so that the checking is done only among the geometries with the given group name.
