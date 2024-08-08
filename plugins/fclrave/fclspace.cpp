@@ -120,6 +120,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 else {
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
+                linkinfo->bFromExtraGeometries = true;
             }
         }
         else {
@@ -152,6 +153,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
             }
+            linkinfo->bFromExtraGeometries = false;
         }
 
         if( linkinfo->vgeoms.size() == 0 ) {
