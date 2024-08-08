@@ -344,7 +344,7 @@ public:
 
         // have to remove any duplicate names, prioritize ones that have higher index
         {
-            boost::unordered_set<boost::string_view> existingBodyNames;
+            std::unordered_set<OpenRAVE::string_view> existingBodyNames;
             ssize_t validBodyCount = envInfo._vBodyInfos.size();
             for (ssize_t iBody = envInfo._vBodyInfos.size() - 1; iBody >= 0; iBody--) {
                 const std::string& bodyName = envInfo._vBodyInfos[iBody]->_name;

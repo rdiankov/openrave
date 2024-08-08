@@ -59,6 +59,13 @@
 #include <string_view>
 #else
 #include <boost/utility/string_view.hpp>
+namespace std{
+    // make boost::string_view handlable by std::unordered_set/map
+    template<typename CharT,typename Traits>
+    class hash<boost::basic_string_view<CharT,Traits>>: public boost::hash<boost::basic_string_view<CharT,Traits>>
+    {
+    };
+};
 #endif
 
 #include <iomanip>
