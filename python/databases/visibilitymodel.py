@@ -72,6 +72,11 @@ __license__ = 'Apache License, Version 2.0'
 import time
 import os.path
 
+import numpy
+for iall in range(len(numpy.__all__)-1, -1, -1):
+    if numpy.__all__[iall] in {'max', 'min', 'round'}:
+        numpy.__all__.pop(iall)
+
 if not __openravepy_build_doc__:
     from ..openravepy_int import *
     from ..openravepy_ext import *

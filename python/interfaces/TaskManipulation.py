@@ -16,6 +16,11 @@ __license__ = 'Apache License, Version 2.0'
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization, IkParameterization, poseSerialization
 from .. import PlanningError
 
+import numpy
+for iall in range(len(numpy.__all__)-1, -1, -1):
+    if numpy.__all__[iall] in {'max', 'min', 'round'}:
+        numpy.__all__.pop(iall)
+
 from numpy import *
 from copy import copy as shallowcopy
 try:

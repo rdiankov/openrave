@@ -60,12 +60,16 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
+import numpy
+for iall in range(len(numpy.__all__)-1, -1, -1):
+    if numpy.__all__[iall] in {'max', 'min', 'round'}:
+        numpy.__all__.pop(iall)
+
 if not __openravepy_build_doc__:
     from numpy import *
 else:
     from numpy import array
 
-import numpy
 from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator

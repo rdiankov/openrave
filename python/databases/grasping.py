@@ -161,12 +161,16 @@ try:
 except:
     import pickle
 
+import numpy
+for iall in range(len(numpy.__all__)-1, -1, -1):
+    if numpy.__all__[iall] in {'max', 'min', 'round'}:
+        numpy.__all__.pop(iall)
+
 if not __openravepy_build_doc__:
     from numpy import *
 else:
     from numpy import inf, array
 
-import numpy
 from .. import PlanningError
 from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, IkParameterization, IkParameterizationType, IkFilterOptions, RaveFindDatabaseFile, RaveDestroy, Environment, Robot, KinBody, DOFAffine, CollisionReport, RaveCreateCollisionChecker, quatRotateDirection, rotationMatrixFromQuat, Ray, poseFromMatrix
