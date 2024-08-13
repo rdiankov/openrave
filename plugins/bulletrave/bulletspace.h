@@ -178,6 +178,10 @@ private:
                     // cylinder axis aligned to Y
                     child.reset(new btCylinderShapeZ(btVector3(geom->GetCylinderRadius(),geom->GetCylinderRadius(),geom->GetCylinderHeight()*0.5f)));
                     break;
+                case GT_Capsule:
+                    child.reset(new btCapsuleShapeZ(geom->GetCapsuleRadius(), geom->GetCapsuleHeight());
+                    break;
+                case GT_Prism:
                 case GT_ConicalFrustum:
                 case GT_Axial:
                 case GT_TriMesh: {

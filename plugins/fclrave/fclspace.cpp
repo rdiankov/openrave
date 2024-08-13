@@ -466,6 +466,14 @@ void _AppendFclBoxCollsionObject(const OpenRAVE::Vector& fullExtents, const Open
     contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fclTrans));
 }
 
+/// \brief helper function to initialize fcl::Container
+void _AppendFclHalfspaceCollsionObject(const OpenRAVE::Transform& trans, std::vector<std::shared_ptr<fcl::CollisionObject> >& contents)
+{
+    std::shared_ptr<fcl::CollisionGeometry> fclGeom = std::make_shared<fcl::Halfspace>(fcl::Vec3f(0, 0, 1), 0);
+    const fcl::Transform3f fclTrans(ConvertQuaternionToFCL(trans.rot), ConvertVectorToFCL(trans.trans));
+    contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fclTrans));
+}
+
 CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::GeometryInfo &info)
 {
     switch(info._type) {
@@ -482,6 +490,9 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
 
     case OpenRAVE::GT_Cylinder:
         return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
+
+    case OpenRAVE::GT_Capsule:
+        return std::make_shared<fcl::Capsule>(info._vGeomData.x, info._vGeomData.y);
 
     case OpenRAVE::GT_Container:
     {
@@ -537,6 +548,25 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
         }
         // finally add the base
         _AppendFclBoxCollsionObject(2.0*vCageBaseExtents, Vector(0, 0, vCageBaseExtents.z), contents);
+        return std::make_shared<fcl::Container>(contents);
+    }
+    case OpenRAVE::GT_Prism:
+    {
+        std::vector<std::shared_ptr<fcl::CollisionObject> > contents;
+        const OpenRAVE::TriMesh& mesh = info._meshcollision;
+        const size_t nPoints = mesh.vertices.size();
+        for( size_t ipoint = 0; ipoint < nPoints; ipoint += 2 ) {
+            const OpenRAVE::Vector p0(mesh.vertices[ipoint].x, mesh.vertices[ipoint].y, 0);
+            const OpenRAVE::Vector p1(mesh.vertices[(ipoint + 2) % nPoints].x, mesh.vertices[(ipoint + 2) % nPoints].y, 0);
+            if( (p1 - p0).lengthsqr2() < g_fEpsilon ) {
+                continue; // ipoint
+            }
+            OpenRAVE::Transform trans(OpenRAVE::geometry::quatRotateDirection(OpenRAVE::Vector(1, 0, 0), (p1 - p0).normalize()), (p0 + p1) * 0.5); // Y pointing to the left side of the directed segment (p0, p1)
+            trans *= OpenRAVE::Transform(OpenRAVE::geometry::quatFromAxisAngle(OpenRAVE::Vector(1, 0, 0), -M_PI * 0.5), OpenRAVE::Vector()); // Z pointing to the left side of the directed segment (p0, p1)
+            _AppendFclHalfspaceCollsionObject(trans, contents);
+        }
+        _AppendFclHalfspaceCollsionObject(OpenRAVE::Transform(OpenRAVE::Vector(1, 0, 0, 0), OpenRAVE::Vector(0, 0, -info._vGeomData.y * 0.5)), contents);
+        _AppendFclHalfspaceCollsionObject(OpenRAVE::Transform(OpenRAVE::Vector(0, 1, 0, 0), OpenRAVE::Vector(0, 0, info._vGeomData.y * 0.5)), contents);
         return std::make_shared<fcl::Container>(contents);
     }
     case OpenRAVE::GT_ConicalFrustum:
