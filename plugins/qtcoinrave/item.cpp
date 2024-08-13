@@ -260,6 +260,8 @@ void KinBodyItem::Load()
                     psep->addChild(cy);
                     break;
                 }
+                case GT_Prism:
+                case GT_Capsule:
                 case GT_ConicalFrustum:
                 case GT_Axial:
                 case GT_Cage:

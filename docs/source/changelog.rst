@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.149.0
+===============
+
+- Add new geometry types "Prism" and "Capsule"
+
 Version 0.148.1
 ===============
 

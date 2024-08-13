@@ -2718,7 +2718,18 @@ void IkParameterization::ConvertUnitScale(dReal fUnitScale)
     // TODO have to scale _mapCustomData by fUnitScale
 }
 
-StringReadable::StringReadable(const std::string& id, const std::string& data) : Readable(id), _data(data)
+StringReadable::StringReadable(const std::string& id, const std::string& data)
+    : Readable(id), _data(data)
+{
+}
+
+StringReadable::StringReadable(const std::string& id, std::string&& data)
+    : Readable(id), _data(std::move(data))
+{
+}
+
+StringReadable::StringReadable(const std::string& id, const char* data, size_t dataLength)
+    : Readable(id), _data(data, dataLength)
 {
 }
 
@@ -2729,6 +2740,16 @@ StringReadable::~StringReadable()
 void StringReadable::SetData(const std::string& newdata)
 {
     _data = newdata;
+}
+
+void StringReadable::SetData(std::string&& newdata)
+{
+    _data = std::move(newdata);
+}
+
+void StringReadable::SetData(const char* data, size_t dataLength)
+{
+    _data.assign(data, dataLength);
 }
 
 const std::string& StringReadable::GetData() const
@@ -2753,13 +2774,13 @@ bool StringReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
 
 bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
-    value.SetString(_data.c_str(), allocator);
+    value.SetString(_data.c_str(), _data.size(), allocator);
     return true;
 }
 
 bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
-    _data = value.GetString();
+    _data.assign(value.GetString(), value.GetStringLength());
     return true;
 }
 

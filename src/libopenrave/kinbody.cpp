@@ -425,7 +425,8 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         return;
     }
     if (rReadable.IsString()) {
-        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString()));
+        // When parsing c-strings as readables need to make sure we use the pointer + length constructor to handle strings with null bytes
+        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString(), rReadable.GetStringLength()));
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }

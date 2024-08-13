@@ -542,6 +542,21 @@ object PyGeometryInfo::GetConicalFrustumHeight() const {
     return _vGeomData[py::to_object(2)];
 }
 
+object PyGeometryInfo::GetPrismHeight() const
+{
+    return _vGeomData[py::to_object(1)];
+}
+
+object PyGeometryInfo::GetCapsuleRadius() const
+{
+    return _vGeomData[py::to_object(0)];
+}
+
+object PyGeometryInfo::GetCapsuleHeight() const
+{
+    return _vGeomData[py::to_object(1)];
+}
+
 object PyGeometryInfo::GetCollisionMesh()
 {
     KinBody::GeometryInfoPtr pgeominfo = GetGeometryInfo();
@@ -1503,6 +1518,15 @@ dReal PyGeometry::GetConicalFrustumBottomRadius() const {
 }
 dReal PyGeometry::GetConicalFrustumHeight() const {
     return _pgeometry->GetConicalFrustumHeight();
+}
+dReal PyGeometry::GetPrismHeight() const {
+    return _pgeometry->GetPrismHeight();
+}
+dReal PyGeometry::GetCapsuleRadius() const {
+    return _pgeometry->GetCapsuleRadius();
+}
+dReal PyGeometry::GetCapsuleHeight() const {
+    return _pgeometry->GetCapsuleHeight();
 }
 object PyGeometry::GetBoxExtents() const {
     return toPyVector3(_pgeometry->GetBoxExtents());
@@ -4965,6 +4989,8 @@ void init_openravepy_kinbody()
                           .value("CalibrationBoard",GT_CalibrationBoard)
                           .value("Axial",GT_Axial)
                           .value("ConicalFrustum",GT_ConicalFrustum)
+                          .value("Prism",GT_Prism)
+                          .value("Capsule",GT_Capsule)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -5137,6 +5163,9 @@ void init_openravepy_kinbody()
                           .def("GetConicalFrustumTopRadius",&PyGeometryInfo::GetConicalFrustumTopRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumTopRadius))
                           .def("GetConicalFrustumBottomRadius",&PyGeometryInfo::GetConicalFrustumBottomRadius, DOXY_FN(GeomeryInfo,GetConicalFrustumBottomRadius))
                           .def("GetConicalFrustumHeight",&PyGeometryInfo::GetConicalFrustumHeight, DOXY_FN(GeomeryInfo,GetConicalFrustumHeight))
+                          .def("GetPrismHeight",&PyGeometryInfo::GetPrismHeight, DOXY_FN(GeomeryInfo,GetPrismHeight))
+                          .def("GetCapsuleRadius",&PyGeometryInfo::GetCapsuleRadius, DOXY_FN(GeomeryInfo,GetCapsuleRadius))
+                          .def("GetCapsuleHeight",&PyGeometryInfo::GetCapsuleHeight, DOXY_FN(GeomeryInfo,GetCapsuleHeight))
                           .def("GetCollisionMesh",&PyGeometryInfo::GetCollisionMesh, DOXY_FN(GeomeryInfo,GetCollisionMesh))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                           .def("SerializeJSON", &PyGeometryInfo::SerializeJSON,
@@ -6293,6 +6322,9 @@ void init_openravepy_kinbody()
                                   .def("GetConicalFrustumTopRadius",&PyGeometry::GetConicalFrustumTopRadius, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumTopRadius))
                                   .def("GetConicalFrustumBottomRadius",&PyGeometry::GetConicalFrustumBottomRadius, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumBottomRadius))
                                   .def("GetConicalFrustumHeight",&PyGeometry::GetConicalFrustumHeight, DOXY_FN(KinBody::Link::Geometry,GetConicalFrustumHeight))
+                                  .def("GetPrismHeight",&PyGeometry::GetPrismHeight, DOXY_FN(KinBody::Link::Geometry,GetPrismHeight))
+                                  .def("GetCapsuleRadius",&PyGeometry::GetCapsuleRadius, DOXY_FN(KinBody::Link::Geometry,GetCapsuleRadius))
+                                  .def("GetCapsuleHeight",&PyGeometry::GetCapsuleHeight, DOXY_FN(KinBody::Link::Geometry,GetCapsuleHeight))
                                   .def("GetBoxExtents",&PyGeometry::GetBoxExtents, DOXY_FN(KinBody::Link::Geometry,GetBoxExtents))
                                   .def("GetContainerOuterExtents",&PyGeometry::GetContainerOuterExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerOuterExtents))
                                   .def("GetContainerInnerExtents",&PyGeometry::GetContainerInnerExtents, DOXY_FN(KinBody::Link::Geometry,GetContainerInnerExtents))
