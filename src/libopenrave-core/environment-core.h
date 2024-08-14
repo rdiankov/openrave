@@ -1544,7 +1544,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
-        // TODO : collision option?
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1563,6 +1563,7 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         CHECK_COLLISION_BODY(pbody2);
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1580,6 +1581,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1598,6 +1600,7 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink1->GetParent());
         CHECK_COLLISION_BODY(plink2->GetParent());
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1616,6 +1619,7 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
         CHECK_COLLISION_BODY(pbody);
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1633,6 +1637,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1650,6 +1655,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1667,6 +1673,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1683,6 +1690,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1697,6 +1705,7 @@ public:
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report) override
     {
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1714,6 +1723,7 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
@@ -1732,6 +1742,7 @@ public:
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
         // TODO : need to implement check self collision like this?
+        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckStandaloneSelfCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
