@@ -431,10 +431,10 @@ public:
 
         PyObject *pPyVertices = vertices.ptr();
         if (PyArray_Check(pPyVertices)) {
-            if (PyArray_NDIM(pPyVertices) != 2) {
+            if (PyArray_NDIM((PyArrayObject*)pPyVertices) != 2) {
                 throw openrave_exception(_("vertices must be a 2D array"), ORE_InvalidArguments);
             }
-            if (!PyArray_ISFLOAT(pPyVertices)) {
+            if (!PyArray_ISFLOAT((PyArrayObject*)pPyVertices)) {
                 throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
             }
             PyArrayObject* pPyVerticesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices));
@@ -477,7 +477,7 @@ public:
         mesh.indices.resize(3*numtris);
         PyObject *pPyIndices = indices.ptr();
         if (PyArray_Check(pPyIndices)) {
-            if (PyArray_NDIM(pPyIndices) != 2 || PyArray_DIM(pPyIndices, 1) != 3 || !PyArray_ISINTEGER(pPyIndices)) {
+            if (PyArray_NDIM((PyArrayObject*)pPyIndices) != 2 || PyArray_DIM((PyArrayObject*)pPyIndices, 1) != 3 || !PyArray_ISINTEGER((PyArrayObject*)pPyIndices)) {
                 throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
             }
             PyArrayObject* pPyIndiciesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices));
