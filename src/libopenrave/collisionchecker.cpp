@@ -334,7 +334,7 @@ int CollisionPairInfo::FindFirstMatchingLinkIndex(const std::vector<KinBody::Lin
 
 int CollisionPairInfo::FindSecondMatchingLinkIndex(const std::vector<KinBody::LinkPtr>& vlinks) const
 {
-    return _FindMatchingLinkIndex(bodyLinkGeom1Name, vlinks);
+    return _FindMatchingLinkIndex(bodyLinkGeom2Name, vlinks);
 }
 
 inline int _CompareLinkName(const std::string& bodyLinkGeomName, const std::string& linkname)
