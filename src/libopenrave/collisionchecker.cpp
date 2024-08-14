@@ -290,7 +290,7 @@ inline int _FindMatchingLinkIndex(const std::string& bodyLinkGeomName, const std
         return -1;
     }
 
-    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
+    const size_t firstindex = bodyLinkGeomName.find_first_of(' ');
     if( firstindex == std::string::npos ) {
         return -1;
     }
@@ -305,19 +305,20 @@ inline int _FindMatchingLinkIndex(const std::string& bodyLinkGeomName, const std
     }
 
     // body matches, now check the links
-    size_t secondindex = bodyLinkGeomName.find_first_of(' ', firstindex+1);
+    const size_t linkNameStartIndex = firstindex+1;
+    const size_t secondindex = bodyLinkGeomName.find_first_of(' ', linkNameStartIndex);
     size_t nLinkNameLength;
     if( secondindex != std::string::npos ) {
-        nLinkNameLength = secondindex - firstindex;
+        nLinkNameLength = secondindex - linkNameStartIndex;
     }
     else {
-        nLinkNameLength = bodyLinkGeomName.size() - firstindex;
+        nLinkNameLength = bodyLinkGeomName.size() - linkNameStartIndex;
     }
 
     for(int ilink = 0; ilink < (int)vlinks.size(); ++ilink) {
         const KinBody::LinkPtr& plink = vlinks[ilink];
         if( plink->GetName().size() == nLinkNameLength ) {
-            if( strncmp(plink->GetName().c_str(), bodyLinkGeomName.c_str()+firstindex+1, nLinkNameLength) == 0 ) {
+            if( strncmp(plink->GetName().c_str(), bodyLinkGeomName.c_str()+linkNameStartIndex, nLinkNameLength) == 0 ) {
                 return ilink;
             }
         }
