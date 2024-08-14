@@ -442,7 +442,19 @@ void KinBodyItem::Load()
                     pgeometrydata->addChild(geode.get());
                     break;
                 }
+                case GT_Capsule: {
+                    // make SoCylinder point towards z, not y
+                    osg::Capsule* cy = new osg::Capsule();
+                    cy->setRadius(orgeom->GetCapsuleRadius());
+                    cy->setHeight(orgeom->GetCapsuleHeight());
+                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(cy);
+                    geode->addDrawable(sd.get());
+                    pgeometrydata->addChild(geode.get());
+                    break;
+                }
                 //  Extract geometry from collision Mesh
+                case GT_Prism:
                 case GT_ConicalFrustum:
                 case GT_Axial:
                 case GT_Cage:

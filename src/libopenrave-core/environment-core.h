@@ -3663,11 +3663,25 @@ protected:
         }
         KinBody& body = *pbodyref;
         const std::string& name = body.GetName();
-        // before deleting, make sure no other bodies are grabbing it!!
-        for (KinBodyPtr& potherbody : _vecbodies) {
-            if( !!potherbody && potherbody->IsGrabbing(body) ) {
-                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%potherbody->GetName());
-                potherbody->Release(body);
+
+        // Before deleting a body, ensure that no other bodies are still grabbing it.
+        // Since all grabbing bodies should be in the attached set for this body, we can localize the search to these bodies.
+        // Otherwise we have to scan the entire environment, which is slow for scenes with many bodies in them
+        {
+            // Get the list of bodies that are grabbing this body for cleanup in a second pass.
+            // We can't ungrab here because it would modify our listAttachedBodies while we are iterating it.
+            std::vector<KinBodyPtr> grabbingBodies;
+            for (KinBodyWeakPtr& pWeakOtherBody : body._listAttachedBodies) {
+                KinBodyPtr pOtherBody = pWeakOtherBody.lock();
+                if (!!pOtherBody && pOtherBody->IsGrabbing(body)) {
+                    grabbingBodies.emplace_back(std::move(pOtherBody));
+                }
+            }
+
+            // Once we've found all of the grabbing bodies, ungrab ourselves with all of them
+            for (KinBodyPtr& pOtherBody : grabbingBodies) {
+                RAVELOG_WARN_FORMAT("env=%s, remove %s already grabbed by body %s!", GetNameId()%body.GetName()%pOtherBody->GetName());
+                pOtherBody->Release(body);
             }
         }
 

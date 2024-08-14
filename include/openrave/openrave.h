@@ -59,6 +59,13 @@
 #include <string_view>
 #else
 #include <boost/utility/string_view.hpp>
+namespace std{
+    // make boost::string_view handlable by std::unordered_set/map
+    template<typename CharT,typename Traits>
+    class hash<boost::basic_string_view<CharT,Traits>>: public boost::hash<boost::basic_string_view<CharT,Traits>>
+    {
+    };
+};
 #endif
 
 #include <iomanip>
@@ -630,10 +637,14 @@ class OPENRAVE_API StringReadable : public Readable
 {
 public:
     StringReadable(const std::string& id, const std::string& data);
+    StringReadable(const std::string& id, std::string&& data);
+    StringReadable(const std::string& id, const char* data, size_t dataLength);
     virtual ~StringReadable();
 
     /// \brief sets new string data
     void SetData(const std::string& newdata);
+    void SetData(std::string&& newdata);
+    void SetData(const char* data, size_t dataLength);
 
     /// \brief gets a reference to the saved data;
     const std::string& GetData() const;

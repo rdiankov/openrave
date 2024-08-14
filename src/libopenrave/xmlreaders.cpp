@@ -221,6 +221,12 @@ GeometryInfoReader::GeometryInfoReader(KinBody::GeometryInfoPtr pgeom, const Att
     else if( _stricmp(type.c_str(), "cage") == 0 ) {
         _pgeom->_type = GT_Cage;
     }
+    else if( _stricmp(type.c_str(), "prism") == 0 ) {
+        _pgeom->_type = GT_Prism;
+    }
+    else if( _stricmp(type.c_str(), "capsule") == 0 ) {
+        _pgeom->_type = GT_Capsule;
+    }
     else {
         RAVELOG_WARN(str(boost::format("type %s not supported\n")%type));
     }
@@ -283,6 +289,11 @@ BaseXMLReader::ProcessElement GeometryInfoReader::startElement(const std::string
         break;
     case GT_Cage:
         if( xmlname == "sidewall" || xmlname == "transf" || xmlname == "vExtents" || xmlname == "type" ) {
+            return PE_Support;
+        }
+        break;
+    case GT_Prism:
+        if( xmlname == "crosssection" ) {
             return PE_Support;
         }
         break;
@@ -421,6 +432,48 @@ bool GeometryInfoReader::endElement(const std::string& xmlname)
 
             break;
         case GT_Cylinder:
+            if( xmlname == "radius") {
+                _ss >> _pgeom->_vGeomData.x;
+            }
+            else if( xmlname == "height" ) {
+                _ss >> _pgeom->_vGeomData.y;
+            }
+            break;
+        case GT_Prism:
+            if( xmlname == "crosssection" ) {
+                _pgeom->_meshcollision.vertices.clear();
+                _pgeom->_meshcollision.indices.clear();
+                vector<dReal> values((istream_iterator<dReal>(_ss)), istream_iterator<dReal>());
+                if( values.size() >= 2 && values.size() % 2 == 0 ) {
+                    const size_t nPoints = values.size();
+                    _pgeom->_meshcollision.vertices.reserve(nPoints);
+                    _pgeom->_meshcollision.indices.reserve(nPoints * 3);
+                    OpenRAVE::Vector vertex;
+                    for( size_t ipoint = 0; ipoint < nPoints; ipoint += 2 ) {
+                        vertex.x = values[ipoint];
+                        vertex.y = values[ipoint + 1];
+                        for( dReal z : { -_pgeom->_vGeomData.y * 0.5, _pgeom->_vGeomData.y * 0.5 } ) { // in meter
+                            vertex.z = z;
+                            _pgeom->_meshcollision.vertices.push_back(vertex);
+                        }
+                        _pgeom->_meshcollision.indices.push_back(ipoint + 0);
+                        _pgeom->_meshcollision.indices.push_back(ipoint + 1);
+                        _pgeom->_meshcollision.indices.push_back((ipoint + 2) % nPoints);
+                        _pgeom->_meshcollision.indices.push_back(ipoint + 1);
+                        _pgeom->_meshcollision.indices.push_back((ipoint + 3) % nPoints);
+                        _pgeom->_meshcollision.indices.push_back((ipoint + 2) % nPoints);
+                    }
+                }
+            }
+            else if( xmlname == "height" ) {
+                _ss >> _pgeom->_vGeomData.y;
+                for( size_t ipoint = 0; ipoint < _pgeom->_meshcollision.vertices.size(); ipoint += 2 ) {
+                    _pgeom->_meshcollision.vertices[ipoint].z = -_pgeom->_vGeomData.y * 0.5;
+                    _pgeom->_meshcollision.vertices[ipoint + 1].z = _pgeom->_vGeomData.y * 0.5;
+                }
+            }
+            break;
+        case GT_Capsule:
             if( xmlname == "radius") {
                 _ss >> _pgeom->_vGeomData.x;
             }
