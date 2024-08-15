@@ -249,6 +249,7 @@ private:
 
     void _PrintCollisionManagerInstanceLE(const KinBody::Link& link, FCLCollisionManagerInstance& envManager);
 
+    /// \brief get information from fcl space GetEnvBodies.
     bool _GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& sinput);
 
     inline bool _IsEnabled(const KinBody& body)
