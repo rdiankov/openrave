@@ -374,6 +374,9 @@ By default will sample the robot's active DOFs. Parameters part of the interface
 
     virtual bool SetManipulatorBiasCommand(std::ostream& sout, std::istream& sinput)
     {
+        // First, reset the flag so that we turn off biasing. We will turn it on again if inputs are valid.
+        _busebiasing = false;
+
         std::string manipname;
         Vector vbiasdirection(0,0,0.1);
         dReal nullsampleprob = 0.60, nullbiassampleprob = 0.50, deltasampleprob = 0.50;
