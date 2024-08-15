@@ -162,14 +162,7 @@ except:
     import pickle
 
 import numpy
-for iall in range(len(numpy.__all__)-1, -1, -1):
-    if numpy.__all__[iall] in {'max', 'min', 'round'}:
-        numpy.__all__.pop(iall)
-
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import inf, array
+from numpy import array, r_, c_, zeros, dot, tile, transpose, reshape, arange, pi, sin, cos, ones, eye, meshgrid, sqrt, arccos, linspace, inf, cross, outer, argsort, linalg, mean, std, random
 
 from .. import PlanningError
 from ..openravepy_ext import transformPoints
@@ -676,7 +669,7 @@ class GraspingModel(DatabaseGenerator):
                             self.robot.SetTransform(finalconfig[1])
                             self.env.UpdatePublishedBodies()
                         if delay is None:
-                            raw_input('press any key to continue: ')
+                            input('press any key to continue: ')
                         elif delay > 0:
                             time.sleep(delay)
                     except PlanningError as e:
@@ -702,7 +695,7 @@ class GraspingModel(DatabaseGenerator):
                     self.env.UpdatePublishedBodies()
                     # wait while environment is locked?
                     if delay is None:
-                        raw_input('press any key to continue: ')
+                        input('press any key to continue: ')
                     elif delay > 0:
                         time.sleep(delay)
     def testGrasp(self,graspingnoise=None,Ngraspingtries = 20,forceclosurethreshold=1e-9,**kwargs):
@@ -810,7 +803,7 @@ class GraspingModel(DatabaseGenerator):
                 else:
                     traj = RaveCreateTrajectory(self.env,'')
                     traj.deserialize(trajdata[-1])
-                values = traj.GetConfigurationSpecification().ExtractJointValues(GetWaypoint(-1),self.robot,self.robot.GetActiveDOFIndices(),0)
+                values = traj.GetConfigurationSpecification().ExtractJointValues(traj.GetWaypoint(-1),self.robot,self.robot.GetActiveDOFIndices(),0)
                 self.robot.SetActiveDOFValues(values)
             self.robot.SetActiveDOFs(self.manip.GetGripperIndices())
             trajdata.append(self.basemanip.MoveActiveJoints(goal=grasp[self.graspindices['igrasppreshape']],execute=execute,outputtraj=outputtraj,outputtrajobj=outputtrajobj))

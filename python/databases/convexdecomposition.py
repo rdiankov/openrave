@@ -66,15 +66,10 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
 
+
 import numpy
-for iall in range(len(numpy.__all__)-1, -1, -1):
-    if numpy.__all__[iall] in {'max', 'min', 'round'}:
-        numpy.__all__.pop(iall)
-
-if not __openravepy_build_doc__:
-    from numpy import *
-
 from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose
+from numpy import e, mean, flatnonzero, cross, logical_and, r_, c_, sqrt, ones, transpose, tile, dot, localpoint, eye, mod, linalg, mod
 from numpy.linalg import norm
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
@@ -631,7 +626,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
                     handles += [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(colorindex+i,len(volumecolors))]) for i,hull in enumerate(hulls)]
                     colorindex+=len(hulls)
-            raw_input('Press any key to exit: ')
+            input('Press any key to exit: ')
         finally:
             # close all graphs
             handles = None
@@ -656,13 +651,13 @@ class ConvexDecompositionModel(DatabaseGenerator):
         try:
             if not progressive:
                 handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
-                raw_input('Press any key to exit: ')
+                input('Press any key to exit: ')
             else:
                 ihull = 0
                 while ihull < len(hulls):
                     hull = hulls[ihull]
                     handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(ihull,len(volumecolors))])]
-                    cmd = raw_input(str(ihull))
+                    cmd = input(str(ihull))
                     if cmd == 'p':
                         ihull -= 1
                     else:
