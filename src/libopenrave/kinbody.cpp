@@ -5925,6 +5925,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             }
             _vSelfCollisionCheckers.push_back(pNewChecker);
         }
+        else {
+            _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
+        }
         bIsDefaultSelfCollisionChecker = false;
     }
 
