@@ -120,8 +120,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 else {
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
-                linkinfo->bFromExtraGeometries = true;
             }
+            linkinfo->bFromExtraGeometries = true;
         }
         else {
             const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
