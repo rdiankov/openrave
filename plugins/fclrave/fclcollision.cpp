@@ -108,7 +108,7 @@ FCLCollisionChecker::FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std:
     // TODO : Consider removing these which could be more harmful than anything else
     RegisterCommand("SetBroadphaseAlgorithm", boost::bind(&FCLCollisionChecker::SetBroadphaseAlgorithmCommand, this, _1, _2), "sets the broadphase algorithm (Naive, SaP, SSaP, IntervalTree, DynamicAABBTree, DynamicAABBTree_Array)");
     RegisterCommand("SetBVHRepresentation", boost::bind(&FCLCollisionChecker::_SetBVHRepresentation, this, _1, _2), "sets the Bouding Volume Hierarchy representation for meshes (AABB, OBB, OBBRSS, RSS, kIDS)");
-    RegisterCommand("GetEnvBodiesInfoFromFCLSpace", boost::bind(&FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace, this, _1, _2), "get");
+    RegisterCommand("GetEnvBodiesInfoFromFCLSpace", boost::bind(&FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace, this, _1, _2), "get information from fcl space GetEnvBodies.");
 
     RAVELOG_VERBOSE_FORMAT("FCLCollisionChecker %s created in env %d", _userdatakey%penv->GetId());
 
@@ -1310,8 +1310,8 @@ void FCLCollisionChecker::_PrintCollisionManagerInstanceLE(const KinBody::Link& 
 
 bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& sinput)
 {
-    sout << "[";
-    int iBody = 0;
+    rapidjson::Document docInfo;
+    rapidjson::Value rBodies(rapidjson::kArrayType);
     for (const KinBodyConstPtr& pbody : _fclspace->GetEnvBodies()) {
         if( !pbody ) {
             continue;
@@ -1320,14 +1320,10 @@ bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& 
         if ( !pinfo ) {
             continue;
         }
-        if( iBody > 0 ) {
-            sout << ",";
-        }
-        iBody++;
-        sout << "{\"name\":\"" << pbody->GetName() << "\",";
-        sout << "\"geometrygroup\": \"" << pinfo->_geometrygroup << "\",";
-        sout << "\"links\":[";
-        int iLink = 0;
+        rapidjson::Value rBody(rapidjson::kObjectType);
+        OpenRAVE::orjson::SetJsonValueByKey(rBody, "name", pbody->GetName(), docInfo.GetAllocator());
+        OpenRAVE::orjson::SetJsonValueByKey(rBody, "geometrygroup", pinfo->_geometrygroup, docInfo.GetAllocator());
+        rapidjson::Value rLinks(rapidjson::kArrayType);
         for(const boost::shared_ptr<FCLSpace::FCLKinBodyInfo::LinkInfo>& linkinfo : pinfo->vlinks ) {
             if( !linkinfo ) {
                 continue;
@@ -1336,14 +1332,10 @@ bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& 
             if( !plink ) {
                 continue;
             }
-            if ( iLink > 0 ) {
-                sout << ",";
-            }
-            iLink++;
-            sout << "{\"name\":\"" << plink->GetName() << "\",";
-            sout << "\"fromExtraGeometries\":" << linkinfo->bFromExtraGeometries << ",";
-            sout << "\"geometries\": [";
-            int iGeom = 0;
+            rapidjson::Value rLink(rapidjson::kObjectType);
+            OpenRAVE::orjson::SetJsonValueByKey(rLink, "name", plink->GetName(), docInfo.GetAllocator());
+            OpenRAVE::orjson::SetJsonValueByKey(rLink, "fromExtraGeometries", linkinfo->bFromExtraGeometries, docInfo.GetAllocator());
+            rapidjson::Value rGeometries(rapidjson::kArrayType);
             for( const TransformCollisionPair& geom : linkinfo->vgeoms) {
                 if ( !geom.second ) {
                     continue;
@@ -1352,17 +1344,18 @@ bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& 
                 if( !ogeominfo ) {
                     continue;
                 }
-                if ( iGeom > 0 ) {
-                    sout << ",";
-                }
-                iGeom++;
-                sout << "{\"name\":\"" << ogeominfo->geomname << "\"}";
+                rapidjson::Value rGeometry(rapidjson::kObjectType);
+                OpenRAVE::orjson::SetJsonValueByKey(rGeometry, "name", ogeominfo->geomname, docInfo.GetAllocator());
+                rGeometries.PushBack(rGeometry, docInfo.GetAllocator());
             }
-            sout << "]}";
+            OpenRAVE::orjson::SetJsonValueByKey(rLink, "geometries", rGeometries, docInfo.GetAllocator());
+            rLinks.PushBack(rLink, docInfo.GetAllocator());
         }
-        sout << "]}";
+        OpenRAVE::orjson::SetJsonValueByKey(rBody, "links", rLinks, docInfo.GetAllocator());
+        rBodies.PushBack(rBody, docInfo.GetAllocator());
     }
-    sout << "]";
+    OpenRAVE::orjson::SetJsonValueByKey(docInfo, "bodies", rBodies, docInfo.GetAllocator());
+    sout << OpenRAVE::orjson::DumpJson(docInfo);
     return !!sinput;
 }
 
