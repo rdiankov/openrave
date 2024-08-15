@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.149.1
+===============
+
+- Fix `FindFirstMatchingLinkIndex` and `FindSecondMatchingLinkIndex` in `CollisionPairInfo`
+
 Version 0.149.0
 ===============
 
