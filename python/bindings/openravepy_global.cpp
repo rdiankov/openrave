@@ -431,10 +431,10 @@ public:
 
         PyObject *pPyVertices = vertices.ptr();
         if (PyArray_Check(pPyVertices)) {
-            if (PyArray_NDIM(pPyVertices) != 2) {
+            if (PyArray_NDIM((PyArrayObject*)pPyVertices) != 2) {
                 throw openrave_exception(_("vertices must be a 2D array"), ORE_InvalidArguments);
             }
-            if (!PyArray_ISFLOAT(pPyVertices)) {
+            if (!PyArray_ISFLOAT((PyArrayObject*)pPyVertices)) {
                 throw openrave_exception(_("vertices must be in float"), ORE_InvalidArguments);
             }
             PyArrayObject* pPyVerticesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyVertices));
@@ -477,7 +477,7 @@ public:
         mesh.indices.resize(3*numtris);
         PyObject *pPyIndices = indices.ptr();
         if (PyArray_Check(pPyIndices)) {
-            if (PyArray_NDIM(pPyIndices) != 2 || PyArray_DIM(pPyIndices, 1) != 3 || !PyArray_ISINTEGER(pPyIndices)) {
+            if (PyArray_NDIM((PyArrayObject*)pPyIndices) != 2 || PyArray_DIM((PyArrayObject*)pPyIndices, 1) != 3 || !PyArray_ISINTEGER((PyArrayObject*)pPyIndices)) {
                 throw openrave_exception(_("indices must be a Nx3 int array"), ORE_InvalidArguments);
             }
             PyArrayObject* pPyIndiciesContiguous = PyArray_GETCONTIGUOUS(reinterpret_cast<PyArrayObject*>(pPyIndices));
@@ -1012,7 +1012,7 @@ void pyRaveSetDebugLevel(object olevel)
 
 int pyRaveInitialize(bool bLoadAllPlugins=true, object olevel=py::none_())
 {
-
+    ViewerManager::GetInstance().Initialize(); // start thread for viewers
     return OpenRAVE::RaveInitialize(bLoadAllPlugins,pyGetIntFromPy(olevel, Level_Info));
 }
 
@@ -1029,6 +1029,12 @@ object pyRaveInvertFileLookup(const std::string& filename)
         return ConvertStringToUnicode(newfilename);
     }
     return py::none_();
+}
+
+void pyRaveDestroy()
+{
+    ViewerManager::GetInstance().Destroy(); // destroy the active viewers
+    OpenRAVE::RaveDestroy();
 }
 
 object RaveGetPluginInfo()
@@ -1302,26 +1308,127 @@ object poseTransformPoint(object opose, object opoint)
     return toPyVector3(newpoint);
 }
 
-object poseTransformPoints(object opose, object opoints)
+py::object poseTransformPoints(py::object opose, py::object opoints)
 {
-    const Transform t = ExtractTransformType<dReal>(opose);
-    const int N = len(opoints);
+    // Extract pose data from opose
+    dReal rotx, roty, rotz, rotw, transx, transy, transz;
+
+    bool useFallbackForPoseExtraction = true;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pytrans({N, 3});
+    do {
+        if( len(opose) != 7 ) {
+            break;
+        }
+        if( !py::isinstance<py::array_t<dReal> >(opose) ) {
+            break;
+        }
+        boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpose;
+        PyArrayObject* poseArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opose.ptr());
+        if( !poseArrPtr || !poseArrPtr->data ) {
+            break;
+        }
+        psaverpose.reset(new AutoPyArrayObjectDereferencer(poseArrPtr));
+        const int poseItemSize = PyArray_ITEMSIZE(poseArrPtr);
+        if( poseItemSize != sizeof(dReal) ) {
+            break;
+        }
+        dReal* pPoseData = (dReal*)PyArray_DATA(poseArrPtr);
+        rotx = *pPoseData++;
+        roty = *pPoseData++;
+        rotz = *pPoseData++;
+        rotw = *pPoseData++;
+        transx = *pPoseData++;
+        transy = *pPoseData++;
+        transz = *pPoseData++;
+        useFallbackForPoseExtraction = false;
+        break;
+    } while(false);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+    if( useFallbackForPoseExtraction ) {
+        const Transform t = ExtractTransformType<dReal>(opose);
+        rotx = t.rot.x;
+        roty = t.rot.y;
+        rotz = t.rot.z;
+        rotw = t.rot.w;
+        transx = t.trans.x;
+        transy = t.trans.y;
+        transz = t.trans.z;
+    }
+
+    // See also RaveTransform::rotate
+    const dReal xx = 2 * roty * roty;
+    const dReal xy = 2 * roty * rotz;
+    const dReal xz = 2 * roty * rotw;
+    const dReal xw = 2 * roty * rotx;
+    const dReal yy = 2 * rotz * rotz;
+    const dReal yz = 2 * rotz * rotw;
+    const dReal yw = 2 * rotz * rotx;
+    const dReal zz = 2 * rotw * rotw;
+    const dReal zw = 2 * rotw * rotx;
+
+    const int numPoints = len(opoints);
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::array_t<dReal> pytrans({numPoints, 3});
     py::buffer_info buf = pytrans.request();
     dReal* ptrans = (dReal*) buf.ptr;
 #else // USE_PYBIND11_PYTHON_BINDINGS
-    npy_intp dims[] = { N,3};
-    PyObject *pytrans = PyArray_SimpleNew(2,dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
+    npy_intp dims[] = {numPoints, 3};
+    PyObject *pytrans = PyArray_SimpleNew(2, dims, sizeof(dReal)==8 ? PyArray_DOUBLE : PyArray_FLOAT);
     dReal* ptrans = (dReal*)PyArray_DATA(pytrans);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-    for(int i = 0; i < N; ++i, ptrans += 3) {
-        Vector newpoint = t*ExtractVector3(opoints[py::to_object(i)]);
-        ptrans[0] = newpoint.x; ptrans[1] = newpoint.y; ptrans[2] = newpoint.z;
+
+    bool useFallbackForPointsExtraction = true;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    do {
+        if( !py::isinstance<py::array_t<dReal> >(opoints) ) {
+            RAVELOG_WARN("The given points are not numpy array so have to use slow generic conversion. Pass in numpy array to take advantage of faster conversion making use of contiguous memory allocation of it.");
+            break;
+        }
+        boost::shared_ptr<AutoPyArrayObjectDereferencer> psaverpoints;
+        PyArrayObject* pointsArrPtr = PyArray_GETCONTIGUOUS((PyArrayObject*)opoints.ptr());
+        if( !pointsArrPtr || !pointsArrPtr->data ) {
+            RAVELOG_WARN("Could not get contiguous points array");
+            break;
+        }
+        psaverpoints.reset(new AutoPyArrayObjectDereferencer(pointsArrPtr));
+        const int pointsItemSize = PyArray_ITEMSIZE(pointsArrPtr);
+        if( pointsItemSize != sizeof(dReal) ) {
+            RAVELOG_WARN("Got invalid points array element");
+            break;
+        }
+        dReal* pPointsData = (dReal*)PyArray_DATA(pointsArrPtr);
+        const int numElements = PyArray_SIZE(pointsArrPtr);
+        if( numElements % 3 != 0 ) {
+            RAVELOG_WARN("Number of elements in points array is not a multiple of 3");
+            break;
+        }
+        dReal pointx, pointy, pointz;
+        for( int ipoint = 0; ipoint < numElements/3; ++ipoint, ptrans += 3 ) {
+            pointx = *pPointsData++;
+            pointy = *pPointsData++;
+            pointz = *pPointsData++;
+            // newpoint = t.trans + t.rotate(point)
+            ptrans[0] = transx + (1 - yy - zz)*pointx + (xy - zw)*pointy + (xz + yw)*pointz;
+            ptrans[1] = transy + (xy + zw)*pointx + (1 - xx - zz)*pointy + (yz - xw)*pointz;
+            ptrans[2] = transz + (xz - yw)*pointx + (yz + xw)*pointy + (1 - xx - yy)*pointz;
+        }
+        useFallbackForPointsExtraction = false;
+    } while(false);
+#endif // USE_PYBIND11_PYTHON_BINDINGS
+
+    if( useFallbackForPointsExtraction ) {
+        Vector point;
+        for( int i = 0; i < numPoints; ++i, ptrans += 3) {
+            point = ExtractVector3(opoints[py::to_object(i)]);
+            ptrans[0] = transx + (1 - yy - zz)*point.x + (xy - zw)*point.y + (xz + yw)*point.z;
+            ptrans[1] = transy + (xy + zw)*point.x + (1 - xx - zz)*point.y + (yz - xw)*point.z;
+            ptrans[2] = transz + (xz - yw)*point.x + (yz + xw)*point.y + (1 - xx - yy)*point.z;
+        }
     }
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     return pytrans;
-#else
+#else // USE_PYBIND11_PYTHON_BINDINGS
     return py::to_array_astype<dReal>(pytrans);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
@@ -1625,15 +1732,15 @@ void init_openravepy_global()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object timeUnit = enum_<TimeUnit>(m, "TimeUnit" DOXY_ENUM(TimeUnit))
+    object timeDurationUnit = enum_<TimeDurationUnit>(m, "TimeDurationUnit" DOXY_ENUM(TimeDurationUnit))
 #else
-    object timeUnit = enum_<TimeUnit>("TimeUnit" DOXY_ENUM(TimeUnit))
+    object timeDurationUnit = enum_<TimeDurationUnit>("TimeDurationUnit" DOXY_ENUM(TimeDurationUnit))
 #endif
-                      .value(GetTimeUnitString(TU_Second), TU_Second)
-                      .value(GetTimeUnitString(TU_Millisecond), TU_Millisecond)
-                      .value(GetTimeUnitString(TU_Microsecond), TU_Microsecond)
-                      .value(GetTimeUnitString(TU_Nanosecond), TU_Nanosecond)
-                      .value(GetTimeUnitString(TU_Picosecond), TU_Picosecond)
+                              .value(GetTimeDurationUnitString(TDU_Second), TDU_Second)
+                              .value(GetTimeDurationUnitString(TDU_Millisecond), TDU_Millisecond)
+                              .value(GetTimeDurationUnitString(TDU_Microsecond), TDU_Microsecond)
+                              .value(GetTimeDurationUnitString(TDU_Nanosecond), TDU_Nanosecond)
+                              .value(GetTimeDurationUnitString(TDU_Picosecond), TDU_Picosecond)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1643,6 +1750,18 @@ void init_openravepy_global()
 #endif
                        .value(GetAngleUnitString(AU_Radian), AU_Radian)
                        .value(GetAngleUnitString(AU_Degree), AU_Degree)
+                       .value(GetAngleUnitString(AU_Centidegree), AU_Centidegree)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object timeStampUnit = enum_<TimeStampUnit>(m, "TimeStampUnit" DOXY_ENUM(TimeStampUnit))
+#else
+    object timeStampUnit = enum_<TimeStampUnit>("TimeStampUnit" DOXY_ENUM(TimeStampUnit))
+#endif
+                      .value(GetTimeStampUnitString(TSU_SecondsFromLinuxEpoch), TSU_SecondsFromLinuxEpoch)
+                      .value(GetTimeStampUnitString(TSU_MillisecondsFromLinuxEpoch), TSU_MillisecondsFromLinuxEpoch)
+                      .value(GetTimeStampUnitString(TSU_MicrosecondsFromLinuxEpoch), TSU_MicrosecondsFromLinuxEpoch)
+                      .value(GetTimeStampUnitString(TSU_ISO8601), TSU_ISO8601)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1684,8 +1803,9 @@ void init_openravepy_global()
         })
     .def_readwrite("lengthUnit",&UnitInfo::lengthUnit)
     .def_readwrite("massUnit",&UnitInfo::massUnit)
-    .def_readwrite("timeUnit",&UnitInfo::timeUnit)
+    .def_readwrite("timeDurationUnit",&UnitInfo::timeDurationUnit)
     .def_readwrite("angleUnit",&UnitInfo::angleUnit)
+    .def_readwrite("timeStampUnit",&UnitInfo::timeStampUnit)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -2256,9 +2376,9 @@ void init_openravepy_global()
     def("RaveInitialize",openravepy::pyRaveInitialize,RaveInitialize_overloads(PY_ARGS("load_all_plugins","level") DOXY_FN1(RaveInitialize)));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
+    m.def("RaveDestroy",openravepy::pyRaveDestroy,DOXY_FN1(OpenRAVE::));
 #else
-    def("RaveDestroy",RaveDestroy,DOXY_FN1(RaveDestroy));
+    def("RaveDestroy",openravepy::pyRaveDestroy,DOXY_FN1(OpenRAVE::RaveDestroy));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveGetPluginInfo",openravepy::RaveGetPluginInfo,DOXY_FN1(RaveGetPluginInfo));
@@ -2558,9 +2678,9 @@ void init_openravepy_global()
     def("poseTransformPoint",openravepy::poseTransformPoint,PY_ARGS("pose","point") "left-transforms a 3D point by a pose transformation.\n\n:param pose: 7 values\n\n:param points: 3 values");
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
+    m.def("poseTransformPoints", openravepy::poseTransformPoints, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #else
-    def("poseTransformPoints",openravepy::poseTransformPoints,PY_ARGS("pose","points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
+    def("poseTransformPoints", openravepy::poseTransformPoints, PY_ARGS("pose", "points") "left-transforms a set of points by a pose transformation.\n\n:param pose: 7 values\n\n:param points: Nx3 values");
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("TransformLookat",openravepy::TransformLookat,PY_ARGS("lookat","camerapos","cameraup") "Returns a camera matrix that looks along a ray with a desired up vector.\n\n:param lookat: unit axis, 3 values\n\n:param camerapos: 3 values\n\n:param cameraup: unit axis, 3 values\n");

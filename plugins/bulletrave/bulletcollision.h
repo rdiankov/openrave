@@ -348,7 +348,7 @@ public:
                         if( !!plink1 && plink1->ValidateContactNormal(p,n) ) {
                             distance = -distance;
                         }
-                        report->contacts.push_back(CollisionReport::CONTACT(p, n, distance));
+                        report->contacts.push_back(CONTACT(p, n, distance));
                     }
                 }
             }
@@ -616,7 +616,7 @@ public:
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-                report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
+                report->contacts.push_back(CONTACT(p,n.normalize3(),report->minDistance));
             }
 
             if( bUseCallbacks ) {
@@ -686,7 +686,7 @@ public:
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-                report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
+                report->contacts.push_back(CONTACT(p,n.normalize3(),report->minDistance));
             }
 
             if( bUseCallbacks ) {
@@ -751,7 +751,7 @@ public:
 
                 Vector p(rayCallback.m_hitPointWorld[0], rayCallback.m_hitPointWorld[1], rayCallback.m_hitPointWorld[2]);
                 Vector n(rayCallback.m_hitNormalWorld[0], rayCallback.m_hitNormalWorld[1], rayCallback.m_hitNormalWorld[2]);
-                report->contacts.push_back(CollisionReport::CONTACT(p,n.normalize3(),report->minDistance));
+                report->contacts.push_back(CONTACT(p,n.normalize3(),report->minDistance));
             }
 
             if( bUseCallbacks ) {

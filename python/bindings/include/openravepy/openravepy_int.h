@@ -94,6 +94,7 @@ class PyViewerBase;
 class PySpaceSamplerBase;
 class PyConfigurationSpecification;
 class PyIkParameterization;
+class PyIkFailureAccumulatorBase;
 class PyReadable;
 class PyCameraIntrinsics;
 class PyLinkInfo;
@@ -103,6 +104,7 @@ class PyManipulatorInfo;
 class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
 class PyLink;
+class PyGeometry;
 class PyJoint;
 
 typedef OPENRAVE_SHARED_PTR<PyInterfaceBase> PyInterfaceBasePtr;
@@ -142,6 +144,7 @@ typedef OPENRAVE_SHARED_PTR<PySpaceSamplerBase const> PySpaceSamplerBaseConstPtr
 typedef OPENRAVE_SHARED_PTR<PyConfigurationSpecification> PyConfigurationSpecificationPtr;
 typedef OPENRAVE_SHARED_PTR<PyConfigurationSpecification const> PyConfigurationSpecificationConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyIkParameterization> PyIkParameterizationPtr;
+typedef OPENRAVE_SHARED_PTR<PyIkFailureAccumulatorBase> PyIkFailureAccumulatorBasePtr;
 typedef OPENRAVE_SHARED_PTR<PyReadable> PyReadablePtr;
 typedef OPENRAVE_SHARED_PTR<PyCameraIntrinsics> PyCameraIntrinsicsPtr;
 typedef OPENRAVE_SHARED_PTR<PyLinkInfo> PyLinkInfoPtr;
@@ -151,6 +154,7 @@ typedef OPENRAVE_SHARED_PTR<PyManipulatorInfo> PyManipulatorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink> PyLinkPtr;
+typedef OPENRAVE_SHARED_PTR<PyGeometry> PyGeometryPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint> PyJointPtr;
 typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
@@ -367,7 +371,7 @@ template <typename T>
 inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    py::array_t<dReal> pyvalues({(int) v.size(), 3});
+    py::array_t<dReal> pyvalues({(int)v.size(), 3});
     py::buffer_info buf = pyvalues.request();
     dReal* pvalue = (dReal*) buf.ptr;
     for(const RaveVector<T>& vi : v) {
@@ -630,7 +634,8 @@ class OPENRAVEPY_API PyReadablesContainer
 protected:
     ReadablesContainerPtr _pbase;
 public:
-    explicit PyReadablesContainer(ReadablesContainerPtr pbase) : _pbase(pbase) {}
+    explicit PyReadablesContainer(ReadablesContainerPtr pbase) : _pbase(pbase) {
+    }
     virtual ~PyReadablesContainer() = default;
 
     virtual py::object GetReadableInterfaces();
@@ -732,6 +737,7 @@ OPENRAVEPY_API PySensorGeometryPtr toPySensorGeometry(const std::string& sensorn
 
 OPENRAVEPY_API bool ExtractIkReturn(py::object o, IkReturn& ikfr);
 OPENRAVEPY_API py::object toPyIkReturn(const IkReturn& ret);
+OPENRAVEPY_API py::object toPyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
 
 OPENRAVEPY_API py::object GetUserData(UserDataPtr pdata);
 
@@ -751,11 +757,10 @@ void init_openravepy_collisionchecker();
 #endif
 OPENRAVEPY_API CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API CollisionReportPtr GetCollisionReport(py::object);
-OPENRAVEPY_API CollisionReportPtr GetCollisionReport(PyCollisionReportPtr);
-OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(CollisionReportPtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API void UpdateCollisionReport(PyCollisionReportPtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API void UpdateCollisionReport(py::object, PyEnvironmentBasePtr);
+OPENRAVEPY_API bool IsCollisionReport(py::object);
+OPENRAVEPY_API bool UpdateCollisionReport(py::object, const CollisionReport&);
+OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(const CollisionReportPtr& p);
+OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(const CollisionReport&);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_controller(py::module& m);
 #else

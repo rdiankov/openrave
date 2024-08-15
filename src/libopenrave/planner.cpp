@@ -188,6 +188,19 @@ PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t sta
     InitCollisionReport(report_);
 }
 
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const IkParameterization& ikparam_, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices_) :
+    PlannerStatus(description_, statusCode_)
+{
+    this->ikparam = ikparam_;
+    this->vIkFailureInfoIndices = vIkFailureInfoIndices_;
+}
+
+PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const std::vector<AccumulatorIndex>& vIkFailureInfoIndices_) :
+    PlannerStatus(description_, statusCode_)
+{
+    this->vIkFailureInfoIndices = vIkFailureInfoIndices_;
+}
+
 PlannerStatus::PlannerStatus(const std::string& description_, const uint32_t statusCode_, const std::vector<dReal>& jointValues_) :
     PlannerStatus(description_, statusCode_)
 {
@@ -231,13 +244,26 @@ void PlannerStatus::InitCollisionReport(CollisionReportPtr& newreport)
 
 void PlannerStatus::AddCollisionReport(const CollisionReport& collisionReport)
 {
-    if (!!collisionReport.plink1 && !!collisionReport.plink2) {
-        std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr> collisionPair(collisionReport.plink1, collisionReport.plink2);
-        std::map<std::pair<KinBody::LinkConstPtr,KinBody::LinkConstPtr>, unsigned int>::iterator collideLinkPairKey = mCollidingLinksCount.find(collisionPair);
-        if (collideLinkPairKey != mCollidingLinksCount.end()) {
-            collideLinkPairKey->second += 1;
-        } else {
-            mCollidingLinksCount[collisionPair] = 1;
+    OPENRAVE_ASSERT_OP(collisionReport.nNumValidCollisions,<=,(int)collisionReport.vCollisionInfos.size());
+    for(int icollision = 0; icollision < collisionReport.nNumValidCollisions; ++icollision) {
+        const CollisionPairInfo& cpinfo = collisionReport.vCollisionInfos[icollision];
+
+        std::pair<std::string,std::string> key;
+        if( cpinfo.bodyLinkGeom1Name < cpinfo.bodyLinkGeom2Name ) {
+            key.first = cpinfo.bodyLinkGeom1Name;
+            key.second = cpinfo.bodyLinkGeom2Name;
+        }
+        else {
+            key.first = cpinfo.bodyLinkGeom2Name;
+            key.second = cpinfo.bodyLinkGeom1Name;
+        }
+
+        std::map<std::pair<std::string,std::string>, unsigned int>::iterator it = mCollidingLinksCount.find(key);
+        if (it != mCollidingLinksCount.end()) {
+            it->second += 1;
+        }
+        else {
+            mCollidingLinksCount[key] = 1;
         }
     }
 }
@@ -252,28 +278,10 @@ void PlannerStatus::SaveToJson(rapidjson::Value& rPlannerStatus, rapidjson::Docu
         orjson::SetJsonValueByKey(rPlannerStatus, "jointValues", jointValues, alloc);
     }
 
-    if(!!report) {
-        rapidjson::Value reportjson(rapidjson::kObjectType);
-        if(!!report->plink1) {
-            orjson::SetJsonValueByKey(reportjson, "plink1", report->plink1->GetName(), alloc);
-        }
-        if(!!report->plink2) {
-            orjson::SetJsonValueByKey(reportjson, "plink2", report->plink2->GetName(), alloc);
-        }
-        rapidjson::Value reportContactsjson(rapidjson::kObjectType);
-        for (size_t i=0; i<report->contacts.size(); ++i) {
-            rapidjson::Value reportContactsPosjson(rapidjson::kObjectType);
-            orjson::SetJsonValueByKey(reportContactsPosjson, "x", report->contacts[i].pos.x, alloc);
-            orjson::SetJsonValueByKey(reportContactsPosjson, "y", report->contacts[i].pos.y, alloc);
-            orjson::SetJsonValueByKey(reportContactsPosjson, "z", report->contacts[i].pos.z, alloc);
-
-            rapidjson::Value rname;
-            orjson::SaveJsonValue(rname, std::to_string(i), alloc);
-            reportContactsjson.AddMember(rname, reportContactsPosjson, alloc);
-        }
-        orjson::SetJsonValueByKey(reportjson, "contacts", reportContactsjson, alloc);
-        //Eventually, serialization could be in openravejson.h
-        orjson::SetJsonValueByKey(rPlannerStatus, "collisionReport", reportjson, alloc);
+    if(!!report && report->IsValid() ) {
+        rapidjson::Value rCollisionReport;
+        report->SaveToJson(rCollisionReport, alloc);
+        orjson::SetJsonValueByKey(rPlannerStatus, "collisionReport", rCollisionReport, alloc);
     }
 
     //Eventually, serialization could be in openravejson.h ?
@@ -1146,7 +1154,7 @@ PlannerBase::PlannerBase(EnvironmentBasePtr penv) : InterfaceBase(PT_Planner, pe
 {
 }
 
-bool PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
+PlannerStatus PlannerBase::InitPlan(RobotBasePtr pbase, std::istream& isParameters)
 {
     RAVELOG_WARN(str(boost::format("using default planner parameters structure to de-serialize parameters data inside %s, information might be lost!! Please define a InitPlan(robot,stream) function!\n")%GetXMLId()));
     boost::shared_ptr<PlannerParameters> localparams(new PlannerParameters());
@@ -1160,6 +1168,10 @@ UserDataPtr PlannerBase::RegisterPlanCallback(const PlanCallbackFn& callbackfn)
     CustomPlannerCallbackDataPtr pdata(new CustomPlannerCallbackData(callbackfn,shared_planner()));
     pdata->_iterator = __listRegisteredCallbacks.insert(__listRegisteredCallbacks.end(),pdata);
     return pdata;
+}
+
+void PlannerBase::SetIkFailureAccumulator(IkFailureAccumulatorBasePtr& pIkFailureAccumulator)
+{
 }
 
 PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryBasePtr ptraj)
@@ -1194,12 +1206,14 @@ PlannerStatus PlannerBase::_ProcessPostPlanners(RobotBasePtr probot, TrajectoryB
     params->_sPostProcessingParameters = "";
     params->_nMaxIterations = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters
     //params->_nMaxPlanningTime = 0; // have to reset since path optimizers also use it and new parameters could be in extra parameters??
-    if( __cachePostProcessPlanner->InitPlan(probot, params) ) {
+
+    PlannerStatus status =  __cachePostProcessPlanner->InitPlan(probot, params);
+   if( (status.GetStatusCode() & PS_HasSolution)) {
         return __cachePostProcessPlanner->PlanPath(ptraj);
     }
 
     // do not fall back to a default linear smoother like in the past! that makes behavior unpredictable
-    return PlannerStatus(PS_Failed);
+    return status;
 }
 
 PlannerAction PlannerBase::_CallCallbacks(const PlannerProgress& progress)

@@ -15,15 +15,6 @@ CollisionGeometryPtr ConvertMeshToFCL(std::vector<fcl::Vec3f> const &points,std:
     return model;
 }
 
-FCLSpace::FCLKinBodyInfo::FCLKinBodyInfo()
-    : nLastStamp(0)
-    , nLinkUpdateStamp(0)
-    , nGeometryUpdateStamp(0)
-    , nAttachedBodiesUpdateStamp(0)
-    , nActiveDOFUpdateStamp(0)
-{
-}
-
 void FCLSpace::FCLKinBodyInfo::Reset()
 {
     FOREACH(itlink, vlinks) {
@@ -80,19 +71,14 @@ void FCLSpace::DestroyEnvironment()
     _vecInitializedBodies.clear();
 }
 
-FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo, bool bSetToCurrentPInfo)
-{
-    if( !pinfo ) {
-        pinfo.reset(new FCLKinBodyInfo());
-        pinfo->_geometrygroup = _geometrygroup;
+void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo) {
+    // If the body hasn't changed, don't reload the links.
+    if (pbody->GetUpdateStamp() == pinfo->nLastLinkReloadStamp) {
+        return;
     }
+    pinfo->nLastLinkReloadStamp = pbody->GetUpdateStamp();
 
-    RAVELOG_VERBOSE_FORMAT("env=%s, self=%d, init body %s (%d)", _penv->GetNameId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
-    pinfo->Reset();
-    pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
-    // make sure that synchronization do occur !
-    pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
-
+    pinfo->vlinks.clear();
     pinfo->vlinks.reserve(pbody->GetLinks().size());
     FOREACHC(itlink, pbody->GetLinks()) {
         const KinBody::LinkPtr& plink = *itlink;
@@ -115,6 +101,11 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
                 if( !pfclgeom ) {
                     continue;
                 }
+                // because user data is null pointer here, in CheckNarrowPhaseGeomCollision report.pgeom ends up being null pointer and we lose the geometry information.
+                // maybe pass plink->GetGeometries()[index] where index=distance(vgeometryinfos.begin(), itgeominfo)?
+                // or, should the collision report store names of body, link, and geom?
+                // also, currently there is no information about which geometry group was used for collision checking.
+                // It's usually obvious immediately after CheckCollision is called, but later on, it it is not that obvious collision report is computed with which geometry group.
                 pfclgeom->setUserData(nullptr);
 
                 // We do not set the transformation here and leave it to _Synchronize
@@ -182,6 +173,24 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
         RAVELOG_DEBUG_FORMAT("FCLSPACECOLLISIONOBJECT|%s|%s", linkinfo->linkBV.second.get()%linkinfo->bodylinkname);
 #endif
     }
+
+}
+
+FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo, bool bSetToCurrentPInfo)
+{
+    if( !pinfo ) {
+        pinfo.reset(new FCLKinBodyInfo());
+        pinfo->_geometrygroup = _geometrygroup;
+    }
+
+    RAVELOG_VERBOSE_FORMAT("env=%s, self=%d, init body %s (%d)", _penv->GetNameId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
+    pinfo->Reset();
+    pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
+    // make sure that synchronization do occur !
+    pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
+    pinfo->nLastLinkReloadStamp = pbody->GetUpdateStamp() - 1;
+
+    ReloadKinBodyLinks(pbody, pinfo);
 
     pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
     pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
@@ -455,6 +464,14 @@ void _AppendFclBoxCollsionObject(const OpenRAVE::Vector& fullExtents, const Open
     contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fclTrans));
 }
 
+/// \brief helper function to initialize fcl::Container
+void _AppendFclHalfspaceCollsionObject(const OpenRAVE::Transform& trans, std::vector<std::shared_ptr<fcl::CollisionObject> >& contents)
+{
+    std::shared_ptr<fcl::CollisionGeometry> fclGeom = std::make_shared<fcl::Halfspace>(fcl::Vec3f(0, 0, 1), 0);
+    const fcl::Transform3f fclTrans(ConvertQuaternionToFCL(trans.rot), ConvertVectorToFCL(trans.trans));
+    contents.emplace_back(std::make_shared<fcl::CollisionObject>(fclGeom, fclTrans));
+}
+
 CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::GeometryInfo &info)
 {
     switch(info._type) {
@@ -471,6 +488,9 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
 
     case OpenRAVE::GT_Cylinder:
         return std::make_shared<fcl::Cylinder>(info._vGeomData.x, info._vGeomData.y);
+
+    case OpenRAVE::GT_Capsule:
+        return std::make_shared<fcl::Capsule>(info._vGeomData.x, info._vGeomData.y);
 
     case OpenRAVE::GT_Container:
     {
@@ -526,6 +546,25 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
         }
         // finally add the base
         _AppendFclBoxCollsionObject(2.0*vCageBaseExtents, Vector(0, 0, vCageBaseExtents.z), contents);
+        return std::make_shared<fcl::Container>(contents);
+    }
+    case OpenRAVE::GT_Prism:
+    {
+        std::vector<std::shared_ptr<fcl::CollisionObject> > contents;
+        const OpenRAVE::TriMesh& mesh = info._meshcollision;
+        const size_t nPoints = mesh.vertices.size();
+        for( size_t ipoint = 0; ipoint < nPoints; ipoint += 2 ) {
+            const OpenRAVE::Vector p0(mesh.vertices[ipoint].x, mesh.vertices[ipoint].y, 0);
+            const OpenRAVE::Vector p1(mesh.vertices[(ipoint + 2) % nPoints].x, mesh.vertices[(ipoint + 2) % nPoints].y, 0);
+            if( (p1 - p0).lengthsqr2() < g_fEpsilon ) {
+                continue; // ipoint
+            }
+            OpenRAVE::Transform trans(OpenRAVE::geometry::quatRotateDirection(OpenRAVE::Vector(1, 0, 0), (p1 - p0).normalize()), (p0 + p1) * 0.5); // Y pointing to the left side of the directed segment (p0, p1)
+            trans *= OpenRAVE::Transform(OpenRAVE::geometry::quatFromAxisAngle(OpenRAVE::Vector(1, 0, 0), -M_PI * 0.5), OpenRAVE::Vector()); // Z pointing to the left side of the directed segment (p0, p1)
+            _AppendFclHalfspaceCollsionObject(trans, contents);
+        }
+        _AppendFclHalfspaceCollsionObject(OpenRAVE::Transform(OpenRAVE::Vector(1, 0, 0, 0), OpenRAVE::Vector(0, 0, -info._vGeomData.y * 0.5)), contents);
+        _AppendFclHalfspaceCollsionObject(OpenRAVE::Transform(OpenRAVE::Vector(0, 1, 0, 0), OpenRAVE::Vector(0, 0, info._vGeomData.y * 0.5)), contents);
         return std::make_shared<fcl::Container>(contents);
     }
     case OpenRAVE::GT_ConicalFrustum:
@@ -609,6 +648,29 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
     }
 }
 
+/// Scope guard to ensure that user data for a kinbody is cleared on scope exit
+/// May be reset to 'disarm' the guard if the data should be kept on scope exit after all.
+struct ScopedUserDataRemover
+{
+    ScopedUserDataRemover(FCLSpace& space, const KinBodyPtr& ptr)
+        : _space(space), _ptr(ptr)
+    {
+    }
+    ~ScopedUserDataRemover()
+    {
+        if (!!_ptr) {
+            _space.RemoveUserData(_ptr);
+        }
+    }
+    void Reset() {
+        _ptr.reset();
+    }
+
+private:
+    FCLSpace& _space;
+    KinBodyPtr _ptr;
+};
+
 void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
 {
     FCLKinBodyInfoPtr pinfo = _pinfo.lock();
@@ -617,13 +679,17 @@ void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pi
     if (0 < bodyIndex && bodyIndex < (int)_currentpinfo.size()) {
         const FCLKinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
 
-        if( !!pinfo && pinfo == pcurrentinfo ) {//pinfo->_geometrygroup.size() == 0 ) {
+        if (!!pinfo && pinfo == pcurrentinfo) { //pinfo->_geometrygroup.size() == 0 ) {
             // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
-            FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-            InitKinBody(pbody, pinfo, false);
-            remover.ResetRemove(); // succeeded
+
+            // In order to ensure that the body is removed from the FCL space if something goes wrong during the reload process,
+            // create a scoped remover that will clear our user data for this body on scope exit. If the reload succeeds, we
+            // reset the scoped remover to prevent it clearing the data.
+            ScopedUserDataRemover userDataGuard{*this, pbody};
+            ReloadKinBodyLinks(pbody, pinfo);
+            userDataGuard.Reset();
         }
         //_cachedpinfo[pbody->GetEnvironmentBodyIndex()].erase(std::string());
     }
@@ -639,10 +705,15 @@ void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pin
     if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
         //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
         pinfo->nGeometryUpdateStamp++;
-        FCLKinBodyInfoRemover remover(boost::bind(&FCLSpace::RemoveUserData, this, pbody)); // protect
-        InitKinBody(pbody, pinfo, false);
-        remover.ResetRemove(); // succeeded
+
+        // In order to ensure that the body is removed from the FCL space if something goes wrong during the reload process,
+        // create a scoped remover that will clear our user data for this body on scope exit. If the reload succeeds, we
+        // reset the scoped remover to prevent it clearing the data.
+        ScopedUserDataRemover userDataGuard{*this, pbody};
+        ReloadKinBodyLinks(pbody, pinfo);
+        userDataGuard.Reset();
     }
+
 //   FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
 //   _cachedpinfo.erase(pbody->GetEnvironmentBodyIndex());
 //   if( !!pinfoCurrentGeometry ) {

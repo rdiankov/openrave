@@ -14,6 +14,8 @@
 from common_test_openrave import *
 
 class TestDatabases(EnvironmentSetup):
+
+    @expected_failure  # newer sympy is not compatible with katana iksolver generation
     def test_ikmodulegeneration(self):
         env=self.env
         for robotname,manipname,iktype in [('robots/neuronics-katana.zae','arm',IkParameterizationType.TranslationDirection5D),('robots/pr2-beta-static.zae','rightarm',IkParameterizationType.Transform6D)]:

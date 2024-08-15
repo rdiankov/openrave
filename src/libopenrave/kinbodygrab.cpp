@@ -499,17 +499,19 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
-        for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end();
-            if( isLinkIgnored ) {
+        for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+            const bool isLinkIndexValid = (0 <= linkIndex && linkIndex < (int)_veclinks.size());
+            if( isLinkIndexValid ) {
                 ++numIgnoredLinks;
+                if( setGrabberLinksToIgnore.count(linkIndex) == 0 ) {
+                    ignoringLinksMatch = false;
+                    break;
+                }
             }
-            if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetIndex()) > 0) ) {
-                ignoringLinksMatch = false;
-                break;
+            else {
+                RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%GetName()%body.GetName()%linkIndex%_veclinks.size());
             }
         }
-
         if( !ignoringLinksMatch || numIgnoredLinks != setGrabberLinksToIgnore.size() ) {
             continue;
         }
@@ -543,14 +545,17 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
         // compare ignored robot links
         bool ignoringLinksMatch = true;
         size_t numIgnoredLinks = 0;  // needed to detect non-existing links in setBodyLinksToIgnore
-        for( const LinkPtr& link : _veclinks ) {
-            const bool isLinkIgnored = std::find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), link->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end();
-            if( isLinkIgnored ) {
+        for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+            const bool isLinkIndexValid = (0 <= linkIndex && linkIndex < (int)_veclinks.size());
+            if( isLinkIndexValid ) {
                 ++numIgnoredLinks;
+                if( setGrabberLinksToIgnore.count(_veclinks[linkIndex]->GetName()) == 0 ) {
+                    ignoringLinksMatch = false;
+                    break;
+                }
             }
-            if( isLinkIgnored != (setGrabberLinksToIgnore.count(link->GetName()) > 0) ) {
-                ignoringLinksMatch = false;
-                break;
+            else {
+                RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%GetName()%body.GetName()%linkIndex%_veclinks.size());
             }
         }
         if( !ignoringLinksMatch || numIgnoredLinks != setGrabberLinksToIgnore.size() ) {
@@ -593,7 +598,7 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
     vGrabbedInfos.reserve(_vGrabbedBodies.size());
     vGrabbedInfos.clear();
     for(size_t i = 0; i < _vGrabbedBodies.size(); ++i) {
-        GrabbedConstPtr pgrabbed = _vGrabbedBodies[i];
+        const GrabbedPtr& pgrabbed = _vGrabbedBodies[i];
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
@@ -604,12 +609,15 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
             poutputinfo->_setIgnoreRobotLinkNames.clear();
             CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, poutputinfo->_rGrabbedUserData);
 
-            FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
-                    poutputinfo->_setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+            for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+                if (0 <= linkIndex && linkIndex < (int)_veclinks.size()) {
+                    poutputinfo->_setIgnoreRobotLinkNames.insert(_veclinks[linkIndex]->GetName());
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%pgrabbedbody->GetName()%GetName()%linkIndex%_veclinks.size());
                 }
             }
-            vGrabbedInfos.push_back(poutputinfo);
+            vGrabbedInfos.emplace_back(std::move(poutputinfo));
         }
     }
 }
@@ -620,7 +628,7 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
     for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
         vGrabbedInfos[igrabbed].Reset(); /// have to reset everything
 
-        GrabbedConstPtr pgrabbed = _vGrabbedBodies[igrabbed];
+        const GrabbedPtr& pgrabbed = _vGrabbedBodies[igrabbed];
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
@@ -631,9 +639,12 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
             outputinfo._setIgnoreRobotLinkNames.clear();
             CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, outputinfo._rGrabbedUserData);
 
-            FOREACHC(itlink, _veclinks) {
-                if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
-                    outputinfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+            for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+                if (0 <= linkIndex && linkIndex < (int)_veclinks.size()) {
+                    outputinfo._setIgnoreRobotLinkNames.insert(_veclinks[linkIndex]->GetName());
+                }
+                else {
+                    RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%pgrabbedbody->GetName()%GetName()%linkIndex%_veclinks.size());
                 }
             }
         }
@@ -644,7 +655,7 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
 {
     grabbedInfo.Reset();
     for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
-        GrabbedConstPtr pgrabbed = _vGrabbedBodies[igrabbed];
+        const GrabbedPtr& pgrabbed = _vGrabbedBodies[igrabbed];
         if( !!pgrabbed ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody && pgrabbedbody->GetName() == grabbedname ) {
@@ -654,9 +665,12 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbe
                 grabbedInfo._setIgnoreRobotLinkNames.clear();
                 CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, grabbedInfo._rGrabbedUserData);
 
-                FOREACHC(itlink, _veclinks) {
-                    if( find(pgrabbed->_setGrabberLinkIndicesToIgnore.begin(), pgrabbed->_setGrabberLinkIndicesToIgnore.end(), (*itlink)->GetIndex()) != pgrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
-                        grabbedInfo._setIgnoreRobotLinkNames.insert((*itlink)->GetName());
+                for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+                    if (0 <= linkIndex && linkIndex < (int)_veclinks.size()) {
+                        grabbedInfo._setIgnoreRobotLinkNames.insert(_veclinks[linkIndex]->GetName());
+                    }
+                    else {
+                        RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%pgrabbedbody->GetName()%GetName()%linkIndex%_veclinks.size());
                     }
                 }
                 return true;
@@ -824,10 +838,14 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
     for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
         KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
         if( pGrabbedBody == body ) {
-            FOREACHC(itGrabberLink, _veclinks) {
-                if( pGrabbed->_setGrabberLinkIndicesToIgnore.find((*itGrabberLink)->GetIndex()) != pGrabbed->_setGrabberLinkIndicesToIgnore.end() ) {
-                    ignorelinks.push_back(*itGrabberLink);
+            for( int linkIndex : pGrabbed->_setGrabberLinkIndicesToIgnore ) {
+                if (0 <= linkIndex && linkIndex < (int)_veclinks.size()) {
+                    ignorelinks.push_back(_veclinks[linkIndex]);
                 }
+                else {
+                    RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%pGrabbedBody->GetName()%GetName()%linkIndex%_veclinks.size());
+                }
+                ignorelinks.push_back(_veclinks.at(linkIndex));
             }
             return;
         }

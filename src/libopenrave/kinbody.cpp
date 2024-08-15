@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
+#include <unordered_set>
 
 // used for functions that are also used internally
 #define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
@@ -323,7 +324,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
             if( itMatchingName != _vGrabbedInfos.end() ) {
                 if (isDeleted) {
-                    _vGrabbedInfos.erase(itMatchingId);
+                    _vGrabbedInfos.erase(itMatchingName);
                     continue;
                 }
                 (*itMatchingName)->DeserializeJSON(rGrabbed, fUnitScale, options);
@@ -424,7 +425,8 @@ void KinBody::KinBodyInfo::_DeserializeReadableInterface(const std::string& id, 
         return;
     }
     if (rReadable.IsString()) {
-        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString()));
+        // When parsing c-strings as readables need to make sure we use the pointer + length constructor to handle strings with null bytes
+        StringReadablePtr pStringReadable(new StringReadable(id, rReadable.GetString(), rReadable.GetStringLength()));
         _mReadableInterfaces[id] = pStringReadable;
         return;
     }
@@ -640,70 +642,35 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     return true;
 }
 
-bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, const std::string& uri)
-{
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
-    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(),>,0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
-    Destroy();
-    LinkPtr plink(new Link(shared_kinbody()));
-    plink->_index = 0;
-    plink->_info._name = "base";
-    plink->_vGeometries.reserve(geometries.size());
-    plink->_info._bStatic = true;
-    FOREACHC(itinfo,geometries) {
-        Link::GeometryPtr geom(new Link::Geometry(plink,**itinfo));
-        geom->_info.InitCollisionMesh();
-        plink->_vGeometries.push_back(geom);
-        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
-    }
-    _veclinks.push_back(plink);
-    _vLinkTransformPointers.clear();
-    __struri = uri;
-    _referenceUri.clear(); // because completely removing the previous body, should reset
-    _prAssociatedFileEntries.reset();
-    return true;
-}
-
-bool KinBody::InitFromGeometries(const std::list<KinBody::GeometryInfo>& geometries, const std::string& uri)
-{
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
-    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(),>,0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
-    Destroy();
-    LinkPtr plink(new Link(shared_kinbody()));
-    plink->_index = 0;
-    plink->_info._name = "base";
-    plink->_info._bStatic = true;
-    plink->_vGeometries.reserve(geometries.size());
-    for(const KinBody::GeometryInfo& ginfo : geometries) {
-        Link::GeometryPtr geom(new Link::Geometry(plink,ginfo));
-        geom->_info.InitCollisionMesh();
-        plink->_vGeometries.push_back(geom);
-        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
-    }
-    _veclinks.push_back(plink);
-    _vLinkTransformPointers.clear();
-    __struri = uri;
-    _referenceUri.clear(); // because completely removing the previous body, should reset
-    _prAssociatedFileEntries.reset();
-    return true;
-}
-
 bool KinBody::InitFromGeometries(const std::vector<KinBody::GeometryInfo>& geometries, const std::string& uri)
 {
-    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
-    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(),>,0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex() == 0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
+    OPENRAVE_ASSERT_OP_FORMAT(geometries.size(), >, 0, "Cannot initializing body '%s' with no geometries.", GetName(), ORE_Failed);
     Destroy();
     LinkPtr plink(new Link(shared_kinbody()));
     plink->_index = 0;
     plink->_info._name = "base";
-    plink->_info._bStatic = true;
     plink->_vGeometries.reserve(geometries.size());
-    for(const KinBody::GeometryInfo& ginfo : geometries) {
-        Link::GeometryPtr geom(new Link::Geometry(plink,ginfo));
+    plink->_info._bStatic = true;
+
+    // Initialize each of our geometries and track the total vertex/index count
+    unsigned totalVertices = 0, totalIndices = 0;
+    FOREACHC(geomIt, geometries) {
+        Link::GeometryPtr geom {new KinBody::Link::Geometry(plink, *geomIt)};
         geom->_info.InitCollisionMesh();
+        const TriMesh& mesh = geom->GetCollisionMesh();
+        totalVertices += mesh.vertices.size();
+        totalIndices += mesh.indices.size();
         plink->_vGeometries.push_back(geom);
-        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
     }
+
+    // Once we have all of the geometries initialized and know their total size, reserve space in our unified collision mesh and append them all at once to reduce reallocs
+    plink->_collision.vertices.reserve(totalVertices);
+    plink->_collision.indices.reserve(totalIndices);
+    for (const KinBody::GeometryPtr& geom : plink->_vGeometries) {
+        plink->_collision.Append(geom->GetCollisionMesh(), geom->GetTransform());
+    }
+
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
     __struri = uri;
@@ -2160,20 +2127,26 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
     int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
     OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, not enough values %d<%d", GetEnv()->GetNameId()%dof%GetDOF(),ORE_InvalidArguments);
 
-    if(checklimits == CLA_Nothing && dofindices.empty()) {
-        _vTempJoints.assign(pJointValues, pJointValues + dof);
-    }
-    else {
-        _vTempJoints.resize(GetDOF());
-        if( dofindices.size() > 0 ) {
-            // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
-            // and then overwrite with the user set values
-            GetDOFValues(_vTempJoints);
-            for(size_t i = 0; i < dofindices.size(); ++i) {
+    GetDOFValues(_vTempJoints);
+    if( dofindices.size() > 0 ) {
+        // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
+        // and then overwrite with the user set values
+        for(size_t i = 0; i < dofindices.size(); ++i) {
+            if( !std::isnan(pJointValues[i]) ) {
                 _vTempJoints.at(dofindices[i]) = pJointValues[i];
             }
-            pJointValues = &_vTempJoints[0];
         }
+    }
+    else {
+        for(size_t i = 0; i < _vTempJoints.size(); ++i) {
+            if( !std::isnan(pJointValues[i]) ) {
+                _vTempJoints[i] = pJointValues[i];
+            }
+        }
+    }
+    pJointValues = &_vTempJoints[0];
+
+    if( checklimits != CLA_Nothing ) {
         dReal* ptempjoints = &_vTempJoints[0];
 
         // check the limits
@@ -2181,13 +2154,6 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
             const Joint& joint = *pjoint;
 
             const dReal* p = pJointValues+joint.GetDOFIndex();
-            if( checklimits == CLA_Nothing ) {
-                // limits should not be checked, so just copy
-                for(int i = 0; i < joint.GetDOF(); ++i) {
-                    *ptempjoints++ = p[i];
-                }
-                continue;
-            }
             if( joint.GetType() == JointSpherical ) {
                 dReal fcurang = fmod(RaveSqrt(p[0]*p[0]+p[1]*p[1]+p[2]*p[2]),2*PI);
                 dReal lowerlimit = joint.GetLowerLimit(0);
@@ -2228,10 +2194,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                         if( p[i] < lowerlimit ) {
                             if( p[i] < lowerlimit-g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN(str(boost::format("env=%d, dof %d value %e is smaller than the lower limit %e")%GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
+                                    RAVELOG_WARN(str(boost::format("env=%s, body '%s' joint '%s' dofindex %d value %.16e is smaller than the lower limit %.16e")%GetEnv()->GetNameId()%GetName()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit));
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %e is smaller than the lower limit %e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' joint '%s' dofindex %d value %.16e is smaller than the lower limit %.16e"), GetEnv()->GetNameId()%GetName()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%lowerlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = lowerlimit;
@@ -2239,10 +2205,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                         else if( p[i] > upperlimit ) {
                             if( p[i] > upperlimit+g_fEpsilonEvalJointLimit ) {
                                 if( checklimits == CLA_CheckLimits ) {
-                                    RAVELOG_WARN_FORMAT("env=%d, dof %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
+                                    RAVELOG_WARN_FORMAT("env=%s, body '%s' joint '%s' dofindex %d value %.16e is greater than the upper limit %.16e", GetEnv()->GetNameId()%GetName()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%upperlimit);
                                 }
                                 else if( checklimits == CLA_CheckLimitsThrow ) {
-                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%d, dof %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetId()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
+                                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' joint '%s' dofindex %d value %.16e is greater than the upper limit %.16e"), GetEnv()->GetNameId()%GetName()%joint.GetName()%(joint.GetDOFIndex()+i)%p[i]%upperlimit, ORE_InvalidArguments);
                                 }
                             }
                             *ptempjoints++ = upperlimit;
@@ -2532,12 +2498,44 @@ bool KinBody::IsDOFPrismatic(int dofindex) const
 
 KinBody::LinkPtr KinBody::GetLink(const std::string& linkname) const
 {
-    for(std::vector<LinkPtr>::const_iterator it = _veclinks.begin(); it != _veclinks.end(); ++it) {
-        if ( (*it)->GetName() == linkname ) {
-            return *it;
+    for(const LinkPtr& plink : _veclinks) {
+        if ( plink->GetName() == linkname ) {
+            return plink;
         }
     }
     return LinkPtr();
+}
+
+KinBody::LinkPtr KinBody::GetLink(const string_view linkname) const
+{
+    for(const LinkPtr& plink : _veclinks) {
+        if ( plink->GetName() == linkname ) {
+            return plink;
+        }
+    }
+    return LinkPtr();
+}
+
+KinBody::LinkPtr KinBody::GetLink(const char* plinkname) const
+{
+    if( !!plinkname ) {
+        for(const LinkPtr& plink : _veclinks) {
+            if ( plink->GetName().compare(plinkname) == 0 ) {
+                return plink;
+            }
+        }
+    }
+    return LinkPtr();
+}
+
+int KinBody::GetLinkIndex(const string_view linkname) const
+{
+    for(int ilink = 0; ilink < (int)_veclinks.size(); ++ilink) {
+        if ( _veclinks[ilink]->GetName() == linkname ) {
+            return ilink;
+        }
+    }
+    return -1;
 }
 
 const std::vector<KinBody::JointPtr>& KinBody::GetDependencyOrderedJoints() const
@@ -4321,54 +4319,127 @@ void KinBody::_ComputeInternalInformation()
 
     // compute the all-pairs shortest paths
     {
-        _vAllPairsShortestPaths.resize(_veclinks.size()*_veclinks.size());
-        FOREACH(it,_vAllPairsShortestPaths) {
+        // Preallocate to fit our NxN joint map
+        _vAllPairsShortestPaths.resize(_veclinks.size() * _veclinks.size());
+
+        // Default each entry to a pair of invalid joint indices
+        FOREACH(it, _vAllPairsShortestPaths) {
             it->first = -1;
             it->second = -1;
         }
-        vector<uint32_t> vcosts(_veclinks.size()*_veclinks.size(),0x3fffffff); // initialize to 2^30-1 since we'll be adding
-        for(size_t i = 0; i < _veclinks.size(); ++i) {
-            vcosts[i*_veclinks.size()+i] = 0;
+
+        // All of our arrays are essentially 2d look up tables, so create a wrapper to generate an array index from a 2d point
+        const size_t linksSize = _veclinks.size();
+#define MAKE_INDEX(X, Y) ((X) * linksSize + (Y))
+
+        // Create an NxN array of costs, where vcosts[MAKE_INDEX(i, j)] is the cost of joint i -> joint j
+        // Initialize the costs to 2^30-1 rather than uint32_t max as a default 'infinite' value because we will later be adding costs together and need to make sure that value doesn't overflow
+        vector<uint32_t> vcosts(_veclinks.size() * _veclinks.size(), 0x3fffffff);
+
+        // Set the diagonal values (all paths from a link to itself) to zero
+        for (size_t i = 0; i < _veclinks.size(); ++i) {
+            vcosts[MAKE_INDEX(i, i)] = 0;
         }
+
+        // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
+        // Otherwise, scenes that contain a large number of non-jointed links will incur significant overhead.
+        // Note that we use an ordered set here - iterating the links in-order ensures that we mimic the actual connection order of the links.
+        // Iterating in non-deterministic order may produce unexpected paths where a 'future' link traversal shares the same cost as a traversal that is closer to the robot base.
+        std::set<int> usedLinkIndices;
+
         FOREACHC(itjoint,_vecjoints) {
-            if( !!(*itjoint)->GetFirstAttached() && !!(*itjoint)->GetSecondAttached() ) {
-                int index = (*itjoint)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetFirstAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+            // If this joint doesn't have two links to calculate a cost between, skip it
+            if (!(*itjoint)->GetFirstAttached() || !(*itjoint)->GetSecondAttached()) {
+                continue;
+            }
+
+            // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
+            const int jointIndex = (*itjoint)->GetJointIndex();
+            const int firstLinkIndex = (*itjoint)->GetFirstAttached()->GetIndex();
+            const int secondLinkIndex = (*itjoint)->GetSecondAttached()->GetIndex();
+
+            // Mark these links as used
+            usedLinkIndices.emplace(firstLinkIndex);
+            usedLinkIndices.emplace(secondLinkIndex);
+
+            // First link
+            {
+                int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointIndex);
                 vcosts[index] = 1;
-                index = (*itjoint)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*itjoint)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*itjoint)->GetSecondAttached()->GetIndex(),(*itjoint)->GetJointIndex());
+            }
+
+            // Second link
+            {
+                int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointIndex);
                 vcosts[index] = 1;
             }
         }
+
+        // Since we are splaying across two different vectors here, we need to add the size of the base joint vector to our joint index for the passive joints
         int jointindex = (int)_vecjoints.size();
         FOREACHC(passive,_vPassiveJoints) {
-            if( !!(*passive)->GetFirstAttached() && !!(*passive)->GetSecondAttached() ) {
-                int index = (*passive)->GetFirstAttached()->GetIndex()*_veclinks.size()+(*passive)->GetSecondAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*passive)->GetFirstAttached()->GetIndex(),jointindex);
-                vcosts[index] = 1;
-                index = (*passive)->GetSecondAttached()->GetIndex()*_veclinks.size()+(*passive)->GetFirstAttached()->GetIndex();
-                _vAllPairsShortestPaths[index] = std::pair<int16_t,int16_t>((*passive)->GetSecondAttached()->GetIndex(),jointindex);
+            // If this joint doesn't have two links, ignore it
+            if (!(*passive)->GetFirstAttached() || !(*passive)->GetSecondAttached()) {
+                continue;
+            }
+
+            // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
+            const int firstLinkIndex = (*passive)->GetFirstAttached()->GetIndex();
+            const int secondLinkIndex = (*passive)->GetSecondAttached()->GetIndex();
+
+            // Mark these links as used
+            usedLinkIndices.emplace(firstLinkIndex);
+            usedLinkIndices.emplace(secondLinkIndex);
+
+            // First link
+            {
+                int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointindex);
                 vcosts[index] = 1;
             }
+
+            // Second link
+            {
+                int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
+                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointindex);
+                vcosts[index] = 1;
+            }
+
+            // Manually track joint index
             ++jointindex;
         }
-        for(size_t k = 0; k < _veclinks.size(); ++k) {
-            for(size_t i = 0; i < _veclinks.size(); ++i) {
-                if( i == k ) {
+
+        // Now that we have the base costs set for all joints, iterate the links we know to be jointed and calculate the total cost between each pair
+        for (size_t k : usedLinkIndices) {
+            for (size_t i : usedLinkIndices) {
+                // Skip comparisons of a link with itself
+                if (i == k) {
                     continue;
                 }
-                for(size_t j = 0; j < _veclinks.size(); ++j) {
-                    if((j == i)||(j == k)) {
+
+                for (size_t j : usedLinkIndices) {
+                    // Skip comparisons of a link with itself
+                    if ((j == i) || (j == k)) {
                         continue;
                     }
-                    uint32_t kcost = vcosts[k*_veclinks.size()+i] + vcosts[j*_veclinks.size()+k];
-                    if( vcosts[j*_veclinks.size()+i] > kcost ) {
-                        vcosts[j*_veclinks.size()+i] = kcost;
-                        _vAllPairsShortestPaths[j*_veclinks.size()+i] = _vAllPairsShortestPaths[k*_veclinks.size()+i];
+
+                    // Calculate the total cost of going from j -> i via k (aka the cost of j -> k + cost k -> i)
+                    uint32_t kcost = vcosts[MAKE_INDEX(j, k)] + vcosts[MAKE_INDEX(k, i)];
+
+                    // If that's cheaper than the current cost of going from j -> i, pick it as the new shortest path
+                    if (vcosts[MAKE_INDEX(j, i)] > kcost) {
+                        // Floor the cost for this movement
+                        vcosts[MAKE_INDEX(j, i)] = kcost;
+
+                        // Update the path with the new route
+                        _vAllPairsShortestPaths[MAKE_INDEX(j, i)] = _vAllPairsShortestPaths[MAKE_INDEX(k, i)];
                     }
                 }
             }
         }
+#undef MAKE_INDEX
     }
 
     // Use the APAC algorithm to initialize the kinematics hierarchy: _vTopologicallySortedJoints, _vJointsAffectingLinks, Link::_vParentLinks.
@@ -5593,6 +5664,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _pKinematicsGenerator.reset();
     _pCurrentKinematicsFunctions.reset();
     _name = r->_name;
+    _referenceUri = r->_referenceUri;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;
@@ -6216,13 +6288,6 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
         updateFromInfoResult = UFIR_Success;
     }
-    if( info._vLinkInfos.size() > 0 ) {
-        _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
-        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
-    }
-    else {
-        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
-    }
 
     // need to avoid checking links and joints belonging to connected bodies
     std::vector<bool> isConnectedLink(_veclinks.size(), false);  // indicate which link comes from connectedbody
@@ -6298,6 +6363,15 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         }
     }
 
+    // update the base link transform after all links have been updated
+    if( info._vLinkInfos.empty() ) {
+        _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
+    }
+    else {
+        _baseLinkInBodyTransform = info._vLinkInfos.front()->GetTransform();
+        _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
+    }
+
     // joints
     if (!UpdateChildrenFromInfo(info._vJointInfos, vJoints, updateFromInfoResult)) {
         return updateFromInfoResult;
@@ -6324,10 +6398,9 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     // transform
-    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) || (info._vLinkInfos.size() > 0 && info._vLinkInfos[0]->IsModifiedField(KinBody::LinkInfo::LIF_Transform)) ) {
-        Transform bodyTransform = info._transform * _invBaseLinkInBodyTransform;
-        if( GetTransform().CompareTransform(bodyTransform, g_fEpsilon) ) {
-            SetTransform(bodyTransform);
+    if( info.IsModifiedField(KinBodyInfo::KBIF_Transform) ) {
+        if( GetTransform().CompareTransform(info._transform, g_fEpsilon) ) {
+            SetTransform(info._transform);
             updateFromInfoResult = UFIR_Success;
             RAVELOG_VERBOSE_FORMAT("body %s updated due to transform change", _id);
         }

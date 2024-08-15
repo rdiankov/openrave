@@ -55,6 +55,19 @@
 #include <set>
 #include <string>
 
+#if  __cplusplus >= 201703L
+#include <string_view>
+#else
+#include <boost/utility/string_view.hpp>
+namespace std{
+    // make boost::string_view handlable by std::unordered_set/map
+    template<typename CharT,typename Traits>
+    class hash<boost::basic_string_view<CharT,Traits>>: public boost::hash<boost::basic_string_view<CharT,Traits>>
+    {
+    };
+};
+#endif
+
 #include <iomanip>
 #include <fstream>
 #include <sstream>
@@ -104,6 +117,12 @@ namespace OpenRAVE {
 #include <openrave/logging.h>
 
 namespace OpenRAVE {
+
+#if  __cplusplus >= 201703L
+using string_view = std::string_view;
+#else
+using string_view = ::boost::string_view;
+#endif
 
 #if OPENRAVE_PRECISION // 1 if double precision
 typedef double dReal;
@@ -245,6 +264,8 @@ class SpaceSamplerBase;
 class IkParameterization;
 class ConfigurationSpecification;
 class IkReturn;
+class IkFailureInfo;
+class IkFailureAccumulatorBase;
 class Readable;
 
 typedef boost::shared_ptr<CollisionReport> CollisionReportPtr;
@@ -302,6 +323,8 @@ typedef boost::weak_ptr<Readable> ReadableWeakPtr;
 typedef boost::shared_ptr<IkReturn> IkReturnPtr;
 typedef boost::shared_ptr<IkReturn const> IkReturnConstPtr;
 typedef boost::weak_ptr<IkReturn> IkReturnWeakPtr;
+typedef boost::shared_ptr<IkFailureInfo> IkFailureInfoPtr;
+typedef boost::shared_ptr<IkFailureAccumulatorBase> IkFailureAccumulatorBasePtr;
 
 class BaseXMLReader;
 typedef boost::shared_ptr<BaseXMLReader> BaseXMLReaderPtr;
@@ -614,10 +637,14 @@ class OPENRAVE_API StringReadable : public Readable
 {
 public:
     StringReadable(const std::string& id, const std::string& data);
+    StringReadable(const std::string& id, std::string&& data);
+    StringReadable(const std::string& id, const char* data, size_t dataLength);
     virtual ~StringReadable();
 
     /// \brief sets new string data
     void SetData(const std::string& newdata);
+    void SetData(std::string&& newdata);
+    void SetData(const char* data, size_t dataLength);
 
     /// \brief gets a reference to the saved data;
     const std::string& GetData() const;
@@ -2488,6 +2515,8 @@ public:
 
     AABB ComputeAABB() const;
     void serialize(std::ostream& o, int options=0) const;
+
+    void SerializeJSON(rapidjson::Value& rTriMesh, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const;
 
     friend OPENRAVE_API std::ostream& operator<<(std::ostream& O, const TriMesh &trimesh);
     friend OPENRAVE_API std::istream& operator>>(std::istream& I, TriMesh& trimesh);

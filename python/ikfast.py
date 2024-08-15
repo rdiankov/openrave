@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Software License Agreement (Lesser GPL)
 #
@@ -181,10 +181,19 @@ if sympy_version < '0.7.0':
     raise ImportError('ikfast needs sympy 0.7.x or greater')
 sympy_smaller_073 = sympy_version < '0.7.3'
 
+from sympy import *
+from sympy.simplify import cse_main
+if sympy_version > '0.7.1':
+    _zeros, _ones = zeros, ones
+    zeros = lambda args: _zeros(*args)
+    ones = lambda args: _ones(*args)
+
 __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Lesser GPL, Version 3'
 __version__ = '0x1000004c' # hex of the version, has to be prefixed with 0x. also in ikfast.h
+
+# has to specify __version__ after importing as sympy as it will be overwritten by sympy.__version__
 
 import sys, copy, time, math, datetime
 if sys.version_info[0]<3:
@@ -202,13 +211,10 @@ except:
         pass
 
 import numpy # required for fast eigenvalue computation
-from sympy import *
-if sympy_version > '0.7.1':
-    _zeros, _ones = zeros, ones
-    zeros = lambda args: _zeros(*args)
-    ones = lambda args: _ones(*args)
+
 try:
     import mpmath # on some distributions, sympy does not have mpmath in its scope
+    mpmath.mp.eps = 1e-9  # sometimes mpmath.polyroots does not converge well, relax the threshold
 except ImportError:
     pass
 
@@ -270,6 +276,7 @@ except ImportError:
             else:
                 return
 
+import six
 import logging
 log = logging.getLogger('openravepy.ikfast')
 
@@ -279,6 +286,45 @@ try:
     using_swiginac = True
 except ImportError:
     using_swiginac = False
+
+# from sympy/core/core.py
+ordering_of_classes = [
+    # singleton numbers
+    'Zero', 'One', 'Half', 'Infinity', 'NaN', 'NegativeOne', 'NegativeInfinity',
+    # numbers
+    'Integer', 'Rational', 'Float',
+    # singleton symbols
+    'Exp1', 'Pi', 'ImaginaryUnit',
+    # symbols
+    'Symbol', 'Wild', 'Temporary',
+    # arithmetic operations
+    'Pow', 'Mul', 'Add',
+    # function values
+    'Derivative', 'Integral',
+    # defined singleton functions
+    'Abs', 'Sign', 'Sqrt',
+    'Floor', 'Ceiling',
+    'Re', 'Im', 'Arg',
+    'Conjugate',
+    'Exp', 'Log',
+    'Sin', 'Cos', 'Tan', 'Cot', 'ASin', 'ACos', 'ATan', 'ACot',
+    'Sinh', 'Cosh', 'Tanh', 'Coth', 'ASinh', 'ACosh', 'ATanh', 'ACoth',
+    'RisingFactorial', 'FallingFactorial',
+    'factorial', 'binomial',
+    'Gamma', 'LowerGamma', 'UpperGamma', 'PolyGamma',
+    'Erf',
+    # special polynomials
+    'Chebyshev', 'Chebyshev2',
+    # undefined functions
+    'Function', 'WildFunction',
+    # anonymous functions__l
+    'Lambda',
+    # Landau O symbol
+    'Order',
+    # relational operations
+    'Equality', 'Unequality', 'StrictGreaterThan', 'StrictLessThan',
+    'GreaterThan', 'LessThan',
+]
 
 CodeGenerators = {}
 # try:
@@ -1297,16 +1343,14 @@ class IKFastSolver(AutoReloader):
     tjX - tan of joint angle    
     """
 
+    @six.python_2_unicode_compatible
     class CannotSolveError(Exception):
         """thrown when ikfast fails to solve a particular set of equations with the given knowns and unknowns
         """
         def __init__(self,value=u''):
             self.value = value
-        def __unicode__(self):
-            return u'%s: %s'%(self.__class__.__name__, self.value)
-        
         def __str__(self):
-            return unicode(self).encode('utf-8')
+            return u'%s: %s'%(self.__class__.__name__, self.value)
         
         def __repr__(self):
             return '<%s(%r)>'%(self.__class__.__name__, self.value)
@@ -8245,9 +8289,10 @@ class IKFastSolver(AutoReloader):
                     break
                 coeffs.append(value)
                 # since coeffs[0] is normalized with the LC constant, can compare for precision
-                if len(coeffs) == 1 and Abs(coeffs[0]) < 2*(10.0**-self.precision):
-                    coeffs = None
-                    break
+                if len(coeffs) == 1:
+                    if ordering_of_classes.index(type(coeffs[0]).__name__) <= ordering_of_classes.index('Float') and Abs(coeffs[0]) < 2*(10.0**-self.precision):
+                        coeffs = None
+                        break
             if coeffs is None:
                 continue
             if not all([c.is_number for c in coeffs]):

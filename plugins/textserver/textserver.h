@@ -2084,20 +2084,22 @@ protected:
                 os << "0 ";
             }
         }
-        int bodyindex = 0;
-        if( !!preport->plink1 &&( preport->plink1->GetParent() != pbody) ) {
-            bodyindex = preport->plink1->GetParent()->GetEnvironmentBodyIndex();
-        }
-        if( !!preport->plink2 &&( preport->plink2->GetParent() != pbody) ) {
-            bodyindex = preport->plink2->GetParent()->GetEnvironmentBodyIndex();
-        }
-        os << bodyindex << " ";
 
-        if( bgetcontacts ) {
-            FOREACH(itc,preport->contacts) {
-                os << itc->pos.x << " " << itc->pos.y << " " << itc->pos.z << " " << itc->norm.x << " " << itc->norm.y << " " << itc->norm.z << " " << itc->depth << " ";
-            }
-        }
+        os << preport->__str__();
+//        int bodyindex = 0;
+//        if( !!preport->plink1 &&( preport->plink1->GetParent() != pbody) ) {
+//            bodyindex = preport->plink1->GetParent()->GetEnvironmentBodyIndex();
+//        }
+//        if( !!preport->plink2 &&( preport->plink2->GetParent() != pbody) ) {
+//            bodyindex = preport->plink2->GetParent()->GetEnvironmentBodyIndex();
+//        }
+//        os << bodyindex << " ";
+//
+//        if( bgetcontacts ) {
+//            FOREACH(itc,preport->contacts) {
+//                os << itc->pos.x << " " << itc->pos.y << " " << itc->pos.z << " " << itc->norm.x << " " << itc->norm.y << " " << itc->norm.z << " " << itc->depth << " ";
+//            }
+//        }
 
         return true;
     }
@@ -2132,11 +2134,14 @@ protected:
                 bcollision = GetEnv()->CheckCollision(r, KinBodyConstPtr(pbody), preport);
             }
             if(bcollision) {
-                BOOST_ASSERT(preport->contacts.size()>0);
-                CollisionReport::CONTACT& c = preport->contacts.front();
+                //BOOST_ASSERT(preport->contacts.size()>0);
+                //CONTACT& c = preport->contacts.front();
                 os << "1 ";
-                info.push_back(c.pos.x); info.push_back(c.pos.y); info.push_back(c.pos.z);
-                info.push_back(c.norm.x); info.push_back(c.norm.y); info.push_back(c.norm.z);
+                for(int i = 0; i < 6; ++i) {
+                    info.push_back(0);
+                }
+                //info.push_back(c.pos.x); info.push_back(c.pos.y); info.push_back(c.pos.z);
+                //info.push_back(c.norm.x); info.push_back(c.norm.y); info.push_back(c.norm.z);
             }
             else {
                 os << "0 ";

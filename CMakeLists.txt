@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 136)
+set (OPENRAVE_VERSION_MINOR 149)
 set (OPENRAVE_VERSION_PATCH 1)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -700,6 +700,7 @@ if (OPT_PYTHON)
   set(OPENRAVE_PYTHON_INSTALL_DIR ${OPENRAVE_PYTHON2_INSTALL_DIR})
   set(OPENRAVEPY_INSTALL_DIR      ${OPENRAVEPY2_INSTALL_DIR})
   set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY2_VER_INSTALL_DIR})
+  set(PYTHON_EXECUTABLE           ${Python2_EXECUTABLE})
 
   # get the sympy version
   execute_process(
@@ -755,7 +756,7 @@ if (OPT_PYTHON)
     target_compile_options(openravepy2_meta INTERFACE "-fvisibility=hidden") # pybind11 requires less visibility
     target_compile_definitions(openravepy2_meta INTERFACE "OPENRAVE_CORE_DLL=1" "USE_PYBIND11_PYTHON_BINDINGS=1")
     set(USE_PYBIND11_PYTHON_BINDINGS ON)
-  elseif()
+  else()
     find_package(Boost REQUIRED COMPONENTS python thread)
     target_link_libraries(openravepy2_meta INTERFACE rt Python2::Module Python2::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
     target_compile_definitions(openravepy2_meta INTERFACE "OPENRAVE_CORE_DLL=1")
@@ -781,6 +782,7 @@ if (OPT_PYTHON3)
     set(OPENRAVE_PYTHON_INSTALL_DIR ${OPENRAVE_PYTHON3_INSTALL_DIR})
     set(OPENRAVEPY_INSTALL_DIR      ${OPENRAVEPY3_INSTALL_DIR})
     set(OPENRAVEPY_VER_INSTALL_DIR  ${OPENRAVEPY3_VER_INSTALL_DIR})
+    set(PYTHON_EXECUTABLE           ${Python3_EXECUTABLE})
   endif()
 
   add_library(openravepy3_meta INTERFACE)

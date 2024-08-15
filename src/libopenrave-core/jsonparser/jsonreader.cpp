@@ -29,7 +29,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <fstream>
-#include <unordered_set>
+#include <boost/unordered_set.hpp>
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
@@ -343,24 +343,26 @@ public:
         }
 
         // have to remove any duplicate names, prioritize ones that have higher index
-        for(int iBody = 0; iBody+1 < (int) envInfo._vBodyInfos.size(); ++iBody) {
-            bool bFoundLast = false;
-            int iTest = envInfo._vBodyInfos.size()-1;
-            while(iTest > iBody) {
-                const std::string& bodyname = envInfo._vBodyInfos[iBody]->_name;
-                if( envInfo._vBodyInfos[iTest]->_name == bodyname ) {
-                    if( !bFoundLast ) {
-                        RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d and replace with %d with body name '%s'", _penv->GetId()%iBody%iTest%bodyname);
-                        envInfo._vBodyInfos[iBody] = envInfo._vBodyInfos[iTest];
-                        bFoundLast = true;
-                    }
-                    else {
-                        RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d with body name '%s'", _penv->GetId()%iTest%bodyname);
-                    }
-                    envInfo._vBodyInfos.erase(envInfo._vBodyInfos.begin()+iTest);
+        {
+            std::unordered_set<OpenRAVE::string_view> existingBodyNames;
+            ssize_t validBodyCount = envInfo._vBodyInfos.size();
+            for (ssize_t iBody = envInfo._vBodyInfos.size() - 1; iBody >= 0; iBody--) {
+                const std::string& bodyName = envInfo._vBodyInfos[iBody]->_name;
+
+                // If this is the first time we've seen this body, add the name to the existing name set and continue
+                if (existingBodyNames.find(bodyName) == existingBodyNames.end()) {
+                    existingBodyNames.emplace(bodyName);
+                    continue;
                 }
-                --iTest;
+
+                // If this body duplicates a body with a higher index, remove it by swapping it to the end of our info list and decrementing the valid body count.
+                // This saves us having to shuffle all of the pointers down each time we call ::erase().
+                RAVELOG_WARN_FORMAT("env=%d, remove redundant entry %d with body name '%s'", _penv->GetId()%iBody%bodyName);
+                std::swap(envInfo._vBodyInfos[iBody], envInfo._vBodyInfos[--validBodyCount]);
             }
+
+            // Shrink our set of bodies to cut off the duplicate bodies, which are all past the validBodyCount index.
+            envInfo._vBodyInfos.resize(validBodyCount);
         }
 
         // clean up any invalid connected bodies

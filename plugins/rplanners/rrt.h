@@ -41,7 +41,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
     virtual ~RrtPlanner() {
     }
 
-    virtual bool _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
+    virtual PlannerStatus _InitPlan(RobotBasePtr pbase, PlannerParametersPtr params)
     {
         params->Validate();
         _goalindex = -1;
@@ -61,10 +61,12 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
-            RAVELOG_ERROR_FORMAT("env=%s, initial config wrong dim: %d %% %d != 0", GetEnv()->GetNameId()%params->vinitialconfig.size()%params->GetDOF());
-            return false;
+            const std::string msg(str(boost::format("env=%s, initial config wrong dim: %d %% %d != 0")%GetEnv()->GetNameId()%params->vinitialconfig.size()%params->GetDOF()));
+            RAVELOG_ERROR(msg);
+            return PlannerStatus(msg, PS_Failed);
         }
 
+        PlannerStatus planningstatus;
         _vecInitialNodes.resize(0);
         _sampleConfig.resize(params->GetDOF());
         // TODO perhaps distmetricfn should take into number of revolutions of circular joints
@@ -75,6 +77,10 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
             _filterreturn->Clear();
             if( params->CheckPathAllConstraints(vinitialconfig,vinitialconfig, std::vector<dReal>(), std::vector<dReal>(), 0, IT_OpenStart, 0xffff|CFO_FillCollisionReport, _filterreturn) != 0 ) {
                 RAVELOG_DEBUG_FORMAT("env=%s, initial configuration for rrt does not satisfy constraints: %s", GetEnv()->GetNameId()%_filterreturn->_report.__str__());
+                planningstatus.statusCode |= PS_FailedDueToInitial;
+                CollisionReportPtr pColReport = boost::make_shared<CollisionReport>(_filterreturn->_report);
+                planningstatus.InitCollisionReport(pColReport);
+                planningstatus.AddCollisionReport(_filterreturn->_report);
                 continue;
             }
             _vecInitialNodes.push_back(_treeForward.InsertNode(NULL, vinitialconfig, _vecInitialNodes.size()));
@@ -82,10 +88,11 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
 
         if( _treeForward.GetNumNodes() == 0 && !params->_sampleinitialfn ) {
             RAVELOG_WARN_FORMAT("env=%s, no initial configurations", GetEnv()->GetNameId());
-            return false;
+            planningstatus.statusCode |= PS_FailedDueToInitial;
+            return planningstatus;
         }
-
-        return true;
+        
+        return PlannerStatus(PS_HasSolution);
     }
 
 //    /// \brief simple path optimization given a path of dof values
@@ -294,14 +301,15 @@ Some python code to display data::\n\
         dReal length;
     };
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new RRTParameters());
         _parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+        PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
+        if( !(status.GetStatusCode() & PS_HasSolution) ) {
             _parameters.reset();
-            return false;
+            return status;
         }
 
         _fGoalBiasProb = dReal(0.01);
@@ -313,9 +321,11 @@ Some python code to display data::\n\
 
         //read in all goals
         if( (_parameters->vgoalconfig.size() % _parameters->GetDOF()) != 0 ) {
-            RAVELOG_ERROR_FORMAT("env=%s, BirrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetNameId());
+            std::string msg = "env=" + GetEnv()->GetNameId() + ", BirrtPlanner::InitPlan - Error: goals are improperly specified";
+            RAVELOG_ERROR(msg);
+            
             _parameters.reset();
-            return false;
+            return PlannerStatus(msg, PS_Failed|PS_FailedDueToGoal);
         }
 
         vector<dReal> vgoal(_parameters->GetDOF());
@@ -338,9 +348,11 @@ Some python code to display data::\n\
         }
 
         if( _treeBackward.GetNumNodes() == 0 && !_parameters->_samplegoalfn ) {
-            RAVELOG_WARN_FORMAT("env=%s, no goals specified", GetEnv()->GetNameId());
+            std::string msg = "env=" + GetEnv()->GetNameId() + ", no goals specified";
+            RAVELOG_WARN(msg);
+            
             _parameters.reset();
-            return false;
+            return PlannerStatus(msg, PS_Failed|PS_FailedDueToGoal);
         }
 
         if( _parameters->_nMaxIterations <= 0 ) {
@@ -352,7 +364,7 @@ Some python code to display data::\n\
             _vgoalpaths.reserve(_parameters->_minimumgoalpaths);
         }
         RAVELOG_DEBUG_FORMAT("env=%s, BiRRT Planner Initialized, initial=%d, goal=%d, step=%f", GetEnv()->GetNameId()%_vecInitialNodes.size()%_treeBackward.GetNumNodes()%_parameters->_fStepLength);
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
@@ -365,7 +377,7 @@ Some python code to display data::\n\
 
         EnvironmentLock lock(GetEnv()->GetMutex());
         uint64_t basetimeus = utils::GetMonotonicTime();
-        
+
         int constraintFilterOptions = 0xffff|CFO_FillCheckedConfiguration;
         if (planningoptions & PO_AddCollisionStatistics) {
             constraintFilterOptions = constraintFilterOptions|CFO_FillCollisionReport;
@@ -657,14 +669,15 @@ Some python code to display data::\n\
     }
 
     virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
-        std::string filename = RaveGetHomeDirectory() + string("/birrtdump.txt");
+        std::string filename = RaveGetHomeDirectory() + boost::str(boost::format("/birrtdump_%d.txt")%utils::GetMilliTime());
         getline(is, filename);
         boost::trim(filename);
-        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        RAVELOG_INFO_FORMAT("env=%s, dumping RRT trees to %s", GetEnv()->GetNameId()%filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _treeForward.DumpTree(f);
         _treeBackward.DumpTree(f);
+        os << filename;
         return true;
     }
 
@@ -691,14 +704,15 @@ public:
     virtual ~BasicRrtPlanner() {
     }
 
-    bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new BasicRRTParameters());
         _parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+        PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
+        if( !(status.GetStatusCode() & PS_HasSolution) ) {
             _parameters.reset();
-            return false;
+            return status;
         }
 
         CollisionOptionsStateSaver optionstate(GetEnv()->GetCollisionChecker(),GetEnv()->GetCollisionChecker()->GetCollisionOptions()|CO_ActiveDOFs,false);
@@ -712,9 +726,10 @@ public:
                 if(goal_index < (int)_parameters->vgoalconfig.size())
                     vgoal[i] = _parameters->vgoalconfig[goal_index];
                 else {
-                    RAVELOG_ERROR_FORMAT("env=%s, BasicRrtPlanner::InitPlan - Error: goals are improperly specified", GetEnv()->GetNameId());
+                    const std::string msg = "env=" + GetEnv()->GetNameId() + ", BasicRrtPlanner::InitPlan - Error: goals are improperly specified";
+                    RAVELOG_ERROR(msg);
                     _parameters.reset();
-                    return false;
+                    return PlannerStatus(msg, PS_Failed);
                 }
                 goal_index++;
             }
@@ -732,14 +747,15 @@ public:
         }
 
         if(( _vecGoals.size() == 0) && !_parameters->_goalfn ) {
-            RAVELOG_WARN_FORMAT("env=%s, no goals or goal function specified", GetEnv()->GetNameId());
+            const std::string msg = "env=" + GetEnv()->GetNameId() + ", no goals or goal function specified";
+            RAVELOG_WARN(msg);
             _parameters.reset();
-            return false;
+            return PlannerStatus(msg, PS_Failed);
         }
 
         _bOneStep = _parameters->_nRRTExtentType == 1;
         RAVELOG_DEBUG_FORMAT("env=%s, BasicRrtPlanner initialized _nRRTExtentType=%d", GetEnv()->GetNameId()%_parameters->_nRRTExtentType);
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
     PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
@@ -927,13 +943,14 @@ public:
     }
 
     virtual bool _DumpTreeCommand(std::ostream& os, std::istream& is) {
-        std::string filename = RaveGetHomeDirectory() + string("/basicrrtdump.txt");
+        std::string filename = RaveGetHomeDirectory() + boost::str(boost::format("/basicrrtdump_%d.txt")%utils::GetMilliTime());
         getline(is, filename);
         boost::trim(filename);
-        RAVELOG_VERBOSE(str(boost::format("dumping rrt tree to %s")%filename));
+        RAVELOG_INFO_FORMAT("env=%s, dumping BasicRRT tree to %s", GetEnv()->GetNameId()%filename);
         ofstream f(filename.c_str());
         f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
         _treeForward.DumpTree(f);
+        os << filename;
         return true;
     }
 protected:
@@ -953,17 +970,18 @@ public:
     virtual ~ExplorationPlanner() {
     }
 
-    virtual bool InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams)
+    virtual PlannerStatus InitPlan(RobotBasePtr pbase, PlannerParametersConstPtr pparams) override
     {
         EnvironmentLock lock(GetEnv()->GetMutex());
         _parameters.reset(new ExplorationParameters());
         _parameters->copy(pparams);
-        if( !RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters) ) {
+        PlannerStatus status = RrtPlanner<SimpleNode>::_InitPlan(pbase,_parameters);
+        if( !(status.GetStatusCode() & PS_HasSolution) ) {
             _parameters.reset();
-            return false;
+            return status;
         }
         RAVELOG_DEBUG_FORMAT("env=%s, ExplorationPlanner::InitPlan - RRT Planner Initialized", GetEnv()->GetNameId());
-        return true;
+        return PlannerStatus(PS_HasSolution);
     }
 
     virtual PlannerStatus PlanPath(TrajectoryBasePtr ptraj, int planningoptions) override
