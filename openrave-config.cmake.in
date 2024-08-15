@@ -68,6 +68,13 @@ if (OpenRAVE_PYTHON2)
   # Backwards compat: Refer to python 2
   set( OpenRAVE_PYTHON_INCLUDE_DIRS ${OpenRAVE_PYTHON2_INCLUDE_DIRS} CACHE STRING "This is for backward compatibility with deprecated CMake declarations." FORCE)
   set( OpenRAVE_PYTHON_DIR "${OpenRAVE_PYTHON2_DIR}")
+
+  if (OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS)
+    set(PYBIND11_FINDPYTHON ON)
+    find_package(pybind11 REQUIRED CONFIG)
+  else()
+    find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS python)
+  endif()
 endif()
 
 if (OpenRAVE_PYTHON3)
@@ -82,12 +89,13 @@ if (OpenRAVE_PYTHON3)
     set( OpenRAVE_PYTHON_INCLUDE_DIRS ${OpenRAVE_PYTHON3_INCLUDE_DIRS} CACHE STRING "This is for backward compatibility with deprecated CMake declarations." FORCE)
     set( OpenRAVE_PYTHON_DIR "${OpenRAVE_PYTHON3_DIR}")
   endif()
-endif()
-if (OpenRAVE_USE_PYBIND11_PYTHON_BINDINGS OR OpenRAVE_USE_PYBIND11_PYTHON3_BINDINGS)
-  set(PYBIND11_FINDPYTHON ON)
-  find_package(pybind11 REQUIRED CONFIG)
-else()
-  find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS python)
+
+  if (OpenRAVE_USE_PYBIND11_PYTHON3_BINDINGS)
+    set(PYBIND11_FINDPYTHON ON)
+    find_package(pybind11 REQUIRED CONFIG)
+  else()
+    find_package(Boost ${OpenRAVE_Boost_VERSION} REQUIRED COMPONENTS python)
+  endif()
 endif()
 
 # Backward compatibility only.
