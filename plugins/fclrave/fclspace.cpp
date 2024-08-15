@@ -120,8 +120,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 else {
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
-                linkinfo->bFromExtraGeometries = true;
             }
+            linkinfo->bFromExtraGeometries = true;
         }
         else if ( _geometrygroup.empty() || _geometrygroup == "self" ) {
             // if this checker is for default geometries checking, allow to check collision with geometries with other group names. let's say, allow to check with "padding" of robot and "self" of obstacle.
