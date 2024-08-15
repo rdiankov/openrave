@@ -6569,9 +6569,12 @@ static void _RemoveMatchingCollisionChecker(std::vector<CollisionCheckerBasePtr>
     std::vector<std::string>::iterator itName = vCollisionCheckerGroupNames.begin();
     while( itChecker != vCollisionCheckers.end() ) {
         CollisionCheckerBasePtr& pChecker = *itChecker;
-        if( (pChecker->GetGeometryGroup().find(prefix) == 0) &&
-            (std::find(vGeometryNamesToKeep.begin(), vGeometryNamesToKeep.end(), pChecker->GetGeometryGroup()) == vGeometryNamesToKeep.end()) ) {
-            pChecker->DestroyEnvironment();
+        std::string& groupName = *itName;
+        if( (groupName.find(prefix) == 0) &&
+            (std::find(vGeometryNamesToKeep.begin(), vGeometryNamesToKeep.end(), groupName) == vGeometryNamesToKeep.end()) ) {
+            if( !!pChecker ) {
+                pChecker->DestroyEnvironment();
+            }
             itChecker = vCollisionCheckers.erase(itChecker);
             itName = vCollisionCheckerGroupNames.erase(itName);
         }
@@ -6602,7 +6605,7 @@ void KinBody::_EnsureSafetyCollisionCheckers()
     if( vSafetyGroupNames.size() > 0 ) {
         // If the default checker does not exist, add it
         if( _vSelfCollisionCheckers.empty() ) {
-            SetSelfCollisionChecker(GetEnv()->GetCollisionChecker());
+            SetSelfCollisionChecker(CollisionCheckerBasePtr());
         }
         // if does not exist, add the new self collision checker with safety groups
         for(const std::string& groupName : vSafetyGroupNames) {
