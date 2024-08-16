@@ -53,7 +53,7 @@ import time,bisect
 
 from numpy import array, r_, c_, e, pi, prod, arange, linalg, dot, cos, sin, reshape, flatnonzero, tile, argmax, transpose, random, inf, cumsum, mean, zeros, hstack, argsort, sqrt, std, eye, mgrid, ravel
 
-from openravepy import planning_error
+from .. import planning_error
 from ..openravepy_int import RaveFindDatabaseFile, RaveCreateRobot, IkParameterization, rotationMatrixFromAxisAngle, poseFromMatrix, matrixFromPose, matrixFromQuat, matrixFromAxisAngle, poseMult, quatFromAxisAngle, IkFilterOptions
 from ..openravepy_ext import quatArrayTMult, quatArrayTDist, poseMultArrayT, normalizeZRotation
 from . import DatabaseGenerator
