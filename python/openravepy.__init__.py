@@ -29,7 +29,7 @@ except NameError:
 import sys
 import six
 
-from .openravepy_int import *
+import openravepy_int
 from .openravepy_int import __version__
 from .openravepy_int import __author__
 from .openravepy_int import __copyright__
@@ -57,7 +57,7 @@ else:
         def __repr__( self ):
             return self._pimpl.__repr__()
         def __unicode__( self ):
-            return unicode(self._pimpl)
+            return unicode(self._pimpl)  # noqa: F821
         def __getattribute__(self, attr):
             my_pimpl = super(openrave_exception_helper, self).__getattribute__("_pimpl")
             try:
@@ -128,7 +128,7 @@ class PlanningError(Exception):
         if sys.version_info[0]>=3:
             self.parameter = parameter
         else:
-            self.parameter = unicode(parameter)
+            self.parameter = unicode(parameter)  # noqa: F821
         if recoverySuggestions is None:
             self.recoverySuggestions = []
         else:
@@ -155,7 +155,7 @@ class PlanningError(Exception):
 # deprecated
 planning_error = PlanningError
 
-from .openravepy_ext import *
+#from .openravepy_ext import *
 
 from . import metaclass
 from . import interfaces
