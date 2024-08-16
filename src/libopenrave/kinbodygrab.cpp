@@ -964,11 +964,16 @@ void KinBody::_UpdateGrabbedBodies()
 
 std::vector<GrabbedPtr>::iterator KinBody::_RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed)
 {
-    KinBodyConstPtr pgrabbedbody = (*itGrabbed)->_pGrabbedBody.lock();
+    // Assert that this body was actually grabbed
+    KinBodyConstPtr pGrabbedBody = (*itGrabbed)->_pGrabbedBody.lock();
+    const MapGrabbedBodyNameIndex::const_iterator itGrabbedIndex = _mapGrabbedBodyNameIndex.find(pGrabbedBody->GetName());
+    OPENRAVE_ASSERT_FORMAT(itGrabbedIndex != _mapGrabbedBodyNameIndex.end(), "env=%s, body '%s' attempted to ungrab body '%s' that wasn't grabbed", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName(), ORE_InvalidArguments);
+
+    // Remove the body from our grabbed list
     itGrabbed = _vGrabbedBodies.erase(itGrabbed);
 
     // Get the index of the removed body, and update the cached indices for all subsequent bodies
-    const size_t removedBodyIndex = _mapGrabbedBodyNameIndex.at(pgrabbedbody->GetName());
+    const size_t removedBodyIndex = itGrabbedIndex->second;
     FOREACH(itBodyIndex, _mapGrabbedBodyNameIndex) {
         if (itBodyIndex->second > removedBodyIndex) {
             itBodyIndex->second--;
@@ -976,13 +981,13 @@ std::vector<GrabbedPtr>::iterator KinBody::_RemoveGrabbedBody(std::vector<Grabbe
     }
 
     // Erase the removed body from the lookup table
-    _mapGrabbedBodyNameIndex.erase(pgrabbedbody->GetName());
+    _mapGrabbedBodyNameIndex.erase(pGrabbedBody->GetName());
 
     for( const GrabbedPtr& pOtherGrabbed : _vGrabbedBodies) {
         // _listNonCollidingLinksWhenGrabbed in other grabbed bodies might contain the body
         std::list<LinkConstPtr>& listNonCollidingLinksWhenGrabbed = pOtherGrabbed->_listNonCollidingLinksWhenGrabbed;
         for (std::list<LinkConstPtr>::iterator itlink = listNonCollidingLinksWhenGrabbed.begin(); itlink != listNonCollidingLinksWhenGrabbed.end();) {
-            if( (*itlink)->GetParent() == pgrabbedbody ) {
+            if( (*itlink)->GetParent() == pGrabbedBody ) {
                 itlink = listNonCollidingLinksWhenGrabbed.erase(itlink);
             }
             else {
