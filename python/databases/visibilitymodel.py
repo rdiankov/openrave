@@ -72,13 +72,13 @@ __license__ = 'Apache License, Version 2.0'
 import time
 import os.path
 
-from openravepy import planning_error
-from openravepy.openravepy_int import RaveFindDatabaseFile, RobotStateSaver, RaveGetHomeDirectory, InvertPose, poseMult, matrixFromPose, poseFromMatrix, RaveDestroy, Environment, Sensor, invertPoses, InvertPoses
-from openravepy.openravepy_ext import poseMultArrayT
 from numpy import array, e, r_, zeros, linalg, dot, argsort, eye, random, flatnonzero, loadtxt
 
+from .. import planning_error
 from ..openravepy_int import RaveGetDefaultViewerType
 from ..openravepy_int import IkParameterization
+from ..openravepy_int import RaveFindDatabaseFile, RobotStateSaver, RaveGetHomeDirectory, InvertPose, poseMult, matrixFromPose, poseFromMatrix, RaveDestroy, Environment, Sensor, invertPoses, InvertPoses
+from ..openravepy_ext import poseMultArrayT
 from . import DatabaseGenerator
 from . import inversekinematics
 from . import kinematicreachability
