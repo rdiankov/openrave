@@ -6,6 +6,7 @@ ChangeLog
 Version 0.149.1
 ===============
 
+- Fix `FindFirstMatchingLinkIndex` and `FindSecondMatchingLinkIndex` in `CollisionPairInfo`
 - Set jitterer's `_busebiasing` flag to `false` in the beginning when receiving `SetManipulatorBias` command. The flag will be set to `true` after confirming that the requested manipulator exists and `vbiasdirection` is non-zero. This is because when the provided `vbiasdirection` is a zero vector, the intention is most likely to not use biasing.
 
 Version 0.149.0
