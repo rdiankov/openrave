@@ -461,8 +461,7 @@ KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
     if (it == _mapGrabbedBodyNameIndex.end()) {
         return nullptr;
     }
-    int index = _mapGrabbedBodyNameIndex.at(body.GetName());
-    return _vGrabbedBodies.at(index)->_pGrabbingLink;
+    return _vGrabbedBodies.at(it->second)->_pGrabbingLink;
 }
 
 int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const
