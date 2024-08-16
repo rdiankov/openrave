@@ -53,14 +53,7 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import numpy
-for iall in range(len(numpy.__all__)-1, -1, -1):
-    if numpy.__all__[iall] in {'max', 'min', 'round'}:
-        numpy.__all__.pop(iall)
-
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import array
+from numpy import array, r_, c_, dot, eye, mod, reshape, flatnonzero, prod, arange, hstack, linalg, sqrt, mean, zeros, tile, floor, mgrid, minimum
 
 from ..openravepy_int import RaveFindDatabaseFile, IkParameterization, rotationMatrixFromQArray, poseFromMatrix
 from ..openravepy_ext import transformPoints, quatArrayTDist

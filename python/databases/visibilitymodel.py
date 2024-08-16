@@ -72,17 +72,10 @@ __license__ = 'Apache License, Version 2.0'
 import time
 import os.path
 
-import numpy
-for iall in range(len(numpy.__all__)-1, -1, -1):
-    if numpy.__all__[iall] in {'max', 'min', 'round'}:
-        numpy.__all__.pop(iall)
-
-if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
-    from numpy import *
-else:
-    from numpy import array
+from openravepy import planning_error
+from openravepy.openravepy_int import RaveFindDatabaseFile, RobotStateSaver, RaveGetHomeDirectory, InvertPose, poseMult, matrixFromPose, poseFromMatrix, RaveDestroy, Environment, Sensor, invertPoses, InvertPoses
+from openravepy.openravepy_ext import poseMultArrayT
+from numpy import array, e, r_, zeros, linalg, dot, argsort, eye, random, flatnonzero, loadtxt
 
 from ..openravepy_int import RaveGetDefaultViewerType
 from ..openravepy_int import IkParameterization
@@ -296,7 +289,7 @@ class VisibilityModel(DatabaseGenerator):
                             print(msg)
                             pilutil.imshow(I)
                         else:
-                            raw_input(msg)
+                            input(msg)
         finally:
             # have to destroy the plot handle
             h = None
@@ -341,7 +334,7 @@ class VisibilityModel(DatabaseGenerator):
                         print(msg)
                         pilutil.imshow(I)
                     else:
-                        raw_input(msg)
+                        input(msg)
         finally:
             # have to destroy the plot handle
             h = None
@@ -376,7 +369,7 @@ class VisibilityModel(DatabaseGenerator):
             if randomize:
                 order = random.permutation(len(self.visibilitytransforms))
             else:
-                order = xrange(len(self.visibilitytransforms))
+                order = range(len(self.visibilitytransforms))
             for i in order:
                 pose = self.visibilitytransforms[i]
                 Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetTransform())
