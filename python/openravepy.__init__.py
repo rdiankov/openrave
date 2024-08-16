@@ -29,7 +29,7 @@ except NameError:
 import sys
 import six
 
-from . import openravepy_int
+from .openravepy_int import *
 from .openravepy_int import __version__
 from .openravepy_int import __author__
 from .openravepy_int import __copyright__
@@ -154,6 +154,8 @@ class PlanningError(Exception):
     
 # deprecated
 planning_error = PlanningError
+
+from .openravepy_ext import *
 
 from . import metaclass
 from . import interfaces
