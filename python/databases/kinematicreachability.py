@@ -53,7 +53,7 @@ __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)
 __license__ = 'Apache License, Version 2.0'
 
 import numpy
-from numpy import array, r_, c_, dot, eye, mod, reshape, flatnonzero, prod, arange, hstack, linalg, sqrt, mean, zeros, tile, floor, mgrid, minimum
+from numpy import array, r_, c_, dot, eye, mod, reshape, flatnonzero, prod, arange, hstack, linalg, sqrt, mean, zeros, tile, floor, mgrid, minimum, sum
 
 from ..openravepy_int import RaveFindDatabaseFile, IkParameterization, rotationMatrixFromQArray, poseFromMatrix
 from ..openravepy_ext import transformPoints, quatArrayTDist

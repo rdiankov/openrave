@@ -162,7 +162,7 @@ except:
     import pickle
 
 import numpy
-from numpy import array, r_, c_, zeros, dot, tile, transpose, reshape, arange, pi, sin, cos, ones, eye, meshgrid, sqrt, arccos, linspace, inf, cross, outer, argsort, linalg, mean, std, random
+from numpy import array, r_, c_, zeros, dot, tile, transpose, reshape, arange, pi, sin, cos, ones, eye, meshgrid, sqrt, arccos, linspace, inf, cross, outer, argsort, linalg, mean, std, random, sum
 
 from .. import PlanningError
 from ..openravepy_ext import transformPoints

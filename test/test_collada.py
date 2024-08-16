@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .common_test_openrave import EnvironmentSetup, expected_failure, g_robotfiles, g_epsilon, transdist
+from common_test_openrave import EnvironmentSetup, expected_failure, g_robotfiles, g_epsilon, transdist
 from openravepy import Environment, Robot, KinBody, RaveCreateKinBody, misc, matrixFromAxisAngle
 from numpy import array, ones, eye, pi, random
 

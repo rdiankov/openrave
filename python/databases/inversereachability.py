@@ -51,7 +51,7 @@ __license__ = 'Apache License, Version 2.0'
 
 import time,bisect
 
-from numpy import array, r_, c_, e, pi, prod, arange, linalg, dot, cos, sin, reshape, flatnonzero, tile, argmax, transpose, random, inf, cumsum, mean, zeros, hstack, argsort, sqrt, std, eye, mgrid, ravel
+from numpy import array, r_, c_, e, pi, prod, arange, linalg, dot, cos, sin, reshape, flatnonzero, tile, argmax, transpose, random, inf, cumsum, mean, zeros, hstack, argsort, sqrt, std, eye, mgrid, ravel, sum
 
 from .. import planning_error
 from ..openravepy_int import RaveFindDatabaseFile, RaveCreateRobot, IkParameterization, rotationMatrixFromAxisAngle, poseFromMatrix, matrixFromPose, matrixFromQuat, matrixFromAxisAngle, poseMult, quatFromAxisAngle, IkFilterOptions

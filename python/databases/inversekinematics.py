@@ -144,7 +144,7 @@ __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>
 __license__ = 'Apache License, Version 2.0'
 
 from numpy import array, float64, double
-from numpy import pi, sqrt, eye, cross, dot, linalg, reshape, mean, median, mod, random
+from numpy import pi, sqrt, eye, cross, dot, linalg, reshape, mean, median, mod, random, sum
 
 from ..openravepy_ext import RobotStateSaver
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix, RaveGetDefaultViewerType

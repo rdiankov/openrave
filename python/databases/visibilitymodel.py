@@ -72,7 +72,7 @@ __license__ = 'Apache License, Version 2.0'
 import time
 import os.path
 
-from numpy import array, e, r_, zeros, linalg, dot, argsort, eye, random, flatnonzero, loadtxt
+from numpy import array, e, r_, zeros, linalg, dot, argsort, eye, random, flatnonzero, loadtxt, sum
 
 from .. import planning_error
 from ..openravepy_int import RaveGetDefaultViewerType
