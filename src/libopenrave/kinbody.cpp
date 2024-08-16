@@ -5790,6 +5790,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
     _listAttachedBodies.clear(); // will be set in the environment
+    _mapGrabbedBodyNameIndex.clear();
     _vGrabbedBodies.clear();
     if( (cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies ) {
         _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
@@ -5841,6 +5842,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                     }
                     pgrabbed->_SetLinkNonCollidingIsValid(true);
                 }
+                _mapGrabbedBodyNameIndex[pgrabbedbody->GetName()] = _vGrabbedBodies.size();
                 _vGrabbedBodies.push_back(pgrabbed);
                 try {
                     // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
@@ -5850,6 +5852,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                     RAVELOG_ERROR_FORMAT("env=%s, failed in attach body", GetEnv()->GetNameId());
                     BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
                     _vGrabbedBodies.pop_back();
+                    _mapGrabbedBodyNameIndex.erase(pgrabbedbody->GetName());
                     throw;
                 }
             }
