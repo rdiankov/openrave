@@ -525,7 +525,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     elif geom.GetType() == KinBody.Link.GeomType.Sphere:
                         insideinds = numpy.less_equal(sum(localpoints**2,1), geom.GetSphereRadius()**2)
                     elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
-                        insideinds = numpy.less_equal(abs(localpoints[:,1]), 0.5*geom.GetCylinderHeight()) and numpy.less_equal(localpoint[:,0]**2+localpoint[:2]**2, geom.GetCylinderRadius()**2)
+                        insideinds = numpy.less_equal(abs(localpoints[:,1]), 0.5*geom.GetCylinderHeight()) and numpy.less_equal(localpoints[:,0]**2+localpoints[:2]**2, geom.GetCylinderRadius()**2)
                     else:
                         continue
                     inside[leftinds[flatnonzero(insideinds)]] = True
