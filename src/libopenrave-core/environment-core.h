@@ -3844,26 +3844,37 @@ protected:
         bool bCollisionCheckerChanged = false;
         std::vector<CollisionCheckerBasePtr> vInputCheckers;
         r->GetCollisionCheckers(vInputCheckers);
-        if( vInputCheckers.size() > 0 && !!vInputCheckers.front() ) {
-            for(CollisionCheckerBasePtr pInputChecker : vInputCheckers) {
-                if( !!pInputChecker ) {
-                    CollisionCheckerBasePtr pTestChecker = GetCollisionCheckerByGroupName(pInputChecker->GetGeometryGroup());
-                    if( !bCheckSharedResources || (!!pTestChecker && pTestChecker->GetXMLId() != pInputChecker->GetXMLId()) || (!pTestChecker) ) {
-                        try {
-                            CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),pInputChecker->GetXMLId());
-                            p->Clone(pInputChecker,options);
-                            SetCollisionCheckerByGroupName(pInputChecker->GetGeometryGroup(), p);
-                            bCollisionCheckerChanged = true;
-                        }
-                        catch(const std::exception& ex) {
-                            throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone collision checker '%s': %s"), r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
-                        }
+        if( r->_vCollisionCheckerGroupNames.size() > 0 ) {
+            const bool bIsDifferentGroupNames = (r->_vCollisionCheckerGroupNames != _vCollisionCheckerGroupNames);
+            if( bIsDifferentGroupNames ) {
+                _vCollisionCheckerGroupNames = r->_vCollisionCheckerGroupNames;
+                _vCollisionCheckers.clear();
+                for(int iChecker = 0; iChecker < (int)r->_vCollisionCheckerGroupNames.size(); ++iChecker) {
+                    _vCollisionCheckers.push_back(CollisionCheckerBasePtr());
+                }
+            }
+            for(int iChecker = 0; iChecker < (int)r->_vCollisionCheckerGroupNames.size(); ++iChecker) {
+                const CollisionCheckerBasePtr pInputChecker = vInputCheckers.at(iChecker);
+                if( !pInputChecker ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT0(_("failed to clone collision checker since the original checker is null '%s'"),ORE_InvalidPlugin);
+                }
+                CollisionCheckerBasePtr pTestChecker = GetCollisionCheckerByGroupName(r->_vCollisionCheckerGroupNames.at(iChecker));
+                if( !bCheckSharedResources || bIsDifferentGroupNames || (!!pTestChecker && pTestChecker->GetXMLId() != pInputChecker->GetXMLId()) ) {
+                    try {
+                        CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),pInputChecker->GetXMLId());
+                        p->Clone(pInputChecker,options);
+                        SetCollisionCheckerByGroupName(pInputChecker->GetGeometryGroup(), p);
+                        bCollisionCheckerChanged = true;
+                    }
+                    catch(const std::exception& ex) {
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("failed to clone collision checker '%s': %s"), r->GetCollisionChecker()->GetXMLId()%ex.what(),ORE_InvalidPlugin);
                     }
                 }
             }
         }
         else {
-            SetCollisionChecker(CollisionCheckerBasePtr());
+            _vCollisionCheckerGroupNames.clear();
+            _vCollisionCheckers.clear();
         }
 
         bool bPhysicsEngineChanged = false;
