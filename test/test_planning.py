@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, g_epsilon, transdist
+from openravepy import interfaces
+from numpy import array, tile, pi, eye, dot
 
 class RunPlanning(EnvironmentSetup):
     def __init__(self,collisioncheckername):

@@ -13,10 +13,10 @@
 # limitations under the License.
 from __future__ import with_statement # for python 2.5
 
-from openravepy import *
+from openravepy import Environment, RaveInitialize, RaveGetHomeDirectory, RaveDestroy, DebugLevel, quatFromAxisAngle, matrixFromAxisAngle, transformPoints, raveLogVerbose
 from openravepy import misc
 import numpy
-from numpy import *
+from numpy import linalg, random, arccos, dot, tile, sqrt
 
 from itertools import combinations
 try:

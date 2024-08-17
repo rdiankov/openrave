@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, g_epsilon, expected_failure, transdist
+from openravepy import planningutils, interfaces
+from openravepy import RaveClone, RaveCreateTrajectory, RaveCreatePlanner, IkFilterOptions, RaveGetAffineConfigurationSpecification, RaveGetAffineDOFValuesFromTransform, PlannerStatusCode, Planner, poseMult, quatRotate, quatFromAxisAngle, ConfigurationSpecification
+from numpy import array, r_, zeros, ones
+import numpy
 
 class TestTrajectory(EnvironmentSetup):
 
@@ -891,4 +895,3 @@ class TestTrajectory(EnvironmentSetup):
         duration = traj.GetDuration()
         planningutils.SegmentTrajectory(traj, startoffset, duration)
         assert( abs(traj.GetDuration() - (duration-startoffset)) <= g_epsilon )
-

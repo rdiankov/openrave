@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, expected_failure
+from openravepy import openravepy_int, RaveCreateSpaceSampler, SampleDataType, RaveGetLoadedInterfaces, RaveCreateSpaceSampler, InterfaceType, Robot, Interval
 from openravepy.openravepy_ext import enum_to_dict
+from numpy import tile
 
 class TestSampling(EnvironmentSetup):
     def _runsampler(self,samplername):
