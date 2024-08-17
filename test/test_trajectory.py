@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from common_test_openrave import EnvironmentSetup, g_epsilon, expected_failure, transdist
-from openravepy import planningutils, interfaces
-from openravepy import RaveClone, RaveCreateTrajectory, RaveCreatePlanner, IkFilterOptions, RaveGetAffineConfigurationSpecification, RaveGetAffineDOFValuesFromTransform, PlannerStatusCode, Planner, poseMult, quatRotate, quatFromAxisAngle, ConfigurationSpecification
-from numpy import array, r_, zeros, ones
+from openravepy import planningutils, interfaces, databases, misc
+from openravepy import RaveClone, RaveCreateTrajectory, RaveCreatePlanner, IkFilterOptions, RaveGetAffineConfigurationSpecification, RaveGetAffineDOFValuesFromTransform, PlannerStatusCode, Planner, poseMult, quatRotate, quatFromAxisAngle, ConfigurationSpecification, IkParameterizationType, DOFAffine, IkParameterization, RaveGetIndexFromAffineDOF, RaveSetDebugLevel, DebugLevel, quatMultiply, quatInverse, matrixFromAxisAngle, axisAngleFromRotationMatrix, poseFromMatrix, openrave_exception
+from numpy import array, r_, c_, zeros, ones, pi, cumsum, dot, eye, arange, linalg, polyfit, tile, flatnonzero, fmod, modf, linspace
 import numpy
+import time
 
 class TestTrajectory(EnvironmentSetup):
 
