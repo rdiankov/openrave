@@ -14,9 +14,8 @@
 from common_test_openrave import EnvironmentSetup, ComputePoseDistance, g_epsilon, transdist, expected_failure, g_robotfiles, randlimits
 from openravepy import misc, databases, interfaces, planningutils
 from openravepy import CollisionOptions, CollisionReport, RaveCreateCollisionChecker, RaveCreateRobot, IkFilterOptions, IkParameterization, IkParameterizationType, RaveCreateKinBody, Environment, RaveCreateTrajectory, Robot, KinBody, DOFAffine, PlannerStatusCode, IkReturnAction, rotationMatrixFromAxisAngle
-from numpy import array, r_, random, dot, cross, zeros, eye, pi, ones, float64, float32, arccos, linalg, abs
+from numpy import array, r_, random, dot, cross, zeros, eye, pi, ones, float64, float32, arccos, linalg, copy, abs, all
 import numpy
-import copy
 
 class RunRobot(EnvironmentSetup):
     def __init__(self,collisioncheckername):

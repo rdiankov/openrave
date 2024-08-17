@@ -14,7 +14,7 @@
 from common_test_openrave import EnvironmentSetup, ComputePoseDistance, transdist, g_epsilon, expected_failure, g_robotfiles, g_jacobianstep, g_envfiles, randlimits, randtrans, axisangledist, izip, pickle
 from openravepy import planningutils, databases, misc
 from openravepy import GeometryType, KinBody, RaveCreateKinBody, poseFromMatrix, SerializationOptions, axisAngleFromRotationMatrix, rotationMatrixFromAxisAngle, TriMesh, quatFromRotationMatrix, transformPoints, raveLogDebug, poseFromMatrices
-from numpy import array, ones, pi, eye, dot, zeros, linalg, random, arange, cross, cos, arccos, polyfit, transpose, diag, abs, sum
+from numpy import array, ones, pi, eye, dot, zeros, linalg, random, arange, cross, cos, arccos, polyfit, transpose, diag, abs, sum, any, all
 import numpy
 
 from itertools import combinations

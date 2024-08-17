@@ -14,7 +14,7 @@
 from common_test_openrave import EnvironmentSetup, g_epsilon, transdist
 from openravepy import databases, planningutils
 from openravepy import IkParameterizationType, IkParameterization, IkFilterOptions, IkReturnAction, RaveSetDebugLevel, DebugLevel, quatMultiply, matrixFromAxisAngle, quatInverse
-from numpy import array, r_, dot, linalg, zeros, sqrt, arccos, ones, pi, tile, eye, abs, sum
+from numpy import array, r_, dot, linalg, zeros, sqrt, arccos, ones, pi, tile, eye, abs, sum, any, all
 import numpy
 
 try:

@@ -13,7 +13,7 @@
 # limitations under the License.
 from common_test_openrave import transdist, g_epsilon, randquat, randpose, log
 from openravepy import rotationMatrixFromAxisAngle, quatFromAxisAngle, poseTransformPoints, matrixFromPose, axisAngleFromQuat, poseFromMatrix, quatRotateDirection, axisAngleFromRotationMatrix, rotationMatrixFromQuat, quatFromRotationMatrix, quatArrayRotate, poseMult, matrixFromAxisAngle, transformInversePoints, matrixFromQuat, matrixFromPoses, poseMultArrayT, quatRotateArrayT, quatRotate, quatMultArrayT, quatArrayTRotate, quatArrayTDist, quatArrayTMult, transformPoints, poseFromMatrices, quatMult, invertPoses
-from numpy import pi, sqrt, random, dot, linalg, tile, abs, sum
+from numpy import pi, sqrt, random, dot, linalg, tile, abs, sum, all
 
 def test_transformations():
     log.info('tests basic math transformations')

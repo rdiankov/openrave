@@ -62,7 +62,7 @@ __license__ = 'Apache License, Version 2.0'
 
 import numpy
 
-from numpy import ones, tile, eye, zeros, dot, linalg, sum, abs
+from numpy import ones, tile, eye, zeros, dot, linalg, sum, abs, all
 
 from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType

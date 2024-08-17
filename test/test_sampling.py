@@ -14,7 +14,7 @@
 from common_test_openrave import EnvironmentSetup, expected_failure
 from openravepy import openravepy_int, RaveCreateSpaceSampler, SampleDataType, RaveGetLoadedInterfaces, RaveCreateSpaceSampler, InterfaceType, Robot, Interval
 from openravepy.openravepy_ext import enum_to_dict
-from numpy import tile
+from numpy import tile, all
 
 class TestSampling(EnvironmentSetup):
     def _runsampler(self,samplername):
