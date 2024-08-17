@@ -13,7 +13,7 @@
 # limitations under the License.
 from common_test_openrave import EnvironmentSetup, g_epsilon, transdist, log, expected_failure, g_robotfiles
 from openravepy import RaveCreatePhysicsEngine, DOFAffine
-from numpy import array, eye, random
+from numpy import array, eye, random, abs, sum
 import numpy
 import time
 

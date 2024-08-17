@@ -16,7 +16,7 @@ from __future__ import with_statement # for python 2.5
 from openravepy import Environment, RaveInitialize, RaveGetHomeDirectory, RaveDestroy, DebugLevel, quatFromAxisAngle, matrixFromAxisAngle, transformPoints, raveLogVerbose
 from openravepy import misc
 import numpy
-from numpy import linalg, random, arccos, dot, tile, sqrt
+from numpy import linalg, random, arccos, dot, tile, sqrt, sum, abs
 
 from itertools import combinations
 try:

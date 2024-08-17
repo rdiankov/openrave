@@ -13,7 +13,7 @@
 # limitations under the License.
 from common_test_openrave import EnvironmentSetup
 from openravepy import RaveCreateCollisionChecker, RaveCreateKinBody, CollisionReport, CollisionOptions, CollisionAction
-from numpy import array, random
+from numpy import array, random, abs
 
 class RunCollision(EnvironmentSetup):
     def __init__(self,collisioncheckername):

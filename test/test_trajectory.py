@@ -14,7 +14,7 @@
 from common_test_openrave import EnvironmentSetup, g_epsilon, expected_failure, transdist
 from openravepy import planningutils, interfaces, databases, misc
 from openravepy import RaveClone, RaveCreateTrajectory, RaveCreatePlanner, IkFilterOptions, RaveGetAffineConfigurationSpecification, RaveGetAffineDOFValuesFromTransform, PlannerStatusCode, Planner, poseMult, quatRotate, quatFromAxisAngle, ConfigurationSpecification, IkParameterizationType, DOFAffine, IkParameterization, RaveGetIndexFromAffineDOF, RaveSetDebugLevel, DebugLevel, quatMultiply, quatInverse, matrixFromAxisAngle, axisAngleFromRotationMatrix, poseFromMatrix, openrave_exception
-from numpy import array, r_, c_, zeros, ones, pi, cumsum, dot, eye, arange, linalg, polyfit, tile, flatnonzero, fmod, modf, linspace
+from numpy import array, r_, c_, zeros, ones, pi, cumsum, dot, eye, arange, linalg, polyfit, tile, flatnonzero, fmod, modf, linspace, abs, sum
 import numpy
 import time
 
