@@ -78,84 +78,74 @@ void CollisionPairInfo::SwapFirstSecond()
     }
 }
 
+static void _SetCollisionBodyLinkGeomName(std::string& bodyLinkGeomName, const std::string& bodyname, const std::string& linkname, const std::string& geomname)
+{
+    bodyLinkGeomName = bodyname;
+    bodyLinkGeomName.push_back(' ');
+    bodyLinkGeomName += linkname;
+    bodyLinkGeomName.push_back(' ');
+    bodyLinkGeomName += geomname;
+}
+
 void CollisionPairInfo::SetFirstCollision(const std::string& bodyname, const std::string& linkname, const std::string& geomname)
 {
-    bodyLinkGeom1Name = bodyname;
-    bodyLinkGeom1Name.push_back(' ');
-    bodyLinkGeom1Name += linkname;
-    bodyLinkGeom1Name.push_back(' ');
-    bodyLinkGeom1Name += geomname;
+    _SetCollisionBodyLinkGeomName(bodyLinkGeom1Name, bodyname, linkname, geomname);
 }
 
 void CollisionPairInfo::SetSecondCollision(const std::string& bodyname, const std::string& linkname, const std::string& geomname)
 {
-    bodyLinkGeom2Name = bodyname;
-    bodyLinkGeom2Name.push_back(' ');
-    bodyLinkGeom2Name += linkname;
-    bodyLinkGeom2Name.push_back(' ');
-    bodyLinkGeom2Name += geomname;
+    _SetCollisionBodyLinkGeomName(bodyLinkGeom2Name, bodyname, linkname, geomname);
 }
 
-void CollisionPairInfo::ExtractFirstBodyName(string_view& bodyname) const
+inline void _ExtractBodyName(const std::string& bodyLinkGeomName, string_view& bodyname)
 {
     bodyname = string_view();
-    if( !bodyLinkGeom1Name.empty() ) {
-        size_t index = bodyLinkGeom1Name.find_first_of(' ');
+    if( !bodyLinkGeomName.empty() ) {
+        size_t index = bodyLinkGeomName.find_first_of(' ');
         if( index != std::string::npos ) {
-            bodyname = string_view(bodyLinkGeom1Name.c_str(), index);
+            bodyname = string_view(bodyLinkGeomName.c_str(), index);
         }
         else {
-            bodyname = string_view(bodyLinkGeom1Name.c_str());
+            bodyname = string_view(bodyLinkGeomName.c_str());
         }
     }
 }
 
+void CollisionPairInfo::ExtractFirstBodyName(string_view& bodyname) const
+{
+    _ExtractBodyName(bodyLinkGeom1Name, bodyname);
+}
+
 void CollisionPairInfo::ExtractSecondBodyName(string_view& bodyname) const
 {
-    bodyname = string_view();
-    if( !bodyLinkGeom2Name.empty() ) {
-        size_t index = bodyLinkGeom2Name.find_first_of(' ');
-        if( index != std::string::npos ) {
-            bodyname = string_view(bodyLinkGeom2Name.c_str(), index);
-        }
-        else {
-            bodyname = string_view(bodyLinkGeom2Name.c_str());
-        }
+    _ExtractBodyName(bodyLinkGeom2Name, bodyname);
+}
+
+inline void _ExtractLinkName(const std::string& bodyLinkGeomName, string_view& linkname)
+{
+    linkname = string_view();
+    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
+    if( firstindex == std::string::npos ) {
+        return;
+    }
+
+    size_t secondindex = bodyLinkGeomName.find_first_of(' ', firstindex+1);
+    if( secondindex == std::string::npos ) {
+        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, bodyLinkGeomName.size()-firstindex-1);
+    }
+    else {
+        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1,secondindex - firstindex - 1);
     }
 }
 
 void CollisionPairInfo::ExtractFirstLinkName(string_view& linkname) const
 {
-    linkname = string_view();
-    size_t firstindex = bodyLinkGeom1Name.find_first_of(' ');
-    if( firstindex == std::string::npos ) {
-        return;
-    }
-
-    size_t secondindex = bodyLinkGeom1Name.find_first_of(' ', firstindex+1);
-    if( secondindex == std::string::npos ) {
-        linkname = string_view(bodyLinkGeom1Name.c_str()+firstindex+1, bodyLinkGeom1Name.size()-firstindex-1);
-    }
-    else {
-        linkname = string_view(bodyLinkGeom1Name.c_str()+firstindex+1,secondindex - firstindex - 1);
-    }
+    _ExtractLinkName(bodyLinkGeom1Name, linkname);
 }
 
 void CollisionPairInfo::ExtractSecondLinkName(string_view& linkname) const
 {
-    linkname = string_view();
-    size_t firstindex = bodyLinkGeom2Name.find_first_of(' ');
-    if( firstindex == std::string::npos ) {
-        return;
-    }
-
-    size_t secondindex = bodyLinkGeom2Name.find_first_of(' ', firstindex+1);
-    if( secondindex == std::string::npos ) {
-        linkname = string_view(bodyLinkGeom2Name.c_str()+firstindex+1, bodyLinkGeom2Name.size()-firstindex-1);
-    }
-    else {
-        linkname = string_view(bodyLinkGeom2Name.c_str()+firstindex+1, secondindex - firstindex - 1);
-    }
+    _ExtractLinkName(bodyLinkGeom2Name, linkname);
 }
 
 inline void _ExtractBodyLinkNames(const std::string& bodyLinkGeomName, string_view& bodyname, string_view& linkname)
