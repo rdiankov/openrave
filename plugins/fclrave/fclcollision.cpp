@@ -1152,15 +1152,6 @@ CollisionPair FCLCollisionChecker::MakeCollisionPair(fcl::CollisionObject* o1, f
 }
 #endif
 
-LinkPair FCLCollisionChecker::MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2)
-{
-    if( plink1.get() < plink2.get() ) {
-        return make_pair(plink1, plink2);
-    } else {
-        return make_pair(plink2, plink1);
-    }
-}
-
 std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> FCLCollisionChecker::GetCollisionLink(const fcl::CollisionObject &collObj)
 {
     FCLSpace::FCLKinBodyInfo::LinkInfo* link_raw = static_cast<FCLSpace::FCLKinBodyInfo::LinkInfo *>(collObj.getUserData());

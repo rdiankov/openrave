@@ -223,8 +223,6 @@ private:
     static CollisionPair MakeCollisionPair(fcl::CollisionObject* o1, fcl::CollisionObject* o2);
 #endif
 
-    static LinkPair MakeLinkPair(LinkConstPtr plink1, LinkConstPtr plink2);
-
     std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> GetCollisionLink(const fcl::CollisionObject &collObj);
 
     FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* GetCollisionGeometry(const fcl::CollisionObject &collObj);
