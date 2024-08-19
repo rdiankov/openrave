@@ -869,12 +869,6 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Assert that we are not trying to self-grab
         OPENRAVE_ASSERT_FORMAT(pBody.get() != this, "env=%s, body '%s' cannot grab itself", GetEnv()->GetNameId()%pBody->GetName(), ORE_InvalidArguments);
 
-        // If the grab info specifies the same body twice, ignore duplicate entries
-        if (_mapGrabbedBodyNameIndex.find(pBody->GetName()) != _mapGrabbedBodyNameIndex.end()) {
-            RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' already grabs body '%s'", GetEnv()->GetNameId()%GetName()%pGrabbedInfo->_grabbedname);
-            continue;
-        }
-
         // If we have a collision checker that is _not_ the default environment collision checker, we need to update it manually
         if (!!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker()) {
             _selfcollisionchecker->InitKinBody(pBody);
