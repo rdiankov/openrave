@@ -3418,6 +3418,31 @@ public:
         _mapBodyNameIndex.erase(itOld);
         _mapBodyNameIndex[newName] = envBodyIndex;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' is renamed to '%s'", GetNameId()%oldName%newName);
+
+        // Since grabs contain cached information keyed off the body name,
+        // we need to ensure that this change is propagated through the grab hierarchy
+        for (KinBodyPtr& pBody : _vecbodies) {
+            // Ignore invalid bodies / bodies that aren't grabbing anything
+            if (!pBody || pBody->_vGrabbedBodies.empty()) {
+                continue;
+            }
+
+            // If this body wasn't grabbing the body to be renamed, nothing to update
+            decltype(KinBody::_mapGrabbedBodyNameIndex)::iterator it = pBody->_mapGrabbedBodyNameIndex.find(oldName);
+            if (it == pBody->_mapGrabbedBodyNameIndex.end()) {
+                continue;
+            }
+
+            // This body is grabbing the renamed body - erase the old map entry and replace it with a new one using the new name
+            // Sanity check that the body does not think it is grabbing anything with the new name already
+            BOOST_ASSERT(pBody->_mapGrabbedBodyNameIndex.find(newName) == pBody->_mapGrabbedBodyNameIndex.end());
+
+            // Swap the index to the new body name key
+            size_t index = it->second;
+            pBody->_mapGrabbedBodyNameIndex.erase(it);
+            pBody->_mapGrabbedBodyNameIndex[newName] = index;
+        }
+
         return true;
     }
 
