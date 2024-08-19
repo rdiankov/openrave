@@ -457,11 +457,22 @@ void KinBody::RegrabAll()
 
 KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
 {
+    // Check to see if we have a grabbed info for a body by this name
     const MapGrabbedBodyNameIndex::const_iterator it = _mapGrabbedBodyNameIndex.find(body.GetName());
     if (it == _mapGrabbedBodyNameIndex.end()) {
+        // If not, definitely not grabbing
         return nullptr;
     }
-    return _vGrabbedBodies.at(it->second)->_pGrabbingLink;
+
+    // If we do, check that the grabbed info we have still points to the same valid kinbody
+    const GrabbedPtr& grabbed = _vGrabbedBodies.at(it->second);
+    const KinBodyConstPtr grabbedBody = grabbed->_pGrabbedBody.lock();
+    if (!grabbedBody || grabbedBody.get() != &body) {
+        return nullptr;
+    }
+
+    // If this is definitely a match, return the grabbing link
+    return grabbed->_pGrabbingLink;
 }
 
 int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const
