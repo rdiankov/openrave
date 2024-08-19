@@ -1515,6 +1515,7 @@ public:
             if( name.size() > 0 ) { // TODO : "self"? or ""?
                 OPENRAVE_ASSERT_OP_FORMAT(_vCollisionCheckers.size(), >, 0, "env='%s' failed to add collision checker by group name since there is no default collision checker.", GetNameId(),ORE_InvalidArguments);
             }
+            OPENRAVE_ASSERT_FORMAT((!!pChecker), "env='%s' failed to add collision checker by group name since null collision checker is specified..", GetNameId(),ORE_InvalidArguments);
             _vCollisionCheckers.push_back(CollisionCheckerBasePtr());
             _vCollisionCheckerGroupNames.push_back(name);
             return _SetCollisionChecker(_vCollisionCheckers.back(), pChecker, name);
@@ -3771,7 +3772,7 @@ protected:
 
         std::lock_guard<std::mutex> lockinit(_mutexInit);
         if( !bCheckSharedResources ) {
-            SetCollisionChecker(CollisionCheckerBasePtr()); // note that _vCollisionCheckers and _vCollisionCheckerGroupNames are cleared in Destroy.
+            // no need to null set of the default collision checker here, since _vCollisionCheckers and _vCollisionCheckerGroupNames are cleared in Destroy, and the later collision checker cloning code will take care.
             SetPhysicsEngine(PhysicsEngineBasePtr());
         }
 
@@ -3863,7 +3864,7 @@ protected:
                     try {
                         CollisionCheckerBasePtr p = RaveCreateCollisionChecker(shared_from_this(),pInputChecker->GetXMLId());
                         p->Clone(pInputChecker,options);
-                        SetCollisionCheckerByGroupName(pInputChecker->GetGeometryGroup(), p);
+                        SetCollisionCheckerByGroupName(r->_vCollisionCheckerGroupNames.at(iChecker), p);
                         bCollisionCheckerChanged = true;
                     }
                     catch(const std::exception& ex) {
