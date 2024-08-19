@@ -108,4 +108,4 @@ jobs:
       # todo: check other tests
       run: |
         cd test
-        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/../src python3 -m nose test_binary_trajectory.py test_collada.py test_collision.py test_configurationcache.py test_controller.py test_environment.py test_geometry.py test_iksolver.py test_kinematics.py test_physics.py test_planning.py test_robot.py test_sampling.py test_trajectory.py
+        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/../src python3 -m nose test_binary_trajectory.py test_collada.py test_collision.py test_configurationcache.py test_controller.py test_environment.py test_geometry.py test_iksolver.py test_kinematics.py test_physics.py test_planning.py test_robot.py test_sampling.py test_trajectory.py test_grabs.py
