@@ -4097,14 +4097,18 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
 
 void KinBody::SetSelfCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr collisionchecker)
 {
+    const bool bIsNotDefaultChecker = name.size() > 0; // TODO : "self"? or ""?
+    if( bIsNotDefaultChecker ) {
+        OPENRAVE_ASSERT_FORMAT((!!collisionchecker), "env='%s' body='%s' failed to add/set self collision checker by group name=%s since there is no default self collision checker.", GetEnv()->GetNameId() % GetName() % name,ORE_InvalidArguments);
+    }
     const std::vector<std::string>::iterator itName = std::find(_vSelfCollisionCheckerGroupNames.begin(), _vSelfCollisionCheckerGroupNames.end(), name);
     if( itName != _vSelfCollisionCheckerGroupNames.end() ) {
         const size_t iChecker = std::distance(_vSelfCollisionCheckerGroupNames.begin(), itName);
         return _SetSelfCollisionChecker(_vSelfCollisionCheckers.at(iChecker), collisionchecker, false, false); // TODO : differentiate "self"?
     }
     else {
-        if( name.size() > 0 ) { // TODO : "self"? or ""?
-            OPENRAVE_ASSERT_OP_FORMAT(_vSelfCollisionCheckers.size(), >, 0, "env='%s' body='%s' failed to add self collision checker by group name since there is no default self collision checker.", GetEnv()->GetNameId() % GetName(),ORE_InvalidArguments);
+        if( bIsNotDefaultChecker ) {
+            OPENRAVE_ASSERT_OP_FORMAT(_vSelfCollisionCheckers.size(), >, 0, "env='%s' body='%s' failed to add self collision checker by group name=%s since there is no default self collision checker.", GetEnv()->GetNameId() % GetName() % name,ORE_InvalidArguments);
         }
         _vSelfCollisionCheckers.push_back(CollisionCheckerBasePtr());
         _vSelfCollisionCheckerGroupNames.push_back(name);
