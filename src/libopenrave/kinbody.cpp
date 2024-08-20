@@ -5908,6 +5908,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vSelfCollisionCheckerGroupNames = r->_vSelfCollisionCheckerGroupNames;
     bool bIsDefaultSelfCollisionChecker = true;
     for(CollisionCheckerBasePtr pOrgChecker : r->_vSelfCollisionCheckers) {
+        if( !bIsDefaultSelfCollisionChecker ) {
+            OPENRAVE_ASSERT_FORMAT(!!pOrgChecker, "env=%s, failed to clone the self collision checker since the non-default self collision checker is null.", GetEnv()->GetNameId(), ORE_Assert);
+        }
         if( !!pOrgChecker ) {
             CollisionCheckerBasePtr pNewChecker = RaveCreateCollisionChecker(GetEnv(), pOrgChecker->GetXMLId());
             pNewChecker->SetCollisionOptions(pOrgChecker->GetCollisionOptions());
