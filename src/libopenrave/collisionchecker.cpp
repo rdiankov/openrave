@@ -102,12 +102,8 @@ inline void _ExtractBodyName(const std::string& bodyLinkGeomName, string_view& b
     bodyname = string_view();
     if( !bodyLinkGeomName.empty() ) {
         size_t index = bodyLinkGeomName.find_first_of(' ');
-        if( index != std::string::npos ) {
-            bodyname = string_view(bodyLinkGeomName.c_str(), index);
-        }
-        else {
-            bodyname = string_view(bodyLinkGeomName.c_str());
-        }
+        OPENRAVE_ASSERT_FORMAT((index != std::string::npos), "Failed to extract body name since bodyLinkGeomName='%s' does not contain the first white space.", bodyLinkGeomName, ORE_Assert);
+        bodyname = string_view(bodyLinkGeomName.c_str(), index);
     }
 }
 
@@ -124,18 +120,15 @@ void CollisionPairInfo::ExtractSecondBodyName(string_view& bodyname) const
 inline void _ExtractLinkName(const std::string& bodyLinkGeomName, string_view& linkname)
 {
     linkname = string_view();
-    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
-    if( firstindex == std::string::npos ) {
+    if( bodyLinkGeomName.empty() ) {
         return;
     }
+    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
+    OPENRAVE_ASSERT_FORMAT((firstindex != std::string::npos), "Failed to extract link name since bodyLinkGeomName='%s' does not contain the first white space.", bodyLinkGeomName, ORE_Assert);
 
     size_t secondindex = bodyLinkGeomName.find_first_of(' ', firstindex+1);
-    if( secondindex == std::string::npos ) {
-        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, bodyLinkGeomName.size()-firstindex-1);
-    }
-    else {
-        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1,secondindex - firstindex - 1);
-    }
+    OPENRAVE_ASSERT_FORMAT((secondindex != std::string::npos), "Failed to extract link name since bodyLinkGeomName='%s' does not contain the second white space.", bodyLinkGeomName, ORE_Assert);
+    linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1,secondindex - firstindex - 1);
 }
 
 void CollisionPairInfo::ExtractFirstLinkName(string_view& linkname) const
@@ -152,21 +145,17 @@ inline void _ExtractBodyLinkNames(const std::string& bodyLinkGeomName, string_vi
 {
     bodyname = string_view();
     linkname = string_view();
-    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
-    if( firstindex == std::string::npos ) {
-        bodyname = string_view(bodyLinkGeomName.c_str());
+    if( bodyLinkGeomName.empty() ) {
         return;
     }
+    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
+    OPENRAVE_ASSERT_FORMAT((firstindex != std::string::npos), "Failed to extract body/link name since bodyLinkGeomName='%s' does not contain the first white space.", bodyLinkGeomName, ORE_Assert);
 
     bodyname = string_view(bodyLinkGeomName.c_str(),firstindex);
 
     size_t secondindex = bodyLinkGeomName.find_first_of(' ', firstindex+1);
-    if( secondindex == std::string::npos ) {
-        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, bodyLinkGeomName.size()-firstindex-1);
-    }
-    else {
-        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, secondindex - firstindex - 1);
-    }
+    OPENRAVE_ASSERT_FORMAT((secondindex != std::string::npos), "Failed to extract body/link name since bodyLinkGeomName='%s' does not contain the second white space.", bodyLinkGeomName, ORE_Assert);
+    linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, secondindex - firstindex - 1);
 }
 
 void CollisionPairInfo::ExtractFirstBodyLinkNames(string_view& bodyname, string_view& linkname) const
@@ -184,29 +173,20 @@ inline void _ExtractBodyLinkGeomNames(const std::string& bodyLinkGeomName, strin
     bodyname = string_view();
     linkname = string_view();
     geomname = string_view();
-    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
-    if( firstindex == std::string::npos ) {
-        bodyname = string_view(bodyLinkGeomName.c_str());
+    if( bodyLinkGeomName.empty() ) {
         return;
     }
+
+    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
+    OPENRAVE_ASSERT_FORMAT((firstindex != std::string::npos), "Failed to extract body/link/geom name since bodyLinkGeomName='%s' does not contain the first white space.", bodyLinkGeomName, ORE_Assert);
 
     bodyname = string_view(bodyLinkGeomName.c_str(),firstindex);
 
     size_t secondindex = bodyLinkGeomName.find_first_of(' ', firstindex+1);
-    if( secondindex == std::string::npos ) {
-        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, bodyLinkGeomName.size()-firstindex-1);
-        return;
-    }
+    OPENRAVE_ASSERT_FORMAT((secondindex != std::string::npos), "Failed to extract body/link/geom name since bodyLinkGeomName='%s' does not contain the second white space.", bodyLinkGeomName, ORE_Assert);
 
     linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, secondindex - firstindex - 1);
-
-    size_t thirdindex = bodyLinkGeomName.find_first_of(' ', secondindex+1);
-    if( thirdindex == std::string::npos ) {
-        geomname = string_view(bodyLinkGeomName.c_str()+secondindex+1, bodyLinkGeomName.size()-secondindex-1);
-        return;
-    }
-
-    geomname = string_view(bodyLinkGeomName.c_str()+secondindex+1, thirdindex - secondindex - 1);
+    geomname = string_view(bodyLinkGeomName.c_str()+secondindex+1, bodyLinkGeomName.size()-secondindex-1);
 }
 
 void CollisionPairInfo::ExtractFirstBodyLinkGeomNames(string_view& bodyname, string_view& linkname, string_view& geomname) const
@@ -221,21 +201,19 @@ void CollisionPairInfo::ExtractSecondBodyLinkGeomNames(string_view& bodyname, st
 
 inline int _CompareLink(const std::string& bodyLinkGeomName, const KinBody::Link& link)
 {
-    // compare the linkname first since getting parent requires atomic operations
-    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
-    if( firstindex == std::string::npos ) {
+    if( bodyLinkGeomName.empty() ) {
         return -1; // no link
     }
+
+    // compare the linkname first since getting parent requires atomic operations
+    size_t firstindex = bodyLinkGeomName.find_first_of(' ');
+    OPENRAVE_ASSERT_FORMAT((firstindex != std::string::npos), "Failed to compare link since bodyLinkGeomName='%s' does not contain the first white space.", bodyLinkGeomName, ORE_Assert);
 
     string_view linkname;
 
     size_t secondindex = bodyLinkGeomName.find_first_of(' ', firstindex+1);
-    if( secondindex == std::string::npos ) {
-        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, bodyLinkGeomName.size()-firstindex-1);
-    }
-    else {
-        linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, secondindex - firstindex - 1);
-    }
+    OPENRAVE_ASSERT_FORMAT((secondindex != std::string::npos), "Failed to compare link since bodyLinkGeomName='%s' does not contain the second white space.", bodyLinkGeomName, ORE_Assert);
+    linkname = string_view(bodyLinkGeomName.c_str()+firstindex+1, secondindex - firstindex - 1);
 
     int linkcmp = linkname.compare(link.GetName());
     if( linkcmp != 0 ) {
@@ -280,10 +258,12 @@ inline int _FindMatchingLinkIndex(const std::string& bodyLinkGeomName, const std
         return -1;
     }
 
-    const size_t firstindex = bodyLinkGeomName.find_first_of(' ');
-    if( firstindex == std::string::npos ) {
+    if( bodyLinkGeomName.empty() ) {
         return -1;
     }
+
+    const size_t firstindex = bodyLinkGeomName.find_first_of(' ');
+    OPENRAVE_ASSERT_FORMAT((firstindex != std::string::npos), "Failed to find matching link index since bodyLinkGeomName='%s' does not contain the second white space.", bodyLinkGeomName, ORE_Assert);
 
     const std::string& bodyname = vlinks[0]->GetParent()->GetName();
     if( bodyname.size() != firstindex ) {
@@ -297,13 +277,8 @@ inline int _FindMatchingLinkIndex(const std::string& bodyLinkGeomName, const std
     // body matches, now check the links
     const size_t linkNameStartIndex = firstindex+1;
     const size_t secondindex = bodyLinkGeomName.find_first_of(' ', linkNameStartIndex);
-    size_t nLinkNameLength;
-    if( secondindex != std::string::npos ) {
-        nLinkNameLength = secondindex - linkNameStartIndex;
-    }
-    else {
-        nLinkNameLength = bodyLinkGeomName.size() - linkNameStartIndex;
-    }
+    OPENRAVE_ASSERT_FORMAT((secondindex != std::string::npos), "Failed to find matching link index since bodyLinkGeomName='%s' does not contain the second white space.", bodyLinkGeomName, ORE_Assert);
+    size_t nLinkNameLength = secondindex - linkNameStartIndex;
 
     for(int ilink = 0; ilink < (int)vlinks.size(); ++ilink) {
         const KinBody::LinkPtr& plink = vlinks[ilink];
@@ -329,10 +304,12 @@ int CollisionPairInfo::FindSecondMatchingLinkIndex(const std::vector<KinBody::Li
 
 inline int _CompareLinkName(const std::string& bodyLinkGeomName, const std::string& linkname)
 {
-    size_t index = bodyLinkGeomName.find_first_of(' ');
-    if( index == std::string::npos ) {
+    if( bodyLinkGeomName.empty() ) {
         return -1;
     }
+
+    size_t index = bodyLinkGeomName.find_first_of(' ');
+    OPENRAVE_ASSERT_FORMAT((index != std::string::npos), "Failed to compare link name since bodyLinkGeomName='%s' does not contain the first white space.", bodyLinkGeomName, ORE_Assert);
 
     int nRemainingLength = (int)bodyLinkGeomName.size() - index - 1;
     if( nRemainingLength < (int)linkname.size() ) {
@@ -357,15 +334,8 @@ inline KinBodyPtr _ExtractBody(const std::string& bodyLinkGeomName, EnvironmentB
         return KinBodyPtr();
     }
 
-    size_t index = bodyLinkGeomName.find_first_of(' ');
-    int nNameLength;
-    if( index != std::string::npos ) {
-        nNameLength = index;
-    }
-    else {
-        nNameLength = bodyLinkGeomName.size();
-    }
-
+    size_t nNameLength = bodyLinkGeomName.find_first_of(' ');
+    OPENRAVE_ASSERT_FORMAT((nNameLength != std::string::npos), "Failed to extract body since bodyLinkGeomName='%s' does not contain the first white space.", bodyLinkGeomName, ORE_Assert);
     return env.GetKinBody(string_view(bodyLinkGeomName.c_str(), nNameLength));
 }
 
