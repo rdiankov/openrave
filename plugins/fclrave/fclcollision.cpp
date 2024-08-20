@@ -1347,7 +1347,7 @@ bool FCLCollisionChecker::_GetEnvBodiesInfoFromFCLSpace(ostream& sout, istream& 
     }
     OpenRAVE::orjson::SetJsonValueByKey(docInfo, "bodies", rBodies, docInfo.GetAllocator());
     sout << OpenRAVE::orjson::DumpJson(docInfo);
-    return !!sinput;
+    return true;
 }
 
 } // namespace fclrave
