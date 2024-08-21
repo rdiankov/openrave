@@ -609,6 +609,14 @@ void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
     }
 }
 
+void KinBody::GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const
+{
+    bodyNames.clear();
+    for (const MapGrabbedByName::value_type& grabPair : _grabbedBodiesByBodyName) {
+        bodyNames.emplace(grabPair.first);
+    }
+}
+
 void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos) const
 {
     vGrabbedInfos.clear();

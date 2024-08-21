@@ -23,6 +23,7 @@
 #define OPENRAVE_KINBODY_H
 
 #include <unordered_map>
+#include <unordered_set>
 
 namespace OpenRAVE {
 
@@ -3497,6 +3498,12 @@ private:
         \param[out] vbodies filled with the grabbed bodies
      */
     void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
+
+    /** \brief get the set of body names that are grabbed by this body
+
+        \param[out] set to fill with the grabbed body names
+     */
+    void GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const;
 
     /// \brief returns number of grabbed targets
     inline int GetNumGrabbed() const {
