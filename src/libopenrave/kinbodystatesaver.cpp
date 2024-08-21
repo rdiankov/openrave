@@ -47,7 +47,7 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
         _pbody->GetDOFResolutions(_vDOFResolutions);
     }
     if( _options & Save_GrabbedBodies ) {
-        _vGrabbedBodies = _pbody->_vGrabbedBodies;
+        _grabbedBodiesByBodyName = _pbody->_grabbedBodiesByBodyName;
     }
 }
 
@@ -89,9 +89,9 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     if( _options & Save_GrabbedBodies ) {
         // have to release all grabbed first
         pbody->ReleaseAllGrabbed();
-        OPENRAVE_ASSERT_OP(pbody->_vGrabbedBodies.size(),==,0);
-        OPENRAVE_ASSERT_OP(pbody->_mapGrabbedBodyNameIndex.size(),==,0);
-        for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
+        OPENRAVE_ASSERT_OP(pbody->_grabbedBodiesByBodyName.size(),==,0);
+        for (const  std::unordered_map<std::string, GrabbedPtr>::value_type& grabPair : _grabbedBodiesByBodyName) {
+            const GrabbedPtr& pGrabbed = grabPair.second;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
                 KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
@@ -107,8 +107,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                 }
                 if( pbody->GetEnv() == _pbody->GetEnv() ) {
                     pbody->_AttachBody(pGrabbedBody);
-                    pbody->_mapGrabbedBodyNameIndex[pGrabbedBody->GetName()] = pbody->_vGrabbedBodies.size();
-                    pbody->_vGrabbedBodies.push_back(pGrabbed);
+                    pbody->_grabbedBodiesByBodyName[pGrabbedBody->GetName()] = pGrabbed;
                     // grabbed bodies could have been removed from env and self collision checker.
                     CollisionCheckerBasePtr collisionchecker = pbody->GetSelfCollisionChecker();
                     if (!!collisionchecker) {
@@ -148,8 +147,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                             CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
                             pbody->_AttachBody(pNewGrabbedBody);
-                            pbody->_mapGrabbedBodyNameIndex[pNewGrabbedBody->GetName()] = pbody->_vGrabbedBodies.size();
-                            pbody->_vGrabbedBodies.push_back(pNewGrabbed);
+                            pbody->_grabbedBodiesByBodyName[pNewGrabbedBody->GetName()] = pNewGrabbed;
                             CollisionCheckerBasePtr collisionchecker = pbody->GetSelfCollisionChecker();
                             if (!!collisionchecker) {
                                 collisionchecker->InitKinBody(pNewGrabbedBody);
@@ -239,7 +237,7 @@ KinBody::KinBodyStateSaverRef::KinBodyStateSaverRef(KinBody& body, int options) 
         body.GetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
     if( _options & Save_GrabbedBodies ) {
-        _vGrabbedBodies = body._vGrabbedBodies;
+        _grabbedBodiesByBodyName = body._grabbedBodiesByBodyName;
     }
     if( _options & Save_JointResolutions ) {
         body.GetDOFResolutions(_vDOFResolutions);
@@ -288,15 +286,14 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     if( _options & Save_GrabbedBodies ) {
         // have to release all grabbed first
         body.ReleaseAllGrabbed();
-        OPENRAVE_ASSERT_OP(body._vGrabbedBodies.size(),==,0);
-        OPENRAVE_ASSERT_OP(body._mapGrabbedBodyNameIndex.size(),==,0);
-        for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
+        OPENRAVE_ASSERT_OP(body._grabbedBodiesByBodyName.size(),==,0);
+        for (const  std::unordered_map<std::string, GrabbedPtr>::value_type& grabPair : _grabbedBodiesByBodyName) {
+            const GrabbedPtr& pGrabbed = grabPair.second;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
                 if( body.GetEnv() == body.GetEnv() ) {
                     body._AttachBody(pGrabbedBody);
-                    body._mapGrabbedBodyNameIndex[pGrabbedBody->GetName()] = body._vGrabbedBodies.size();
-                    body._vGrabbedBodies.push_back(pGrabbed);
+                    body._grabbedBodiesByBodyName[pGrabbedBody->GetName()] = pGrabbed;
                 }
                 else {
                     // The body that the state was saved from is from a different environment from pbody. This case can
@@ -324,8 +321,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                             CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
                             body._AttachBody(pNewGrabbedBody);
-                            body._mapGrabbedBodyNameIndex[pNewGrabbedBody->GetName()] = body._vGrabbedBodies.size();
-                            body._vGrabbedBodies.push_back(pNewGrabbed);
+                            body._grabbedBodiesByBodyName[pNewGrabbedBody->GetName()] = pNewGrabbed;
                             CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
                             if (!!collisionchecker) {
                                 collisionchecker->InitKinBody(pNewGrabbedBody);

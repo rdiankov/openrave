@@ -121,7 +121,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
             continue;
         }
 
-        // update objects recursively 
+        // update objects recursively
         orjson::UpdateJsonByKey(docGripperInfo, memberName.c_str(), it->value, docGripperInfo.GetAllocator());
 
     }
@@ -587,10 +587,10 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         }
 
         if( bConnectedBodyStatesChanged ) {
-            if( !_vGrabbedBodies.empty() ) {
-                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_vGrabbedBodies.size());
-                for(GrabbedPtr& grabbed : _vGrabbedBodies) {
-                    grabbed->InvalidateListNonCollidingLinks();
+            if( !_grabbedBodiesByBodyName.empty() ) {
+                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_grabbedBodiesByBodyName.size());
+                for (const MapGrabbedByName::value_type& grabPair : _grabbedBodiesByBodyName) {
+                    grabPair.second->InvalidateListNonCollidingLinks();
                 }
             }
         }
