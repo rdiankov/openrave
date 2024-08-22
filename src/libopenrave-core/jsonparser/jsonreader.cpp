@@ -563,8 +563,32 @@ protected:
 
             for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
                 const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
-                std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
-                std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
+                const std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
+                const std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
+                // if envInfo already has a corresponding entry, has to clear it since rEnvInfo is supposed to overwrite it.
+                if( !bodyId.empty() ) {
+                    bool found = false;
+                    for(KinBody::KinBodyInfoPtr& pExistingBodyInfo : envInfo._vBodyInfos) {
+                        if( pExistingBodyInfo->_id == bodyId ) {
+                            RAVELOG_VERBOSE_FORMAT("env=%s, resetting body info for '%s'(id='%s') since there is a corresponding entry from the current uri '%s'", _penv->GetNameId()%pExistingBodyInfo->_name%pExistingBodyInfo->_id%pCurrentUri);
+                            pExistingBodyInfo->Reset();
+                            pExistingBodyInfo->_id = bodyId;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if( !found && !bodyName.empty() ) {
+                        for(KinBody::KinBodyInfoPtr& pExistingBodyInfo : envInfo._vBodyInfos) {
+                            if( pExistingBodyInfo->_name == bodyName ) {
+                                RAVELOG_VERBOSE_FORMAT("env=%s, resetting body info for '%s'(id='%s') since there is a corresponding entry from the current uri '%s'", _penv->GetNameId()%pExistingBodyInfo->_name%pExistingBodyInfo->_id%pCurrentUri);
+                                pExistingBodyInfo->Reset();
+                                pExistingBodyInfo->_name = bodyName;
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
                 const char* pReferenceUri = orjson::GetCStringJsonValueByKey(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(pReferenceUri)) {
                     std::set<std::string> circularReference;
