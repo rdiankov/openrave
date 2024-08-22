@@ -52,10 +52,8 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import array
+import numpy
+from numpy import array, r_, c_, dot, eye, mod, reshape, flatnonzero, prod, arange, hstack, linalg, sqrt, mean, zeros, tile, floor, mgrid, minimum, sum
 
 from ..openravepy_int import RaveFindDatabaseFile, IkParameterization, rotationMatrixFromQArray, poseFromMatrix
 from ..openravepy_ext import transformPoints, quatArrayTDist
@@ -64,7 +62,6 @@ from ..misc import SpaceSamplerExtra
 from . import DatabaseGenerator
 from . import convexdecomposition, inversekinematics
 
-import numpy
 import time
 import os.path
 from os import makedirs
