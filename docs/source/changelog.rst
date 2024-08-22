@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.149.2
+===============
+
+- Fix: when loading environment from `{"referenceUri": "uri", "bodies": [...]}`, body infos were merged instead of overwritten.
+
 Version 0.149.1
 ===============
 
