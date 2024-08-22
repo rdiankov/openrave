@@ -298,6 +298,36 @@ public:
                 }
                 return false;
             }
+            // if parent rEnvInfo is going to overwrite bodies in the environment of the referenceUri, do not deserialize them. otherwise, they would be merged instead of overwritten.
+            if( rEnvInfo.HasMember("bodies") && rEnvInfo["bodies"].Size() > 0 ) {
+                if( prReferenceEnvInfo->HasMember("bodies") && (*prReferenceEnvInfo)["bodies"].Size() > 0 ) {
+                    boost::shared_ptr<rapidjson::Document> prFilteredReferenceEnvInfo = boost::make_shared<rapidjson::Document>(&alloc);
+                    prFilteredReferenceEnvInfo->CopyFrom(*prReferenceEnvInfo, alloc);
+                    const rapidjson::Value& rEnvBodies = rEnvInfo["bodies"];
+                    rapidjson::Value& rRefBodies = (*prFilteredReferenceEnvInfo)["bodies"];
+                    for (rapidjson::Value::ConstValueIterator itEnvBody = rEnvBodies.Begin(); itEnvBody != rEnvBodies.End(); ++itEnvBody) {
+                        rapidjson::Value::ConstMemberIterator itEnvBodyId = itEnvBody->FindMember("id");
+                        if( itEnvBodyId == itEnvBody->MemberEnd() || itEnvBodyId->value.GetStringLength() == 0 ) {
+                            continue;
+                        }
+                        const char* envBodyId = itEnvBodyId->value.GetString();
+                        const size_t envBodyIdLen = itEnvBodyId->value.GetStringLength();
+                        for (rapidjson::Value::ValueIterator itRefBody = rRefBodies.Begin(); itRefBody != rRefBodies.End(); ++itRefBody) {
+                            rapidjson::Value::ConstMemberIterator itRefBodyId = itRefBody->FindMember("id");
+                            if( itRefBodyId == itRefBody->MemberEnd() || itRefBodyId->value.GetStringLength() == 0 ) {
+                                continue;
+                            }
+                            const char* refBodyId = itRefBodyId->value.GetString();
+                            if( strncmp(envBodyId, refBodyId, envBodyIdLen) == 0 ) {
+                                rRefBodies.Erase(itRefBody);
+                                RAVELOG_VERBOSE_FORMAT("Body id='%s' in referenceUri '%s' will be overwritten. So excluding it from deserialization.", refBodyId % pReferenceUri);
+                                break;
+                            }
+                        }
+                    }
+                    prReferenceEnvInfo = prFilteredReferenceEnvInfo;
+                }
+            }
             RAVELOG_VERBOSE_FORMAT("resolved fullFilename=%s", fullFilename);
 
             if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
@@ -565,30 +595,6 @@ protected:
                 const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
                 const std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
                 const std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
-                // if envInfo already has a corresponding entry, has to clear it since rEnvInfo is supposed to overwrite it.
-                if( !bodyId.empty() ) {
-                    bool found = false;
-                    for(KinBody::KinBodyInfoPtr& pExistingBodyInfo : envInfo._vBodyInfos) {
-                        if( pExistingBodyInfo->_id == bodyId ) {
-                            RAVELOG_VERBOSE_FORMAT("env=%s, resetting body info for '%s'(id='%s') since there is a corresponding entry from the current uri '%s'", _penv->GetNameId()%pExistingBodyInfo->_name%pExistingBodyInfo->_id%pCurrentUri);
-                            pExistingBodyInfo->Reset();
-                            pExistingBodyInfo->_id = bodyId;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if( !found && !bodyName.empty() ) {
-                        for(KinBody::KinBodyInfoPtr& pExistingBodyInfo : envInfo._vBodyInfos) {
-                            if( pExistingBodyInfo->_name == bodyName ) {
-                                RAVELOG_VERBOSE_FORMAT("env=%s, resetting body info for '%s'(id='%s') since there is a corresponding entry from the current uri '%s'", _penv->GetNameId()%pExistingBodyInfo->_name%pExistingBodyInfo->_id%pCurrentUri);
-                                pExistingBodyInfo->Reset();
-                                pExistingBodyInfo->_name = bodyName;
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                }
                 const char* pReferenceUri = orjson::GetCStringJsonValueByKey(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(pReferenceUri)) {
                     std::set<std::string> circularReference;
