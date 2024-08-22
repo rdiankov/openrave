@@ -68,8 +68,7 @@ __license__ = 'Apache License, Version 2.0'
 
 
 import numpy
-from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose
-from numpy import e, mean, flatnonzero, cross, logical_and, r_, c_, sqrt, ones, transpose, tile, dot, eye, mod, linalg, mod, sum, abs, all, any
+from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose, e, mean, flatnonzero, cross, logical_and, r_, c_, sqrt, ones, transpose, tile, dot, eye, mod, linalg, mod, sum, abs, all, any
 from numpy.linalg import norm
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
