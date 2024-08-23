@@ -1402,7 +1402,7 @@ bool RobotBase::Manipulator::CheckIndependentCollision(CollisionReportPtr report
             }
 
             // check if any grabbed bodies are attached to this link
-            for (const MapGrabbedByName::value_type& grabPair : probot->_grabbedBodiesByBodyName) {
+            for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : probot->_grabbedBodiesByEnvironmentIndex) {
                 const GrabbedPtr& pgrabbed = grabPair.second;
                 if( pgrabbed->_pGrabbingLink == *itlink ) {
                     if( vbodyexcluded.empty() ) {

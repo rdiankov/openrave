@@ -2668,6 +2668,22 @@ public:
         return KinBodyPtr();
     }
 
+    bool GetBodyNameFromEnvironmentBodyIndex(int bodyIndex, std::string& out) const override
+    {
+        SharedLock lock(_mutexInterfaces);
+        if (0 < bodyIndex && bodyIndex < (int)_vecbodies.size()) {
+            out = _vecbodies.at(bodyIndex)->GetName();
+            return true;
+        }
+        return false;
+    }
+
+    int GetEnvironmentBodyIndexByName(string_view bodyName) const override
+    {
+        SharedLock lock(_mutexInterfaces);
+        return _FindBodyIndexByName(bodyName);
+    }
+
     void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
                                              std::vector<KinBodyPtr>& bodies) const override
     {
@@ -3130,7 +3146,7 @@ public:
                     if (!pAttached) {
                         continue;
                     }
-                    for (const KinBody::MapGrabbedByName::value_type& grabPair : pAttached->_grabbedBodiesByBodyName) {
+                    for (const KinBody::MapGrabbedByEnvironmentIndex::value_type& grabPair : pAttached->_grabbedBodiesByEnvironmentIndex) {
                         const GrabbedPtr& pGrabbed = grabPair.second;
                         KinBodyConstPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
                         if( !!pGrabbedBody && pGrabbedBody.get() == &*pMatchExistingBody ) {
@@ -3419,30 +3435,6 @@ public:
         _mapBodyNameIndex.erase(itOld);
         _mapBodyNameIndex[newName] = envBodyIndex;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' is renamed to '%s'", GetNameId()%oldName%newName);
-
-        // Since grabs contain information keyed off the body name,
-        // we need to ensure that this change is propagated through the grab hierarchy
-        for (KinBodyPtr& pBody : _vecbodies) {
-            // Ignore invalid bodies / bodies that aren't grabbing anything
-            if (!pBody || pBody->_grabbedBodiesByBodyName.empty()) {
-                continue;
-            }
-
-            // If this body wasn't grabbing the body to be renamed, nothing to update
-            KinBody::MapGrabbedByName::iterator it = pBody->_grabbedBodiesByBodyName.find(oldName);
-            if (it == pBody->_grabbedBodiesByBodyName.end()) {
-                continue;
-            }
-
-            // This body is grabbing the renamed body - erase the old map entry and replace it with a new one using the new name
-            // Sanity check that the body does not think it is grabbing anything with the new name already
-            BOOST_ASSERT(pBody->_grabbedBodiesByBodyName.find(newName) == pBody->_grabbedBodiesByBodyName.end());
-
-            // Swap the index to the new body name key
-            GrabbedPtr grabbed = std::move(it->second);
-            pBody->_grabbedBodiesByBodyName.erase(it);
-            pBody->_grabbedBodiesByBodyName[newName] = std::move(grabbed);
-        }
 
         return true;
     }

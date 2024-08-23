@@ -5031,9 +5031,9 @@ void KinBody::_ComputeInternalInformation()
         vector<dReal> vcurrentvalues;
         // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
-        MapGrabbedByName grabbedBodiesByBodyName; grabbedBodiesByBodyName.swap(_grabbedBodiesByBodyName); // swap to get rid of grabbed bodies
+        MapGrabbedByEnvironmentIndex grabbedBodiesByBodyName; grabbedBodiesByBodyName.swap(_grabbedBodiesByEnvironmentIndex); // swap to get rid of grabbed bodies
         KinBody::SetDOFValues(vcurrentvalues,CLA_CheckLimits, std::vector<int>());
-        grabbedBodiesByBodyName.swap(_grabbedBodiesByBodyName); // swap back
+        grabbedBodiesByBodyName.swap(_grabbedBodiesByEnvironmentIndex); // swap back
         GetLinkTransformations(vnewtrans, vnewdoflastsetvalues);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
@@ -5790,9 +5790,9 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
     _listAttachedBodies.clear(); // will be set in the environment
-    _grabbedBodiesByBodyName.clear();
+    _grabbedBodiesByEnvironmentIndex.clear();
     if ((cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies) {
-        for (const MapGrabbedByName::value_type& otherGrabPair : r->_grabbedBodiesByBodyName) {
+        for (const MapGrabbedByEnvironmentIndex::value_type& otherGrabPair : r->_grabbedBodiesByEnvironmentIndex) {
             const GrabbedPtr& pgrabbedref = otherGrabPair.second;
             if( !pgrabbedref ) {
                 RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
@@ -5851,7 +5851,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                     throw;
                 }
 
-                _grabbedBodiesByBodyName[pgrabbedbody->GetName()] = std::move(pgrabbed);
+                BOOST_ASSERT(pgrabbedbody->GetEnvironmentBodyIndex() > 0);
+                _grabbedBodiesByEnvironmentIndex[pgrabbedbody->GetEnvironmentBodyIndex()] = std::move(pgrabbed);
             }
         } // end for pgrabbedref
     } // end if not Clone_IgnoreGrabbedBodies
@@ -5870,7 +5871,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             // InitKinBody will be called when the body is added to the environment.
         }
         // have to also call InitKinBody to grabbed bodies.
-        for (const MapGrabbedByName::value_type& grabPair : _grabbedBodiesByBodyName) {
+        for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
             KinBodyPtr pGrabbedBody = grabPair.second->_pGrabbedBody.lock();
             _selfcollisionchecker->InitKinBody(pGrabbedBody);
         }

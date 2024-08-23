@@ -587,9 +587,9 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
         }
 
         if( bConnectedBodyStatesChanged ) {
-            if( !_grabbedBodiesByBodyName.empty() ) {
-                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_grabbedBodiesByBodyName.size());
-                for (const MapGrabbedByName::value_type& grabPair : _grabbedBodiesByBodyName) {
+            if( !_grabbedBodiesByEnvironmentIndex.empty() ) {
+                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_grabbedBodiesByEnvironmentIndex.size());
+                for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
                     grabPair.second->InvalidateListNonCollidingLinks();
                 }
             }
