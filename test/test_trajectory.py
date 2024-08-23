@@ -11,7 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, g_epsilon, expected_failure, transdist
+from openravepy import planningutils, interfaces, databases, misc
+from openravepy import RaveClone, RaveCreateTrajectory, RaveCreatePlanner, IkFilterOptions, RaveGetAffineConfigurationSpecification, RaveGetAffineDOFValuesFromTransform, PlannerStatusCode, Planner, poseMult, quatRotate, quatFromAxisAngle, ConfigurationSpecification, IkParameterizationType, DOFAffine, IkParameterization, RaveGetIndexFromAffineDOF, RaveSetDebugLevel, DebugLevel, quatMultiply, quatInverse, matrixFromAxisAngle, axisAngleFromRotationMatrix, poseFromMatrix, openrave_exception
+from numpy import array, r_, c_, zeros, ones, pi, cumsum, dot, eye, arange, linalg, polyfit, tile, flatnonzero, fmod, modf, linspace, abs, sum, all
+import numpy
+import time
 
 class TestTrajectory(EnvironmentSetup):
 
@@ -891,4 +896,3 @@ class TestTrajectory(EnvironmentSetup):
         duration = traj.GetDuration()
         planningutils.SegmentTrajectory(traj, startoffset, duration)
         assert( abs(traj.GetDuration() - (duration-startoffset)) <= g_epsilon )
-

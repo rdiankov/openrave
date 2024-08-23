@@ -129,8 +129,8 @@ class Xunitmp(Plugin):
     def _quoteattr(self, attr):
         """Escape an XML attribute. Value can be unicode."""
         attr = xml_safe(attr)
-        if isinstance(attr, unicode) and not UNICODE_STRINGS:
-            attr = attr.encode(self.encoding)
+        # if isinstance(attr, unicode) and not UNICODE_STRINGS:
+        #     attr = attr.encode(self.encoding)
         return saxutils.quoteattr(attr)
 
     def options(self, parser, env):

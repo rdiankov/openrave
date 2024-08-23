@@ -4020,11 +4020,11 @@ protected:
             // most likely unique, but have to double check
             if( utils::IsValidName(newId) && _CheckUniqueId(pbody, false) ) {
                 if( !baseId.empty() ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, setting body id from '%s' -> '%s' due to conflict", GetId()%baseId%newId);
+                    RAVELOG_DEBUG_FORMAT("env=%s, setting body '%s' id from '%s' -> '%s' due to conflict", GetNameId()%pbody->GetName()%baseId%newId);
                 }
                 break;
             }
-            RAVELOG_INFO_FORMAT("env=%d, tried renaming body from '%s' -> '%s' due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseId%newId);
+            RAVELOG_INFO_FORMAT("env=%s, tried renaming body '%s' id from '%s' -> '%s' due to conflict, but conflict again. This is highly unlikely to happen.", GetNameId()%pbody->GetName()%baseId%newId);
         }
     }
 

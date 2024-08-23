@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.150.0
+===============
+
+- Change AddLinkGeomCollision API to accept geomname.
+
 Version 0.149.1
 ===============
 
