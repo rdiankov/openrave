@@ -23,6 +23,7 @@
 #define OPENRAVE_KINBODY_H
 
 #include <unordered_map>
+#include <unordered_set>
 
 namespace OpenRAVE {
 
@@ -2470,7 +2471,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<size_t, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2516,7 +2517,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<size_t, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -3498,15 +3499,16 @@ private:
      */
     void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
+    /** \brief get the set of body names that are grabbed by this body
+
+        \param[out] set to fill with the grabbed body names
+     */
+    void GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const;
+
     /// \brief returns number of grabbed targets
     inline int GetNumGrabbed() const {
-        return (int)_vGrabbedBodies.size();
+        return _grabbedBodiesByEnvironmentIndex.size();
     }
-
-    /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
-    ///
-    /// \param[in] iGrabbed index into the grabbed bodies. Max is GetNumGrabbed()-1
-    KinBodyPtr GetGrabbedBody(int iGrabbed) const;
 
     /** \brief gets info of all grabbed bodies
 
@@ -3588,6 +3590,8 @@ private:
     }
 
 protected:
+    using MapGrabbedByEnvironmentIndex = std::unordered_map<size_t, GrabbedPtr>;
+
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
 
@@ -3660,7 +3664,7 @@ protected:
     void _UpdateGrabbedBodies();
 
     /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
-    std::vector<GrabbedPtr>::iterator _RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed);
+    MapGrabbedByEnvironmentIndex::iterator _RemoveGrabbedBody(MapGrabbedByEnvironmentIndex::iterator itGrabbed);
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
@@ -3703,11 +3707,9 @@ protected:
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
-    std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
-
-    /// Quick lookup map of body name -> indexed into _vGrabbedBodies of the matching grab entry
-    using MapGrabbedBodyNameIndex = std::unordered_map<std::string, std::vector<GrabbedPtr>::size_type>;
-    MapGrabbedBodyNameIndex _mapGrabbedBodyNameIndex;
+    /// Map of grabbed body record indexed by the environment index of the grabbed body to provide faster lookup
+    /// It is assumed that bodies cannot have their environment index change while they are grabbed.
+    MapGrabbedByEnvironmentIndex _grabbedBodiesByEnvironmentIndex;
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
@@ -3825,6 +3827,7 @@ public:
 
     // Member Variables
     KinBodyWeakPtr _pGrabbedBody; ///< the body being grabbed
+    uintptr_t _grabbedBodyPtrId; ///< raw reference to the underlying grabbed body. Used in place of name as a stable unique identifier for kinbody instances.
     KinBody::LinkPtr _pGrabbingLink; ///< the link used for grabbing _pGrabbedBody. Its transform (as well as the transforms of other links rigidly attached to _pGrabbingLink) relative to the grabbed body remains constant until the grabbed body is released.
     std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
     Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
