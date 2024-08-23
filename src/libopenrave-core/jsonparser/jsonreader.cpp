@@ -306,24 +306,61 @@ public:
                     const rapidjson::Value& rEnvBodies = rEnvInfo["bodies"];
                     rapidjson::Value& rRefBodies = (*prFilteredReferenceEnvInfo)["bodies"];
                     for (rapidjson::Value::ConstValueIterator itEnvBody = rEnvBodies.Begin(); itEnvBody != rEnvBodies.End(); ++itEnvBody) {
+                        rapidjson::Value::ValueIterator itIdMatchRefBody = rRefBodies.End();
+                        rapidjson::Value::ValueIterator itNameMatchRefBody = rRefBodies.End();
+                        const char* envBodyId = "";
+                        const char* envBodyName = "";
+
                         rapidjson::Value::ConstMemberIterator itEnvBodyId = itEnvBody->FindMember("id");
-                        if( itEnvBodyId == itEnvBody->MemberEnd() || itEnvBodyId->value.GetStringLength() == 0 ) {
-                            continue;
+                        if( itEnvBodyId != itEnvBody->MemberEnd() && itEnvBodyId->value.GetStringLength() > 0 ) {
+                            envBodyId = itEnvBodyId->value.GetString();
+                            const size_t envBodyIdLen = itEnvBodyId->value.GetStringLength();
+                            for (rapidjson::Value::ValueIterator itRefBody = rRefBodies.Begin(); itRefBody != rRefBodies.End(); ++itRefBody) {
+                                rapidjson::Value::ConstMemberIterator itRefBodyId = itRefBody->FindMember("id");
+                                if( itRefBodyId == itRefBody->MemberEnd() || itRefBodyId->value.GetStringLength() == 0 ) {
+                                    continue;
+                                }
+                                const char* refBodyId = itRefBodyId->value.GetString();
+                                const size_t refBodyIdLen = itRefBodyId->value.GetStringLength();
+                                if( envBodyIdLen == refBodyIdLen && strncmp(envBodyId, refBodyId, envBodyIdLen) == 0 ) {
+                                    itIdMatchRefBody = itRefBody;
+                                    break;
+                                }
+                            }
                         }
-                        const char* envBodyId = itEnvBodyId->value.GetString();
-                        const size_t envBodyIdLen = itEnvBodyId->value.GetStringLength();
-                        for (rapidjson::Value::ValueIterator itRefBody = rRefBodies.Begin(); itRefBody != rRefBodies.End(); ++itRefBody) {
-                            rapidjson::Value::ConstMemberIterator itRefBodyId = itRefBody->FindMember("id");
-                            if( itRefBodyId == itRefBody->MemberEnd() || itRefBodyId->value.GetStringLength() == 0 ) {
-                                continue;
+                        rapidjson::Value::ConstMemberIterator itEnvBodyName = itEnvBody->FindMember("name");
+                        if( itEnvBodyName != itEnvBody->MemberEnd() && itEnvBodyName->value.GetStringLength() > 0 ) {
+                            envBodyName = itEnvBodyName->value.GetString();
+                            const size_t envBodyNameLen = itEnvBodyName->value.GetStringLength();
+                            for (rapidjson::Value::ValueIterator itRefBody = rRefBodies.Begin(); itRefBody != rRefBodies.End(); ++itRefBody) {
+                                rapidjson::Value::ConstMemberIterator itRefBodyName = itRefBody->FindMember("name");
+                                if( itRefBodyName == itRefBody->MemberEnd() || itRefBodyName->value.GetStringLength() == 0 ) {
+                                    continue;
+                                }
+                                const char* refBodyName = itRefBodyName->value.GetString();
+                                const size_t refBodyNameLen = itRefBodyName->value.GetStringLength();
+                                if( envBodyNameLen == refBodyNameLen && strncmp(envBodyName, refBodyName, envBodyNameLen) == 0 ) {
+                                    itNameMatchRefBody = itRefBody;
+                                    break;
+                                }
                             }
-                            const char* refBodyId = itRefBodyId->value.GetString();
-                            const size_t refBodyIdLen = itRefBodyId->value.GetStringLength();
-                            if( envBodyIdLen == refBodyIdLen && strncmp(envBodyId, refBodyId, envBodyIdLen) == 0 ) {
-                                rRefBodies.Erase(itRefBody);
-                                RAVELOG_VERBOSE_FORMAT("Body id='%s' in referenceUri '%s' will be overwritten. So excluding it from deserialization.", refBodyId % pReferenceUri);
-                                break;
+                        }
+                        if( itNameMatchRefBody != rRefBodies.End() ) {
+                            if( itNameMatchRefBody == itIdMatchRefBody ) {
+                                RAVELOG_VERBOSE_FORMAT("Found body with the same name='%s' and id='%s' in referenceUri '%s'. Excluding it from deserialization.", envBodyName % envBodyId % pReferenceUri);
+                                rRefBodies.Erase(itNameMatchRefBody);
                             }
+                            else if( itIdMatchRefBody == rRefBodies.End() ) {
+                                RAVELOG_VERBOSE_FORMAT("Found body with the same name='%s' but different id='%s' in referenceUri '%s'. Excluding it from deserialization.", envBodyName % envBodyId % pReferenceUri);
+                                rRefBodies.Erase(itNameMatchRefBody);
+                            }
+                            else {
+                                throw OPENRAVE_EXCEPTION_FORMAT("Found body with the same name='%s' in referenceUri '%s' but there is body with the same id='%s' with different name='%s'. Cannot replace the body.", envBodyName % pReferenceUri % (*itIdMatchRefBody)["id"].GetString() % (*itIdMatchRefBody)["name"].GetString(), ORE_BodyIdConflict);
+                            }
+                        }
+                        else if( itIdMatchRefBody != rRefBodies.End() )  {
+                            RAVELOG_VERBOSE_FORMAT("Found body with the same id='%s' but different name='%s' in referenceUri '%s'. Excluding it from deserialization.", envBodyId % envBodyName % pReferenceUri);
+                            rRefBodies.Erase(itIdMatchRefBody);
                         }
                     }
                     prReferenceEnvInfo = prFilteredReferenceEnvInfo;
