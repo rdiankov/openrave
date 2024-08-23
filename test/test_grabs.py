@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, transdist, g_epsilon, assert_raises
+from openravepy import RaveCreateKinBody, OpenRAVEException
+from numpy import array, eye, dot, linalg
+
 
 class TestGrabs(EnvironmentSetup):
 
