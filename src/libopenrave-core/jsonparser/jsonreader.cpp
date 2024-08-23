@@ -318,7 +318,8 @@ public:
                                 continue;
                             }
                             const char* refBodyId = itRefBodyId->value.GetString();
-                            if( strncmp(envBodyId, refBodyId, envBodyIdLen) == 0 ) {
+                            const size_t refBodyIdLen = itRefBodyId->value.GetStringLength();
+                            if( envBodyIdLen == refBodyIdLen && strncmp(envBodyId, refBodyId, envBodyIdLen) == 0 ) {
                                 rRefBodies.Erase(itRefBody);
                                 RAVELOG_VERBOSE_FORMAT("Body id='%s' in referenceUri '%s' will be overwritten. So excluding it from deserialization.", refBodyId % pReferenceUri);
                                 break;
