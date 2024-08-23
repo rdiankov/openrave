@@ -13,7 +13,6 @@ typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
 typedef KinBody::GeometryConstPtr GeometryConstPtr;
 typedef std::pair<GeometryConstPtr, GeometryConstPtr> GeomPair;
-typedef boost::weak_ptr<KinBody::Geometry> GeometryWeakPtr;
 typedef std::pair<LinkPair, GeomPair> LinkGeomPairs;
 using OpenRAVE::ORE_Assert;
 
@@ -79,18 +78,11 @@ public:
         {
 public:
             FCLGeometryInfo();
-            FCLGeometryInfo(KinBody::GeometryPtr pgeom);
 
             virtual ~FCLGeometryInfo() {
             }
 
-            inline KinBody::GeometryPtr GetGeometry() {
-                return _pgeom.lock();
-            }
-
-            GeometryWeakPtr _pgeom;
-            std::string bodylinkgeomname; // for debugging purposes
-            bool bFromKinBodyGeometry; ///< if true, then from kinbodygeometry. Otherwise from standalone object that does not have any KinBody associations
+            std::string geomname; // for debugging purposes
         };
 
         class LinkInfo
@@ -137,6 +129,7 @@ public:
             std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
             bool bFromKinBodyLink; ///< if true, then from kinbodylink. Otherwise from standalone object that does not have any KinBody associations
+            bool bFromExtraGeometries = false; ///< if true, geometries come from extraGeometries. otherwise, KinBody::Link::GetGeometries.
         };
 
         FCLKinBodyInfo() {}

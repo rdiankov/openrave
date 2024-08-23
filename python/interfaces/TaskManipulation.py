@@ -16,7 +16,8 @@ __license__ = 'Apache License, Version 2.0'
 from ..openravepy_int import RaveCreateModule, RaveCreateTrajectory, matrixSerialization, IkParameterization, IkParameterization, poseSerialization
 from .. import PlanningError
 
-from numpy import *
+from numpy import array, double, float64, reshape, sum
+
 from copy import copy as shallowcopy
 try:
     from cStringIO import StringIO

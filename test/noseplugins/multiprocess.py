@@ -137,6 +137,8 @@ except ImportError:
 
 if sys.version_info >= (3, 0):
     def bytes_(s, encoding='utf8'):
+        if isinstance(s, bytes):
+            return s
         return bytes(s, encoding)
 else:
     def bytes_(s, encoding=None):
