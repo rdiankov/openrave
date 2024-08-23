@@ -605,7 +605,8 @@ public:
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
 
-    /// Get the corresponding body from its unique network id
+    /// Get the name of a kinbody based on its index in the environment
+    /// Returns false if the index does not map to a valid body in the environment
     virtual bool GetBodyNameFromEnvironmentBodyIndex(int bodyIndex, std::string& out) const = 0;
 
     /// Fetch the index of a body in the environment by name

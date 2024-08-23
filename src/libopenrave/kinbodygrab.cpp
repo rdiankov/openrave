@@ -467,13 +467,13 @@ void KinBody::RegrabAll()
 
 KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
 {
-    // If we have no grab with a matching name, we are not grabbing this body
+    // If we have no grab for a body with a matching env index, we are not grabbing this body
     MapGrabbedByEnvironmentIndex::const_iterator grabIt = _grabbedBodiesByEnvironmentIndex.find(body.GetEnvironmentBodyIndex());
     if (grabIt == _grabbedBodiesByEnvironmentIndex.end()) {
         return nullptr;
     }
 
-    // If we do have a grab with that name, check that the grabbed info we have still points to the same valid kinbody
+    // If we do have a grab with that index, check that the grabbed info we have still points to the same valid kinbody
     const KinBodyConstPtr grabbedBody = grabIt->second->_pGrabbedBody.lock();
     if (!grabbedBody || grabbedBody.get() != &body) {
         return nullptr;
