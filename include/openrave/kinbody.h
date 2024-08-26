@@ -3506,7 +3506,7 @@ private:
     void GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const;
 
     /// \brief returns number of grabbed targets
-    inline int GetNumGrabbed() const {
+    int GetNumGrabbed() const {
         return _grabbedBodiesByEnvironmentIndex.size();
     }
 

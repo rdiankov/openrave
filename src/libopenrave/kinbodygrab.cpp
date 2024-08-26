@@ -827,7 +827,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
     // First pass: remove all existing grabs that are no longer valid per the new list of grab infos
     {
         // Fresh copy of the grabbed body map to move grabs we're keeping into
-        MapGrabbedByEnvironmentIndex  newGrabbedBodiesByBodyName;
+        MapGrabbedByEnvironmentIndex  newGrabbedBodiesByEnvironmentIndex;
 
         // Scan through the list of new grab infos and migrate any existing grabs to the new grab list
         for (const KinBody::GrabbedInfoConstPtr& grabInfo : vGrabbedInfos) {
@@ -849,7 +849,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             existingGrabIt->second->InvalidateListNonCollidingLinks();
 
             // Move the pointer out of the old grab list and into the new one.
-            newGrabbedBodiesByBodyName[existingGrabIt->first] = std::move(existingGrabIt->second); // Invalidates entry in old map
+            newGrabbedBodiesByEnvironmentIndex[existingGrabIt->first] = std::move(existingGrabIt->second); // Invalidates entry in old map
         }
 
         // At this point, any non-null grab pointers in the old _grabbedBodiesByEnvironmentIndex map are for bodies that are no longer grabbed.
@@ -872,7 +872,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         }
 
         // Now that we have filtered out all of the dead grabs, latch the set of still-active grabs back to our master list
-        _grabbedBodiesByEnvironmentIndex.swap(newGrabbedBodiesByBodyName);
+        _grabbedBodiesByEnvironmentIndex.swap(newGrabbedBodiesByEnvironmentIndex);
     }
 
     // Ensure that we reset the collision checker options when done
