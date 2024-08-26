@@ -700,7 +700,7 @@ bool KinBody::GetGrabbedInfo(const std::string& grabbedName, GrabbedInfo& grabbe
     // If the body is dead, this grab doesn't count
     const GrabbedPtr& pgrabbed = grabIt->second;
     KinBodyPtr pGrabbedBody = pgrabbed->_pGrabbedBody.lock();
-    if (!!pGrabbedBody) {
+    if (!pGrabbedBody) {
         return false;
     }
 
