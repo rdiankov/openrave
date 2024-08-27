@@ -3679,6 +3679,19 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    /// \brief Check self collision against a grabbed body. Assuming ComputeListNonCollidingLinks is called before this function.
+    /// \param[out/in] collisionchecke : collisoin checker to be used.
+    /// \param[out] report, pusereport : result of report and temporarily-used report.
+    /// \param[in] pGrabbed : ptr of Grabbed.
+    /// \param[in] bAllLinkCollisions : bAllLinkCollisions flag of the caller.
+    /// \param[in] grabbedBody : should be come from pGrabbed's _pGrabbedBody.
+    bool _CheckGrabbedBodySelfCollision(CollisionCheckerBasePtr& collisionchecker,
+                                        CollisionReportPtr& report,
+                                        CollisionReportPtr& pusereport,
+                                        const GrabbedConstPtr& pGrabbed,
+                                        const bool bAllLinkCollisions,
+                                        const KinBody& grabbedBody) const;
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

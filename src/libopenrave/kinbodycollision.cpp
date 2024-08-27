@@ -92,54 +92,16 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         }
 
         _vGrabbedBodies[indexGrabbed1]->ComputeListNonCollidingLinks();
-
-        const std::list<KinBody::LinkConstPtr>& nonCollidingLinks1 = _vGrabbedBodies[indexGrabbed1]->_listNonCollidingLinksWhenGrabbed;
-
-        KinBodyPtr pLinkParent;
-
-        for (const KinBody::LinkConstPtr& probotlinkFromNonColliding : nonCollidingLinks1) {
-            const KinBody::Link& robotlinkFromNonColliding = *probotlinkFromNonColliding;
-            pLinkParent = robotlinkFromNonColliding.GetParent(true);
-            if( !pLinkParent ) {
-                RAVELOG_WARN_FORMAT("env=%s, _listNonCollidingLinks has invalid link %s:%d", GetEnv()->GetNameId()%robotlinkFromNonColliding.GetName()%robotlinkFromNonColliding.GetIndex());
-            }
-            const KinBody::LinkConstPtr& probotlink = (!!pLinkParent) ? probotlinkFromNonColliding : _veclinks.at(robotlinkFromNonColliding.GetIndex());
-
-            // have to use link/link collision since link/body checks attached bodies
-            for (const KinBody::LinkPtr& pGrabbedBodylink : grabbedBody1.GetLinks()) {
-                if( collisionchecker->CheckCollision(probotlink, pGrabbedBodylink, pusereport) ) {
-                    bCollision = true;
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        break;
-                    }
-                }
-                if( !!pusereport && pusereport->minDistance < report->minDistance ) {
-                    *report = *pusereport;
-                }
-            }
-            if( bCollision ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    break;
-                }
-            }
-        }
-        if( bCollision ) {
-            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                break;
-            }
-        }
-
-        if( grabbedBody1.CheckSelfCollision(pusereport, collisionchecker) ) {
+        if( _CheckGrabbedBodySelfCollision(collisionchecker, report, pusereport,
+                                           _vGrabbedBodies[indexGrabbed1], bAllLinkCollisions, grabbedBody1) ) {
             bCollision = true;
             if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                 break;
             }
         }
-        if( !!pusereport && pusereport->minDistance < report->minDistance ) {
-            *report = *pusereport;
-        }
 
         if( numGrabbed > 1 ) {
+            const std::list<KinBody::LinkConstPtr>& nonCollidingLinks1 = _vGrabbedBodies[indexGrabbed1]->_listNonCollidingLinksWhenGrabbed;
             // Since collision checking is commutative (i.e. CheckCollision(link1, link2) == CheckCollision(link2, link1)), checking it once per pair is sufficient.
             for( size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < numGrabbed; ++indexGrabbed2 ) {
                 const KinBodyPtr& pGrabbedBody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
@@ -435,23 +397,35 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for (const GrabbedConstPtr& pgrabbed : _vGrabbedBodies) {
+    const int coloptions = pchecker->GetCollisionOptions();
+    CollisionReport tempreport;
+    CollisionReportPtr pusereport = report;
+    if( !!report && (coloptions & CO_Distance) ) {
+        pusereport = boost::shared_ptr<CollisionReport>(&tempreport,utils::null_deleter());
+    }
+    for (GrabbedPtr& pgrabbed : _vGrabbedBodies) {
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
+                pgrabbed->ComputeListNonCollidingLinks();
                 if( !linksaver ) {
                     linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
                     plink->Enable(false);
                     // also disable rigidly attached links?
                 }
                 KinBodyStateSaver bodysaver(pgrabbedbody,Save_LinkTransformation);
-                if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pgrabbedbody),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
+                if( _CheckGrabbedBodySelfCollision(pchecker, report, pusereport, pgrabbed, bAllLinkCollisions, *pgrabbedbody) ) {
                     bincollision = true;
+                    if( !bAllLinkCollisions ) {
+                        break;
+                    }
                 }
             }
+        }
+    }
+    if( bincollision && !!report ) {
+        if( report != pusereport ) {
+            *report = *pusereport;
         }
     }
     return bincollision;
@@ -484,10 +458,17 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for (const GrabbedConstPtr& pgrabbed : _vGrabbedBodies) {
+    const int coloptions = pchecker->GetCollisionOptions();
+    CollisionReport tempreport;
+    CollisionReportPtr pusereport = report;
+    if( !!report && (coloptions & CO_Distance) ) {
+        pusereport = boost::shared_ptr<CollisionReport>(&tempreport,utils::null_deleter());
+    }
+    for (GrabbedPtr& pgrabbed : _vGrabbedBodies) {
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
+                pgrabbed->ComputeListNonCollidingLinks();
                 if( !linksaver ) {
                     linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
                     plink->Enable(false);
@@ -495,16 +476,70 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans
                 }
                 KinBodyStateSaver bodysaver(pgrabbedbody,Save_LinkTransformation);
                 pgrabbedbody->SetTransform(tlinktrans * pgrabbed->_tRelative);
-                if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pgrabbedbody),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
+                if( _CheckGrabbedBodySelfCollision(pchecker, report, pusereport, pgrabbed, bAllLinkCollisions, *pgrabbedbody) ) {
                     bincollision = true;
+                    if( !bAllLinkCollisions ) {
+                        break;
+                    }
                 }
             }
         }
     }
+    if( bincollision && !!report ) {
+        if( report != pusereport ) {
+            *report = *pusereport;
+        }
+    }
     return bincollision;
+}
+
+bool KinBody::_CheckGrabbedBodySelfCollision(CollisionCheckerBasePtr& collisionchecker,
+                                             CollisionReportPtr& report,
+                                             CollisionReportPtr& pusereport,
+                                             const GrabbedConstPtr& pGrabbed,
+                                             const bool bAllLinkCollisions,
+                                             const KinBody& grabbedBody) const
+{
+    const std::list<KinBody::LinkConstPtr>& nonCollidingLinks = pGrabbed->_listNonCollidingLinksWhenGrabbed;
+    KinBodyPtr pLinkParent;
+    bool bCollision = false;
+    for (const KinBody::LinkConstPtr& probotlinkFromNonColliding : nonCollidingLinks) {
+        const KinBody::Link& robotlinkFromNonColliding = *probotlinkFromNonColliding;
+        pLinkParent = robotlinkFromNonColliding.GetParent(true);
+        if( !pLinkParent ) {
+            RAVELOG_WARN_FORMAT("env=%s, _listNonCollidingLinks has invalid link %s:%d", GetEnv()->GetNameId()%robotlinkFromNonColliding.GetName()%robotlinkFromNonColliding.GetIndex());
+        }
+        const KinBody::LinkConstPtr& probotlink = (!!pLinkParent) ? probotlinkFromNonColliding : _veclinks.at(robotlinkFromNonColliding.GetIndex());
+
+        // have to use link/link collision since link/body checks attached bodies
+        for (const KinBody::LinkPtr& pGrabbedBodylink : grabbedBody.GetLinks()) {
+            if( collisionchecker->CheckCollision(probotlink, pGrabbedBodylink, pusereport) ) {
+                bCollision = true;
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    return true;
+                }
+            }
+            if( !!pusereport && pusereport->minDistance < report->minDistance ) {
+                *report = *pusereport;
+            }
+        }
+        if( bCollision ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
+            }
+        }
+    }
+
+    if( grabbedBody.CheckSelfCollision(pusereport, collisionchecker) ) {
+        bCollision = true;
+        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+            return true;
+        }
+    }
+    if( !!pusereport && pusereport->minDistance < report->minDistance ) {
+        *report = *pusereport;
+    }
+    return bCollision;
 }
 
 } // end namespace OpenRAVE
