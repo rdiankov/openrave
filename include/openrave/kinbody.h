@@ -2471,7 +2471,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::unordered_map<size_t, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
+        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2517,7 +2517,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::unordered_map<size_t, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
+        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -3590,7 +3590,7 @@ private:
     }
 
 protected:
-    using MapGrabbedByEnvironmentIndex = std::unordered_map<size_t, GrabbedPtr>;
+    using MapGrabbedByEnvironmentIndex = std::unordered_map<int, GrabbedPtr>;
 
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);

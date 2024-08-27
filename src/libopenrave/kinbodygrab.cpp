@@ -832,7 +832,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Scan through the list of new grab infos and migrate any existing grabs to the new grab list
         for (const KinBody::GrabbedInfoConstPtr& grabInfo : vGrabbedInfos) {
             // Check to see if the grabbed body exists
-            const size_t grabbedBodyIndex = GetEnv()->GetEnvironmentBodyIndexByName(grabInfo->_grabbedname);
+            const int grabbedBodyIndex = GetEnv()->GetEnvironmentBodyIndexByName(grabInfo->_grabbedname);
             if (grabbedBodyIndex == 0) {
                 RAVELOG_WARN_FORMAT("unable to determine environment index for body '%s', does it exist in the environment?", grabInfo->_grabbedname);
                 continue;
@@ -913,7 +913,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         pBody->SetTransform(tBody);
 
         // Get the index of the body we're tring to grab
-        const size_t grabbedBodyIndex = GetEnv()->GetEnvironmentBodyIndexByName(pGrabbedInfo->_grabbedname);
+        const int grabbedBodyIndex = GetEnv()->GetEnvironmentBodyIndexByName(pGrabbedInfo->_grabbedname);
         if (grabbedBodyIndex == 0) {
             RAVELOG_WARN_FORMAT("unable to determine environment index for body '%s', does it exist in the environment?", pGrabbedInfo->_grabbedname);
             continue;

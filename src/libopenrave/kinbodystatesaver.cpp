@@ -90,7 +90,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
         // have to release all grabbed first
         pbody->ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(pbody->_grabbedBodiesByEnvironmentIndex.size(),==,0);
-        for (const  std::unordered_map<size_t, GrabbedPtr>::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        for (const std::unordered_map<int, GrabbedPtr>::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
             const GrabbedPtr& pGrabbed = grabPair.second;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
@@ -289,7 +289,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
         // have to release all grabbed first
         body.ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(body._grabbedBodiesByEnvironmentIndex.size(),==,0);
-        for (const  std::unordered_map<size_t, GrabbedPtr>::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        for (const std::unordered_map<int, GrabbedPtr>::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
             const GrabbedPtr& pGrabbed = grabPair.second;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
