@@ -922,7 +922,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Does this map to an existing grab?
         MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.find(grabbedBodyIndex);
         bool isNewlyGrabbedBody = existingGrabIt == _grabbedBodiesByEnvironmentIndex.end();
-        if (isNewlyGrabbedBody) {
+        if (true || isNewlyGrabbedBody) {
             // If it doesn't, allocate a new grab info object
             existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink)).first;
         }
