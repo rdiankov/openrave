@@ -22,6 +22,9 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
+#include <unordered_map>
+#include <unordered_set>
+
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
@@ -2468,7 +2471,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2514,7 +2517,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -3496,15 +3499,16 @@ private:
      */
     void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
-    /// \brief returns number of grabbed targets
-    inline int GetNumGrabbed() const {
-        return (int)_vGrabbedBodies.size();
-    }
+    /** \brief get the set of body names that are grabbed by this body
 
-    /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
-    ///
-    /// \param[in] iGrabbed index into the grabbed bodies. Max is GetNumGrabbed()-1
-    KinBodyPtr GetGrabbedBody(int iGrabbed) const;
+        \param[out] set to fill with the grabbed body names
+     */
+    void GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const;
+
+    /// \brief returns number of grabbed targets
+    int GetNumGrabbed() const {
+        return _grabbedBodiesByEnvironmentIndex.size();
+    }
 
     /** \brief gets info of all grabbed bodies
 
@@ -3586,6 +3590,8 @@ private:
     }
 
 protected:
+    using MapGrabbedByEnvironmentIndex = std::unordered_map<int, GrabbedPtr>;
+
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
 
@@ -3658,7 +3664,7 @@ protected:
     void _UpdateGrabbedBodies();
 
     /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
-    std::vector<GrabbedPtr>::iterator _RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed);
+    MapGrabbedByEnvironmentIndex::iterator _RemoveGrabbedBody(MapGrabbedByEnvironmentIndex::iterator itGrabbed);
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
@@ -3701,7 +3707,9 @@ protected:
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
-    std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+    /// Map of grabbed body record indexed by the environment index of the grabbed body to provide faster lookup
+    /// It is assumed that bodies cannot have their environment index change while they are grabbed.
+    MapGrabbedByEnvironmentIndex _grabbedBodiesByEnvironmentIndex;
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
