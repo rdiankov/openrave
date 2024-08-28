@@ -605,6 +605,14 @@ public:
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
 
+    /// Get the name of a kinbody based on its index in the environment
+    /// Returns false if the index does not map to a valid body in the environment
+    virtual bool GetBodyNameFromEnvironmentBodyIndex(int bodyIndex, std::string& out) const = 0;
+
+    /// Fetch the index of a body in the environment by name
+    /// Returns zero if no body with that name exists in the environment
+    virtual int GetEnvironmentBodyIndexByName(string_view bodyName) const = 0;
+
     /// Get the corresponding bodies from its unique network id
     ///
     /// Calling GetBodyFromEnvironmentBodyIndex in loop should be replaced by this function to minimize scoped lock constrution and deconstruction

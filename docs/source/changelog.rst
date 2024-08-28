@@ -3,10 +3,17 @@
 ChangeLog
 #########
 
-Version 0.150.1
+Version 0.151.1
 ===============
 
 - Fix: when loading environment from `{"referenceUri": "uri", "bodies": [...]}`, body infos were merged instead of overwritten.
+
+Version 0.151.0
+===============
+
+- Optimize ResetGrabbed to avoid detaching/reattaching bodies that are still grabbed with the new grab infos
+- Change the internal storage for grab records in kinbodies to use unordered maps instead of vectors
+- The function KinBody::GetGrabbedBody(int) has been removed, as grab information orderig is no longer contiguous/stable
 
 Version 0.150.0
 ===============

@@ -2668,6 +2668,22 @@ public:
         return KinBodyPtr();
     }
 
+    bool GetBodyNameFromEnvironmentBodyIndex(int bodyIndex, std::string& out) const override
+    {
+        SharedLock lock(_mutexInterfaces);
+        if (0 < bodyIndex && bodyIndex < (int)_vecbodies.size()) {
+            out = _vecbodies.at(bodyIndex)->GetName();
+            return true;
+        }
+        return false;
+    }
+
+    int GetEnvironmentBodyIndexByName(string_view bodyName) const override
+    {
+        SharedLock lock(_mutexInterfaces);
+        return _FindBodyIndexByName(bodyName);
+    }
+
     void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
                                              std::vector<KinBodyPtr>& bodies) const override
     {
@@ -3130,7 +3146,8 @@ public:
                     if (!pAttached) {
                         continue;
                     }
-                    for (const GrabbedPtr& pGrabbed : pAttached->_vGrabbedBodies) {
+                    for (const KinBody::MapGrabbedByEnvironmentIndex::value_type& grabPair : pAttached->_grabbedBodiesByEnvironmentIndex) {
+                        const GrabbedPtr& pGrabbed = grabPair.second;
                         KinBodyConstPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
                         if( !!pGrabbedBody && pGrabbedBody.get() == &*pMatchExistingBody ) {
                             pGrabbingBodies.push_back(pAttached);
@@ -3418,6 +3435,7 @@ public:
         _mapBodyNameIndex.erase(itOld);
         _mapBodyNameIndex[newName] = envBodyIndex;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' is renamed to '%s'", GetNameId()%oldName%newName);
+
         return true;
     }
 

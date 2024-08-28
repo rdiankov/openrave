@@ -149,7 +149,8 @@ void Grabbed::ComputeListNonCollidingLinks()
 
         // Check grabbed body vs other existing grabbed bodies
         // int iOtherGrabbed = -1;
-        for( const GrabbedPtr& pOtherGrabbed : pGrabber->_vGrabbedBodies ) {
+        for (const KinBody::MapGrabbedByEnvironmentIndex::value_type& otherGrabbedPair : pGrabber->_grabbedBodiesByEnvironmentIndex) {
+            const GrabbedPtr& pOtherGrabbed = otherGrabbedPair.second;
             // ++iOtherGrabbed;
             KinBodyPtr pOtherGrabbedBody = pOtherGrabbed->_pGrabbedBody.lock();
             if( !pOtherGrabbedBody ) {
@@ -227,9 +228,9 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
 
     // If pGrabbedBody has previously been grabbed, check if the grabbing condition is the same
     GrabbedPtr pPreviouslyGrabbed;
-    std::vector<GrabbedPtr>::iterator itPreviouslyGrabbed;
-    FOREACHC(itGrabbed, _vGrabbedBodies) {
-        GrabbedPtr pGrabbed = *itGrabbed;
+    MapGrabbedByEnvironmentIndex::iterator itPreviouslyGrabbed;
+    FOREACHC(itGrabbed, _grabbedBodiesByEnvironmentIndex) {
+        GrabbedPtr& pGrabbed = itGrabbed->second;
         if( pGrabbed->_pGrabbedBody.lock() == pGrabbedBody ) {
             pPreviouslyGrabbed = pGrabbed;
             itPreviouslyGrabbed = itGrabbed;
@@ -298,7 +299,6 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
     pGrabbedBody->SetVelocity(velocity.first, velocity.second);
     CopyRapidJsonDoc(rGrabbedUserData, pGrabbed->_rGrabbedUserData);
-    _vGrabbedBodies.push_back(pGrabbed);
 
     try {
         // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
@@ -306,11 +306,12 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     }
     catch(...) {
         RAVELOG_ERROR_FORMAT("env=%s, failed to attach %s to %s when grabbing", GetEnv()->GetNameId()%pGrabbedBody->GetName()%GetName());
-        BOOST_ASSERT(_vGrabbedBodies.back() == pGrabbed);
         // do not call _selfcollisionchecker->RemoveKinBody since the same object might be re-attached later on and we should preserve the structures.
-        _vGrabbedBodies.pop_back();
         throw;
     }
+
+    BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
+    _grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = std::move(pGrabbed);
 
     try {
         _PostprocessChangedParameters(Prop_RobotGrabbed);
@@ -325,8 +326,8 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
 
 void KinBody::Release(KinBody &body)
 {
-    FOREACH(itgrabbed, _vGrabbedBodies) {
-        GrabbedPtr pgrabbed = *itgrabbed;
+    FOREACH(itgrabbed, _grabbedBodiesByEnvironmentIndex) {
+        GrabbedPtr pgrabbed = itgrabbed->second;
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         if( !!pgrabbedbody ) {
             bool bpointermatch = pgrabbedbody.get() == &body;
@@ -345,8 +346,8 @@ void KinBody::Release(KinBody &body)
 
     if( IS_DEBUGLEVEL(Level_Debug) ) {
         std::stringstream ss;
-        for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
-            KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
+        for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+            KinBodyConstPtr pgrabbedbody = grabPair.second->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
                 ss << pgrabbedbody->GetName() << ", ";
             }
@@ -358,40 +359,57 @@ void KinBody::Release(KinBody &body)
 
 void KinBody::ReleaseAllGrabbed()
 {
-    if( _vGrabbedBodies.size() > 0 ) {
-        for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
-            KinBodyPtr pbody = pgrabbed->_pGrabbedBody.lock();
-            if( !!pbody ) {
-                _RemoveAttachedBody(*pbody);
-            }
-        }
-        _vGrabbedBodies.clear();
-        _PostprocessChangedParameters(Prop_RobotGrabbed);
+    // If we have no grabbed bodies, do nothing
+    if (_grabbedBodiesByEnvironmentIndex.empty()) {
+        return;
     }
+
+    // Detach all previously grabbed bodies
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        KinBodyPtr pbody = grabPair.second->_pGrabbedBody.lock();
+        if (!!pbody) {
+            _RemoveAttachedBody(*pbody);
+        }
+    }
+
+    // Clear our set of grabs
+    _grabbedBodiesByEnvironmentIndex.clear();
+
+    // Execute any hooks registered for grabs
+    _PostprocessChangedParameters(Prop_RobotGrabbed);
 }
 
 void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWith)
 {
-    OPENRAVE_ASSERT_FORMAT(bodyLinkToReleaseWith.GetParent().get() == this, "body %s invalid grab arguments",GetName(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(bodyLinkToReleaseWith.GetParent().get() == this, "body %s invalid grab arguments", GetName(), ORE_InvalidArguments);
 
-    if( _vGrabbedBodies.size() > 0 ) {
-        bool bReleased = false;
-        int nCheckIndex = (int)_vGrabbedBodies.size()-1;
-        while(nCheckIndex >= 0) {
-            GrabbedPtr pgrabbed = _vGrabbedBodies.at(nCheckIndex);
-            if( pgrabbed->_pGrabbingLink.get() == &bodyLinkToReleaseWith ) {
-                KinBodyPtr pbody = pgrabbed->_pGrabbedBody.lock();
-                if( !!pbody ) {
-                    _RemoveAttachedBody(*pbody);
-                }
-                _RemoveGrabbedBody(_vGrabbedBodies.begin()+nCheckIndex);
-                bReleased = true;
-            }
-            --nCheckIndex;
+    // If we have no grabbed bodies, do nothing
+    if (_grabbedBodiesByEnvironmentIndex.empty()) {
+        return;
+    }
+
+    // Scan our grabs for any entries that use the grabbing link, and if found, remove
+    bool didUngrabBody = false;
+    for (MapGrabbedByEnvironmentIndex::iterator grabIt = _grabbedBodiesByEnvironmentIndex.begin(); grabIt != _grabbedBodiesByEnvironmentIndex.end(); /* nop */) {
+        // If this isn't the right link, ignore
+        if (grabIt->second->_pGrabbingLink.get() != &bodyLinkToReleaseWith) {
+            grabIt++;
+            continue;
         }
-        if( bReleased ) {
-            _PostprocessChangedParameters(Prop_RobotGrabbed);
+
+        // If it is, detach this body (if live)
+        KinBodyPtr pbody = grabIt->second->_pGrabbedBody.lock();
+        if (!!pbody) {
+            _RemoveAttachedBody(*pbody);
         }
+
+        // Erase this grab and flag that we need to run post-processing hooks when finished
+        grabIt = _grabbedBodiesByEnvironmentIndex.erase(grabIt);
+        didUngrabBody = true;
+    }
+
+    if (didUngrabBody) {
+        _PostprocessChangedParameters(Prop_RobotGrabbed);
     }
 }
 
@@ -400,27 +418,28 @@ void KinBody::RegrabAll()
     CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
 
-    size_t numGrabbed = _vGrabbedBodies.size();
     // Remove bodies from _listAttachedBodies first and then will add them back later. Maybe this is for triggering
     // postprocessing with Prop_BodyAttached?
-    FOREACH(itGrabbed, _vGrabbedBodies) {
-        GrabbedPtr pGrabbed = boost::dynamic_pointer_cast<Grabbed>(*itGrabbed);
-        KinBodyPtr pBody = pGrabbed->_pGrabbedBody.lock();
-        if( !!pBody ) {
+    for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        KinBodyPtr pBody = grabPair.second->_pGrabbedBody.lock();
+        if (!!pBody) {
             _RemoveAttachedBody(*pBody);
         }
     }
 
-    std::vector<GrabbedPtr> vOriginalGrabbed;
-    vOriginalGrabbed.swap(_vGrabbedBodies);
+    // Swap out the previous set of grabbed bodies so that we can iterate and re-create
+    MapGrabbedByEnvironmentIndex originalGrabbedBodiesByBodyName;
+    originalGrabbedBodiesByBodyName.swap(_grabbedBodiesByEnvironmentIndex);
 
-    _vGrabbedBodies.reserve(numGrabbed);
-    // Regrab all the objects in the same order.
-    for( size_t iGrabbed = 0; iGrabbed < numGrabbed; ++iGrabbed ) {
-        GrabbedPtr pGrabbed = vOriginalGrabbed[iGrabbed];
+    // Regrab all the bodies again
+    for (MapGrabbedByEnvironmentIndex::value_type& grabPair : originalGrabbedBodiesByBodyName) {
+        const int grabbedBodyEnvIndex = grabPair.first;
+        GrabbedPtr& pGrabbed = grabPair.second;
+
+        // If this body has ceased to exist, don't re-add it
         KinBodyPtr pBody = pGrabbed->_pGrabbedBody.lock();
-        if( !pBody ) {
-            RAVELOG_WARN_FORMAT("env=%s, grabbed body %d/%d does not exist any more", GetEnv()->GetNameId()%iGrabbed%numGrabbed);
+        if (!pBody) {
+            RAVELOG_WARN_FORMAT("env=%s, grabbed body with index %d does not exist any more", GetEnv()->GetNameId()%grabbedBodyEnvIndex);
             continue;
         }
 
@@ -433,34 +452,42 @@ void KinBody::RegrabAll()
         velocity.first += velocity.second.cross(pBody->GetTransform().trans - pNewGrabbed->_pGrabbingLink->GetTransform().trans);
         pBody->SetVelocity(velocity.first, velocity.second);
 
-        _vGrabbedBodies.push_back(pNewGrabbed);
         try {
             _AttachBody(pBody);
         }
         catch(...) {
             RAVELOG_ERROR_FORMAT("env=%s, failed to attach body '%s' to body '%s' when grabbing", GetEnv()->GetNameId()%pBody->GetName()%GetName());
-            BOOST_ASSERT(_vGrabbedBodies.back() == pGrabbed);
-            _vGrabbedBodies.pop_back();
             throw;
         }
+
+        BOOST_ASSERT(pBody->GetEnvironmentBodyIndex() > 0);
+        _grabbedBodiesByEnvironmentIndex[pBody->GetEnvironmentBodyIndex()] = std::move(pNewGrabbed);
     }
 }
 
 KinBody::LinkPtr KinBody::IsGrabbing(const KinBody &body) const
 {
-    for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
-        KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
-        if( !!pgrabbedbody && pgrabbedbody.get() == &body ) {
-            return pgrabbed->_pGrabbingLink;
-        }
+    // If we have no grab for a body with a matching env index, we are not grabbing this body
+    MapGrabbedByEnvironmentIndex::const_iterator grabIt = _grabbedBodiesByEnvironmentIndex.find(body.GetEnvironmentBodyIndex());
+    if (grabIt == _grabbedBodiesByEnvironmentIndex.end()) {
+        return nullptr;
     }
-    return LinkPtr();
+
+    // If we do have a grab with that index, check that the grabbed info we have still points to the same valid kinbody
+    const KinBodyConstPtr grabbedBody = grabIt->second->_pGrabbedBody.lock();
+    if (!grabbedBody || grabbedBody.get() != &body) {
+        return nullptr;
+    }
+
+    // If this is definitely a match, return the grabbing link
+    return grabIt->second->_pGrabbingLink;
 }
 
 int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const
 {
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
-    for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        const GrabbedPtr& pgrabbed = grabPair.second;
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
 
         // compare grabbing body
@@ -481,7 +508,8 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setGrabberLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const
 {
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
-    for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        const GrabbedPtr& pgrabbed = grabPair.second;
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
 
         // compare grabbing body
@@ -527,7 +555,8 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<std::string>& setGrabberLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const
 {
     GrabbedInfoCheckResult defaultErrorCode = GICR_BodyNotGrabbed;
-    for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        const GrabbedPtr& pgrabbed = grabPair.second;
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
 
         // compare grabbing body
@@ -573,32 +602,32 @@ int KinBody::CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLink
 void KinBody::GetGrabbed(std::vector<KinBodyPtr>& vbodies) const
 {
     vbodies.clear();
-    vbodies.reserve(_vGrabbedBodies.size());
-    for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
-        KinBodyPtr pbody = pgrabbed->_pGrabbedBody.lock();
-        if( !!pbody && pbody->GetEnvironmentBodyIndex() ) {
+    vbodies.reserve(_grabbedBodiesByEnvironmentIndex.size());
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        KinBodyPtr pbody = grabPair.second->_pGrabbedBody.lock();
+        if (!!pbody && pbody->GetEnvironmentBodyIndex()) {
             vbodies.push_back(pbody);
         }
     }
 }
 
-KinBodyPtr KinBody::GetGrabbedBody(int iGrabbed) const
+void KinBody::GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const
 {
-    GrabbedConstPtr pgrabbed = _vGrabbedBodies.at(iGrabbed);
-    KinBodyPtr pbody = pgrabbed->_pGrabbedBody.lock();
-    if( !!pbody && pbody->GetEnvironmentBodyIndex() ) {
-        return pbody;
+    bodyNames.clear();
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        std::string bodyName;
+        if (GetEnv()->GetBodyNameFromEnvironmentBodyIndex(grabPair.first, bodyName)) {
+            bodyNames.emplace(std::move(bodyName));
+        }
     }
-
-    return KinBodyPtr(); // whatever is grabbed is not valid.
 }
 
 void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos) const
 {
-    vGrabbedInfos.reserve(_vGrabbedBodies.size());
     vGrabbedInfos.clear();
-    for(size_t i = 0; i < _vGrabbedBodies.size(); ++i) {
-        const GrabbedPtr& pgrabbed = _vGrabbedBodies[i];
+    vGrabbedInfos.reserve(_grabbedBodiesByEnvironmentIndex.size());
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        const GrabbedPtr& pgrabbed = grabPair.second;
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
         if( !!pgrabbedbody ) {
@@ -624,15 +653,15 @@ void KinBody::GetGrabbedInfo(std::vector<KinBody::GrabbedInfoPtr>& vGrabbedInfos
 
 void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
 {
-    vGrabbedInfos.resize(_vGrabbedBodies.size());
-    for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
-        vGrabbedInfos[igrabbed].Reset(); /// have to reset everything
-
-        const GrabbedPtr& pgrabbed = _vGrabbedBodies[igrabbed];
+    vGrabbedInfos.clear();
+    vGrabbedInfos.reserve(_grabbedBodiesByEnvironmentIndex.size());
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        const GrabbedPtr& pgrabbed = grabPair.second;
         KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
         // sometimes bodies can be removed before they are Released, this is ok and can happen during exceptions and stack unwinding
-        if( !!pgrabbedbody ) {
-            KinBody::GrabbedInfo& outputinfo = vGrabbedInfos[igrabbed];
+        if (!!pgrabbedbody) {
+            vGrabbedInfos.emplace_back();
+            KinBody::GrabbedInfo& outputinfo = vGrabbedInfos.back();
             outputinfo._grabbedname = pgrabbedbody->GetName();
             outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
             outputinfo._trelative = pgrabbed->_tRelative;
@@ -651,33 +680,49 @@ void KinBody::GetGrabbedInfo(std::vector<GrabbedInfo>& vGrabbedInfos) const
     }
 }
 
-bool KinBody::GetGrabbedInfo(const std::string& grabbedname, GrabbedInfo& grabbedInfo) const
+bool KinBody::GetGrabbedInfo(const std::string& grabbedName, GrabbedInfo& grabbedInfo) const
 {
     grabbedInfo.Reset();
-    for(size_t igrabbed = 0; igrabbed < _vGrabbedBodies.size(); ++igrabbed) {
-        const GrabbedPtr& pgrabbed = _vGrabbedBodies[igrabbed];
-        if( !!pgrabbed ) {
-            KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
-            if( !!pgrabbedbody && pgrabbedbody->GetName() == grabbedname ) {
-                grabbedInfo._grabbedname = pgrabbedbody->GetName();
-                grabbedInfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
-                grabbedInfo._trelative = pgrabbed->_tRelative;
-                grabbedInfo._setIgnoreRobotLinkNames.clear();
-                CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, grabbedInfo._rGrabbedUserData);
 
-                for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
-                    if (0 <= linkIndex && linkIndex < (int)_veclinks.size()) {
-                        grabbedInfo._setIgnoreRobotLinkNames.insert(_veclinks[linkIndex]->GetName());
-                    }
-                    else {
-                        RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%pgrabbedbody->GetName()%GetName()%linkIndex%_veclinks.size());
-                    }
-                }
-                return true;
-            }
+    // Look up the target body by name to get its index
+    KinBodyPtr pSearchBody = GetEnv()->GetKinBody(grabbedName);
+    if (!pSearchBody) {
+        // If the body doesn't exist in the env, we can't be grabbing it
+        return false;
+    }
+
+    // Check to see if we have a grab for that index. If not, we defintely aren't grabbing.
+    MapGrabbedByEnvironmentIndex::const_iterator grabIt = _grabbedBodiesByEnvironmentIndex.find(pSearchBody->GetEnvironmentBodyIndex());
+    if (grabIt == _grabbedBodiesByEnvironmentIndex.end()) {
+        return false;
+    }
+
+    // If the body is dead, this grab doesn't count
+    const GrabbedPtr& pgrabbed = grabIt->second;
+    KinBodyPtr pGrabbedBody = pgrabbed->_pGrabbedBody.lock();
+    if (!pGrabbedBody) {
+        return false;
+    }
+
+    // Sanity check
+    OPENRAVE_ASSERT_FORMAT(pGrabbedBody->GetName() == grabbedName, "env=%s, body '%s' thought it grabbed '%s' but actual body name is '%s'", GetEnv()->GetNameId()%GetName()%grabbedName%pGrabbedBody->GetName(), ORE_InvalidArguments);
+
+    // Fill in the output data and return success
+    grabbedInfo._grabbedname = pGrabbedBody->GetName();
+    grabbedInfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
+    grabbedInfo._trelative = pgrabbed->_tRelative;
+    grabbedInfo._setIgnoreRobotLinkNames.clear();
+    CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, grabbedInfo._rGrabbedUserData);
+
+    for (int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore) {
+        if (0 <= linkIndex && linkIndex < (int)_veclinks.size()) {
+            grabbedInfo._setIgnoreRobotLinkNames.insert(_veclinks[linkIndex]->GetName());
+        }
+        else {
+            RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", GetEnv()->GetNameId()%pGrabbedBody->GetName()%GetName()%linkIndex%_veclinks.size());
         }
     }
-    return false;
+    return true;
 }
 
 KinBody::GrabbedInfo::GrabbedInfo(const GrabbedInfo& other)
@@ -779,63 +824,137 @@ std::string KinBody::GrabbedInfo::GetGrabbedInfoHash() const
 
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGrabbedInfos)
 {
-    ReleaseAllGrabbed();
-    if( vGrabbedInfos.size() > 0 ) {
-        CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
-        CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
-        FOREACHC(itGrabbedInfo, vGrabbedInfos) {
-            GrabbedInfoConstPtr pGrabbedInfo = *itGrabbedInfo;
-            KinBodyPtr pBody = GetEnv()->GetKinBody(pGrabbedInfo->_grabbedname);
-            OPENRAVE_ASSERT_FORMAT(!!pBody, "env=%s, body '%s' grabs invalid grab body '%s'",GetEnv()->GetNameId()%GetName()%pGrabbedInfo->_grabbedname, ORE_InvalidArguments);
-            KinBody::LinkPtr pGrabbingLink = GetLink(pGrabbedInfo->_robotlinkname);
-            if( !pGrabbingLink ) {
-                std::stringstream ss;
-                for( const LinkPtr& pLink : _veclinks ) {
-                    ss << pLink->GetName() << ",";
-                }
-                throw OPENRAVE_EXCEPTION_FORMAT("env=%s, body '%s' grabs body '%s' with an invalid grabbing link '%s'. Available links are [%s]",GetEnv()->GetNameId()%GetName()%pGrabbedInfo->_grabbedname%pGrabbedInfo->_robotlinkname%ss.str(), ORE_InvalidArguments);
-            }
-            OPENRAVE_ASSERT_FORMAT(pBody.get() != this, "env=%s, body '%s' cannot grab itself", GetEnv()->GetNameId()%pBody->GetName(), ORE_InvalidArguments);
-            if( IsGrabbing(*pBody) ) {
-                RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' already grabs body '%s'", GetEnv()->GetNameId()%GetName()%pGrabbedInfo->_grabbedname);
+    // First pass: remove all existing grabs that are no longer valid per the new list of grab infos
+    {
+        // Fresh copy of the grabbed body map to move grabs we're keeping into
+        MapGrabbedByEnvironmentIndex  newGrabbedBodiesByEnvironmentIndex;
+
+        // Scan through the list of new grab infos and migrate any existing grabs to the new grab list
+        for (const KinBody::GrabbedInfoConstPtr& grabInfo : vGrabbedInfos) {
+            // Check to see if the grabbed body exists
+            const int grabbedBodyIndex = GetEnv()->GetEnvironmentBodyIndexByName(grabInfo->_grabbedname);
+            if (grabbedBodyIndex == 0) {
+                RAVELOG_WARN_FORMAT("unable to determine environment index for body '%s', does it exist in the environment?", grabInfo->_grabbedname);
                 continue;
             }
 
-            if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
-                // collision checking will not be automatically updated with environment calls, so need to do this manually
-                _selfcollisionchecker->InitKinBody(pBody);
+            // Check to see if this grab exists in the existing grab list
+            MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.find(grabbedBodyIndex);
+            if (existingGrabIt == _grabbedBodiesByEnvironmentIndex.end()) {
+                // If it doesn't, this is a new grab - nothing to move.
+                continue;
             }
 
-            if( pBody->GetLinks().size() == 0 ) {
-                RAVELOG_WARN_FORMAT("env=%s, cannot set transform of grabbed body '%s' with no links when grabbing by body '%s'", GetEnv()->GetNameId()%pBody->GetName()%GetName());
+            // Since we are mutating the set of grabbed bodies, invalidate the set of non-colliding links on any existing grabs
+            existingGrabIt->second->InvalidateListNonCollidingLinks();
+
+            // Move the pointer out of the old grab list and into the new one.
+            newGrabbedBodiesByEnvironmentIndex[existingGrabIt->first] = std::move(existingGrabIt->second); // Invalidates entry in old map
+        }
+
+        // At this point, any non-null grab pointers in the old _grabbedBodiesByEnvironmentIndex map are for bodies that are no longer grabbed.
+        // Scan through and release these grabs now.
+        for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+            // If this grab already got migrated to the list of grabs to keep, skip it
+            if (!grabPair.second) {
+                continue;
             }
-            Transform tGrabbingLink = pGrabbingLink->GetTransform();
-            Transform tBody = tGrabbingLink * pGrabbedInfo->_trelative;
-            pBody->SetTransform(tBody); // need to set the correct transform to pBody before creation of pGrabbed
 
-            GrabbedPtr pGrabbed(new Grabbed(pBody, pGrabbingLink));
-            pGrabbed->_tRelative = pGrabbedInfo->_trelative;
-            FOREACHC(itLinkName, pGrabbedInfo->_setIgnoreRobotLinkNames) {
-                pGrabbed->_setGrabberLinkIndicesToIgnore.insert(GetLink(*itLinkName)->GetIndex());
+            // If the body this grab info referenced is already deleted, nothing to be done
+            // Don't count this as mutating the grabbed body state, as the body had already vanished
+            KinBodyPtr pGrabbedBody = grabPair.second->_pGrabbedBody.lock();
+            if (!pGrabbedBody) {
+                continue;
             }
-            CopyRapidJsonDoc(pGrabbedInfo->_rGrabbedUserData, pGrabbed->_rGrabbedUserData);
 
-            std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
-            velocity.first += velocity.second.cross(tBody.trans - tGrabbingLink.trans);
-            pBody->SetVelocity(velocity.first, velocity.second);
+            // If the body is valid, detach it
+            _RemoveAttachedBody(*pGrabbedBody);
+        }
 
-            _vGrabbedBodies.push_back(pGrabbed);
+        // Now that we have filtered out all of the dead grabs, latch the set of still-active grabs back to our master list
+        _grabbedBodiesByEnvironmentIndex.swap(newGrabbedBodiesByEnvironmentIndex);
+    }
+
+    // Ensure that we reset the collision checker options when done
+    CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
+    CollisionOptionsStateSaver colsaver(collisionchecker, 0);
+
+    // Next, for each incoming grab info, either update the existing grab or create a new one if it doesn't exist
+    for (const KinBody::GrabbedInfoConstPtr& pGrabbedInfo : vGrabbedInfos) {
+        // Assert that this grab info maps to a real body in the environment
+        KinBodyPtr pBody = GetEnv()->GetKinBody(pGrabbedInfo->_grabbedname);
+        OPENRAVE_ASSERT_FORMAT(!!pBody, "env=%s, body '%s' grabs invalid grab body '%s'", GetEnv()->GetNameId()%GetName()%pGrabbedInfo->_grabbedname, ORE_InvalidArguments);
+
+        // Check that the specified grab link is also real
+        KinBody::LinkPtr pGrabbingLink = GetLink(pGrabbedInfo->_robotlinkname);
+        if (!pGrabbingLink) {
+            std::stringstream ss;
+            for (const LinkPtr& pLink : _veclinks) {
+                ss << pLink->GetName() << ",";
+            }
+            throw OPENRAVE_EXCEPTION_FORMAT("env=%s, body '%s' grabs body '%s' with an invalid grabbing link '%s'. Available links are [%s]", GetEnv()->GetNameId()%GetName()%pGrabbedInfo->_grabbedname%pGrabbedInfo->_robotlinkname%ss.str(), ORE_InvalidArguments);
+        }
+
+        // Assert that we are not trying to self-grab
+        OPENRAVE_ASSERT_FORMAT(pBody.get() != this, "env=%s, body '%s' cannot grab itself", GetEnv()->GetNameId()%pBody->GetName(), ORE_InvalidArguments);
+
+        // If we have a collision checker that is _not_ the default environment collision checker, we need to update it manually
+        if (!!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker()) {
+            _selfcollisionchecker->InitKinBody(pBody);
+        }
+
+        // Update the body's transform in the environment before grabbing it.
+        // This has to be done before we create the new Grabbed container, as the Grabbed object will persist the current transform of the object when constructed.
+        if (pBody->GetLinks().size() == 0) {
+            RAVELOG_WARN_FORMAT("env=%s, cannot set transform of grabbed body '%s' with no links when grabbing by body '%s'", GetEnv()->GetNameId()%pBody->GetName()%GetName());
+        }
+        Transform tGrabbingLink = pGrabbingLink->GetTransform();
+        Transform tBody = tGrabbingLink * pGrabbedInfo->_trelative;
+        pBody->SetTransform(tBody);
+
+        // Get the index of the body we're tring to grab
+        const int grabbedBodyIndex = GetEnv()->GetEnvironmentBodyIndexByName(pGrabbedInfo->_grabbedname);
+        if (grabbedBodyIndex == 0) {
+            RAVELOG_WARN_FORMAT("unable to determine environment index for body '%s', does it exist in the environment?", pGrabbedInfo->_grabbedname);
+            continue;
+        }
+
+        // Does this map to an existing grab?
+        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.find(grabbedBodyIndex);
+        bool isNewlyGrabbedBody = existingGrabIt == _grabbedBodiesByEnvironmentIndex.end();
+        if (isNewlyGrabbedBody) {
+            // If it doesn't, allocate a new grab info object
+            existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink)).first;
+        }
+
+        // Update the grab object with the ancillary grab info
+        GrabbedPtr& pGrabbed = existingGrabIt->second;
+        pGrabbed->_tRelative = pGrabbedInfo->_trelative;
+        FOREACHC(itLinkName, pGrabbedInfo->_setIgnoreRobotLinkNames) {
+            pGrabbed->_setGrabberLinkIndicesToIgnore.insert(GetLink(*itLinkName)->GetIndex());
+        }
+        CopyRapidJsonDoc(pGrabbedInfo->_rGrabbedUserData, pGrabbed->_rGrabbedUserData);
+
+        // Multiply the velocity of the grabbing link by the additional transform to get the extended velocity of this new body
+        std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
+        velocity.first += velocity.second.cross(tBody.trans - tGrabbingLink.trans);
+        pBody->SetVelocity(velocity.first, velocity.second);
+
+        // Only attach the body again if it's actually a new body
+        if (isNewlyGrabbedBody) {
             _AttachBody(pBody);
-        } // end FOREACHC
+        }
+    }
 
-        _PostprocessChangedParameters(Prop_RobotGrabbed);
-    } // end if vGrabbedInfos.size() > 0
+    // Now that we have finished processing all of the grab changes, invoke any register grab callbacks
+    _PostprocessChangedParameters(Prop_RobotGrabbed);
 }
 
 void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::LinkConstPtr>& ignorelinks) const
 {
     ignorelinks.clear();
-    for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        const GrabbedPtr& pGrabbed = grabPair.second;
         KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
         if( pGrabbedBody == body ) {
             for( int linkIndex : pGrabbed->_setGrabberLinkIndicesToIgnore ) {
@@ -855,11 +974,10 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
 
 void KinBody::_UpdateGrabbedBodies()
 {
-    std::vector<GrabbedPtr>::iterator itgrabbed = _vGrabbedBodies.begin();
     std::pair<Vector, Vector> velocity;
     Transform tGrabbedBody; // cache
-    while(itgrabbed != _vGrabbedBodies.end() ) {
-        GrabbedPtr pgrabbed = *itgrabbed;
+    for (MapGrabbedByEnvironmentIndex::iterator grabIt = _grabbedBodiesByEnvironmentIndex.begin(); grabIt != _grabbedBodiesByEnvironmentIndex.end(); /* nop */) {
+        GrabbedPtr pgrabbed = grabIt->second;
         KinBodyPtr pGrabbedBody = pgrabbed->_pGrabbedBody.lock();
         if( !!pGrabbedBody ) {
             const Transform& tGrabbingLink = pgrabbed->_pGrabbingLink->GetTransform();
@@ -869,24 +987,34 @@ void KinBody::_UpdateGrabbedBodies()
             pgrabbed->_pGrabbingLink->GetVelocity(velocity.first, velocity.second);
             velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
             pGrabbedBody->SetVelocity(velocity.first, velocity.second);
-            ++itgrabbed;
+            ++grabIt;
         }
         else {
             RAVELOG_DEBUG_FORMAT("env=%s, erasing invalid grabbed body from grabbing body '%s'", GetEnv()->GetNameId()%GetName());
-            itgrabbed = _RemoveGrabbedBody(itgrabbed);
+            grabIt = _RemoveGrabbedBody(grabIt);
         }
     }
 }
 
-std::vector<GrabbedPtr>::iterator KinBody::_RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed)
+KinBody::MapGrabbedByEnvironmentIndex::iterator KinBody::_RemoveGrabbedBody(MapGrabbedByEnvironmentIndex::iterator itGrabbed)
 {
-    KinBodyConstPtr pgrabbedbody = (*itGrabbed)->_pGrabbedBody.lock();
-    itGrabbed = _vGrabbedBodies.erase(itGrabbed);
-    for( const GrabbedPtr& pOtherGrabbed : _vGrabbedBodies) {
-        // _listNonCollidingLinksWhenGrabbed in other grabbed bodies might contain the body
+    // Cache the actual grab body here so that we can post-process
+    KinBodyConstPtr pGrabbedBody = itGrabbed->second->_pGrabbedBody.lock();
+
+    // Remove the body from our set of grabs
+    itGrabbed = _grabbedBodiesByEnvironmentIndex.erase(itGrabbed);
+
+    // If the grabbed body wasn't real, skip updating the link collision states
+    if (!pGrabbedBody) {
+        return itGrabbed;
+    }
+
+    // Scan through the other grabs we have and update the set of non-colliding links in those bodies to not include the links of the body we just removed
+    for (const MapGrabbedByEnvironmentIndex::value_type& otherGrabPair : _grabbedBodiesByEnvironmentIndex) {
+        const GrabbedPtr& pOtherGrabbed = otherGrabPair.second;
         std::list<LinkConstPtr>& listNonCollidingLinksWhenGrabbed = pOtherGrabbed->_listNonCollidingLinksWhenGrabbed;
         for (std::list<LinkConstPtr>::iterator itlink = listNonCollidingLinksWhenGrabbed.begin(); itlink != listNonCollidingLinksWhenGrabbed.end();) {
-            if( (*itlink)->GetParent() == pgrabbedbody ) {
+            if ((*itlink)->GetParent() == pGrabbedBody) {
                 itlink = listNonCollidingLinksWhenGrabbed.erase(itlink);
             }
             else {
@@ -894,6 +1022,7 @@ std::vector<GrabbedPtr>::iterator KinBody::_RemoveGrabbedBody(std::vector<Grabbe
             }
         }
     }
+
     return itGrabbed;
 }
 

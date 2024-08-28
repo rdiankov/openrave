@@ -458,7 +458,7 @@ void KinBody::Destroy()
     if( GetEnvironmentBodyIndex() != 0 ) {
         RAVELOG_DEBUG_FORMAT("env=%s, destroying body '%s' with bodyIndex=%d while it is still in the environment.", GetEnv()->GetNameId()%GetName()%GetEnvironmentBodyIndex());
     }
-    
+
     ReleaseAllGrabbed();
     if( _listAttachedBodies.size() > 0 ) {
         // could be in the environment destructor?
@@ -5031,9 +5031,9 @@ void KinBody::_ComputeInternalInformation()
         vector<dReal> vcurrentvalues;
         // unfortunately if SetDOFValues is overloaded by the robot, it could call the robot's _UpdateGrabbedBodies, which is a problem during environment cloning since the grabbed bodies might not be initialized. Therefore, call KinBody::SetDOFValues
         GetDOFValues(vcurrentvalues);
-        std::vector<GrabbedPtr> vGrabbedBodies; vGrabbedBodies.swap(_vGrabbedBodies); // swap to get rid of _vGrabbedBodies
+        MapGrabbedByEnvironmentIndex grabbedBodiesByBodyName; grabbedBodiesByBodyName.swap(_grabbedBodiesByEnvironmentIndex); // swap to get rid of grabbed bodies
         KinBody::SetDOFValues(vcurrentvalues,CLA_CheckLimits, std::vector<int>());
-        vGrabbedBodies.swap(_vGrabbedBodies); // swap back
+        grabbedBodiesByBodyName.swap(_grabbedBodiesByEnvironmentIndex); // swap back
         GetLinkTransformations(vnewtrans, vnewdoflastsetvalues);
         for(size_t i = 0; i < vprevtrans.size(); ++i) {
             if( TransformDistanceFast(vprevtrans[i],vnewtrans[i]) > 1e-5 ) {
@@ -5790,10 +5790,10 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
     _listAttachedBodies.clear(); // will be set in the environment
-    _vGrabbedBodies.clear();
-    if( (cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies ) {
-        _vGrabbedBodies.reserve(r->_vGrabbedBodies.size());
-        for (const GrabbedPtr& pgrabbedref : r->_vGrabbedBodies) {
+    _grabbedBodiesByEnvironmentIndex.clear();
+    if ((cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies) {
+        for (const MapGrabbedByEnvironmentIndex::value_type& otherGrabPair : r->_grabbedBodiesByEnvironmentIndex) {
+            const GrabbedPtr& pgrabbedref = otherGrabPair.second;
             if( !pgrabbedref ) {
                 RAVELOG_WARN_FORMAT("env=%s, have uninitialized GrabbedConstPtr in _vGrabbedBodies", GetEnv()->GetNameId());
                 continue;
@@ -5841,17 +5841,18 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                     }
                     pgrabbed->_SetLinkNonCollidingIsValid(true);
                 }
-                _vGrabbedBodies.push_back(pgrabbed);
+
                 try {
                     // if an exception happens in _AttachBody, have to remove from _vGrabbedBodies
                     _AttachBody(pgrabbedbody);
                 }
-                catch(...) {
+                catch (...) {
                     RAVELOG_ERROR_FORMAT("env=%s, failed in attach body", GetEnv()->GetNameId());
-                    BOOST_ASSERT(_vGrabbedBodies.back()==pgrabbed);
-                    _vGrabbedBodies.pop_back();
                     throw;
                 }
+
+                BOOST_ASSERT(pgrabbedbody->GetEnvironmentBodyIndex() > 0);
+                _grabbedBodiesByEnvironmentIndex[pgrabbedbody->GetEnvironmentBodyIndex()] = std::move(pgrabbed);
             }
         } // end for pgrabbedref
     } // end if not Clone_IgnoreGrabbedBodies
@@ -5870,8 +5871,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             // InitKinBody will be called when the body is added to the environment.
         }
         // have to also call InitKinBody to grabbed bodies.
-        for (const GrabbedPtr& pGrabbed : _vGrabbedBodies) {
-            KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+        for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+            KinBodyPtr pGrabbedBody = grabPair.second->_pGrabbedBody.lock();
             _selfcollisionchecker->InitKinBody(pGrabbedBody);
         }
     }
@@ -6158,7 +6159,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._dofValues.clear();
 
     if( !(options & EIO_SkipDOFValues) ) {
-        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized    
+        CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized
         std::vector<dReal> vDOFValues;
         GetDOFValues(vDOFValues);
         for (size_t idof = 0; idof < vDOFValues.size(); ++idof) {
