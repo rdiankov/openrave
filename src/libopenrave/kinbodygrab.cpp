@@ -243,7 +243,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         if( !!pPreviouslyGrabbed ) {
             RAVELOG_INFO_FORMAT("env=%s, body '%s' grabs body '%s' that has previously been grabbed", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName());
         }
-        else {
+        else if( IS_DEBUGLEVEL(Level_Verbose) ) {
             std::set<KinBodyPtr> setAttached;
             pGrabbedBody->GetAttached(setAttached);
             std::stringstream ss;
@@ -252,7 +252,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
                     ss << (*itbody)->GetName() << ",";
                 }
             }
-            RAVELOG_WARN_FORMAT("env=%s, body '%s' trying to grab body '%s' with %d attached bodies [%s]", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%setAttached.size()%ss.str());
+            RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' trying to grab body '%s' with %d attached bodies [%s]", GetEnv()->GetNameId()%GetName()%pGrabbedBody->GetName()%setAttached.size()%ss.str());
         }
     }
 
