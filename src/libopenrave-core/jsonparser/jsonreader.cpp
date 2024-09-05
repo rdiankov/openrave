@@ -298,6 +298,80 @@ public:
                 }
                 return false;
             }
+            // if parent rEnvInfo is going to overwrite bodies in the environment of the referenceUri, do not deserialize them. otherwise, they would be merged instead of overwritten.
+            if( rEnvInfo.HasMember("bodies") && rEnvInfo["bodies"].Size() > 0 ) {
+                if( prReferenceEnvInfo->HasMember("bodies") && (*prReferenceEnvInfo)["bodies"].Size() > 0 ) {
+                    boost::shared_ptr<rapidjson::Document> prFilteredReferenceEnvInfo = boost::make_shared<rapidjson::Document>(&alloc);
+                    prFilteredReferenceEnvInfo->CopyFrom(*prReferenceEnvInfo, alloc);
+                    const rapidjson::Value& rEnvBodies = rEnvInfo["bodies"];
+                    rapidjson::Value& rRefBodies = (*prFilteredReferenceEnvInfo)["bodies"];
+                    for (rapidjson::Value::ConstValueIterator itEnvBody = rEnvBodies.Begin(); itEnvBody != rEnvBodies.End(); ++itEnvBody) {
+                        rapidjson::Value::ValueIterator itIdMatchRefBody = rRefBodies.End();
+                        rapidjson::Value::ValueIterator itNameMatchRefBody = rRefBodies.End();
+                        const char* envBodyId = "";
+                        const char* envBodyName = "";
+
+                        rapidjson::Value::ConstMemberIterator itEnvBodyId = itEnvBody->FindMember("id");
+                        if( itEnvBodyId != itEnvBody->MemberEnd() && itEnvBodyId->value.GetStringLength() > 0 ) {
+                            envBodyId = itEnvBodyId->value.GetString();
+                            const size_t envBodyIdLen = itEnvBodyId->value.GetStringLength();
+                            for (rapidjson::Value::ValueIterator itRefBody = rRefBodies.Begin(); itRefBody != rRefBodies.End(); ++itRefBody) {
+                                rapidjson::Value::ConstMemberIterator itRefBodyId = itRefBody->FindMember("id");
+                                if( itRefBodyId == itRefBody->MemberEnd() || itRefBodyId->value.GetStringLength() == 0 ) {
+                                    continue;
+                                }
+                                const char* refBodyId = itRefBodyId->value.GetString();
+                                const size_t refBodyIdLen = itRefBodyId->value.GetStringLength();
+                                if( envBodyIdLen == refBodyIdLen && strncmp(envBodyId, refBodyId, envBodyIdLen) == 0 ) {
+                                    itIdMatchRefBody = itRefBody;
+                                    break;
+                                }
+                            }
+                        }
+                        rapidjson::Value::ConstMemberIterator itEnvBodyName = itEnvBody->FindMember("name");
+                        if( itEnvBodyName != itEnvBody->MemberEnd() && itEnvBodyName->value.GetStringLength() > 0 ) {
+                            envBodyName = itEnvBodyName->value.GetString();
+                            const size_t envBodyNameLen = itEnvBodyName->value.GetStringLength();
+                            for (rapidjson::Value::ValueIterator itRefBody = rRefBodies.Begin(); itRefBody != rRefBodies.End(); ++itRefBody) {
+                                rapidjson::Value::ConstMemberIterator itRefBodyName = itRefBody->FindMember("name");
+                                if( itRefBodyName == itRefBody->MemberEnd() || itRefBodyName->value.GetStringLength() == 0 ) {
+                                    continue;
+                                }
+                                const char* refBodyName = itRefBodyName->value.GetString();
+                                const size_t refBodyNameLen = itRefBodyName->value.GetStringLength();
+                                if( envBodyNameLen == refBodyNameLen && strncmp(envBodyName, refBodyName, envBodyNameLen) == 0 ) {
+                                    itNameMatchRefBody = itRefBody;
+                                    break;
+                                }
+                            }
+                        }
+                        if( itNameMatchRefBody != rRefBodies.End() ) {
+                            if( itNameMatchRefBody == itIdMatchRefBody ) {
+                                RAVELOG_VERBOSE_FORMAT("Found body with the same name='%s' and id='%s' in referenceUri '%s'. Excluding it from deserialization.", envBodyName % envBodyId % pReferenceUri);
+                                rRefBodies.Erase(itNameMatchRefBody);
+                            }
+                            else if( itIdMatchRefBody == rRefBodies.End() ) {
+                                RAVELOG_VERBOSE_FORMAT("Found body with the same name='%s' but different id='%s' in referenceUri '%s'. Excluding it from deserialization.", envBodyName % envBodyId % pReferenceUri);
+                                rRefBodies.Erase(itNameMatchRefBody);
+                            }
+                            else {
+                                const char* idMatchRefBodyId = (*itIdMatchRefBody)["id"].GetString();
+                                const char* idMatchRefBodyName = "";
+                                rapidjson::Value::ConstMemberIterator itIdMatchRefBodyName = itIdMatchRefBody->FindMember("name");
+                                if( itIdMatchRefBodyName != itIdMatchRefBody->MemberEnd() ) {
+                                    idMatchRefBodyName = itIdMatchRefBodyName->value.GetString();
+                                }
+                                throw OPENRAVE_EXCEPTION_FORMAT("Found body with the same name='%s' in referenceUri '%s' but there is body with the same id='%s' with different name='%s'. Cannot replace the body.", envBodyName % pReferenceUri % idMatchRefBodyId % idMatchRefBodyName, ORE_BodyIdConflict);
+                            }
+                        }
+                        else if( itIdMatchRefBody != rRefBodies.End() )  {
+                            RAVELOG_VERBOSE_FORMAT("Found body with the same id='%s' but different name='%s' in referenceUri '%s'. Excluding it from deserialization.", envBodyId % envBodyName % pReferenceUri);
+                            rRefBodies.Erase(itIdMatchRefBody);
+                        }
+                    }
+                    prReferenceEnvInfo = prFilteredReferenceEnvInfo;
+                }
+            }
             RAVELOG_VERBOSE_FORMAT("resolved fullFilename=%s", fullFilename);
 
             if( updateMode == UFIM_OnlySpecifiedBodiesExact ) {
@@ -563,8 +637,8 @@ protected:
 
             for(int iInputBodyIndex = 0; iInputBodyIndex < (int)rBodies.Size(); ++iInputBodyIndex) {
                 const rapidjson::Value& rBodyInfo = rBodies[iInputBodyIndex];
-                std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
-                std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
+                const std::string bodyId = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "id", "");
+                const std::string bodyName = orjson::GetJsonValueByKey<std::string>(rBodyInfo, "name", "");
                 const char* pReferenceUri = orjson::GetCStringJsonValueByKey(rBodyInfo, "referenceUri", "");
                 if (_IsExpandableReferenceUri(pReferenceUri)) {
                     std::set<std::string> circularReference;
