@@ -355,7 +355,13 @@ public:
                                 rRefBodies.Erase(itNameMatchRefBody);
                             }
                             else {
-                                throw OPENRAVE_EXCEPTION_FORMAT("Found body with the same name='%s' in referenceUri '%s' but there is body with the same id='%s' with different name='%s'. Cannot replace the body.", envBodyName % pReferenceUri % (*itIdMatchRefBody)["id"].GetString() % (*itIdMatchRefBody)["name"].GetString(), ORE_BodyIdConflict);
+                                const char* idMatchRefBodyId = (*itIdMatchRefBody)["id"].GetString();
+                                const char* idMatchRefBodyName = "";
+                                rapidjson::Value::ConstMemberIterator itIdMatchRefBodyName = itIdMatchRefBody->FindMember("name");
+                                if( itIdMatchRefBodyName != itIdMatchRefBody->MemberEnd() ) {
+                                    idMatchRefBodyName = itIdMatchRefBodyName->value.GetString();
+                                }
+                                throw OPENRAVE_EXCEPTION_FORMAT("Found body with the same name='%s' in referenceUri '%s' but there is body with the same id='%s' with different name='%s'. Cannot replace the body.", envBodyName % pReferenceUri % idMatchRefBodyId % idMatchRefBodyName, ORE_BodyIdConflict);
                             }
                         }
                         else if( itIdMatchRefBody != rRefBodies.End() )  {
