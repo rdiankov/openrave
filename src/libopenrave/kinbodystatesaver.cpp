@@ -339,7 +339,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                             CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
                             body._AttachBody(pNewGrabbedBody);
-                            BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
+                            BOOST_ASSERT(pNewGrabbedBody->GetEnvironmentBodyIndex() > 0);
                             body._grabbedBodiesByEnvironmentIndex[pNewGrabbedBody->GetEnvironmentBodyIndex()] = pNewGrabbed;
                             CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
                             if (!!collisionchecker) {
