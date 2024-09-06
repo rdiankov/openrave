@@ -1796,12 +1796,16 @@ bool ParabolicRampND::SolveMinTime(const Vector& amax,const Vector& vmax)
                 SaveRamp("ParabolicRampND_SolveMinAccel_failure.dat",ramps[i].x0,ramps[i].dx0,ramps[i].x1,ramps[i].dx1,-1,vmax[i],endTime);
                 PARABOLIC_RAMP_PLOG("Saving to failed_ramps.txt\n");
                 FILE* f=fopen("failed_ramps.txt","w+");
-                fprintf(f,"MinAccel T=%.15e, vmax=%.15e\n",endTime,vmax[i]);
-                fprintf(f,"x0=%.15e, dx0=%.15e\n",ramps[i].x0,ramps[i].dx0);
-                fprintf(f,"x1=%.15e, dx1=%.15e\n",ramps[i].x1,ramps[i].dx1);
-                fprintf(f,"MinTime solution v=%.15e, t1=%.15e, t2=%.15e, T=%.15e\n",ramps[i].v,ramps[i].tswitch1,ramps[i].tswitch2,ramps[i].ttotal);
-                fprintf(f,"\n");
-                fclose(f);
+                if( f != NULL ) {
+                    fprintf(f,"MinAccel T=%.15e, vmax=%.15e\n",endTime,vmax[i]);
+                    fprintf(f,"x0=%.15e, dx0=%.15e\n",ramps[i].x0,ramps[i].dx0);
+                    fprintf(f,"x1=%.15e, dx1=%.15e\n",ramps[i].x1,ramps[i].dx1);
+                    fprintf(f,"MinTime solution v=%.15e, t1=%.15e, t2=%.15e, T=%.15e\n",ramps[i].v,ramps[i].tswitch1,ramps[i].tswitch2,ramps[i].ttotal);
+                    fprintf(f,"\n");
+                    fclose(f);
+                } else {
+                    PARABOLIC_RAMP_PLOG("Failed to open failed_ramps.txt\n");
+                }
                 return false;
             }
             if(Abs(ramps[i].a1) > EpsilonA+amax[i] || Abs(ramps[i].a2) > EpsilonA+amax[i] || Abs(ramps[i].v) > EpsilonV+vmax[i]) {
