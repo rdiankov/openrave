@@ -308,6 +308,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                     body._AttachBody(pGrabbedBody);
                     BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
                     body._grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = pGrabbed;
+                    // grabbed bodies could have been removed from env and self collision checker.
                     CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
                     if (!!collisionchecker) {
                         collisionchecker->InitKinBody(pGrabbedBody);
@@ -352,7 +353,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                             if (!!collisionchecker) {
                                 collisionchecker->InitKinBody(pNewGrabbedBody);
                             }
-                       }
+                        }
                     }
                     else {
                         RAVELOG_WARN_FORMAT("env=%s, could not find body with id %d (body '%s' from env=%s)", body.GetEnv()->GetNameId()%pGrabbedBody->GetEnvironmentBodyIndex()%pGrabbedBody->GetName()%_body.GetEnv()->GetNameId());
