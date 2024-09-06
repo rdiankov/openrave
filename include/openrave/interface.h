@@ -89,6 +89,9 @@ struct OPENRAVE_API ReadablesContainer {
     /// \brief Returns the readable interface. <b>[multi-thread safe]</b>
     virtual ReadablePtr GetReadableInterface(const std::string& id) const;
 
+    /// \brief Returns true if this container has a readable interface with the given id. <b>[multi-thread safe]</b>
+    virtual bool HasReadableInterface(const std::string& id) const;
+
     /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
     virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
 
