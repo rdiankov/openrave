@@ -293,7 +293,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
             const GrabbedPtr& pGrabbed = grabPair.second;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
-                if( body.GetEnv() == body.GetEnv() ) {
+                if( body.GetEnv() == _body.GetEnv() ) {
                     body._AttachBody(pGrabbedBody);
                     BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
                     body._grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = pGrabbed;
