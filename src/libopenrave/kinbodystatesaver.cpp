@@ -129,7 +129,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
                             // pbody is supposed to already be set to some "proper" configuration as the newly
                             // initialized Grabbed objects will save the current state of pbody for later computation of
                             // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
-                            LinkPtr pNewGrabbingLink = pbody->GetLink(pGrabbingLink->GetName());
+                            LinkPtr pNewGrabbingLink = pbody->GetLinks().at(KinBody::LinkPtr(pGrabbingLink)->GetIndex());
                             GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pNewGrabbingLink));
                             pNewGrabbed->_tRelative = pGrabbed->_tRelative;
                             pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
@@ -327,12 +327,19 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                             // body is supposed to already be set to some "proper" configuration as the newly
                             // initialized Grabbed objects will save the current state of pbody for later computation of
                             // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
-                            GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, body.GetLinks().at(KinBody::LinkPtr(pGrabbed->_pGrabbingLink)->GetIndex())));
+                            LinkPtr pNewGrabbingLink = body.GetLinks().at(KinBody::LinkPtr(pGrabbingLink)->GetIndex());
+                            GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pNewGrabbingLink));
                             pNewGrabbed->_tRelative = pGrabbed->_tRelative;
                             pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
                             if( pGrabbed->IsListNonCollidingLinksValid() ) {
                                 FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
-                                    pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(body.GetLinks().at((*itLinkRef)->GetIndex()));
+                                    int linkindex = (*itLinkRef)->GetIndex();
+                                    if( linkindex < 0 || linkindex >= (int)body.GetLinks().size() ) {
+                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetIndex()%body.GetLinks().size());
+                                    }
+                                    else {
+                                        pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(body.GetLinks().at((*itLinkRef)->GetIndex()));
+                                    }
                                 }
                                 pNewGrabbed->_SetLinkNonCollidingIsValid(true);
                             }
