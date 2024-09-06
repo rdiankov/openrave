@@ -828,7 +828,7 @@ int CacheTree::SaveCache(std::string filename)
 
     FILE* pfile;
     pfile = fopen(_fulldirname.c_str(),"wb");
-    if( pFile == NULL) {
+    if( pfile == NULL) {
         return 0;
     }
 
