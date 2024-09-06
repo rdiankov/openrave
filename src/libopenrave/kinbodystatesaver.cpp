@@ -293,6 +293,17 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
             const GrabbedPtr& pGrabbed = grabPair.second;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
+                KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
+                if( !pGrabbingLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link for grabbed body '%s'"),
+                                                    body.GetEnv()->GetNameId()%pGrabbedBody->GetName(),
+                                                    ORE_Failed);
+                }
+                else if( !body.GetLink(pGrabbingLink->GetName()) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)"),
+                                                    body.GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%body.GetName()%body.GetLinks().size(),
+                                                    ORE_Failed);
+                }
                 if( body.GetEnv() == _body.GetEnv() ) {
                     body._AttachBody(pGrabbedBody);
                     BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
