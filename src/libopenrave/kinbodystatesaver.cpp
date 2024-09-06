@@ -297,6 +297,10 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
                     body._AttachBody(pGrabbedBody);
                     BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
                     body._grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = pGrabbed;
+                    CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
+                    if (!!collisionchecker) {
+                        collisionchecker->InitKinBody(pGrabbedBody);
+                    }
                 }
                 else {
                     // The body that the state was saved from is from a different environment from pbody. This case can
