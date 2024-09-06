@@ -756,6 +756,9 @@ void ViewerManager::_RunViewerThread()
         bool bShowViewer = true;
         {
             std::unique_lock<std::mutex> lock(_mutexViewer);
+            if (_bShutdown) {
+                break;
+            }
             if( _listviewerinfos.size() == 0 ) {
                 _conditionViewer.wait(lock);
                 if( _listviewerinfos.size() == 0 ) {
