@@ -1645,6 +1645,17 @@ public:
         }
     }
 
+   void VisitBodies(const std::function<void(const KinBodyPtr&)>& visitorFunction) const override
+    {
+        // Lock the interface mutex
+        SharedLock lockInterfaces{_mutexInterfaces};
+
+        // Map the provided function across all the valid bodies in the env
+        for (const KinBodyPtr& body : _vecbodies) {
+            visitorFunction(body);
+        }
+    }
+
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout) const override
     {
         TimedSharedLock lock186(_mutexInterfaces, timeout);

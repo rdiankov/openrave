@@ -22,6 +22,8 @@
 #ifndef  OPENRAVE_ENVIRONMENTBASE_H
 #define  OPENRAVE_ENVIRONMENTBASE_H
 
+#include <functional>
+
 namespace OpenRAVE {
 
 #if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
@@ -550,6 +552,13 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout=0) const = 0;
+
+    /// \brief Map the provided visitor function across all bodies loaded in the environment (including robots). <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked while iterating the bodies.
+    /// The visitor function must not perform any actions that would mutate the set of bodies in the environment during iteration.
+    /// \param visitorFunction function that will be called on each body currently present in the environment
+    virtual void VisitBodies(const std::function<void(const KinBodyPtr&)>& visitorFunction) const = 0;
 
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     ///
