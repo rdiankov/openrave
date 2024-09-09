@@ -2509,11 +2509,6 @@ public:
         /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
         virtual void SetRestoreOnDestructor(bool restore);
 protected:
-        void _RestoreKinBodyGrabbedBodiesFromSavedData(KinBody& body,
-                                                       const KinBody& savedBody,
-                                                       const int options,
-                                                       const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
-
         KinBody& _body;
 
         int _options;         ///< saved options
@@ -3689,6 +3684,14 @@ protected:
     void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
+
+    /// \brief Restore kinbody's grabbed bodies information from saved data. Assumes that this is called from _RestoreKinBody of saver classes.
+    /// \param[in] savedBody : saved KinBody inside of saver.
+    /// \param[in] options : SaveParameters inside of saver.
+    /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
+    void _RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody,
+                                                   const int options,
+                                                   const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
 
     std::string _name; ///< name of body
 
