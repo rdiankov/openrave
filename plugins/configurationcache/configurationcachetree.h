@@ -259,6 +259,9 @@ public:
     int GetNumKnownNodes();
 
     /// \brief save cache to disk
+    ///
+    /// \param[in] filename the file name where to save the cache
+    /// \return 1 if everything went fine and 0 if there was a trouble opening the file
     int SaveCache(std::string filename);
 
     /// \brief load cache from disk
