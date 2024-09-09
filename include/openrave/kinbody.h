@@ -2509,6 +2509,11 @@ public:
         /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
         virtual void SetRestoreOnDestructor(bool restore);
 protected:
+        void _RestoreKinBodyGrabbedBodiesFromSavedData(KinBody& body,
+                                                       const KinBody& savedBody,
+                                                       const int options,
+                                                       const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
+
         KinBody& _body;
 
         int _options;         ///< saved options

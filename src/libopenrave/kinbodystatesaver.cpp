@@ -18,6 +18,105 @@
 
 namespace OpenRAVE {
 
+void KinBody::KinBodyStateSaverRef::_RestoreKinBodyGrabbedBodiesFromSavedData(KinBody& body,
+                                                                              const KinBody& savedBody,
+                                                                              const int options,
+                                                                              const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex)
+{
+    {
+        // have to release all grabbed first
+        body.ReleaseAllGrabbed();
+        OPENRAVE_ASSERT_OP(body._grabbedBodiesByEnvironmentIndex.size(),==,0);
+        for (const std::unordered_map<int, GrabbedPtr>::value_type& grabPair : savedGrabbedBodiesByEnvironmentIndex) {
+            const GrabbedPtr& pGrabbed = grabPair.second;
+            KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
+            if( !!pGrabbedBody ) {
+                KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
+                if( !pGrabbingLink ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link for grabbed body '%s'"),
+                                                    body.GetEnv()->GetNameId()%pGrabbedBody->GetName(),
+                                                    ORE_Failed);
+                }
+                else if( !body.GetLink(pGrabbingLink->GetName()) ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)"),
+                                                    body.GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%body.GetName()%body.GetLinks().size(),
+                                                    ORE_Failed);
+                }
+                if( body.GetEnv() == savedBody.GetEnv() ) {
+                    body._AttachBody(pGrabbedBody);
+                    BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
+                    body._grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = pGrabbed;
+                    // grabbed bodies could have been removed from env and self collision checker.
+                    CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
+                    if (!!collisionchecker) {
+                        collisionchecker->InitKinBody(pGrabbedBody);
+                    }
+                }
+                else {
+                    // The body that the state was saved from is from a different environment from pbody. This case can
+                    // happen when cloning an environment (see Environment::_Clone). Since cloning is supposed to
+                    // preserve environmentBodyIndex of bodies, it is ok do the following.
+
+                    KinBodyPtr pNewGrabbedBody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pGrabbedBody->GetEnvironmentBodyIndex());
+                    if( !!pNewGrabbedBody ) {
+                        if( pGrabbedBody->GetKinematicsGeometryHash() != pNewGrabbedBody->GetKinematicsGeometryHash() ) {
+                            RAVELOG_WARN_FORMAT("env=%s, new grabbed body '%s' kinematics-geometry hash is different from original grabbed body '%s' from env=%s", body.GetEnv()->GetNameId()%pNewGrabbedBody->GetName()%pGrabbedBody->GetName()%savedBody.GetEnv()->GetNameId());
+                        }
+                        else {
+                            // body is supposed to already be set to some "proper" configuration as the newly
+                            // initialized Grabbed objects will save the current state of pbody for later computation of
+                            // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
+                            KinBody::LinkPtr pNewGrabbingLink = body.GetLinks().at(KinBody::LinkPtr(pGrabbingLink)->GetIndex());
+                            GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pNewGrabbingLink));
+                            pNewGrabbed->_tRelative = pGrabbed->_tRelative;
+                            pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
+                            if( pGrabbed->IsListNonCollidingLinksValid() ) {
+                                FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
+                                    const KinBodyPtr pParent = (*itLinkRef)->GetParent();
+                                    if( !pParent ) {
+                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since parent is not found.", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName());
+                                        continue;
+                                    }
+                                    const KinBodyPtr pNewNonCollidingBody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pParent->GetEnvironmentBodyIndex());
+                                    if( !pNewNonCollidingBody) {
+                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName() % pParent->GetEnvironmentBodyIndex());
+                                        continue;
+                                    }
+                                    const int linkindex = (*itLinkRef)->GetIndex();
+                                    if( linkindex < 0 || linkindex >= (int)pNewNonCollidingBody->GetLinks().size() ) {
+                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetIndex()%pNewNonCollidingBody->GetLinks().size());
+                                    }
+                                    else {
+                                        pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(pNewNonCollidingBody->GetLinks().at(linkindex));
+                                    }
+                                }
+                                pNewGrabbed->_SetLinkNonCollidingIsValid(true);
+                            }
+                            CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
+
+                            body._AttachBody(pNewGrabbedBody);
+                            BOOST_ASSERT(pNewGrabbedBody->GetEnvironmentBodyIndex() > 0);
+                            body._grabbedBodiesByEnvironmentIndex[pNewGrabbedBody->GetEnvironmentBodyIndex()] = pNewGrabbed;
+                            CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
+                            if (!!collisionchecker) {
+                                collisionchecker->InitKinBody(pNewGrabbedBody);
+                            }
+                        }
+                    }
+                    else {
+                        RAVELOG_WARN_FORMAT("env=%s, could not find body with id %d (body '%s' from env=%s)", body.GetEnv()->GetNameId()%pGrabbedBody->GetEnvironmentBodyIndex()%pGrabbedBody->GetName()%savedBody.GetEnv()->GetNameId());
+                    } // end if !!pNewGrabbedBody
+                }
+            }
+        }
+
+        // if not calling SetLinkTransformations, then manually call _UpdateGrabbedBodies
+        if( !(options & KinBody::Save_LinkTransformation ) ) {
+            body._UpdateGrabbedBodies();
+        }
+    }
+}
+
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _pbody(pbody), _options(options), _bRestoreOnDestructor(true)
 {
     if( _options & Save_LinkTransformation ) {
@@ -296,96 +395,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        // have to release all grabbed first
-        body.ReleaseAllGrabbed();
-        OPENRAVE_ASSERT_OP(body._grabbedBodiesByEnvironmentIndex.size(),==,0);
-        for (const std::unordered_map<int, GrabbedPtr>::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
-            const GrabbedPtr& pGrabbed = grabPair.second;
-            KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
-            if( !!pGrabbedBody ) {
-                KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
-                if( !pGrabbingLink ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link for grabbed body '%s'"),
-                                                    body.GetEnv()->GetNameId()%pGrabbedBody->GetName(),
-                                                    ORE_Failed);
-                }
-                else if( !body.GetLink(pGrabbingLink->GetName()) ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)"),
-                                                    body.GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%body.GetName()%body.GetLinks().size(),
-                                                    ORE_Failed);
-                }
-                if( body.GetEnv() == _body.GetEnv() ) {
-                    body._AttachBody(pGrabbedBody);
-                    BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
-                    body._grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = pGrabbed;
-                    // grabbed bodies could have been removed from env and self collision checker.
-                    CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
-                    if (!!collisionchecker) {
-                        collisionchecker->InitKinBody(pGrabbedBody);
-                    }
-                }
-                else {
-                    // The body that the state was saved from is from a different environment from pbody. This case can
-                    // happen when cloning an environment (see Environment::_Clone). Since cloning is supposed to
-                    // preserve environmentBodyIndex of bodies, it is ok do the following.
-
-                    KinBodyPtr pNewGrabbedBody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pGrabbedBody->GetEnvironmentBodyIndex());
-                    if( !!pNewGrabbedBody ) {
-                        if( pGrabbedBody->GetKinematicsGeometryHash() != pNewGrabbedBody->GetKinematicsGeometryHash() ) {
-                            RAVELOG_WARN_FORMAT("env=%s, new grabbed body '%s' kinematics-geometry hash is different from original grabbed body '%s' from env=%s", body.GetEnv()->GetNameId()%pNewGrabbedBody->GetName()%pGrabbedBody->GetName()%_body.GetEnv()->GetNameId());
-                        }
-                        else {
-                            // body is supposed to already be set to some "proper" configuration as the newly
-                            // initialized Grabbed objects will save the current state of pbody for later computation of
-                            // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
-                            LinkPtr pNewGrabbingLink = body.GetLinks().at(KinBody::LinkPtr(pGrabbingLink)->GetIndex());
-                            GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pNewGrabbingLink));
-                            pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-                            pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
-                            if( pGrabbed->IsListNonCollidingLinksValid() ) {
-                                FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
-                                    const KinBodyPtr pParent = (*itLinkRef)->GetParent();
-                                    if( !pParent ) {
-                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since parent is not found.", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName());
-                                        continue;
-                                    }
-                                    const KinBodyPtr pNewNonCollidingBody = body.GetEnv()->GetBodyFromEnvironmentBodyIndex(pParent->GetEnvironmentBodyIndex());
-                                    if( !pNewNonCollidingBody) {
-                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName() % pParent->GetEnvironmentBodyIndex());
-                                        continue;
-                                    }
-                                    const int linkindex = (*itLinkRef)->GetIndex();
-                                    if( linkindex < 0 || linkindex >= (int)pNewNonCollidingBody->GetLinks().size() ) {
-                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetIndex()%pNewNonCollidingBody->GetLinks().size());
-                                    }
-                                    else {
-                                        pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(pNewNonCollidingBody->GetLinks().at(linkindex));
-                                    }
-                                }
-                                pNewGrabbed->_SetLinkNonCollidingIsValid(true);
-                            }
-                            CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
-
-                            body._AttachBody(pNewGrabbedBody);
-                            BOOST_ASSERT(pNewGrabbedBody->GetEnvironmentBodyIndex() > 0);
-                            body._grabbedBodiesByEnvironmentIndex[pNewGrabbedBody->GetEnvironmentBodyIndex()] = pNewGrabbed;
-                            CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
-                            if (!!collisionchecker) {
-                                collisionchecker->InitKinBody(pNewGrabbedBody);
-                            }
-                        }
-                    }
-                    else {
-                        RAVELOG_WARN_FORMAT("env=%s, could not find body with id %d (body '%s' from env=%s)", body.GetEnv()->GetNameId()%pGrabbedBody->GetEnvironmentBodyIndex()%pGrabbedBody->GetName()%_body.GetEnv()->GetNameId());
-                    } // end if !!pNewGrabbedBody
-                }
-            }
-        }
-
-        // if not calling SetLinkTransformations, then manually call _UpdateGrabbedBodies
-        if( !(_options & Save_LinkTransformation ) ) {
-            body._UpdateGrabbedBodies();
-        }
+        _RestoreKinBodyGrabbedBodiesFromSavedData(body, _body, _options, _grabbedBodiesByEnvironmentIndex);
     }
     if( _options & Save_LinkTransformation ) {
         body.SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
