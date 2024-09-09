@@ -3,6 +3,13 @@
 ChangeLog
 #########
 
+Version 0.152.0
+===============
+
+- Apply the recent changes of KinBodyStateSaver::_RemoveKinBody to KinBodyStateSaverRef::_RemoveKinBody.
+- Fix bug not to restore grabbed bodies when KinBodyStateSaverRef and KinBodyStateSaver are restored to cloned bodies.
+- Share the same utility function to restore the grabbed bodies between KinBodyStateSaver and KinBodyStateSaverRef
+
 Version 0.151.1
 ===============
 
