@@ -123,7 +123,7 @@ bool PPRamp::SolveMinTime2(Real amax,Real timeLowerBound)
     }
     _a2 = -_a1;
     PARABOLIC_RAMP_ASSERT(ttotal >= timeLowerBound);
-    Real ts1 = 0.0, ts2 = 0.0;
+    Real ts1 = -1.0, ts2 = -1.0;
     int res = CalcSwitchTimes(_a1,ts1,ts2);
     PARABOLIC_RAMP_ASSERT(res > 0);
     if(res == 1) {
@@ -352,7 +352,7 @@ Real PPRamp::CalcTotalTime(Real a) const
 
 int PPRamp::CalcTotalTimes(Real a,Real& t1,Real& t2) const
 {
-    Real ts1 = 0.0, ts2 = 0.0;
+    Real ts1 = -1.0, ts2 = -1.0;
     int res=CalcSwitchTimes(a,ts1,ts2);
     if(res == 0) return res;
     else if(res == 1) {
@@ -429,7 +429,7 @@ int PPRamp::CalcSwitchTimes(Real a,Real& t1,Real& t2) const
 
 Real PPRamp::CalcSwitchTime(Real a) const
 {
-    Real t1 = 0.0, t2 = 0.0;
+    Real t1 = -1.0, t2 = -1.0;
     int res = CalcSwitchTimes(a,t1,t2);
     if(res == 0) {
         return -1;
