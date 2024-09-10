@@ -5605,7 +5605,8 @@ void init_openravepy_kinbody()
                                     .value("Identical",KinBody::GICR_Identical)
                                     .value("BodyNotGrabbed",KinBody::GICR_BodyNotGrabbed)
                                     .value("GrabbingLinkNotMatch",KinBody::GICR_GrabbingLinkNotMatch)
-                                    .value("IgnoredLinksNotMatch",KinBody::GICR_IgnoredLinksNotMatch);
+                                    .value("IgnoredLinksNotMatch",KinBody::GICR_IgnoredLinksNotMatch)
+                                    .value("UserDataNotMatch",KinBody::GICR_UserDataNotMatch);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object kinbodyinfo = class_<PyKinBody::PyKinBodyInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> >(m, "KinBodyInfo", DOXY_CLASS(KinBody::KinBodyInfo))
