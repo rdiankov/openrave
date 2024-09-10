@@ -2902,7 +2902,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                     solved = false;
                     if( 1 ) { // disable to avoid changing time
                         PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
-                        Real newEndTime;
+                        Real newEndTime = 0.0;
                         Real maxNewEndTime = -1;
                         bool result;
                         for (size_t k = 0; k < ramps.size(); ++k) {
