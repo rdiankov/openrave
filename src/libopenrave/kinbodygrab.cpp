@@ -404,7 +404,8 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
         }
 
         // Erase this grab and flag that we need to run post-processing hooks when finished
-        grabIt = _grabbedBodiesByEnvironmentIndex.erase(grabIt);
+        grabIt = _RemoveGrabbedBody(grabIt);
+
         didUngrabBody = true;
     }
 
