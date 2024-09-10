@@ -254,7 +254,7 @@ bool PPRamp::SolveFixedTime(Real amax,Real endTime)
 
 bool PPRamp::SolveMinAccel(Real endTime)
 {
-    Real switch1,switch2;
+    Real switch1 = 0.0,switch2 = 0.0;
     Real apn = CalcMinAccel(endTime,1.0,switch1);
     Real anp = CalcMinAccel(endTime,-1.0,switch2);
     //cout<<"Accel for parabola +-: "<<apn<<", parabola -+: "<<anp<<endl;
