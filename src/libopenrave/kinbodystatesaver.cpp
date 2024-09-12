@@ -28,7 +28,8 @@ void KinBody::_RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody
         body.ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(body._grabbedBodiesByEnvironmentIndex.size(),==,0);
         for (const std::unordered_map<int, SavedGrabbedData>::value_type& grabPair : savedGrabbedDataByEnvironmentIndex) {
-            const GrabbedPtr& pGrabbed = grabPair.second.pGrabbed;
+            const SavedGrabbedData& savedGrabbedData = grabPair.second;
+            const GrabbedPtr& pGrabbed = savedGrabbedData.pGrabbed;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
                 KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
@@ -46,6 +47,13 @@ void KinBody::_RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody
                     body._AttachBody(pGrabbedBody);
                     BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
                     body._grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = pGrabbed;
+
+                    // restore copied data for grabbed
+                    Grabbed& grabbed = *pGrabbed;
+                    grabbed._listNonCollidingLinksWhenGrabbed = savedGrabbedData.listNonCollidingLinksWhenGrabbed;
+                    grabbed._setGrabberLinkIndicesToIgnore = savedGrabbedData.setGrabberLinkIndicesToIgnore;
+                    grabbed._SetLinkNonCollidingIsValid(savedGrabbedData.listNonCollidingIsValid);
+
                     // grabbed bodies could have been removed from env and self collision checker.
                     CollisionCheckerBasePtr collisionchecker = body.GetSelfCollisionChecker();
                     if (!!collisionchecker) {
@@ -69,9 +77,9 @@ void KinBody::_RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody
                             KinBody::LinkPtr pNewGrabbingLink = body.GetLinks().at(KinBody::LinkPtr(pGrabbingLink)->GetIndex());
                             GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pNewGrabbingLink));
                             pNewGrabbed->_tRelative = pGrabbed->_tRelative;
-                            pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
-                            if( pGrabbed->IsListNonCollidingLinksValid() ) {
-                                FOREACHC(itLinkRef, pGrabbed->_listNonCollidingLinksWhenGrabbed) {
+                            pNewGrabbed->_setGrabberLinkIndicesToIgnore = savedGrabbedData.setGrabberLinkIndicesToIgnore;
+                            if( savedGrabbedData.listNonCollidingIsValid ) {
+                                FOREACHC(itLinkRef, savedGrabbedData.listNonCollidingLinksWhenGrabbed) {
                                     const KinBodyPtr pParent = (*itLinkRef)->GetParent();
                                     if( !pParent ) {
                                         RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since parent is not found.", body.GetEnv()->GetNameId()%(*itLinkRef)->GetName());
