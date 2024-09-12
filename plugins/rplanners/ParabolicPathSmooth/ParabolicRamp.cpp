@@ -2806,7 +2806,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         if(bmin < xmin[i]-EpsilonX || bmax > xmax[i]+EpsilonX) {
             Real originaltime = ramps[i][0].ttotal;
             bool bSuccess = false;
-            for(Real itimemult = 1; itimemult <= 5; ++itimemult) {
+            for(int itimemult = 1; itimemult <= 5; ++itimemult) {
                 Real timemult = 1+itimemult*0.5; // perhaps should test different values?
                 if( SolveMinAccelBounded(x0[i], v0[i], x1[i], v1[i], originaltime*timemult, amax[i], vmax[i], xmin[i], xmax[i], ramps[i]) ) {////////Puttichai
                     bSuccess = true;
