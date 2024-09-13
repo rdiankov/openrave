@@ -7,7 +7,9 @@ Version 0.152.0
 ===============
 
 - Apply the recent changes of KinBodyStateSaver::_RemoveKinBody to KinBodyStateSaverRef::_RemoveKinBody.
-- Fix bug not to restore grabbed bodies when KinBodyStateSaverRef and KinBodyStateSaver are restored to cloned bodies.
+- Fix bug which prevented from restoring grabbed bodies when KinBodyStateSaverRef and KinBodyStateSaver. Also, do not use Save_GrabbedBodies in Grabbed::ComputeListNonCollidingLinks
+- Fix bug which does not remove unnecessary link from _listNonCollidingLinksWhenGrabbed when ReleaseAllWithLink is called
+- Fix bug in ResetGrabbed which unexpectedly mutates the contents of Grabbed instances.
 - Share the same utility function to restore the grabbed bodies between KinBodyStateSaver and KinBodyStateSaverRef
 
 Version 0.151.1
