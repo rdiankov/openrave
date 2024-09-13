@@ -3698,13 +3698,23 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
-    /// \brief Restore kinbody's grabbed bodies information from saved data. Assumes that this is called from _RestoreKinBody of saver classes.
+    /// \brief Restore kinbody's grabbed bodies information from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
+    ///        _RestoreGrabbedBodiesFromSavedData with bCalledFromClone=true allows to restore grabbed bodies from one env to another env.
+    ///        To do so, it's referring that _environmentBodyIndex is consistent between two envs. Otherwise, we cannnot identify the correct bodies.
+    ///        This should be called from Clone where we can assume that _environmentBodyIndex is configured consistent between two envs.
+    ///        Please do not call this from other use cases.
+    /// \param[in] originalBody : This function restores the grabbed bodies from originalBody to 'this'.
+    void _RestoreGrabbedBodiesForClone(const KinBody& originalBody);
+
+    /// \brief Restore kinbody's grabbed bodies information from saved data.
     /// \param[in] savedBody : saved KinBody inside of saver.
     /// \param[in] options : SaveParameters inside of saver.
     /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
+    /// \param[in] bCalledFromClone : true this is called from clone, e.g. called from _RestoreGrabbedBodiesForClone. false if  Assumes that this is called from _RestoreKinBody of saver classes.
     void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                             const int options,
-                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex);
+                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
+                                            const bool bCalledFromClone = false);
 
     /// \brief Save this kinbody's information.
     /// \param[out] savedGrabbedDataByEnvironmentIndex : saved information about _grabbedBodiesByEnvironmentIndex.

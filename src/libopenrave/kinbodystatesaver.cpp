@@ -31,11 +31,19 @@ static void _PushLinkToListNonCollidingLinksWhenGrabbed(Grabbed& grabbed,
     else {
         grabbed._listNonCollidingLinksWhenGrabbed.push_back(vLinks.at(linkindex));
     }
+
+void KinBody::_RestoreGrabbedBodiesForClone(const KinBody& originalBody)
+{
+    std::unordered_map<int, KinBody::SavedGrabbedData> originalGrabbedDataByEnvironmentIndex;
+    originalBody._SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
+    const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
+    _RestoreGrabbedBodiesFromSavedData(originalBody, options, originalGrabbedDataByEnvironmentIndex, true);
 }
 
 void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                                  const int options,
-                                                 const std::unordered_map<int, KinBody::SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex)
+                                                 const std::unordered_map<int, KinBody::SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
+                                                 const bool bCalledFromClone)
 {
     {
         // have to release all grabbed first
@@ -76,6 +84,10 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                     }
                 }
                 else {
+                    // In the following, we assume that this function is called from Environment::_Clone.
+                    // If this section is accidentally called from other use cases, it's dangerous, since environmentBodyIndex is not consistent between two different envs in general, except for Environment::_Clone.
+                    OPENRAVE_ASSERT_FORMAT(bCalledFromClone, "env=%s, restoring of the grabbed bodies from env=%s to env=%s is not allowed if it's not called from Clone, since environmentBodyIndex might not be consistent between two different envs.", body.GetEnv()->GetNameId() % savedBody.GetEnv()->GetNameId() % body.GetEnv()->GetNameId(), ORE_Failed);
+
                     // The body that the state was saved from is from a different environment from savedBody. This case can
                     // happen when cloning an environment (see Environment::_Clone). Since cloning is supposed to
                     // preserve environmentBodyIndex of bodies, it is ok do the following.
@@ -139,7 +151,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
         }
     }
 }
-
+    
 void KinBody::_SaveKinBodySavedGrabbedData(std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex) const
 {
     savedGrabbedDataByEnvironmentIndex.clear();
