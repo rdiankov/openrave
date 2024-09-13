@@ -46,6 +46,13 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                                  const bool bCalledFromClone)
 {
     {
+        const bool bIsFromSameEnv = GetEnv() == savedBody.GetEnv();
+        if( !bIsFromSameEnv ) {
+            // If this body and savedBody are not coming from the same env, we assume that this function is called from Environment::_Clone.
+            // If this section is accidentally called from other use cases, it's dangerous, since environmentBodyIndex is not consistent between two different envs in general, except for Environment::_Clone.
+            OPENRAVE_ASSERT_FORMAT(bCalledFromClone, "env=%s, restoring of the grabbed bodies from env=%s to env=%s is not allowed if it's not called from Clone, since environmentBodyIndex might not be consistent between two different envs.", GetEnv()->GetNameId() % savedBody.GetEnv()->GetNameId() % GetEnv()->GetNameId(), ORE_Failed);
+        }
+
         // have to release all grabbed first
         ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(_grabbedBodiesByEnvironmentIndex.size(),==,0);
@@ -65,7 +72,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                                     GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%GetName()%GetLinks().size(),
                                                     ORE_Failed);
                 }
-                if( GetEnv() == savedBody.GetEnv() ) {
+                if( bIsFromSameEnv ) {
                     // restore copied data for grabbed
                     Grabbed& grabbed = *pGrabbed;
                     grabbed._listNonCollidingLinksWhenGrabbed = savedGrabbedData.listNonCollidingLinksWhenGrabbed;
@@ -84,10 +91,6 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                     }
                 }
                 else {
-                    // In the following, we assume that this function is called from Environment::_Clone.
-                    // If this section is accidentally called from other use cases, it's dangerous, since environmentBodyIndex is not consistent between two different envs in general, except for Environment::_Clone.
-                    OPENRAVE_ASSERT_FORMAT(bCalledFromClone, "env=%s, restoring of the grabbed bodies from env=%s to env=%s is not allowed if it's not called from Clone, since environmentBodyIndex might not be consistent between two different envs.", body.GetEnv()->GetNameId() % savedBody.GetEnv()->GetNameId() % body.GetEnv()->GetNameId(), ORE_Failed);
-
                     // The body that the state was saved from is from a different environment from savedBody. This case can
                     // happen when cloning an environment (see Environment::_Clone). Since cloning is supposed to
                     // preserve environmentBodyIndex of bodies, it is ok do the following.
