@@ -70,6 +70,21 @@ static void _GetOneGrabbedInfo(KinBody::GrabbedInfo& outputinfo,
     }
 }
 
+/// \brief create saver for grabbed/grabber.
+static void _CreateSaverForGrabbedAndGrabber(KinBody::KinBodyStateSaverPtr& pSaver,
+                                             const KinBodyPtr& pBody,
+                                             const int defaultSaveOptions)
+{
+    if( pBody->IsRobot() ) {
+        RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pBody);
+        pSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
+    }
+    else {
+        pSaver.reset(new KinBody::KinBodyStateSaver(pBody, defaultSaveOptions));
+    }
+    pSaver->SetRestoreOnDestructor(false); // This is very important! saver is used only in ComputeListNonCollidingLinks and we don't want to restore on destructor.
+}
+
 Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
 {
     _pGrabbedBody = pGrabbedBody;
@@ -77,26 +92,14 @@ Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
     _pGrabbingLink->GetRigidlyAttachedLinks(_vAttachedToGrabbingLink);
     _listNonCollidingIsValid = false;
     // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
-    int defaultGrabbedSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits;
-    int defaultGrabberSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_LinkVelocities;
-    if( pGrabbedBody->IsRobot() ) {
-        RobotBasePtr pGrabbedRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabbedBody);
-        _pGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultGrabbedSaveOptions|KinBody::Save_ConnectedBodies));
-    }
-    else {
-        _pGrabbedSaver.reset(new KinBody::KinBodyStateSaver(pGrabbedBody, defaultGrabbedSaveOptions));
-    }
-    _pGrabbedSaver->SetRestoreOnDestructor(false); // This is very important!
+    _CreateSaverForGrabbedAndGrabber(_pGrabbedSaver,
+                                     pGrabbedBody,
+                                     KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits);
 
     KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
-    if( pGrabber->IsRobot() ) {
-        RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabber);
-        _pGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultGrabberSaveOptions|KinBody::Save_ConnectedBodies));
-    }
-    else {
-        _pGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultGrabberSaveOptions));
-    }
-    _pGrabberSaver->SetRestoreOnDestructor(false); // This is very important!
+    _CreateSaverForGrabbedAndGrabber(_pGrabberSaver,
+                                     pGrabber,
+                                     KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_LinkVelocities);
 } // end Grabbed
 
 void Grabbed::AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore)
