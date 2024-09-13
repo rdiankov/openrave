@@ -18,6 +18,73 @@
 
 namespace OpenRAVE {
 
+/// \brief Push link to listNonCollidingLinksWhenGrabbed, only if it has no collision with the whole grabbedBody.
+static void _PushLinkIfNonColliding(std::list<KinBody::LinkConstPtr>& listNonCollidingLinksWhenGrabbed,
+                                    CollisionCheckerBasePtr& pchecker,
+                                    const KinBody::LinkPtr& pLinkToCheck, const KinBody& grabbedBody)
+{
+    KinBody::LinkConstPtr pLinkToCheckConst(pLinkToCheck);
+    for (const KinBody::LinkPtr& pGrabbedBodylink : grabbedBody.GetLinks()) {
+        if( pchecker->CheckCollision(pLinkToCheckConst, KinBody::LinkConstPtr(pGrabbedBodylink)) ) {
+            return; // if colliding, do not push.
+        }
+    }
+    // if not colliding with any of links in grabbedBody, push it.
+    listNonCollidingLinksWhenGrabbed.push_back(pLinkToCheck);
+}
+
+/// \brief remove link from listNonCollidingLinksWhenGrabbed if its parent is same as the given body.
+template<typename KinBodyPtrT>
+static void _RemoveLinkFromListNonCollidingLinksWhenGrabbed(std::list<KinBody::LinkConstPtr>& listNonCollidingLinksWhenGrabbed,
+                                                            const KinBodyPtrT& pGrabbedBody)
+{
+    for (std::list<KinBody::LinkConstPtr>::iterator itlink = listNonCollidingLinksWhenGrabbed.begin(); itlink != listNonCollidingLinksWhenGrabbed.end();) {
+        if ((*itlink)->GetParent() == pGrabbedBody) {
+            itlink = listNonCollidingLinksWhenGrabbed.erase(itlink);
+        }
+        else {
+            ++itlink;
+        }
+    }
+}
+
+/// \brief get one grabbed info from pgrabbed and pgrabbedbody.
+/// \param[out] outputinfo : result
+static void _GetOneGrabbedInfo(KinBody::GrabbedInfo& outputinfo,
+                               const GrabbedPtr& pgrabbed, const KinBodyPtr& pgrabbedbody, const std::vector<KinBody::LinkPtr>& veclinks,
+                               const std::string& bodyName, const EnvironmentBasePtr& pEnv)
+{
+    outputinfo._grabbedname = pgrabbedbody->GetName();
+    outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
+    outputinfo._trelative = pgrabbed->_tRelative;
+    outputinfo._setIgnoreRobotLinkNames.clear();
+    CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, outputinfo._rGrabbedUserData);
+
+    for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
+        if (0 <= linkIndex && linkIndex < (int)veclinks.size()) {
+            outputinfo._setIgnoreRobotLinkNames.insert(veclinks[linkIndex]->GetName());
+        }
+        else {
+            RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", pEnv->GetNameId()%pgrabbedbody->GetName()%bodyName%linkIndex%veclinks.size());
+        }
+    }
+}
+
+/// \brief create saver for grabbed/grabber.
+static void _CreateSaverForGrabbedAndGrabber(KinBody::KinBodyStateSaverPtr& pSaver,
+                                             const KinBodyPtr& pBody,
+                                             const int defaultSaveOptions)
+{
+    if( pBody->IsRobot() ) {
+        RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pBody);
+        pSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultSaveOptions|KinBody::Save_ConnectedBodies));
+    }
+    else {
+        pSaver.reset(new KinBody::KinBodyStateSaver(pBody, defaultSaveOptions));
+    }
+    pSaver->SetRestoreOnDestructor(false); // This is very important! saver is used only in ComputeListNonCollidingLinks and we don't want to restore on destructor.
+}
+
 Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
 {
     _pGrabbedBody = pGrabbedBody;
@@ -25,26 +92,14 @@ Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
     _pGrabbingLink->GetRigidlyAttachedLinks(_vAttachedToGrabbingLink);
     _listNonCollidingIsValid = false;
     // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
-    int defaultGrabbedSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits;
-    int defaultGrabberSaveOptions = KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_LinkVelocities;
-    if( pGrabbedBody->IsRobot() ) {
-        RobotBasePtr pGrabbedRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabbedBody);
-        _pGrabbedSaver.reset(new RobotBase::RobotStateSaver(pGrabbedRobot, defaultGrabbedSaveOptions|KinBody::Save_ConnectedBodies));
-    }
-    else {
-        _pGrabbedSaver.reset(new KinBody::KinBodyStateSaver(pGrabbedBody, defaultGrabbedSaveOptions));
-    }
-    _pGrabbedSaver->SetRestoreOnDestructor(false); // This is very important!
+    _CreateSaverForGrabbedAndGrabber(_pGrabbedSaver,
+                                     pGrabbedBody,
+                                     KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits);
 
     KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
-    if( pGrabber->IsRobot() ) {
-        RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pGrabber);
-        _pGrabberSaver.reset(new RobotBase::RobotStateSaver(pRobot, defaultGrabberSaveOptions|KinBody::Save_ConnectedBodies));
-    }
-    else {
-        _pGrabberSaver.reset(new KinBody::KinBodyStateSaver(pGrabber, defaultGrabberSaveOptions));
-    }
-    _pGrabberSaver->SetRestoreOnDestructor(false); // This is very important!
+    _CreateSaverForGrabbedAndGrabber(_pGrabberSaver,
+                                     pGrabber,
+                                     KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_LinkVelocities);
 } // end Grabbed
 
 void Grabbed::AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore)
