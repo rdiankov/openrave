@@ -2370,7 +2370,7 @@ private:
         Save_JointResolutions                = 0x00000040, ///< saves the dof resolutions
         Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies. Although saver support restoring to the kinbody in other env in general, this Save_GrabbedBodies option does not support for restoring to the kinbody in other env. This is because it cannot successfuly identify the grabbed bodies in other env based on environment body index.
         Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states

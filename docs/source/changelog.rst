@@ -11,6 +11,7 @@ Version 0.152.0
 - Fix bug which does not remove unnecessary link from _listNonCollidingLinksWhenGrabbed when ReleaseAllWithLink is called
 - Fix bug in ResetGrabbed which unexpectedly mutates the contents of Grabbed instances.
 - Share the same utility function to restore the grabbed bodies between KinBodyStateSaver and KinBodyStateSaverRef
+- Deprecate KinBodyStateSaver::Restore to the kinbody in other env only for Save_GrabbedBodies option.
 
 Version 0.151.1
 ===============
