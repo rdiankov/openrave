@@ -18,9 +18,18 @@
 
 namespace OpenRAVE {
 
-void KinBody::_RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody,
-                                                        const int options,
-                                                        const std::unordered_map<int, KinBody::SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex)
+void KinBody::_RestoreGrabbedBodiesForClone(const KinBody& originalBody)
+{
+    std::unordered_map<int, KinBody::SavedGrabbedData> originalGrabbedDataByEnvironmentIndex;
+    originalBody._SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
+    const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
+    _RestoreGrabbedBodiesFromSavedData(originalBody, options, originalGrabbedDataByEnvironmentIndex, true);
+}
+
+void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
+                                                 const int options,
+                                                 const std::unordered_map<int, KinBody::SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
+                                                 const bool bCalledFromClone)
 {
     {
         KinBody& body = *this;
@@ -61,6 +70,10 @@ void KinBody::_RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody
                     }
                 }
                 else {
+                    // In the following, we assume that this function is called from Environment::_Clone.
+                    // If this section is accidentally called from other use cases, it's dangerous, since environmentBodyIndex is not consistent between two different envs in general, except for Environment::_Clone.
+                    OPENRAVE_ASSERT_FORMAT(bCalledFromClone, "env=%s, restoring of the grabbed bodies from env=%s to env=%s is not allowed if it's not called from Clone, since environmentBodyIndex might not be consistent between two different envs.", body.GetEnv()->GetNameId() % savedBody.GetEnv()->GetNameId() % body.GetEnv()->GetNameId(), ORE_Failed);
+
                     // The body that the state was saved from is from a different environment from pbody. This case can
                     // happen when cloning an environment (see Environment::_Clone). Since cloning is supposed to
                     // preserve environmentBodyIndex of bodies, it is ok do the following.
@@ -124,7 +137,7 @@ void KinBody::_RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody
         }
     }
 }
-
+    
 void KinBody::_SaveKinBodySavedGrabbedData(std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex) const
 {
     savedGrabbedDataByEnvironmentIndex.clear();
@@ -208,7 +221,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        pbody->_RestoreKinBodyGrabbedBodiesFromSavedData(*_pbody, _options, _grabbedDataByEnvironmentIndex);
+        pbody->_RestoreGrabbedBodiesFromSavedData(*_pbody, _options, _grabbedDataByEnvironmentIndex);
     }
     if( _options & Save_LinkTransformation ) {
         pbody->SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
@@ -328,7 +341,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        body._RestoreKinBodyGrabbedBodiesFromSavedData(_body, _options, _grabbedDataByEnvironmentIndex);
+        body._RestoreGrabbedBodiesFromSavedData(_body, _options, _grabbedDataByEnvironmentIndex);
     }
     if( _options & Save_LinkTransformation ) {
         body.SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
