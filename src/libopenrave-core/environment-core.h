@@ -341,7 +341,7 @@ public:
 
         RAVELOG_VERBOSE_FORMAT("env=%s destructor, _vecbodies.size():%d", GetNameId()%_vecbodies.size());
         if (_vecbodies.size() > 10000 || _mapBodyNameIndex.size() > 10000 || _mapBodyIdIndex.size() > 10000) { // don't know good threshold
-            RAVELOG_WARN_FORMAT("env=%s, _vecbodies.size():%d, _mapBodyNameIndex.size():%d, _mapBodyIdIndex.size():%d seems large, maybe there is memory leak", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size());
+            RAVELOG_WARN_FORMAT("env=%s, _vecbodies.size():%d, _mapBodyNameIndex.size():%d, _mapBodyIdIndex.size():%d seems large, maybe there is memory leak", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size()%_mapBodyIdIndex.size());
         }
         _StopSimulationThread();
 
