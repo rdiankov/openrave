@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.151.3
+===============
+
+- Support sensorgeometry field of ST_Force6D in PyAttachedSensorInfo
+
 Version 0.151.1
 ===============
 
