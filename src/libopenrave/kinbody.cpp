@@ -5028,15 +5028,21 @@ void KinBody::_ComputeInternalInformation()
 
             // if a pair links has exactly one non-static joint in the middle, then make the pair adjacent
             vector<JointPtr> vjoints;
-            for(int ind0 = 0; ind0 < (int)_veclinks.size()-1; ++ind0) {
-                for(int ind1 = ind0+1; ind1 < (int)_veclinks.size(); ++ind1) {
+            for (int ind0 = 0; ind0 < (int)_veclinks.size() - 1; ++ind0) {
+                for (int ind1 = ind0 + 1; ind1 < (int)_veclinks.size(); ++ind1) {
+                    // If these links are already adjacent, skip computation of their connecting chain
+                    const size_t adjacencyIndex = _GetIndex1d(ind0, ind1);
+                    if (_vAdjacentLinks.at(adjacencyIndex)) {
+                        continue;
+                    }
+
                     GetChain(ind0, ind1, vjoints);
                     size_t numstatic = 0;
                     FOREACH(it,vjoints) {
                         numstatic += (*it)->IsStatic();
                     }
                     if( numstatic+1 >= vjoints.size() ) {
-                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
+                        _vAdjacentLinks.at(adjacencyIndex) = 1;
                     }
                 }
             }
