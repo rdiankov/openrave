@@ -3675,6 +3675,16 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized.
     void _InitAndAddLink(LinkPtr plink);
 
+    /// \brief initializes the internal link vector with the provided link infos.
+    ///
+    /// Internal method called as part of Init() or InitFromLinkInfos()
+    /// LinkInfoT may be a LinkInfo struct or a pointer to a LinkInfo
+    template <typename LinkInfoT>
+    void _InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos);
+
+    /// Initialize a valid link pointer from the specified link info
+    void _InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo);
+
     /// \brief initializes and adds a link to internal hierarchy.
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.

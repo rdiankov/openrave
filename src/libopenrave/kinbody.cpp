@@ -722,16 +722,64 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
     _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
+void KinBody::_InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo)
+{
+    linkPtr->_vGeometries.clear();
+    linkPtr->_collision.vertices.clear();
+    linkPtr->_collision.indices.clear();
+
+    for (const KinBody::GeometryInfoPtr& geomInfo : linkInfo._vgeometryinfos) {
+        KinBody::Link::GeometryPtr geom(new KinBody::Link::Geometry(linkPtr, *geomInfo));
+        if (geom->_info._meshcollision.vertices.size() == 0) { // try to avoid recomputing
+            geom->_info.InitCollisionMesh();
+        }
+        linkPtr->_vGeometries.push_back(geom);
+        linkPtr->_collision.Append(geom->GetCollisionMesh(), geom->GetTransform());
+    }
+
+    FOREACH(it, linkInfo._mReadableInterfaces) {
+        linkPtr->SetReadableInterface(it->first, it->second);
+    }
+}
+
+static const KinBody::LinkInfo& _ResolveLinkInfo(const KinBody::LinkInfoConstPtr& linkInfo) { return *linkInfo; }
+static const KinBody::LinkInfo& _ResolveLinkInfo(const KinBody::LinkInfo& linkInfo) { return linkInfo; }
+template <typename LinkInfoT>
+void KinBody::_InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos)
+{
+    CHECK_NO_INTERNAL_COMPUTATION;
+    BOOST_ASSERT(_veclinks.empty()); // We assume we are the first call to initialize links
+
+    // Keep track of link names as we go to deduplicate
+    std::unordered_set<std::string> existingLinkNames;
+
+    _veclinks.reserve(linkInfos.size());
+    for (const LinkInfoT& linkInfo : linkInfos) {
+        LinkPtr plink(new Link(shared_kinbody()));
+        plink->_info = _ResolveLinkInfo(linkInfo);
+        LinkInfo& info = plink->_info;
+
+        // check to make sure there are no repeating names in already added links
+        const bool isLinkNameUnique = existingLinkNames.emplace(info._name).second;
+        if (!isLinkNameUnique) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link '%s' is declared more than once in body '%s', uri is '%s'"), info._name%GetName()%GetURI(), ORE_InvalidArguments);
+        }
+
+        // Initialize the link from the associated info and add to our list of links
+        plink->_index = static_cast<int>(_veclinks.size());
+        _InitLinkFromInfo(plink, info);
+        _veclinks.push_back(std::move(plink));
+    }
+
+    _vLinkTransformPointers.clear();
+    __hashKinematicsGeometryDynamics.resize(0);
+}
+
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
-    _veclinks.reserve(linkinfos.size());
-    FOREACHC(itlinkinfo, linkinfos) {
-        LinkPtr plink(new Link(shared_kinbody()));
-        plink->_info = **itlinkinfo;
-        _InitAndAddLink(plink);
-    }
+    _InitWithInitialLinks(linkinfos);
     _vecjoints.reserve(jointinfos.size());
     FOREACHC(itjointinfo, jointinfos) {
         JointInfoConstPtr rawinfo = *itjointinfo;
@@ -751,12 +799,7 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
     Destroy();
-    _veclinks.reserve(linkinfos.size());
-    FOREACHC(itlinkinfo, linkinfos) {
-        LinkPtr plink(new Link(shared_kinbody()));
-        plink->_info = *itlinkinfo;
-        _InitAndAddLink(plink);
-    }
+    _InitWithInitialLinks(linkinfos);
     if( linkinfos.size() > 1 ) {
         // create static joints
         _vecjoints.clear();
@@ -6068,21 +6111,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     }
 
     plink->_index = static_cast<int>(_veclinks.size());
-    plink->_vGeometries.clear();
-    plink->_collision.vertices.clear();
-    plink->_collision.indices.clear();
-    FOREACHC(itgeominfo,info._vgeometryinfos) {
-        Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
-        if( geom->_info._meshcollision.vertices.size() == 0 ) { // try to avoid recomputing
-            geom->_info.InitCollisionMesh();
-        }
-        plink->_vGeometries.push_back(geom);
-        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
-    }
-
-    FOREACH(it, info._mReadableInterfaces) {
-        plink->SetReadableInterface(it->first, it->second);
-    }
+    _InitLinkFromInfo(plink, info);
 
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();
