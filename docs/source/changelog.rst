@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.154.0
+===============
+
+- Deprecate restoring of grabbed bodies by `KinBodyStateSaver` from one env to another env since it's hard to restore any kind of bodies into different env. Instead, use the dedicated private API in `Environment::_Clone`.
+
 Version 0.153.0
 ===============
 
