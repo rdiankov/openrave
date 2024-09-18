@@ -120,36 +120,6 @@ void Grabbed::AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksT
     }
 }
 
-/// \brief Push link to listNonCollidingLinksWhenGrabbed, only if it has no collision with the whole grabbedBody.
-static void _PushLinkIfNonColliding(std::list<KinBody::LinkConstPtr>& listNonCollidingLinksWhenGrabbed,
-                                    CollisionCheckerBasePtr& pchecker,
-                                    const KinBody::LinkPtr& pLinkToCheck, const KinBody& grabbedBody)
-{
-    KinBody::LinkConstPtr pLinkToCheckConst(pLinkToCheck);
-    for (const KinBody::LinkPtr& pGrabbedBodylink : grabbedBody.GetLinks()) {
-        if( pchecker->CheckCollision(pLinkToCheckConst, KinBody::LinkConstPtr(pGrabbedBodylink)) ) {
-            return; // if colliding, do not push.
-        }
-    }
-    // if not colliding with any of links in grabbedBody, push it.
-    listNonCollidingLinksWhenGrabbed.push_back(pLinkToCheck);
-}
-
-/// \brief remove link from listNonCollidingLinksWhenGrabbed if its parent is same as the given body.
-template<typename KinBodyPtrT>
-static void _RemoveLinkFromListNonCollidingLinksWhenGrabbed(std::list<KinBody::LinkConstPtr>& listNonCollidingLinksWhenGrabbed,
-                                                            const KinBodyPtrT& pGrabbedBody)
-{
-    for (std::list<KinBody::LinkConstPtr>::iterator itlink = listNonCollidingLinksWhenGrabbed.begin(); itlink != listNonCollidingLinksWhenGrabbed.end();) {
-        if ((*itlink)->GetParent() == pGrabbedBody) {
-            itlink = listNonCollidingLinksWhenGrabbed.erase(itlink);
-        }
-        else {
-            ++itlink;
-        }
-    }
-}
-
 void Grabbed::ComputeListNonCollidingLinks()
 {
     if( _listNonCollidingIsValid ) {
@@ -641,28 +611,6 @@ void KinBody::GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) co
         std::string bodyName;
         if (GetEnv()->GetBodyNameFromEnvironmentBodyIndex(grabPair.first, bodyName)) {
             bodyNames.emplace(std::move(bodyName));
-        }
-    }
-}
-
-/// \brief get one grabbed info from pgrabbed and pgrabbedbody.
-/// \param[out] outputinfo : result
-static void _GetOneGrabbedInfo(KinBody::GrabbedInfo& outputinfo,
-                               const GrabbedPtr& pgrabbed, const KinBodyPtr& pgrabbedbody, const std::vector<KinBody::LinkPtr>& veclinks,
-                               const std::string& bodyName, const EnvironmentBasePtr& pEnv)
-{
-    outputinfo._grabbedname = pgrabbedbody->GetName();
-    outputinfo._robotlinkname = pgrabbed->_pGrabbingLink->GetName();
-    outputinfo._trelative = pgrabbed->_tRelative;
-    outputinfo._setIgnoreRobotLinkNames.clear();
-    CopyRapidJsonDoc(pgrabbed->_rGrabbedUserData, outputinfo._rGrabbedUserData);
-
-    for( int linkIndex : pgrabbed->_setGrabberLinkIndicesToIgnore ) {
-        if (0 <= linkIndex && linkIndex < (int)veclinks.size()) {
-            outputinfo._setIgnoreRobotLinkNames.insert(veclinks[linkIndex]->GetName());
-        }
-        else {
-            RAVELOG_WARN_FORMAT("env=%s, grabbed body '%s' of body '%s' has an invalid grabber link index %d to ignore. number of links is %d.", pEnv->GetNameId()%pgrabbedbody->GetName()%bodyName%linkIndex%veclinks.size());
         }
     }
 }
