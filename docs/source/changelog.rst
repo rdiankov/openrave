@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+Version 0.153.0
+===============
+
+- Fix the bug that `KinBodyStateSaver` cannot restore the `_listNonCollidingIsValid`, `_listNonCollidingLinksWhenGrabbed`, and `_setGrabberLinkIndicesToIgnore` in `Grabbed`.
+- Resolve cyclic relationship between `KinBodyStateSaver` and `Grabbed` by eliminating `Save_GrabbedBodies` from `ComputeListNonCollidingLinks`.
+
 Version 0.152.0
 ===============
 
