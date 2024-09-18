@@ -35,14 +35,14 @@ static void _PushLinkToListNonCollidingLinksWhenGrabbed(Grabbed& grabbed,
 
 void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                                  const int options,
-                                                 const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex)
+                                                 const std::unordered_map<int, KinBody::SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex)
 {
     {
         // have to release all grabbed first
         ReleaseAllGrabbed();
         OPENRAVE_ASSERT_OP(_grabbedBodiesByEnvironmentIndex.size(),==,0);
-        for (const std::unordered_map<int, GrabbedPtr>::value_type& grabPair : savedGrabbedBodiesByEnvironmentIndex) {
-            const GrabbedPtr& pGrabbed = grabPair.second;
+        for (const std::unordered_map<int, SavedGrabbedData>::value_type& grabPair : savedGrabbedDataByEnvironmentIndex) {
+            const GrabbedPtr& pGrabbed = grabPair.second.pGrabbed;
             KinBodyPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
             if( !!pGrabbedBody ) {
                 KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
@@ -133,6 +133,20 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
     }
 }
 
+void KinBody::_SaveKinBodySavedGrabbedData(std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex) const
+{
+    savedGrabbedDataByEnvironmentIndex.clear();
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        std::unordered_map<int, SavedGrabbedData>::iterator itData = savedGrabbedDataByEnvironmentIndex.emplace(grabPair.first, SavedGrabbedData()).first;
+        const GrabbedPtr& pGrabbed = grabPair.second;
+        SavedGrabbedData& data = itData->second;
+        data.pGrabbed = pGrabbed;
+        data.listNonCollidingLinksWhenGrabbed = pGrabbed->_listNonCollidingLinksWhenGrabbed;
+        data.setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
+        data.listNonCollidingIsValid = pGrabbed->IsListNonCollidingLinksValid();
+    }
+}
+
 KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _pbody(pbody), _options(options), _bRestoreOnDestructor(true)
 {
     if( _options & Save_LinkTransformation ) {
@@ -162,7 +176,7 @@ KinBody::KinBodyStateSaver::KinBodyStateSaver(KinBodyPtr pbody, int options) : _
         _pbody->GetDOFResolutions(_vDOFResolutions);
     }
     if( _options & Save_GrabbedBodies ) {
-        _grabbedBodiesByEnvironmentIndex = _pbody->_grabbedBodiesByEnvironmentIndex;
+        _pbody->_SaveKinBodySavedGrabbedData(_grabbedDataByEnvironmentIndex);
     }
 }
 
@@ -202,7 +216,7 @@ void KinBody::KinBodyStateSaver::_RestoreKinBody(boost::shared_ptr<KinBody> pbod
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        pbody->_RestoreGrabbedBodiesFromSavedData(*_pbody, _options, _grabbedBodiesByEnvironmentIndex);
+        pbody->_RestoreGrabbedBodiesFromSavedData(*_pbody, _options, _grabbedDataByEnvironmentIndex);
     }
     if( _options & Save_LinkTransformation ) {
         pbody->SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
@@ -275,7 +289,7 @@ KinBody::KinBodyStateSaverRef::KinBodyStateSaverRef(KinBody& body, int options) 
         body.GetDOFLimits(_vDOFLimits[0], _vDOFLimits[1]);
     }
     if( _options & Save_GrabbedBodies ) {
-        _grabbedBodiesByEnvironmentIndex = body._grabbedBodiesByEnvironmentIndex;
+        body._SaveKinBodySavedGrabbedData(_grabbedDataByEnvironmentIndex);
     }
     if( _options & Save_JointResolutions ) {
         body.GetDOFResolutions(_vDOFResolutions);
@@ -322,7 +336,7 @@ void KinBody::KinBodyStateSaverRef::_RestoreKinBody(KinBody& body)
     }
     // restoring grabbed bodies has to happen first before link transforms can be restored since _UpdateGrabbedBodies can be called with the old grabbed bodies.
     if( _options & Save_GrabbedBodies ) {
-        body._RestoreGrabbedBodiesFromSavedData(_body, _options, _grabbedBodiesByEnvironmentIndex);
+        body._RestoreGrabbedBodiesFromSavedData(_body, _options, _grabbedDataByEnvironmentIndex);
     }
     if( _options & Save_LinkTransformation ) {
         body.SetLinkTransformations(_vLinkTransforms, _vdoflastsetvalues);
