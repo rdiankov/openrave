@@ -5003,14 +5003,10 @@ void KinBody::_ComputeInternalInformation()
         // make no-geometry links adjacent to all other links
         for (const LinkPtr& plink0 : _veclinks) {
             const Link& link0 = *plink0;
-            if( link0.GetGeometries().size() == 0 ) {
+            if (link0.GetGeometries().size() == 0) {
                 int ind0 = link0.GetIndex();
-                for (const LinkPtr& plink1 : _veclinks) {
-                    const Link& link1 = *plink1;
-                    int ind1 = link1.GetIndex();
-                    if (ind0 != ind1) {
-                        _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
-                    }
+                for (int ind1 = ind0 + 1; ind1 < _veclinks.size(); ind1++) {
+                    _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
                 }
             }
         }
