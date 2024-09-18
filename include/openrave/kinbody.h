@@ -3689,9 +3689,9 @@ protected:
     /// \param[in] savedBody : saved KinBody inside of saver.
     /// \param[in] options : SaveParameters inside of saver.
     /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
-    void _RestoreKinBodyGrabbedBodiesFromSavedData(const KinBody& savedBody,
-                                                   const int options,
-                                                   const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
+    void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
+                                            const int options,
+                                            const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
 
     std::string _name; ///< name of body
 
