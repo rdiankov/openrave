@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+Version 0.151.3
+===============
+
+- Remove grabbed body from other grabbed bodies when `ReleaseAllWithLink` is called, as other API such as `Release`.
+- Fix `ResetGrabbed` not to unexpectedly change the internal states.
+
 Version 0.151.1
 ===============
 
