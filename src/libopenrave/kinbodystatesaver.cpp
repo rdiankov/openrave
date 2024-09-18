@@ -31,6 +31,7 @@ static void _PushLinkToListNonCollidingLinksWhenGrabbed(Grabbed& grabbed,
     else {
         grabbed._listNonCollidingLinksWhenGrabbed.push_back(vLinks.at(linkindex));
     }
+}
 
 void KinBody::_RestoreGrabbedBodiesForClone(const KinBody& originalBody)
 {
