@@ -346,9 +346,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
-        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
-        }
+        UpdateOrCreateInfosWithNameCheck(value["links"].Begin(), value["links"].End(), _vLinkInfos, "name", fUnitScale, options);
 
         // Assert that we don't have any duplicate link names
         std::unordered_set<OpenRAVE::string_view> usedLinkNames;
@@ -362,9 +360,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
-        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
-        }
+        UpdateOrCreateInfosWithNameCheck(value["joints"].Begin(), value["joints"].End(), _vLinkInfos, "name", fUnitScale, options);
     }
 
     if (value.HasMember("dofValues")) {

@@ -481,6 +481,140 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared
     vInfos.push_back(pNewInfo);
 }
 
+template <typename T>
+void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourceItBegin, rapidjson::Value::ConstValueIterator sourceItEnd, std::vector<boost::shared_ptr<T>>& vInfosOut, const char* pNameInJson, dReal fUnitScale, int options)
+{
+    // In order to memoize name/id match lookup, create jump tables of name/id to vInfosOut index
+    // Note that we allocate full strings rather than string views because otherwise deserializing into the existing info struct may mutate the view out from under the map
+    std::unordered_map<std::string, size_t> infoIdxByName;
+    std::unordered_map<std::string, size_t> infoIdxById;
+    for (size_t i = 0; i < vInfosOut.size(); i++) {
+        const boost::shared_ptr<T>& info = vInfosOut[i];
+        // Note that we emplace here rather than overwriting - we want to prioritize elements that area earlier in the vInfosOut array in the case of a duplicate
+        // This replicates the old behaviour, which involved a sequential array scan.
+        if (!info->_name.empty()) {
+            infoIdxByName.emplace(info->_name, i);
+        }
+        if (!info->_id.empty()) {
+            infoIdxById.emplace(info->_id, i);
+        }
+    }
+
+    // Track whether we deleted any elements and need to garbage collect the output vector before returning
+    bool didEraseElements = false;
+    for (rapidjson::Value::ConstValueIterator it = sourceItBegin; it != sourceItEnd; it++) {
+        // Bind the next JSON value to consider
+        const rapidjson::Value& value = *it;
+
+        // If the ID is non-empty, attempt to look up a matching entry in vInfosOut
+        std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+        std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, pNameInJson);
+        OpenRAVE::orjson::GetCStringJsonValueByKey(value, pNameInJson);
+        size_t existingInfoIndex = -1;
+        if (!id.empty()) {
+            decltype(infoIdxById)::iterator existingInfoIdxIt = infoIdxById.find(id);
+            if (existingInfoIdxIt != infoIdxById.end()) {
+                existingInfoIndex = existingInfoIdxIt->second;
+            }
+        }
+        else {
+            // Check if the new info has a name. If it doesn't, don't try and match it - just always create a new object
+            // sometimes names can be empty, in which case, always create a new object
+            if (!name.empty()) {
+                decltype(infoIdxByName)::iterator existingInfoIdxIt = infoIdxByName.find(id);
+                if (existingInfoIdxIt != infoIdxByName.end()) {
+                    existingInfoIndex = existingInfoIdxIt->second;
+                }
+            }
+        }
+
+        // If this element is deleted, we need to remove any matching element from the info list
+        bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
+        if (existingInfoIndex != -1) {
+            if (isDeleted) {
+                // Erase the referents to this element from our skip lists, but only if they actually point to this index
+                decltype(infoIdxById)::iterator idIt = infoIdxById.find(id);
+                if (idIt != infoIdxById.end() && idIt->second == existingInfoIndex) {
+                    infoIdxById.erase(idIt);
+                }
+                decltype(infoIdxById)::iterator nameIt = infoIdxByName.find(name);
+                if (nameIt != infoIdxByName.end() && nameIt->second == existingInfoIndex) {
+                    infoIdxByName.erase(nameIt);
+                }
+
+                // Don't erase the backing item from the list immediately, since that would invalidate all the subsequent indices in our jump tables.
+                // Instead just null the element, and we'll filter the whole list at the end.
+                vInfosOut[existingInfoIndex].reset();
+                didEraseElements = true;
+                continue;
+            }
+
+            // If we are updating an element in place, we need to check if we're about to change the id/name
+            // If we are, we have to update the jump tables.
+            const bool didChangeName = !name.empty() && vInfosOut[existingInfoIndex]->_name != name; // If the name to be loaded is empty, it won't clobber anything, so don't count that as a change
+            const bool didChangeId = vInfosOut[existingInfoIndex]->_id != id; // Id always overwrites, so count it as changed even if the new id is empty
+
+            // Erase the old id/name mapping if it changed
+            if (didChangeId) {
+                infoIdxById.erase(vInfosOut[existingInfoIndex]->_id);
+            }
+            if (didChangeName) {
+                infoIdxByName.erase(vInfosOut[existingInfoIndex]->_name);
+            }
+
+            // Deserialize the new json over the existing entry
+            vInfosOut[existingInfoIndex]->DeserializeJSON(value, fUnitScale, options);
+            vInfosOut[existingInfoIndex]->_id = id;
+
+            // Write back the new id/name mappings with the new values if changed
+            if (didChangeId) {
+                infoIdxById.emplace(vInfosOut[existingInfoIndex]->_id, existingInfoIndex);
+            }
+            if (didChangeName) {
+                infoIdxByName.emplace(vInfosOut[existingInfoIndex]->_name, existingInfoIndex);
+            }
+
+            continue;
+        }
+
+        // If the item is deleted and didn't match an existing index, then there is nothing to remove.
+        // Just skip this entry.
+        if (isDeleted) {
+            continue;
+        }
+
+        // If we didn't match an existing entry, then create a new one now
+        boost::shared_ptr<T> pNewInfo(new T());
+        pNewInfo->DeserializeJSON(value, fUnitScale, options);
+        pNewInfo->_id = id;
+
+        // Update our jump tables and push this info onto the list
+        const size_t newInfoIndex = vInfosOut.size();
+        infoIdxById.emplace(id, newInfoIndex);
+        infoIdxByName.emplace(pNewInfo->_name, newInfoIndex);
+        vInfosOut.emplace_back(std::move(pNewInfo));
+    }
+
+    // If we deleted any elements, scan through and ensure there are no holes in the output before returning.
+    // Scan backwards through the list, swapping all of the invalid pointers to the end.
+    // Once we're done, truncate the list to drop all the invalid entries.
+    if (didEraseElements) {
+        size_t validElementCount = vInfosOut.size();
+        for (ssize_t i = vInfosOut.size() - 1; i >= 0; i--) {
+            // If this element is still valid, leave it where it is
+            if (!!vInfosOut[i]) {
+                continue;
+            }
+
+            // If this element is null, swap it with the last valid element and decrement the valid element count
+            std::swap(vInfosOut[i], vInfosOut[--validElementCount]); // Note prefix decrement to turn the count into an index
+        }
+
+        // Resize to crop the end of the list
+        vInfosOut.resize(validElementCount);
+    }
+}
+
 template<typename T>
 void UpdateOrCreateInfoWithNameCheck(const rapidjson::Value& value, std::vector<boost::shared_ptr<T> >& vInfos, const char* pNameInJson, dReal fUnitScale, int options)
 {
