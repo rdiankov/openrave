@@ -18,6 +18,21 @@
 
 namespace OpenRAVE {
 
+/// \brief push link to _listNonCollidingLinksWhenGrabbed of grabbed.
+static void _PushLinkToListNonCollidingLinksWhenGrabbed(Grabbed& grabbed,
+                                                        const int linkindex,
+                                                        const KinBody::LinkConstPtr& pLinkRef,
+                                                        const std::vector<KinBody::LinkPtr>& vLinks,
+                                                        const EnvironmentBasePtr& pEnv)
+{
+    if( linkindex < 0 || linkindex >= (int)vLinks.size() ) {
+        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", pEnv->GetNameId()%pLinkRef->GetName()%pLinkRef->GetIndex()%vLinks.size());
+    }
+    else {
+        grabbed._listNonCollidingLinksWhenGrabbed.push_back(vLinks.at(linkindex));
+    }
+}
+
 void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                                  const int options,
                                                  const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex)
@@ -42,9 +57,11 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                                     ORE_Failed);
                 }
                 if( GetEnv() == savedBody.GetEnv() ) {
+                    // attach and add
                     _AttachBody(pGrabbedBody);
                     BOOST_ASSERT(pGrabbedBody->GetEnvironmentBodyIndex() > 0);
                     _grabbedBodiesByEnvironmentIndex[pGrabbedBody->GetEnvironmentBodyIndex()] = pGrabbed;
+
                     // grabbed bodies could have been removed from env and self collision checker.
                     CollisionCheckerBasePtr collisionchecker = GetSelfCollisionChecker();
                     if (!!collisionchecker) {
@@ -76,17 +93,17 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                         RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since parent is not found.", GetEnv()->GetNameId()%(*itLinkRef)->GetName());
                                         continue;
                                     }
-                                    const KinBodyPtr pNewNonCollidingBody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pParent->GetEnvironmentBodyIndex());
-                                    if( !pNewNonCollidingBody) {
-                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", GetEnv()->GetNameId()%(*itLinkRef)->GetName() % pParent->GetEnvironmentBodyIndex());
-                                        continue;
-                                    }
                                     const int linkindex = (*itLinkRef)->GetIndex();
-                                    if( linkindex < 0 || linkindex >= (int)pNewNonCollidingBody->GetLinks().size() ) {
-                                        RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetIndex()%pNewNonCollidingBody->GetLinks().size());
+                                    if( pParent.get() == this ) {
+                                        _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, *itLinkRef, GetLinks(), GetEnv());
                                     }
                                     else {
-                                        pNewGrabbed->_listNonCollidingLinksWhenGrabbed.push_back(pNewNonCollidingBody->GetLinks().at(linkindex));
+                                        const KinBodyPtr pNewNonCollidingBody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pParent->GetEnvironmentBodyIndex());
+                                        if( !pNewNonCollidingBody) {
+                                            RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", GetEnv()->GetNameId()%(*itLinkRef)->GetName() % pParent->GetEnvironmentBodyIndex());
+                                            continue;
+                                        }
+                                        _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, *itLinkRef, pNewNonCollidingBody->GetLinks(), GetEnv());
                                     }
                                 }
                                 pNewGrabbed->_SetLinkNonCollidingIsValid(true);
