@@ -538,11 +538,11 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
         if (existingInfoIndex != -1) {
             if (isDeleted) {
                 // Erase the referents to this element from our skip lists, but only if they actually point to this index
-                decltype(infoIdxById)::iterator idIt = infoIdxById.find(id);
+                decltype(infoIdxById)::iterator idIt = infoIdxById.find(vInfosOut[existingInfoIndex]->_id);
                 if (idIt != infoIdxById.end() && idIt->second == existingInfoIndex) {
                     infoIdxById.erase(idIt);
                 }
-                decltype(infoIdxByName)::iterator nameIt = infoIdxByName.find(name);
+                decltype(infoIdxByName)::iterator nameIt = infoIdxByName.find(vInfosOut[existingInfoIndex]->_name);
                 if (nameIt != infoIdxByName.end() && nameIt->second == existingInfoIndex) {
                     infoIdxByName.erase(nameIt);
                 }
