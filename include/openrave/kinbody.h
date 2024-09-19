@@ -2411,6 +2411,10 @@ public:
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
+        /// If this value is true, the kinbody will not precalculate the shortest path between each link
+        /// Calculating these paths is time- and cost-expensive (n^2 on the number of links), and may not be necessary for bodies with no joints
+        bool _skipLinkPairShortestPathCalculation = false;
+
         enum KinBodyInfoField {
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
@@ -3748,6 +3752,10 @@ protected:
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
     int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+
+    /// If this value is true, the kinbody will not precalculate the shortest path between each link
+    /// Calculating these paths is time- and cost-expensive (n^2 on the number of links), and may not be necessary for bodies with no joints
+    bool _skipLinkPairShortestPathCalculation = false;
 
 private:
     mutable std::vector<dReal> _vTempJoints;

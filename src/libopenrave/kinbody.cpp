@@ -22,6 +22,7 @@
 #define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
+#define CHECK_ALL_PAIRS_SHORTEST_PATHS OPENRAVE_ASSERT_FORMAT(_vAllPairsShortestPaths.empty() == false, "env=%s, body %s all pair shortest path computations were skipped, cannot utilize this API", GetEnv()->GetNameId()%GetName(), ORE_NotInitialized);
 
 namespace OpenRAVE {
 
@@ -134,6 +135,7 @@ void KinBody::KinBodyInfo::Reset()
     _prAssociatedFileEntries.reset();
     _isRobot = false;
     _isPartial = true;
+    _skipLinkPairShortestPathCalculation = false;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -167,6 +169,7 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
     }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
+    orjson::SetJsonValueByKey(rKinBodyInfo, "skipLinkPairShortestPathCalculation", _skipLinkPairShortestPathCalculation, allocator);
 
     if (_dofValues.size() > 0) {
         rapidjson::Value dofValues;
@@ -272,6 +275,7 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
     orjson::LoadJsonValueByKey(value, "isRobot", _isRobot);
+    orjson::LoadJsonValueByKey(value, "skipLinkPairShortestPathCalculation", _skipLinkPairShortestPathCalculation);
 
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
@@ -793,6 +797,7 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
     _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
+    _skipLinkPairShortestPathCalculation = info._skipLinkPairShortestPathCalculation;
     if( info._vLinkInfos.size() > 0 ) {
         _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
         _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
@@ -2559,6 +2564,7 @@ const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> >
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const
 {
     CHECK_INTERNAL_COMPUTATION0;
+    CHECK_ALL_PAIRS_SHORTEST_PATHS;
     OPENRAVE_ASSERT_FORMAT(linkindex1>=0 && linkindex1<(int)_veclinks.size(), "body %s linkindex1 %d invalid (num links %d)", GetName()%linkindex1%_veclinks.size(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex2>=0 && linkindex2<(int)_veclinks.size(), "body %s linkindex2 %d invalid (num links %d)", GetName()%linkindex2%_veclinks.size(), ORE_InvalidArguments);
     vjoints.resize(0);
@@ -2580,6 +2586,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const
 {
     CHECK_INTERNAL_COMPUTATION0;
+    CHECK_ALL_PAIRS_SHORTEST_PATHS;
     OPENRAVE_ASSERT_FORMAT(linkindex1>=0 && linkindex1<(int)_veclinks.size(), "body %s linkindex1 %d invalid (num links %d)", GetName()%linkindex1%_veclinks.size(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex2>=0 && linkindex2<(int)_veclinks.size(), "body %s linkindex2 %d invalid (num links %d)", GetName()%linkindex2%_veclinks.size(), ORE_InvalidArguments);
     vlinks.resize(0);
@@ -2644,6 +2651,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                                          const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
+    CHECK_ALL_PAIRS_SHORTEST_PATHS;
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
@@ -2789,6 +2797,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                                         std::vector<dReal>& vjacobian) const
 {
     CHECK_INTERNAL_COMPUTATION;
+    CHECK_ALL_PAIRS_SHORTEST_PATHS;
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
@@ -2905,6 +2914,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                                        const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
+    CHECK_ALL_PAIRS_SHORTEST_PATHS;
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
@@ -3035,6 +3045,7 @@ void KinBody::CalculateAngularVelocityJacobian(const int linkindex,
 void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, std::vector<dReal>& hessian, const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
+    CHECK_ALL_PAIRS_SHORTEST_PATHS;
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s bad link index %d (num links %d)", GetName()%linkindex%_veclinks.size(),ORE_InvalidArguments);
     size_t dofstride=0;
     if( dofindices.size() > 0 ) {
@@ -3256,6 +3267,7 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
 void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian, const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
+    CHECK_ALL_PAIRS_SHORTEST_PATHS;
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s bad link index %d (num links %d)", GetName()%linkindex%_veclinks.size(),ORE_InvalidArguments);
     size_t dofstride=0;
     if( dofindices.size() > 0 ) {
@@ -4317,8 +4329,13 @@ void KinBody::_ComputeInternalInformation()
     _vTopologicallySortedJointIndicesAll.resize(0);
     _vJointsAffectingLinks.resize(_vecjoints.size()*_veclinks.size());
 
-    // compute the all-pairs shortest paths
-    {
+    // Compute the shortest path between each pair of links, unless this body is explicitly configured _not_ to precalculate this information
+    // Note that if we have joints, we use this information for optimizing kinematics, so force enable it
+    if (_skipLinkPairShortestPathCalculation && !_vecjoints.empty()) {
+        RAVELOG_WARN_FORMAT("env=%s, body %s had skipLinkPairShortestPathCalculation=true, but has joints so forcing calculation", GetEnv()->GetNameId()%GetName());
+        _skipLinkPairShortestPathCalculation = false;
+    }
+    if (!_skipLinkPairShortestPathCalculation) {
         // Preallocate to fit our NxN joint map
         _vAllPairsShortestPaths.resize(_veclinks.size() * _veclinks.size());
 
@@ -6155,6 +6172,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
     info._isPartial = false; // extracting everything
+    info._skipLinkPairShortestPathCalculation = _skipLinkPairShortestPathCalculation;
 
     info._dofValues.clear();
 
