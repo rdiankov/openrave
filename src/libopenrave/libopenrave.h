@@ -542,7 +542,7 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
                 if (idIt != infoIdxById.end() && idIt->second == existingInfoIndex) {
                     infoIdxById.erase(idIt);
                 }
-                decltype(infoIdxById)::iterator nameIt = infoIdxByName.find(name);
+                decltype(infoIdxByName)::iterator nameIt = infoIdxByName.find(name);
                 if (nameIt != infoIdxByName.end() && nameIt->second == existingInfoIndex) {
                     infoIdxByName.erase(nameIt);
                 }
