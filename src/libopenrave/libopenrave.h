@@ -484,6 +484,11 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared
 template <typename T>
 void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourceItBegin, rapidjson::Value::ConstValueIterator sourceItEnd, std::vector<boost::shared_ptr<T>>& vInfosOut, const char* pNameInJson, dReal fUnitScale, int options)
 {
+    // If the begin/end iterators are empty, don't bother even building the lookup table
+    if (sourceItBegin == sourceItEnd) {
+        return;
+    }
+
     // In order to memoize name/id match lookup, create jump tables of name/id to vInfosOut index
     // Note that we allocate full strings rather than string views because otherwise deserializing into the existing info struct may mutate the view out from under the map
     std::unordered_map<std::string, size_t> infoIdxByName;
@@ -521,7 +526,7 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
             // Check if the new info has a name. If it doesn't, don't try and match it - just always create a new object
             // sometimes names can be empty, in which case, always create a new object
             if (!name.empty()) {
-                decltype(infoIdxByName)::iterator existingInfoIdxIt = infoIdxByName.find(id);
+                decltype(infoIdxByName)::iterator existingInfoIdxIt = infoIdxByName.find(name);
                 if (existingInfoIdxIt != infoIdxByName.end()) {
                     existingInfoIndex = existingInfoIdxIt->second;
                 }
