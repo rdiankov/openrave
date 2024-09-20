@@ -21,6 +21,12 @@ Version 0.152.0
 - Use the same utility function between `KinBodyStateSaver` and `KinBodyStateSaverRef` to share the same bug fixes in the past for `Save_GrabbedBodies`.
 - Fix the bug which prevented from `KinBodyStateSaver/KinBodyStateSaverRef` retoring `_listNonCollidingLinksWhenGrabbed` for grabbed bodies.
 
+Version 0.151.2
+===============
+
+- Support sensorgeometry field of ST_Force6D in PyAttachedSensorInfo
+- Viewer shutdown deadlock for openravepy
+
 Version 0.151.1
 ===============
 
