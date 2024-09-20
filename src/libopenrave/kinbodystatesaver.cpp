@@ -29,7 +29,7 @@ static void _PushLinkToListNonCollidingLinksWhenGrabbed(Grabbed& grabbed,
         RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", pEnv->GetNameId()%pLinkRef->GetName()%pLinkRef->GetIndex()%vLinks.size());
     }
     else {
-        grabbed._listNonCollidingLinksWhenGrabbed.push_back(vLinks.at(linkindex));
+        grabbed._listNonCollidingLinksWhenGrabbed.push_back(vLinks[linkindex]);
     }
 }
 
