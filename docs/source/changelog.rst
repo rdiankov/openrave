@@ -3,10 +3,14 @@
 ChangeLog
 #########
 
-Version 0.151.2
+Version 0.151.3
 ===============
 
 - Support sensorgeometry field of ST_Force6D in PyAttachedSensorInfo
+
+Version 0.151.2
+===============
+
 - Viewer shutdown deadlock for openravepy
 
 Version 0.151.1
