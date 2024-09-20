@@ -22,7 +22,7 @@
 #define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
-#define CHECK_ALL_PAIRS_SHORTEST_PATHS OPENRAVE_ASSERT_FORMAT(_vAllPairsShortestPaths.empty() == false, "env=%s, body %s all pair shortest path computations were skipped, cannot utilize this API", GetEnv()->GetNameId()%GetName(), ORE_NotInitialized);
+#define CHECK_ALL_PAIRS_SHORTEST_PATHS OPENRAVE_ASSERT_FORMAT(_vAllPairsShortestPaths.size() >= (_veclinks.size() * _veclinks.size()), "env=%s, body %s all pair shortest path computations were skipped, cannot utilize this API", GetEnv()->GetNameId()%GetName(), ORE_NotInitialized);
 
 namespace OpenRAVE {
 
