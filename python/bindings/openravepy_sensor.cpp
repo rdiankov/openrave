@@ -697,6 +697,9 @@ PySensorGeometryPtr toPySensorGeometry(const std::string& sensorname, const rapi
         else if( pgeom->GetType() == SensorBase::ST_Laser ) {
             return PySensorGeometryPtr(new PyLaserGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::LaserGeomData const>(pgeom)));
         }
+        else if( pgeom->GetType() == SensorBase::ST_Force6D ) {
+            return PySensorGeometryPtr(new PyForce6DGeomData(OPENRAVE_STATIC_POINTER_CAST<SensorBase::Force6DGeomData const>(pgeom)));
+        }
 
     }
     return PySensorGeometryPtr();

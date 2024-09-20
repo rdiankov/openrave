@@ -3,6 +3,30 @@
 ChangeLog
 #########
 
+Version 0.154.0
+===============
+
+- Deprecate restoring of grabbed bodies by `KinBodyStateSaver` from one env to another env since it's hard to restore any kind of bodies into different env. Instead, use the dedicated private API in `Environment::_Clone`.
+
+Version 0.153.0
+===============
+
+- Fix the bug that `KinBodyStateSaver` cannot restore the `_listNonCollidingIsValid`, `_listNonCollidingLinksWhenGrabbed`, and `_setGrabberLinkIndicesToIgnore` in `Grabbed`.
+- Resolve cyclic relationship between `KinBodyStateSaver` and `Grabbed` by eliminating `Save_GrabbedBodies` from `ComputeListNonCollidingLinks`.
+
+Version 0.152.0
+===============
+
+- Fix typo which prevented from proper state restoring for `KinBodyStateSaverRef`.
+- Use the same utility function between `KinBodyStateSaver` and `KinBodyStateSaverRef` to share the same bug fixes in the past for `Save_GrabbedBodies`.
+- Fix the bug which prevented from `KinBodyStateSaver/KinBodyStateSaverRef` retoring `_listNonCollidingLinksWhenGrabbed` for grabbed bodies.
+
+Version 0.151.2
+===============
+
+- Support sensorgeometry field of ST_Force6D in PyAttachedSensorInfo
+- Viewer shutdown deadlock for openravepy
+
 Version 0.151.1
 ===============
 
