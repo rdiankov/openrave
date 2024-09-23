@@ -386,7 +386,7 @@ protected:
     virtual void _CallFinishCallbacks(IkReturnPtr, RobotBase::ManipulatorConstPtr, const IkParameterization &);
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_IKSOLVER_HASH;
     }
 

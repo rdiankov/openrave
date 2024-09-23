@@ -715,7 +715,7 @@ protected:
     virtual PlannerAction _CallCallbacks(const PlannerProgress& progress);
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_PLANNER_HASH;
     }
 
