@@ -754,9 +754,9 @@ public:
     {
 public:
         Reader(ConfigurationSpecification& spec);
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-        virtual bool endElement(const std::string& name);
-        virtual void characters(const std::string& ch);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+        virtual bool endElement(const std::string& name) override;
+        virtual void characters(const std::string& ch) override;
 protected:
         ConfigurationSpecification& _spec;
         std::stringstream _ss;

@@ -95,7 +95,7 @@ public:
     class OPENRAVE_API JointEncoderSensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_JointEncoder;
         }
         std::vector<dReal> encoderValues;         ///< measured joint angles in radians
