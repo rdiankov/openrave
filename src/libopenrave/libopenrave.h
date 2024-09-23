@@ -481,6 +481,11 @@ void UpdateOrCreateInfo(const rapidjson::Value& value, std::vector<boost::shared
     vInfos.push_back(pNewInfo);
 }
 
+// Optimized version of UpdateOrCreateInfoWithNameCheck for updating/creating multiple info entries at once
+// Given an iterable range, for each element attempt to either update an existing info record in vInfosOut or create a new record if no matching record can be found.
+// When matching info records, we will attempt to match first on ID, and failing that on name.
+// Since name fields may not all have the same key in the JSON representation, the name field to use for comparison is specified in pNameInJson.
+// The unit scale and options fields are passed directly to the DeserializeJson method on the underlying info type T.
 template <typename T>
 void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourceItBegin, rapidjson::Value::ConstValueIterator sourceItEnd, std::vector<boost::shared_ptr<T>>& vInfosOut, const char* pNameInJson, dReal fUnitScale, int options)
 {
@@ -493,6 +498,8 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
     // Note that we allocate full strings rather than string views because otherwise deserializing into the existing info struct may mutate the view out from under the map
     std::unordered_map<std::string, size_t> infoIdxByName;
     std::unordered_map<std::string, size_t> infoIdxById;
+    infoIdxByName.reserve(vInfosOut.size());
+    infoIdxById.reserve(vInfosOut.size());
     for (size_t i = 0; i < vInfosOut.size(); i++) {
         const boost::shared_ptr<T>& info = vInfosOut[i];
         // Note that we emplace here rather than overwriting - we want to prioritize elements that area earlier in the vInfosOut array in the case of a duplicate
