@@ -47,7 +47,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
         if( !pGrabbedBody ) {
             continue;
         }
-        KinBody::LinkPtr pGrabbingLink(pGrabbed->_pGrabbingLink);
+        const KinBody::LinkPtr& pGrabbingLink = pGrabbed->_pGrabbingLink;
         if( !pGrabbingLink ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, could not find grabbing link for grabbed body '%s'"),
                                             GetEnv()->GetNameId()%pGrabbedBody->GetName(),
@@ -90,7 +90,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                     // body is supposed to already be set to some "proper" configuration as the newly
                     // initialized Grabbed objects will save the current state of pbody for later computation of
                     // _listNonCollidingLinksWhenGrabbed (in case it is not yet computed).
-                    KinBody::LinkPtr pNewGrabbingLink = GetLinks().at(KinBody::LinkPtr(pGrabbingLink)->GetIndex());
+                    KinBody::LinkPtr pNewGrabbingLink = GetLinks().at(pGrabbingLink->GetIndex());
                     GrabbedPtr pNewGrabbed(new Grabbed(pNewGrabbedBody, pNewGrabbingLink));
                     pNewGrabbed->_tRelative = pGrabbed->_tRelative;
                     pNewGrabbed->_setGrabberLinkIndicesToIgnore = savedGrabbedData.setGrabberLinkIndicesToIgnore;
