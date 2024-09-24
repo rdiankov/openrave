@@ -2411,10 +2411,6 @@ public:
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
-        /// If this value is true, the kinbody will not precalculate the shortest path between each link
-        /// Calculating these paths is time- and cost-expensive (n^2 on the number of links), and may not be necessary for bodies with no joints
-        bool _skipLinkPairShortestPathCalculation = false;
-
         enum KinBodyInfoField {
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
@@ -3701,6 +3697,8 @@ protected:
     std::vector<uint64_t> _vLinkEnableStatesMask; /// bit mask containing enabled info of links. If bit 0 of _vLinkEnableBitMap[0] is 1, link 0 is enabled. If bit 2 of _vLinkEnableBitMap[1] is 0, link 66 is disabled. Used for fast access to the LinkInfo::_bIsEnabled
 
     std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
+    bool _vAllPairsShortestPathsValid = false; ///< flag to indicate whether the _vAllPairsShortestPaths has been calculated and safely accessed
+
     std::vector<int8_t> _vJointsAffectingLinks; ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
@@ -3752,10 +3750,6 @@ protected:
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
     int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
-
-    /// If this value is true, the kinbody will not precalculate the shortest path between each link
-    /// Calculating these paths is time- and cost-expensive (n^2 on the number of links), and may not be necessary for bodies with no joints
-    bool _skipLinkPairShortestPathCalculation = false;
 
 private:
     mutable std::vector<dReal> _vTempJoints;

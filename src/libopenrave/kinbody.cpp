@@ -22,7 +22,7 @@
 #define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
-#define CHECK_ALL_PAIRS_SHORTEST_PATHS OPENRAVE_ASSERT_FORMAT(_vAllPairsShortestPaths.size() >= (_veclinks.size() * _veclinks.size()), "env=%s, body %s all pair shortest path computations were skipped, cannot utilize this API", GetEnv()->GetNameId()%GetName(), ORE_NotInitialized);
+#define CHECK_ALL_PAIRS_SHORTEST_PATHS OPENRAVE_ASSERT_FORMAT(_vAllPairsShortestPathsValid, "env=%s, body %s all pair shortest path computations were skipped, cannot utilize this API", GetEnv()->GetNameId()%GetName(), ORE_NotInitialized);
 
 namespace OpenRAVE {
 
@@ -135,7 +135,6 @@ void KinBody::KinBodyInfo::Reset()
     _prAssociatedFileEntries.reset();
     _isRobot = false;
     _isPartial = true;
-    _skipLinkPairShortestPathCalculation = false;
 }
 
 void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
@@ -169,7 +168,6 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
     }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
-    orjson::SetJsonValueByKey(rKinBodyInfo, "skipLinkPairShortestPathCalculation", _skipLinkPairShortestPathCalculation, allocator);
 
     if (_dofValues.size() > 0) {
         rapidjson::Value dofValues;
@@ -275,7 +273,6 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
     orjson::LoadJsonValueByKey(value, "isRobot", _isRobot);
-    orjson::LoadJsonValueByKey(value, "skipLinkPairShortestPathCalculation", _skipLinkPairShortestPathCalculation);
 
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
@@ -490,6 +487,7 @@ void KinBody::Destroy()
     _vAdjacentLinks.clear();
     _vInitialLinkTransformations.clear();
     _vAllPairsShortestPaths.clear();
+    _vAllPairsShortestPathsValid = false;
     _vClosedLoops.clear();
     _vClosedLoopIndices.clear();
     _vForcedAdjacentLinks.clear();
@@ -797,7 +795,6 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
     _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
-    _skipLinkPairShortestPathCalculation = info._skipLinkPairShortestPathCalculation;
     if( info._vLinkInfos.size() > 0 ) {
         _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
         _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
@@ -4329,13 +4326,13 @@ void KinBody::_ComputeInternalInformation()
     _vTopologicallySortedJointIndicesAll.resize(0);
     _vJointsAffectingLinks.resize(_vecjoints.size()*_veclinks.size());
 
-    // Compute the shortest path between each pair of links, unless this body is explicitly configured _not_ to precalculate this information
-    // Note that if we have joints, we use this information for optimizing kinematics, so force enable it
-    if (_skipLinkPairShortestPathCalculation && !_vecjoints.empty()) {
-        RAVELOG_WARN_FORMAT("env=%s, body %s had skipLinkPairShortestPathCalculation=true, but has joints so forcing calculation", GetEnv()->GetNameId()%GetName());
-        _skipLinkPairShortestPathCalculation = false;
-    }
-    if (!_skipLinkPairShortestPathCalculation) {
+    // If necessary, calculate the shortest path between every pair of links on this body.
+    // Jointed bodies utilize this information, but if this body has no joints, we can probably safely skip it.
+    const bool skipLinkPairShortestPathCalculation = _vecjoints.empty();
+    if (skipLinkPairShortestPathCalculation) {
+        _vAllPairsShortestPaths.clear();
+        _vAllPairsShortestPathsValid = false;
+    } else {
         // Preallocate to fit our NxN joint map
         _vAllPairsShortestPaths.resize(_veclinks.size() * _veclinks.size());
 
@@ -4457,11 +4454,14 @@ void KinBody::_ComputeInternalInformation()
             }
         }
 #undef MAKE_INDEX
+        _vAllPairsShortestPathsValid = true;
     }
 
     // Use the APAC algorithm to initialize the kinematics hierarchy: _vTopologicallySortedJoints, _vJointsAffectingLinks, Link::_vParentLinks.
     // SIMOES, Ricardo. APAC: An exact algorithm for retrieving cycles and paths in all kinds of graphs. Tékhne, Dec. 2009, no.12, p.39-55. ISSN 1654-9911.
     if((_veclinks.size() > 0)&&(_vecjoints.size() > 0)) {
+        BOOST_ASSERT(_vAllPairsShortestPathsValid); // Required for calculations later
+
         std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
         // joints with only one attachment are attached to a static link, which is attached to link 0
         for( const JointPtr& joint :_vecjoints) {
@@ -5773,6 +5773,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vInitialLinkTransformations = r->_vInitialLinkTransformations;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
+    _vAllPairsShortestPathsValid = r->_vAllPairsShortestPathsValid;
     _vClosedLoopIndices = r->_vClosedLoopIndices;
     _vClosedLoops.resize(0); _vClosedLoops.reserve(r->_vClosedLoops.size());
     FOREACHC(itloop,_vClosedLoops) {
@@ -6174,7 +6175,6 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
     info._isPartial = false; // extracting everything
-    info._skipLinkPairShortestPathCalculation = _skipLinkPairShortestPathCalculation;
 
     info._dofValues.clear();
 
