@@ -404,7 +404,8 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
         }
 
         // Erase this grab and flag that we need to run post-processing hooks when finished
-        grabIt = _grabbedBodiesByEnvironmentIndex.erase(grabIt);
+        grabIt = _RemoveGrabbedBody(grabIt);
+
         didUngrabBody = true;
     }
 
@@ -825,11 +826,10 @@ std::string KinBody::GrabbedInfo::GetGrabbedInfoHash() const
 void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGrabbedInfos)
 {
     // First pass: remove all existing grabs that are no longer valid per the new list of grab infos
+    // Keep track of which bodies are still attached, so that we can skip re-attaching them later
+    std::unordered_set<int> existingAttachedGrabBodyIndices;
     {
-        // Fresh copy of the grabbed body map to move grabs we're keeping into
-        MapGrabbedByEnvironmentIndex  newGrabbedBodiesByEnvironmentIndex;
-
-        // Scan through the list of new grab infos and migrate any existing grabs to the new grab list
+        // Scan through the list of new grab infos and flag the indices of all the bodies that are staying attached
         for (const KinBody::GrabbedInfoConstPtr& grabInfo : vGrabbedInfos) {
             // Check to see if the grabbed body exists
             const int grabbedBodyIndex = GetEnv()->GetEnvironmentBodyIndexByName(grabInfo->_grabbedname);
@@ -848,8 +848,11 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             // Since we are mutating the set of grabbed bodies, invalidate the set of non-colliding links on any existing grabs
             existingGrabIt->second->InvalidateListNonCollidingLinks();
 
-            // Move the pointer out of the old grab list and into the new one.
-            newGrabbedBodiesByEnvironmentIndex[existingGrabIt->first] = std::move(existingGrabIt->second); // Invalidates entry in old map
+            // Mark that this grabbed body is already attached
+            existingAttachedGrabBodyIndices.emplace(grabbedBodyIndex);
+
+            // Release the pointer from our list to indicate that we have processed it
+            existingGrabIt->second.reset();
         }
 
         // At this point, any non-null grab pointers in the old _grabbedBodiesByEnvironmentIndex map are for bodies that are no longer grabbed.
@@ -871,8 +874,9 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             _RemoveAttachedBody(*pGrabbedBody);
         }
 
-        // Now that we have filtered out all of the dead grabs, latch the set of still-active grabs back to our master list
-        _grabbedBodiesByEnvironmentIndex.swap(newGrabbedBodiesByEnvironmentIndex);
+        // Now that we are done processing our old grabs, reset the set of grabbed bodies.
+        // Any bodies that are still grabbed will be re-added in the next pass.
+        _grabbedBodiesByEnvironmentIndex.clear();
     }
 
     // Ensure that we reset the collision checker options when done
@@ -919,13 +923,13 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
             continue;
         }
 
-        // Does this map to an existing grab?
-        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.find(grabbedBodyIndex);
-        bool isNewlyGrabbedBody = existingGrabIt == _grabbedBodiesByEnvironmentIndex.end();
-        if (isNewlyGrabbedBody) {
-            // If it doesn't, allocate a new grab info object
-            existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink)).first;
-        }
+        // Check if this maps to an existing grab, in which case we don't need to re-attach the body
+        bool isNewlyGrabbedBody = existingAttachedGrabBodyIndices.find(grabbedBodyIndex) == existingAttachedGrabBodyIndices.end();
+
+        // Even if this is an existing grabbed body, re-allocate our Grabbed record for two reasons:
+        // - We need to re-save the current state of the grabbed object (e.g. the relative transform)
+        // - References to the old Grabbed infos for this body may be held by state savers somewhere outside the body, so we can't mutate them without invalidating those checkpoints
+        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink)).first;
 
         // Update the grab object with the ancillary grab info
         GrabbedPtr& pGrabbed = existingGrabIt->second;
