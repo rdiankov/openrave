@@ -4457,6 +4457,10 @@ void KinBody::_ComputeInternalInformation()
     _vTopologicallySortedJointIndicesAll.resize(0);
     _vJointsAffectingLinks.resize(_vecjoints.size()*_veclinks.size());
 
+    // Invalidate our all pairs shortest path table by default
+    _vAllPairsShortestPaths.clear();
+    _vAllPairsShortestPathsValid = false;
+
     // Use the APAC algorithm to initialize the kinematics hierarchy: _vTopologicallySortedJoints, _vJointsAffectingLinks, Link::_vParentLinks.
     // SIMOES, Ricardo. APAC: An exact algorithm for retrieving cycles and paths in all kinds of graphs. Tékhne, Dec. 2009, no.12, p.39-55. ISSN 1654-9911.
     if ((_veclinks.size() > 0) && (_vecjoints.size() > 0)) {
@@ -5154,6 +5158,7 @@ void KinBody::_ComputeInternalInformation()
 void KinBody::_DeinitializeInternalInformation()
 {
     _nHierarchyComputed = 0; // should reset to inform other elements that kinematics information might not be accurate
+    _vAllPairsShortestPathsValid = false;
 }
 
 bool KinBody::IsAttached(const KinBody &body) const
