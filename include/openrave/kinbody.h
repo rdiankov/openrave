@@ -3683,7 +3683,7 @@ protected:
     void _InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos);
 
     /// Initialize a valid link pointer from the specified link info
-    void _InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo);
+    static void _InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo);
 
     /// \brief initializes and adds a link to internal hierarchy.
     ///
