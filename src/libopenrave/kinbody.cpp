@@ -4128,10 +4128,9 @@ void KinBody::_EnsureAllPairsShortestPaths() const
     _vAllPairsShortestPaths.resize(_veclinks.size() * _veclinks.size());
 
     // Default each entry to a pair of invalid joint indices
-    FOREACH(it, _vAllPairsShortestPaths)
-    {
-        it->first = -1;
-        it->second = -1;
+    for (std::pair<int16_t, int16_t>& pair : _vAllPairsShortestPaths) {
+        pair.first = -1;
+        pair.second = -1;
     }
 
     // All of our arrays are essentially 2d look up tables, so create a wrapper to generate an array index from a 2d point
@@ -4153,17 +4152,16 @@ void KinBody::_EnsureAllPairsShortestPaths() const
     // Iterating in non-deterministic order may produce unexpected paths where a 'future' link traversal shares the same cost as a traversal that is closer to the robot base.
     std::set<int> usedLinkIndices;
 
-    FOREACHC(itjoint, _vecjoints)
-    {
+    for (const JointPtr& joint : _vecjoints) {
         // If this joint doesn't have two links to calculate a cost between, skip it
-        if (!(*itjoint)->GetFirstAttached() || !(*itjoint)->GetSecondAttached()) {
+        if (!joint->GetFirstAttached() || !joint->GetSecondAttached()) {
             continue;
         }
 
         // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
-        const int jointIndex = (*itjoint)->GetJointIndex();
-        const int firstLinkIndex = (*itjoint)->GetFirstAttached()->GetIndex();
-        const int secondLinkIndex = (*itjoint)->GetSecondAttached()->GetIndex();
+        const int jointIndex = joint->GetJointIndex();
+        const int firstLinkIndex = joint->GetFirstAttached()->GetIndex();
+        const int secondLinkIndex = joint->GetSecondAttached()->GetIndex();
 
         // Mark these links as used
         usedLinkIndices.emplace(firstLinkIndex);
@@ -4186,16 +4184,15 @@ void KinBody::_EnsureAllPairsShortestPaths() const
 
     // Since we are splaying across two different vectors here, we need to add the size of the base joint vector to our joint index for the passive joints
     int jointindex = (int)_vecjoints.size();
-    FOREACHC(passive, _vPassiveJoints)
-    {
+    for (const JointPtr& passiveJoint : _vPassiveJoints) {
         // If this joint doesn't have two links, ignore it
-        if (!(*passive)->GetFirstAttached() || !(*passive)->GetSecondAttached()) {
+        if (!passiveJoint->GetFirstAttached() || !passiveJoint->GetSecondAttached()) {
             continue;
         }
 
         // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
-        const int firstLinkIndex = (*passive)->GetFirstAttached()->GetIndex();
-        const int secondLinkIndex = (*passive)->GetSecondAttached()->GetIndex();
+        const int firstLinkIndex = passiveJoint->GetFirstAttached()->GetIndex();
+        const int secondLinkIndex = passiveJoint->GetSecondAttached()->GetIndex();
 
         // Mark these links as used
         usedLinkIndices.emplace(firstLinkIndex);
