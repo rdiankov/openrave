@@ -118,7 +118,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                 continue;
                             }
                             const int linkindex = (*itLinkRef)->GetIndex();
-                            if( pParent.get() == this ) {
+                            if( pParent.get() == &savedBody ) {
                                 _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, *itLinkRef, GetLinks(), GetEnv());
                             }
                             else {
