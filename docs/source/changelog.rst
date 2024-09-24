@@ -3,6 +3,18 @@
 ChangeLog
 #########
 
+Version 0.151.3
+===============
+
+- Remove grabbed body from other grabbed bodies when `ReleaseAllWithLink` is called, as other API such as `Release`.
+- Fix `ResetGrabbed` not to unexpectedly change the internal states.
+
+Version 0.151.2
+===============
+
+- Support sensorgeometry field of ST_Force6D in PyAttachedSensorInfo
+- Viewer shutdown deadlock for openravepy
+
 Version 0.151.1
 ===============
 

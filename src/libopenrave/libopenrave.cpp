@@ -2399,7 +2399,7 @@ bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjs
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
-    orjson::SetJsonValueByKey(value, "correctionMatrix", correction_matrix, allocator, correction_matrix.size());
+    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
     return true;
 }
 
@@ -2407,7 +2407,7 @@ bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value,
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "polarity", polarity);
-    orjson::LoadJsonValueByKey(value, "correctionMatrix", correction_matrix);
+    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
     return true;
 }
 
