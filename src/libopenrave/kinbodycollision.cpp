@@ -72,17 +72,23 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
 
     // Flatten the grabbed bodies so that we can zip our iteration with the cache of locked pointers
     // Use raw pointers to save overhead here since lifetime is guaranteed by _grabbedBodiesByEnvironmentIndex
+    // locking weak pointer is expensive, so do it N times and cache, where N is the number of grabbedBody instead of N^2
     std::vector<Grabbed*> vGrabbedBodies;
     vGrabbedBodies.reserve(_grabbedBodiesByEnvironmentIndex.size());
-    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
-        vGrabbedBodies.emplace_back(grabPair.second.get());
-    }
-
-    // locking weak pointer is expensive, so do it N times and cache, where N is the number of grabbedBody instead of N^2
     std::vector<KinBodyPtr> vLockedGrabbedBodiesCache;
-    vLockedGrabbedBodiesCache.reserve(vGrabbedBodies.size());
-    for (const Grabbed* grab : vGrabbedBodies) {
-        vLockedGrabbedBodiesCache.push_back(grab->_pGrabbedBody.lock());
+    vLockedGrabbedBodiesCache.reserve(_grabbedBodiesByEnvironmentIndex.size());
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        KinBodyPtr pGrabbedBody = grabPair.second.get()->_pGrabbedBody.lock();
+        if( !pGrabbedBody ) {
+            RAVELOG_WARN_FORMAT("env=%s, grabbed body on %s has already been destroyed, ignoring.", GetEnv()->GetNameId()%GetName());
+            continue;
+        }
+        const KinBody& grabbedBody = *pGrabbedBody;
+        if( !grabbedBody.IsEnabled() ) {
+            continue;
+        }
+        vGrabbedBodies.emplace_back(grabPair.second.get());
+        vLockedGrabbedBodiesCache.push_back(pGrabbedBody);
     }
 
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
@@ -90,15 +96,6 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     // RAVELOG_INFO_FORMAT("env=%s, checking self collision for %s with grabbed bodies: numgrabbed=%d", GetEnv()->GetNameId()%GetName()%numGrabbed);
     for (size_t indexGrabbed1 = 0; indexGrabbed1 < numGrabbed; indexGrabbed1++) {
         const KinBodyPtr& pGrabbedBody1 = vLockedGrabbedBodiesCache[indexGrabbed1];
-        if( !pGrabbedBody1 ) {
-            RAVELOG_WARN_FORMAT("env=%s, grabbed body on %s has already been destroyed, ignoring.", GetEnv()->GetNameId()%GetName());
-            continue;
-        }
-        const KinBody& grabbedBody1 = *pGrabbedBody1;
-        if( !grabbedBody1.IsEnabled() ) {
-            continue;
-        }
-
         vGrabbedBodies[indexGrabbed1]->ComputeListNonCollidingLinks();
 
         const std::list<KinBody::LinkConstPtr>& nonCollidingLinks1 = vGrabbedBodies[indexGrabbed1]->_listNonCollidingLinksWhenGrabbed;
@@ -151,15 +148,6 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             // Since collision checking is commutative (i.e. CheckCollision(link1, link2) == CheckCollision(link2, link1)), checking it once per pair is sufficient.
             for( size_t indexGrabbed2 = indexGrabbed1 + 1; indexGrabbed2 < numGrabbed; ++indexGrabbed2 ) {
                 const KinBodyPtr& pGrabbedBody2 = vLockedGrabbedBodiesCache[indexGrabbed2];
-                if( !pGrabbedBody2 ) {
-                    RAVELOG_WARN_FORMAT("env=%s, grabbed body on %s has already been destroyed, so ignoring.", GetEnv()->GetNameId()%GetName());
-                    continue;
-                }
-                const KinBody& grabbedBody2 = *pGrabbedBody2;
-                if( !grabbedBody2.IsEnabled() ) {
-                    continue;
-                }
-
                 vGrabbedBodies[indexGrabbed2]->ComputeListNonCollidingLinks();
 
                 const std::list<KinBody::LinkConstPtr>& nonCollidingLinks2 = vGrabbedBodies[indexGrabbed2]->_listNonCollidingLinksWhenGrabbed;
