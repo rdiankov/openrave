@@ -22,7 +22,6 @@
 #define CHECK_NO_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 0, "env=%s, body %s cannot be added to environment when doing this operation, current value is %d", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_InvalidState);
 #define CHECK_INTERNAL_COMPUTATION0 OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed != 0, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
 #define CHECK_INTERNAL_COMPUTATION OPENRAVE_ASSERT_FORMAT(_nHierarchyComputed == 2, "env=%s, body %s internal structures need to be computed, current value is %d. Are you sure Environment::AddRobot/AddKinBody was called?", GetEnv()->GetNameId()%GetName()%_nHierarchyComputed, ORE_NotInitialized);
-#define CHECK_ALL_PAIRS_SHORTEST_PATHS OPENRAVE_ASSERT_FORMAT(_vAllPairsShortestPathsValid, "env=%s, body %s all pair shortest path computations were skipped, cannot utilize this API", GetEnv()->GetNameId()%GetName(), ORE_NotInitialized);
 
 namespace OpenRAVE {
 
@@ -2561,7 +2560,7 @@ const std::vector< std::vector< std::pair<KinBody::LinkPtr, KinBody::JointPtr> >
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vjoints) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    CHECK_ALL_PAIRS_SHORTEST_PATHS;
+    _EnsureAllPairsShortestPaths();
     OPENRAVE_ASSERT_FORMAT(linkindex1>=0 && linkindex1<(int)_veclinks.size(), "body %s linkindex1 %d invalid (num links %d)", GetName()%linkindex1%_veclinks.size(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex2>=0 && linkindex2<(int)_veclinks.size(), "body %s linkindex2 %d invalid (num links %d)", GetName()%linkindex2%_veclinks.size(), ORE_InvalidArguments);
     vjoints.resize(0);
@@ -2583,7 +2582,7 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<JointPtr>& vj
 bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vlinks) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    CHECK_ALL_PAIRS_SHORTEST_PATHS;
+    _EnsureAllPairsShortestPaths();
     OPENRAVE_ASSERT_FORMAT(linkindex1>=0 && linkindex1<(int)_veclinks.size(), "body %s linkindex1 %d invalid (num links %d)", GetName()%linkindex1%_veclinks.size(), ORE_InvalidArguments);
     OPENRAVE_ASSERT_FORMAT(linkindex2>=0 && linkindex2<(int)_veclinks.size(), "body %s linkindex2 %d invalid (num links %d)", GetName()%linkindex2%_veclinks.size(), ORE_InvalidArguments);
     vlinks.resize(0);
@@ -2648,7 +2647,7 @@ void KinBody::ComputeJacobianTranslation(const int linkindex,
                                          const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    CHECK_ALL_PAIRS_SHORTEST_PATHS;
+    _EnsureAllPairsShortestPaths();
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
@@ -2794,7 +2793,7 @@ void KinBody::CalculateRotationJacobian(const int linkindex,
                                         std::vector<dReal>& vjacobian) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    CHECK_ALL_PAIRS_SHORTEST_PATHS;
+    _EnsureAllPairsShortestPaths();
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
@@ -2911,7 +2910,7 @@ void KinBody::ComputeJacobianAxisAngle(const int linkindex,
                                        const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    CHECK_ALL_PAIRS_SHORTEST_PATHS;
+    _EnsureAllPairsShortestPaths();
     const int nlinks = _veclinks.size();
     const int nActiveJoints = _vecjoints.size();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < nlinks, "body %s bad link index %d (num links %d)",
@@ -3042,7 +3041,7 @@ void KinBody::CalculateAngularVelocityJacobian(const int linkindex,
 void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, std::vector<dReal>& hessian, const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    CHECK_ALL_PAIRS_SHORTEST_PATHS;
+    _EnsureAllPairsShortestPaths();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s bad link index %d (num links %d)", GetName()%linkindex%_veclinks.size(),ORE_InvalidArguments);
     size_t dofstride=0;
     if( dofindices.size() > 0 ) {
@@ -3264,7 +3263,7 @@ void KinBody::ComputeHessianTranslation(int linkindex, const Vector& position, s
 void KinBody::ComputeHessianAxisAngle(int linkindex, std::vector<dReal>& hessian, const std::vector<int>& dofindices) const
 {
     CHECK_INTERNAL_COMPUTATION;
-    CHECK_ALL_PAIRS_SHORTEST_PATHS;
+    _EnsureAllPairsShortestPaths();
     OPENRAVE_ASSERT_FORMAT(linkindex >= 0 && linkindex < (int)_veclinks.size(), "body %s bad link index %d (num links %d)", GetName()%linkindex%_veclinks.size(),ORE_InvalidArguments);
     size_t dofstride=0;
     if( dofindices.size() > 0 ) {
@@ -4118,6 +4117,141 @@ CollisionCheckerBasePtr KinBody::GetSelfCollisionChecker() const
     return _selfcollisionchecker;
 }
 
+void KinBody::_EnsureAllPairsShortestPaths() const
+{
+    // If the all pairs shortest paths have already been calculated, no need to do anything
+    if (_vAllPairsShortestPathsValid) {
+        return;
+    }
+
+    // Preallocate to fit our NxN joint map
+    _vAllPairsShortestPaths.resize(_veclinks.size() * _veclinks.size());
+
+    // Default each entry to a pair of invalid joint indices
+    FOREACH(it, _vAllPairsShortestPaths)
+    {
+        it->first = -1;
+        it->second = -1;
+    }
+
+    // All of our arrays are essentially 2d look up tables, so create a wrapper to generate an array index from a 2d point
+    const size_t linksSize = _veclinks.size();
+#define MAKE_INDEX(X, Y) ((X)*linksSize + (Y))
+
+    // Create an NxN array of costs, where vcosts[MAKE_INDEX(i, j)] is the cost of joint i -> joint j
+    // Initialize the costs to 2^30-1 rather than uint32_t max as a default 'infinite' value because we will later be adding costs together and need to make sure that value doesn't overflow
+    vector<uint32_t> vcosts(_veclinks.size() * _veclinks.size(), 0x3fffffff);
+
+    // Set the diagonal values (all paths from a link to itself) to zero
+    for (size_t i = 0; i < _veclinks.size(); ++i) {
+        vcosts[MAKE_INDEX(i, i)] = 0;
+    }
+
+    // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
+    // Otherwise, scenes that contain a large number of non-jointed links will incur significant overhead.
+    // Note that we use an ordered set here - iterating the links in-order ensures that we mimic the actual connection order of the links.
+    // Iterating in non-deterministic order may produce unexpected paths where a 'future' link traversal shares the same cost as a traversal that is closer to the robot base.
+    std::set<int> usedLinkIndices;
+
+    FOREACHC(itjoint, _vecjoints)
+    {
+        // If this joint doesn't have two links to calculate a cost between, skip it
+        if (!(*itjoint)->GetFirstAttached() || !(*itjoint)->GetSecondAttached()) {
+            continue;
+        }
+
+        // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
+        const int jointIndex = (*itjoint)->GetJointIndex();
+        const int firstLinkIndex = (*itjoint)->GetFirstAttached()->GetIndex();
+        const int secondLinkIndex = (*itjoint)->GetSecondAttached()->GetIndex();
+
+        // Mark these links as used
+        usedLinkIndices.emplace(firstLinkIndex);
+        usedLinkIndices.emplace(secondLinkIndex);
+
+        // First link
+        {
+            int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
+            _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointIndex);
+            vcosts[index] = 1;
+        }
+
+        // Second link
+        {
+            int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
+            _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointIndex);
+            vcosts[index] = 1;
+        }
+    }
+
+    // Since we are splaying across two different vectors here, we need to add the size of the base joint vector to our joint index for the passive joints
+    int jointindex = (int)_vecjoints.size();
+    FOREACHC(passive, _vPassiveJoints)
+    {
+        // If this joint doesn't have two links, ignore it
+        if (!(*passive)->GetFirstAttached() || !(*passive)->GetSecondAttached()) {
+            continue;
+        }
+
+        // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
+        const int firstLinkIndex = (*passive)->GetFirstAttached()->GetIndex();
+        const int secondLinkIndex = (*passive)->GetSecondAttached()->GetIndex();
+
+        // Mark these links as used
+        usedLinkIndices.emplace(firstLinkIndex);
+        usedLinkIndices.emplace(secondLinkIndex);
+
+        // First link
+        {
+            int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
+            _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointindex);
+            vcosts[index] = 1;
+        }
+
+        // Second link
+        {
+            int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
+            _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointindex);
+            vcosts[index] = 1;
+        }
+
+        // Manually track joint index
+        ++jointindex;
+    }
+
+    // Now that we have the base costs set for all joints, iterate the links we know to be jointed and calculate the total cost between each pair
+    for (size_t k : usedLinkIndices) {
+        for (size_t i : usedLinkIndices) {
+            // Skip comparisons of a link with itself
+            if (i == k) {
+                continue;
+            }
+
+            for (size_t j : usedLinkIndices) {
+                // Skip comparisons of a link with itself
+                if ((j == i) || (j == k)) {
+                    continue;
+                }
+
+                // Calculate the total cost of going from j -> i via k (aka the cost of j -> k + cost k -> i)
+                uint32_t kcost = vcosts[MAKE_INDEX(j, k)] + vcosts[MAKE_INDEX(k, i)];
+
+                // If that's cheaper than the current cost of going from j -> i, pick it as the new shortest path
+                if (vcosts[MAKE_INDEX(j, i)] > kcost) {
+                    // Floor the cost for this movement
+                    vcosts[MAKE_INDEX(j, i)] = kcost;
+
+                    // Update the path with the new route
+                    _vAllPairsShortestPaths[MAKE_INDEX(j, i)] = _vAllPairsShortestPaths[MAKE_INDEX(k, i)];
+                }
+            }
+        }
+    }
+#undef MAKE_INDEX
+
+    // Flag that our shortest path table is now valid
+    _vAllPairsShortestPathsValid = true;
+}
 
 void KinBody::_ComputeInternalInformation()
 {
@@ -4326,141 +4460,11 @@ void KinBody::_ComputeInternalInformation()
     _vTopologicallySortedJointIndicesAll.resize(0);
     _vJointsAffectingLinks.resize(_vecjoints.size()*_veclinks.size());
 
-    // If necessary, calculate the shortest path between every pair of links on this body.
-    // Jointed bodies utilize this information, but if this body has no joints, we can probably safely skip it.
-    const bool skipLinkPairShortestPathCalculation = _vecjoints.empty();
-    if (skipLinkPairShortestPathCalculation) {
-        _vAllPairsShortestPaths.clear();
-        _vAllPairsShortestPathsValid = false;
-    } else {
-        // Preallocate to fit our NxN joint map
-        _vAllPairsShortestPaths.resize(_veclinks.size() * _veclinks.size());
-
-        // Default each entry to a pair of invalid joint indices
-        FOREACH(it, _vAllPairsShortestPaths) {
-            it->first = -1;
-            it->second = -1;
-        }
-
-        // All of our arrays are essentially 2d look up tables, so create a wrapper to generate an array index from a 2d point
-        const size_t linksSize = _veclinks.size();
-#define MAKE_INDEX(X, Y) ((X) * linksSize + (Y))
-
-        // Create an NxN array of costs, where vcosts[MAKE_INDEX(i, j)] is the cost of joint i -> joint j
-        // Initialize the costs to 2^30-1 rather than uint32_t max as a default 'infinite' value because we will later be adding costs together and need to make sure that value doesn't overflow
-        vector<uint32_t> vcosts(_veclinks.size() * _veclinks.size(), 0x3fffffff);
-
-        // Set the diagonal values (all paths from a link to itself) to zero
-        for (size_t i = 0; i < _veclinks.size(); ++i) {
-            vcosts[MAKE_INDEX(i, i)] = 0;
-        }
-
-        // Since not all links will be part of valid joints, we should only consider those valid links when building our cost map.
-        // Otherwise, scenes that contain a large number of non-jointed links will incur significant overhead.
-        // Note that we use an ordered set here - iterating the links in-order ensures that we mimic the actual connection order of the links.
-        // Iterating in non-deterministic order may produce unexpected paths where a 'future' link traversal shares the same cost as a traversal that is closer to the robot base.
-        std::set<int> usedLinkIndices;
-
-        FOREACHC(itjoint,_vecjoints) {
-            // If this joint doesn't have two links to calculate a cost between, skip it
-            if (!(*itjoint)->GetFirstAttached() || !(*itjoint)->GetSecondAttached()) {
-                continue;
-            }
-
-            // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
-            const int jointIndex = (*itjoint)->GetJointIndex();
-            const int firstLinkIndex = (*itjoint)->GetFirstAttached()->GetIndex();
-            const int secondLinkIndex = (*itjoint)->GetSecondAttached()->GetIndex();
-
-            // Mark these links as used
-            usedLinkIndices.emplace(firstLinkIndex);
-            usedLinkIndices.emplace(secondLinkIndex);
-
-            // First link
-            {
-                int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
-                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointIndex);
-                vcosts[index] = 1;
-            }
-
-            // Second link
-            {
-                int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
-                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointIndex);
-                vcosts[index] = 1;
-            }
-        }
-
-        // Since we are splaying across two different vectors here, we need to add the size of the base joint vector to our joint index for the passive joints
-        int jointindex = (int)_vecjoints.size();
-        FOREACHC(passive,_vPassiveJoints) {
-            // If this joint doesn't have two links, ignore it
-            if (!(*passive)->GetFirstAttached() || !(*passive)->GetSecondAttached()) {
-                continue;
-            }
-
-            // The links are directly connected to this joint, so we know they're the shortest path and can assign them a cost of 1 hop
-            const int firstLinkIndex = (*passive)->GetFirstAttached()->GetIndex();
-            const int secondLinkIndex = (*passive)->GetSecondAttached()->GetIndex();
-
-            // Mark these links as used
-            usedLinkIndices.emplace(firstLinkIndex);
-            usedLinkIndices.emplace(secondLinkIndex);
-
-            // First link
-            {
-                int index = MAKE_INDEX(firstLinkIndex, secondLinkIndex);
-                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(firstLinkIndex, jointindex);
-                vcosts[index] = 1;
-            }
-
-            // Second link
-            {
-                int index = MAKE_INDEX(secondLinkIndex, firstLinkIndex);
-                _vAllPairsShortestPaths[index] = std::pair<int16_t, int16_t>(secondLinkIndex, jointindex);
-                vcosts[index] = 1;
-            }
-
-            // Manually track joint index
-            ++jointindex;
-        }
-
-        // Now that we have the base costs set for all joints, iterate the links we know to be jointed and calculate the total cost between each pair
-        for (size_t k : usedLinkIndices) {
-            for (size_t i : usedLinkIndices) {
-                // Skip comparisons of a link with itself
-                if (i == k) {
-                    continue;
-                }
-
-                for (size_t j : usedLinkIndices) {
-                    // Skip comparisons of a link with itself
-                    if ((j == i) || (j == k)) {
-                        continue;
-                    }
-
-                    // Calculate the total cost of going from j -> i via k (aka the cost of j -> k + cost k -> i)
-                    uint32_t kcost = vcosts[MAKE_INDEX(j, k)] + vcosts[MAKE_INDEX(k, i)];
-
-                    // If that's cheaper than the current cost of going from j -> i, pick it as the new shortest path
-                    if (vcosts[MAKE_INDEX(j, i)] > kcost) {
-                        // Floor the cost for this movement
-                        vcosts[MAKE_INDEX(j, i)] = kcost;
-
-                        // Update the path with the new route
-                        _vAllPairsShortestPaths[MAKE_INDEX(j, i)] = _vAllPairsShortestPaths[MAKE_INDEX(k, i)];
-                    }
-                }
-            }
-        }
-#undef MAKE_INDEX
-        _vAllPairsShortestPathsValid = true;
-    }
-
     // Use the APAC algorithm to initialize the kinematics hierarchy: _vTopologicallySortedJoints, _vJointsAffectingLinks, Link::_vParentLinks.
     // SIMOES, Ricardo. APAC: An exact algorithm for retrieving cycles and paths in all kinds of graphs. Tékhne, Dec. 2009, no.12, p.39-55. ISSN 1654-9911.
-    if((_veclinks.size() > 0)&&(_vecjoints.size() > 0)) {
-        BOOST_ASSERT(_vAllPairsShortestPathsValid); // Required for calculations later
+    if ((_veclinks.size() > 0) && (_vecjoints.size() > 0)) {
+        // Some of our calculations later depend on the link:link shortest path table, so ensure it's precalculated once here
+        _EnsureAllPairsShortestPaths();
 
         std::vector< std::vector<int> > vlinkadjacency(_veclinks.size());
         // joints with only one attachment are attached to a static link, which is attached to link 0
