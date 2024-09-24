@@ -111,23 +111,23 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                     pNewGrabbed->_tRelative = pGrabbed->_tRelative;
                     pNewGrabbed->_setGrabberLinkIndicesToIgnore = savedGrabbedData.setGrabberLinkIndicesToIgnore;
                     if( savedGrabbedData.listNonCollidingIsValid ) {
-                        FOREACHC(itLinkRef, savedGrabbedData.listNonCollidingLinksWhenGrabbed) {
-                            const KinBodyPtr pParent = (*itLinkRef)->GetParent();
-                            if( !pParent ) {
-                                RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since parent is not found.", GetEnv()->GetNameId()%(*itLinkRef)->GetName());
+                        FOREACHC(itLinkSaved, savedGrabbedData.listNonCollidingLinksWhenGrabbed) {
+                            const KinBodyPtr pParentSaved = (*itLinkSaved)->GetParent();
+                            if( !pParentSaved ) {
+                                RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since parent is not found.", GetEnv()->GetNameId()%(*itLinkSaved)->GetName());
                                 continue;
                             }
-                            const int linkindex = (*itLinkRef)->GetIndex();
-                            if( pParent.get() == &savedBody ) {
-                                _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, *itLinkRef, GetLinks(), GetEnv());
+                            const int linkindex = (*itLinkSaved)->GetIndex();
+                            if( pParentSaved.get() == &savedBody ) {
+                                _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, *itLinkSaved, GetLinks(), GetEnv());
                             }
                             else {
-                                const KinBodyPtr pNewNonCollidingBody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pParent->GetEnvironmentBodyIndex());
+                                const KinBodyPtr pNewNonCollidingBody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pParentSaved->GetEnvironmentBodyIndex());
                                 if( !pNewNonCollidingBody) {
-                                    RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", GetEnv()->GetNameId()%(*itLinkRef)->GetName() % pParent->GetEnvironmentBodyIndex());
+                                    RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", GetEnv()->GetNameId()%(*itLinkSaved)->GetName() % pParentSaved->GetEnvironmentBodyIndex());
                                     continue;
                                 }
-                                _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, *itLinkRef, pNewNonCollidingBody->GetLinks(), GetEnv());
+                                _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, *itLinkSaved, pNewNonCollidingBody->GetLinks(), GetEnv());
                             }
                         }
                         pNewGrabbed->_SetLinkNonCollidingIsValid(true);
