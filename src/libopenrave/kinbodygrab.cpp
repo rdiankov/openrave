@@ -1050,6 +1050,7 @@ bool KinBody::_IsListNonCollidingLinksValidFromEnvironmentBodyIndex(const int en
 {
     MapGrabbedByEnvironmentIndex::const_iterator itGrab = _grabbedBodiesByEnvironmentIndex.find(envBodyIndex);
     if( itGrab == _grabbedBodiesByEnvironmentIndex.end() ) {
+        RAVELOG_WARN_FORMAT("env=%s, could not check the IsListNonCollidingLinksValid for body '%s', since there is no grabbed body with envBodyIndex=%d.", GetEnv()->GetNameId()%GetName() % envBodyIndex);
         return false;
     }
     return itGrab->second->IsListNonCollidingLinksValid();

@@ -19,10 +19,10 @@
 namespace OpenRAVE {
 
 /// \brief push link to _listNonCollidingLinksWhenGrabbed of grabbed.
-static bool _CheckLinkIndexForListNonCollidingLinkPairs(const int linkIndex,
-                                                        const std::string& linkName,
-                                                        const std::vector<KinBody::LinkPtr>& vLinks,
-                                                        const EnvironmentBasePtr& pEnv)
+static bool _IsValidLinkIndexForListNonCollidingLinkPairs(const int linkIndex,
+                                                          const std::string& linkName,
+                                                          const std::vector<KinBody::LinkPtr>& vLinks,
+                                                          const EnvironmentBasePtr& pEnv)
 {
     if( linkIndex < 0 || linkIndex >= (int)vLinks.size() ) {
         RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since its index %d is out of range (body num links is %d)", pEnv->GetNameId()%linkName%linkIndex%vLinks.size());
@@ -122,8 +122,8 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                             }
                             const int grabbedLinkIndex = (*itLinkSaved).first->GetIndex();
                             const int grabberLinkIndex = (*itLinkSaved).second->GetIndex();
-                            if( !_CheckLinkIndexForListNonCollidingLinkPairs(grabberLinkIndex, (*itLinkSaved).second->GetName(), GetLinks(), GetEnv()) ||
-                                !_CheckLinkIndexForListNonCollidingLinkPairs(grabbedLinkIndex, (*itLinkSaved).first->GetName(), pNewGrabbedBody->GetLinks(), GetEnv()) ) {
+                            if( !_IsValidLinkIndexForListNonCollidingLinkPairs(grabberLinkIndex, (*itLinkSaved).second->GetName(), GetLinks(), GetEnv()) ||
+                                !_IsValidLinkIndexForListNonCollidingLinkPairs(grabbedLinkIndex, (*itLinkSaved).first->GetName(), pNewGrabbedBody->GetLinks(), GetEnv()) ) {
                                 continue;
                             }
                             pNewGrabbed->_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.emplace_back(pNewGrabbedBody->GetLinks()[grabbedLinkIndex], GetLinks()[grabberLinkIndex]);
@@ -176,8 +176,8 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
             FOREACHC(itLinkPairSaved, itInfoSaved->second) {
                 const int linkIndexFirst = (*itLinkPairSaved).first->GetIndex();
                 const int linkIndexSecond = (*itLinkPairSaved).second->GetIndex();
-                if( !_CheckLinkIndexForListNonCollidingLinkPairs(linkIndexFirst, (*itLinkPairSaved).first->GetName(), pFirst->GetLinks(), GetEnv()) ||
-                    !_CheckLinkIndexForListNonCollidingLinkPairs(linkIndexSecond, (*itLinkPairSaved).second->GetName(), pSecond->GetLinks(), GetEnv()) ) {
+                if( !_IsValidLinkIndexForListNonCollidingLinkPairs(linkIndexFirst, (*itLinkPairSaved).first->GetName(), pFirst->GetLinks(), GetEnv()) ||
+                    !_IsValidLinkIndexForListNonCollidingLinkPairs(linkIndexSecond, (*itLinkPairSaved).second->GetName(), pSecond->GetLinks(), GetEnv()) ) {
                     continue;
                 }
                 listNonCollidingLinkPairs.emplace_back(pFirst->GetLinks()[linkIndexFirst], pSecond->GetLinks()[linkIndexSecond]);
