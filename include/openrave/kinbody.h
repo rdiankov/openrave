@@ -3685,6 +3685,14 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    /// \brief Restore kinbody's grabbed bodies information from saved data. Assumes that this is called from _RestoreKinBody of saver classes.
+    /// \param[in] savedBody : saved KinBody inside of saver.
+    /// \param[in] options : SaveParameters inside of saver.
+    /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
+    void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
+                                            const int options,
+                                            const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
