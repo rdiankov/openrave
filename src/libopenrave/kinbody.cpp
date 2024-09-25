@@ -486,7 +486,6 @@ void KinBody::Destroy()
     _vAdjacentLinks.clear();
     _vInitialLinkTransformations.clear();
     _vAllPairsShortestPaths.clear();
-    _vAllPairsShortestPathsValid = false;
     _vClosedLoops.clear();
     _vClosedLoopIndices.clear();
     _vForcedAdjacentLinks.clear();
@@ -4120,7 +4119,7 @@ CollisionCheckerBasePtr KinBody::GetSelfCollisionChecker() const
 void KinBody::_EnsureAllPairsShortestPaths() const
 {
     // If the all pairs shortest paths have already been calculated, no need to do anything
-    if (_vAllPairsShortestPathsValid) {
+    if (!_vAllPairsShortestPaths.empty()) {
         return;
     }
 
@@ -4245,9 +4244,6 @@ void KinBody::_EnsureAllPairsShortestPaths() const
         }
     }
 #undef MAKE_INDEX
-
-    // Flag that our shortest path table is now valid
-    _vAllPairsShortestPathsValid = true;
 }
 
 void KinBody::_ComputeInternalInformation()
@@ -4459,7 +4455,6 @@ void KinBody::_ComputeInternalInformation()
 
     // Invalidate our all pairs shortest path table by default
     _vAllPairsShortestPaths.clear();
-    _vAllPairsShortestPathsValid = false;
 
     // Use the APAC algorithm to initialize the kinematics hierarchy: _vTopologicallySortedJoints, _vJointsAffectingLinks, Link::_vParentLinks.
     // SIMOES, Ricardo. APAC: An exact algorithm for retrieving cycles and paths in all kinds of graphs. Tékhne, Dec. 2009, no.12, p.39-55. ISSN 1654-9911.
@@ -5158,7 +5153,9 @@ void KinBody::_ComputeInternalInformation()
 void KinBody::_DeinitializeInternalInformation()
 {
     _nHierarchyComputed = 0; // should reset to inform other elements that kinematics information might not be accurate
-    _vAllPairsShortestPathsValid = false;
+
+    // Clear all-pairs shortest path table to force recomputation
+    _vAllPairsShortestPaths.clear();
 }
 
 bool KinBody::IsAttached(const KinBody &body) const
@@ -5779,7 +5776,6 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _vInitialLinkTransformations = r->_vInitialLinkTransformations;
     _vForcedAdjacentLinks = r->_vForcedAdjacentLinks;
     _vAllPairsShortestPaths = r->_vAllPairsShortestPaths;
-    _vAllPairsShortestPathsValid = r->_vAllPairsShortestPathsValid;
     _vClosedLoopIndices = r->_vClosedLoopIndices;
     _vClosedLoops.resize(0); _vClosedLoops.reserve(r->_vClosedLoops.size());
     FOREACHC(itloop,_vClosedLoops) {

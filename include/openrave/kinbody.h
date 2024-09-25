@@ -3710,12 +3710,9 @@ protected:
     /// All-pairs shortest paths through the link hierarchy.
     /// The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints.
     /// If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
-    /// This value and its associated valid flag are mutable, as they are lazily calculated and so may need to be generated as part of a const method call.
+    /// Note that this value is lazily calculated - accesses to this variable must be fenced by a call to _EnsureAllPairsShortestPaths
+    /// This value is mutable, as due to the lazy calculation it may need to be generated as part of a const method call.
     mutable std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths;
-
-    /// Flag to indicate whether the _vAllPairsShortestPaths has been calculated and safely accessed.
-    /// This value is mutable, as the associated data are lazily calculated and so this state may need to change as part of a const method call.
-    mutable bool _vAllPairsShortestPathsValid = false;
 
     std::vector<int8_t> _vJointsAffectingLinks; ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
