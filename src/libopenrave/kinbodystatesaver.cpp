@@ -168,8 +168,12 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
             }
             const KinBodyPtr pFirst = GetEnv()->GetBodyFromEnvironmentBodyIndex(pFirstSaved->GetEnvironmentBodyIndex());
             const KinBodyPtr pSecond = GetEnv()->GetBodyFromEnvironmentBodyIndex(pSecondSaved->GetEnvironmentBodyIndex());
-            if( !pFirst || !pSecond ) {
-                RAVELOG_WARN_FORMAT("env=%s, could not find bodies with envBodyIndex '%s' (%d) and '%s' (%d).", GetEnv()->GetNameId()%pFirstSaved->GetName()%pFirstSaved->GetEnvironmentBodyIndex()%pSecondSaved->GetName()%pSecondSaved->GetEnvironmentBodyIndex());
+            if( !pFirst ) {
+                RAVELOG_WARN_FORMAT("env=%s, could not find bodies with envBodyIndex '%s' (%d).", GetEnv()->GetNameId()%pFirstSaved->GetName()%pFirstSaved->GetEnvironmentBodyIndex());
+                continue;
+            }
+            if( !pSecond ) {
+                RAVELOG_WARN_FORMAT("env=%s, could not find bodies with envBodyIndex '%s' (%d).", GetEnv()->GetNameId()%pSecondSaved->GetName()%pSecondSaved->GetEnvironmentBodyIndex());
                 continue;
             }
             KinBody::ListNonCollidingLinkPairs listNonCollidingLinkPairs;

@@ -161,6 +161,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         const KinBodyPtr pLink1 = pairs.front().first->GetParent(true);
         const KinBodyPtr pLink2 = pairs.front().second->GetParent(true);
         if( !pLink1 || !pLink2 ) {
+            RAVELOG_WARN_FORMAT("env=%s, _listNonCollidingLinks has invalid link %s, %s", GetEnv()->GetNameId() % pairs.front().first->GetName() % pairs.front().second->GetName());
             continue;
         }
         FOREACHC(itLinks, pairs) {
