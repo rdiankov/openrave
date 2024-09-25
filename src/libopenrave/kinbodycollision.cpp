@@ -108,7 +108,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
     }
 
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
-    const size_t numGrabbed = _grabbedBodiesByEnvironmentIndex.size();
+    const size_t numGrabbed = vGrabbedBodies.size();
     // RAVELOG_INFO_FORMAT("env=%s, checking self collision for %s with grabbed bodies: numgrabbed=%d", GetEnv()->GetNameId()%GetName()%numGrabbed);
     for (size_t indexGrabbed1 = 0; indexGrabbed1 < numGrabbed; indexGrabbed1++) {
         vGrabbedBodies[indexGrabbed1]->ComputeListNonCollidingLinks();
