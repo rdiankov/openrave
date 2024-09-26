@@ -728,6 +728,8 @@ void KinBody::_InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkIn
     linkPtr->_collision.vertices.clear();
     linkPtr->_collision.indices.clear();
 
+    linkPtr->_vGeometries.reserve(linkInfo._vgeometryinfos.size());
+
     for (const KinBody::GeometryInfoPtr& geomInfo : linkInfo._vgeometryinfos) {
         KinBody::Link::GeometryPtr geom(new KinBody::Link::Geometry(linkPtr, *geomInfo));
         if (geom->_info._meshcollision.vertices.size() == 0) { // try to avoid recomputing
