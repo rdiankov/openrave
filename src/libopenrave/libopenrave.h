@@ -519,8 +519,8 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
         const rapidjson::Value& value = *it;
 
         // If the ID is non-empty, attempt to look up a matching entry in vInfosOut
-        std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
-        std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, pNameInJson);
+        const std::string id = OpenRAVE::orjson::GetStringJsonValueByKey(value, "id");
+        const std::string name = OpenRAVE::orjson::GetStringJsonValueByKey(value, pNameInJson);
         OpenRAVE::orjson::GetCStringJsonValueByKey(value, pNameInJson);
         size_t existingInfoIndex = -1;
         if (!id.empty()) {
