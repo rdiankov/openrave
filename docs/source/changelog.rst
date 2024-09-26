@@ -3,6 +3,18 @@
 ChangeLog
 #########
 
+Version 0.153.0
+===============
+
+- Lazily calculate `_vAllPairsShortestPaths` on kinematics bodies to reduce overhead for bodies that do not make use of kinematics
+
+Version 0.152.0
+===============
+
+- Fix typo which prevented from proper state restoring for `KinBodyStateSaverRef`.
+- Use the same utility function between `KinBodyStateSaver` and `KinBodyStateSaverRef` to share the same bug fixes in the past for `Save_GrabbedBodies`.
+- Fix the bug which prevented from `KinBodyStateSaver/KinBodyStateSaverRef` retoring `_listNonCollidingLinksWhenGrabbed` for grabbed bodies.
+
 Version 0.151.3
 ===============
 
