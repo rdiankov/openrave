@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.153.0
+===============
+
+- Lazily calculate `_vAllPairsShortestPaths` on kinematics bodies to reduce overhead for bodies that do not make use of kinematics
+
 Version 0.152.0
 ===============
 
