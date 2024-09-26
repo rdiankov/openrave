@@ -3,16 +3,20 @@
 ChangeLog
 #########
 
-Version 0.154.0
+Version 0.155.0
 ===============
-
 - Deprecate restoring of grabbed bodies by `KinBodyStateSaver` from one env to another env since it's hard to restore any kind of bodies into different env. Instead, use the dedicated private API in `Environment::_Clone`.
 
-Version 0.153.0
+Version 0.154.0
 ===============
 
 - Fix the bug that `KinBodyStateSaver` cannot restore the `_listNonCollidingIsValid`, `_listNonCollidingLinksWhenGrabbed`, and `_setGrabberLinkIndicesToIgnore` in `Grabbed`.
 - Resolve cyclic relationship between `KinBodyStateSaver` and `Grabbed` by eliminating `Save_GrabbedBodies` from `ComputeListNonCollidingLinks`.
+
+Version 0.153.0
+===============
+
+- Lazily calculate `_vAllPairsShortestPaths` on kinematics bodies to reduce overhead for bodies that do not make use of kinematics
 
 Version 0.152.0
 ===============

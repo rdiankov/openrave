@@ -3720,6 +3720,9 @@ protected:
     /// \param[out] savedGrabbedDataByEnvironmentIndex : saved information about _grabbedBodiesByEnvironmentIndex.
     void _SaveKinBodySavedGrabbedData(std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex) const;
 
+    /// Ensures that _vAllPairsShortestPaths is initialized if it is not already
+    void _EnsureAllPairsShortestPaths() const;
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
@@ -3731,7 +3734,13 @@ protected:
     std::vector<int> _vDOFIndices; ///< cached start joint indices, indexed by dof indices
     std::vector<uint64_t> _vLinkEnableStatesMask; /// bit mask containing enabled info of links. If bit 0 of _vLinkEnableBitMap[0] is 1, link 0 is enabled. If bit 2 of _vLinkEnableBitMap[1] is 0, link 66 is disabled. Used for fast access to the LinkInfo::_bIsEnabled
 
-    std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
+    /// All-pairs shortest paths through the link hierarchy.
+    /// The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints.
+    /// If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
+    /// Note that this value is lazily calculated - accesses to this variable must be fenced by a call to _EnsureAllPairsShortestPaths
+    /// This value is mutable, as due to the lazy calculation it may need to be generated as part of a const method call.
+    mutable std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths;
+
     std::vector<int8_t> _vJointsAffectingLinks; ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
