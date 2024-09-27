@@ -583,6 +583,7 @@ class OPENRAVEPY_API PyRay
 public:
     PyRay() {
     }
+    virtual ~PyRay() {}
     PyRay(py::object newpos, py::object newdir);
     PyRay(const RAY& newr) : r(newr) {
     }
