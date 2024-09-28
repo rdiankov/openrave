@@ -284,10 +284,10 @@ class VisibilityModel(DatabaseGenerator):
                             self.env.UpdatePublishedBodies()
                         msg='%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility)
                         if options is not None and options.showimage:
-                            pilutil=__import__('scipy.misc',fromlist=['pilutil'])
+                            from matplotlib.pyplot import imshow
                             I=self.getCameraImage()
                             print(msg)
-                            pilutil.imshow(I)
+                            imshow(I)
                         else:
                             input(msg)
         finally:
@@ -329,10 +329,10 @@ class VisibilityModel(DatabaseGenerator):
                         self.env.UpdatePublishedBodies()
                     msg='visibility=%d, press any key to continue: '%(visibility)
                     if options is not None and options.showimage:
-                        pilutil=__import__('scipy.misc',fromlist=['pilutil'])
+                        from matplotib.pyplot import imshow
                         I=self.getCameraImage()
                         print(msg)
-                        pilutil.imshow(I)
+                        imshow(I)
                     else:
                         input(msg)
         finally:
@@ -409,7 +409,8 @@ class VisibilityModel(DatabaseGenerator):
 #         numpy.savetxt(options.savefile,Imask,'%d')
 #         print 'mask saved to ' + options.savefile
 #         try:
-#             scipy.misc.pilutil.imshow(array(Imask*255,'uint8'))
+#             from matplotlib.pyplot import imshow
+#             imshow(array(Imask*255,'uint8'))
 #         except:
 #             pass
 
