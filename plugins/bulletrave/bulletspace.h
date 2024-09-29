@@ -321,7 +321,6 @@ private:
                     (*itjoint)->GetLimits(vlower,vupper);
                     hinge->setLimit(vlower.at(0),vupper.at(0),0.9f,0.9f,1.0f);
                     if( !(*itjoint)->IsCircular(0) ) {
-                        vector<dReal> vlower, vupper;
                         (*itjoint)->GetLimits(vlower,vupper);
                         btScalar orInitialAngle = (*itjoint)->GetValue(0);
                         btScalar btInitialAngle = hinge->getHingeAngle();
@@ -446,8 +445,7 @@ private:
     void _Synchronize(KinBodyInfoPtr pinfo)
     {
         vector<Transform> vtrans;
-        std::vector<int> dofbranches;
-        pinfo->pbody->GetLinkTransformations(vtrans,dofbranches);
+        pinfo->pbody->GetLinkTransformations(vtrans);
         pinfo->nLastStamp = pinfo->pbody->GetUpdateStamp();
         BOOST_ASSERT( vtrans.size() == pinfo->vlinks.size() );
         for(size_t i = 0; i < vtrans.size(); ++i) {
