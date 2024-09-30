@@ -177,6 +177,10 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             }
         }
     }
+
+    if( bCollision ) {
+        _PostProcessOnCheckSelfCollision(report, pusereport, *this);
+    }
     return bCollision;
 }
 
