@@ -220,7 +220,7 @@ void Grabbed::ComputeListNonCollidingLinks()
                 continue;
             }
             if( pOtherGrabbedBody->GetEnvironmentBodyIndex() == 0 ) {
-                RAVELOG_WARN_FORMAT("env=%s, other grabbed body on %s has invalid environment body index. Perhaps already removed from the environmnet. So ignoring it.", penv->GetNameId()%pGrabber->GetName());
+                RAVELOG_WARN_FORMAT("env=%s, other grabbed body on %s has invalid environment body index. Perhaps already removed from the environment. So ignoring it.", penv->GetNameId()%pGrabber->GetName());
                 continue;
             }
             if( pOtherGrabbedBody->GetLinks().empty() ) {
