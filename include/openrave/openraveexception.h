@@ -70,7 +70,7 @@ public:
     OpenRAVEException(const std::string& s, OpenRAVEErrorCode error=ORE_Failed);
     virtual ~OpenRAVEException() throw() {
     }
-    char const* what() const throw();
+    char const* what() const throw() override;
     const std::string& message() const;
     OpenRAVEErrorCode GetCode() const;
 private:

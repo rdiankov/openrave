@@ -927,7 +927,7 @@ public:
         /// \brief release the body state. _pbody will not get restored on destruction
         ///
         /// After this call, it will still be possible to use \ref Restore.
-        virtual void Release();
+        virtual void Release() override;
 
 protected:
         RobotBasePtr _probot;
