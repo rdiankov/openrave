@@ -3740,11 +3740,13 @@ protected:
     /// \param[in] pGrabbingLinkToCheck : link ptr of grabbing link to check. if nullptr, no filtering, e.g. check all possible grabbed bodies with grabbing links. if specified, check self collision by the grabbed bodies which grabbingLink matches to this pGrabbingLinkToCheck, and check self collision of this link with other grabbed bodies.
     /// \param[in] bAllLinkCollisions : true if all link should be checked.
     /// \param[in] updateGrabbedBodyTransformWithSaverFn : callback function to update the Transform of grabbed bodies, which is grabbed by pGrabbingLinkToCheck. If the function is nullptr, do nothing. This is only used when pGrabbingLinkToCheck gives valid pointer. This function returns KinBodyStateSaverPtr to restore the original Transform after all.
+    /// \param[in] vInclusiveTargetLinks : Vector of target links to check. This is only used when non-empty vetor is specified. If empty, do not filter, e.g. check the all possible link pairs. So far, this is only supported when pGrabbingLinkToCheck is specified. In this function, link pair is collision-checked. One link in the pair should be grabbed body attached to pGrabbingLinkToCheck, or pGrabbingLinkToCheck itself. Another link in the pair should be included in this vector.
     bool _CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
                                           CollisionReportPtr& report,
                                           const LinkPtr& pGrabbingLinkToCheck,
                                           const bool bAllLinkCollisions,
-                                          const std::function<KinBody::KinBodyStateSaverPtr(KinBodyPtr&, const Transform&)>& updateGrabbedBodyTransformWithSaverFn) const;
+                                          const std::function<KinBody::KinBodyStateSaverPtr(KinBodyPtr&, const Transform&)>& updateGrabbedBodyTransformWithSaverFn,
+                                          const std::vector<KinBody::LinkConstPtr>& vInclusiveTargetLinks = std::vector<KinBody::LinkConstPtr>()) const;
 
     std::string _name; ///< name of body
 

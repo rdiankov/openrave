@@ -103,8 +103,14 @@ bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisio
                                                CollisionReportPtr& report,
                                                const KinBody::LinkPtr& pGrabbingLinkToCheck,
                                                const bool bAllLinkCollisions,
-                                               const std::function<KinBody::KinBodyStateSaverPtr(KinBodyPtr&, const Transform&)>& updateGrabbedBodyTransformWithSaverFn) const
+                                               const std::function<KinBody::KinBodyStateSaverPtr(KinBodyPtr&, const Transform&)>& updateGrabbedBodyTransformWithSaverFn,
+                                               const std::vector<KinBody::LinkConstPtr>& vInclusiveTargetLinks) const
 {
+    const bool bCheckSpecificGrabbingLinkOnly = !!pGrabbingLinkToCheck;
+    if( vInclusiveTargetLinks.size() > 0 ) {
+        OPENRAVE_ASSERT_FORMAT(bCheckSpecificGrabbingLinkOnly, "env=%s, vInclusiveTargetLinks is specified, but pGrabbingLinkToCheck is not specified. for body '%s'", GetEnv()->GetNameId()%GetName(), ORE_InvalidArguments);
+    }
+
     bool bCollision = false;
     // if collision checker is set to distance checking, have to compare reports for the minimum distance
     const int coloptions = collisionchecker->GetCollisionOptions();
@@ -138,7 +144,6 @@ bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisio
     const size_t numGrabbed = vGrabbedBodies.size();
     // RAVELOG_INFO_FORMAT("env=%s, checking self collision for %s with grabbed bodies: numgrabbed=%d", GetEnv()->GetNameId()%GetName()%numGrabbed);
     std::vector<KinBody*> vGrabbedBodiesWithGivenGrabbingLink;
-    const bool bCheckSpecificGrabbingLinkOnly = !!pGrabbingLinkToCheck;
     if( bCheckSpecificGrabbingLinkOnly ) {
         vGrabbedBodiesWithGivenGrabbingLink.reserve(numGrabbed);
     }
@@ -166,6 +171,12 @@ bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisio
             const KinBody::LinkConstPtr& probotlink = (!!pLinkParent) ? probotlinkFromNonColliding : _veclinks.at(robotlinkFromNonColliding.GetIndex());
             if( !bGrabbingLinkToCheck && probotlink != pGrabbingLinkToCheck ) { // if this grabbed body is not attached to the grabbinglink to check, and if the target link is not same pGrabbingLinkToCheck, no need to check.
                 continue;
+            }
+            if( vInclusiveTargetLinks.size() > 0 ) {
+                const KinBody::LinkConstPtr& pLinkToCheck = bGrabbingLinkToCheck ? probotlink : pGrabbed->_pGrabbingLink;
+                if( std::find(vInclusiveTargetLinks.begin(), vInclusiveTargetLinks.end(), pLinkToCheck) == vInclusiveTargetLinks.end() ) {
+                    continue;
+                }
             }
 
             // have to use link/link collision since link/body checks attached bodies
@@ -207,13 +218,25 @@ bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisio
             RAVELOG_WARN_FORMAT("env=%s, _listNonCollidingLinks has invalid link %s, %s", GetEnv()->GetNameId() % pairs.front().first->GetName() % pairs.front().second->GetName());
             continue;
         }
+        bool bIsFirstGrabbingLink = false;
         if( bCheckSpecificGrabbingLinkOnly ) {
-            if( std::find(vGrabbedBodiesWithGivenGrabbingLink.begin(), vGrabbedBodiesWithGivenGrabbingLink.end(), pLink1.get()) == vGrabbedBodiesWithGivenGrabbingLink.end() &&
-                std::find(vGrabbedBodiesWithGivenGrabbingLink.begin(), vGrabbedBodiesWithGivenGrabbingLink.end(), pLink2.get()) == vGrabbedBodiesWithGivenGrabbingLink.end() ) {
+            if( std::find(vGrabbedBodiesWithGivenGrabbingLink.begin(), vGrabbedBodiesWithGivenGrabbingLink.end(), pLink1.get()) != vGrabbedBodiesWithGivenGrabbingLink.end() ) {
+                bIsFirstGrabbingLink = true;
+            }
+            else if( std::find(vGrabbedBodiesWithGivenGrabbingLink.begin(), vGrabbedBodiesWithGivenGrabbingLink.end(), pLink2.get()) != vGrabbedBodiesWithGivenGrabbingLink.end() ) {
+                bIsFirstGrabbingLink = false;
+            }
+            else {
                 continue;
             }
         }
         FOREACHC(itLinks, pairs) {
+            if( vInclusiveTargetLinks.size() > 0 ) {
+                const KinBody::LinkConstPtr& pLinkToCheck = bIsFirstGrabbingLink ? (*itLinks).second : (*itLinks).first;
+                if( std::find(vInclusiveTargetLinks.begin(), vInclusiveTargetLinks.end(), pLinkToCheck) == vInclusiveTargetLinks.end() ) {
+                    continue;
+                }
+            }
             if( collisionchecker->CheckCollision((*itLinks).first, (*itLinks).second, pusereport) ) {
                 if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                     _PostProcessOnCheckSelfCollision(report, pusereport, *this);
