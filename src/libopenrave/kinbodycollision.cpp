@@ -79,8 +79,23 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         bCollision = true;
     }
 
+    if( _CheckGrabbedBodiesSelfCollision(collisionchecker, report, bAllLinkCollisions) ) {
+        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+            return true;
+        }
+        bCollision = true;
+    }
+
+    return bCollision;
+}
+
+bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
+                                               CollisionReportPtr& report,
+                                               const bool bAllLinkCollisions) const
+{
+    bool bCollision = false;
     // if collision checker is set to distance checking, have to compare reports for the minimum distance
-    int coloptions = collisionchecker->GetCollisionOptions();
+    const int coloptions = collisionchecker->GetCollisionOptions();
     CollisionReport tempreport;
     CollisionReportPtr pusereport = report;
     if( !!report && (coloptions & CO_Distance) ) {

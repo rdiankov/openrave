@@ -3734,6 +3734,14 @@ protected:
     /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
     static int _GetSecondEnvironmentBodyIndexFromPair(const uint64_t pair);
 
+    /// \brief Check self collision between grabber and grabbed, and between two grabbed bodies.
+    /// \param collisionchecker : collision checker to use
+    /// \param[out] report : resultant report
+    /// \param[in] bAllLinkCollisions : true if all link should be checked.
+    bool _CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
+                                          CollisionReportPtr& report,
+                                          const bool bAllLinkCollisions) const;
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
