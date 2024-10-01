@@ -2438,6 +2438,19 @@ protected:
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
 
+    /// \brief Saved data for Grabbed used in KinBodyStateSaver and KinBodyStateSaverRef
+    ///        When KinBody::Grab, KinBody::Release, ...etc are called, new Grabbed instance is created in KinBody and the original ptr for the original Grabbed instance is swapped.
+    ///        Thus, the original information of Grabbed instance is unchanged and holding the ptr of it as pGrabbed is enough for the saver.
+    ///        However, some of the grab-related API mutates the internal states of Grabbed instance.
+    ///        To restore the original information even such case, each saver should have copied values of such internal states.
+    struct SavedGrabbedData
+    {
+        GrabbedPtr pGrabbed; ///< pointer of original Grabbed instance, which originally in KinBody's _grabbedBodiesByEnvironmentIndex.
+        std::list<KinBody::LinkConstPtr> listNonCollidingLinksWhenGrabbed; ///< copied values of Grabbed's _listNonCollidingLinksWhenGrabbed. See also the documentation of Grabbed class.
+        std::set<int> setGrabberLinkIndicesToIgnore; ///< copied values of Grabbed's _setGrabberLinkIndicesToIgnore. See also the documentation of Grabbed class.
+        bool listNonCollidingIsValid = false; ///< copied values of Grabbed's _listNonCollidingIsValid. See also the documentation of Grabbed class.
+    };
+
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
     /// Options can be passed to the constructor in order to choose which parameters to save (see \ref SaveParameters)
@@ -2471,7 +2484,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
+        std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2517,7 +2530,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
+        std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -3701,7 +3714,11 @@ protected:
     /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
     void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                             const int options,
-                                            const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
+                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex);
+
+    /// \brief Save this kinbody's information.
+    /// \param[out] savedGrabbedDataByEnvironmentIndex : saved information about _grabbedBodiesByEnvironmentIndex.
+    void _SaveKinBodySavedGrabbedData(std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex) const;
 
     /// Ensures that _vAllPairsShortestPaths is initialized if it is not already
     void _EnsureAllPairsShortestPaths() const;
