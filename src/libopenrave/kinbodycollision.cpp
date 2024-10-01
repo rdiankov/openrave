@@ -39,7 +39,6 @@ static void _PostProcessOnCheckSelfCollision(CollisionReportPtr& report, Collisi
         if( report != pusereport ) {
             *report = *pusereport;
         }
-        _PrintStatusOnCheckSelfCollisoin(report, body);
     }
 }
 
@@ -86,6 +85,9 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         bCollision = true;
     }
 
+    if( bCollision && !!report ) {
+        _PrintStatusOnCheckSelfCollisoin(report, *this);
+    }
     return bCollision;
 }
 
