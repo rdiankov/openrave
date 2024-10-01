@@ -411,22 +411,13 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
         }
     }
 
-    KinBodyStateSaverPtr linksaver;
     // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
     // it is important to make sure to add all other attached bodies in the ignored list!
-    std::vector<KinBodyConstPtr> vbodyexcluded;
-    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
         GrabbedPtr& pgrabbed = grabPair.second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
-                if( !linksaver ) {
-                    linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
-                    plink->Enable(false);
-                    // also disable rigidly attached links?
-                }
-                KinBodyStateSaver bodysaver(pgrabbedbody,Save_LinkTransformation);
                 if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pgrabbedbody),report) ) {
                     if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
                         return true;
@@ -461,21 +452,13 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans
         }
     }
 
-    KinBodyStateSaverPtr linksaver;
     // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
     // it is important to make sure to add all other attached bodies in the ignored list!
-    std::vector<KinBodyConstPtr> vbodyexcluded;
-    std::vector<KinBody::LinkConstPtr> vlinkexcluded;
     for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
         GrabbedPtr& pgrabbed = grabPair.second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
-                if( !linksaver ) {
-                    linksaver.reset(new KinBodyStateSaver(shared_kinbody()));
-                    plink->Enable(false);
-                    // also disable rigidly attached links?
-                }
                 KinBodyStateSaver bodysaver(pgrabbedbody,Save_LinkTransformation);
                 pgrabbedbody->SetTransform(tlinktrans * pgrabbed->_tRelative);
                 if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pgrabbedbody),report) ) {
