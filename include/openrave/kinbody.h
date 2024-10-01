@@ -3739,10 +3739,12 @@ protected:
     /// \param[out] report : resultant report
     /// \param[in] pGrabbingLinkToCheck : link ptr of grabbing link to check. if nullptr, no filtering, e.g. check all possible grabbed bodies with grabbing links. if specified, check self collision by the grabbed bodies which grabbingLink matches to this pGrabbingLinkToCheck, and check self collision of this link with other grabbed bodies.
     /// \param[in] bAllLinkCollisions : true if all link should be checked.
+    /// \param[in] updateGrabbedBodyTransformWithSaverFn : callback function to update the Transform of grabbed bodies, which is grabbed by pGrabbingLinkToCheck. If the function is nullptr, do nothing. This is only used when pGrabbingLinkToCheck gives valid pointer. This function returns KinBodyStateSaverPtr to restore the original Transform after all.
     bool _CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
                                           CollisionReportPtr& report,
                                           const LinkPtr& pGrabbingLinkToCheck,
-                                          const bool bAllLinkCollisions) const;
+                                          const bool bAllLinkCollisions,
+                                          const std::function<KinBody::KinBodyStateSaverPtr(KinBodyPtr&, const Transform&)>& updateGrabbedBodyTransformWithSaverFn) const;
 
     std::string _name; ///< name of body
 
