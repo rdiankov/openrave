@@ -432,19 +432,8 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
 
     // check if any grabbed bodies are attached to this link, and if so check their collisions with the environment
     // it is important to make sure to add all other attached bodies in the ignored list!
-    for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
-        GrabbedPtr& pgrabbed = grabPair.second;
-        if( pgrabbed->_pGrabbingLink == plink ) {
-            KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
-            if( !!pgrabbedbody ) {
-                if( pchecker->CheckCollision(shared_kinbody_const(), KinBodyConstPtr(pgrabbedbody),report) ) {
-                    if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                        return true;
-                    }
-                    bincollision = true;
-                }
-            }
-        }
+    if( _CheckGrabbedBodiesSelfCollision(pchecker, report, plink, bAllLinkCollisions) ) {
+        bincollision = true;
     }
     return bincollision;
 }
