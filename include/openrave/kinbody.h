@@ -3737,9 +3737,11 @@ protected:
     /// \brief Check self collision between grabber and grabbed, and between two grabbed bodies.
     /// \param collisionchecker : collision checker to use
     /// \param[out] report : resultant report
+    /// \param[in] pGrabbingLinkToCheck : link ptr of grabbing link to check. if nullptr, no filtering, e.g. check all possible grabbed bodies with grabbing links. if specified, check self collision by the grabbed bodies which grabbingLink matches to this pGrabbingLinkToCheck, and check self collision of this link with other grabbed bodies.
     /// \param[in] bAllLinkCollisions : true if all link should be checked.
     bool _CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
                                           CollisionReportPtr& report,
+                                          const LinkPtr& pGrabbingLinkToCheck,
                                           const bool bAllLinkCollisions) const;
 
     std::string _name; ///< name of body

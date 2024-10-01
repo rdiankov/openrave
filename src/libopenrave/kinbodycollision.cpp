@@ -78,7 +78,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         bCollision = true;
     }
 
-    if( _CheckGrabbedBodiesSelfCollision(collisionchecker, report, bAllLinkCollisions) ) {
+    if( _CheckGrabbedBodiesSelfCollision(collisionchecker, report, LinkPtr(), bAllLinkCollisions) ) {
         if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
             return true;
         }
@@ -93,6 +93,7 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
 
 bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
                                                CollisionReportPtr& report,
+                                               const KinBody::LinkPtr& pGrabbingLinkToCheck,
                                                const bool bAllLinkCollisions) const
 {
     bool bCollision = false;
@@ -127,12 +128,21 @@ bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisio
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
     const size_t numGrabbed = vGrabbedBodies.size();
     // RAVELOG_INFO_FORMAT("env=%s, checking self collision for %s with grabbed bodies: numgrabbed=%d", GetEnv()->GetNameId()%GetName()%numGrabbed);
+    std::vector<KinBody*> vGrabbedBodiesWithGivenGrabbingLink;
+    const bool bCheckSpecificGrabbingLinkOnly = !!pGrabbingLinkToCheck;
+    if( bCheckSpecificGrabbingLinkOnly ) {
+        vGrabbedBodiesWithGivenGrabbingLink.reserve(numGrabbed);
+    }
     for (size_t indexGrabbed1 = 0; indexGrabbed1 < numGrabbed; indexGrabbed1++) {
-        vGrabbedBodies[indexGrabbed1]->ComputeListNonCollidingLinks();
-        const ListNonCollidingLinkPairs& nonCollidingLinkPairs = vGrabbedBodies[indexGrabbed1]->_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed;
+        Grabbed* pGrabbed = vGrabbedBodies[indexGrabbed1];
+        pGrabbed->ComputeListNonCollidingLinks();
+        const ListNonCollidingLinkPairs& nonCollidingLinkPairs = pGrabbed->_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed;
+        const bool bGrabbingLinkToCheck = bCheckSpecificGrabbingLinkOnly ? pGrabbed->_pGrabbingLink == pGrabbingLinkToCheck : true; // true if this grabbedbody's grabbinglink should be checked.
+        if( bCheckSpecificGrabbingLinkOnly && bGrabbingLinkToCheck ) {
+            vGrabbedBodiesWithGivenGrabbingLink.push_back(vLockedGrabbedBodiesCache[indexGrabbed1].get());
+        }
 
         KinBodyPtr pLinkParent;
-
         FOREACHC(itNonCollidingLinkPairs, nonCollidingLinkPairs) {
             const KinBody::LinkConstPtr& probotlinkFromNonColliding = (*itNonCollidingLinkPairs).second;
             const KinBody::Link& robotlinkFromNonColliding = *probotlinkFromNonColliding;
@@ -141,6 +151,9 @@ bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisio
                 RAVELOG_WARN_FORMAT("env=%s, _listNonCollidingLinks has invalid link %s:%d", GetEnv()->GetNameId()%robotlinkFromNonColliding.GetName()%robotlinkFromNonColliding.GetIndex());
             }
             const KinBody::LinkConstPtr& probotlink = (!!pLinkParent) ? probotlinkFromNonColliding : _veclinks.at(robotlinkFromNonColliding.GetIndex());
+            if( !bGrabbingLinkToCheck && probotlink != pGrabbingLinkToCheck ) { // if this grabbed body is not attached to the grabbinglink to check, and if the target link is not same pGrabbingLinkToCheck, no need to check.
+                continue;
+            }
 
             // have to use link/link collision since link/body checks attached bodies
             const KinBody::LinkConstPtr& pGrabbedBodylink = (*itNonCollidingLinkPairs).first;
@@ -180,6 +193,12 @@ bool KinBody::_CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisio
         if( !pLink1 || !pLink2 ) {
             RAVELOG_WARN_FORMAT("env=%s, _listNonCollidingLinks has invalid link %s, %s", GetEnv()->GetNameId() % pairs.front().first->GetName() % pairs.front().second->GetName());
             continue;
+        }
+        if( bCheckSpecificGrabbingLinkOnly ) {
+            if( std::find(vGrabbedBodiesWithGivenGrabbingLink.begin(), vGrabbedBodiesWithGivenGrabbingLink.end(), pLink1.get()) == vGrabbedBodiesWithGivenGrabbingLink.end() &&
+                std::find(vGrabbedBodiesWithGivenGrabbingLink.begin(), vGrabbedBodiesWithGivenGrabbingLink.end(), pLink2.get()) == vGrabbedBodiesWithGivenGrabbingLink.end() ) {
+                continue;
+            }
         }
         FOREACHC(itLinks, pairs) {
             if( collisionchecker->CheckCollision((*itLinks).first, (*itLinks).second, pusereport) ) {
