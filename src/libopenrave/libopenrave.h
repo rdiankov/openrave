@@ -545,6 +545,8 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
         if (existingInfoIndex != -1) {
             if (isDeleted) {
                 // Erase the referents to this element from our skip lists, but only if they actually point to this index
+                // Note that here we look up using the ID/name of the _existing deserialized info_, not the input JSON.
+                // This is to handle cases where the input JSON specifies only one of name/id but the other is already parsed from a previous update.
                 decltype(infoIdxById)::iterator idIt = infoIdxById.find(vInfosOut[existingInfoIndex]->_id);
                 if (idIt != infoIdxById.end() && idIt->second == existingInfoIndex) {
                     infoIdxById.erase(idIt);
