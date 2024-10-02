@@ -754,6 +754,7 @@ void KinBody::_InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos)
 
     // Keep track of link names as we go to deduplicate
     std::unordered_set<std::string> existingLinkNames;
+    existingLinkNames.reserve(linkInfos.size());
 
     _veclinks.reserve(linkInfos.size());
     for (const LinkInfoT& linkInfo : linkInfos) {
