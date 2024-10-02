@@ -608,22 +608,35 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
     }
 
     // If we deleted any elements, scan through and ensure there are no holes in the output before returning.
-    // Scan backwards through the list, swapping all of the invalid pointers to the end.
+    // We iterate through the vector with two pointers; a write index and read index,
+    // and coalesce all valid pointers at the start of the array while preserving order.
     // Once we're done, truncate the list to drop all the invalid entries.
     if (didEraseElements) {
-        size_t validElementCount = vInfosOut.size();
-        for (ssize_t i = vInfosOut.size() - 1; i >= 0; i--) {
-            // If this element is still valid, leave it where it is
-            if (!!vInfosOut[i]) {
+        size_t readIndex = 0;
+        size_t writeIndex = 0;
+        while (readIndex < vInfosOut.size()) {
+            // Is the read index a valid pointer?
+            if (!vInfosOut[readIndex]) {
+                // If item under the read index is _not_ valid, then we have a hole.
+                // Increment the read index, but _don't_ increment the write index.
+                readIndex++;
                 continue;
             }
 
-            // If this element is null, swap it with the last valid element and decrement the valid element count
-            std::swap(vInfosOut[i], vInfosOut[--validElementCount]); // Note prefix decrement to turn the count into an index
+            // If the read and write indexes are divergent (i.e, there has been a write hole), then move this object down.
+            // If the list is already contiguous, no need to shuffle (we'd just be moving objects into themselves)
+            if (readIndex != writeIndex) {
+                vInfosOut[writeIndex] = std::move(vInfosOut[readIndex]);
+            }
+
+            // Since this element was valid, increment both the write and read pointers.
+            writeIndex++;
+            readIndex++;
+            continue;
         }
 
         // Resize to crop the end of the list
-        vInfosOut.resize(validElementCount);
+        vInfosOut.resize(writeIndex);
     }
 }
 
