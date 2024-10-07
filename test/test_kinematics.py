@@ -1090,7 +1090,7 @@ class TestKinematics(EnvironmentSetup):
             link1._vgeometryinfos = [infobox2]
             link1._name = 'link1'
             link1._mapFloatParameters = {'param0':[1,2.3]}
-            link1._mapIntParameters = {'param0':[4,5.6]}
+            link1._mapIntParameters = {'param0':[4,5,6]}
             link1._t[0,3] = 0.5
 
             joint0 = KinBody.JointInfo()
