@@ -491,7 +491,7 @@ class TestCOLLADA(EnvironmentSetup):
             minfo._tLocalTool[0:3,3] = [0.1,0.2,0.3]
             minfo._vdirection = [-1,0,0]
             minfo._vGripperJointNames = ['j6']
-            minfo._vClosingDirection = [-1.0]
+            minfo._vClosingDirection = [-1]
             robot.AddManipulator(minfo)
             #robot.SetDOFLimits(-linspace(0.4,0.8,robot.GetDOF()),linspace(1.4,1.8,robot.GetDOF()))
             #robot.SetDOFVelocityLimits(linspace(1,10,robot.GetDOF()))

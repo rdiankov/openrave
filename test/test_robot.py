@@ -525,7 +525,7 @@ class RunRobot(EnvironmentSetup):
         manipinfo._tLocalTool[2,3] = 1.0
         manipinfo._vGripperJointNames = ['l_gripper_l_finger_joint']
         manipinfo._vdirection = [0,1,0]
-        manipinfo._vClosingDirection = [1.0]
+        manipinfo._vClosingDirection = [1]
         newmanip = robot.AddManipulator(manipinfo)
         assert(newmanip.GetBase().GetName() == manip.GetBase().GetName())
         assert(newmanip.GetEndEffector().GetName() == manip.GetEndEffector().GetName())
