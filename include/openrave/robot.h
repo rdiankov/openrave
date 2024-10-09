@@ -336,10 +336,18 @@ public:
             Custom data is copied to the new parameterization. Furthermore, some IK types like Lookat3D and TranslationLocalGlobal6D set constraints in the global coordinate system of the manipulator. Because these values are not stored in manipulator itself, they have to be passed in through an existing IkParameterization.
             Ideally pluging the returned ik parameterization into FindIkSolution should return the a manipulator configuration
             such that a new call to GetIkParameterization returns the same values.
-            \param ikparam The parameterization to use as seed.
+            \param seedikp The parameterization to use as seed.
             \param inworld if true will return the parameterization in the world coordinate system, otherwise in the base link (\ref GetBase()) coordinate system
          */
-        IkParameterization GetIkParameterization(const IkParameterization& ikparam, bool inworld=true) const;
+        IkParameterization GetIkParameterization(const IkParameterization& seedikp, bool inworld=true) const;
+
+        /** \brief convert ikparameter into one with low constraints using robot posture.
+            \param sourceikp ikparam to convert
+            \param iktype the type of parameterization to request
+            \param inworld if true will return the parameterization in the world coordinate system, otherwise in the base link (\ref GetBase()) coordinate system
+         */
+        IkParameterization ConvertIkParameterization(const IkParameterization &sourceikp, IkParameterizationType iktype, bool inworld=true) const;
+        IkParameterization ConvertIkParameterization(const IkParameterization &sourceikp, const IkParameterization &seedikp, bool inworld=true) const;
 
         /// \brief Get all child joints of the manipulator starting at the pEndEffector link
         void GetChildJoints(std::vector<JointPtr>& vjoints) const;

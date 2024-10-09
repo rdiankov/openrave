@@ -1616,11 +1616,11 @@ std::istream& operator>>(std::istream& I, IkParameterization& ikparam)
         break;
     case IKP_Lookat3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetLookat3D(v); break; }
     case IKP_TranslationDirection5D: { RAY r; I >> r.dir.x >> r.dir.y >> r.dir.z >> r.pos.x >> r.pos.y >> r.pos.z; ikparam.SetTranslationDirection5D(r); break; }
-    case IKP_TranslationXY2D: { Vector v; I >> v.y >> v.y; ikparam.SetTranslationXY2D(v); break; }
+    case IKP_TranslationXY2D: { Vector v; I >> v.x >> v.y; ikparam.SetTranslationXY2D(v); break; }
     case IKP_TranslationXY2DVelocity:
         I >> ikparam._transform.trans.x >> ikparam._transform.trans.y;
         break;
-    case IKP_TranslationXYOrientation3D: { Vector v; I >> v.y >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
+    case IKP_TranslationXYOrientation3D: { Vector v; I >> v.x >> v.y >> v.z; ikparam.SetTranslationXYOrientation3D(v); break; }
     case IKP_TranslationLocalGlobal6D: { Vector localtrans, trans; I >> localtrans.x >> localtrans.y >> localtrans.z >> trans.x >> trans.y >> trans.z; ikparam.SetTranslationLocalGlobal6D(localtrans,trans); break; }
     case IKP_TranslationLocalGlobal6DVelocity:
         I >> ikparam._transform.rot.x >> ikparam._transform.rot.y >> ikparam._transform.rot.z >> ikparam._transform.trans.x >> ikparam._transform.trans.y >> ikparam._transform.trans.z;
