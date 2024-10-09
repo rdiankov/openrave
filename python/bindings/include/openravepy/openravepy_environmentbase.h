@@ -292,7 +292,7 @@ public:
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
     /// returns the number of vectors
-    static size_t _getListVector(object odata, std::vector<RaveVector<float> >& vvectors);
+    static size_t _getListVector(object odata, std::vector<RaveVector<float> >& vvectors, size_t numcol);
 
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
@@ -307,7 +307,7 @@ public:
     object drawlabel(const std::string &label, object worldPosition, object ocolor=py::none_(), float height=0.05);
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
-    object drawboxarray(object opos, object oextents, object ocolor=py::none_());
+    object drawboxarray(object opos, object oextents, object ocolors=py::none_());
     object drawaabb(object oaabb, object otransform, object ocolor=py::none_(), float transparency=0.0f);
     object drawobb(object oobb, object ocolor=py::none_(), float transparency=0.0f);
 

@@ -1771,19 +1771,24 @@ GraphHandlePtr QtOSGViewer::drawbox(const RaveVector<float>& vpos, const RaveVec
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 
-void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents, bool bUsingTransparency)
+void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents, const std::vector<RaveVector<float> >& vcolors, bool bUsingTransparency)
 {
     OSGMatrixTransformPtr trans(new osg::MatrixTransform());
     osg::ref_ptr<osg::Geode> geode(new osg::Geode());
-
+    bool size_mismatch = vcolors.size() != vpos.size();
     for (size_t i = 0; i < vpos.size(); i++) {
         const RaveVector<float>& pos = vpos[i];
         osg::ref_ptr<osg::Box> box = new osg::Box();
         box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
         box->setCenter(osg::Vec3(pos.x, pos.y, pos.z));
-
+        
         osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
-        sd->setColor(osg::Vec4f(0.33203125f, 0.5f, 0.898437f, 1.0f));
+        if (size_mismatch) {
+            const RaveVector<float>& color = vcolors[0];
+            sd->setColor(osg::Vec4f(color.x, color.y, color.z, color.w));
+        } else {
+            sd->setColor(osg::Vec4f(vcolors[i].x, vcolors[i].y, vcolors[i].z, vcolors[i].w));
+        }
         geode->addDrawable(sd);
     }
 
@@ -1796,10 +1801,10 @@ void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVecto
     _posgWidget->GetFigureRoot()->insertChild(0, handle);
 }
 
-GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents)
+GraphHandlePtr QtOSGViewer::drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents, const std::vector<RaveVector<float> >& vcolors)
 {
     OSGSwitchPtr handle = _CreateGraphHandle();
-    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, false), ViewerCommandPriority::MEDIUM); // copies ref counts
+    _PostToGUIThread(boost::bind(&QtOSGViewer::_DrawBoxArray, this, handle, vpos, vextents, vcolors, false), ViewerCommandPriority::MEDIUM); // copies ref counts
     return GraphHandlePtr(new PrivateGraphHandle(shared_viewer(), handle));
 }
 

@@ -760,7 +760,7 @@ public:
     ///
     /// extents are half the width, height, and depth of the box
     /// \return handle to plotted boxes, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
-    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) = 0;
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, const std::vector<RaveVector<float>>& colors = {}) = 0;
 
     /// \brief Draws a AABB. <b>[multi-thread safe]</b>
     ///

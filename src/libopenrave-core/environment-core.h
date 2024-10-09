@@ -2586,7 +2586,7 @@ public:
         }
         return handles;
     }
-    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents)
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float> >& vpos, const RaveVector<float>& vextents, const std::vector<RaveVector<float> >& vcolors)
     {
         SharedLock lock103(_mutexInterfaces);
         if( _listViewers.size() == 0 ) {
@@ -2594,7 +2594,7 @@ public:
         }
         GraphHandleMultiPtr handles(new GraphHandleMulti());
         FOREACHC(itviewer, _listViewers) {
-            handles->Add((*itviewer)->drawboxarray(vpos, vextents));
+            handles->Add((*itviewer)->drawboxarray(vpos, vextents, vcolors));
         }
         return handles;
     }
