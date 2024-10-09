@@ -132,6 +132,7 @@ class OPENRAVE_API IkFailureAccumulatorBase
 public:
     /// \brief Get the next available IkFailureInfo to fill in failure information.
     virtual IkFailureInfo& GetNextAvailableIkFailureInfo() = 0;
+    virtual ~IkFailureAccumulatorBase() {}
 };
 
 typedef boost::shared_ptr<IkFailureAccumulatorBase> IkFailureAccumulatorBasePtr;
