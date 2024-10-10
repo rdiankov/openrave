@@ -33,10 +33,26 @@ static void _PushLinkToListNonCollidingLinksWhenGrabbed(Grabbed& grabbed,
     }
 }
 
+void KinBody::_RestoreGrabbedBodiesForClone(const KinBody& originalBody)
+{
+    std::unordered_map<int, KinBody::SavedGrabbedData> originalGrabbedDataByEnvironmentIndex;
+    originalBody._SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
+    const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
+    _RestoreGrabbedBodiesFromSavedData(originalBody, options, originalGrabbedDataByEnvironmentIndex, true);
+}
+
 void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                                  const int options,
-                                                 const std::unordered_map<int, KinBody::SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex)
+                                                 const std::unordered_map<int, KinBody::SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
+                                                 const bool bCalledFromClone)
 {
+    const bool bIsFromSameEnv = GetEnv() == savedBody.GetEnv();
+    if( !bIsFromSameEnv ) {
+        // If this body and savedBody are not coming from the same env, we assume that this function is called from Environment::_Clone.
+        // If this section is accidentally called from other use cases, it's dangerous, since environmentBodyIndex is not consistent between two different envs in general, except for Environment::_Clone.
+        OPENRAVE_ASSERT_FORMAT(bCalledFromClone, "env=%s, restoring of the grabbed bodies from env=%s to env=%s is not allowed if it's not called from Clone, since environmentBodyIndex might not be consistent between two different envs.", GetEnv()->GetNameId() % savedBody.GetEnv()->GetNameId() % GetEnv()->GetNameId(), ORE_Failed);
+    }
+
     // have to release all grabbed first
     ReleaseAllGrabbed();
     OPENRAVE_ASSERT_OP(_grabbedBodiesByEnvironmentIndex.size(),==,0);
@@ -58,7 +74,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                             GetEnv()->GetNameId()%pGrabbingLink->GetName()%pGrabbedBody->GetName()%GetName()%GetLinks().size(),
                                             ORE_Failed);
         }
-        if( GetEnv() == savedBody.GetEnv() ) {
+        if( bIsFromSameEnv ) {
             // restore copied data for grabbed
             Grabbed& grabbed = *pGrabbed;
             grabbed._listNonCollidingLinksWhenGrabbed = savedGrabbedData.listNonCollidingLinksWhenGrabbed;
@@ -138,7 +154,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
         _UpdateGrabbedBodies();
     }
 }
-
+    
 void KinBody::_SaveKinBodySavedGrabbedData(std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex) const
 {
     savedGrabbedDataByEnvironmentIndex.clear();
