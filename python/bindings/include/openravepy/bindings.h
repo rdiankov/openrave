@@ -253,6 +253,9 @@ inline std::vector<int8_t> ExtractArrayInt8(const py::object& o)
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for int");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return v;
 }
@@ -273,6 +276,10 @@ inline std::vector<T> ExtractArray(const py::object& o)
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for " + std::string(typeid(T).name()));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        // pybind11 converts C++ exception to Python exception after returning from the function, so the exception has to be rethrown
+        throw;
+#endif
     }
     return v;
 }

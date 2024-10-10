@@ -125,6 +125,9 @@ std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for JointInfos");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vJointInfos;
 }
@@ -161,6 +164,9 @@ std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInf
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for GrabbedInfos");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vGrabbedInfos;
 }
@@ -183,6 +189,9 @@ std::vector<std::pair<std::pair<std::string, int>, dReal> > ExtractDOFValuesArra
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for DOFValues");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vDOFValues;
 }
