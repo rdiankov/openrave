@@ -341,11 +341,11 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
     }
 
     if (value.HasMember("extraGeometries") && value["extraGeometries"].IsArray()) {
-        for (rapidjson::Value::ConstValueIterator it_l = value["extraGeometries"].Begin(); it_l != value["extraGeometries"].End(); ++it_l) {
+        for (rapidjson::Value::ConstValueIterator it = value["extraGeometries"].Begin(); it != value["extraGeometries"].End(); ++it) {
             std::string name;
             // has valid extra geometry
-            if (it_l->HasMember("name") && it_l->HasMember("id")) {
-                orjson::LoadJsonValueByKey(*it_l, "name", name);
+            if (it->HasMember("name")) {
+                orjson::LoadJsonValueByKey(*it, "name", name);
             }
             else {
                 continue;
@@ -355,14 +355,11 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
                 _mapExtraGeometries[name] = std::vector<GeometryInfoPtr>();
             }
 
-            if (it_l->HasMember("geometries")) {
+            if (it->HasMember("geometries")) {
                 std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[name];
-                vgeometries.clear();
-                vgeometries.reserve((*it_l)["geometries"].Size());
-                for(rapidjson::Value::ConstValueIterator im = (*it_l)["geometries"].Begin(); im != (*it_l)["geometries"].End(); ++im) {
-                    GeometryInfoPtr pNewGeometryInfo(new GeometryInfo());
-                    pNewGeometryInfo->DeserializeJSON(*im, fUnitScale, options);
-                    vgeometries.push_back(pNewGeometryInfo);
+                vgeometries.reserve((*it)["geometries"].Size() + vgeometries.size());
+                for (rapidjson::Value::ConstValueIterator itGeometry = (*it)["geometries"].Begin(); itGeometry != (*it)["geometries"].End(); ++itGeometry) {
+                    UpdateOrCreateInfoWithNameCheck(*itGeometry, vgeometries, "name", fUnitScale, options);
                 }
             }
         }
