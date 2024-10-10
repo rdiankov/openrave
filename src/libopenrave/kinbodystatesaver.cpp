@@ -108,7 +108,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                             else {
                                 const KinBodyPtr pNewNonCollidingBody = GetEnv()->GetBodyFromEnvironmentBodyIndex(pParentSaved->GetEnvironmentBodyIndex());
                                 if( !pNewNonCollidingBody) {
-                                    RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", GetEnv()->GetNameId()%(*itLinkSaved)->GetName() % pParentSaved->GetEnvironmentBodyIndex());
+                                    RAVELOG_WARN_FORMAT("env=%s, could not restore link '%s' since could not not find body with id %d.", GetEnv()->GetNameId()%(*itLinkSaved)->GetName()%pParentSaved->GetEnvironmentBodyIndex());
                                     continue;
                                 }
                                 _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, (*itLinkSaved)->GetName(), pNewNonCollidingBody->GetLinks(), GetEnv());
