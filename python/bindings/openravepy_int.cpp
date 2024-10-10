@@ -1104,6 +1104,9 @@ static std::vector<KinBody::KinBodyInfoPtr> _ExtractBodyInfoArray(object vBodyIn
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for BodyInfos");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vBodyInfos;
 }
