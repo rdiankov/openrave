@@ -346,7 +346,7 @@ PolynomialCheckReturn PolynomialChecker::CheckChunk(const Chunk& c, const std::v
     bool bHasVelocityLimits = vmVect.size() == ndof;
     bool bHasAccelerationLimits = amVect.size() == ndof;
     bool bHasJerkLimits = jmVect.size() == ndof;
-    PolynomialCheckReturn ret;
+    PolynomialCheckReturn ret = PCR_Normal;
     for( size_t idof = 0; idof < ndof; ++idof ) {
         if( bHasVelocityLimits ) {
             vm = vmVect[idof];
