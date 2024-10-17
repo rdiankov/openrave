@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.155.0
+===============
+
+- Add `colors` option to `env.drawboxarray` to specify colors for each box.
+
 Version 0.154.0
 ===============
 
