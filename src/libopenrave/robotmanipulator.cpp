@@ -17,6 +17,42 @@
 #include "libopenrave.h"
 namespace OpenRAVE {
 
+/// \brief Get independent links from robot.
+/// \param[out] vlinks : vector of independent links.
+/// \param[in] proot, varmdofindices, vgripperdofindices : used to compute the independent links.
+template<typename LinkPtrT>
+void _GetIndependentLinks(std::vector<LinkPtrT>& vlinks, const RobotBasePtr& probot, const std::vector<int>& varmdofindices, const std::vector<int>& vgripperdofindices)
+{
+    vlinks.clear();
+    FOREACHC(itlink, probot->GetLinks()) {
+        bool bAffected = false;
+        FOREACHC(itindex,varmdofindices) {
+            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+        FOREACHC(itindex,vgripperdofindices) {
+            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+
+        if( !bAffected ) {
+            vlinks.push_back(*itlink);
+        }
+    }
+}
+
+/// \brief update grabbedBody1 transform and return saver.
+static KinBody::KinBodyStateSaverPtr _UpdateGrabbedBodyTransformWithSaver(KinBodyPtr& pGrabbedBody, const Transform& tRelative, const Transform& tLinkTrans)
+{
+    KinBody::KinBodyStateSaverPtr saver(new KinBody::KinBodyStateSaver(pGrabbedBody, KinBody::Save_LinkTransformation));
+    pGrabbedBody->SetTransform(tLinkTrans * tRelative);
+    return saver;
+}
+
 void RobotBase::ManipulatorInfo::Reset()
 {
     _id.clear();
@@ -890,26 +926,7 @@ bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
 void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
 {
     RobotBasePtr probot(__probot);
-    vlinks.clear();
-    FOREACHC(itlink, probot->GetLinks()) {
-        bool bAffected = false;
-        FOREACHC(itindex,__varmdofindices) {
-            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
-                bAffected = true;
-                break;
-            }
-        }
-        FOREACHC(itindex,__vgripperdofindices) {
-            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
-                bAffected = true;
-                break;
-            }
-        }
-
-        if( !bAffected ) {
-            vlinks.push_back(*itlink);
-        }
-    }
+    _GetIndependentLinks(vlinks, probot, __varmdofindices, __vgripperdofindices);
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report) const
@@ -1042,9 +1059,9 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
 
     // parameters used only when bIgnoreManipulatorLinks is true
     CollisionCheckerBasePtr pselfchecker;
-    std::vector<LinkPtr> vindependentinks;
+    std::vector<LinkConstPtr> vindependentinks;
     if( bIgnoreManipulatorLinks ) {
-        GetIndependentLinks(vindependentinks);
+        _GetIndependentLinks<LinkConstPtr>(vindependentinks, probot, __varmdofindices, __vgripperdofindices);
         pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
     }
 
@@ -1081,6 +1098,13 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr re
                     }
                 }
             }
+            if( probot->_CheckGrabbedBodiesSelfCollision(pselfchecker, report, *itlink, bAllLinkCollisions, nullptr, vindependentinks) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    //RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                    return true;
+                }
+                bincollision = true;
+            }
         }
         else {
             if( probot->CheckLinkSelfCollision(ilink,report) ) {
@@ -1112,9 +1136,9 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
 
     // parameters used only when bIgnoreManipulatorLinks is true
     CollisionCheckerBasePtr pselfchecker;
-    std::vector<LinkPtr> vindependentinks;
+    std::vector<LinkConstPtr> vindependentinks;
     if( bIgnoreManipulatorLinks ) {
-        GetIndependentLinks(vindependentinks);
+        _GetIndependentLinks<LinkConstPtr>(vindependentinks, probot, __varmdofindices, __vgripperdofindices);
         pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
     }
 
@@ -1154,6 +1178,13 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
                         bincollision = true;
                     }
                 }
+            }
+            if( probot->_CheckGrabbedBodiesSelfCollision(pselfchecker, report, *itlink, bAllLinkCollisions, std::bind(_UpdateGrabbedBodyTransformWithSaver, std::placeholders::_1, std::placeholders::_2, std::cref(tlinktrans)), vindependentinks) ) {
+                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                    //RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
+                    return true;
+                }
+                bincollision = true;
             }
         }
         else {
