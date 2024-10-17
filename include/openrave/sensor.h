@@ -484,6 +484,7 @@ public:
                        && mu_s == other.mu_s
                        && mu_d == other.mu_d;
             }
+            virtual ~Friction() {}
         };
         std::vector<Vector> positions;         ///< 3D positions of all the elements in the sensor frame
         dReal thickness;         ///< the thickness of the tactile sensors (used for determining contact and computing force)
