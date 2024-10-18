@@ -3353,7 +3353,7 @@ private:
         _nUpdateStampId += inc;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
 
     /// \brief Register a callback with the interface.
     ///
@@ -3364,7 +3364,7 @@ private:
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const boost::function<void()>& callback) const;
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const override;
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -3795,7 +3795,7 @@ protected:
 
 private:
     mutable std::vector<dReal> _vTempJoints;
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_KINBODY_HASH;
     }
 
