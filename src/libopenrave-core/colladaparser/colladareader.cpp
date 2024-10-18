@@ -5075,12 +5075,15 @@ private:
                     }
                     FOREACH(itlinkgeomgroups, mapGeometryGroups) {
                         FOREACH(itgeomgroup, itlinkgeomgroups->second) {
-                            std::vector<KinBody::GeometryInfoPtr> vgeometries;
+                            KinBody::ExtraGeometryInfoPtr extrageom(new KinBody::ExtraGeometryInfo());
+                            extrageom->_id = itgeomgroup->first;
+                            extrageom->_name = itgeomgroup->first;
+                            std::vector<KinBody::GeometryInfoPtr>& vgeometries = extrageom->_vgeometryinfos;
                             vgeometries.reserve(itgeomgroup->second.size());
                             FOREACH(itgeominfo, itgeomgroup->second) {
                                 vgeometries.push_back(boost::make_shared<KinBody::GeometryInfo>(*itgeominfo));
                             }
-                            itlinkgeomgroups->first->SetGroupGeometries(itgeomgroup->first, vgeometries);
+                            itlinkgeomgroups->first->SetGroupGeometries(itgeomgroup->first, extrageom);
                         }
                     }
                 }

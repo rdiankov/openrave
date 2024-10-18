@@ -587,6 +587,91 @@ std::string PyGeometryInfo::__str__()
     return orjson::DumpJson(doc);
 }
 
+PyExtraGeometryInfo::PyExtraGeometryInfo()
+{
+}
+
+PyExtraGeometryInfo::PyExtraGeometryInfo(const KinBody::ExtraGeometryInfo& info)
+{
+    _Update(info);
+}
+
+KinBody::ExtraGeometryInfoPtr PyExtraGeometryInfo::GetExtraGeometryInfo()
+{
+    KinBody::ExtraGeometryInfoPtr pinfo(new KinBody::ExtraGeometryInfo());
+    // extract id and name
+    if ( !IS_PYTHONOBJECT_NONE(_id) ) {
+        pinfo->_id = py::extract<std::string>(_id);
+    }
+    if( !IS_PYTHONOBJECT_NONE(_name) ) {
+        pinfo->_name = py::extract<std::string>(_name);
+    }
+    // extract vgeometries field
+    pinfo->_vgeometryinfos.resize(len(_vgeometryinfos));
+    for(size_t i = 0; i < pinfo->_vgeometryinfos.size(); ++i) {
+        PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
+        pinfo->_vgeometryinfos[i] = pygeom->GetGeometryInfo();
+    }
+    return pinfo;
+}
+
+py::object PyExtraGeometryInfo::SerializeJSON(dReal fUnitScale, object options)
+{
+    rapidjson::Document doc;
+    KinBody::ExtraGeometryInfoPtr pInfo = GetExtraGeometryInfo();
+    const int intOptions = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pInfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, intOptions);
+    }
+    return toPyObject(doc);
+}
+
+void PyExtraGeometryInfo::DeserializeJSON(object obj, dReal fUnitScale, py::object options)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    KinBody::ExtraGeometryInfoPtr pInfo = GetExtraGeometryInfo();
+    const int intOptions = pyGetIntFromPy(options, 0);
+    {
+        openravepy::PythonThreadSaver threadsaver;
+        pInfo->DeserializeJSON(doc, fUnitScale, intOptions);
+    }
+    _Update(*pInfo);
+}
+
+std::string PyExtraGeometryInfo::__repr__()
+{
+    rapidjson::Document doc;
+    KinBody::ExtraGeometryInfoPtr pextrageominfo = GetExtraGeometryInfo();
+    dReal fUnitScale = 1;
+    int options = 0;
+    pextrageominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+    std::string repr("ExtraGeometryInfo('");
+    repr += orjson::DumpJson(doc);
+    repr += "')";
+    return repr;
+}
+
+std::string PyExtraGeometryInfo::__str__()
+{
+    rapidjson::Document doc;
+    KinBody::ExtraGeometryInfoPtr pextrageominfo = GetExtraGeometryInfo();
+    dReal fUnitScale = 1;
+    int options = 0;
+    pextrageominfo->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options);
+    return orjson::DumpJson(doc);
+}
+
+void PyExtraGeometryInfo::_Update(const KinBody::ExtraGeometryInfo& info)
+{
+    _id = ConvertStringToUnicode(info._id);
+    _name = ConvertStringToUnicode(info._name);
+    FOREACHC(itgeominfo, info._vgeometryinfos) {
+        _vgeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itgeominfo)));
+    }
+}
+
 PyLinkInfo::PyLinkInfo() {
 }
 
@@ -618,7 +703,8 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
         vForcedAdjacentLinks.append(linkName);
     }
     FOREACHC(it, info._mapExtraGeometries) {
-        _mapExtraGeometries[it->first.c_str()] = toPyArray(it->second);
+        _mapExtraGeometries[it->first.c_str()] = PyExtraGeometryInfoPtr(new PyExtraGeometryInfo(*(it->second)));
+        // _mapExtraGeometries[it->first.c_str()] = toPyArray(it->second);
     }
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
@@ -659,6 +745,11 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     for(size_t i = 0; i < info._vgeometryinfos.size(); ++i) {
         PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(_vgeometryinfos[i]);
         info._vgeometryinfos[i] = pygeom->GetGeometryInfo();
+    }
+    for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
+        std::string id = extract<std::string>(item.first);
+        PyExtraGeometryInfoPtr pyextrageom = py::extract<PyExtraGeometryInfoPtr>(item.second);
+        info._mapExtraGeometries[id] = pyextrageom->GetExtraGeometryInfo();
     }
     if( !IS_PYTHONOBJECT_NONE(_id) ) {
         info._id = py::extract<std::string>(_id);
@@ -718,28 +809,25 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     }
 #endif
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
-        std::string name = extract<std::string>(item.first);
-        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(item.second));
-        for(size_t j = 0; j < len(item.second); j++) {
-            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(item.second[py::to_object(j)]);
-            info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
-        }
-    }
-#else
-    num = len(_mapExtraGeometries);
-    okeyvalueiter = _mapExtraGeometries.iteritems();
-    for(size_t i = 0; i < num; ++i) {
-        object okeyvalue = okeyvalueiter.attr("next") ();
-        std::string name = extract<std::string>(okeyvalue[0]);
-        info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(okeyvalue[1]));
-        for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++) {
-            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
-            info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
-        }
-    }
-#endif
+// #ifdef USE_PYBIND11_PYTHON_BINDINGS
+//     for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
+//         std::string id = extract<std::string>(item.first);
+//         PyExtraGeometryInfoPtr pyextrageom = py::extract<PyExtraGeometryInfoPtr>(item.second);
+//         info._mapExtraGeometries[id] = pyextrageom->GetExtraGeometryInfo();
+//     }
+// #else
+//     num = len(_mapExtraGeometries);
+//     okeyvalueiter = _mapExtraGeometries.iteritems();
+//     for(size_t i = 0; i < num; ++i) {
+//         object okeyvalue = okeyvalueiter.attr("next") ();
+//         std::string name = extract<std::string>(okeyvalue[0]);
+//         info._mapExtraGeometries[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometries[name].reserve(len(okeyvalue[1]));
+//         for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++) {
+//             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
+//             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
+//         }
+//     }
+// #endif
 
     info._mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
     info._vForcedAdjacentLinks = ExtractArray<std::string>(_vForcedAdjacentLinks);
@@ -1868,36 +1956,33 @@ void PyLink::RemoveGeometryByName(const std::string& geometryname, bool removeFr
     _plink->RemoveGeometryByName(geometryname, removeFromAllGroups);
 }
 
-void PyLink::SetGeometriesFromGroup(const std::string& name)
+void PyLink::SetGeometriesFromGroup(const std::string& groupid)
 {
-    _plink->SetGeometriesFromGroup(name);
+    _plink->SetGeometriesFromGroup(groupid);
 }
 
-object PyLink::GetGeometriesFromGroup(const std::string& name)
+object PyLink::GetGeometriesFromGroup(const std::string& groupid)
 {
     py::list ogeometryinfos;
-    FOREACHC(itinfo, _plink->GetGeometriesFromGroup(name)) {
+    FOREACHC(itinfo, _plink->GetGeometriesFromGroup(groupid)) {
         ogeometryinfos.append(PyGeometryInfoPtr(new PyGeometryInfo(**itinfo)));
     }
     return ogeometryinfos;
 }
 
-void PyLink::SetGroupGeometries(const std::string& name, object ogeometryinfos)
+void PyLink::SetGroupGeometries(const std::string& groupid, object oextrageometryinfo)
 {
-    std::vector<KinBody::GeometryInfoPtr> geometries(len(ogeometryinfos));
-    for(size_t i = 0; i < geometries.size(); ++i) {
-        PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometryinfos[py::to_object(i)]);
-        if( !pygeom ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
-        }
-        geometries[i] = pygeom->GetGeometryInfo();
+    PyExtraGeometryInfoPtr pyextrageom = py::extract<PyExtraGeometryInfoPtr>(oextrageometryinfo);
+    if( !pyextrageom ) {
+        throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ExtraGeometryInfo"),ORE_InvalidArguments);
     }
-    _plink->SetGroupGeometries(name, geometries);
+    KinBody::ExtraGeometryInfoPtr extraGeometry( pyextrageom->GetExtraGeometryInfo() );
+    _plink->SetGroupGeometries(groupid, extraGeometry);
 }
 
-int PyLink::GetGroupNumGeometries(const std::string& geomname)
+int PyLink::GetGroupNumGeometries(const std::string& groupid)
 {
-    return _plink->GetGroupNumGeometries(geomname);
+    return _plink->GetGroupNumGeometries(groupid);
 }
 
 object PyLink::GetRigidlyAttachedLinks() const {
@@ -2368,6 +2453,11 @@ PyJointPtr toPyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr pyenv)
 PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& geominfo)
 {
     return PyGeometryInfoPtr(new PyGeometryInfo(geominfo));
+}
+
+PyExtraGeometryInfoPtr toPyExtraGeometryInfo(const KinBody::ExtraGeometryInfo& extrageominfo)
+{
+    return PyExtraGeometryInfoPtr(new PyExtraGeometryInfo(extrageominfo));
 }
 
 py::object toPyObject(const PyGeometryInfoPtr& pygeom)
@@ -2871,13 +2961,16 @@ void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bo
 
 void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olinkgeometryinfos)
 {
-    std::vector< std::vector<KinBody::GeometryInfoPtr> > linkgeometries(len(olinkgeometryinfos));
+    std::vector< KinBody::ExtraGeometryInfoPtr > linkgeometries(len(olinkgeometryinfos));
+
     for(size_t i = 0; i < linkgeometries.size(); ++i) {
-        std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i];
-        object infoi = extract<py::object>(olinkgeometryinfos[py::to_object(i)]);
-        geometries.resize(len(infoi));
+        PyExtraGeometryInfoPtr infoi = extract<PyExtraGeometryInfoPtr>(olinkgeometryinfos[py::to_object(i)]);
+        linkgeometries[i]->_id = py::extract<std::string>(infoi->_id).empty() ? geomname : py::extract<std::string>(infoi->_id);
+        linkgeometries[i]->_name = py::extract<std::string>(infoi->_name).empty() ? geomname : py::extract<std::string>(infoi->_name);
+        std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i]->_vgeometryinfos;
+        geometries.resize(len(infoi->_vgeometryinfos));
         for(size_t j = 0; j < geometries.size(); ++j) {
-            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(infoi[py::to_object(j)]);
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(infoi->_vgeometryinfos[py::to_object(j)]);
             if( !pygeom ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
             }
@@ -4915,12 +5008,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(GetGrabbedInfo_overloads, GetGrabbedInfo,
 // SerializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyExtraGeometryInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGrabbedInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyKinBodyInfo_SerializeJSON_overloads, SerializeJSON, 0, 2)
 // DeserializeJSON
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyElectricMotorActuatorInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyExtraGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyGeometryInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyLinkInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyJointInfo_DeserializeJSON_overloads, DeserializeJSON, 1, 3)
@@ -5213,6 +5308,35 @@ void init_openravepy_kinbody()
 #else
                           .def_pickle(GeometryInfo_pickle_suite())
 #endif
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    object extrageometryinfo = class_<PyExtraGeometryInfo, OPENRAVE_SHARED_PTR<PyExtraGeometryInfo> >(m, "ExtraGeometryInfo", DOXY_CLASS(KinBody::ExtraGeometryInfo))
+                               .def(init<>())
+#else
+    object extrageometryinfo = class_<PyExtraGeometryInfo, OPENRAVE_SHARED_PTR<PyExtraGeometryInfo> >("ExtraGeometryInfo", DOXY_CLASS(KinBody::ExtraGeometryInfo))
+#endif
+                               .def_readwrite("_vgeometryinfos", &PyExtraGeometryInfo::_vgeometryinfos)
+                               .def_readwrite("_id", &PyExtraGeometryInfo::_id)
+                               .def_readwrite("_name", &PyExtraGeometryInfo::_name)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+                               .def("SerializeJSON", &PyExtraGeometryInfo::SerializeJSON,
+                                              "unitScale"_a = 1.0,
+                                              "options"_a = py::none_(),
+                                              DOXY_FN(ExtraGeometryInfo, SerializeJSON)
+                                              )
+                               .def("DeserializeJSON", &PyExtraGeometryInfo::DeserializeJSON,
+                                              "obj"_a,
+                                              "unitScale"_a = 1.0,
+                                              "options"_a = py::none_(),
+                                              DOXY_FN(ExtraGeometryInfo, DeserializeJSON)
+                                              )
+#else
+                               .def("SerializeJSON", &ExtraGeometryInfo::SerializeJSON, PyExtraGeometryInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(ExtraGeometryInfo, SerializeJSON)))
+                               .def("DeserializeJSON", &ExtraGeometryInfo::DeserializeJSON, PyExtraGeometryInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(ExtraGeometryInfo, DeserializeJSON)))
+#endif
+                               .def("__repr__", &PyExtraGeometryInfo::__repr__)
+                               .def("__str__", &PyExtraGeometryInfo::__str__)
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -6280,6 +6404,7 @@ void init_openravepy_kinbody()
             // \deprecated (12/10/18)
             link.attr("GeomType") = geometrytype;
             link.attr("GeometryInfo") = geometryinfo;
+            link.attr("ExtraGeometryInfo") = extrageometryinfo;
             {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                 // PyGeometry belongs to PyLink, not openravepy._openravepy_.openravepy_int

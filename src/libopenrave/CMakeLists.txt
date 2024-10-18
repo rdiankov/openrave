@@ -9,6 +9,7 @@ set(openrave_lib_SOURCES
   interface.cpp
   kinbody.cpp
   kinbodycollision.cpp
+  kinbodyextrageometry.cpp
   kinbodygeometry.cpp
   kinbodygrab.cpp
   kinbodyjoint.cpp
