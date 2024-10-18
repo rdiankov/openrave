@@ -689,11 +689,11 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
             pvinfos = &(*itlink)->_info._vgeometryinfos;
         }
         else {
-            std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
+            std::map< std::string, KinBody::ExtraGeometryInfoPtr >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
             if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
             }
-            pvinfos = &it->second;
+            pvinfos = &it->second->_vgeometryinfos;
         }
         (*itlink)->_vGeometries.resize(pvinfos->size());
         for(size_t i = 0; i < pvinfos->size(); ++i) {
@@ -713,15 +713,22 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
     }
 }
 
-void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
+// DEPRECATED: now using ExtraGeometryInfo type instead of std::vector<GeometryInfoPtr>
+// void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
+
+void KinBody::SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries)
 {
     OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );
-    FOREACH(itlink, _veclinks) {
-        Link& link = **itlink;
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
-        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
-        it->second.resize(geometries.size());
-        std::copy(geometries.begin(),geometries.end(),it->second.begin());
+    for (size_t idx=0; idx < _veclinks.size(); ++idx) {
+        Link& link = *_veclinks.at(idx);
+        link._info._mapExtraGeometries[id] = KinBody::ExtraGeometryInfoPtr(new KinBody::ExtraGeometryInfo());
+        link._info._mapExtraGeometries[id]->_id = linkgeometries.at(idx)->_id.empty() ? id : linkgeometries.at(idx)->_id;
+        link._info._mapExtraGeometries[id]->_name = linkgeometries.at(idx)->_name.empty() ? id : linkgeometries.at(idx)->_name;
+
+        const std::vector<GeometryInfoPtr>& inputgeometries = linkgeometries.at(idx)->_vgeometryinfos;
+        std::vector<GeometryInfoPtr>& vgeometries = link._info._mapExtraGeometries[id]->_vgeometryinfos;
+        vgeometries.resize(inputgeometries.size());
+        std::copy(inputgeometries.begin(), inputgeometries.end(), vgeometries.begin());
     }
     _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
@@ -5096,11 +5103,14 @@ void KinBody::_ComputeInternalInformation()
     std::string selfgroup("self");
     FOREACH(itlink, _veclinks) {
         if( (*itlink)->_info._mapExtraGeometries.find(selfgroup) == (*itlink)->_info._mapExtraGeometries.end() ) {
-            std::vector<GeometryInfoPtr> vgeoms;
+            (*itlink)->_info._mapExtraGeometries[selfgroup] = ExtraGeometryInfoPtr(new ExtraGeometryInfo());
+            (*itlink)->_info._mapExtraGeometries[selfgroup]->_id = selfgroup;
+            (*itlink)->_info._mapExtraGeometries[selfgroup]->_name = selfgroup;
+            std::vector<GeometryInfoPtr>& vgeoms = (*itlink)->_info._mapExtraGeometries[selfgroup]->_vgeometryinfos;
+            vgeoms.reserve((*itlink)->_vGeometries.size());
             FOREACH(itgeom, (*itlink)->_vGeometries) {
                 vgeoms.push_back(GeometryInfoPtr(new GeometryInfo((*itgeom)->GetInfo())));
             }
-            (*itlink)->_info._mapExtraGeometries.insert(make_pair(selfgroup, vgeoms));
         }
     }
 
@@ -5711,14 +5721,15 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
         }
         {
             // deep copy extra geometries as well, otherwise changing value of map in original map affects value of cloned map
-            std::map< std::string, std::vector<GeometryInfoPtr> > newMapExtraGeometries;
-            for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometries) {
-                std::vector<GeometryInfoPtr> newvalues;
-                newvalues.reserve(keyValue.second.size());
-                for (const GeometryInfoPtr& geomInfoPtr : keyValue.second) {
-                    newvalues.push_back(GeometryInfoPtr(new GeometryInfo(*geomInfoPtr)));
+            std::map<std::string, ExtraGeometryInfoPtr> newMapExtraGeometries;
+            for (const std::pair<const std::string, ExtraGeometryInfoPtr>& keyValue : newlink._info._mapExtraGeometries) {
+                newMapExtraGeometries[keyValue.first] = ExtraGeometryInfoPtr(new ExtraGeometryInfo());
+                newMapExtraGeometries[keyValue.first]->_id = keyValue.second->_id;
+                newMapExtraGeometries[keyValue.first]->_name = keyValue.second->_name;
+                newMapExtraGeometries[keyValue.first]->_vgeometryinfos.reserve(keyValue.second->_vgeometryinfos.size());
+                for (const GeometryInfoPtr& geomInfoPtr : keyValue.second->_vgeometryinfos) {
+                    newMapExtraGeometries[keyValue.first]->_vgeometryinfos.push_back(GeometryInfoPtr(new GeometryInfo(*geomInfoPtr)));
                 }
-                newMapExtraGeometries[keyValue.first] = newvalues;
             }
             newlink._info._mapExtraGeometries = newMapExtraGeometries;
         }
