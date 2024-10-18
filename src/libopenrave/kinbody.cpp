@@ -5859,7 +5859,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                         }
                         pgrabbed->_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.emplace_back(pGrabbedBodyLink, _veclinks[linkIndex]);
                     }
-                    pgrabbed->_SetLinkNonCollidingIsValid(true);
+                    pgrabbed->SetLinkNonCollidingIsValid(true);
                 }
 
                 try {
