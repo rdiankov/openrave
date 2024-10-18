@@ -2370,7 +2370,7 @@ private:
         Save_JointResolutions                = 0x00000040, ///< saves the dof resolutions
         Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies. Although saver support restoring to the kinbody in other env in general, this Save_GrabbedBodies option does not support for restoring to the kinbody in other env. This is because it cannot successfuly identify the grabbed bodies in other env based on environment body index.
         Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
@@ -2438,6 +2438,9 @@ protected:
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
 
+    /// \brief Alias for list of non-colliding link pairs, mostly used for Grabbed checking.
+    using ListNonCollidingLinkPairs = std::list<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> >;
+
     /// \brief Saved data for Grabbed used in KinBodyStateSaver and KinBodyStateSaverRef
     ///        When KinBody::Grab, KinBody::Release, ...etc are called, new Grabbed instance is created in KinBody and the original ptr for the original Grabbed instance is swapped.
     ///        Thus, the original information of Grabbed instance is unchanged and holding the ptr of it as pGrabbed is enough for the saver.
@@ -2446,7 +2449,7 @@ protected:
     struct SavedGrabbedData
     {
         GrabbedPtr pGrabbed; ///< pointer of original Grabbed instance, which originally in KinBody's _grabbedBodiesByEnvironmentIndex.
-        std::list<KinBody::LinkConstPtr> listNonCollidingLinksWhenGrabbed; ///< copied values of Grabbed's _listNonCollidingLinksWhenGrabbed. See also the documentation of Grabbed class.
+        ListNonCollidingLinkPairs listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed; ///< copied values of Grabbed's _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed. See also the documentation of Grabbed class.
         std::set<int> setGrabberLinkIndicesToIgnore; ///< copied values of Grabbed's _setGrabberLinkIndicesToIgnore. See also the documentation of Grabbed class.
         bool listNonCollidingIsValid = false; ///< copied values of Grabbed's _listNonCollidingIsValid. See also the documentation of Grabbed class.
     };
@@ -2485,6 +2488,7 @@ protected:
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
+        std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2531,6 +2535,7 @@ protected:
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
+        std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -3491,16 +3496,6 @@ private:
         GICR_UserDataNotMatch = 4, ///< Specified body is grabbed, grabbing link matches, and ignored links match, but user data do not match
     };
 
-    /** \brief Checks whether a body is grabbed with the given robot link.
-     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
-     */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const;
-
-    /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
-     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
-     */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const;
-
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
@@ -3698,13 +3693,25 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
-    /// \brief Restore kinbody's grabbed bodies information from saved data. Assumes that this is called from _RestoreKinBody of saver classes.
+    /// \brief Restore kinbody's grabbed bodies information from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
+    ///        _RestoreGrabbedBodiesFromSavedData with bCalledFromClone=true allows to restore grabbed bodies from one env to another env.
+    ///        To do so, it's referring that _environmentBodyIndex is consistent between two envs. Otherwise, we cannnot identify the correct bodies.
+    ///        This should be called from Clone where we can assume that _environmentBodyIndex is configured consistent between two envs.
+    ///        Please do not call this from other use cases.
+    /// \param[in] originalBody : This function restores the grabbed bodies from originalBody to 'this'.
+    void _RestoreGrabbedBodiesForClone(const KinBody& originalBody);
+
+    /// \brief Restore kinbody's grabbed bodies information from saved data.
     /// \param[in] savedBody : saved KinBody inside of saver.
     /// \param[in] options : SaveParameters inside of saver.
     /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
+    /// \param[in] savedMapListNonCollidingInterGrabbedLinkPairsWhenGrabbed : _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed held in saver.
+    /// \param[in] bCalledFromClone : true this is called from clone, e.g. called from _RestoreGrabbedBodiesForClone. false if  Assumes that this is called from _RestoreKinBody of saver classes.
     void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                             const int options,
-                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex);
+                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
+                                            const std::unordered_map<uint64_t, ListNonCollidingLinkPairs>& savedMapListNonCollidingInterGrabbedLinkPairsWhenGrabbed,
+                                            const bool bCalledFromClone = false);
 
     /// \brief Save this kinbody's information.
     /// \param[out] savedGrabbedDataByEnvironmentIndex : saved information about _grabbedBodiesByEnvironmentIndex.
@@ -3712,6 +3719,34 @@ protected:
 
     /// Ensures that _vAllPairsShortestPaths is initialized if it is not already
     void _EnsureAllPairsShortestPaths() const;
+
+    /// \brief Check if IsListNonCollidingLinksValid is true for the Grabbed instance with the given envBodyIndex.
+    /// \param[int] envBodyIndex : env body index.
+    bool _IsListNonCollidingLinksValidFromEnvironmentBodyIndex(const int envBodyIndex) const;
+
+    /// \brief Compute environment body indices pair. pack the two bodies' envBodyIndices (32bit int) into one environment body indices pair (uint64_t).
+    ///        Here, environment body indices pair is uint64_t, which higher 32bits are for body2 envBodyIndex, and which lower 32bits are for body1 envBodyIndex.
+    static uint64_t _ComputeEnvironmentBodyIndicesPair(const KinBody& body1, const KinBody& body2);
+
+    /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
+    static int _GetFirstEnvironmentBodyIndexFromPair(const uint64_t pair);
+
+    /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
+    static int _GetSecondEnvironmentBodyIndexFromPair(const uint64_t pair);
+
+    /// \brief Check self collision between grabber and grabbed, and between two grabbed bodies.
+    /// \param collisionchecker : collision checker to use
+    /// \param[out] report : resultant report
+    /// \param[in] pGrabbingLinkToCheck : link ptr of grabbing link to check. if nullptr, no filtering, e.g. check all possible grabbed bodies with grabbing links. if specified, check self collision by the grabbed bodies which grabbingLink matches to this pGrabbingLinkToCheck, and check self collision of this link with other grabbed bodies.
+    /// \param[in] bAllLinkCollisions : true if all link should be checked.
+    /// \param[in] updateGrabbedBodyTransformWithSaverFn : callback function to update the Transform of grabbed bodies, which is grabbed by pGrabbingLinkToCheck. If the function is nullptr, do nothing. This is only used when pGrabbingLinkToCheck gives valid pointer. This function returns KinBodyStateSaverPtr to restore the original Transform after all.
+    /// \param[in] vInclusiveTargetLinks : Vector of target links to check. This is only used when non-empty vetor is specified. If empty, do not filter, e.g. check the all possible link pairs. So far, this is only supported when pGrabbingLinkToCheck is specified. In this function, link pair is collision-checked. One link in the pair should be grabbed body attached to pGrabbingLinkToCheck, or pGrabbingLinkToCheck itself. Another link in the pair should be included in this vector.
+    bool _CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
+                                          CollisionReportPtr& report,
+                                          const LinkPtr& pGrabbingLinkToCheck,
+                                          const bool bAllLinkCollisions,
+                                          const std::function<KinBody::KinBodyStateSaverPtr(KinBodyPtr&, const Transform&)>& updateGrabbedBodyTransformWithSaverFn,
+                                          const std::vector<KinBody::LinkConstPtr>& vInclusiveTargetLinks = std::vector<KinBody::LinkConstPtr>()) const;
 
     std::string _name; ///< name of body
 
@@ -3782,6 +3817,7 @@ protected:
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
     int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+    std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed; ///< map of list of link pairs. This is computed when grabbed bodies are grabbed, and at taht time, two grabbed bodies are not touching each other. Since these links are not colliding at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list. Each pair in the list should be [Grabbed1-link, Grabbed2-link]. Note that this does not contain link pairs of [Grabbed-link, Grabber-link], c.f. Grabbed::_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed. Note that the key of this map is 'environment body indices pair', which higher 32bits are for the first KinBody's envBodyIndex, and which lower 32bits are for the second KinBody's envBodyIndex. Please also see _ComputeEnvironmentBodyIndicesPair.
 
 private:
     mutable std::vector<dReal> _vTempJoints;
@@ -3839,12 +3875,7 @@ public:
     ///        valid until the grabbed body is released.
     void ComputeListNonCollidingLinks();
 
-    inline void InvalidateListNonCollidingLinks()
-    {
-        _listNonCollidingIsValid = false;
-    }
-
-    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
+    inline void SetLinkNonCollidingIsValid(bool bIsValid)
     {
         _listNonCollidingIsValid = bIsValid;
     }
@@ -3862,11 +3893,21 @@ public:
     // Member Variables
     KinBodyWeakPtr _pGrabbedBody; ///< the body being grabbed
     KinBody::LinkPtr _pGrabbingLink; ///< the link used for grabbing _pGrabbedBody. Its transform (as well as the transforms of other links rigidly attached to _pGrabbingLink) relative to the grabbed body remains constant until the grabbed body is released.
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
+    KinBody::ListNonCollidingLinkPairs _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed; ///< list of link pairs of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list. Each pair in the list should be [Grabbed-link, Grabber-link]. Note that this does not contain link pairs from two grabbed bodies, c.f. KinBody::_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.
     Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
     std::set<int> _setGrabberLinkIndicesToIgnore; ///< indices to the links of the grabber whose collisions with the grabbed bodies should be ignored.
     rapidjson::Document _rGrabbedUserData; ///< user-defined data to be updated when kinbody grabs and releases objects
 private:
+
+    /// \brief push inter-grabbed-bodies non colliding link pairs to grabber.
+    /// \param[out] pGrabber : updated grabber.
+    /// \param[out] pchecker : collision checker
+    /// \param[in] grabbedBody, otherGrabbedBody : grabbed body by this class, and other grabbed body to check.
+    void _PushNonCollidingLinkPairsForGrabbedBodies(KinBodyPtr& pGrabber,
+                                                    CollisionCheckerBasePtr& pchecker,
+                                                    const KinBody& grabbedBody,
+                                                    const KinBody& otherGrabbedBody);
+
     bool _listNonCollidingIsValid = false; ///< a flag indicating whether the current _listNonCollidingLinksWhenGrabbed is valid or not.
     std::vector<KinBody::LinkPtr> _vAttachedToGrabbingLink; ///< vector of all links that are rigidly attached to _pGrabbingLink
     KinBody::KinBodyStateSaverPtr _pGrabberSaver; ///< statesaver that saves the snapshot of the grabber at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.
