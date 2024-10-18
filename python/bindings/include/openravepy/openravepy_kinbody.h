@@ -318,7 +318,6 @@ public:
     void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
-    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink) const;
     int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object grabbedUserData) const;
     int GetNumGrabbed() const;
     py::object GetGrabbed() const;

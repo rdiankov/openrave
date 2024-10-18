@@ -5908,7 +5908,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                             }
                         }
                     }
-                    pgrabbed->_SetLinkNonCollidingIsValid(true);
+                    pgrabbed->SetLinkNonCollidingIsValid(true);
                 }
 
                 try {
