@@ -57,7 +57,7 @@ else:
         def __repr__( self ):
             return self._pimpl.__repr__()
         def __unicode__( self ):
-            return unicode(self._pimpl)
+            return unicode(self._pimpl)  # noqa: F821
         def __getattribute__(self, attr):
             my_pimpl = super(openrave_exception_helper, self).__getattribute__("_pimpl")
             try:
@@ -128,7 +128,7 @@ class PlanningError(Exception):
         if sys.version_info[0]>=3:
             self.parameter = parameter
         else:
-            self.parameter = unicode(parameter)
+            self.parameter = unicode(parameter)  # noqa: F821
         if recoverySuggestions is None:
             self.recoverySuggestions = []
         else:

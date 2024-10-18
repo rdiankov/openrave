@@ -66,10 +66,9 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
 
-if not __openravepy_build_doc__:
-    from numpy import *
 
-from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose
+import numpy
+from numpy import reshape, array, float64, int32, zeros, isnan, newaxis, empty, arange, repeat, where, isclose, e, mean, flatnonzero, cross, logical_and, r_, c_, sqrt, ones, transpose, tile, dot, eye, mod, linalg, mod, sum, abs, all, any
 from numpy.linalg import norm
 
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh
@@ -525,7 +524,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     elif geom.GetType() == KinBody.Link.GeomType.Sphere:
                         insideinds = numpy.less_equal(sum(localpoints**2,1), geom.GetSphereRadius()**2)
                     elif geom.GetType() == KinBody.Link.GeomType.Cylinder:
-                        insideinds = numpy.less_equal(abs(localpoints[:,1]), 0.5*geom.GetCylinderHeight()) and numpy.less_equal(localpoint[:,0]**2+localpoint[:2]**2, geom.GetCylinderRadius()**2)
+                        insideinds = numpy.less_equal(abs(localpoints[:,1]), 0.5*geom.GetCylinderHeight()) and numpy.less_equal(localpoints[:,0]**2+localpoints[:2]**2, geom.GetCylinderRadius()**2)
                     else:
                         continue
                     inside[leftinds[flatnonzero(insideinds)]] = True
@@ -626,7 +625,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                             hulls.append(self.transformHull(geom.GetTransform(),ComputeCylinderYMesh(radius=geom.GetCylinderRadius(),height=geom.GetCylinderHeight())))
                     handles += [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(colorindex+i,len(volumecolors))]) for i,hull in enumerate(hulls)]
                     colorindex+=len(hulls)
-            raw_input('Press any key to exit: ')
+            input('Press any key to exit: ')
         finally:
             # close all graphs
             handles = None
@@ -651,13 +650,13 @@ class ConvexDecompositionModel(DatabaseGenerator):
         try:
             if not progressive:
                 handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(i,len(volumecolors))]) for i,hull in enumerate(hulls)]
-                raw_input('Press any key to exit: ')
+                input('Press any key to exit: ')
             else:
                 ihull = 0
                 while ihull < len(hulls):
                     hull = hulls[ihull]
                     handles = [self.env.drawtrimesh(points=transformPoints(link.GetTransform(),hull[0]),indices=hull[1],colors=volumecolors[mod(ihull,len(volumecolors))])]
-                    cmd = raw_input(str(ihull))
+                    cmd = input(str(ihull))
                     if cmd == 'p':
                         ihull -= 1
                     else:

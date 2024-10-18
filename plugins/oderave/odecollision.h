@@ -1006,7 +1006,7 @@ private:
 
                 if( !!pcb->_report ) {
                     if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                        int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, OpenRAVE::KinBody::GeometryConstPtr(), pkb2, OpenRAVE::KinBody::GeometryConstPtr());
+                        int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, std::string(), pkb2, std::string());
                         OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
                         if( icollision >= 0 ) {
                             OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
@@ -1124,7 +1124,7 @@ private:
 
                 if( !!pcb->_report ) {
                     if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                        int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, OpenRAVE::KinBody::GeometryConstPtr(), pkb2, OpenRAVE::KinBody::GeometryConstPtr());
+                        int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, std::string(), pkb2, std::string());
                         OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
                         if( icollision >= 0 ) {
                             OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];
@@ -1267,7 +1267,7 @@ private:
 
                     if( !!pcb->_report ) {
                         if( _options & OpenRAVE::CO_AllLinkCollisions ) {
-                            int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, OpenRAVE::KinBody::GeometryConstPtr(), pkb2, OpenRAVE::KinBody::GeometryConstPtr());
+                            int inewcollision = pcb->_report->AddLinkGeomCollision(pkb1, std::string(), pkb2, std::string());
                             OpenRAVE::CollisionPairInfo& newcpinfo = pcb->_report->vCollisionInfos[inewcollision];
                             if( icollision >= 0 ) {
                                 OpenRAVE::CollisionPairInfo& cpinfo = _report.vCollisionInfos[icollision];

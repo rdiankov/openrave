@@ -70,15 +70,23 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         pusereport = boost::shared_ptr<CollisionReport>(&tempreport,utils::null_deleter());
     }
 
+    // Flatten the grabbed bodies so that we can zip our iteration with the cache of locked pointers
+    // Use raw pointers to save overhead here since lifetime is guaranteed by _grabbedBodiesByEnvironmentIndex
+    std::vector<Grabbed*> vGrabbedBodies;
+    vGrabbedBodies.reserve(_grabbedBodiesByEnvironmentIndex.size());
+    for (const MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        vGrabbedBodies.emplace_back(grabPair.second.get());
+    }
+
     // locking weak pointer is expensive, so do it N times and cache, where N is the number of grabbedBody instead of N^2
     std::vector<KinBodyPtr> vLockedGrabbedBodiesCache;
-    vLockedGrabbedBodiesCache.reserve(_vGrabbedBodies.size());
-    for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
-        vLockedGrabbedBodiesCache.push_back(pgrabbed->_pGrabbedBody.lock());
+    vLockedGrabbedBodiesCache.reserve(vGrabbedBodies.size());
+    for (const Grabbed* grab : vGrabbedBodies) {
+        vLockedGrabbedBodiesCache.push_back(grab->_pGrabbedBody.lock());
     }
 
     // check all grabbed bodies with (TODO: support CO_ActiveDOFs option)
-    const size_t numGrabbed = _vGrabbedBodies.size();
+    const size_t numGrabbed = _grabbedBodiesByEnvironmentIndex.size();
     // RAVELOG_INFO_FORMAT("env=%s, checking self collision for %s with grabbed bodies: numgrabbed=%d", GetEnv()->GetNameId()%GetName()%numGrabbed);
     for (size_t indexGrabbed1 = 0; indexGrabbed1 < numGrabbed; indexGrabbed1++) {
         const KinBodyPtr& pGrabbedBody1 = vLockedGrabbedBodiesCache[indexGrabbed1];
@@ -91,9 +99,9 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             continue;
         }
 
-        _vGrabbedBodies[indexGrabbed1]->ComputeListNonCollidingLinks();
+        vGrabbedBodies[indexGrabbed1]->ComputeListNonCollidingLinks();
 
-        const std::list<KinBody::LinkConstPtr>& nonCollidingLinks1 = _vGrabbedBodies[indexGrabbed1]->_listNonCollidingLinksWhenGrabbed;
+        const std::list<KinBody::LinkConstPtr>& nonCollidingLinks1 = vGrabbedBodies[indexGrabbed1]->_listNonCollidingLinksWhenGrabbed;
 
         KinBodyPtr pLinkParent;
 
@@ -152,9 +160,9 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
                     continue;
                 }
 
-                _vGrabbedBodies[indexGrabbed2]->ComputeListNonCollidingLinks();
+                vGrabbedBodies[indexGrabbed2]->ComputeListNonCollidingLinks();
 
-                const std::list<KinBody::LinkConstPtr>& nonCollidingLinks2 = _vGrabbedBodies[indexGrabbed2]->_listNonCollidingLinksWhenGrabbed;
+                const std::list<KinBody::LinkConstPtr>& nonCollidingLinks2 = vGrabbedBodies[indexGrabbed2]->_listNonCollidingLinksWhenGrabbed;
 
                 for( const KinBody::LinkPtr& pGrabbedBody2Link : grabbedBody2.GetLinks() ) {
                     if( !pGrabbedBody2Link->IsEnabled() ) {
@@ -246,7 +254,8 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Ki
     }
 
     // check if any grabbed bodies are attached to this link, and if so check their collisions with the specified body
-    for (const GrabbedPtr& pgrabbed : _vGrabbedBodies) {
+    for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        GrabbedPtr& pgrabbed = grabPair.second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
@@ -285,7 +294,8 @@ bool KinBody::CheckLinkCollision(int ilinkindex, KinBodyConstPtr pbody, Collisio
     }
 
     // check if any grabbed bodies are attached to this link, and if so check their collisions with the specified body
-    for (const GrabbedConstPtr& pgrabbed : _vGrabbedBodies) {
+    for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        GrabbedPtr& pgrabbed = grabPair.second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
@@ -328,16 +338,16 @@ bool KinBody::CheckLinkCollision(int ilinkindex, const Transform& tlinktrans, Co
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    FOREACHC(itgrabbed,_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = *itgrabbed;
+    FOREACHC(itgrabbed,_grabbedBodiesByEnvironmentIndex) {
+        GrabbedConstPtr pgrabbed = itgrabbed->second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
                 vbodyexcluded.resize(0);
                 vbodyexcluded.push_back(shared_kinbody_const());
-                FOREACHC(itgrabbed2,_vGrabbedBodies) {
+                FOREACHC(itgrabbed2,_grabbedBodiesByEnvironmentIndex) {
                     if( itgrabbed2 != itgrabbed ) {
-                        GrabbedConstPtr pgrabbed2 = *itgrabbed2;
+                        GrabbedConstPtr pgrabbed2 = itgrabbed2->second;
                         KinBodyPtr pgrabbedbody2 = pgrabbed2->_pGrabbedBody.lock();
                         if( !!pgrabbedbody2 ) {
                             vbodyexcluded.push_back(pgrabbedbody2);
@@ -382,16 +392,16 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    FOREACHC(itgrabbed,_vGrabbedBodies) {
-        GrabbedConstPtr pgrabbed = *itgrabbed;
+    FOREACHC(itgrabbed,_grabbedBodiesByEnvironmentIndex) {
+        GrabbedConstPtr pgrabbed = itgrabbed->second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
                 vbodyexcluded.resize(0);
                 vbodyexcluded.push_back(shared_kinbody_const());
-                FOREACHC(itgrabbed2,_vGrabbedBodies) {
+                FOREACHC(itgrabbed2,_grabbedBodiesByEnvironmentIndex) {
                     if( itgrabbed2 != itgrabbed ) {
-                        GrabbedConstPtr pgrabbed2 = *itgrabbed2;
+                        GrabbedConstPtr pgrabbed2 = itgrabbed2->second;
                         KinBodyPtr pgrabbedbody2 = pgrabbed2->_pGrabbedBody.lock();
                         if( !!pgrabbedbody2 ) {
                             vbodyexcluded.push_back(pgrabbedbody2);
@@ -435,7 +445,8 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for (const GrabbedConstPtr& pgrabbed : _vGrabbedBodies) {
+    for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        GrabbedPtr& pgrabbed = grabPair.second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {
@@ -484,7 +495,8 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans
     // it is important to make sure to add all other attached bodies in the ignored list!
     std::vector<KinBodyConstPtr> vbodyexcluded;
     std::vector<KinBody::LinkConstPtr> vlinkexcluded;
-    for (const GrabbedConstPtr& pgrabbed : _vGrabbedBodies) {
+    for (MapGrabbedByEnvironmentIndex::value_type& grabPair : _grabbedBodiesByEnvironmentIndex) {
+        GrabbedPtr& pgrabbed = grabPair.second;
         if( pgrabbed->_pGrabbingLink == plink ) {
             KinBodyPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();
             if( !!pgrabbedbody ) {

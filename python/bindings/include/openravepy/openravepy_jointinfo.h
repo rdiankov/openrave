@@ -115,6 +115,30 @@ public:
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
 
+class PyExtraGeometryInfo
+{
+public:
+    PyExtraGeometryInfo();
+    PyExtraGeometryInfo(const KinBody::ExtraGeometryInfo& info);
+    KinBody::ExtraGeometryInfoPtr GetExtraGeometryInfo();
+
+    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
+
+    py::list _vgeometryinfos;
+
+    std::string __repr__();
+    std::string __str__();
+
+    object _id = py::none_();
+    object _name = py::none_();
+
+private:
+    void _Update(const KinBody::ExtraGeometryInfo& info);
+};
+
+typedef OPENRAVE_SHARED_PTR<PyExtraGeometryInfo> PyExtraGeometryInfoPtr;
+
 class PyLinkInfo
 {
 public:
@@ -403,13 +427,13 @@ public:
     void AddGeometryToGroup(object ogeometryinfo, const std::string& groupname);
 
     void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
-    void SetGeometriesFromGroup(const std::string& name);
+    void SetGeometriesFromGroup(const std::string& groupid);
 
-    object GetGeometriesFromGroup(const std::string& name);
+    object GetGeometriesFromGroup(const std::string& groupid);
 
-    void SetGroupGeometries(const std::string& name, object ogeometryinfos);
+    void SetGroupGeometries(const std::string& groupid, object oextrageometryinfo);
 
-    int GetGroupNumGeometries(const std::string& geomname);
+    int GetGroupNumGeometries(const std::string& groupid);
 
     object GetRigidlyAttachedLinks() const;
 

@@ -22,6 +22,9 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
+#include <unordered_map>
+#include <unordered_set>
+
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
@@ -345,7 +348,6 @@ public:
         CLA_CheckLimitsSilent = 2, ///< checks the limits and silently clamps the joint values (used if the code expects bad values as part of normal operation)
         CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
     };
-
 
     /// \brief Describes the properties of a geometric primitive.
     ///
@@ -979,6 +981,33 @@ protected:
     typedef boost::shared_ptr<Geometry> GeometryPtr;
     typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
 
+    /// \brief Describes the properties of an extraGeometric primitive.
+    class OPENRAVE_API ExtraGeometryInfo : public InfoBase
+    {
+public:
+        ExtraGeometryInfo(){
+        }
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
+
+        std::vector<GeometryInfoPtr> _vgeometryinfos;
+
+        ///\brief unique id of the link
+        std::string _id;
+        /// \brief unique link name
+        std::string _name;
+
+private:
+        friend class Link;
+        friend class KinBody;
+        friend class RobtBase;
+    };
+
+    typedef boost::shared_ptr<ExtraGeometryInfo> ExtraGeometryInfoPtr;
+    typedef boost::shared_ptr<ExtraGeometryInfo const> ExtraGeometryInfoConstPtr;
+
     /// \brief Describes the properties of a link used to initialize it
     class OPENRAVE_API LinkInfo : public InfoBase
     {
@@ -1014,7 +1043,7 @@ public:
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
-        std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
+        std::map< std::string, ExtraGeometryInfoPtr > _mapExtraGeometries;
 
         ///\brief unique id of the link
         std::string _id;
@@ -1082,6 +1111,8 @@ private:
 
         /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
         void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
+
+        void _DeserializeExtraGeometryInfo(const std::string& id, const rapidjson::Value& rExtraGeom, dReal fUnitScale, int options);
 
         friend class Link;
         friend class KinBody;
@@ -1328,25 +1359,25 @@ public:
         ///
         /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
         /// \throw If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
-        void SetGeometriesFromGroup(const std::string& name);
+        void SetGeometriesFromGroup(const std::string& groupid);
 
         /// \brief returns a const reference to the vector of geometries for a particular group
         ///
         /// \param name The name of the geometry group.
         /// \throw openrave_exception If the group does not exist, throws an exception.
-        const std::vector<KinBody::GeometryInfoPtr>& GetGeometriesFromGroup(const std::string& name) const;
+        const std::vector<KinBody::GeometryInfoPtr>& GetGeometriesFromGroup(const std::string& groupid) const;
 
         /// \brief stores geometries for later retrieval
         ///
         /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
         /// any be careful not to modify the geometries afterwards
-        void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+        void SetGroupGeometries(const std::string& groupid, const KinBody::ExtraGeometryInfoPtr& extraGeometry);
 
 private:
         /// \brief stores geometries for later retrieval
         ///
         /// This call is identical to SetGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
-        void _SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+        void _SetGroupGeometriesNoPostprocess(const std::string& name, const KinBody::ExtraGeometryInfoPtr& extraGeometry);
 
 public:
         /// \brief returns the number of geometries stored from a particular key
@@ -2468,7 +2499,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2514,7 +2545,7 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<int, GrabbedPtr> _grabbedBodiesByEnvironmentIndex;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -2598,7 +2629,9 @@ private:
     /// \param linkgeometries a vector containing a collection of geometry infos ptr for each links
     /// Note that the pointers are copied and not the data, so be careful not to modify the geometries afterwards
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
-    virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
+    virtual void SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries);
+    //  DEPRECATED: now group geometry is in ExtraGeometryInfo struct type 
+    // virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
     /// \brief Unique name of the body.
     virtual const std::string& GetName() const {
@@ -3496,15 +3529,16 @@ private:
      */
     void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
-    /// \brief returns number of grabbed targets
-    inline int GetNumGrabbed() const {
-        return (int)_vGrabbedBodies.size();
-    }
+    /** \brief get the set of body names that are grabbed by this body
 
-    /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
-    ///
-    /// \param[in] iGrabbed index into the grabbed bodies. Max is GetNumGrabbed()-1
-    KinBodyPtr GetGrabbedBody(int iGrabbed) const;
+        \param[out] set to fill with the grabbed body names
+     */
+    void GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const;
+
+    /// \brief returns number of grabbed targets
+    int GetNumGrabbed() const {
+        return _grabbedBodiesByEnvironmentIndex.size();
+    }
 
     /** \brief gets info of all grabbed bodies
 
@@ -3586,6 +3620,8 @@ private:
     }
 
 protected:
+    using MapGrabbedByEnvironmentIndex = std::unordered_map<int, GrabbedPtr>;
+
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
 
@@ -3658,7 +3694,7 @@ protected:
     void _UpdateGrabbedBodies();
 
     /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
-    std::vector<GrabbedPtr>::iterator _RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed);
+    MapGrabbedByEnvironmentIndex::iterator _RemoveGrabbedBody(MapGrabbedByEnvironmentIndex::iterator itGrabbed);
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
@@ -3679,6 +3715,17 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    /// \brief Restore kinbody's grabbed bodies information from saved data. Assumes that this is called from _RestoreKinBody of saver classes.
+    /// \param[in] savedBody : saved KinBody inside of saver.
+    /// \param[in] options : SaveParameters inside of saver.
+    /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
+    void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
+                                            const int options,
+                                            const std::unordered_map<int, GrabbedPtr>& savedGrabbedBodiesByEnvironmentIndex);
+
+    /// Ensures that _vAllPairsShortestPaths is initialized if it is not already
+    void _EnsureAllPairsShortestPaths() const;
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
@@ -3690,7 +3737,13 @@ protected:
     std::vector<int> _vDOFIndices; ///< cached start joint indices, indexed by dof indices
     std::vector<uint64_t> _vLinkEnableStatesMask; /// bit mask containing enabled info of links. If bit 0 of _vLinkEnableBitMap[0] is 1, link 0 is enabled. If bit 2 of _vLinkEnableBitMap[1] is 0, link 66 is disabled. Used for fast access to the LinkInfo::_bIsEnabled
 
-    std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
+    /// All-pairs shortest paths through the link hierarchy.
+    /// The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints.
+    /// If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
+    /// Note that this value is lazily calculated - accesses to this variable must be fenced by a call to _EnsureAllPairsShortestPaths
+    /// This value is mutable, as due to the lazy calculation it may need to be generated as part of a const method call.
+    mutable std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths;
+
     std::vector<int8_t> _vJointsAffectingLinks; ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
@@ -3701,7 +3754,9 @@ protected:
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
-    std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+    /// Map of grabbed body record indexed by the environment index of the grabbed body to provide faster lookup
+    /// It is assumed that bodies cannot have their environment index change while they are grabbed.
+    MapGrabbedByEnvironmentIndex _grabbedBodiesByEnvironmentIndex;
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 

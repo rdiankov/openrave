@@ -341,7 +341,7 @@ public:
 
         RAVELOG_VERBOSE_FORMAT("env=%s destructor, _vecbodies.size():%d", GetNameId()%_vecbodies.size());
         if (_vecbodies.size() > 10000 || _mapBodyNameIndex.size() > 10000 || _mapBodyIdIndex.size() > 10000) { // don't know good threshold
-            RAVELOG_WARN_FORMAT("env=%s, _vecbodies.size():%d, _mapBodyNameIndex.size():%d, _mapBodyIdIndex.size():%d seems large, maybe there is memory leak", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size());
+            RAVELOG_WARN_FORMAT("env=%s, _vecbodies.size():%d, _mapBodyNameIndex.size():%d, _mapBodyIdIndex.size():%d seems large, maybe there is memory leak", GetNameId()%_vecbodies.size()%_mapBodyNameIndex.size()%_mapBodyIdIndex.size());
         }
         _StopSimulationThread();
 
@@ -2668,6 +2668,22 @@ public:
         return KinBodyPtr();
     }
 
+    bool GetBodyNameFromEnvironmentBodyIndex(int bodyIndex, std::string& out) const override
+    {
+        SharedLock lock(_mutexInterfaces);
+        if (0 < bodyIndex && bodyIndex < (int)_vecbodies.size()) {
+            out = _vecbodies.at(bodyIndex)->GetName();
+            return true;
+        }
+        return false;
+    }
+
+    int GetEnvironmentBodyIndexByName(string_view bodyName) const override
+    {
+        SharedLock lock(_mutexInterfaces);
+        return _FindBodyIndexByName(bodyName);
+    }
+
     void GetBodiesFromEnvironmentBodyIndices(const std::vector<int>& bodyIndices,
                                              std::vector<KinBodyPtr>& bodies) const override
     {
@@ -3130,7 +3146,8 @@ public:
                     if (!pAttached) {
                         continue;
                     }
-                    for (const GrabbedPtr& pGrabbed : pAttached->_vGrabbedBodies) {
+                    for (const KinBody::MapGrabbedByEnvironmentIndex::value_type& grabPair : pAttached->_grabbedBodiesByEnvironmentIndex) {
+                        const GrabbedPtr& pGrabbed = grabPair.second;
                         KinBodyConstPtr pGrabbedBody = pGrabbed->_pGrabbedBody.lock();
                         if( !!pGrabbedBody && pGrabbedBody.get() == &*pMatchExistingBody ) {
                             pGrabbingBodies.push_back(pAttached);
@@ -3418,6 +3435,7 @@ public:
         _mapBodyNameIndex.erase(itOld);
         _mapBodyNameIndex[newName] = envBodyIndex;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' is renamed to '%s'", GetNameId()%oldName%newName);
+
         return true;
     }
 
@@ -4020,11 +4038,11 @@ protected:
             // most likely unique, but have to double check
             if( utils::IsValidName(newId) && _CheckUniqueId(pbody, false) ) {
                 if( !baseId.empty() ) {
-                    RAVELOG_DEBUG_FORMAT("env=%d, setting body id from '%s' -> '%s' due to conflict", GetId()%baseId%newId);
+                    RAVELOG_DEBUG_FORMAT("env=%s, setting body '%s' id from '%s' -> '%s' due to conflict", GetNameId()%pbody->GetName()%baseId%newId);
                 }
                 break;
             }
-            RAVELOG_INFO_FORMAT("env=%d, tried renaming body from '%s' -> '%s' due to conflict, but conflict again. This is highly unlikely to happen.", GetId()%baseId%newId);
+            RAVELOG_INFO_FORMAT("env=%s, tried renaming body '%s' id from '%s' -> '%s' due to conflict, but conflict again. This is highly unlikely to happen.", GetNameId()%pbody->GetName()%baseId%newId);
         }
     }
 

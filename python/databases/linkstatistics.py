@@ -60,16 +60,12 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import array
-
 import numpy
+from numpy import ones, tile, eye, zeros, dot, linalg, sum, abs, all
+
 from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator
-from .. import pyANN
 from . import convexdecomposition
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh, SpaceSamplerExtra
 import time

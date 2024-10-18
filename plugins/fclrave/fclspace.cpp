@@ -26,11 +26,7 @@ void FCLSpace::FCLKinBodyInfo::Reset()
     _linkenablecallback.reset();
 }
 
-FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo() : bFromKinBodyGeometry(false)
-{
-}
-
-FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo(KinBody::GeometryPtr pgeom) : _pgeom(pgeom), bFromKinBodyGeometry(true)
+FCLSpace::FCLKinBodyInfo::FCLGeometryInfo::FCLGeometryInfo()
 {
 }
 
@@ -101,12 +97,13 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 if( !pfclgeom ) {
                     continue;
                 }
-                // because user data is null pointer here, in CheckNarrowPhaseGeomCollision report.pgeom ends up being null pointer and we lose the geometry information.
-                // maybe pass plink->GetGeometries()[index] where index=distance(vgeometryinfos.begin(), itgeominfo)?
-                // or, should the collision report store names of body, link, and geom?
-                // also, currently there is no information about which geometry group was used for collision checking.
+                // currently there is no information about which geometry group was used for collision checking.
                 // It's usually obvious immediately after CheckCollision is called, but later on, it it is not that obvious collision report is computed with which geometry group.
-                pfclgeom->setUserData(nullptr);
+                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo());
+                pfclgeominfo->geomname = geominfo._name;
+                pfclgeom->setUserData(pfclgeominfo.get());
+                // save the pointers
+                linkinfo->vgeominfos.push_back(pfclgeominfo);
 
                 // We do not set the transformation here and leave it to _Synchronize
                 CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
@@ -121,6 +118,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
             }
+            linkinfo->bFromExtraGeometries = true;
         }
         else {
             const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
@@ -132,8 +130,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 if( !pfclgeom ) {
                     continue;
                 }
-                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo(pgeom));
-                pfclgeominfo->bodylinkgeomname = pbody->GetName() + "/" + plink->GetName() + "/" + pgeom->GetName();
+                boost::shared_ptr<FCLKinBodyInfo::FCLGeometryInfo> pfclgeominfo(new FCLKinBodyInfo::FCLGeometryInfo());
+                pfclgeominfo->geomname = geominfo._name;
                 pfclgeom->setUserData(pfclgeominfo.get());
                 // save the pointers
                 linkinfo->vgeominfos.push_back(pfclgeominfo);
@@ -152,10 +150,11 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                     enclosingBV += ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
                 }
             }
+            linkinfo->bFromExtraGeometries = false;
         }
 
         if( linkinfo->vgeoms.size() == 0 ) {
-            RAVELOG_DEBUG_FORMAT("env=%s, Initializing body '%s' (index=%d) link '%s' with 0 geometries (env %d) (userdatakey %s)", _penv->GetNameId()%pbody->GetName()%pbody->GetEnvironmentBodyIndex()%plink->GetName()%_penv->GetId()%_userdatakey);
+            RAVELOG_DEBUG_FORMAT("env=%s, Initializing body '%s' (index=%d) link '%s' with 0 geometries (env %d) (userdatakey %s, group=%s, bodygroup=%s)", _penv->GetNameId()%pbody->GetName()%pbody->GetEnvironmentBodyIndex()%plink->GetName()%_penv->GetId()%_userdatakey%_geometrygroup%pinfo->_geometrygroup);
         }
         else {
             CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
