@@ -861,9 +861,6 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
                 continue;
             }
 
-            // Since we are mutating the set of grabbed bodies, invalidate the set of non-colliding links on any existing grabs
-            existingGrabIt->second->InvalidateListNonCollidingLinks();
-
             // Mark that this grabbed body is already attached
             existingAttachedGrabBodyIndices.emplace(grabbedBodyIndex);
 
