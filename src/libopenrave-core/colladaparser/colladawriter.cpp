@@ -2825,7 +2825,7 @@ private:
                 }
                 FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometries) {
                     int igeom = 0;
-                    FOREACHC(itgeominfo, itgeomgroup->second) {
+                    FOREACHC(itgeominfo, itgeomgroup->second->_vgeometryinfos) {
                         daeElementRef bind_instance_geometry = ptec->add("bind_instance_geometry");
                         bind_instance_geometry->setAttribute("type", itgeomgroup->first.c_str());
                         bind_instance_geometry->setAttribute("link", vlinksidrefs.at((*itlink)->GetIndex()).c_str());
