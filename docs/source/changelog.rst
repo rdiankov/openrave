@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.156.0
+===============
+
+- Speed up environment loading for big scenes with lots of static links.
+
+Version 0.155.0
+===============
+
+- Add virtual destructors
+
 Version 0.154.0
 ===============
 

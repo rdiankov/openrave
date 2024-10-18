@@ -524,7 +524,7 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
         OpenRAVE::orjson::GetCStringJsonValueByKey(value, pNameInJson);
         size_t existingInfoIndex = -1;
         if (!id.empty()) {
-            decltype(infoIdxById)::iterator existingInfoIdxIt = infoIdxById.find(id);
+            std::unordered_map<std::string, size_t>::iterator existingInfoIdxIt = infoIdxById.find(id);
             if (existingInfoIdxIt != infoIdxById.end()) {
                 existingInfoIndex = existingInfoIdxIt->second;
             }
@@ -533,7 +533,7 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
             // Check if the new info has a name. If it doesn't, don't try and match it - just always create a new object
             // sometimes names can be empty, in which case, always create a new object
             if (!name.empty()) {
-                decltype(infoIdxByName)::iterator existingInfoIdxIt = infoIdxByName.find(name);
+                std::unordered_map<std::string, size_t>::iterator existingInfoIdxIt = infoIdxByName.find(name);
                 if (existingInfoIdxIt != infoIdxByName.end()) {
                     existingInfoIndex = existingInfoIdxIt->second;
                 }
@@ -542,16 +542,16 @@ void UpdateOrCreateInfosWithNameCheck(rapidjson::Value::ConstValueIterator sourc
 
         // If this element is deleted, we need to remove any matching element from the info list
         bool isDeleted = OpenRAVE::orjson::GetJsonValueByKey<bool>(value, "__deleted__", false);
-        if (existingInfoIndex != -1) {
+        if (existingInfoIndex != (size_t)-1) {
             if (isDeleted) {
                 // Erase the referents to this element from our skip lists, but only if they actually point to this index
                 // Note that here we look up using the ID/name of the _existing deserialized info_, not the input JSON.
                 // This is to handle cases where the input JSON specifies only one of name/id but the other is already parsed from a previous update.
-                decltype(infoIdxById)::iterator idIt = infoIdxById.find(vInfosOut[existingInfoIndex]->_id);
+                std::unordered_map<std::string, size_t>::iterator idIt = infoIdxById.find(vInfosOut[existingInfoIndex]->_id);
                 if (idIt != infoIdxById.end() && idIt->second == existingInfoIndex) {
                     infoIdxById.erase(idIt);
                 }
-                decltype(infoIdxByName)::iterator nameIt = infoIdxByName.find(vInfosOut[existingInfoIndex]->_name);
+                std::unordered_map<std::string, size_t>::iterator nameIt = infoIdxByName.find(vInfosOut[existingInfoIndex]->_name);
                 if (nameIt != infoIdxByName.end() && nameIt->second == existingInfoIndex) {
                     infoIdxByName.erase(nameIt);
                 }
