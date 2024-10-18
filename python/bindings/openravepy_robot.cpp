@@ -482,6 +482,9 @@ std::vector<RobotBase::ManipulatorInfoPtr> ExtractManipulatorInfoArray(object py
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for ManipulatorInfo");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vManipulatorInfos;
 }
@@ -508,6 +511,9 @@ std::vector<RobotBase::AttachedSensorInfoPtr> ExtractAttachedSensorInfoArray(obj
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for AttachedSensorInfo");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vAttachedSensorInfos;
 }
@@ -534,6 +540,9 @@ std::vector<RobotBase::ConnectedBodyInfoPtr> ExtractConnectedBodyInfoArray(objec
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for ConnectedBodyInfo");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vConnectedBodyInfos;
 }
@@ -559,6 +568,9 @@ std::vector<RobotBase::GripperInfoPtr> ExtractGripperInfoArray(object pyGripperI
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for GripperInfo");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vGripperInfos;
 }
