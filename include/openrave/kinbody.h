@@ -3839,12 +3839,7 @@ public:
     ///        valid until the grabbed body is released.
     void ComputeListNonCollidingLinks();
 
-    inline void InvalidateListNonCollidingLinks()
-    {
-        _listNonCollidingIsValid = false;
-    }
-
-    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
+    inline void SetLinkNonCollidingIsValid(bool bIsValid)
     {
         _listNonCollidingIsValid = bIsValid;
     }

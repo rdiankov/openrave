@@ -79,7 +79,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
             Grabbed& grabbed = *pGrabbed;
             grabbed._listNonCollidingLinksWhenGrabbed = savedGrabbedData.listNonCollidingLinksWhenGrabbed;
             grabbed._setGrabberLinkIndicesToIgnore = savedGrabbedData.setGrabberLinkIndicesToIgnore;
-            grabbed._SetLinkNonCollidingIsValid(savedGrabbedData.listNonCollidingIsValid);
+            grabbed.SetLinkNonCollidingIsValid(savedGrabbedData.listNonCollidingIsValid);
 
             // attach and add
             _AttachBody(pGrabbedBody);
@@ -130,7 +130,7 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                 _PushLinkToListNonCollidingLinksWhenGrabbed(*pNewGrabbed, linkindex, (*itLinkSaved)->GetName(), pNewNonCollidingBody->GetLinks(), GetEnv());
                             }
                         }
-                        pNewGrabbed->_SetLinkNonCollidingIsValid(true);
+                        pNewGrabbed->SetLinkNonCollidingIsValid(true);
                     }
                     CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
 
