@@ -3698,13 +3698,13 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
-    /// \brief Restore kinbody's grabbed bodies information from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
+    /// \brief Restore kinbody's states from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
     ///        _RestoreGrabbedBodiesFromSavedData with bCalledFromClone=true allows to restore grabbed bodies from one env to another env.
     ///        To do so, it's referring that _environmentBodyIndex is consistent between two envs. Otherwise, we cannnot identify the correct bodies.
     ///        This should be called from Clone where we can assume that _environmentBodyIndex is configured consistent between two envs.
     ///        Please do not call this from other use cases.
-    /// \param[in] originalBody : This function restores the grabbed bodies from originalBody to 'this'.
-    void _RestoreGrabbedBodiesForClone(const KinBody& originalBody);
+    /// \param[in] pOriginalBody : This function restores the states from pOriginalBody to 'this'.
+    void _RestoreStateForClone(const KinBodyPtr& pOriginalBody);
 
     /// \brief Restore kinbody's grabbed bodies information from saved data.
     /// \param[in] savedBody : saved KinBody inside of saver.

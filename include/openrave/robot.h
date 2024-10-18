@@ -1391,6 +1391,10 @@ protected:
     virtual void _PreprocessRestoreGrabbedBodies(std::unordered_map<int, KinBody::SavedGrabbedData>& grabbedDataByEnvironmentIndex,
                                                  const std::vector<int8_t>& vConnectedBodyActiveStates) const;
 
+    /// \brief Restore states from other robot. Please also see KinBody::_RestoreStateForClone as well.
+    /// \param[in] bRestoreGrabbedBodiesOnly : true if only restore grabbed bodies. otherwise, restore other states.
+    virtual void _RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const bool bRestoreGrabbedBodiesOnly);
+
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;
 

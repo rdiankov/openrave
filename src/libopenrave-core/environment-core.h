@@ -3879,21 +3879,14 @@ protected:
                 if( body.IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
-                    // restore grabbed bodies. note that this was originally in the following RobotStateSaver. in the saver, the order of Save_GrabbedBodies is almost first. thus, we should call this before the following saver.
                     if( !!poldrobot && !!pnewrobot ) {
-                        pnewrobot->_RestoreGrabbedBodiesForClone(*poldrobot);
+                        pnewrobot->_RestoreStateForClone(poldrobot, false);
                     }
-                    // need to also update active dof/active manip since it is erased by _ComputeInternalInformation
-                    RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_LinkVelocities|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
-                    saver.Restore(pnewrobot);
                 }
                 else {
-                    // restore grabbed bodies. note that this was originally in the following RobotStateSaver. in the saver, the order of Save_GrabbedBodies is almost first. thus, we should call this before the following saver.
                     if( !!pbody && !!pnewbody ) {
-                        pnewbody->_RestoreGrabbedBodiesForClone(*pbody);
+                        pnewbody->_RestoreStateForClone(pbody);
                     }
-                    KinBody::KinBodyStateSaver saver(pbody, KinBody::Save_LinkVelocities); // all the others should have been saved?
-                    saver.Restore(pnewbody);
                 }
             }
             if( listToCopyState.size() > 0 ) {
@@ -3905,7 +3898,7 @@ protected:
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_vecbodies.at(envBodyIndex));
                         if( !!poldrobot && !!pnewrobot ) {
-                            pnewrobot->_RestoreGrabbedBodiesForClone(*poldrobot);
+                            pnewrobot->_RestoreStateForClone(poldrobot, true);
                         }
                     }
                 }

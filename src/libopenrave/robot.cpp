@@ -468,6 +468,36 @@ void RobotBase::_PreprocessRestoreGrabbedBodies(std::unordered_map<int, KinBody:
     }
 }
 
+void RobotBase::_RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const bool bRestoreGrabbedBodiesOnly)
+{
+    // In the old code, this is done by KinBodyStateSaver's Save_GrabbedBodies|Save_LinkVelocities|Save_ActiveDOF|Save_ActiveManipulator
+    // The restoring order was: RobotBase::Save_GrabbedBodies -> RobotBase::Save_ActiveDOF -> RobotBase::Save_ActiveManipulator -> KinBody::Save_GrabbedBodies -> KinBody::Save_LinkVelocities
+    // This function re-implement it by individual API call.
+
+    // RobotBase::Save_GrabbedBodies. It requires the same data of Save_ConnectedBodies.
+    std::vector<int8_t> vOriginalConnectedBodyActiveStates;
+    pOriginalRobot->GetConnectedBodyActiveStates(vOriginalConnectedBodyActiveStates);
+    std::unordered_map<int, KinBody::SavedGrabbedData> originalGrabbedDataByEnvironmentIndex;
+    pOriginalRobot->_SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
+    _PreprocessRestoreGrabbedBodies(originalGrabbedDataByEnvironmentIndex, vOriginalConnectedBodyActiveStates);
+
+    // RobotBase::Save_ActiveDOF, RobotBase::Save_ActiveManipulator
+    if( !bRestoreGrabbedBodiesOnly ) {
+        RobotBase::RobotStateSaver saver(pOriginalRobot, KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
+        saver.Restore(shared_robot());
+    }
+
+    // KinBody::Save_GrabbedBodies
+    const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
+    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, /*bCalledFromClone*/ true);
+
+    // KinBody::Save_LinkVelocities
+    if( !bRestoreGrabbedBodiesOnly ) {
+        RobotBase::RobotStateSaver saver(pOriginalRobot, KinBody::Save_LinkVelocities);
+        saver.Restore(shared_robot());
+    }
+}
+
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
