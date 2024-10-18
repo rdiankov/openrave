@@ -33,12 +33,21 @@ static void _PushLinkToListNonCollidingLinksWhenGrabbed(Grabbed& grabbed,
     }
 }
 
-void KinBody::_RestoreGrabbedBodiesForClone(const KinBody& originalBody)
+void KinBody::_RestoreStateForClone(const KinBodyPtr& pOriginalBody)
 {
+    // In the old code, this is done by KinBodyStateSaver's KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities.
+    // The restoring order was: KinBodyStateSaver::Save_GrabbedBodies -> KinBodyStateSaver::Save_LinkVelocities.
+    // This function re-implement it by individual API call.
+
+    // KinBodyStateSaver::Save_GrabbedBodies
     std::unordered_map<int, KinBody::SavedGrabbedData> originalGrabbedDataByEnvironmentIndex;
-    originalBody._SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
+    pOriginalBody->_SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
     const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
-    _RestoreGrabbedBodiesFromSavedData(originalBody, options, originalGrabbedDataByEnvironmentIndex, true);
+    _RestoreGrabbedBodiesFromSavedData(*pOriginalBody, options, originalGrabbedDataByEnvironmentIndex, /*bCalledFromClone*/ true);
+
+    // KinBodyStateSaver::Save_LinkVelocities
+    KinBody::KinBodyStateSaver saver(pOriginalBody, KinBody::Save_LinkVelocities); // all the others should have been saved?
+    saver.Restore(shared_kinbody());
 }
 
 void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
