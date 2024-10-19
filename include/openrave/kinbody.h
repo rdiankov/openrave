@@ -2370,7 +2370,7 @@ private:
         Save_JointResolutions                = 0x00000040, ///< saves the dof resolutions
         Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies. Although saver support restoring to the kinbody in other env in general, this Save_GrabbedBodies option does not support for restoring to the kinbody in other env. This is because it cannot successfuly identify the grabbed bodies in other env based on environment body index.
         Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
@@ -3359,7 +3359,7 @@ private:
         _nUpdateStampId += inc;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
 
     /// \brief Register a callback with the interface.
     ///
@@ -3370,7 +3370,7 @@ private:
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const boost::function<void()>& callback) const;
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const override;
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -3496,16 +3496,6 @@ private:
         GICR_IgnoredLinksNotMatch = 3, ///< Specified body is grabbed and grabbing link matches, but ignored links do not match
         GICR_UserDataNotMatch = 4, ///< Specified body is grabbed, grabbing link matches, and ignored links match, but user data do not match
     };
-
-    /** \brief Checks whether a body is grabbed with the given robot link.
-     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
-     */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const;
-
-    /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
-     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
-     */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const;
 
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
@@ -3694,6 +3684,16 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized.
     void _InitAndAddLink(LinkPtr plink);
 
+    /// \brief initializes the internal link vector with the provided link infos.
+    ///
+    /// Internal method called as part of Init() or InitFromLinkInfos()
+    /// LinkInfoT may be a LinkInfo struct or a pointer to a LinkInfo
+    template <typename LinkInfoT>
+    void _InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos);
+
+    /// Initialize a valid link pointer from the specified link info
+    static void _InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo);
+
     /// \brief initializes and adds a link to internal hierarchy.
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
@@ -3704,13 +3704,23 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
-    /// \brief Restore kinbody's grabbed bodies information from saved data. Assumes that this is called from _RestoreKinBody of saver classes.
+    /// \brief Restore kinbody's states from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
+    ///        _RestoreGrabbedBodiesFromSavedData with bCalledFromClone=true allows to restore grabbed bodies from one env to another env.
+    ///        To do so, it's referring that _environmentBodyIndex is consistent between two envs. Otherwise, we cannnot identify the correct bodies.
+    ///        This should be called from Clone where we can assume that _environmentBodyIndex is configured consistent between two envs.
+    ///        Please do not call this from other use cases.
+    /// \param[in] pOriginalBody : This function restores the states from pOriginalBody to 'this'.
+    void _RestoreStateForClone(const KinBodyPtr& pOriginalBody);
+
+    /// \brief Restore kinbody's grabbed bodies information from saved data.
     /// \param[in] savedBody : saved KinBody inside of saver.
     /// \param[in] options : SaveParameters inside of saver.
     /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
+    /// \param[in] bCalledFromClone : true this is called from clone, e.g. called from _RestoreGrabbedBodiesForClone. false if  Assumes that this is called from _RestoreKinBody of saver classes.
     void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                             const int options,
-                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex);
+                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
+                                            const bool bCalledFromClone = false);
 
     /// \brief Save this kinbody's information.
     /// \param[out] savedGrabbedDataByEnvironmentIndex : saved information about _grabbedBodiesByEnvironmentIndex.
@@ -3791,7 +3801,7 @@ protected:
 
 private:
     mutable std::vector<dReal> _vTempJoints;
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_KINBODY_HASH;
     }
 
@@ -3845,12 +3855,7 @@ public:
     ///        valid until the grabbed body is released.
     void ComputeListNonCollidingLinks();
 
-    inline void InvalidateListNonCollidingLinks()
-    {
-        _listNonCollidingIsValid = false;
-    }
-
-    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
+    inline void SetLinkNonCollidingIsValid(bool bIsValid)
     {
         _listNonCollidingIsValid = bIsValid;
     }

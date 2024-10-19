@@ -444,6 +444,60 @@ const std::string& RobotBase::AttachedSensor::GetStructureHash() const
     return __hashstructure;
 }
 
+void RobotBase::_PreprocessRestoreGrabbedBodies(std::unordered_map<int, KinBody::SavedGrabbedData>& grabbedDataByEnvironmentIndex,
+                                                const std::vector<int8_t>& vConnectedBodyActiveStates) const
+{
+    // For now, if a robot's connected body active states change, have to reset _setGrabberLinkIndicesToIgnore
+    bool bConnectedBodyStatesChanged = vConnectedBodyActiveStates.size() != _vecConnectedBodies.size();
+    if( !bConnectedBodyStatesChanged ) {
+        for( size_t iConnectedBody = 0; iConnectedBody < vConnectedBodyActiveStates.size(); ++iConnectedBody ) {
+            if(vConnectedBodyActiveStates[iConnectedBody] != _vecConnectedBodies[iConnectedBody]->IsActive() ) {
+                bConnectedBodyStatesChanged = true;
+                break;
+            }
+        }
+    }
+
+    if( bConnectedBodyStatesChanged ) {
+        if( !grabbedDataByEnvironmentIndex.empty() ) {
+            RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", GetEnv()->GetNameId()%GetName()%grabbedDataByEnvironmentIndex.size());
+            for (std::unordered_map<int, SavedGrabbedData>::value_type& grabPair : grabbedDataByEnvironmentIndex) {
+                grabPair.second.listNonCollidingIsValid = false;
+            }
+        }
+    }
+}
+
+void RobotBase::_RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const bool bRestoreGrabbedBodiesOnly)
+{
+    // In the old code, this is done by KinBodyStateSaver's Save_GrabbedBodies|Save_LinkVelocities|Save_ActiveDOF|Save_ActiveManipulator
+    // The restoring order was: RobotBase::Save_GrabbedBodies -> RobotBase::Save_ActiveDOF -> RobotBase::Save_ActiveManipulator -> KinBody::Save_GrabbedBodies -> KinBody::Save_LinkVelocities
+    // This function re-implement it by individual API call.
+
+    // RobotBase::Save_GrabbedBodies. It requires the same data of Save_ConnectedBodies.
+    std::vector<int8_t> vOriginalConnectedBodyActiveStates;
+    pOriginalRobot->GetConnectedBodyActiveStates(vOriginalConnectedBodyActiveStates);
+    std::unordered_map<int, KinBody::SavedGrabbedData> originalGrabbedDataByEnvironmentIndex;
+    pOriginalRobot->_SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
+    _PreprocessRestoreGrabbedBodies(originalGrabbedDataByEnvironmentIndex, vOriginalConnectedBodyActiveStates);
+
+    // RobotBase::Save_ActiveDOF, RobotBase::Save_ActiveManipulator
+    if( !bRestoreGrabbedBodiesOnly ) {
+        RobotBase::RobotStateSaver saver(pOriginalRobot, KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
+        saver.Restore(shared_robot());
+    }
+
+    // KinBody::Save_GrabbedBodies
+    const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
+    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, /*bCalledFromClone*/ true);
+
+    // KinBody::Save_LinkVelocities
+    if( !bRestoreGrabbedBodiesOnly ) {
+        RobotBase::RobotStateSaver saver(pOriginalRobot, KinBody::Save_LinkVelocities);
+        saver.Restore(shared_robot());
+    }
+}
+
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
 {
     if( _options & Save_ActiveDOF ) {
@@ -575,25 +629,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     }
 
     if( _options & Save_GrabbedBodies ) {
-        // For now, if a robot's connected body active states change, have to reset _setGrabberLinkIndicesToIgnore
-        bool bConnectedBodyStatesChanged = _vConnectedBodyActiveStates.size() != probot->_vecConnectedBodies.size();
-        if( !bConnectedBodyStatesChanged ) {
-            for( size_t iConnectedBody = 0; iConnectedBody < _vConnectedBodyActiveStates.size(); ++iConnectedBody ) {
-                if(_vConnectedBodyActiveStates[iConnectedBody] != probot->_vecConnectedBodies[iConnectedBody]->IsActive() ) {
-                    bConnectedBodyStatesChanged = true;
-                    break;
-                }
-            }
-        }
-
-        if( bConnectedBodyStatesChanged ) {
-            if( !_grabbedDataByEnvironmentIndex.empty() ) {
-                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_grabbedDataByEnvironmentIndex.size());
-                for (std::unordered_map<int, SavedGrabbedData>::value_type& grabPair : _grabbedDataByEnvironmentIndex) {
-                    grabPair.second.listNonCollidingIsValid = false;
-                }
-            }
-        }
+        probot->_PreprocessRestoreGrabbedBodies(_grabbedDataByEnvironmentIndex, _vConnectedBodyActiveStates);
     }
 
     if( _options & Save_ActiveDOF ) {
