@@ -114,7 +114,8 @@ static void _CreateSaverForGrabbedAndGrabber(KinBody::KinBodyStateSaverPtr& pSav
     }
 }
 
-Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
+Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, const uint64_t uniqueId)
+    : _uniqueId(uniqueId)
 {
     _pGrabbedBody = pGrabbedBody;
     _pGrabbingLink = pGrabbingLink;
@@ -231,6 +232,14 @@ void Grabbed::ComputeListNonCollidingLinks()
             if( pOtherGrabbedBody == pGrabbedBody ) {
                 continue;
             }
+
+            // If the unique id of pOtherGrabbed is >= than the one of this grabbed, it means pOtherGrabbed is grabbed later than 'this'. Thus, pOtherGrabbed did not exist when 'this' was grabbed.
+            // The results of lazy computation should be same as the result of non-lazy computation. Therefore, we should not compute the inter-grabbed collision checking with pOtherGrabbed.
+            // This resolves Issue4 in https://github.com/rdiankov/openrave/issues/1436.
+            if( pOtherGrabbed->_uniqueId >= _uniqueId ) {
+                continue;
+            }
+
             vGrabbedBodies.emplace_back(pOtherGrabbed.get());
             vLockedGrabbedBodiesCache.push_back(pOtherGrabbedBody);
         }
@@ -403,7 +412,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         _RemoveGrabbedBody(itPreviouslyGrabbed);
     }
 
-    GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink));
+    GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink, _nextGrabbedBodyUniqueId++));
     pGrabbed->_tRelative = tGrabbingLink.inverse() * tGrabbedBody;
     pGrabbed->_setGrabberLinkIndicesToIgnore = setGrabberLinksToIgnore;
 
@@ -481,6 +490,7 @@ void KinBody::ReleaseAllGrabbed()
 
     // If we have no grabbed bodies, do nothing
     if (_grabbedBodiesByEnvironmentIndex.empty()) {
+        _nextGrabbedBodyUniqueId = 0; // just in case
         return;
     }
 
@@ -494,6 +504,7 @@ void KinBody::ReleaseAllGrabbed()
 
     // Clear our set of grabs
     _grabbedBodiesByEnvironmentIndex.clear();
+    _nextGrabbedBodyUniqueId = 0;
 
     // Execute any hooks registered for grabs
     _PostprocessChangedParameters(Prop_RobotGrabbed);
@@ -507,6 +518,7 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
     if (_grabbedBodiesByEnvironmentIndex.empty()) {
         // just in case, make sure to clear the map of inter grabbed pairs.
         _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
+        _nextGrabbedBodyUniqueId = 0;
         return;
     }
 
@@ -569,7 +581,7 @@ void KinBody::RegrabAll()
             continue;
         }
 
-        GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
+        GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink, _nextGrabbedBodyUniqueId++));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
         CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
@@ -890,6 +902,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Now that we are done processing our old grabs, reset the set of grabbed bodies.
         // Any bodies that are still grabbed will be re-added in the next pass.
         _grabbedBodiesByEnvironmentIndex.clear();
+        _nextGrabbedBodyUniqueId = 0;
 
         // Since all of grabbed instances are re-created, ok to disregard the previous cache.
         _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
@@ -945,7 +958,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Even if this is an existing grabbed body, re-allocate our Grabbed record for two reasons:
         // - We need to re-save the current state of the grabbed object (e.g. the relative transform)
         // - References to the old Grabbed infos for this body may be held by state savers somewhere outside the body, so we can't mutate them without invalidating those checkpoints
-        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink)).first;
+        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink, _nextGrabbedBodyUniqueId++)).first;
 
         // Update the grab object with the ancillary grab info
         GrabbedPtr& pGrabbed = existingGrabIt->second;
@@ -1023,6 +1036,9 @@ KinBody::MapGrabbedByEnvironmentIndex::iterator KinBody::_RemoveGrabbedBody(MapG
 
     // Remove the body from our set of grabs
     itGrabbed = _grabbedBodiesByEnvironmentIndex.erase(itGrabbed);
+    if( _grabbedBodiesByEnvironmentIndex.empty() ) {
+        _nextGrabbedBodyUniqueId = 0;
+    }
 
     // If the grabbed body wasn't real, skip updating the link collision states
     if (!pGrabbedBody) {
@@ -1055,7 +1071,7 @@ bool KinBody::_IsListNonCollidingLinksValidFromEnvironmentBodyIndex(const int en
 
 uint64_t KinBody::_ComputeEnvironmentBodyIndicesPair(const KinBody& body1, const KinBody& body2)
 {
-    return static_cast<uint64_t>(body1.GetEnvironmentBodyIndex()) + (static_cast<uint64_t>(body2.GetEnvironmentBodyIndex()) << 32);
+    return static_cast<uint64_t>(body1.GetEnvironmentBodyIndex()) | (static_cast<uint64_t>(body2.GetEnvironmentBodyIndex()) << 32);
 }
 
 int KinBody::_GetFirstEnvironmentBodyIndexFromPair(const uint64_t pair)
