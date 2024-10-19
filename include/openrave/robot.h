@@ -927,7 +927,7 @@ public:
         /// \brief release the body state. _pbody will not get restored on destruction
         ///
         /// After this call, it will still be possible to use \ref Restore.
-        virtual void Release();
+        virtual void Release() override;
 
 protected:
         RobotBasePtr _probot;
@@ -1384,6 +1384,16 @@ protected:
     virtual void _PostprocessChangedParameters(uint32_t parameters) override;
 
     virtual void _UpdateAttachedSensors();
+
+    /// \brief preprocess for restore for Save_GrabbedBodies.
+    /// \param[out] grabbedDataByEnvironmentIndex : original data for grabbedDataByEnvironmentIndex. if connected body change is observed, invalidate the collision related cache in it.
+    /// \param[in] vConnectedBodyActiveStates : connected bodies states, which is compared with this robot's connected bodies states.
+    virtual void _PreprocessRestoreGrabbedBodies(std::unordered_map<int, KinBody::SavedGrabbedData>& grabbedDataByEnvironmentIndex,
+                                                 const std::vector<int8_t>& vConnectedBodyActiveStates) const;
+
+    /// \brief Restore states from other robot. Please also see KinBody::_RestoreStateForClone as well.
+    /// \param[in] bRestoreGrabbedBodiesOnly : true if only restore grabbed bodies. otherwise, restore other states.
+    virtual void _RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const bool bRestoreGrabbedBodiesOnly);
 
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;

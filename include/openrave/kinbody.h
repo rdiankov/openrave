@@ -3358,7 +3358,7 @@ private:
         _nUpdateStampId += inc;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
 
     /// \brief Register a callback with the interface.
     ///
@@ -3369,7 +3369,7 @@ private:
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const boost::function<void()>& callback) const;
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const override;
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -3683,6 +3683,16 @@ protected:
     /// Can only be called before internal robot hierarchy is initialized.
     void _InitAndAddLink(LinkPtr plink);
 
+    /// \brief initializes the internal link vector with the provided link infos.
+    ///
+    /// Internal method called as part of Init() or InitFromLinkInfos()
+    /// LinkInfoT may be a LinkInfo struct or a pointer to a LinkInfo
+    template <typename LinkInfoT>
+    void _InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos);
+
+    /// Initialize a valid link pointer from the specified link info
+    static void _InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo);
+
     /// \brief initializes and adds a link to internal hierarchy.
     ///
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
@@ -3693,13 +3703,13 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
-    /// \brief Restore kinbody's grabbed bodies information from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
+    /// \brief Restore kinbody's states from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
     ///        _RestoreGrabbedBodiesFromSavedData with bCalledFromClone=true allows to restore grabbed bodies from one env to another env.
     ///        To do so, it's referring that _environmentBodyIndex is consistent between two envs. Otherwise, we cannnot identify the correct bodies.
     ///        This should be called from Clone where we can assume that _environmentBodyIndex is configured consistent between two envs.
     ///        Please do not call this from other use cases.
-    /// \param[in] originalBody : This function restores the grabbed bodies from originalBody to 'this'.
-    void _RestoreGrabbedBodiesForClone(const KinBody& originalBody);
+    /// \param[in] pOriginalBody : This function restores the states from pOriginalBody to 'this'.
+    void _RestoreStateForClone(const KinBodyPtr& pOriginalBody);
 
     /// \brief Restore kinbody's grabbed bodies information from saved data.
     /// \param[in] savedBody : saved KinBody inside of saver.
@@ -3807,7 +3817,7 @@ protected:
 
 private:
     mutable std::vector<dReal> _vTempJoints;
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_KINBODY_HASH;
     }
 
