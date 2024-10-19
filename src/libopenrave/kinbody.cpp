@@ -5861,6 +5861,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _listAttachedBodies.clear(); // will be set in the environment
     _grabbedBodiesByEnvironmentIndex.clear();
     _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
+    _nextGrabbedBodyUniqueId = r->_nextGrabbedBodyUniqueId;
     if ((cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies) {
         for (const MapGrabbedByEnvironmentIndex::value_type& otherGrabPair : r->_grabbedBodiesByEnvironmentIndex) {
             const GrabbedPtr& pgrabbedref = otherGrabPair.second;
@@ -5884,7 +5885,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 }
                 //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
-                GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
+                GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex()), pgrabbedref->_uniqueId));
                 pgrabbed->_tRelative = pgrabbedref->_tRelative;
                 pgrabbed->_setGrabberLinkIndicesToIgnore = pgrabbedref->_setGrabberLinkIndicesToIgnore; // can do this since link indices are the same
                 CopyRapidJsonDoc(pgrabbedref->_rGrabbedUserData, pgrabbed->_rGrabbedUserData);
