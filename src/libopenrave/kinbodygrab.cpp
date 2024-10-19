@@ -232,6 +232,14 @@ void Grabbed::ComputeListNonCollidingLinks()
             if( pOtherGrabbedBody == pGrabbedBody ) {
                 continue;
             }
+
+            // If the unique id of pOtherGrabbed is >= than the one of this grabbed, it means pOtherGrabbed is grabbed later than 'this'. Thus, pOtherGrabbed did not exist when 'this' was grabbed.
+            // The results of lazy computation should be same as the result of non-lazy computation. Therefore, we should not compute the inter-grabbed collision checking with pOtherGrabbed.
+            // This resolves Issue4 in https://github.com/rdiankov/openrave/issues/1436.
+            if( pOtherGrabbed->_uniqueId >= _uniqueId ) {
+                continue;
+            }
+
             vGrabbedBodies.emplace_back(pOtherGrabbed.get());
             vLockedGrabbedBodiesCache.push_back(pOtherGrabbedBody);
         }
