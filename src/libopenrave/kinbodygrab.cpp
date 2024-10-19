@@ -1055,7 +1055,7 @@ bool KinBody::_IsListNonCollidingLinksValidFromEnvironmentBodyIndex(const int en
 
 uint64_t KinBody::_ComputeEnvironmentBodyIndicesPair(const KinBody& body1, const KinBody& body2)
 {
-    return static_cast<uint64_t>(body1.GetEnvironmentBodyIndex()) + (static_cast<uint64_t>(body2.GetEnvironmentBodyIndex()) << 32);
+    return static_cast<uint64_t>(body1.GetEnvironmentBodyIndex()) | (static_cast<uint64_t>(body2.GetEnvironmentBodyIndex()) << 32);
 }
 
 int KinBody::_GetFirstEnvironmentBodyIndexFromPair(const uint64_t pair)
