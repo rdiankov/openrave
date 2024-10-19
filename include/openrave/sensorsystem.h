@@ -69,7 +69,7 @@ protected:
     }
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_SENSORSYSTEM_HASH;
     }
 };
@@ -130,23 +130,23 @@ public:
             SetBody(pbody);
         }
 
-        virtual ReadableConstPtr GetData() const {
+        virtual ReadableConstPtr GetData() const override {
             return _initdata;
         }
-        virtual KinBody::LinkPtr GetOffsetLink() const {
+        virtual KinBody::LinkPtr GetOffsetLink() const override {
             return KinBody::LinkPtr(_plink);
         }
 
-        virtual bool IsPresent() const {
+        virtual bool IsPresent() const override {
             return bPresent;
         }
-        virtual bool IsEnabled() const {
+        virtual bool IsEnabled() const override {
             return bEnabled;
         }
-        virtual bool IsLocked() const {
+        virtual bool IsLocked() const override {
             return bLock;
         }
-        virtual bool Lock(bool bDoLock) {
+        virtual bool Lock(bool bDoLock) override {
             bLock = bDoLock; return true;
         }
 
@@ -187,12 +187,12 @@ protected:
     {
 public:
         SimpleXMLReader(boost::shared_ptr<XMLData>);
-        virtual ReadablePtr GetReadable() {
+        virtual ReadablePtr GetReadable() override {
             return _pdata;
         }
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-        virtual bool endElement(const std::string& name);
-        virtual void characters(const std::string& ch);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+        virtual bool endElement(const std::string& name) override;
+        virtual void characters(const std::string& ch) override;
 
 protected:
         boost::shared_ptr<XMLData> _pdata;
@@ -205,15 +205,15 @@ protected:
     SimpleSensorSystem(const std::string& xmlid, EnvironmentBasePtr penv);
     virtual ~SimpleSensorSystem();
 
-    virtual void Reset();
+    virtual void Reset() override;
 
-    virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies);
-    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata);
+    virtual void AddRegisteredBodies(const std::vector<KinBodyPtr>& vbodies) override;
+    virtual KinBody::ManageDataPtr AddKinBody(KinBodyPtr pbody, ReadableConstPtr pdata) override;
 
-    virtual bool RemoveKinBody(KinBodyPtr pbody);
-    virtual bool IsBodyPresent(KinBodyPtr pbody);
-    virtual bool EnableBody(KinBodyPtr pbody, bool bEnable);
-    virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2);
+    virtual bool RemoveKinBody(KinBodyPtr pbody) override;
+    virtual bool IsBodyPresent(KinBodyPtr pbody) override;
+    virtual bool EnableBody(KinBodyPtr pbody, bool bEnable) override;
+    virtual bool SwitchBody(KinBodyPtr pbody1, KinBodyPtr pbody2) override;
 
 protected:
     typedef std::pair<boost::shared_ptr<BodyData>, Transform > SNAPSHOT;

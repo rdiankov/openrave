@@ -352,7 +352,7 @@ protected:
     }
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_COLLISIONCHECKER_HASH;
     }
 
