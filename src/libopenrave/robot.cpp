@@ -489,7 +489,7 @@ void RobotBase::_RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const 
 
     // KinBody::Save_GrabbedBodies
     const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
-    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, /*bCalledFromClone*/ true);
+    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, pOriginalRobot->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed, /*bCalledFromClone*/ true);
 
     // KinBody::Save_LinkVelocities
     if( !bRestoreGrabbedBodiesOnly ) {
