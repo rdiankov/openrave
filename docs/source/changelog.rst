@@ -3,6 +3,25 @@
 ChangeLog
 #########
 
+Version 0.156.0
+===============
+
+- Speed up environment loading for big scenes with lots of static links.
+- Deprecate restoring of grabbed bodies by `KinBodyStateSaver` from one env to another env since it's hard to restore any kind of bodies into different env. Instead, use the dedicated private API in `Environment::_Clone`.
+- Remove unnecessary APIs about `CheckGrabbedInfo` and `InvalidateListNonCollidingLinks`.
+- Add python enum for `GICR_UserDataNotMatch`
+
+Version 0.155.0
+===============
+
+- Add virtual destructors
+
+Version 0.154.0
+===============
+
+- Fix the bug that `KinBodyStateSaver` cannot restore the `_listNonCollidingIsValid`, `_listNonCollidingLinksWhenGrabbed`, and `_setGrabberLinkIndicesToIgnore` in `Grabbed`.
+- Resolve cyclic relationship between `KinBodyStateSaver` and `Grabbed` by eliminating `Save_GrabbedBodies` from `ComputeListNonCollidingLinks`.
+
 Version 0.153.0
 ===============
 

@@ -3879,13 +3879,14 @@ protected:
                 if( body.IsRobot() ) {
                     RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                     RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(pnewbody);
-                    // need to also update active dof/active manip since it is erased by _ComputeInternalInformation
-                    RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities|KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
-                    saver.Restore(pnewrobot);
+                    if( !!poldrobot && !!pnewrobot ) {
+                        pnewrobot->_RestoreStateForClone(poldrobot, false);
+                    }
                 }
                 else {
-                    KinBody::KinBodyStateSaver saver(pbody, KinBody::Save_GrabbedBodies|KinBody::Save_LinkVelocities); // all the others should have been saved?
-                    saver.Restore(pnewbody);
+                    if( !!pbody && !!pnewbody ) {
+                        pnewbody->_RestoreStateForClone(pbody);
+                    }
                 }
             }
             if( listToCopyState.size() > 0 ) {
@@ -3896,8 +3897,9 @@ protected:
                         const int envBodyIndex = body.GetEnvironmentBodyIndex();
                         RobotBasePtr poldrobot = RaveInterfaceCast<RobotBase>(pbody);
                         RobotBasePtr pnewrobot = RaveInterfaceCast<RobotBase>(_vecbodies.at(envBodyIndex));
-                        RobotBase::RobotStateSaver saver(poldrobot, KinBody::Save_GrabbedBodies);
-                        saver.Restore(pnewrobot);
+                        if( !!poldrobot && !!pnewrobot ) {
+                            pnewrobot->_RestoreStateForClone(poldrobot, true);
+                        }
                     }
                 }
             }
