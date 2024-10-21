@@ -976,7 +976,12 @@ public:
                     // geometry is not in the default group, so we add it to the LinkInfo without instantiating it
                     string groupname = geomreader->GetGroupName();
                     if( groupname != "self" ) {
-                        _plink->_info._mapExtraGeometries[groupname].push_back(info);
+                        if (_plink->_info._mapExtraGeometries.find(groupname) == _plink->_info._mapExtraGeometries.end()) {
+                            _plink->_info._mapExtraGeometries[groupname] = KinBody::ExtraGeometryInfoPtr(new KinBody::ExtraGeometryInfo());
+                            _plink->_info._mapExtraGeometries[groupname]->_id = groupname;
+                            _plink->_info._mapExtraGeometries[groupname]->_name = groupname;
+                        }
+                        _plink->_info._mapExtraGeometries[groupname]->_vgeometryinfos.push_back(info);
                         _pcurreader.reset();
                         return false;
                     }
