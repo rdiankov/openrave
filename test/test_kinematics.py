@@ -1084,13 +1084,13 @@ class TestKinematics(EnvironmentSetup):
             link0._vgeometryinfos = [infobox0, infobox1]
             link0._name = 'link0'
             link0._mapFloatParameters = {'param0':[1,2.3]}
-            link0._mapIntParameters = {'param0':[4,5.6]}
+            link0._mapIntParameters = {'param0':[4,5,6]}
             link0._mapStringParameters = {'jp':u'日本語', 'test':'has spaces'}
             link1 = KinBody.LinkInfo()
             link1._vgeometryinfos = [infobox2]
             link1._name = 'link1'
             link1._mapFloatParameters = {'param0':[1,2.3]}
-            link1._mapIntParameters = {'param0':[4,5.6]}
+            link1._mapIntParameters = {'param0':[4,5,6]}
             link1._t[0,3] = 0.5
 
             joint0 = KinBody.JointInfo()

@@ -346,25 +346,21 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     if (value.HasMember("links")) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
-        for (rapidjson::Value::ConstValueIterator it = value["links"].Begin(); it != value["links"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vLinkInfos, "name", fUnitScale, options);
-        }
+        UpdateOrCreateInfosWithNameCheck(value["links"].Begin(), value["links"].End(), _vLinkInfos, "name", fUnitScale, options);
 
-        // if has conflicting names, should error here
-        for(int ilink0 = 0; ilink0 < (int)_vLinkInfos.size(); ++ilink0 ) {
-            for(int ilink1 = ilink0+1; ilink1 < (int)_vLinkInfos.size(); ++ilink1 ) {
-                if( _vLinkInfos[ilink0]->_name == _vLinkInfos[ilink1]->_name ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT("Body '%s' has info with link[%d] and link[%d] having the same linkname '%s', which is not allowed. link[%d].id='%s', link[%d].id='%s'", _name%ilink0%ilink1%_vLinkInfos[ilink0]->_name%ilink0%_vLinkInfos[ilink0]->_id%ilink1%_vLinkInfos[ilink1]->_id, ORE_Assert);
-                }
+        // Assert that we don't have any duplicate link names
+        std::unordered_set<OpenRAVE::string_view> usedLinkNames;
+        for (const LinkInfoPtr& linkInfo : _vLinkInfos) {
+            const bool didEmplace = usedLinkNames.emplace(linkInfo->_name).second;
+            if (!didEmplace) {
+                throw OPENRAVE_EXCEPTION_FORMAT("Body '%s' has info with multiple links sharing the same linkname '%s', which is not allowed.", _name%linkInfo->_name, ORE_Assert);
             }
         }
     }
 
     if (value.HasMember("joints")) {
         _vJointInfos.reserve(value["joints"].Size() + _vJointInfos.size());
-        for (rapidjson::Value::ConstValueIterator it = value["joints"].Begin(); it != value["joints"].End(); ++it) {
-            UpdateOrCreateInfoWithNameCheck(*it, _vJointInfos, "name", fUnitScale, options);
-        }
+        UpdateOrCreateInfosWithNameCheck(value["joints"].Begin(), value["joints"].End(), _vJointInfos, "name", fUnitScale, options);
     }
 
     if (value.HasMember("dofValues")) {
@@ -733,16 +729,67 @@ void KinBody::SetLinkGroupGeometries(const std::string& id, const std::vector<Ki
     _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
+void KinBody::_InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo)
+{
+    linkPtr->_vGeometries.clear();
+    linkPtr->_collision.vertices.clear();
+    linkPtr->_collision.indices.clear();
+
+    linkPtr->_vGeometries.reserve(linkInfo._vgeometryinfos.size());
+
+    for (const KinBody::GeometryInfoPtr& geomInfo : linkInfo._vgeometryinfos) {
+        KinBody::Link::GeometryPtr geom(new KinBody::Link::Geometry(linkPtr, *geomInfo));
+        if (geom->_info._meshcollision.vertices.size() == 0) { // try to avoid recomputing
+            geom->_info.InitCollisionMesh();
+        }
+        linkPtr->_vGeometries.push_back(geom);
+        linkPtr->_collision.Append(geom->GetCollisionMesh(), geom->GetTransform());
+    }
+
+    FOREACH(it, linkInfo._mReadableInterfaces) {
+        linkPtr->SetReadableInterface(it->first, it->second);
+    }
+}
+
+static const KinBody::LinkInfo& _ResolveLinkInfo(const KinBody::LinkInfoConstPtr& linkInfo) { return *linkInfo; }
+static const KinBody::LinkInfo& _ResolveLinkInfo(const KinBody::LinkInfo& linkInfo) { return linkInfo; }
+template <typename LinkInfoT>
+void KinBody::_InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos)
+{
+    CHECK_NO_INTERNAL_COMPUTATION;
+    BOOST_ASSERT(_veclinks.empty()); // We assume we are the first call to initialize links
+
+    // Keep track of link names as we go to deduplicate
+    std::unordered_set<std::string> existingLinkNames;
+    existingLinkNames.reserve(linkInfos.size());
+
+    _veclinks.reserve(linkInfos.size());
+    for (const LinkInfoT& linkInfo : linkInfos) {
+        LinkPtr plink(new Link(shared_kinbody()));
+        plink->_info = _ResolveLinkInfo(linkInfo);
+        LinkInfo& info = plink->_info;
+
+        // check to make sure there are no repeating names in already added links
+        const bool isLinkNameUnique = existingLinkNames.emplace(info._name).second;
+        if (!isLinkNameUnique) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("link '%s' is declared more than once in body '%s', uri is '%s'"), info._name%GetName()%GetURI(), ORE_InvalidArguments);
+        }
+
+        // Initialize the link from the associated info and add to our list of links
+        plink->_index = static_cast<int>(_veclinks.size());
+        _InitLinkFromInfo(plink, info);
+        _veclinks.push_back(std::move(plink));
+    }
+
+    _vLinkTransformPointers.clear();
+    __hashKinematicsGeometryDynamics.resize(0);
+}
+
 bool KinBody::Init(const std::vector<KinBody::LinkInfoConstPtr>& linkinfos, const std::vector<KinBody::JointInfoConstPtr>& jointinfos, const std::string& uri)
 {
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     Destroy();
-    _veclinks.reserve(linkinfos.size());
-    FOREACHC(itlinkinfo, linkinfos) {
-        LinkPtr plink(new Link(shared_kinbody()));
-        plink->_info = **itlinkinfo;
-        _InitAndAddLink(plink);
-    }
+    _InitWithInitialLinks(linkinfos);
     _vecjoints.reserve(jointinfos.size());
     FOREACHC(itjointinfo, jointinfos) {
         JointInfoConstPtr rawinfo = *itjointinfo;
@@ -762,12 +809,7 @@ void KinBody::InitFromLinkInfos(const std::vector<LinkInfo>& linkinfos, const st
     OPENRAVE_ASSERT_FORMAT(GetEnvironmentBodyIndex()==0, "%s: cannot Init a body while it is added to the environment", GetName(), ORE_Failed);
     OPENRAVE_ASSERT_OP(linkinfos.size(),>,0);
     Destroy();
-    _veclinks.reserve(linkinfos.size());
-    FOREACHC(itlinkinfo, linkinfos) {
-        LinkPtr plink(new Link(shared_kinbody()));
-        plink->_info = *itlinkinfo;
-        _InitAndAddLink(plink);
-    }
+    _InitWithInitialLinks(linkinfos);
     if( linkinfos.size() > 1 ) {
         // create static joints
         _vecjoints.clear();
@@ -4988,11 +5030,10 @@ void KinBody::_ComputeInternalInformation()
         // make no-geometry links adjacent to all other links
         for (const LinkPtr& plink0 : _veclinks) {
             const Link& link0 = *plink0;
-            if( link0.GetGeometries().size() == 0 ) {
-                int ind0 = link0.GetIndex();
-                for (const LinkPtr& plink1 : _veclinks) {
-                    const Link& link1 = *plink1;
-                    int ind1 = link1.GetIndex();
+            if (link0.GetGeometries().size() == 0) {
+                const int ind0 = link0.GetIndex();
+                for (const LinkPtr& link1 : _veclinks) {
+                    const int ind1 = link1->GetIndex();
                     if (ind0 != ind1) {
                         _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
                     }
@@ -5020,13 +5061,19 @@ void KinBody::_ComputeInternalInformation()
             if (!_vecjoints.empty()) {
                 for (int ind0 = 0; ind0 < (int)_veclinks.size() - 1; ++ind0) {
                     for (int ind1 = ind0 + 1; ind1 < (int)_veclinks.size(); ++ind1) {
+                        // If these links are already adjacent, skip computation of their connecting chain
+                        const size_t adjacencyIndex = _GetIndex1d(ind0, ind1);
+                        if (_vAdjacentLinks[adjacencyIndex]) {
+                            continue;
+                        }
+
                         GetChain(ind0, ind1, vjoints);
                         size_t numstatic = 0;
                         FOREACH(it, vjoints) {
                             numstatic += (*it)->IsStatic();
                         }
                         if (numstatic + 1 >= vjoints.size()) {
-                            _vAdjacentLinks.at(_GetIndex1d(ind0, ind1)) = 1;
+                            _vAdjacentLinks[adjacencyIndex] = 1;
                         }
                     }
                 }
@@ -5872,7 +5919,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                             }
                         }
                     }
-                    pgrabbed->_SetLinkNonCollidingIsValid(true);
+                    pgrabbed->SetLinkNonCollidingIsValid(true);
                 }
 
                 try {
@@ -6105,21 +6152,7 @@ void KinBody::_InitAndAddLink(LinkPtr plink)
     }
 
     plink->_index = static_cast<int>(_veclinks.size());
-    plink->_vGeometries.clear();
-    plink->_collision.vertices.clear();
-    plink->_collision.indices.clear();
-    FOREACHC(itgeominfo,info._vgeometryinfos) {
-        Link::GeometryPtr geom(new Link::Geometry(plink,**itgeominfo));
-        if( geom->_info._meshcollision.vertices.size() == 0 ) { // try to avoid recomputing
-            geom->_info.InitCollisionMesh();
-        }
-        plink->_vGeometries.push_back(geom);
-        plink->_collision.Append(geom->GetCollisionMesh(),geom->GetTransform());
-    }
-
-    FOREACH(it, info._mReadableInterfaces) {
-        plink->SetReadableInterface(it->first, it->second);
-    }
+    _InitLinkFromInfo(plink, info);
 
     _veclinks.push_back(plink);
     _vLinkTransformPointers.clear();

@@ -66,7 +66,7 @@ public:
     class OPENRAVE_API LaserSensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_Laser;
         }
 
@@ -79,23 +79,23 @@ public:
         std::vector<RaveVector<dReal> > ranges;         ///< Range and direction readings in the form of direction*distance. The direction is in world coordinates. The values should be returned in the order laser detected them in.
         std::vector<dReal> intensity;         ///< Intensity readings.
 
-        virtual bool serialize(std::ostream& O) const;
+        virtual bool serialize(std::ostream& O) const override;
     };
     class OPENRAVE_API CameraSensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_Camera;
         }
         std::vector<uint8_t> vimagedata;         ///< rgb image data, if camera only outputs in grayscale, fill each channel with the same value
-        virtual bool serialize(std::ostream& O) const;
+        virtual bool serialize(std::ostream& O) const override;
     };
 
     /// \brief Stores joint angles and EE position.
     class OPENRAVE_API JointEncoderSensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_JointEncoder;
         }
         std::vector<dReal> encoderValues;         ///< measured joint angles in radians
@@ -106,7 +106,7 @@ public:
     class OPENRAVE_API Force6DSensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_Force6D;
         }
         Vector force;         ///< Force in X Y Z, in newtons
@@ -117,7 +117,7 @@ public:
     class OPENRAVE_API IMUSensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_IMU;
         }
         Vector rotation;         ///< quaternion
@@ -132,7 +132,7 @@ public:
     class OPENRAVE_API OdometrySensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_Odometry;
         }
         Transform pose;         ///< measured pose
@@ -145,7 +145,7 @@ public:
     class OPENRAVE_API TactileSensorData : public SensorData
     {
 public:
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_Tactile;
         }
         std::vector<Vector> forces;         /// xyz force of each individual element
@@ -167,7 +167,7 @@ public:
 
         ActuatorSensorData() : state(AS_Undefined), measuredcurrent(0), measuredtemperature(0), appliedcurrent(0) {
         }
-        virtual SensorType GetType() {
+        virtual SensorType GetType() override {
             return ST_Actuator;
         }
 
@@ -484,6 +484,7 @@ public:
                        && mu_s == other.mu_s
                        && mu_d == other.mu_d;
             }
+            virtual ~Friction() {}
         };
         std::vector<Vector> positions;         ///< 3D positions of all the elements in the sensor frame
         dReal thickness;         ///< the thickness of the tactile sensors (used for determining contact and computing force)

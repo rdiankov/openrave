@@ -58,6 +58,7 @@
 #if  __cplusplus >= 201703L
 #include <string_view>
 #else
+#include <boost/container_hash/hash.hpp>
 #include <boost/utility/string_view.hpp>
 namespace std{
     // make boost::string_view handlable by std::unordered_set/map
@@ -444,9 +445,9 @@ class OPENRAVE_API DummyXMLReader : public BaseXMLReader
 {
 public:
     DummyXMLReader(const std::string& fieldname, const std::string& parentname, boost::shared_ptr<std::ostream> osrecord = boost::shared_ptr<std::ostream>());
-    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-    virtual bool endElement(const std::string& name);
-    virtual void characters(const std::string& ch);
+    virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+    virtual bool endElement(const std::string& name) override;
+    virtual void characters(const std::string& ch) override;
     const std::string& GetFieldName() const {
         return _fieldname;
     }
@@ -754,9 +755,9 @@ public:
     {
 public:
         Reader(ConfigurationSpecification& spec);
-        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts);
-        virtual bool endElement(const std::string& name);
-        virtual void characters(const std::string& ch);
+        virtual ProcessElement startElement(const std::string& name, const AttributesList& atts) override;
+        virtual bool endElement(const std::string& name) override;
+        virtual void characters(const std::string& ch) override;
 protected:
         ConfigurationSpecification& _spec;
         std::stringstream _ss;
