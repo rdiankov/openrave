@@ -306,12 +306,10 @@ void Grabbed::_PushNonCollidingLinkPairsForGrabbedBodies(KinBodyPtr& pGrabber,
     }
 
     // If not found, try checking the non-colliding lists. If non-colliding list is not empty, push the new info.
-    if( itInfo == pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.end() ) {
-        KinBody::ListNonCollidingLinkPairs listNonCollidingLinkPairs;
-        _PushLinkPairsIfNonCollidingWithOtherGrabbedBody(listNonCollidingLinkPairs, pchecker, grabbedBody, otherGrabbedBody, /* bInvertFirstSecond */ false);
-        if( listNonCollidingLinkPairs.size() > 0 ) {
-            itInfo = pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.emplace(indexForTest0, std::move(listNonCollidingLinkPairs)).first;
-        }
+    KinBody::ListNonCollidingLinkPairs listNonCollidingLinkPairs;
+    _PushLinkPairsIfNonCollidingWithOtherGrabbedBody(listNonCollidingLinkPairs, pchecker, grabbedBody, otherGrabbedBody, /* bInvertFirstSecond */ false);
+    if( listNonCollidingLinkPairs.size() > 0 ) {
+        itInfo = pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.emplace(indexForTest0, std::move(listNonCollidingLinkPairs)).first;
     }
 }
 
