@@ -4157,13 +4157,6 @@ object PyKinBody::IsGrabbing(PyKinBodyPtr pbody) const
     return toPyKinBodyLink(plink,_pyenv);
 }
 
-int PyKinBody::CheckGrabbedInfo(PyKinBodyPtr pbody, object pylink) const
-{
-    CHECK_POINTER(pbody);
-    CHECK_POINTER(pylink);
-    return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink));
-}
-
 int PyKinBody::CheckGrabbedInfo(PyKinBodyPtr pbody, object pylink, object linkstoignore, object grabbedUserData) const
 {
     CHECK_POINTER(pbody);
@@ -4172,17 +4165,13 @@ int PyKinBody::CheckGrabbedInfo(PyKinBodyPtr pbody, object pylink, object linkst
     if( !IS_PYTHONOBJECT_NONE(grabbedUserData) ) {
         toRapidJSONValue(grabbedUserData, rGrabbedUserData, rGrabbedUserData.GetAllocator());
     }
-    if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 && IS_PYTHONOBJECT_STRING(object(linkstoignore[0])) ) {
+    std::set<std::string> setlinkstoignoreString;
+    if( !IS_PYTHONOBJECT_NONE(linkstoignore) && len(linkstoignore) > 0 ) {
+        OPENRAVE_ASSERT_OP(IS_PYTHONOBJECT_STRING(object(linkstoignore[0])), ==, true);
         // linkstoignore is a list of link names
-        std::set<std::string> setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
-        return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreString, rGrabbedUserData);
+        setlinkstoignoreString = ExtractSet<std::string>(linkstoignore);
     }
-    // linkstoignore is a list of link indices
-    std::set<int> setlinkstoignoreInt;
-    if( !IS_PYTHONOBJECT_NONE(linkstoignore) ) {
-        setlinkstoignoreInt = ExtractSet<int>(linkstoignore);
-    }
-    return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreInt, rGrabbedUserData);
+    return _pbody->CheckGrabbedInfo(*(pbody->GetBody()), *GetKinBodyLink(pylink), setlinkstoignoreString, rGrabbedUserData);
 }
 
 int PyKinBody::GetNumGrabbed() const
@@ -5614,7 +5603,8 @@ void init_openravepy_kinbody()
                                     .value("Identical",KinBody::GICR_Identical)
                                     .value("BodyNotGrabbed",KinBody::GICR_BodyNotGrabbed)
                                     .value("GrabbingLinkNotMatch",KinBody::GICR_GrabbingLinkNotMatch)
-                                    .value("IgnoredLinksNotMatch",KinBody::GICR_IgnoredLinksNotMatch);
+                                    .value("IgnoredLinksNotMatch",KinBody::GICR_IgnoredLinksNotMatch)
+                                    .value("UserDataNotMatch",KinBody::GICR_UserDataNotMatch);
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object kinbodyinfo = class_<PyKinBody::PyKinBodyInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyKinBodyInfo> >(m, "KinBodyInfo", DOXY_CLASS(KinBody::KinBodyInfo))
@@ -5693,8 +5683,6 @@ void init_openravepy_kinbody()
         void (PyKinBody::*setdofvelocities4)(object,object,object,uint32_t) = &PyKinBody::SetDOFVelocities;
         bool (PyKinBody::*pgrab2)(PyKinBodyPtr,object) = &PyKinBody::Grab;
         bool (PyKinBody::*pgrab4)(PyKinBodyPtr,object,object,object) = &PyKinBody::Grab;
-        int (PyKinBody::*checkgrabbedinfo2)(PyKinBodyPtr,object) const = &PyKinBody::CheckGrabbedInfo;
-        int (PyKinBody::*checkgrabbedinfo3)(PyKinBodyPtr,object,object,object) const = &PyKinBody::CheckGrabbedInfo;
         object (PyKinBody::*GetNonAdjacentLinks1)() const = &PyKinBody::GetNonAdjacentLinks;
         object (PyKinBody::*GetNonAdjacentLinks2)(int) const = &PyKinBody::GetNonAdjacentLinks;
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
@@ -6015,8 +6003,7 @@ void init_openravepy_kinbody()
                          .def("ReleaseAllGrabbedWithLink",&PyKinBody::ReleaseAllGrabbedWithLink, PY_ARGS("grablink") DOXY_FN(KinBody,ReleaseAllGrabbedWithLink))
                          .def("RegrabAll",&PyKinBody::RegrabAll, DOXY_FN(KinBody,RegrabAll))
                          .def("IsGrabbing",&PyKinBody::IsGrabbing,PY_ARGS("body") DOXY_FN(KinBody,IsGrabbing))
-                         .def("CheckGrabbedInfo",checkgrabbedinfo2,PY_ARGS("body","grablink") DOXY_FN(KinBody,CheckGrabbedInfo "const KinBody; const Link"))
-                         .def("CheckGrabbedInfo",checkgrabbedinfo3,PY_ARGS("body","grablink","linkstoignore","grabbedUserData") DOXY_FN(KinBody,CheckGrabbedInfo "const KinBody; const Link; const std::set; const rapidjson::Document"))
+                         .def("CheckGrabbedInfo",&PyKinBody::CheckGrabbedInfo,PY_ARGS("body","grablink","linkstoignore","grabbedUserData") DOXY_FN(KinBody,CheckGrabbedInfo "const KinBody; const Link; const std::set; const rapidjson::Document"))
                          .def("GetNumGrabbed", &PyKinBody::GetNumGrabbed, DOXY_FN(KinBody,GetNumGrabbed))
                          .def("GetGrabbed",&PyKinBody::GetGrabbed, DOXY_FN(KinBody,GetGrabbed))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

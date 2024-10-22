@@ -533,11 +533,11 @@ public:
         StringSerializableData(const std::string& data) : _data(data) {
         }
 
-        virtual void Serialize(std::ostream& O, int options=0) const {
+        virtual void Serialize(std::ostream& O, int options=0) const override {
             O << _data;
         }
 
-        virtual void Deserialize(std::istream& I) {
+        virtual void Deserialize(std::istream& I) override {
             // need to read the entire input
             stringbuf buf;
             I.get(buf, 0);
@@ -554,7 +554,7 @@ public:
     }
     PySerializableData(SerializableDataPtr handle) : _handle(handle) {
     }
-    void Close() {
+    void Close() override {
         _handle.reset();
     }
     py::object Serialize(int options) {
@@ -583,6 +583,7 @@ class OPENRAVEPY_API PyRay
 public:
     PyRay() {
     }
+    virtual ~PyRay() {}
     PyRay(py::object newpos, py::object newdir);
     PyRay(const RAY& newr) : r(newr) {
     }
