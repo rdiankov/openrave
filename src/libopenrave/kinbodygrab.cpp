@@ -18,32 +18,51 @@
 
 namespace OpenRAVE {
 
-/// \brief Push link to listNonCollidingLinksWhenGrabbed, only if it has no collision with the whole grabbedBody.
-static void _PushLinkIfNonColliding(std::list<KinBody::LinkConstPtr>& listNonCollidingLinksWhenGrabbed,
+/// \brief Push link to listNonCollidingLinkPairs if the given links are not in collision each other. This is for grabbed-grabber link pairs.
+static void _PushLinkIfNonColliding(std::list<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> >& listNonCollidingLinkPairs,
                                     CollisionCheckerBasePtr& pchecker,
-                                    const KinBody::LinkPtr& pLinkToCheck, const KinBody& grabbedBody)
+                                    const KinBody::LinkPtr& pGrabberLinkToCheck, const KinBody& grabbedBody)
 {
-    KinBody::LinkConstPtr pLinkToCheckConst(pLinkToCheck);
+    KinBody::LinkConstPtr pGrabberLinkToCheckConst(pGrabberLinkToCheck);
     for (const KinBody::LinkPtr& pGrabbedBodylink : grabbedBody.GetLinks()) {
-        if( pchecker->CheckCollision(pLinkToCheckConst, KinBody::LinkConstPtr(pGrabbedBodylink)) ) {
-            return; // if colliding, do not push.
+        if( !pchecker->CheckCollision(pGrabberLinkToCheckConst, KinBody::LinkConstPtr(pGrabbedBodylink)) ) {
+            listNonCollidingLinkPairs.emplace_back(pGrabbedBodylink, pGrabberLinkToCheck);
         }
     }
-    // if not colliding with any of links in grabbedBody, push it.
-    listNonCollidingLinksWhenGrabbed.push_back(pLinkToCheck);
 }
 
-/// \brief remove link from listNonCollidingLinksWhenGrabbed if its parent is same as the given body.
-template<typename KinBodyPtrT>
-static void _RemoveLinkFromListNonCollidingLinksWhenGrabbed(std::list<KinBody::LinkConstPtr>& listNonCollidingLinksWhenGrabbed,
-                                                            const KinBodyPtrT& pGrabbedBody)
+/// \brief Check if link pair is included in the list. The order of first/second does not matter.
+static bool _IsLinkPairIncluded(const KinBody::Link* pLink1ToSearch,
+                                const KinBody::Link* pLink2ToSearch,
+                                const std::list<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> >& listNonCollidingLinkPairs)
 {
-    for (std::list<KinBody::LinkConstPtr>::iterator itlink = listNonCollidingLinksWhenGrabbed.begin(); itlink != listNonCollidingLinksWhenGrabbed.end();) {
-        if ((*itlink)->GetParent() == pGrabbedBody) {
-            itlink = listNonCollidingLinksWhenGrabbed.erase(itlink);
+    FOREACHC(itLinks, listNonCollidingLinkPairs) {
+        const KinBody::Link* const pLinkFirst = (*itLinks).first.get();
+        const KinBody::Link* const pLinkSecond = (*itLinks).second.get();
+        if ( (pLinkFirst == pLink1ToSearch && pLinkSecond == pLink2ToSearch) || (pLinkFirst == pLink2ToSearch && pLinkSecond == pLink1ToSearch) ) {
+            return true;
         }
-        else {
-            ++itlink;
+    }
+    return false;
+}
+
+/// \brief Push link to listNonCollidingLinkPairs if the given grabbed bodies links are not in collision each other. This is inter-grabbed link pairs.
+/// \param[in] bInvertFirstSecond : true if push the pair by inverting the first and the second.
+static void _PushLinkPairsIfNonCollidingWithOtherGrabbedBody(std::list<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> >& listNonCollidingLinkPairs,
+                                                             CollisionCheckerBasePtr& pchecker,
+                                                             const KinBody& grabbedBody,
+                                                             const KinBody& otherGrabbedBody)
+{
+    for (const KinBody::LinkPtr& pGrabbedBodyLink : grabbedBody.GetLinks()) {
+        for (const KinBody::LinkPtr& pOtherGrabbedLink : otherGrabbedBody.GetLinks()) {
+            // if already in the list, no need to check collision.
+            if( _IsLinkPairIncluded(pGrabbedBodyLink.get(), pOtherGrabbedLink.get(), listNonCollidingLinkPairs) ) {
+                continue;
+            }
+            // if not colliding, push.
+            if( !pchecker->CheckCollision(KinBody::LinkConstPtr(pGrabbedBodyLink), KinBody::LinkConstPtr(pOtherGrabbedLink)) ) {
+                listNonCollidingLinkPairs.emplace_back(pGrabbedBodyLink, pOtherGrabbedLink);
+            }
         }
     }
 }
@@ -88,7 +107,8 @@ static void _CreateSaverForGrabbedAndGrabber(KinBody::KinBodyStateSaverPtr& pSav
     }
 }
 
-Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
+Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, const uint64_t uniqueId)
+    : _uniqueId(uniqueId)
 {
     _pGrabbedBody = pGrabbedBody;
     _pGrabbingLink = pGrabbingLink;
@@ -115,7 +135,14 @@ void Grabbed::AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksT
 
         if( _listNonCollidingIsValid ) {
             KinBody::LinkPtr pGrabberLink = pGrabber->GetLinks().at(*itLinkIndexToIgnore);
-            _listNonCollidingLinksWhenGrabbed.remove(pGrabberLink);
+            for (KinBody::ListNonCollidingLinkPairs::iterator itPair = _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.begin(); itPair != _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.end();/* nop */) {
+                if ((*itPair).second == pGrabberLink) { // in this link pair, the second should be grabber link.
+                    itPair = _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.erase(itPair);
+                }
+                else {
+                    ++itPair;
+                }
+            }
         }
     }
 }
@@ -141,8 +168,8 @@ void Grabbed::ComputeListNonCollidingLinks()
     _pGrabbedSaver->Restore();
     _pGrabberSaver->Restore(); // note that this Restore also updates other grabbed bodies.
 
-    // Actual computation of _listNonCollidingLinksWhenGrabbed
-    _listNonCollidingLinksWhenGrabbed.clear();
+    // Actual computation of _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.
+    _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.clear(); // clear only this, and do not clear the contents of _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed here, since other Grabbed instance might have updated it.
     EnvironmentBasePtr penv = pGrabber->GetEnv();
     // if( 1 ) {
     //     std::stringstream ssdebug;
@@ -180,14 +207,6 @@ void Grabbed::ComputeListNonCollidingLinks()
         for (const KinBody::MapGrabbedByEnvironmentIndex::value_type& otherGrabbedPair : pGrabber->_grabbedBodiesByEnvironmentIndex) {
             const GrabbedPtr& pOtherGrabbed = otherGrabbedPair.second;
 
-            // Remove this pGrabbedBody from _listNonCollidingLinksWhenGrabbed in other grabbed.
-            // The condition when pOtherGrabbedBody is checked with pGrabbedBody might be different from the condition when this pGrabbedBody is checked with pOtherGrabbedBody now.
-            // In such case, it's reasonable to respect the latest condition.
-            // To do so, remove pOtherGrabbed->_listNonCollidingLinksWhenGrabbed first and this function will add it at the end of this function if necessary to this Grabbed's _listNonCollidingLinksWhenGrabbed.
-            // Note that the _listNonCollidingLinksWhenGrabbed result might not be symmetric between pOtherGrabbed and this Grabbed, e.g. this Grabbed's _listNonCollidingLinksWhenGrabbed might contain pOtherGrabbedBody, but pOtherGrabbed->_listNonCollidingLinksWhenGrabbed does not contain pGrabbedBody.
-            // Even if there is such asymmetricity, KinBody::CheckSelfCollision will consider the collision checking pair correctly.
-            _RemoveLinkFromListNonCollidingLinksWhenGrabbed<KinBodyPtr>(pOtherGrabbed->_listNonCollidingLinksWhenGrabbed, pGrabbedBody);
-
             // extract valid pointers
             KinBodyPtr pOtherGrabbedBody = pOtherGrabbed->_pGrabbedBody.lock();
             if( !pOtherGrabbedBody ) {
@@ -203,10 +222,19 @@ void Grabbed::ComputeListNonCollidingLinks()
                 continue;
             }
 
-            if( pOtherGrabbedBody != pGrabbedBody ) {
-                vGrabbedBodies.emplace_back(pOtherGrabbed.get());
-                vLockedGrabbedBodiesCache.push_back(pOtherGrabbedBody);
+            if( pOtherGrabbedBody == pGrabbedBody ) {
+                continue;
             }
+
+            // If the unique id of pOtherGrabbed is >= than the one of this grabbed, it means pOtherGrabbed is grabbed later than 'this'. Thus, pOtherGrabbed did not exist when 'this' was grabbed.
+            // The results of lazy computation should be same as the result of non-lazy computation. Therefore, we should not compute the inter-grabbed collision checking with pOtherGrabbed.
+            // This resolves Issue4 in https://github.com/rdiankov/openrave/issues/1436.
+            if( pOtherGrabbed->_uniqueId >= _uniqueId ) {
+                continue;
+            }
+
+            vGrabbedBodies.emplace_back(pOtherGrabbed.get());
+            vLockedGrabbedBodiesCache.push_back(pOtherGrabbedBody);
         }
 
         KinBody::KinBodyStateSaver grabbedEnableSaver(pGrabbedBody, KinBody::Save_LinkEnable);
@@ -224,7 +252,7 @@ void Grabbed::ComputeListNonCollidingLinks()
                 // This link (*itGrabberLink) is *not* rigidly attached to _pGrabbingLink.
                 if( _setGrabberLinkIndicesToIgnore.find((*itGrabberLink)->GetIndex()) == _setGrabberLinkIndicesToIgnore.end() ) {
                     // Not ignoring collisions between this link and the grabber body
-                    _PushLinkIfNonColliding(_listNonCollidingLinksWhenGrabbed, pchecker, *itGrabberLink, grabbedBody);
+                    _PushLinkIfNonColliding(_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed, pchecker, *itGrabberLink, grabbedBody);
                 }
             }
         }
@@ -240,9 +268,7 @@ void Grabbed::ComputeListNonCollidingLinks()
                 if (!bTwoGrabbedBodiesHaveStaticRelativePose) {
                     KinBody::KinBodyStateSaver otherGrabbedEnableSaver(pOtherGrabbedBody, KinBody::Save_LinkEnable);
                     pOtherGrabbedBody->Enable(true);
-                    for (const KinBody::LinkPtr& pOtherGrabbedLink : pOtherGrabbedBody->GetLinks()) {
-                        _PushLinkIfNonColliding(_listNonCollidingLinksWhenGrabbed, pchecker, pOtherGrabbedLink, grabbedBody);
-                    }
+                    _PushNonCollidingLinkPairsForGrabbedBodies(pGrabber, pchecker, grabbedBody, *pOtherGrabbedBody);
                 }
             }
         }
@@ -258,6 +284,35 @@ void Grabbed::ComputeListNonCollidingLinks()
     //     ssdebug << "];";
     //     RAVELOG_INFO_FORMAT("env=%s, %s", penv->GetNameId()%ssdebug.str());
     // }
+}
+
+void Grabbed::_PushNonCollidingLinkPairsForGrabbedBodies(KinBodyPtr& pGrabber,
+                                                         CollisionCheckerBasePtr& pchecker,
+                                                         const KinBody& grabbedBody,
+                                                         const KinBody& otherGrabbedBody)
+{
+    // Find item by (grabbedBody, otherGrabbedBody) pair.
+    const uint64_t indexForTest0 = KinBody::_ComputeEnvironmentBodyIndicesPair(grabbedBody, otherGrabbedBody);
+    std::unordered_map<uint64_t, KinBody::ListNonCollidingLinkPairs>::iterator itInfo = pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.find(indexForTest0);
+    if( itInfo != pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.end() ) {
+        _PushLinkPairsIfNonCollidingWithOtherGrabbedBody((*itInfo).second, pchecker, grabbedBody, otherGrabbedBody);
+        return;
+    }
+
+    // Find item by (otherGrabbedBody, grabbedBody) pair.
+    const uint64_t indexForTest1 = KinBody::_ComputeEnvironmentBodyIndicesPair(otherGrabbedBody, grabbedBody);
+    itInfo = pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.find(indexForTest1);
+    if( itInfo != pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.end() ) {
+        _PushLinkPairsIfNonCollidingWithOtherGrabbedBody((*itInfo).second, pchecker, otherGrabbedBody, grabbedBody);
+        return;
+    }
+
+    // If not found, try checking the non-colliding lists. If non-colliding list is not empty, push the new info.
+    KinBody::ListNonCollidingLinkPairs listNonCollidingLinkPairs;
+    _PushLinkPairsIfNonCollidingWithOtherGrabbedBody(listNonCollidingLinkPairs, pchecker, grabbedBody, otherGrabbedBody);
+    if( listNonCollidingLinkPairs.size() > 0 ) {
+        itInfo = pGrabber->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.emplace(indexForTest0, std::move(listNonCollidingLinkPairs)).first;
+    }
 }
 
 bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const rapidjson::Value& rGrabbedUserData)
@@ -348,7 +403,7 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         _RemoveGrabbedBody(itPreviouslyGrabbed);
     }
 
-    GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink));
+    GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink, _nextGrabbedBodyUniqueId++));
     pGrabbed->_tRelative = tGrabbingLink.inverse() * tGrabbedBody;
     pGrabbed->_setGrabberLinkIndicesToIgnore = setGrabberLinksToIgnore;
 
@@ -421,8 +476,12 @@ void KinBody::Release(KinBody &body)
 
 void KinBody::ReleaseAllGrabbed()
 {
+    // just in case, always clear the map of inter grabbed pairs.
+    _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
+
     // If we have no grabbed bodies, do nothing
     if (_grabbedBodiesByEnvironmentIndex.empty()) {
+        _nextGrabbedBodyUniqueId = 0; // just in case
         return;
     }
 
@@ -436,6 +495,7 @@ void KinBody::ReleaseAllGrabbed()
 
     // Clear our set of grabs
     _grabbedBodiesByEnvironmentIndex.clear();
+    _nextGrabbedBodyUniqueId = 0;
 
     // Execute any hooks registered for grabs
     _PostprocessChangedParameters(Prop_RobotGrabbed);
@@ -447,6 +507,9 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
 
     // If we have no grabbed bodies, do nothing
     if (_grabbedBodiesByEnvironmentIndex.empty()) {
+        // just in case, make sure to clear the map of inter grabbed pairs.
+        _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
+        _nextGrabbedBodyUniqueId = 0;
         return;
     }
 
@@ -494,6 +557,9 @@ void KinBody::RegrabAll()
     MapGrabbedByEnvironmentIndex originalGrabbedBodiesByBodyName;
     originalGrabbedBodiesByBodyName.swap(_grabbedBodiesByEnvironmentIndex);
 
+    // Since all of grabbed instances are re-created, ok to disregard the previous cache.
+    _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
+
     // Regrab all the bodies again
     for (MapGrabbedByEnvironmentIndex::value_type& grabPair : originalGrabbedBodiesByBodyName) {
         const int grabbedBodyEnvIndex = grabPair.first;
@@ -506,7 +572,7 @@ void KinBody::RegrabAll()
             continue;
         }
 
-        GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
+        GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink, _nextGrabbedBodyUniqueId++));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
         CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
@@ -827,6 +893,10 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Now that we are done processing our old grabs, reset the set of grabbed bodies.
         // Any bodies that are still grabbed will be re-added in the next pass.
         _grabbedBodiesByEnvironmentIndex.clear();
+        _nextGrabbedBodyUniqueId = 0;
+
+        // Since all of grabbed instances are re-created, ok to disregard the previous cache.
+        _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
     }
 
     // Ensure that we reset the collision checker options when done
@@ -879,7 +949,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Even if this is an existing grabbed body, re-allocate our Grabbed record for two reasons:
         // - We need to re-save the current state of the grabbed object (e.g. the relative transform)
         // - References to the old Grabbed infos for this body may be held by state savers somewhere outside the body, so we can't mutate them without invalidating those checkpoints
-        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink)).first;
+        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink, _nextGrabbedBodyUniqueId++)).first;
 
         // Update the grab object with the ancillary grab info
         GrabbedPtr& pGrabbed = existingGrabIt->second;
@@ -957,19 +1027,52 @@ KinBody::MapGrabbedByEnvironmentIndex::iterator KinBody::_RemoveGrabbedBody(MapG
 
     // Remove the body from our set of grabs
     itGrabbed = _grabbedBodiesByEnvironmentIndex.erase(itGrabbed);
+    if( _grabbedBodiesByEnvironmentIndex.empty() ) {
+        _nextGrabbedBodyUniqueId = 0;
+    }
 
     // If the grabbed body wasn't real, skip updating the link collision states
     if (!pGrabbedBody) {
         return itGrabbed;
     }
 
-    // Scan through the other grabs we have and update the set of non-colliding links in those bodies to not include the links of the body we just removed
-    for (const MapGrabbedByEnvironmentIndex::value_type& otherGrabPair : _grabbedBodiesByEnvironmentIndex) {
-        const GrabbedPtr& pOtherGrabbed = otherGrabPair.second;
-        _RemoveLinkFromListNonCollidingLinksWhenGrabbed<KinBodyConstPtr>(pOtherGrabbed->_listNonCollidingLinksWhenGrabbed, pGrabbedBody);
+    // Scan through inter grabbed link pairs which contains the links of pGrabbedBody.
+    const int envBodyIndex = pGrabbedBody->GetEnvironmentBodyIndex();
+    for (std::unordered_map<uint64_t, ListNonCollidingLinkPairs>::iterator itInfo = _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.begin(); itInfo != _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.end(); /* nop */) {
+        if ( (_GetFirstEnvironmentBodyIndexFromPair(itInfo->first) == envBodyIndex) || (_GetSecondEnvironmentBodyIndexFromPair(itInfo->first) == envBodyIndex) ) {
+            itInfo = _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.erase(itInfo);
+        }
+        else {
+            itInfo++;
+        }
     }
 
     return itGrabbed;
+}
+
+bool KinBody::_IsListNonCollidingLinksValidFromEnvironmentBodyIndex(const int envBodyIndex) const
+{
+    MapGrabbedByEnvironmentIndex::const_iterator itGrab = _grabbedBodiesByEnvironmentIndex.find(envBodyIndex);
+    if( itGrab == _grabbedBodiesByEnvironmentIndex.end() ) {
+        RAVELOG_WARN_FORMAT("env=%s, could not check the IsListNonCollidingLinksValid for body '%s', since there is no grabbed body with envBodyIndex=%d.", GetEnv()->GetNameId()%GetName() % envBodyIndex);
+        return false;
+    }
+    return itGrab->second->IsListNonCollidingLinksValid();
+}
+
+uint64_t KinBody::_ComputeEnvironmentBodyIndicesPair(const KinBody& body1, const KinBody& body2)
+{
+    return static_cast<uint64_t>(body1.GetEnvironmentBodyIndex()) | (static_cast<uint64_t>(body2.GetEnvironmentBodyIndex()) << 32);
+}
+
+int KinBody::_GetFirstEnvironmentBodyIndexFromPair(const uint64_t pair)
+{
+    return static_cast<int>(pair & 0xffffffff);
+}
+
+int KinBody::_GetSecondEnvironmentBodyIndexFromPair(const uint64_t pair)
+{
+    return static_cast<int>(pair >> 32);
 }
 
 } // end namespace OpenRAVE
