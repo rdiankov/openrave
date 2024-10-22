@@ -187,6 +187,14 @@ void KinBody::_RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                 RAVELOG_WARN_FORMAT("env=%s, could not find bodies with envBodyIndex '%s' (%d).", GetEnv()->GetNameId()%pSecondSaved->GetName()%pSecondSaved->GetEnvironmentBodyIndex());
                 continue;
             }
+            if( pFirstSaved->GetKinematicsGeometryHash() != pFirst->GetKinematicsGeometryHash() ) {
+                RAVELOG_WARN_FORMAT("env=%s, new grabbed body '%s' kinematics-geometry hash is different from original grabbed body '%s' from env=%s", GetEnv()->GetNameId()%pFirst->GetName()%pFirstSaved->GetName()%savedBody.GetEnv()->GetNameId());
+                continue;
+            }
+            if( pSecondSaved->GetKinematicsGeometryHash() != pSecond->GetKinematicsGeometryHash() ) {
+                RAVELOG_WARN_FORMAT("env=%s, new grabbed body '%s' kinematics-geometry hash is different from original grabbed body '%s' from env=%s", GetEnv()->GetNameId()%pSecond->GetName()%pSecondSaved->GetName()%savedBody.GetEnv()->GetNameId());
+                continue;
+            }
             KinBody::ListNonCollidingLinkPairs listNonCollidingLinkPairs;
             FOREACHC(itLinkPairSaved, itInfoSaved->second) {
                 const int linkIndexFirst = (*itLinkPairSaved).first->GetIndex();
