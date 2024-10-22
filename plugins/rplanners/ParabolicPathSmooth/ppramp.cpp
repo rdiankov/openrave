@@ -480,6 +480,9 @@ Real PPRamp::CalcMinAccel(Real endTime,Real sign,Real& switchTime) const
     Real c = (dx1 - dx0)*endTime;
     Real rat1 = 0.0, rat2 = 0.0;
     int res=SolveQuadratic(a,b,c,rat1,rat2);
+    if (res == 0) {
+        return -1.0;
+    }
     Real accel1 = (dx1-dx0)/rat1;
     Real accel2 = (dx1-dx0)/rat2;
     Real switchTime1 = endTime*0.5+0.5*rat1;
