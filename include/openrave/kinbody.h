@@ -994,9 +994,9 @@ public:
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
 
-        ///\brief unique id of the link
+        ///\brief unique id of the extrageometry
         std::string _id;
-        /// \brief unique link name
+        /// \brief unique extrageometry name
         std::string _name;
 
 private:
@@ -2643,7 +2643,7 @@ private:
     /// Note that the pointers are copied and not the data, so be careful not to modify the geometries afterwards
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     virtual void SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries);
-    //  DEPRECATED: now group geometry is in ExtraGeometryInfo struct type 
+    //  DEPRECATED: now group geometry is in ExtraGeometryInfo struct type
     // virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
     /// \brief Unique name of the body.

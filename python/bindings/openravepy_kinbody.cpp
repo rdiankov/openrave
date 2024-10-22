@@ -712,8 +712,7 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
         vForcedAdjacentLinks.append(linkName);
     }
     FOREACHC(it, info._mapExtraGeometries) {
-        _mapExtraGeometries[it->first.c_str()] = PyExtraGeometryInfoPtr(new PyExtraGeometryInfo(*(it->second)));
-        // _mapExtraGeometries[it->first.c_str()] = toPyArray(it->second);
+        _mapExtraGeometries[it->first.c_str()] = toPyExtraGeometryInfo(*(it->second));
     }
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
@@ -771,6 +770,23 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
     info._mass = _mass;
     info._vinertiamoments = ExtractVector3(_vinertiamoments);
     info._mapFloatParameters.clear();
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometries) {
+        std::string id = extract<std::string>(item.first);
+        PyExtraGeometryInfoPtr pyextrageom = py::extract<PyExtraGeometryInfoPtr>(item.second);
+        info._mapExtraGeometries[id] = pyextrageom->GetExtraGeometryInfo();
+    }
+#else
+    size_t num = len(_mapExtraGeometries);
+    object okeyvalueiter = _mapExtraGeometries.iteritems();
+    for(size_t i = 0; i < num; ++i) {
+        object okeyvalue = okeyvalueiter.attr("next") ();
+        std::string id = extract<std::string>(okeyvalue[0]);
+        info._mapExtraGeometries[id] = py::extrqact<PyExtraGeometryInfoPtr>(okeyvalue[1]);
+    }
+#endif
+
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     for(const std::pair<py::handle, py::handle>& item : _mapFloatParameters) {
         std::string name = extract<std::string>(item.first);
@@ -2974,6 +2990,9 @@ void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olink
 
     for(size_t i = 0; i < linkgeometries.size(); ++i) {
         PyExtraGeometryInfoPtr infoi = extract<PyExtraGeometryInfoPtr>(olinkgeometryinfos[py::to_object(i)]);
+        if ( !infoi ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ExtraGeometryInfo"), ORE_InvalidArguments);
+        }
         linkgeometries[i]->_id = py::extract<std::string>(infoi->_id).empty() ? geomname : py::extract<std::string>(infoi->_id);
         linkgeometries[i]->_name = py::extract<std::string>(infoi->_name).empty() ? geomname : py::extract<std::string>(infoi->_name);
         std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i]->_vgeometryinfos;
