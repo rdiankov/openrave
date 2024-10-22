@@ -2990,6 +2990,9 @@ void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olink
 
     for(size_t i = 0; i < linkgeometries.size(); ++i) {
         PyExtraGeometryInfoPtr infoi = extract<PyExtraGeometryInfoPtr>(olinkgeometryinfos[py::to_object(i)]);
+        if ( !infoi ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ExtraGeometryInfo"), ORE_InvalidArguments);
+        }
         linkgeometries[i]->_id = py::extract<std::string>(infoi->_id).empty() ? geomname : py::extract<std::string>(infoi->_id);
         linkgeometries[i]->_name = py::extract<std::string>(infoi->_name).empty() ? geomname : py::extract<std::string>(infoi->_name);
         std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i]->_vgeometryinfos;
