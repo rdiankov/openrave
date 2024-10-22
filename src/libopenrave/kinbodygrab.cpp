@@ -53,16 +53,15 @@ static void _PushLinkPairsIfNonCollidingWithOtherGrabbedBody(std::list<std::pair
                                                              const KinBody& grabbedBody,
                                                              const KinBody& otherGrabbedBody)
 {
-    for (const KinBody::LinkPtr& pOtherGrabbedLink : otherGrabbedBody.GetLinks()) {
-        KinBody::LinkConstPtr pOtherGrabbedLinkToCheckConst(pOtherGrabbedLink);
-        for (const KinBody::LinkPtr& pGrabbedBodylink : grabbedBody.GetLinks()) {
+    for (const KinBody::LinkPtr& pGrabbedBodyLink : grabbedBody.GetLinks()) {
+        for (const KinBody::LinkPtr& pOtherGrabbedLink : otherGrabbedBody.GetLinks()) {
             // if already in the list, no need to check collision.
-            if( _IsLinkPairIncluded(pOtherGrabbedLinkToCheckConst.get(), pGrabbedBodylink.get(), listNonCollidingLinkPairs) ) {
+            if( _IsLinkPairIncluded(pGrabbedBodyLink.get(), pOtherGrabbedLink.get(), listNonCollidingLinkPairs) ) {
                 continue;
             }
             // if not colliding, push.
-            if( !pchecker->CheckCollision(pOtherGrabbedLinkToCheckConst, KinBody::LinkConstPtr(pGrabbedBodylink)) ) {
-                listNonCollidingLinkPairs.emplace_back(pGrabbedBodylink, pOtherGrabbedLink);
+            if( !pchecker->CheckCollision(KinBody::LinkConstPtr(pGrabbedBodyLink), KinBody::LinkConstPtr(pOtherGrabbedLink)) ) {
+                listNonCollidingLinkPairs.emplace_back(pGrabbedBodyLink, pOtherGrabbedLink);
             }
         }
     }
