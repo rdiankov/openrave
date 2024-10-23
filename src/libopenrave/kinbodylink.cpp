@@ -780,9 +780,7 @@ void KinBody::Link::_InitGeometriesInternal(bool bForceRecomputeMeshCollision) {
     }
     _info._mapExtraGeometries.clear();
     // have to reset the self group! cannot use geometries directly since we require exclusive access to the GeometryInfo objects
-    KinBody::ExtraGeometryInfoPtr selfGeom(new ExtraGeometryInfo());
-    selfGeom->_id = "self";
-    std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = selfGeom->_vgeometryinfos;
+    std::vector<KinBody::GeometryInfoPtr> vgeometryinfos;
     vgeometryinfos.resize(_vGeometries.size());
     for(int index = 0; index < (int)vgeometryinfos.size(); ++index) {
         vgeometryinfos[index].reset(new KinBody::GeometryInfo());
@@ -791,7 +789,7 @@ void KinBody::Link::_InitGeometriesInternal(bool bForceRecomputeMeshCollision) {
 
     // SetGroupGeometries calls PostprocessChangedParameters on the parent, which would increment the body update stamp, and then we would invoke PostprocessChangedParameters _again_ in _Update here, resulting in duplicated work in callbacks.
     // Coalesce these update calls into one by calling the NoPostprocess version and adding the Prop_LinkGeometryGroup flag to our main _Update call instead.
-    _SetGroupGeometriesNoPostprocess("self", selfGeom);
+    _SetGroupGeometriesNoPostprocess("self", vgeometryinfos);
     _Update(/* parametersChanged */ true, /* extraParametersChanged */ Prop_LinkGeometryGroup);
 }
 
@@ -852,24 +850,31 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
     return it->second->_vgeometryinfos;
 }
 
-void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupid, const KinBody::ExtraGeometryInfoPtr& extraGeometry)
+void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupid, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    FOREACH(itgeominfo, extraGeometry->_vgeometryinfos) {
+    FOREACH(itgeominfo, geometries) {
         if (!(*itgeominfo)) {
-            int igeominfo = itgeominfo - extraGeometry->_vgeometryinfos.begin();
+            int igeominfo = itgeominfo - geometries.begin();
             throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo % GetParent()->GetName(), ORE_InvalidArguments);
         }
     }
-    // check group id validity
-    if (_info._mapExtraGeometries.find(groupid) != _info._mapExtraGeometries.end()) {
-        throw OPENRAVE_EXCEPTION_FORMAT("ExtraGeometry id %s is invalid as already exists", groupid, ORE_InvalidArguments);
-    }
-    _info._mapExtraGeometries.insert(make_pair(groupid, boost::shared_ptr<ExtraGeometryInfo>(extraGeometry)));
+    KinBody::ExtraGeometryInfoPtr new_extrageom( new KinBody::ExtraGeometryInfo() );
+    new_extrageom->_id = groupid;
+    new_extrageom->_name = groupid;
+    std::map<std::string, KinBody::ExtraGeometryInfoPtr>::iterator it = _info._mapExtraGeometries.insert(make_pair(groupid, new_extrageom)).first;
+    it->second->_vgeometryinfos.resize(geometries.size());
+    std::copy(geometries.begin(), geometries.end(), it->second->_vgeometryinfos.begin());
+
+    // // check group id validity
+    // if (_info._mapExtraGeometries.find(groupid) != _info._mapExtraGeometries.end()) {
+    //     throw OPENRAVE_EXCEPTION_FORMAT("ExtraGeometry id %s is invalid as already exists", groupid, ORE_InvalidArguments);
+    // }
+    // _info._mapExtraGeometries.insert(make_pair(groupid, boost::shared_ptr<ExtraGeometryInfo>(extraGeometry)));
 }
 
-void KinBody::Link::SetGroupGeometries(const std::string& groupid, const KinBody::ExtraGeometryInfoPtr& extraGeometry)
+void KinBody::Link::SetGroupGeometries(const std::string& groupid, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    _SetGroupGeometriesNoPostprocess(groupid, extraGeometry);
+    _SetGroupGeometriesNoPostprocess(groupid, geometries);
     GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 

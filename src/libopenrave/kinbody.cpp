@@ -710,21 +710,20 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
 }
 
 // DEPRECATED: now using ExtraGeometryInfo type instead of std::vector<GeometryInfoPtr>
-// void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
+// void KinBody::SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries)
 
-void KinBody::SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries)
+void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
 {
     OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );
-    for (size_t idx=0; idx < _veclinks.size(); ++idx) {
-        Link& link = *_veclinks.at(idx);
-        link._info._mapExtraGeometries[id] = KinBody::ExtraGeometryInfoPtr(new KinBody::ExtraGeometryInfo());
-        link._info._mapExtraGeometries[id]->_id = linkgeometries.at(idx)->_id.empty() ? id : linkgeometries.at(idx)->_id;
-        link._info._mapExtraGeometries[id]->_name = linkgeometries.at(idx)->_name.empty() ? id : linkgeometries.at(idx)->_name;
-
-        const std::vector<GeometryInfoPtr>& inputgeometries = linkgeometries.at(idx)->_vgeometryinfos;
-        std::vector<GeometryInfoPtr>& vgeometries = link._info._mapExtraGeometries[id]->_vgeometryinfos;
-        vgeometries.resize(inputgeometries.size());
-        std::copy(inputgeometries.begin(), inputgeometries.end(), vgeometries.begin());
+    FOREACH(itlink, _veclinks){
+        Link& link = **itlink;
+        KinBody::ExtraGeometryInfoPtr new_extrageom( new KinBody::ExtraGeometryInfo() );
+        new_extrageom->_id = geomname;
+        new_extrageom->_name = geomname;
+        std::map< std::string, KinBody::ExtraGeometryInfoPtr >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname, new_extrageom)).first;
+        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
+        it->second->_vgeometryinfos.resize(geometries.size());
+        std::copy(geometries.begin(), geometries.end(), it->second->_vgeometryinfos.begin());
     }
     _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }

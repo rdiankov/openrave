@@ -1995,14 +1995,17 @@ object PyLink::GetGeometriesFromGroup(const std::string& groupid)
     return ogeometryinfos;
 }
 
-void PyLink::SetGroupGeometries(const std::string& groupid, object oextrageometryinfo)
+void PyLink::SetGroupGeometries(const std::string& groupid, object ogeometryinfos)
 {
-    PyExtraGeometryInfoPtr pyextrageom = py::extract<PyExtraGeometryInfoPtr>(oextrageometryinfo);
-    if( !pyextrageom ) {
-        throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ExtraGeometryInfo"),ORE_InvalidArguments);
+    std::vector<KinBody::GeometryInfoPtr> geometries(len(ogeometryinfos));
+    for (size_t i = 0; i < geometries.size(); ++i) {
+        PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(ogeometryinfos[py::to_object(i)]);
+        if ( !pygeom ) {
+            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
+        }
+        geometries[i] = pygeom->GetGeometryInfo();
     }
-    KinBody::ExtraGeometryInfoPtr extraGeometry( pyextrageom->GetExtraGeometryInfo() );
-    _plink->SetGroupGeometries(groupid, extraGeometry);
+    _plink->SetGroupGeometries(groupid, geometries);
 }
 
 int PyLink::GetGroupNumGeometries(const std::string& groupid)
@@ -2986,20 +2989,34 @@ void PyKinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bo
 
 void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olinkgeometryinfos)
 {
-    std::vector< KinBody::ExtraGeometryInfoPtr > linkgeometries(len(olinkgeometryinfos));
-
+    std::vector< std::vector<KinBody::GeometryInfoPtr> > linkgeometries(len(olinkgeometryinfos));
     for(size_t i = 0; i < linkgeometries.size(); ++i) {
-        linkgeometries[i] = KinBody::ExtraGeometryInfoPtr(new KinBody::ExtraGeometryInfo());
-        PyExtraGeometryInfoPtr infoi = extract<PyExtraGeometryInfoPtr>(olinkgeometryinfos[py::to_object(i)]);
-        if ( !infoi ) {
-            throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ExtraGeometryInfo"), ORE_InvalidArguments);
-        }
-        linkgeometries[i]->_id = py::extract<std::string>(infoi->_id).empty() ? geomname : py::extract<std::string>(infoi->_id);
-        linkgeometries[i]->_name = py::extract<std::string>(infoi->_name).empty() ? geomname : py::extract<std::string>(infoi->_name);
-        std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i]->_vgeometryinfos;
-        geometries.resize(len(infoi->_vgeometryinfos));
+        std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i];
+        object infoi = extract<py::object>(olinkgeometryinfos[py::to_object(i)]);
+        geometries.resize(len(infoi));
+
+        // linkgeometries[i] = KinBody::ExtraGeometryInfoPtr(new KinBody::ExtraGeometryInfo());
+        // PyExtraGeometryInfoPtr infoi = extract<PyExtraGeometryInfoPtr>(olinkgeometryinfos[py::to_object(i)]);
+        // if ( !infoi ) {
+        //     throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.ExtraGeometryInfo"), ORE_InvalidArguments);
+        // }
+        // if (olinkgeometryinfos[py::to_object(i)].attr("_id").is_none()) {
+        //     linkgeometries[i]->_id = geomname;
+        // }
+        // else {
+        //     linkgeometries[i]->_id = py::extract<std::string>(infoi->_id).empty() ? geomname : py::extract<std::string>(infoi->_id);
+        // }
+        // if (olinkgeometryinfos[py::to_object(i)].attr("_name").is_none()) {
+        //     linkgeometries[i]->_name = geomname;
+        // }
+        // else {
+        //     linkgeometries[i]->_name = py::extract<std::string>(infoi->_name).empty() ? geomname : py::extract<std::string>(infoi->_name);
+        // }
+        // linkgeometries[i]->_name = py::extract<std::string>(infoi->_name).empty() ? geomname : py::extract<std::string>(infoi->_name);
+        // std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries[i]->_vgeometryinfos;
+        // geometries.resize(len(infoi->_vgeometryinfos));
         for(size_t j = 0; j < geometries.size(); ++j) {
-            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(infoi->_vgeometryinfos[py::to_object(j)]);
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(infoi[py::to_object(j)]);
             if( !pygeom ) {
                 throw OPENRAVE_EXCEPTION_FORMAT0(_("cannot cast to KinBody.GeometryInfo"),ORE_InvalidArguments);
             }
