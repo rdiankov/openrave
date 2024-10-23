@@ -1371,13 +1371,13 @@ public:
         ///
         /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
         /// any be careful not to modify the geometries afterwards
-        void SetGroupGeometries(const std::string& groupid, const KinBody::ExtraGeometryInfoPtr& extraGeometry);
+        void SetGroupGeometries(const std::string& groupid, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
 private:
         /// \brief stores geometries for later retrieval
         ///
         /// This call is identical to SetGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
-        void _SetGroupGeometriesNoPostprocess(const std::string& name, const KinBody::ExtraGeometryInfoPtr& extraGeometry);
+        void _SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
 public:
         /// \brief returns the number of geometries stored from a particular key
@@ -2642,9 +2642,9 @@ private:
     /// \param linkgeometries a vector containing a collection of geometry infos ptr for each links
     /// Note that the pointers are copied and not the data, so be careful not to modify the geometries afterwards
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
-    virtual void SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries);
+    // virtual void SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries);
     //  DEPRECATED: now group geometry is in ExtraGeometryInfo struct type
-    // virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
+    virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
     /// \brief Unique name of the body.
     virtual const std::string& GetName() const {
