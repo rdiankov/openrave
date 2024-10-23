@@ -720,7 +720,7 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
         KinBody::ExtraGeometryInfoPtr new_extrageom( new KinBody::ExtraGeometryInfo() );
         new_extrageom->_id = geomname;
         new_extrageom->_name = geomname;
-        std::map< std::string, KinBody::ExtraGeometryInfoPtr >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname, KinBody::ExtraGeometryInfoPtr())).first;
+        std::map< std::string, KinBody::ExtraGeometryInfoPtr >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname, new_extrageom)).first;
         const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
         it->second->_vgeometryinfos.resize(geometries.size());
         std::copy(geometries.begin(), geometries.end(), it->second->_vgeometryinfos.begin());
