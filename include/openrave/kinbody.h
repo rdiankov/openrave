@@ -2460,7 +2460,16 @@ protected:
     class OPENRAVE_API KinBodyStateSaver
     {
 public:
+        /// \brief construct KinBodyStateSaver to save the states of the given pbody. This constructor is standard one.
+        /// \param[in] pbody : the states of this body are saved. later on, the saved states will be restored, depending on the usage such as _bRestoreOnDestructor.
+        /// \param[in] options : options to represent which state to save.
         KinBodyStateSaver(KinBodyPtr pbody, int options = Save_LinkTransformation|Save_LinkEnable);
+
+        /// \brief construct KinBodyStateSaver by copying from other saver. This constructor is advanced and expected to be used in very limited use cases.
+        /// \param[in] pbody : the saved states will be restored, depending on the usage such as _bRestoreOnDestructor. Note that the saver's states are not coming from this pbody.
+        /// \param[in] referenceSaver : the states are copied from this saver. Note that some of the states are not copied, such as pointers.
+        KinBodyStateSaver(KinBodyPtr pbody, const KinBodyStateSaver& referenceSaver);
+
         virtual ~KinBodyStateSaver();
         inline const KinBodyPtr& GetBody() const {
             return _pbody;
@@ -2480,6 +2489,9 @@ public:
         /// \brief sets whether the state saver will restore the state on destruction. by default this is true.
         virtual void SetRestoreOnDestructor(bool restore);
 protected:
+        /// \brief Throw exception due to the wrong usage of constructor call with wrong options.
+        virtual void _ThrowOnInvalidCopyFromOtherSaver(const char* envNameId, const char* className, const SaveParameters param, const int options);
+
         KinBodyPtr _pbody;
         int _options;         ///< saved options
         std::vector<Transform> _vLinkTransforms;
@@ -3868,7 +3880,13 @@ private:
 class OPENRAVE_API Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
 public:
+    /// \brief constructor. This is standard one.
     Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, const uint64_t uniqueId);
+
+    /// \brief constructor. This constructor is advanced and expected to be used in very limited use cases.
+    /// \param[in] referenceGrabbed : reference of Grabbed. The internal state savers will copy the states from referenceGrabbed's savers.
+    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, const uint64_t uniqueId, const Grabbed& referenceGrabbed);
+
     virtual ~Grabbed() {
     }
 
