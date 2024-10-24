@@ -296,7 +296,7 @@ public:
         if (find(_vOpenRAVESchemeAliases.begin(), _vOpenRAVESchemeAliases.end(), urioriginal.scheme()) !=
             _vOpenRAVESchemeAliases.end()) {
             if (urioriginal.path().empty()) {
-                return nullptr;
+                return std::string();
             }
             // remove first slash because we need relative file
             uriresolved = "file:";

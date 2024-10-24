@@ -1460,9 +1460,6 @@ protected:
     {
         dReal fCosTheta = RaveCos(fTheta);
         int N;
-        if(fTheta < 0.01f) {
-            N = 1;
-        }
         RAY r;
 
         GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Distance);

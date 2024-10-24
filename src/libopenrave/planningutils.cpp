@@ -4198,7 +4198,7 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                         BOOST_ASSERT(0);
                     } // end switch maskinterpolation
                     bool bFoundTimeInstant = false;
-                    dReal root;
+                    dReal root = 0;
                     if( numroots > 0 ) {
                         std::sort(_vrawroots.begin(), _vrawroots.begin() + numroots);
                         for( int iroot = 0; iroot < numroots; ++iroot ) {
