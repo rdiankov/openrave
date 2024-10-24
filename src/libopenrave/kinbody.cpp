@@ -709,9 +709,6 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
     }
 }
 
-// DEPRECATED: now using ExtraGeometryInfo type instead of std::vector<GeometryInfoPtr>
-// void KinBody::SetLinkGroupGeometries(const std::string& id, const std::vector<KinBody::ExtraGeometryInfoPtr>& linkgeometries)
-
 void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
 {
     OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );

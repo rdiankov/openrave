@@ -864,12 +864,6 @@ void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupid,
     std::map<std::string, KinBody::ExtraGeometryInfoPtr>::iterator it = _info._mapExtraGeometries.insert(make_pair(groupid, new_extrageom)).first;
     it->second->_vgeometryinfos.resize(geometries.size());
     std::copy(geometries.begin(), geometries.end(), it->second->_vgeometryinfos.begin());
-
-    // // check group id validity
-    // if (_info._mapExtraGeometries.find(groupid) != _info._mapExtraGeometries.end()) {
-    //     throw OPENRAVE_EXCEPTION_FORMAT("ExtraGeometry id %s is invalid as already exists", groupid, ORE_InvalidArguments);
-    // }
-    // _info._mapExtraGeometries.insert(make_pair(groupid, boost::shared_ptr<ExtraGeometryInfo>(extraGeometry)));
 }
 
 void KinBody::Link::SetGroupGeometries(const std::string& groupid, const std::vector<KinBody::GeometryInfoPtr>& geometries)
