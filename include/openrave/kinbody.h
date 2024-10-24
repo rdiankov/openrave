@@ -349,7 +349,6 @@ public:
         CLA_CheckLimitsThrow = 3, ///< check the limits and throws if something went wrong
     };
 
-
     /// \brief Describes the properties of a geometric primitive.
     ///
     /// Contains everything associated with a geometry's appearance and shape
@@ -982,6 +981,33 @@ protected:
     typedef boost::shared_ptr<Geometry> GeometryPtr;
     typedef boost::shared_ptr<Geometry const> GeometryConstPtr;
 
+    /// \brief Describes the properties of an extraGeometric primitive.
+    class OPENRAVE_API ExtraGeometryInfo : public InfoBase
+    {
+public:
+        ExtraGeometryInfo(){
+        }
+
+        void Reset() override;
+        void SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const override;
+        void DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options) override;
+
+        std::vector<GeometryInfoPtr> _vgeometryinfos;
+
+        ///\brief unique id of the extrageometry
+        std::string _id;
+        /// \brief unique extrageometry name
+        std::string _name;
+
+private:
+        friend class Link;
+        friend class KinBody;
+        friend class RobtBase;
+    };
+
+    typedef boost::shared_ptr<ExtraGeometryInfo> ExtraGeometryInfoPtr;
+    typedef boost::shared_ptr<ExtraGeometryInfo const> ExtraGeometryInfoConstPtr;
+
     /// \brief Describes the properties of a link used to initialize it
     class OPENRAVE_API LinkInfo : public InfoBase
     {
@@ -1017,7 +1043,7 @@ public:
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
-        std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
+        std::map< std::string, ExtraGeometryInfoPtr > _mapExtraGeometries;
 
         ///\brief unique id of the link
         std::string _id;
@@ -1085,6 +1111,8 @@ private:
 
         /// \brief deserializes a readable from rReadable and stores it into _mReadableInterfaces[id]
         void _DeserializeReadableInterface(const std::string& id, const rapidjson::Value& rReadable, dReal fUnitScale);
+
+        void _DeserializeExtraGeometryInfo(const std::string& id, const rapidjson::Value& rExtraGeom, dReal fUnitScale, int options);
 
         friend class Link;
         friend class KinBody;
@@ -1331,19 +1359,19 @@ public:
         ///
         /// \param name The name of the geometry group. If name is empty, will initialize the default geometries.
         /// \throw If name does not exist in GetInfo()._mapExtraGeometries, then throw an exception.
-        void SetGeometriesFromGroup(const std::string& name);
+        void SetGeometriesFromGroup(const std::string& groupid);
 
         /// \brief returns a const reference to the vector of geometries for a particular group
         ///
         /// \param name The name of the geometry group.
         /// \throw openrave_exception If the group does not exist, throws an exception.
-        const std::vector<KinBody::GeometryInfoPtr>& GetGeometriesFromGroup(const std::string& name) const;
+        const std::vector<KinBody::GeometryInfoPtr>& GetGeometriesFromGroup(const std::string& groupid) const;
 
         /// \brief stores geometries for later retrieval
         ///
         /// the list is stored inside _GetInfo()._mapExtraGeometries. Note that the pointers are copied and not the data, so
         /// any be careful not to modify the geometries afterwards
-        void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+        void SetGroupGeometries(const std::string& groupid, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
 private:
         /// \brief stores geometries for later retrieval
