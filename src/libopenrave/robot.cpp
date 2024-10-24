@@ -489,7 +489,7 @@ void RobotBase::_RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const 
 
     // KinBody::Save_GrabbedBodies
     const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
-    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, /*bCalledFromClone*/ true);
+    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, pOriginalRobot->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed, pOriginalRobot->_nextGrabbedBodyUniqueId, /*bCalledFromClone*/ true);
 
     // KinBody::Save_LinkVelocities
     if( !bRestoreGrabbedBodiesOnly ) {
@@ -537,6 +537,28 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
         // The change in connected body active states essentially affect the robot's link indices, which
         // will then mess up Grabbed's _setGrabberLinkIndicesToIgnore
         _probot->GetConnectedBodyActiveStates(_vConnectedBodyActiveStates);
+    }
+}
+
+RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, const RobotStateSaver& referenceSaver) : KinBodyStateSaver(probot, referenceSaver), _probot(probot)
+{
+    if( _options & Save_ActiveDOF ) {
+        vactivedofs = referenceSaver.vactivedofs;
+        affinedofs = referenceSaver.affinedofs;
+        rotationaxis = referenceSaver.rotationaxis;
+    }
+    if( _options & Save_ActiveManipulator ) {
+        _ThrowOnInvalidCopyFromOtherSaver(probot->GetEnv()->GetNameId().c_str(), "RobotStateSaver", Save_ActiveManipulator, _options);
+    }
+    if( _options & Save_ActiveManipulatorToolTransform ) {
+        _ThrowOnInvalidCopyFromOtherSaver(probot->GetEnv()->GetNameId().c_str(), "RobotStateSaver", Save_ActiveManipulatorToolTransform, _options);
+    }
+    if( _options & Save_ManipulatorsToolTransform ) {
+        _ThrowOnInvalidCopyFromOtherSaver(probot->GetEnv()->GetNameId().c_str(), "RobotStateSaver", Save_ManipulatorsToolTransform, _options);
+    }
+
+    if( (_options & Save_ConnectedBodies) || (_options & Save_GrabbedBodies) ) {
+        _vConnectedBodyActiveStates = referenceSaver._vConnectedBodyActiveStates;
     }
 }
 
