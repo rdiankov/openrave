@@ -65,6 +65,21 @@ inline void _ResizeVectorFor2DTable(std::vector<int8_t>& vec, size_t vectorSize)
     }
 }
 
+static void _PrintDOFValuesForInitialLinkTransformations(const KinBody& body, const std::vector<dReal>& vdoflastsetvalues, const char* context)
+{
+    if( body.GetDOF() == 0 ) {
+        return;
+    }
+    std::stringstream ssJoints;
+    for(size_t iDOF = 0; iDOF < vdoflastsetvalues.size(); ++iDOF) {
+        if( iDOF > 0 ) {
+            ssJoints << ",";
+        }
+        ssJoints << vdoflastsetvalues[iDOF];
+    }
+    RAVELOG_INFO_FORMAT("env=%s, body '%s' _vInitialLinkTransformations is updated in %s by dofValues=[%s]", body.GetEnv()->GetNameId()%body.GetName()%context%ssJoints.str());
+}
+
 class ChangeCallbackData : public UserData
 {
 public:
@@ -5113,6 +5128,7 @@ void KinBody::_ComputeInternalInformation()
                 RAVELOG_VERBOSE(str(boost::format("dof %d has different values after SetDOFValues %d!=%d, this could be due to mimic joint equations kicking into effect.")%i%vprevdoflastsetvalues.at(i)%vnewdoflastsetvalues.at(i)));
             }
         }
+        _PrintDOFValuesForInitialLinkTransformations(*this, vnewdoflastsetvalues, __FUNCTION__);
         _vInitialLinkTransformations = vnewtrans;
     }
 
@@ -5585,6 +5601,7 @@ void KinBody::SetNonCollidingConfiguration()
     _ResetInternalCollisionCache();
     vector<dReal> vdoflastsetvalues;
     GetLinkTransformations(_vInitialLinkTransformations, vdoflastsetvalues);
+    _PrintDOFValuesForInitialLinkTransformations(*this, vdoflastsetvalues, __FUNCTION__);
 }
 
 void KinBody::_ResetInternalCollisionCache()
@@ -5613,6 +5630,20 @@ bool CompareNonAdjacentFarthest(int pair0, int pair1)
         }
     }
     return dist0 > dist1;
+}
+
+void KinBody::_PrintNonAdjacentLinks(const boost::array<std::vector<int>, 4>& vNonAdjacentLinks, const size_t nonAdjacentMask, const std::string& envNameId, const std::string& bodyName)
+{
+    std::stringstream ssLinks;
+    const std::vector<int>& vSelectedNonAdjacentLinks = vNonAdjacentLinks[nonAdjacentMask];
+    for(size_t iLinks = 0; iLinks < vSelectedNonAdjacentLinks.size(); ++iLinks) {
+        const int value = vSelectedNonAdjacentLinks[iLinks];
+        if( iLinks > 0 ) {
+            ssLinks << ",";
+        }
+        ssLinks << "(" << (value & 0xffff) << "," << (value>>16) << ")";
+    }
+    RAVELOG_INFO_FORMAT("env=%s, body '%s' computes the cache for GetNonAdjacentLinks(%d). linkPairs=[%s]", envNameId%bodyName%nonAdjacentMask%ssLinks.str());
 }
 
 const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
@@ -5663,6 +5694,7 @@ private:
         std::sort(_vNonAdjacentLinks[0].begin(), _vNonAdjacentLinks[0].end(), CompareNonAdjacentFarthest);
         _nUpdateStampId++; // because transforms were modified
         _nNonAdjacentLinkCache = 0;
+        KinBody::_PrintNonAdjacentLinks(_vNonAdjacentLinks, 0, GetEnv()->GetNameId(), GetName());
     }
     if( (_nNonAdjacentLinkCache&adjacentoptions) != adjacentoptions ) {
         int requestedoptions = (~_nNonAdjacentLinkCache)&adjacentoptions;
