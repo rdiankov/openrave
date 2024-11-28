@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.159.0
+===============
+
+- Revive the order of grabbed bodies to avoid less deterministic grabbed self collision checking.
+
 Version 0.158.0
 ===============
 

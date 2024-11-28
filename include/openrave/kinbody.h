@@ -2489,6 +2489,7 @@ protected:
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
         std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
+        uint64_t _nextGrabbedBodyUniqueId = 0;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2536,6 +2537,7 @@ protected:
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
         std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
         std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
+        uint64_t _nextGrabbedBodyUniqueId = 0;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -3722,11 +3724,13 @@ protected:
     /// \param[in] options : SaveParameters inside of saver.
     /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
     /// \param[in] savedMapListNonCollidingInterGrabbedLinkPairsWhenGrabbed : _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed held in saver.
+    /// \param[in] savedNextGrabbedBodyUniqueId : _nextGrabbedBodyUniqueId in saver.
     /// \param[in] bCalledFromClone : true this is called from clone, e.g. called from _RestoreGrabbedBodiesForClone. false if  Assumes that this is called from _RestoreKinBody of saver classes.
     void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
                                             const int options,
                                             const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
                                             const std::unordered_map<uint64_t, ListNonCollidingLinkPairs>& savedMapListNonCollidingInterGrabbedLinkPairsWhenGrabbed,
+                                            const uint64_t savedNextGrabbedBodyUniqueId,
                                             const bool bCalledFromClone = false);
 
     /// \brief Save this kinbody's information.
@@ -3832,6 +3836,7 @@ protected:
     /// - Each link pair (grabbed1Link, grabbed2Link) in ListNonCollidingLinkPair must be such that the first element
     ///   corresponds to the grabbed body with lower environment body index.
     std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
+    uint64_t _nextGrabbedBodyUniqueId = 0; ///< This indicates the unique id of the next grabbed body. Monotonically increasing, except for the resetting when all grabbed bodies are released, ...etc. Lower unique id means grabbed earlier, and we can identify the order of grabbed bodies through this Id.
 
 private:
     mutable std::vector<dReal> _vTempJoints;
@@ -3867,7 +3872,7 @@ private:
 class OPENRAVE_API Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
 public:
-    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink);
+    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, const uint64_t uniqueId);
     virtual ~Grabbed() {
     }
 
@@ -3911,6 +3916,7 @@ public:
     Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
     std::set<int> _setGrabberLinkIndicesToIgnore; ///< indices to the links of the grabber whose collisions with the grabbed bodies should be ignored.
     rapidjson::Document _rGrabbedUserData; ///< user-defined data to be updated when kinbody grabs and releases objects
+    const uint64_t _uniqueId = 0; ///< The unique id of this Grabbed instance. Lower unique id means grabbed earlier, and we can identify the order of grabbed bodies through this Id.
 private:
 
     /// \brief update grabber's _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed. if there is the existing list, push the inter-grabbed link pairs to it. otherwise, create the new list in the map and push the inter-grabbed link pairs to it.
