@@ -112,8 +112,16 @@ static void _CreateSaverForGrabbedAndGrabber(KinBody::KinBodyStateSaverPtr& pSav
         pSaver->SetRestoreOnDestructor(false);
     }
 }
+static void _CreateSaverForGrabber(KinBody::KinBodyStateSaverPtr& pSaver, const KinBodyPtr& pBody)
+{
+    _CreateSaverForGrabbedAndGrabber(pSaver,
+                                     pBody,
+                                     // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
+                                     KinBody::Save_LinkTransformation | KinBody::Save_LinkEnable | KinBody::Save_JointLimits | KinBody::Save_LinkVelocities,
+                                     /* bDisableRestoreOnDestructor */ false);
+}
 
-Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
+Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, KinBody::KinBodyStateSaverPtr pGrabberSaver)
 {
     _pGrabbedBody = pGrabbedBody;
     _pGrabbingLink = pGrabbingLink;
@@ -125,11 +133,11 @@ Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
                                      KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits,
                                      bDisableRestoreOnDestructor);
 
-    KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
-    _CreateSaverForGrabbedAndGrabber(_pGrabberSaver,
-                                     pGrabber,
-                                     KinBody::Save_LinkTransformation|KinBody::Save_LinkEnable|KinBody::Save_JointLimits|KinBody::Save_LinkVelocities, // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
-                                     bDisableRestoreOnDestructor);
+    // If an existing saver was provided, just use that. If it wasn't, then generate a new one now.
+    _pGrabberSaver = std::move(pGrabberSaver);
+    if (!_pGrabberSaver) {
+        _CreateSaverForGrabber(_pGrabberSaver, RaveInterfaceCast<KinBody>(pGrabbingLink->GetParent()));
+    }
 } // end Grabbed
 
 void Grabbed::AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore)
@@ -397,7 +405,14 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
         _RemoveGrabbedBody(itPreviouslyGrabbed);
     }
 
-    GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink));
+    // If the link transformations/velocities of our grabber haven't changed, we can re-use the existing state saver.
+    // This optimization is most useful for bodies with many static links, e.g. maps, where the number of links is large and the transforms change infrequently if ever
+    if (_grabberStateSaverCache == nullptr) {
+        RAVELOG_INFO_FORMAT("grabber %s (grabbing %s) has no cached grab state saver, generating", GetName()%pGrabbedBody->GetName());
+        _CreateSaverForGrabber(_grabberStateSaverCache, RaveInterfaceCast<KinBody>(pGrabbingLink->GetParent()));
+    }
+
+    GrabbedPtr pGrabbed(new Grabbed(pGrabbedBody, pGrabbingLink, _grabberStateSaverCache));
     pGrabbed->_tRelative = tGrabbingLink.inverse() * tGrabbedBody;
     pGrabbed->_setGrabberLinkIndicesToIgnore = setGrabberLinksToIgnore;
 
@@ -551,6 +566,13 @@ void KinBody::RegrabAll()
     // Since all of grabbed instances are re-created, ok to disregard the previous cache.
     _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
 
+    // Ensure that our cached grab saver is initialized before looping
+    // Grabbing won't affect existing link transforms, so we don't need to check again each loop
+    if (!originalGrabbedBodiesByBodyName.empty() && _grabberStateSaverCache == nullptr) {
+        RAVELOG_INFO_FORMAT("grabber %s has no cached grab state saver, generating", GetName());
+        _CreateSaverForGrabber(_grabberStateSaverCache, RaveInterfaceCast<KinBody>(_veclinks[0]->GetParent()));
+    }
+
     // Regrab all the bodies again
     for (MapGrabbedByEnvironmentIndex::value_type& grabPair : originalGrabbedBodiesByBodyName) {
         const int grabbedBodyEnvIndex = grabPair.first;
@@ -563,7 +585,7 @@ void KinBody::RegrabAll()
             continue;
         }
 
-        GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
+        GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink, _grabberStateSaverCache));
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
         CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);
@@ -893,6 +915,13 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
     CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     CollisionOptionsStateSaver colsaver(collisionchecker, 0);
 
+    // Ensure that our cached grab saver is initialized before looping
+    // Grabbing won't affect existing link transforms, so we don't need to check again each loop
+    if (!vGrabbedInfos.empty() && _grabberStateSaverCache == nullptr) {
+        RAVELOG_INFO_FORMAT("grabber %s has no cached grab state saver, generating", GetName());
+        _CreateSaverForGrabber(_grabberStateSaverCache, RaveInterfaceCast<KinBody>(_veclinks[0]->GetParent()));
+    }
+
     // Next, for each incoming grab info, either update the existing grab or create a new one if it doesn't exist
     for (const KinBody::GrabbedInfoConstPtr& pGrabbedInfo : vGrabbedInfos) {
         // Assert that this grab info maps to a real body in the environment
@@ -939,7 +968,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         // Even if this is an existing grabbed body, re-allocate our Grabbed record for two reasons:
         // - We need to re-save the current state of the grabbed object (e.g. the relative transform)
         // - References to the old Grabbed infos for this body may be held by state savers somewhere outside the body, so we can't mutate them without invalidating those checkpoints
-        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink)).first;
+        MapGrabbedByEnvironmentIndex::iterator existingGrabIt = _grabbedBodiesByEnvironmentIndex.emplace(pBody->GetEnvironmentBodyIndex(), new Grabbed(pBody, pGrabbingLink, _grabberStateSaverCache)).first;
 
         // Update the grab object with the ancillary grab info
         GrabbedPtr& pGrabbed = existingGrabIt->second;

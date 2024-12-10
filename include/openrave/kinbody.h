@@ -3833,6 +3833,12 @@ protected:
     ///   corresponds to the grabbed body with lower environment body index.
     std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
 
+    /// Cached kinbody state saver that can be used as part of a Grabbed record.
+    /// In the case where a body with a lot of links grabs a lot of other bodies without mutating itself otherwise (e.g. a map),
+    /// this can result in eliminating a significant number of link transform/velocity allocations/calculations.
+    /// Cached pointer is cleared whenever _PostprocessChangedParameters is invoked with a property that would affect the cached saver
+    KinBody::KinBodyStateSaverPtr _grabberStateSaverCache;
+
 private:
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const override {
@@ -3867,7 +3873,7 @@ private:
 class OPENRAVE_API Grabbed : public UserData, public boost::enable_shared_from_this<Grabbed>
 {
 public:
-    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink);
+    Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, KinBody::KinBodyStateSaverPtr pGrabberSaver=nullptr);
     virtual ~Grabbed() {
     }
 

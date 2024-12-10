@@ -6031,6 +6031,12 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 void KinBody::_PostprocessChangedParameters(uint32_t parameters)
 {
     _nUpdateStampId++;
+
+    // If we changed any properties saved in _CreateSaverForGrabber, we need to invalidate the cache
+    if (parameters & (Prop_Links | Prop_JointLimits)) {
+        _grabberStateSaverCache = nullptr;
+    }
+
     if( _nHierarchyComputed == 1 ) {
         _nParametersChanged |= parameters;
         return;
