@@ -118,7 +118,7 @@ static void _CreateSaverForGrabber(KinBody::KinBodyStateSaverPtr& pSaver, const 
                                      pBody,
                                      // Need to save link velocities of the grabber since will be used for computing link velocities of the grabbed bodies.
                                      KinBody::Save_LinkTransformation | KinBody::Save_LinkEnable | KinBody::Save_JointLimits | KinBody::Save_LinkVelocities,
-                                     /* bDisableRestoreOnDestructor */ false);
+                                     /* bDisableRestoreOnDestructor */ true);
 }
 
 Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, KinBody::KinBodyStateSaverPtr pGrabberSaver)
