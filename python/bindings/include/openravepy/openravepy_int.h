@@ -641,6 +641,7 @@ public:
 
     virtual py::object GetReadableInterfaces();
     virtual py::object GetReadableInterface(const std::string& xmltag);
+    virtual bool HasReadableInterface(const std::string& xmltag);
 
     virtual void SetReadableInterface(const std::string& xmltag, py::object oreadable);
 };

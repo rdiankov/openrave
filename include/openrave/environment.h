@@ -22,13 +22,15 @@
 #ifndef  OPENRAVE_ENVIRONMENTBASE_H
 #define  OPENRAVE_ENVIRONMENTBASE_H
 
+#include <openrave/config.h>
+
 namespace OpenRAVE {
 
 #if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
-#if __cplusplus >= 201703L
+#if OPENRAVE_STD_SCOPED_LOCK
 #include <mutex>
 using EnvironmentMutex = ::std::recursive_mutex;
-using EnvironmentLock  = ::std::unique_lock<std::recursive_mutex>;
+using EnvironmentLock  = ::std::scoped_lock<std::recursive_mutex>;
 using defer_lock_t     = ::std::defer_lock_t;
 using try_to_lock_t    = ::std::try_to_lock_t;
 #else
@@ -36,7 +38,7 @@ using EnvironmentMutex = ::boost::recursive_try_mutex;
 using EnvironmentLock  = EnvironmentMutex::scoped_lock;
 using defer_lock_t     = ::boost::defer_lock_t;
 using try_to_lock_t    = ::boost::try_to_lock_t;
-#endif // __cplusplus >= 201703L
+#endif // OPENRAVE_STD_SCOPED_LOCK
 #else
 using EnvironmentMutex = ::std::mutex;
 using EnvironmentLock  = ::std::unique_lock<std::mutex>;
@@ -760,7 +762,7 @@ public:
     ///
     /// extents are half the width, height, and depth of the box
     /// \return handle to plotted boxes, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
-    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) = 0;
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, const std::vector<RaveVector<float>>& colors = {}) = 0;
 
     /// \brief Draws a AABB. <b>[multi-thread safe]</b>
     ///

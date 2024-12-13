@@ -54,8 +54,13 @@
 #include <map>
 #include <set>
 #include <string>
+#include <iomanip>
+#include <fstream>
+#include <sstream>
 
-#if  __cplusplus >= 201703L
+#include <openrave/config.h>
+
+#if OPENRAVE_STD_STRING_VIEW
 #include <string_view>
 #else
 #include <boost/utility/string_view.hpp>
@@ -67,10 +72,6 @@ namespace std{
     };
 };
 #endif
-
-#include <iomanip>
-#include <fstream>
-#include <sstream>
 
 // QTBUG-22829 alternative workaround
 #ifndef Q_MOC_RUN
@@ -107,7 +108,6 @@ namespace std{
 /// The entire %OpenRAVE library
 namespace OpenRAVE {
 
-#include <openrave/config.h>
 #include <openrave/interfacehashes.h>
 
 }
@@ -118,7 +118,7 @@ namespace OpenRAVE {
 
 namespace OpenRAVE {
 
-#if  __cplusplus >= 201703L
+#if OPENRAVE_STD_STRING_VIEW
 using string_view = std::string_view;
 #else
 using string_view = ::boost::string_view;

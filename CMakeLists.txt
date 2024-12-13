@@ -4,7 +4,7 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 158)
+set (OPENRAVE_VERSION_MINOR 159)
 set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
@@ -15,6 +15,8 @@ message(STATUS "Using cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION
 cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
+# https://cmake.org/cmake/help/v3.8/policy/CMP0067.html
+cmake_policy(SET CMP0067 NEW)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
@@ -111,6 +113,37 @@ include(InstallSymlink)
 include(GNUInstallDirs)
 
 find_package(PkgConfig) # pkg_check_modules
+
+check_cxx_source_compiles(" 
+#include <mutex> 
+int main() 
+{ 
+    std::scoped_lock lock;
+    return 0;
+}"
+OPENRAVE_STD_SCOPED_LOCK
+)
+# need to convert to int to set config.h
+if(OPENRAVE_STD_SCOPED_LOCK)
+  set(OPENRAVE_STD_SCOPED_LOCK 1)
+else()
+  set(OPENRAVE_STD_SCOPED_LOCK 0)
+endif()
+
+check_cxx_source_compiles(" 
+#include <string_view> 
+int main() 
+{ 
+    std::string_view view;
+    return 0;
+}"
+OPENRAVE_STD_STRING_VIEW
+)
+if(OPENRAVE_STD_STRING_VIEW)
+  set(OPENRAVE_STD_STRING_VIEW 1)
+else()
+  set(OPENRAVE_STD_STRING_VIEW 0)
+endif()
 
 if( WIN32 )
   # does not support symlinks
@@ -374,8 +407,8 @@ if( ASSIMP_FOUND )
   #include <assimp/Logger.h> 
   int main() 
   { 
-      Assimp::Logger::WARN; 
-      return 0; 
+      Assimp::Logger::WARN;
+      return 0;
   }" 
   IS_ASSIMP_PRE_R896 
   )

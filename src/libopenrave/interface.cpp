@@ -266,6 +266,13 @@ ReadablePtr ReadablesContainer::GetReadableInterface(const std::string& id) cons
     return it != __mapReadableInterfaces.end() ? it->second : ReadablePtr();
 }
 
+bool ReadablesContainer::HasReadableInterface(const std::string& id) const
+{
+    boost::shared_lock<boost::shared_mutex> lock(_mutexInterface);
+    READERSMAP::const_iterator it = __mapReadableInterfaces.find(id);
+    return it != __mapReadableInterfaces.end();
+}
+
 ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);

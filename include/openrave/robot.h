@@ -862,7 +862,11 @@ public:
         bool CanProvideManipulator(const std::string& resolvedManipulatorName) const;
 
 private:
+        /// \brief A callback function to update _info when the robot's properties change.
+        void _UpdateConnectedBodyInfo();
+
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
+        UserDataPtr _updateInfoCallback; ///< callback registered to the robot to update _info whenever the robot properties (such as joint velocity/acceleration limits) change.
 
         std::string _nameprefix; ///< the name prefix to use for all the resolved link names. Initialized regardless of the active state of the connected body.
         std::string _dummyPassiveJointName; ///< the joint that is used to attach the connected body to the robot link
