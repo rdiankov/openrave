@@ -976,10 +976,10 @@ public:
     {
         CHECK_INTERFACE(pinterface);
         switch(pinterface->GetInterfaceType()) {
-        case PT_Robot: _AddRobot(RaveInterfaceCast<RobotBase>(pinterface),addMode); break;
-        case PT_KinBody: _AddKinBody(RaveInterfaceCast<KinBody>(pinterface),addMode); break;
+        case PT_Robot: _AddRobot(RaveInterfaceCast<RobotBase>(pinterface), addMode); break;
+        case PT_KinBody: _AddKinBody(RaveInterfaceCast<KinBody>(pinterface), addMode); break;
         case PT_Module: {
-            int ret = AddModule(RaveInterfaceCast<ModuleBase>(pinterface),cmdargs);
+            int ret = AddModule(RaveInterfaceCast<ModuleBase>(pinterface), cmdargs);
             OPENRAVE_ASSERT_OP_FORMAT(ret,==,0,"module '%s' failed with args: '%s'",pinterface->GetXMLId()%cmdargs,ORE_InvalidArguments);
             break;
         }
@@ -990,7 +990,17 @@ public:
         }
     }
 
-    virtual void _AddKinBody(KinBodyPtr pbody, InterfaceAddMode addMode)
+    virtual void AddKinBody(KinBodyPtr pbody, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex) override
+    {
+        _AddKinBody(pbody, addMode, requestedEnvironmentBodyIndex);
+    }
+
+    virtual void AddRobot(RobotBasePtr probot, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex) override
+    {
+        _AddRobot(probot, addMode, requestedEnvironmentBodyIndex);
+    }
+
+    virtual void _AddKinBody(KinBodyPtr pbody, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex = 0)
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_INTERFACE(pbody);
@@ -1011,7 +1021,7 @@ public:
         }
         {
             ExclusiveLock lock969(_mutexInterfaces);
-            const int newBodyIndex = _AssignEnvironmentBodyIndex(pbody);
+            const int newBodyIndex = _AssignEnvironmentBodyIndex(pbody, requestedEnvironmentBodyIndex);
             _AddKinBodyInternal(pbody, newBodyIndex);
             _nBodiesModifiedStamp++;
         }
@@ -1028,7 +1038,7 @@ public:
         _CallBodyCallbacks(pbody, 1);
     }
 
-    virtual void _AddRobot(RobotBasePtr robot, InterfaceAddMode addMode)
+    virtual void _AddRobot(RobotBasePtr robot, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex = 0)
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_INTERFACE(robot);
@@ -1052,7 +1062,7 @@ public:
         }
         {
             ExclusiveLock lock823(_mutexInterfaces);
-            const int newBodyIndex = _AssignEnvironmentBodyIndex(robot);
+            const int newBodyIndex = _AssignEnvironmentBodyIndex(robot, requestedEnvironmentBodyIndex);
             _AddKinBodyInternal(robot, newBodyIndex);
             _nBodiesModifiedStamp++;
         }
@@ -3128,7 +3138,7 @@ public:
                 } else {
                     updateFromInfoResult = pMatchExistingBody->UpdateFromKinBodyInfo(*pKinBodyInfo);
                 }
-                RAVELOG_VERBOSE_FORMAT("env=%s, update body '%s' from info result %u", GetNameId()%pMatchExistingBody->_id%updateFromInfoResult);
+                RAVELOG_VERBOSE_FORMAT("env=%s, update body '%s' from info result %d", GetNameId() % pMatchExistingBody->_id % static_cast<int>(updateFromInfoResult));
                 if (updateFromInfoResult == UFIR_NoChange) {
                     continue;
                 }
@@ -3289,7 +3299,7 @@ public:
                 }
 
                 // re-grab after add this body back to the environment
-                for (int grabbingBodyIndex = 0; grabbingBodyIndex<pGrabbingBodies.size(); grabbingBodyIndex++) {
+                for (int grabbingBodyIndex = 0; grabbingBodyIndex < (int)pGrabbingBodies.size(); grabbingBodyIndex++) {
                     pGrabbingBodies[grabbingBodyIndex]->Grab(pInitBody, pGrabbingLinks[grabbingBodyIndex], linkIndicesToIgnore[grabbingBodyIndex], rGrabbedUserDataDocuments[grabbingBodyIndex]);
                 }
             }
@@ -3340,7 +3350,7 @@ public:
 
             if (itExistingBody != vBodies.end()) {
                 // grabbed infos
-                if (pKinBodyInfo->_vGrabbedInfos.size() != (*itExistingBody)->GetNumGrabbed()) {
+                if ((int)pKinBodyInfo->_vGrabbedInfos.size() != (*itExistingBody)->GetNumGrabbed()) {
                     RAVELOG_DEBUG_FORMAT("env=%s, body name='%s' updating grab from %d -> %d", GetNameId()%bodyName%(*itExistingBody)->GetNumGrabbed()%pKinBodyInfo->_vGrabbedInfos.size());
                     // when grab info changes, have to report to caller
                     if (std::find(vModifiedBodies.begin(), vModifiedBodies.end(), *itExistingBody) == vModifiedBodies.end() && std::find(vCreatedBodies.begin(), vCreatedBodies.end(), *itExistingBody) == vCreatedBodies.end()) {
@@ -4203,20 +4213,38 @@ protected:
     }
 
     /// assumes _mutexInterfaces is locked
-    virtual int _AssignEnvironmentBodyIndex(KinBodyPtr pbody)
+    virtual int _AssignEnvironmentBodyIndex(KinBodyPtr pbody, int requestedEnvironmentBodyIndex = 0)
     {
         const bool bRecycleId = !_environmentIndexRecyclePool.empty();
         int envBodyIndex = 0;
-        if (bRecycleId) {
-            std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
-            envBodyIndex = *smallestIt;
-            _environmentIndexRecyclePool.erase(smallestIt);
-            RAVELOG_VERBOSE_FORMAT("env=%s, recycled body envBodyIndex=%d for '%s'. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+        if (requestedEnvironmentBodyIndex > 0) {
+            // user requested env body index
+            std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.find(requestedEnvironmentBodyIndex);
+            if (smallestIt != _environmentIndexRecyclePool.end()) {
+                envBodyIndex = *smallestIt;
+                _environmentIndexRecyclePool.erase(smallestIt);
+                RAVELOG_VERBOSE_FORMAT("env=%s, recycled body envBodyIndex=%d for '%s'. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+            }
+            else {
+                envBodyIndex = requestedEnvironmentBodyIndex;
+                if ((size_t) envBodyIndex < _vecbodies.size() && !!_vecbodies.at(envBodyIndex)) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, environmentBodyIndex=%d is used by existing body=%s while trying to add new body=%s"), GetNameId() % requestedEnvironmentBodyIndex % _vecbodies.at(envBodyIndex)->GetName() % pbody->GetName(), ORE_EnvironmentBodyIndexConflict);
+                }
+                RAVELOG_VERBOSE_FORMAT("env=%s, use requested envBodyIndex=%d for '%s'. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+            }
         }
         else {
-            envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
-            if( envBodyIndex > 200 ) { // give some number sufficiently big so that leaking of objects can be detected rather than spamming the log
-                RAVELOG_DEBUG_FORMAT("env=%s, assigned new body envBodyIndex=%d for '%s', this should not happen unless total number of bodies in env keeps increasing", GetNameId()%envBodyIndex%pbody->GetName());
+            if (bRecycleId) {
+                std::set<int>::iterator smallestIt = _environmentIndexRecyclePool.begin();
+                envBodyIndex = *smallestIt;
+                _environmentIndexRecyclePool.erase(smallestIt);
+                RAVELOG_VERBOSE_FORMAT("env=%s, recycled body envBodyIndex=%d for '%s'. %d remaining in pool", GetNameId()%envBodyIndex%pbody->GetName()%_environmentIndexRecyclePool.size());
+            }
+            else {
+                envBodyIndex = _vecbodies.empty() ? 1 : _vecbodies.size(); // skip 0
+                if( envBodyIndex > 200 ) { // give some number sufficiently big so that leaking of objects can be detected rather than spamming the log
+                    RAVELOG_DEBUG_FORMAT("env=%s, assigned new body envBodyIndex=%d for '%s', this should not happen unless total number of bodies in env keeps increasing", GetNameId()%envBodyIndex%pbody->GetName());
+                }
             }
         }
         pbody->_environmentBodyIndex = envBodyIndex;

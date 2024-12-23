@@ -585,6 +585,10 @@ void RobotBase::ConnectedBody::_UpdateConnectedBodyInfo()
         if( !!pattachedrobot ) {
             for( const std::pair<std::string, RobotBase::JointPtr>& pair: _vResolvedJointNames ) {
                 const std::string& resolvedJointName = pair.first;
+                if( resolvedJointName.empty() ) {
+                    // Can be empty after being deinitialized
+                    continue;
+                }
                 KinBody::JointPtr pJoint = pattachedrobot->GetJoint(resolvedJointName);
                 if( !!pJoint ) {
                     const KinBody::JointInfo& newJointInfo = pJoint->UpdateAndGetInfo(); // source of new information

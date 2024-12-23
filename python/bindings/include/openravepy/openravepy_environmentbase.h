@@ -217,8 +217,10 @@ public:
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);
+    void AddKinBody(PyKinBodyPtr pbody, py::object oAddMode, int requestedEnvironmentBodyIndex);
     void AddRobot(PyRobotBasePtr robot);
     void AddRobot(PyRobotBasePtr robot, bool bAnonymous);
+    void AddRobot(PyRobotBasePtr robot, py::object oAddMode, int requestedEnvironmentBodyIndex);
     void AddSensor(PySensorBasePtr sensor);
     void AddSensor(PySensorBasePtr sensor, bool bAnonymous);
     void AddViewer(PyViewerBasePtr viewer);

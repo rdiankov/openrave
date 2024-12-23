@@ -23,22 +23,15 @@
 #define  OPENRAVE_ENVIRONMENTBASE_H
 
 #include <openrave/config.h>
+#include <mutex>
 
 namespace OpenRAVE {
 
 #if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
-#if OPENRAVE_STD_SCOPED_LOCK
-#include <mutex>
 using EnvironmentMutex = ::std::recursive_mutex;
-using EnvironmentLock  = ::std::scoped_lock<std::recursive_mutex>;
+using EnvironmentLock  = ::std::unique_lock<std::recursive_mutex>;
 using defer_lock_t     = ::std::defer_lock_t;
 using try_to_lock_t    = ::std::try_to_lock_t;
-#else
-using EnvironmentMutex = ::boost::recursive_try_mutex;
-using EnvironmentLock  = EnvironmentMutex::scoped_lock;
-using defer_lock_t     = ::boost::defer_lock_t;
-using try_to_lock_t    = ::boost::try_to_lock_t;
-#endif // OPENRAVE_STD_SCOPED_LOCK
 #else
 using EnvironmentMutex = ::std::mutex;
 using EnvironmentLock  = ::std::unique_lock<std::mutex>;
@@ -481,6 +474,22 @@ public:
     virtual void Add(InterfaceBasePtr pinterface, InterfaceAddMode addMode, const std::string& cmdargs=std::string()) = 0;
 
     virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs=std::string()) RAVE_DEPRECATED;
+
+    /** \brief Add an body to the environment
+        \param[in] pbody the pointer to an initialized body
+        \param[in] addMode One of IAM_X
+        \param[in] requestedEnvironmentBodyIndex if positive and none of existing body uses it, this is assigned to pbody. If positive and existing body uses it, exception is thrown. If non-positive, environment body index is decided internally.
+        \throw openrave_exception Throw if interface is invalid or already added
+     */
+    virtual void AddKinBody(KinBodyPtr pbody, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex) = 0;
+
+    /** \brief Add an robot to the environment
+        \param[in] probot the pointer to an initialized robot
+        \param[in] addMode One of IAM_X
+        \param[in] requestedEnvironmentBodyIndex if positive and none of existing body uses it, this is assigned to probot. If positive and existing body uses it, exception is thrown. If non-positive, environment body index is decided internally.
+        \throw openrave_exception Throw if interface is invalid or already added
+     */
+    virtual void AddRobot(RobotBasePtr probot, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex) = 0;
 
     /// \brief bodycallback(body, action)
     ///
