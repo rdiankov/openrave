@@ -63,6 +63,7 @@
 #if OPENRAVE_STD_STRING_VIEW
 #include <string_view>
 #else
+#include <boost/container_hash/hash.hpp>
 #include <boost/utility/string_view.hpp>
 namespace std{
     // make boost::string_view handlable by std::unordered_set/map
