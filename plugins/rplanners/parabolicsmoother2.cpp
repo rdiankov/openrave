@@ -608,6 +608,7 @@ public:
             ptraj->GetWaypoint(0, x0Vect, posSpec);
             ptraj->GetWaypoint(0, v0Vect, velSpec);
 
+            size_t ndof = _parameters->GetDOF();
             std::vector<RampOptimizer::RampND>& tempRampNDVect = _cacheRampNDVect;
             for (size_t iwaypoint = 1; iwaypoint < ptraj->GetNumWaypoints(); ++iwaypoint) {
                 ptraj->GetWaypoint(iwaypoint, tVect, timeSpec);
@@ -627,6 +628,33 @@ public:
 
                     if( isParabolic ) {
                         tempRampND.Initialize(x0Vect, x1Vect, v0Vect, v1Vect, std::vector<dReal>(), tVect[0]);
+                        bool bAccelChanged = false;
+                        for( size_t idof = 0; idof < ndof; ++idof ) {
+                            if( tempRampND.GetAAt(idof) < -_parameters->_vConfigAccelerationLimit[idof] ) {
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", _environmentid % idof % tempRampND.GetAAt(idof) % (-_parameters->_vConfigAccelerationLimit[idof]) % (tempRampND.GetAAt(idof) + _parameters->_vConfigAccelerationLimit[idof]));
+                                tempRampND.GetAAt(idof) = -_parameters->_vConfigAccelerationLimit[idof];
+                                bAccelChanged = true;
+                            }
+                            else if( tempRampND.GetAAt(idof) > _parameters->_vConfigAccelerationLimit[idof] ) {
+                                RAVELOG_VERBOSE_FORMAT("env=%d, idof=%d, accel changed: %.15e --> %.15e; diff=%.15e", _environmentid % idof % tempRampND.GetAAt(idof) % _parameters->_vConfigAccelerationLimit[idof] % (tempRampND.GetAAt(idof) - _parameters->_vConfigAccelerationLimit[idof]));
+                                tempRampND.GetAAt(idof) = _parameters->_vConfigAccelerationLimit[idof];
+                                bAccelChanged = true;
+                            }
+                        }
+                        if( bAccelChanged ) {
+                            RampOptimizer::ParabolicCheckReturn parabolicret = RampOptimizer::CheckRampND(tempRampND, _parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit, _parameters->_vConfigVelocityLimit, _parameters->_vConfigAccelerationLimit);
+                            if( parabolicret != RampOptimizer::PCR_Normal ) {
+                                _sslog.str(""); _sslog.clear();
+                                _sslog << std::setprecision(std::numeric_limits<dReal>::digits10 + 1);
+                                _sslog << "x0=["; SerializeValues(_sslog, x0Vect);
+                                _sslog << "]; x1=["; SerializeValues(_sslog, x1Vect);
+                                _sslog << "]; v0=["; SerializeValues(_sslog, v0Vect);
+                                _sslog << "]; v1=["; SerializeValues(_sslog, v1Vect);
+                                _sslog << "]; deltatime=" << tVect[0];
+                                OPENRAVE_ASSERT_FORMAT(parabolicret == RampOptimizer::PCR_Normal, "env=%s, the input RampND at iwaypoint=%d is invalid (ret=%x) after modifying accelerations. %s", _environmentid % iwaypoint % parabolicret % _sslog.str(), ORE_InvalidArguments);
+                            }
+                        }
+
                         if( !_parameters->verifyinitialpath ) {
                             tempRampND.constraintChecked = true;
                         }
