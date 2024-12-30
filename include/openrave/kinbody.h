@@ -2200,6 +2200,16 @@ protected:
         /// \brief Return the velocity of the specified joint axis only.
         dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
+        /// \brief compute torque limit from speed torque points.
+        /// \param[in] iaxis : index of axis.
+        /// \param[in] electricMotorActuatorInfo : electrical motor actuator info.
+        /// \param[in] vSpeedTorquePoints : vector of pairs of speed and torque, which is coming from electrical motor actuator info.
+        /// \param[in] fDefaultTorqueLimit : if vSpeedTorquePoints is empty, this value is used.
+        dReal _GetTorqueLimitFromSpeedTorquePoints(const int iaxis,
+                                                   const ElectricMotorActuatorInfo& electricMotorActuatorInfo,
+                                                   const std::vector<std::pair<dReal, dReal> >& vSpeedTorquePoints,
+                                                   const dReal fDefaultTorqueLimit) const;
+
         boost::array<dReal,3> _doflastsetvalues; ///< the last set value by the kinbody (_voffsets not applied). For revolute joints that have a range greater than 2*pi, it is only possible to recover the joint value from the link positions mod 2*pi. In order to recover the branch, multiplies of 2*pi are added/subtracted to this value that is closest to _doflastsetvalues. For circular joints, the last set value can be ignored since they always return a value from [-pi,pi)
 
 private:

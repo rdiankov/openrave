@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+Version 0.161.0
+===============
+
+- Remove the code for back electromotive force from torque limit calculation APIs.
+- Add common utility function for torque limit calculation.
+
 Version 0.160.0
 ===============
 
