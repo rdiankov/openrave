@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.161.2
+===============
+
+- Handle missing URIs when using CURL for loading JSON scenes.
+
+Version 0.161.1
+===============
+
+- Expose toAttributeList from openravepy library.
+
 Version 0.161.0
 ===============
 

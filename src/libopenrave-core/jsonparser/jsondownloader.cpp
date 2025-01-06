@@ -98,29 +98,31 @@ JSONDownloader::~JSONDownloader()
     }
 }
 
-JSONDownloaderScope::JSONDownloaderScope(JSONDownloader& downloader, rapidjson::Document::AllocatorType& alloc, bool downloadRecursively) :
+JSONDownloaderScope::JSONDownloaderScope(const std::string& contextdesc, JSONDownloader& downloader, rapidjson::Document::AllocatorType& alloc, bool downloadRecursively) :
     _downloader(downloader),
     _alloc(alloc),
     _downloadRecursively(downloadRecursively)
 {
+    _contextdesc = contextdesc;
 }
 
 JSONDownloaderScope::~JSONDownloaderScope()
 {
 }
 
-void JSONDownloaderScope::Download(const char* pUri, rapidjson::Document& doc, uint64_t timeoutUS)
+bool JSONDownloaderScope::Download(const char* pUri, rapidjson::Document& doc, bool bMustResolveURI, uint64_t timeoutUS)
 {
     _QueueDownloadURI(pUri, &doc);
-    WaitForDownloads(timeoutUS);
+    return WaitForDownloads(bMustResolveURI, timeoutUS);
 }
 
-void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
+bool JSONDownloaderScope::WaitForDownloads(bool bMustResolveURI, uint64_t timeoutUS)
 {
     if (_mapDownloadContexts.empty()) {
-        return;
+        return true;
     }
 
+    bool bHasInvalidURI = false;
     const uint64_t startTimestampUS = utils::GetMonotonicTime();
     int numDownloads = 0;
     while (!_mapDownloadContexts.empty()) {
@@ -128,32 +130,32 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
         int numRunningHandles = 0;
         const CURLMcode performCode = curl_multi_perform(_downloader._curlm, &numRunningHandles);
         if (performCode) {
-            throw OPENRAVE_EXCEPTION_FORMAT("failed to download, curl_multi_perform() failed with code %d", (int)performCode, ORE_CurlInvalidHandle);
+            throw OPENRAVE_EXCEPTION_FORMAT("%s failed to download, curl_multi_perform() failed with code %d", _contextdesc%(int)performCode, ORE_CurlInvalidHandle);
         }
-        RAVELOG_VERBOSE_FORMAT("curl_multi_perform(): numRunningHandles = %d", numRunningHandles);
+        RAVELOG_VERBOSE_FORMAT("%s curl_multi_perform(): numRunningHandles = %d", _contextdesc%numRunningHandles);
         if (numRunningHandles > 0) {
             // poll for 100ms
             const CURLMcode pollCode = curl_multi_poll(_downloader._curlm, NULL, 0, 100, NULL);
             if (pollCode) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to download, curl_multi_poll() failed with code %d", (int)pollCode, ORE_CurlInvalidHandle);
+                throw OPENRAVE_EXCEPTION_FORMAT("%s failed to download, curl_multi_poll() failed with code %d", _contextdesc%(int)pollCode, ORE_CurlInvalidHandle);
             }
         }
 
         // check for timeout
         const uint64_t currentTimestampUS = utils::GetMonotonicTime();
         if (currentTimestampUS > startTimestampUS + timeoutUS) {
-            throw OPENRAVE_EXCEPTION_FORMAT("timed out waiting for download to finish, timeout is %d[us]", timeoutUS, ORE_CurlTimeout);
+            throw OPENRAVE_EXCEPTION_FORMAT("%s timed out waiting for download to finish, timeout is %d[us]", _contextdesc%timeoutUS, ORE_CurlTimeout);
         }
 
         // process all messages
         for (;;) {
             int numMessagesInQueue = 0;
             const CURLMsg *curlMessage = curl_multi_info_read(_downloader._curlm, &numMessagesInQueue);
-            RAVELOG_VERBOSE_FORMAT("curl_multi_info_read(): numMessagesInQueue = %d", numMessagesInQueue);
+            RAVELOG_VERBOSE_FORMAT("%s curl_multi_info_read(): numMessagesInQueue=%d", _contextdesc%numMessagesInQueue);
             if (!curlMessage) {
                 break;
             }
-            RAVELOG_VERBOSE_FORMAT("curl_multi_info_read(): curlMessage->msg = %d", (int)curlMessage->msg);
+            RAVELOG_VERBOSE_FORMAT("%s curl_multi_info_read(): curlMessage->msg=%d", _contextdesc%(int)curlMessage->msg);
             if (curlMessage->msg != CURLMSG_DONE) {
                 // go to the next message in the queue
                 continue;
@@ -162,12 +164,12 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
             // remove handle
             const CURLMcode removeHandleCode = curl_multi_remove_handle(_downloader._curlm, curlMessage->easy_handle);
             if (removeHandleCode) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to download, curl_multi_remove_handle() failed with code %d", (int)removeHandleCode, ORE_CurlInvalidHandle);
+                throw OPENRAVE_EXCEPTION_FORMAT("%s failed to download, curl_multi_remove_handle() failed with code %d", _contextdesc%(int)removeHandleCode, ORE_CurlInvalidHandle);
             }
             const std::map<CURL*, JSONDownloadContextPtr>::iterator it = _mapDownloadContexts.find(curlMessage->easy_handle);
             if (it == _mapDownloadContexts.end()) {
                 // if this happens, it is probably a bug in this code
-                throw OPENRAVE_EXCEPTION_FORMAT0("curl download finished, but failed to find corresponding context, cannot continue", ORE_CurlInvalidHandle);
+                throw OPENRAVE_EXCEPTION_FORMAT("%s curl download finished failed to find corresponding context, cannot continue", _contextdesc, ORE_CurlInvalidHandle);
             }
             JSONDownloadContextPtr pContext;
             pContext.swap(it->second);
@@ -176,24 +178,31 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
             // check result
             const CURLcode curlCode = curlMessage->data.result;
             if (curlCode != CURLE_OK) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to download uri \"%s\": %s", pContext->uri%curl_easy_strerror(curlCode), ORE_CurlInvalidResponse);
+                throw OPENRAVE_EXCEPTION_FORMAT("%s failed to download uri '%s': %s", _contextdesc%pContext->uri%curl_easy_strerror(curlCode), ORE_CurlInvalidResponse);
             }
 
             // check http response code
             long responseCode = 0;
             const CURLcode getInfoCode = curl_easy_getinfo(pContext->curl, CURLINFO_RESPONSE_CODE, &responseCode);
             if (getInfoCode != CURLE_OK) {
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to get response status code for uri \"%s\": %s", pContext->uri%curl_easy_strerror(getInfoCode), ORE_CurlInvalidHandle);
+                throw OPENRAVE_EXCEPTION_FORMAT("%s failed to get response status code for uri '%s': %s", _contextdesc%pContext->uri%curl_easy_strerror(getInfoCode), ORE_CurlInvalidHandle);
             }
             if (responseCode != 0 && responseCode != 200) {
                 // file scheme downloads have a zero response code
-                throw OPENRAVE_EXCEPTION_FORMAT("failed to download uri \"%s\", received http %d response", pContext->uri%responseCode, ORE_CurlInvalidResponse);
+                if (bMustResolveURI || responseCode != 404 ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT("%s failed to download uri '%s', received http %d response", _contextdesc%pContext->uri%responseCode, responseCode == 404 ? ORE_InvalidURI : ORE_CurlInvalidResponse);
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("%s failed to download uri '%s', received http %d response, continuing since mustresolveuri is not true", _contextdesc%pContext->uri%responseCode);
+                    bHasInvalidURI = true;
+                    continue;
+                }
             }
 
             // parse data
             _ParseDocument(pContext);
 
-            RAVELOG_DEBUG_FORMAT("successfully downloaded \"%s\", took %d[us]", pContext->uri%(currentTimestampUS-pContext->startTimestampUS));
+            RAVELOG_DEBUG_FORMAT("%s successfully downloaded '%s', took %d[us]", _contextdesc%pContext->uri%(currentTimestampUS-pContext->startTimestampUS));
             ++numDownloads;
 
             // reuse the context object later
@@ -211,7 +220,8 @@ void JSONDownloaderScope::WaitForDownloads(uint64_t timeoutUS)
     }
 
     const uint64_t stopTimestampUS = utils::GetMonotonicTime();
-    RAVELOG_DEBUG_FORMAT("downloaded %d files, took %d[us]", numDownloads%(stopTimestampUS-startTimestampUS));
+    RAVELOG_DEBUG_FORMAT("%s downloaded %d files, took %d[us]", _contextdesc%numDownloads%(stopTimestampUS-startTimestampUS));
+    return !bHasInvalidURI;
 }
 
 static size_t _WriteBackDataFromCurl(const char *data, size_t size, size_t dataSize, JSONDownloadContext* pContext)
@@ -325,7 +335,7 @@ void JSONDownloaderScope::_QueueDownloadURI(const char* pUri, rapidjson::Documen
     }
 
     _mapDownloadContexts[pContext->curl].swap(pContext);
-    RAVELOG_DEBUG_FORMAT("start to download uri \"%s\" from \"%s\"", canonicalUri%url);
+    RAVELOG_VERBOSE_FORMAT("%s start to download uri '%s' from '%s'", _contextdesc%canonicalUri%url);
 }
 
 void JSONDownloaderScope::QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo)
@@ -339,6 +349,9 @@ void JSONDownloaderScope::QueueDownloadReferenceURIs(const rapidjson::Value& rEn
         return;
     }
     const rapidjson::Value& rBodies = itBodies->value;
+    if( !rBodies.IsArray() ) {
+        return;
+    }
     for (rapidjson::Value::ConstValueIterator itBody = rBodies.Begin(); itBody != rBodies.End(); ++itBody) {
         const rapidjson::Value& rBody = *itBody;
         if (!rBody.IsObject()) {

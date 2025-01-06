@@ -947,10 +947,10 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
                 }
                 ss << "]; jointorder=[";
                 FOREACH(itj, _vDOFOrderedJoints) {
-                    ss << (*itj)->GetName() << ", ";
+                    ss << (*itj)->GetName() << "=(" << (*it)->GetValue(0) << "," << (*it)->GetDOFIndex() << "),  ";
                 }
                 ss << "];";
-                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), (*it)->GetName()%(*it)->GetDOFIndex()%toadd%v.size()%ss.str(), ORE_InvalidState);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' (%d) dof indices mismatch joint '%s' (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), GetEnv()->GetNameId()%GetName()%GetEnvironmentBodyIndex()%(*it)->GetName()%(*it)->GetDOFIndex()%toadd%v.size()%ss.str(), ORE_InvalidState);
             }
             (*it)->GetValues(v,true);
         }
