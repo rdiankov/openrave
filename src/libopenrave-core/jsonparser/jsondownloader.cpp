@@ -214,7 +214,7 @@ bool JSONDownloaderScope::WaitForDownloads(bool bMustResolveURI, uint64_t timeou
 
             // queue other resources to be downloaded
             if (_downloadRecursively) {
-                QueueDownloadReferenceURIs(doc);
+                QueueDownloadReferenceURIs(bMustResolveURI, doc);
             }
         }
     }
@@ -338,7 +338,7 @@ void JSONDownloaderScope::_QueueDownloadURI(const char* pUri, rapidjson::Documen
     RAVELOG_VERBOSE_FORMAT("%s start to download uri '%s' from '%s'", _contextdesc%canonicalUri%url);
 }
 
-void JSONDownloaderScope::QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo)
+void JSONDownloaderScope::QueueDownloadReferenceURIs(bool bMustResolveURI, const rapidjson::Value& rEnvInfo)
 {
     if (!rEnvInfo.IsObject()) {
         return;
@@ -363,7 +363,13 @@ void JSONDownloaderScope::QueueDownloadReferenceURIs(const rapidjson::Value& rEn
         }
         if (!_IsExpandableReferenceUri(pReferenceUri)) {
             const char* pId = orjson::GetCStringJsonValueByKey(rBody, "id","");
-            throw OPENRAVE_EXCEPTION_FORMAT("bodyId '%s' has invalid referenceUri='%s", pId%pReferenceUri, ORE_InvalidURI);
+            if( bMustResolveURI ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("bodyId '%s' has invalid referenceUri='%s'.", pId%pReferenceUri, ORE_InvalidURI);
+            }
+            else {
+                RAVELOG_VERBOSE_FORMAT("bodyId '%s' has invalid referenceUri='%s', but continuing since does not need to resolve uri", pId%pReferenceUri);
+                return;
+            }
         }
         QueueDownloadURI(pReferenceUri);
     }

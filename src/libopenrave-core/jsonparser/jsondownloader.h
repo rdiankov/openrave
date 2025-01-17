@@ -87,7 +87,7 @@ public:
 
     /// \brief Downloads all reference uris in the supplied env info, as well as all their further references
     /// \param rEnvInfo env info where reference uris should be discovered
-    void QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo);
+    void QueueDownloadReferenceURIs(bool bMustResolveURI, const rapidjson::Value& rEnvInfo);
 
     /// \brief Wait for queued downloads to finish, downloaded documents are inserted into rapidJSONDocuments passed in constructor
     /// \param timeoutUS timeout in microseconds to wait for download to finish

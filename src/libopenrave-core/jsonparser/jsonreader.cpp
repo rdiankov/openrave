@@ -257,7 +257,7 @@ public:
         if (IsDownloadingFromRemote()) {
 #if OPENRAVE_CURL
             JSONDownloaderScope jsonDownload(_contextdesc, *_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
-            jsonDownload.QueueDownloadReferenceURIs(rEnvInfo);
+            jsonDownload.QueueDownloadReferenceURIs(_bMustResolveURI, rEnvInfo);
             if( !jsonDownload.WaitForDownloads(_bMustResolveURI, _downloadTimeoutUS) ) {
                 RAVELOG_VERBOSE("failed downloads");
                 //return false;
@@ -483,7 +483,7 @@ public:
         if (IsDownloadingFromRemote()) {
 #if OPENRAVE_CURL
             JSONDownloaderScope jsonDownload(_contextdesc, *_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
-            jsonDownload.QueueDownloadReferenceURIs(rEnvInfo);
+            jsonDownload.QueueDownloadReferenceURIs(_bMustResolveEnvironmentURI, rEnvInfo);
             if( !jsonDownload.WaitForDownloads(_bMustResolveEnvironmentURI, _downloadTimeoutUS) ) {
                 //return false;
             }
@@ -515,7 +515,7 @@ public:
         if (IsDownloadingFromRemote()) {
 #if OPENRAVE_CURL
             JSONDownloaderScope jsonDownload(_contextdesc, *_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
-            jsonDownload.QueueDownloadReferenceURIs(rEnvInfo);
+            jsonDownload.QueueDownloadReferenceURIs(_bMustResolveEnvironmentURI, rEnvInfo);
             if( !jsonDownload.WaitForDownloads(_bMustResolveEnvironmentURI, _downloadTimeoutUS) ) {
                 //return false;
             }
@@ -678,7 +678,7 @@ protected:
                         throw OPENRAVE_EXCEPTION_FORMAT("body '%s' has invalid referenceUri='%s", bodyId%pReferenceUri, ORE_InvalidURI);
                     }
 
-                    RAVELOG_WARN_FORMAT("env=%d, body '%s' has invalid referenceUri='%s'", _penv->GetId()%bodyId%pReferenceUri);
+                    RAVELOG_WARN_FORMAT("env=%s, body '%s' has invalid referenceUri='%s'", _penv->GetNameId()%bodyId%pReferenceUri);
                 }
             }
         }
