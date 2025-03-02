@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.163.0
+===============
+
+- Copy the internal states of `_pGrabbedSaver` and `_pGrabberSaver` of `Grabbed` instances when cloning or restoring, to avoid incorrect computation of the non colliding list cache.
+
 Version 0.162.1
 ===============
 

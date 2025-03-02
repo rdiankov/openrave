@@ -5943,7 +5943,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 }
                 //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
-                GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
+                GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex()), *pgrabbedref));
                 pgrabbed->_tRelative = pgrabbedref->_tRelative;
                 pgrabbed->_setGrabberLinkIndicesToIgnore = pgrabbedref->_setGrabberLinkIndicesToIgnore; // can do this since link indices are the same
                 CopyRapidJsonDoc(pgrabbedref->_rGrabbedUserData, pgrabbed->_rGrabbedUserData);

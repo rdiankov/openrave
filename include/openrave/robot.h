@@ -919,7 +919,16 @@ protected:
     class OPENRAVE_API RobotStateSaver : public KinBodyStateSaver
     {
 public:
+        /// \brief construct RobotStateSaver to save the states of the given probot. This constructor is standard one.
+        /// \param[in] probot : the states of this robot are saved. later on, the saved states will be restored, depending on the usage such as _bRestoreOnDestructor.
+        /// \param[in] options : options to represent which state to save.
         RobotStateSaver(RobotBasePtr probot, int options = Save_LinkTransformation|Save_LinkEnable|Save_ActiveDOF|Save_ActiveManipulator);
+
+        /// \brief construct RobotStateSaver by copying from other saver. This constructor is advanced and expected to be used in very limited use cases.
+        /// \param[in] probot : the saved states will be restored, depending on the usage such as _bRestoreOnDestructor. Note that the saver's states are not coming from this probot.
+        /// \param[in] referenceSaver : the states are copied from this saver. Note that some of the states are not copied, such as pointers.
+        RobotStateSaver(RobotBasePtr probot, const RobotStateSaver& referenceSaver);
+
         virtual ~RobotStateSaver();
 
         /// \brief restore the state

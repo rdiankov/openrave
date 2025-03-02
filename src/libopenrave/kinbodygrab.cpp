@@ -113,6 +113,21 @@ static void _CreateSaverForGrabbedAndGrabber(KinBody::KinBodyStateSaverPtr& pSav
     }
 }
 
+/// \brief create saver for grabbed/grabber.
+static void _CreateSaverForGrabbedAndGrabber(KinBody::KinBodyStateSaverPtr& pSaver,
+                                             const KinBodyPtr& pBody,
+                                             const KinBody::KinBodyStateSaverPtr& pReferenceSaver)
+{
+    if( pBody->IsRobot() ) {
+        RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pBody);
+        const RobotBase::RobotStateSaverPtr pRobotReferenceSaver = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase::RobotStateSaver>(pReferenceSaver);
+        pSaver.reset(new RobotBase::RobotStateSaver(pRobot, *pRobotReferenceSaver));
+    }
+    else {
+        pSaver.reset(new KinBody::KinBodyStateSaver(pBody, *pReferenceSaver));
+    }
+}
+
 Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
 {
     _pGrabbedBody = pGrabbedBody;
@@ -142,6 +157,22 @@ Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink)
                                      pGrabber,
                                      saverOptions,
                                      bDisableRestoreOnDestructor);
+} // end Grabbed
+
+Grabbed::Grabbed(KinBodyPtr pGrabbedBody, KinBody::LinkPtr pGrabbingLink, const Grabbed& referenceGrabbed)
+{
+    _pGrabbedBody = pGrabbedBody;
+    _pGrabbingLink = pGrabbingLink;
+    _pGrabbingLink->GetRigidlyAttachedLinks(_vAttachedToGrabbingLink);
+    _listNonCollidingIsValid = false;
+    _CreateSaverForGrabbedAndGrabber(_pGrabbedSaver,
+                                     pGrabbedBody,
+                                     referenceGrabbed._pGrabbedSaver);
+
+    KinBodyPtr pGrabber = RaveInterfaceCast<KinBody>(_pGrabbingLink->GetParent());
+    _CreateSaverForGrabbedAndGrabber(_pGrabberSaver,
+                                     pGrabber,
+                                     referenceGrabbed._pGrabberSaver);
 } // end Grabbed
 
 void Grabbed::AddMoreIgnoreLinks(const std::set<int>& setAdditionalGrabberLinksToIgnore)

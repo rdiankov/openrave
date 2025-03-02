@@ -540,6 +540,28 @@ RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : 
     }
 }
 
+RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, const RobotStateSaver& referenceSaver) : KinBodyStateSaver(probot, referenceSaver), _probot(probot)
+{
+    if( _options & Save_ActiveDOF ) {
+        vactivedofs = referenceSaver.vactivedofs;
+        affinedofs = referenceSaver.affinedofs;
+        rotationaxis = referenceSaver.rotationaxis;
+    }
+    if( _options & Save_ActiveManipulator ) {
+        _ThrowOnInvalidCopyFromOtherSaver(probot->GetEnv()->GetNameId().c_str(), "RobotStateSaver", Save_ActiveManipulator, _options);
+    }
+    if( _options & Save_ActiveManipulatorToolTransform ) {
+        _ThrowOnInvalidCopyFromOtherSaver(probot->GetEnv()->GetNameId().c_str(), "RobotStateSaver", Save_ActiveManipulatorToolTransform, _options);
+    }
+    if( _options & Save_ManipulatorsToolTransform ) {
+        _ThrowOnInvalidCopyFromOtherSaver(probot->GetEnv()->GetNameId().c_str(), "RobotStateSaver", Save_ManipulatorsToolTransform, _options);
+    }
+
+    if( (_options & Save_ConnectedBodies) || (_options & Save_GrabbedBodies) ) {
+        _vConnectedBodyActiveStates = referenceSaver._vConnectedBodyActiveStates;
+    }
+}
+
 RobotBase::RobotStateSaver::~RobotStateSaver()
 {
     if( _bRestoreOnDestructor && !!_probot && _probot->GetEnvironmentBodyIndex() != 0 ) {
