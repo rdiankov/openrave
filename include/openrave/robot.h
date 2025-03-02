@@ -1452,6 +1452,30 @@ private:
     friend class Grabbed;
 };
 
+enum EnvironmentBodyRemoverRestoreOptions : uint8_t
+{
+    EBRRO_NoAbortOnInfoLost = 0, ///< will not abort even if any info cannot be restored.
+    EBRRO_AbortOnActiveManipulatorLost = 0b01, ///< will abort if active manipulator cannot be restored.
+    EBRRO_AbortOnGrabbedBodiesLost = 0b10,     ///< will abort if grabbed bodies cannot be restored.
+    EBRRO_AbortOnInfoLost = EBRRO_AbortOnActiveManipulatorLost | EBRRO_AbortOnGrabbedBodiesLost, ///< will abort if any info cannot be restored.
+};
+
+///\brief removes the robot from the environment temporarily while in scope
+class OPENRAVE_API EnvironmentBodyRemover
+{
+public:
+    EnvironmentBodyRemover(KinBodyPtr pBody, int restoreOptions=EBRRO_AbortOnGrabbedBodiesLost); // abort on grabbed bodies lost for backward compatibility
+    ~EnvironmentBodyRemover() noexcept(true);
+
+private:
+    KinBodyPtr _pBody;
+    std::vector<KinBody::GrabbedInfoPtr> _pGrabbedInfos; ///< the list of the current grabbed info of pBody at the time of removal.
+    RobotBasePtr _pBodyRobot;
+    std::string _activeManipName; ///< the name of the current active manipulator of pBody at the time of removal.
+    const int _environmentBodyIndex; ///< environment body index before removal from env. This is used to add body back to the env with same environment body index. Unless explicitly given, EnvironmentBase::Add may assign a different environment body index from the original one. This breaks assumption of constant environmentBodyIndex.
+    int _restoreOptions;
+};
+
 } // end namespace OpenRAVE
 
 #endif   // ROBOT_H
