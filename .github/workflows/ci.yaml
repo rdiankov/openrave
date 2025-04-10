@@ -88,7 +88,7 @@ jobs:
         set -e
         git clone https://github.com/msgpack/msgpack-c && mkdir msgpack-c/build
         cd msgpack-c/build
-        git checkout cpp-7.0.0
+        git checkout cpp-6.0.0
 
         cmake .. -GNinja -DMSGPACK_BUILD_EXAMPLES=OFF -DMSGPACK_BUILD_TESTS=OFF
         ninja -j4
