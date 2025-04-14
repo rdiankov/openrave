@@ -57,7 +57,7 @@ ControllerBasePtr PyControllerBase::GetOpenRAVEController() {
     return _pcontroller;
 }
 
-bool PyControllerBase::Init(PyRobotBasePtr pyrobot, const string& PY_ARGS)
+bool PyControllerBase::Init(PyRobotBasePtr pyrobot, const std::string& PY_ARGS)
 {
     RAVELOG_WARN("PyControllerBase::Init(robot,PY_ARGS) deprecated!\n");
     CHECK_POINTER(pyrobot);
@@ -210,7 +210,7 @@ void init_openravepy_controller()
 #endif
 {
     {
-        bool (PyControllerBase::*init1)(PyRobotBasePtr,const string &) = &PyControllerBase::Init;
+        bool (PyControllerBase::*init1)(PyRobotBasePtr,const std::string &) = &PyControllerBase::Init;
         bool (PyControllerBase::*init2)(PyRobotBasePtr,object,int) = &PyControllerBase::Init;
         bool (PyControllerBase::*setdesired1)(object) = &PyControllerBase::SetDesired;
         bool (PyControllerBase::*setdesired2)(object,object) = &PyControllerBase::SetDesired;

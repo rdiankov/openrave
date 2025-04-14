@@ -52,7 +52,7 @@ public:
     ///
     /// Try to block until viewer is created, unless main thread is already taken up.
     /// \param bDoNotAddIfExists if true, will not add a viewer if one already exists and is added to the manager
-    void AddViewer(EnvironmentBasePtr penv, const string &strviewer, bool bShowViewer, bool bDoNotAddIfExists);
+    void AddViewer(EnvironmentBasePtr penv, const std::string &strviewer, bool bShowViewer, bool bDoNotAddIfExists);
 
     /// \brief if removed, returns true
     bool RemoveViewer(ViewerBasePtr pviewer);

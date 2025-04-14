@@ -91,7 +91,7 @@ public:
 
     dReal GetDuration() const;
 
-    void deserialize(const string& s);
+    void deserialize(const std::string& s);
 
     object serialize(object options=py::none_());
 

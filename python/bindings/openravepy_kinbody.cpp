@@ -1485,7 +1485,7 @@ void PyGeometry::SetNegativeCropContainerEmptyMargins(object negativeCropContain
 void PyGeometry::SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins) {
     _pgeometry->SetPositiveCropContainerEmptyMargins(ExtractVector3(positiveCropContainerEmptyMargins));
 }
-void PyGeometry::SetRenderFilename(const string& filename) {
+void PyGeometry::SetRenderFilename(const std::string& filename) {
     _pgeometry->SetRenderFilename(filename);
 }
 void PyGeometry::SetName(const std::string& name) {
@@ -3576,7 +3576,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
             int linkindex = py::extract<int>(item.first);
             object olinkaccelerations = extract<py::object>(item.second);
             OPENRAVE_ASSERT_OP(len(olinkaccelerations),==,6);
-            (*pmapExternalAccelerations)[linkindex] = make_pair(Vector(py::extract<dReal>(olinkaccelerations[py::to_object(0)]),py::extract<dReal>(olinkaccelerations[py::to_object(1)]),py::extract<dReal>(olinkaccelerations[py::to_object(2)])),Vector(py::extract<dReal>(olinkaccelerations[py::to_object(3)]),py::extract<dReal>(olinkaccelerations[py::to_object(4)]),py::extract<dReal>(olinkaccelerations[py::to_object(5)])));
+            (*pmapExternalAccelerations)[linkindex] = std::make_pair(Vector(py::extract<dReal>(olinkaccelerations[py::to_object(0)]),py::extract<dReal>(olinkaccelerations[py::to_object(1)]),py::extract<dReal>(olinkaccelerations[py::to_object(2)])),Vector(py::extract<dReal>(olinkaccelerations[py::to_object(3)]),py::extract<dReal>(olinkaccelerations[py::to_object(4)]),py::extract<dReal>(olinkaccelerations[py::to_object(5)])));
         }
 #else
         py::list iterkeys = (py::list)odict.iterkeys();
@@ -3584,7 +3584,7 @@ object PyKinBody::GetLinkAccelerations(object odofaccelerations, object oexterna
             int linkindex = py::extract<int>(iterkeys[i]);
             object olinkaccelerations = odict[iterkeys[i]];
             OPENRAVE_ASSERT_OP(len(olinkaccelerations),==,6);
-            (*pmapExternalAccelerations)[linkindex] = make_pair(Vector(py::extract<dReal>(olinkaccelerations[0]),py::extract<dReal>(olinkaccelerations[1]),py::extract<dReal>(olinkaccelerations[2])),Vector(py::extract<dReal>(olinkaccelerations[3]),py::extract<dReal>(olinkaccelerations[4]),py::extract<dReal>(olinkaccelerations[5])));
+            (*pmapExternalAccelerations)[linkindex] = std::make_pair(Vector(py::extract<dReal>(olinkaccelerations[0]),py::extract<dReal>(olinkaccelerations[1]),py::extract<dReal>(olinkaccelerations[2])),Vector(py::extract<dReal>(olinkaccelerations[3]),py::extract<dReal>(olinkaccelerations[4]),py::extract<dReal>(olinkaccelerations[5])));
         }
 #endif
     }
@@ -3988,7 +3988,7 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
             int linkindex = py::extract<int>(item.first);
             object oforcetorque = extract<py::object>(item.second);
             OPENRAVE_ASSERT_OP(len(oforcetorque),==,6);
-            mapExternalForceTorque[linkindex] = make_pair(Vector(py::extract<dReal>(oforcetorque[py::to_object(0)]),py::extract<dReal>(oforcetorque[py::to_object(1)]),py::extract<dReal>(oforcetorque[py::to_object(2)])),Vector(py::extract<dReal>(oforcetorque[py::to_object(3)]),py::extract<dReal>(oforcetorque[py::to_object(4)]),py::extract<dReal>(oforcetorque[py::to_object(5)])));
+            mapExternalForceTorque[linkindex] = std::make_pair(Vector(py::extract<dReal>(oforcetorque[py::to_object(0)]),py::extract<dReal>(oforcetorque[py::to_object(1)]),py::extract<dReal>(oforcetorque[py::to_object(2)])),Vector(py::extract<dReal>(oforcetorque[py::to_object(3)]),py::extract<dReal>(oforcetorque[py::to_object(4)]),py::extract<dReal>(oforcetorque[py::to_object(5)])));
         }
 #else
         py::list iterkeys = (py::list)odict.iterkeys();
@@ -3996,7 +3996,7 @@ object PyKinBody::ComputeInverseDynamics(object odofaccelerations, object oexter
             int linkindex = py::extract<int>(iterkeys[i]);
             object oforcetorque = odict[iterkeys[i]];
             OPENRAVE_ASSERT_OP(len(oforcetorque),==,6);
-            mapExternalForceTorque[linkindex] = make_pair(Vector(py::extract<dReal>(oforcetorque[0]),py::extract<dReal>(oforcetorque[1]),py::extract<dReal>(oforcetorque[2])),Vector(py::extract<dReal>(oforcetorque[3]),py::extract<dReal>(oforcetorque[4]),py::extract<dReal>(oforcetorque[5])));
+            mapExternalForceTorque[linkindex] = std::make_pair(Vector(py::extract<dReal>(oforcetorque[0]),py::extract<dReal>(oforcetorque[1]),py::extract<dReal>(oforcetorque[2])),Vector(py::extract<dReal>(oforcetorque[3]),py::extract<dReal>(oforcetorque[4]),py::extract<dReal>(oforcetorque[5])));
         }
 #endif
     }
@@ -4320,7 +4320,7 @@ int PyKinBody::GetUpdateStamp() const
     return _pbody->GetUpdateStamp();
 }
 
-string PyKinBody::serialize(int options) const
+std::string PyKinBody::serialize(int options) const
 {
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -4336,7 +4336,7 @@ UpdateFromInfoResult PyKinBody::UpdateFromKinBodyInfo(py::object pyKinBodyInfo)
     return _pbody->UpdateFromKinBodyInfo(*pKinBodyInfo);
 }
 
-string PyKinBody::GetKinematicsGeometryHash() const
+std::string PyKinBody::GetKinematicsGeometryHash() const
 {
     return _pbody->GetKinematicsGeometryHash();
 }
@@ -4388,11 +4388,11 @@ PyStateRestoreContextBase* PyKinBody::CreateStateSaver(object options)
     return new PyStateRestoreContext<PyKinBodyStateSaverPtr, PyKinBodyPtr>(saver);
 }
 
-string PyKinBody::__repr__()
+std::string PyKinBody::__repr__()
 {
     return boost::str(boost::format("RaveGetEnvironment(%d).GetKinBody('%s')")%RaveGetEnvironmentId(_pbody->GetEnv())%_pbody->GetName());
 }
-string PyKinBody::__str__()
+std::string PyKinBody::__str__()
 {
     return boost::str(boost::format("<%s:%s - %s (%s)>")%RaveGetInterfaceName(_pbody->GetInterfaceType())%_pbody->GetXMLId()%_pbody->GetName()%_pbody->GetKinematicsGeometryHash());
 }

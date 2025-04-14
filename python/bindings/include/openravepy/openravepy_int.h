@@ -64,7 +64,6 @@ using namespace boost::placeholders;
         if( !(p) ) { throw openrave_exception(boost::str(boost::format(_("[%s:%d]: invalid pointer"))%__PRETTY_FUNCTION__%__LINE__)); } \
 }
 
-using namespace std;
 using namespace OpenRAVE;
 
 namespace openravepy {
@@ -539,7 +538,7 @@ public:
 
         virtual void Deserialize(std::istream& I) override {
             // need to read the entire input
-            stringbuf buf;
+            std::stringbuf buf;
             I.get(buf, 0);
             _data = buf.str();
         }
@@ -695,16 +694,16 @@ public:
     }
     py::object GetUserData(const std::string& key=std::string()) const;
 
-    bool SupportsCommand(const string& cmd);
-    py::object SendCommand(const string& in, bool releasegil=false, bool lockenv=false);
+    bool SupportsCommand(const std::string& cmd);
+    py::object SendCommand(const std::string& in, bool releasegil=false, bool lockenv=false);
 
-    bool SupportsJSONCommand(const string& cmd);
-    py::object SendJSONCommand(const string& cmd, py::object input, bool releasegil=false, bool lockenv=false);
+    bool SupportsJSONCommand(const std::string& cmd);
+    py::object SendJSONCommand(const std::string& cmd, py::object input, bool releasegil=false, bool lockenv=false);
 
-    virtual string __repr__() {
+    virtual std::string __repr__() {
         return boost::str(boost::format("RaveCreateInterface(RaveGetEnvironment(%d),InterfaceType.%s,'%s')")%RaveGetEnvironmentId(_pbase->GetEnv())%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
-    virtual string __str__() {
+    virtual std::string __str__() {
         return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
     virtual py::object __unicode__() {

@@ -577,7 +577,7 @@ dReal PyTrajectoryBase::GetDuration() const {
     return _ptrajectory->GetDuration();
 }
 
-void PyTrajectoryBase::deserialize(const string& s)
+void PyTrajectoryBase::deserialize(const std::string& s)
 {
     std::stringstream ss(s);
     _ptrajectory->deserialize(ss);
@@ -593,7 +593,7 @@ object PyTrajectoryBase::serialize(object options)
 
 void PyTrajectoryBase::SaveToFile(const std::string& filename, object options)
 {
-    std::ofstream f(filename.c_str(), ios::binary);
+    std::ofstream f(filename.c_str(), std::ios::binary);
     f << std::setprecision(std::numeric_limits<dReal>::digits10+1);
     _ptrajectory->serialize(f, pyGetIntFromPy(options, 0));
     f.close(); // necessary?
@@ -601,7 +601,7 @@ void PyTrajectoryBase::SaveToFile(const std::string& filename, object options)
 
 void PyTrajectoryBase::LoadFromFile(const std::string& filename)
 {
-    std::ifstream f(filename.c_str(), ios::binary);
+    std::ifstream f(filename.c_str(), std::ios::binary);
     _ptrajectory->deserialize(f);
     f.close(); // necessary?
 }

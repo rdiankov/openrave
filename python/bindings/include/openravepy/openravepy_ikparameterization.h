@@ -27,7 +27,7 @@ class OPENRAVEPY_API PyIkParameterization
 {
 public:
     PyIkParameterization();
-    PyIkParameterization(const string &s);
+    PyIkParameterization(const std::string &s);
     PyIkParameterization(object o, IkParameterizationType type);
     PyIkParameterization(OPENRAVE_SHARED_PTR<PyIkParameterization> pyikparam);
     PyIkParameterization(const IkParameterization &ikparam);

@@ -288,7 +288,7 @@ public:
     void SetPositiveCropContainerMargins(object positiveCropContainerMargins);
     void SetNegativeCropContainerEmptyMargins(object negativeCropContainerEmptyMargins);
     void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
-    void SetRenderFilename(const string& filename);
+    void SetRenderFilename(const std::string& filename);
     void SetName(const std::string& name);
     bool IsDraw();
     bool IsVisible();
@@ -456,7 +456,7 @@ public:
     std::string GetId() const;
     object GetName() const;
     bool IsMimic(int iaxis=-1);
-    string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="");
+    std::string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="");
     object GetMimicDOFIndices(int iaxis=0);
     void SetMimicEquations(int iaxis, const std::string& poseq, const std::string& veleq, const std::string& acceleq);
 
@@ -599,8 +599,8 @@ public:
     bool IsLocked();
     bool Lock(bool bDoLock);
 
-    string __repr__();
-    string __str__();
+    std::string __repr__();
+    std::string __str__();
     object __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyManageData> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyManageData> p);

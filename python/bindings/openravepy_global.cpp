@@ -1478,7 +1478,7 @@ dReal ComputePoseDistSqr(object opose0, object opose1, dReal quatweight=1.0)
     return (t0.trans-t1.trans).lengthsqr3() + quatweight*e;
 }
 
-string matrixSerialization(object o)
+std::string matrixSerialization(object o)
 {
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
@@ -1486,7 +1486,7 @@ string matrixSerialization(object o)
     return ss.str();
 }
 
-string poseSerialization(object o)
+std::string poseSerialization(object o)
 {
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost

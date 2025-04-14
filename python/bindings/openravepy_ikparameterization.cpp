@@ -50,7 +50,7 @@ namespace numeric = py::numeric;
 
 PyIkParameterization::PyIkParameterization() {
 }
-PyIkParameterization::PyIkParameterization(const string &s) {
+PyIkParameterization::PyIkParameterization(const std::string &s) {
     std::stringstream ss(s);
     ss >> _param;
 }

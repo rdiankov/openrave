@@ -32,7 +32,7 @@ public:
     virtual ~PyControllerBase();
 
     ControllerBasePtr GetOpenRAVEController();
-    bool Init(PyRobotBasePtr pyrobot, const string& PY_ARGS);
+    bool Init(PyRobotBasePtr pyrobot, const std::string& PY_ARGS);
 
     bool Init(PyRobotBasePtr pyrobot, object odofindices, int nControlTransformation);
 

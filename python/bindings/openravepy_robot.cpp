@@ -1687,7 +1687,7 @@ object PyRobotBase::GetManipulators()
     return manips;
 }
 
-object PyRobotBase::GetManipulators(const string& manipname)
+object PyRobotBase::GetManipulators(const std::string& manipname)
 {
     py::list manips;
     FOREACH(it, _probot->GetManipulators()) {
@@ -1697,7 +1697,7 @@ object PyRobotBase::GetManipulators(const string& manipname)
     }
     return manips;
 }
-PyManipulatorPtr PyRobotBase::GetManipulator(const string& manipname)
+PyManipulatorPtr PyRobotBase::GetManipulator(const std::string& manipname)
 {
     FOREACH(it, _probot->GetManipulators()) {
         if( (*it)->GetName() == manipname ) {
@@ -1853,7 +1853,7 @@ object PyRobotBase::GetController() const {
     return py::to_object(openravepy::toPyController(_probot->GetController(),_pyenv));
 }
 
-bool PyRobotBase::SetController(PyControllerBasePtr pController, const string& PY_ARGS) {
+bool PyRobotBase::SetController(PyControllerBasePtr pController, const std::string& PY_ARGS) {
     RAVELOG_WARN("RobotBase::SetController(PyControllerBasePtr,PY_ARGS) is deprecated\n");
     std::vector<int> dofindices;
     for(int i = 0; i < _probot->GetDOF(); ++i) {
@@ -2637,8 +2637,8 @@ void init_openravepy_robot()
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
 
         object (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
-        object (PyRobotBase::*GetManipulators2)(const string &) = &PyRobotBase::GetManipulators;
-        bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
+        object (PyRobotBase::*GetManipulators2)(const std::string &) = &PyRobotBase::GetManipulators;
+        bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const std::string &) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
         bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;

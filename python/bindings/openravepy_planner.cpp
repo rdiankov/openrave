@@ -268,7 +268,7 @@ std::string PyPlannerBase::PyPlannerParameters::__repr__() {
     std::stringstream ss;
     ss << std::setprecision(std::numeric_limits<dReal>::digits10+1);         /// have to do this or otherwise precision gets lost
     ss << "Planner.PlannerParameters(\"\"\"";
-    ss << *_paramsread << "\"\"\")" << endl;
+    ss << *_paramsread << "\"\"\")" << std::endl;
     return ss.str();
 }
 std::string PyPlannerBase::PyPlannerParameters::__str__() {
@@ -306,7 +306,7 @@ bool PyPlannerBase::InitPlan(PyRobotBasePtr pyrobot, PyPlannerParametersPtr ppar
     return _pplanner->InitPlan(probot,parameters).HasSolution();
 }
 
-bool PyPlannerBase::InitPlan(PyRobotBasePtr pbase, const string& params)
+bool PyPlannerBase::InitPlan(PyRobotBasePtr pbase, const std::string& params)
 {
     std::stringstream ss(params);
     return _pplanner->InitPlan(openravepy::GetRobot(pbase),ss).HasSolution();
@@ -482,7 +482,7 @@ void init_openravepy_planner()
 
     {
         bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr,bool) = &PyPlannerBase::InitPlan;
-        bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
+        bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const std::string &) = &PyPlannerBase::InitPlan;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         scope_ planner = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, PyInterfaceBase>(m, "Planner", DOXY_CLASS(PlannerBase))
 #else
