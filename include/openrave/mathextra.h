@@ -1219,6 +1219,8 @@ template <typename IKReal, int D>
 inline void polyroots(const IKReal* rawcoeffs, IKReal* rawroots, int& numroots)
 {
     using std::complex;
+    static_assert(D > 1, "D should be greater than 1. Solve linear equation to handle D==1 case");  // this function accesses roots[1]
+
     BOOST_ASSERT(rawcoeffs[0] != 0);
     const IKReal tol = 128.0*std::numeric_limits<IKReal>::epsilon();
     const IKReal tolsqrt = sqrt(std::numeric_limits<IKReal>::epsilon());
@@ -1466,7 +1468,9 @@ inline bool computequinticnextdiscretizedstep(const T* coeffs, const T step, con
         polyroots<T, 2>(&tempcoeffs[3], rawroots, numroots);
     }
     else if( tempcoeffs[4] != 0 ) {
-        polyroots<T, 1>(&tempcoeffs[4], rawroots, numroots);
+        // polyroots<T, 1>(&tempcoeffs[4], rawroots, numroots);  // out-of-bound memory access
+        numroots = 1;
+        rawroots[0] = -tempcoeffs[5]/tempcoeffs[4];
     }
     bool bFound = false;
     for( int i = 0; i < numroots; ++i ) {
@@ -1512,7 +1516,7 @@ inline bool computecubicnextdiscretizedstep(const T* coeffs, const T step, const
         polyroots<T, 2>(&tempcoeffs[1], rawroots, numroots);
     }
     else if( tempcoeffs[2] != 0 ) {
-        // polyroots<T, 1>(&tempcoeffs[2], rawroots, numroots);
+        // polyroots<T, 1>(&tempcoeffs[2], rawroots, numroots);  // out-of-bound memory access
         numroots = 1;
         rawroots[0] = -tempcoeffs[3]/tempcoeffs[2];
     }

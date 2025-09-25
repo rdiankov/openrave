@@ -4166,7 +4166,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                             mathextra::polyroots<dReal, 2>(&_vrawcoeffs[1], &_vrawroots[0], numroots);
                         }
                         else if( _vrawcoeffs[2] != 0 ) {
-                            mathextra::polyroots<dReal, 1>(&_vrawcoeffs[2], &_vrawroots[0], numroots);
+                            // mathextra::polyroots<dReal, 1>(&_vrawcoeffs[2], &_vrawroots[0], numroots);  // out-of-bound memory access
+                            numroots = 1;
+                            _vrawroots[0] = -_vrawcoeffs[3]/_vrawcoeffs[2];
                         }
                         break;
                     case IT_Quintic:
@@ -4186,7 +4188,9 @@ int DynamicsCollisionConstraint::Check(const std::vector<dReal>& q0, const std::
                             mathextra::polyroots<dReal, 2>(&_vrawcoeffs[3], &_vrawroots[0], numroots);
                         }
                         else if( _vrawcoeffs[4] != 0 ) {
-                            mathextra::polyroots<dReal, 1>(&_vrawcoeffs[4], &_vrawroots[0], numroots);
+                            // mathextra::polyroots<dReal, 1>(&_vrawcoeffs[4], &_vrawroots[0], numroots);  // out-of-bound memory access
+                            numroots = 1;
+                            _vrawroots[0] = -_vrawcoeffs[5]/_vrawcoeffs[4];
                         }
                         break;
                     default:

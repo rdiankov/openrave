@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.167.13
+===============
+
+- Fix potential bad memory access at `polyroots` function.
+
 Version 0.167.12
 ===============
 
