@@ -86,13 +86,6 @@ class LinkStatisticsModel(DatabaseGenerator):
     def has(self):
         return self.grabbedjointspheres is not None and len(self.grabbedjointspheres) > 0
     
-    @staticmethod
-    def _GetValue(value):
-        if hasattr(value,'value'):
-            return value.value
-        else:
-            return value
-
     def getversion(self):
         return 7
     

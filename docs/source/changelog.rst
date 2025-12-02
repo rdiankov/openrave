@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.168.5
+===============
+
+- Reduce and delay preallocation of buffer region for JSON loading and parabolic smoother to reduce overall memory footprint.
+
 Version 0.168.4
 ===============
 
