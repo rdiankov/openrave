@@ -102,9 +102,7 @@ public:
     uint8_t _usenn; ///< if 1, then use part of the nearest neighbor search, otherwise ignore
     uint32_t _userdata; ///< user specified data tagging this node
 
-#ifdef _DEBUG
     int id;
-#endif
     dReal q[0]; // the configuration immediately follows the struct
 };
 
@@ -159,6 +157,7 @@ public:
         _maxlevel = 0;
         _minlevel = 0;
         _fMaxLevelBound = 0;
+        _nextid = 0;
     }
 
     ~SpatialTree() {
@@ -212,6 +211,7 @@ public:
             _pNodesPool.reset(new boost::pool<>(sizeof(Node)+_dof*sizeof(dReal)));
         }
         _numnodes = 0;
+        _nextid = 0;
     }
 
     inline dReal _ComputeDistance(const dReal* config0, const dReal* config1) const
@@ -493,7 +493,7 @@ public:
                 continue;
             }
 
-            const std::set<NodePtr>& setLevelRawChildren = _vsetLevelNodes.at(enclevel);
+            const std::set<NodePtr, NodePtrLessById>& setLevelRawChildren = _vsetLevelNodes.at(enclevel);
             FOREACHC(itnode, setLevelRawChildren) {
                 FOREACH(itchild, (*itnode)->_vchildren) {
                     dReal curdist = _ComputeDistance(*itnode, *itchild);
@@ -585,7 +585,7 @@ public:
         }
         FOREACHC(itchildren, _vsetLevelNodes) {
             if( inode < itchildren->size() ) {
-                typename std::set<NodePtr>::iterator itchild = itchildren->begin();
+                typename std::set<NodePtr, NodePtrLessById>::iterator itchild = itchildren->begin();
                 advance(itchild, inode);
                 return *itchild;
             }
@@ -617,15 +617,19 @@ private:
         int retid = s_id++;
         return retid;
     }
+
+    int GetNewId()
+    {
+        return _nextid++;
+    }
+
     inline NodePtr _CreateNode(NodePtr rrtparent, const vector<dReal>& config, uint32_t userdata)
     {
         // allocate memory for the structur and the internal state vectors
         void* pmemory = _pNodesPool->malloc();
         NodePtr node = new (pmemory) Node(rrtparent, config);
         node->_userdata = userdata;
-#ifdef _DEBUG
-        node->id = GetNewStaticId();
-#endif
+        node->id = GetNewId();
         return node;
     }
 
@@ -635,9 +639,7 @@ private:
         void* pmemory = _pNodesPool->malloc();
         NodePtr node = new (pmemory) Node(refnode->rrtparent, refnode->q, _dof);
         node->_userdata = refnode->_userdata;
-#ifdef _DEBUG
-        node->id = GetNewStaticId();
-#endif
+        node->id = GetNewId();
         return node;
     }
 
@@ -942,7 +944,7 @@ private:
         }
 
         // build the level below
-        std::set<NodePtr>& setLevelRawChildren = _vsetLevelNodes.at(enclevel);
+        std::set<NodePtr, NodePtrLessById>& setLevelRawChildren = _vsetLevelNodes.at(enclevel);
         int coverindex = _maxlevel-(currentlevel-1);
         if( coverindex >= (int)vvCoverSetNodes.size() ) {
             vvCoverSetNodes.resize(coverindex+(_maxlevel-_minlevel)+1);
@@ -1048,6 +1050,18 @@ private:
         return bRemoved;
     }
 
+    struct NodePtrLessById
+    {
+        bool operator()(const NodePtr& a, const NodePtr& b) const
+        {
+            // Required by strict weak ordering. Treat same pointer as equal
+            if (a == b) {
+                return false;
+            }
+            // Order by creation id
+            return a->id < b->id;
+        }
+    };
 
     boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)> _distmetricfn;
     boost::weak_ptr<PlannerBase> _planner;
@@ -1058,7 +1072,7 @@ private:
     // cover tree data structures
     boost::shared_ptr< boost::pool<> > _pNodesPool; ///< pool nodes are created from
 
-    std::vector< std::set<NodePtr> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
+    std::vector< std::set<NodePtr, NodePtrLessById> > _vsetLevelNodes; ///< _vsetLevelNodes[enc(level)][node] holds the indices of the children of "node" of a given the level. enc(level) maps (-inf,inf) into [0,inf) so it can be indexed by the vector. Every node has an entry in a map here. If the node doesn't hold any children, then it is at the leaf of the tree. _vsetLevelNodes.at(_EncodeLevel(_maxlevel)) is the root.
 
     dReal _maxdistance; ///< maximum possible distance between two states. used to balance the tree. Has to be > 0.
     dReal _mindistance; ///< minimum possible distance between two states until they are declared the same
@@ -1067,10 +1081,11 @@ private:
     int _minlevel; ///< the minimum allowed levels in the tree (inclusive)
     int _numnodes; ///< the number of nodes in the current tree starting at the root at _vsetLevelNodes.at(_EncodeLevel(_maxlevel))
     dReal _fMaxLevelBound; // pow(_base, _maxlevel)
+    int _nextid = 0; ///< The id to be assigned to the next node being created.
 
     // cache
     vector<NodePtr> _vchildcache;
-    set<NodePtr> _setchildcache;
+    set<NodePtr, NodePtrLessById> _setchildcache;
     vector<dReal> _vNewConfig, _vDeltaConfig, _vCurConfig;
     mutable vector<dReal> _vTempConfig;
     ConstraintFilterReturnPtr _constraintreturn;
