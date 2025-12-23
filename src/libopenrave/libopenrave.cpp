@@ -64,14 +64,15 @@ void RecursiveMutexWithGILCheck::_UpdateIsMultiThreading()
     }
 
     const std::thread::id currentId = std::this_thread::get_id();
+    char threadName[16];
+    pthread_getname_np(pthread_self(), threadName, sizeof(threadName));
     std::lock_guard<std::mutex> lock(_mutexForInitialLockThreadId);
     if( _initialLockThreadId == std::thread::id() ) {
-        char threadName[16];
-        pthread_getname_np(pthread_self(), threadName, sizeof(threadName));
         RAVELOG_DEBUG_FORMAT("thread \"%s\" (id=%s) is the first to try to lock this mutex.", threadName % currentId);
         _initialLockThreadId = currentId; // the current thread is the first thready trying to lock this recursive mutex.
     }
     else if ( _initialLockThreadId != currentId ) {
+        RAVELOG_DEBUG_FORMAT("another thread \"%s\" (id=%s) is trying to lock this mutex, so this mutex is shared by multiple threads.", threadName % currentId);
         _isMultiThreading = true;
     }
 }
