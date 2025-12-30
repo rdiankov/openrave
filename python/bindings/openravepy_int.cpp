@@ -992,6 +992,7 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
 {
     std::stringstream sin(in);
     std::stringstream sout;
+    bool successSendCommand;
     {
         openravepy::PythonThreadSaverPtr statesaver;
         openravepy::PyEnvironmentLockSaverPtr envsaver;
@@ -1009,9 +1010,10 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
             }
         }
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        if( !_pbase->SendCommand(sout,sin) ) {
-            return py::none_();
-        }
+        successSendCommand = _pbase->SendCommand(sout,sin);
+    }
+    if( !successSendCommand ) {
+        return py::none_();
     }
     return py::to_object(sout.str());
 }
