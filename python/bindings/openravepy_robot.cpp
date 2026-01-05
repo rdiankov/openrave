@@ -839,7 +839,7 @@ py::array_t<dReal> PyRobotBase::PyManipulator::GetClosingDirection() {
     RAVELOG_WARN("GetClosingDirection is deprecated, use GetChuckingDirection\n");
     return toPyArray(_pmanip->GetChuckingDirection());
 }
-py::array_t<dReal> PyRobotBase::PyManipulator::GetChuckingDirection() {
+py::array_t<int> PyRobotBase::PyManipulator::GetChuckingDirection() {
     return toPyArray(_pmanip->GetChuckingDirection());
 }
 py::array_t<dReal> PyRobotBase::PyManipulator::GetDirection() {

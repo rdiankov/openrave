@@ -105,7 +105,7 @@ public:
         int GetArmDOF();
         int GetGripperDOF();
         py::array_t<dReal> GetClosingDirection();
-        py::array_t<dReal> GetChuckingDirection();
+        py::array_t<int> GetChuckingDirection();
         py::array_t<dReal> GetDirection();
         py::array_t<dReal> GetLocalToolDirection();
         bool IsGrabbing(PyKinBodyPtr pbody);
