@@ -3018,7 +3018,7 @@ py::list PyEnvironmentBase::GetPublishedBodies(uint64_t timeout)
     return ostates;
 }
 
-py::dict PyEnvironmentBase::GetPublishedBody(const std::string &name, uint64_t timeout)
+py::typing::Optional<py::dict> PyEnvironmentBase::GetPublishedBody(const std::string &name, uint64_t timeout)
 {
     KinBody::BodyState bodystate;
     if( !_penv->GetPublishedBody(name, bodystate, timeout) ) {

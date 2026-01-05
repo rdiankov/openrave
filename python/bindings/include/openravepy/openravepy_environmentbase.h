@@ -339,7 +339,7 @@ public:
 
     py::list GetPublishedBodies(uint64_t timeout=0);
 
-    py::dict GetPublishedBody(const std::string &name, uint64_t timeout = 0);
+    py::typing::Optional<py::dict> GetPublishedBody(const std::string &name, uint64_t timeout = 0);
 
     py::typing::Optional<py::array_t<dReal> > GetPublishedBodyJointValues(const std::string &name, uint64_t timeout=0);
 
