@@ -6167,7 +6167,9 @@ void KinBody::SetConfigurationValues(std::vector<dReal>::const_iterator itvalues
         std::copy(itvalues,itvalues+GetDOF(),vdofvalues.begin());
     }
     Transform t;
-    RaveGetTransformFromAffineDOFValues(t,itvalues+GetDOF(),DOF_Transform);
+    // Set the given configuration values as is (by passing normalize=false) so that calling SetConfigurationValues with
+    // values from GetConfigurationValues recovers the exact original states.
+    RaveGetTransformFromAffineDOFValues(t, itvalues + GetDOF(), DOF_Transform, Vector(), /*normalize*/ false);
     SetDOFValues(vdofvalues,t,checklimits);
 }
 
