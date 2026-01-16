@@ -145,10 +145,11 @@ bool IkReturn::Append(const IkReturn& r)
         }
     }
     if( r._vsolution.size() > 0 ) {
-        if( _vsolution.size() > 0 ) {
-            RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting it anyway.");
-            bclashing = true;
-        }
+        // Not an irregular case. Can happen, for example, when calling FindIKSolution with free indices + giving a ref solution.
+        // if( _vsolution.size() > 0 ) {
+        //     RAVELOG_WARN("IkReturn already has _vsolution set, but overwriting it anyway.");
+        //     bclashing = true;
+        // }
         _vsolution = r._vsolution;
     }
     _vIkFailureInfoIndices = r._vIkFailureInfoIndices;
