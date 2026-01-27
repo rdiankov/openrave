@@ -395,7 +395,7 @@ else()
 endif()
 
 add_library(openrave-msgpack INTERFACE IMPORTED)
-find_package(msgpack-cxx 7.0.0)
+find_package(msgpack-cxx 6.1.1)
 if (NOT msgpack-cxx_FOUND)
   pkg_check_modules(msgpack msgpack)
   target_link_libraries(openrave-msgpack INTERFACE ${msgpack_LIBRARIES})
@@ -978,5 +978,6 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
   include(CPack)
   include(DebSourcePPA)
 endif()
+
 
 
