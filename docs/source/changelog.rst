@@ -3,6 +3,40 @@
 ChangeLog
 #########
 
+Version 0.168.5
+===============
+
+- Reduce and delay preallocation of buffer region for JSON loading and parabolic smoother to reduce overall memory footprint.
+
+Version 0.168.4
+===============
+
+- Add support for serialization and deserialization of std::vector<bool> for openravejson.
+
+Version 0.168.3
+===============
+
+- Expose `KinBody::GetDependencyOrderedJointsAll()` to python bindings.
+
+Version 0.168.2
+===============
+
+- Fix bug with not preservering `grippername` when regrabbing.
+- Fix bug with copying `grabbedUserData` in `GrabbedInfo` in python.
+
+Version 0.168.1
+===============
+
+- Reordered classes declaration order to comply https://pybind11.readthedocs.io/en/stable/advanced/misc.html#avoiding-c-types-in-docstrings , which is required for pybind11-stubgen.
+
+Version 0.168.0
+===============
+
+- Introduce friction to kinbody geometry.
+- Add support for using per-object frictions in ODE plugin.
+- Enable friction model by default in ODE plugin.
+- Split ERP and CFM to to the ones for joint constraints and the ones for contact constraints (`erp`/`cfm` and `contactErp`/`contactCfm` respectively)
+
 Version 0.167.12
 ===============
 

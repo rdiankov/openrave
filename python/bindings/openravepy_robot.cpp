@@ -2434,10 +2434,16 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyRobotBaseInfo_DeserializeJSON_overloads
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_robot(py::module& m)
+RobotBaseInitializer::RobotBaseInitializer(py::module& m_): m(m_),
+    robot(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase))
 #else
-void init_openravepy_robot()
+RobotBaseInitializer::RobotBaseInitializer():
+    robot("Robot", DOXY_CLASS(RobotBase), no_init)
 #endif
+{
+}
+
+void RobotBaseInitializer::init_openravepy_robot()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
@@ -2634,6 +2640,24 @@ void init_openravepy_robot()
     ;
 
     {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> > manipulator(m, "Manipulator", DOXY_CLASS(RobotBase::Manipulator));
+#else
+        class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> > manipulator("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init);
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyRobotBase::PyAttachedSensor, OPENRAVE_SHARED_PTR<PyRobotBase::PyAttachedSensor> > attachedsensor(m, "AttachedSensor", DOXY_CLASS(RobotBase::AttachedSensor));
+#else
+        class_<PyRobotBase::PyAttachedSensor, OPENRAVE_SHARED_PTR<PyRobotBase::PyAttachedSensor> > attachedsensor("AttachedSensor", DOXY_CLASS(RobotBase::AttachedSensor), no_init);
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyRobotBase::PyConnectedBody, OPENRAVE_SHARED_PTR<PyRobotBase::PyConnectedBody> > connectedbody(m, "ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody));
+#else
+        class_<PyRobotBase::PyConnectedBody, OPENRAVE_SHARED_PTR<PyRobotBase::PyConnectedBody> > connectedbody("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init);
+#endif
+
         void (PyRobotBase::*psetactivedofs1)(const object&) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs2)(const object&, int) = &PyRobotBase::SetActiveDOFs;
         void (PyRobotBase::*psetactivedofs3)(const object&, int, object) = &PyRobotBase::SetActiveDOFs;
@@ -2651,11 +2675,8 @@ void init_openravepy_robot()
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
         bool (PyRobotBase::*initrobot)(object, object, object, object, const std::string&) = &PyRobotBase::Init;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody>(m, "Robot", py::dynamic_attr(), DOXY_CLASS(RobotBase))
-#else
-        scope_ robot = class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> >("Robot", DOXY_CLASS(RobotBase), no_init)
-#endif
+
+        robot
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                        .def("Init", initrobot,
                             "linkinfos"_a,
@@ -2863,11 +2884,8 @@ void init_openravepy_robot()
         bool (PyRobotBase::PyManipulator::*pCheckIndependentCollision2)(PyCollisionReportPtr) const = &PyRobotBase::PyManipulator::CheckIndependentCollision;
 
         std::string GetIkParameterization_doc = std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "const IkParameterization; bool")) + std::string(DOXY_FN(RobotBase::Manipulator,GetIkParameterization "IkParameterizationType; bool"));
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> >(m, "Manipulator", DOXY_CLASS(RobotBase::Manipulator))
-#else
-        class_<PyRobotBase::PyManipulator, OPENRAVE_SHARED_PTR<PyRobotBase::PyManipulator> >("Manipulator", DOXY_CLASS(RobotBase::Manipulator), no_init)
-#endif
+
+        manipulator
         .def("GetTransform", &PyRobotBase::PyManipulator::GetTransform, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetTransformPose", &PyRobotBase::PyManipulator::GetTransformPose, DOXY_FN(RobotBase::Manipulator,GetTransform))
         .def("GetVelocity", &PyRobotBase::PyManipulator::GetVelocity, DOXY_FN(RobotBase::Manipulator,GetVelocity))
@@ -3027,11 +3045,7 @@ void init_openravepy_robot()
         .def("__hash__",&PyRobotBase::PyManipulator::__hash__)
         ;
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyRobotBase::PyAttachedSensor, OPENRAVE_SHARED_PTR<PyRobotBase::PyAttachedSensor> >(m, "AttachedSensor", DOXY_CLASS(RobotBase::AttachedSensor))
-#else
-        class_<PyRobotBase::PyAttachedSensor, OPENRAVE_SHARED_PTR<PyRobotBase::PyAttachedSensor> >("AttachedSensor", DOXY_CLASS(RobotBase::AttachedSensor), no_init)
-#endif
+        attachedsensor
         .def("GetSensor",&PyRobotBase::PyAttachedSensor::GetSensor, DOXY_FN(RobotBase::AttachedSensor,GetSensor))
         .def("GetAttachingLink",&PyRobotBase::PyAttachedSensor::GetAttachingLink, DOXY_FN(RobotBase::AttachedSensor,GetAttachingLink))
         .def("GetRelativeTransform",&PyRobotBase::PyAttachedSensor::GetRelativeTransform, DOXY_FN(RobotBase::AttachedSensor,GetRelativeTransform))
@@ -3068,11 +3082,7 @@ void init_openravepy_robot()
         .def("__hash__",&PyRobotBase::PyAttachedSensor::__hash__)
         ;
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        class_<PyRobotBase::PyConnectedBody, OPENRAVE_SHARED_PTR<PyRobotBase::PyConnectedBody> >(m, "ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody))
-#else
-        class_<PyRobotBase::PyConnectedBody, OPENRAVE_SHARED_PTR<PyRobotBase::PyConnectedBody> >("ConnectedBody", DOXY_CLASS(RobotBase::ConnectedBody), no_init)
-#endif
+        connectedbody
         .def("GetId",&PyRobotBase::PyConnectedBody::GetId, DOXY_FN(RobotBase::ConnectedBody,GetId))
         .def("GetName",&PyRobotBase::PyConnectedBody::GetName, DOXY_FN(RobotBase::ConnectedBody,GetName))
         .def("GetInfo",&PyRobotBase::PyConnectedBody::GetInfo, DOXY_FN(RobotBase::ConnectedBody,GetInfo))

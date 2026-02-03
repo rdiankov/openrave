@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 167)
-set (OPENRAVE_VERSION_PATCH 12)
+set (OPENRAVE_VERSION_MINOR 168)
+set (OPENRAVE_VERSION_PATCH 5)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -190,6 +190,8 @@ endif()
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
   add_definitions("-Werror=return-type")
+
+  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined ${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
@@ -813,13 +815,13 @@ if (OPT_PYTHON3)
   find_package(pybind11 2.9.2) # 2.9.2 is the last version of pybind11 to support Python 2.
 
   if (pybind11_FOUND)
-    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Module Python3::NumPy pybind11::module libopenrave libopenrave-core)
+    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Python Python3::NumPy pybind11::module libopenrave libopenrave-core)
     target_compile_options(openravepy3_meta INTERFACE "-fvisibility=hidden") # pybind11 requires less visibility
     target_compile_definitions(openravepy3_meta INTERFACE "OPENRAVE_CORE_DLL=1" "USE_PYBIND11_PYTHON_BINDINGS=1")
     set(USE_PYBIND11_PYTHON3_BINDINGS ON)
   else()
     find_package(Boost REQUIRED COMPONENTS python thread)
-    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Module Python3::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
+    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Python Python3::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
     target_compile_definitions(openravepy3_meta INTERFACE "OPENRAVE_CORE_DLL=1")
     set(USE_PYBIND11_PYTHON3_BINDINGS OFF)
   endif()

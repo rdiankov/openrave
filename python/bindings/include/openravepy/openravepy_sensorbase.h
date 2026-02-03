@@ -315,6 +315,20 @@ public:
     virtual object __unicode__();
 };
 
+struct SensorBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    SensorBaseInitializer(py::module& m_);
+    void init_openravepy_sensor();
+    py::module& m;
+    py::class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, PyInterfaceBase> sensor;
+#else
+    SensorBaseInitializer();
+    void init_openravepy_sensor();
+    py::class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> > sensor;
+#endif
+};
+
 } // namespace openravepy
 
 #endif // OPENRAVEPY_INTERNAL_SENSORBASE_H

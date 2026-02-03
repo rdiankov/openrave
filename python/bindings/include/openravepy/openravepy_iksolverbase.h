@@ -102,5 +102,18 @@ public:
 
     object RegisterCustomFilter(int priority, object fncallback);
 };
+
+struct IkSolverBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    IkSolverBaseInitializer(py::module& m_);
+    void init_openravepy_iksolver();
+    py::module& m;
+#else
+    IkSolverBaseInitializer();
+    void init_openravepy_iksolver();
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_IKSOLVERBASE_H

@@ -321,7 +321,11 @@ inline std::string GetPyErrorString()
 }
 
 /// should call in the beginning of all BOOST_PYTHON_MODULE
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_python_bindings(py::module& m);
+#else
 void init_python_bindings();
+#endif
 
 } // namespace openravepy
 

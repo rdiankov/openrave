@@ -69,6 +69,20 @@ public:
     uint32_t nKeepPrevious = 0;
 };
 
+struct CollisionReportInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    CollisionReportInitializer(py::module& m_);
+    void init_openravepy_collisionreport();
+    py::module& m;
+    py::class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> > collisionreport;
+#else
+    CollisionReportInitializer();
+    void init_openravepy_collisionreport();
+    py::class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> > collisionreport;
+#endif
+};
+
 } // namespace openravepy
 
 #endif // OPENRAVEPY_INTERNAL_COLLISIONREPORT_H

@@ -345,6 +345,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
         calibrationBoardParameters["bigDotDiameterDistanceRatio"] = parameters.bigDotDiameterDistanceRatio;
     }
     _calibrationBoardParameters = calibrationBoardParameters;
+    _friction = info._friction;
 }
 
 object PyGeometryInfo::ComputeInnerEmptyVolume()
@@ -453,6 +454,7 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
     info._fTransparency = _fTransparency;
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
+    info._friction = _friction;
     if (info._type == GT_CalibrationBoard) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 #define has_key contains
@@ -1491,6 +1493,9 @@ void PyGeometry::SetRenderFilename(const string& filename) {
 void PyGeometry::SetName(const std::string& name) {
     _pgeometry->SetName(name);
 }
+void PyGeometry::SetFriction(const float& friction) {
+    _pgeometry->SetFriction(friction);
+}
 bool PyGeometry::IsDraw() {
     RAVELOG_WARN("IsDraw deprecated, use Geometry.IsVisible\n");
     return _pgeometry->IsVisible();
@@ -1564,6 +1569,9 @@ std::string PyGeometry::GetId() const {
 }
 object PyGeometry::GetName() const {
     return ConvertStringToUnicode(_pgeometry->GetName());
+}
+float PyGeometry::GetFriction() const {
+    return _pgeometry->GetFriction();
 }
 float PyGeometry::GetTransparency() const {
     return _pgeometry->GetTransparency();
@@ -3337,6 +3345,15 @@ object PyKinBody::GetDependencyOrderedJoints()
     return joints;
 }
 
+object PyKinBody::GetDependencyOrderedJointsAll()
+{
+    py::list joints;
+    FOREACHC(itjoint, _pbody->GetDependencyOrderedJointsAll()) {
+        joints.append(PyJointPtr(new PyJoint(*itjoint, GetEnv())));
+    }
+    return joints;
+}
+
 object PyKinBody::GetClosedLoops()
 {
     py::list loops;
@@ -4863,7 +4880,7 @@ class GrabbedInfo_pickle_suite
 public:
     static py::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
     {
-        return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setIgnoreRobotLinkNames, r._grippername);
+        return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setIgnoreRobotLinkNames, r._grippername, r._grabbedUserData);
     }
     static void setstate(PyKinBody::PyGrabbedInfo& r, py::tuple state) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -4881,6 +4898,7 @@ public:
 #else
         r._setIgnoreRobotLinkNames = state[3];
 #endif
+        r._grabbedUserData = state[5];
     }
 };
 
@@ -4952,10 +4970,16 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(ComputeLocalAABBForGeometryGroup_overload
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_kinbody(py::module& m)
+KinBodyInitializer::KinBodyInitializer(py::module& m_): m(m_),
+    kinbody(m, "KinBody", py::dynamic_attr(), DOXY_CLASS(KinBody))
 #else
-void init_openravepy_kinbody()
+KinBodyInitializer::KinBodyInitializer(),
+    kinbody("KinBody", DOXY_CLASS(KinBody), no_init)
 #endif
+{
+}
+
+void KinBodyInitializer::init_openravepy_kinbody()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
@@ -4994,7 +5018,7 @@ void init_openravepy_kinbody()
 #else
     object geometrytype = enum_<GeometryType>("GeometryType" DOXY_ENUM(GeometryType))
 #endif
-                          .value("None",GT_None)
+                          .value("None_",GT_None)
                           .value("Box",GT_Box)
                           .value("Sphere",GT_Sphere)
                           .value("Cylinder",GT_Cylinder)
@@ -5106,7 +5130,7 @@ void init_openravepy_kinbody()
 #else
     object jointtype = enum_<KinBody::JointType>("JointType" DOXY_ENUM(JointType))
 #endif
-                       .value("None",KinBody::JointNone)
+                       .value("None_",KinBody::JointNone)
                        .value("Hinge",KinBody::JointHinge)
                        .value("Revolute",KinBody::JointRevolute)
                        .value("Slider",KinBody::JointSlider)
@@ -5162,6 +5186,7 @@ void init_openravepy_kinbody()
                           .def_readwrite("_vPositiveCropContainerMargins", &PyGeometryInfo::_vPositiveCropContainerMargins)
                           .def_readwrite("_vNegativeCropContainerEmptyMargins", &PyGeometryInfo::_vNegativeCropContainerEmptyMargins)
                           .def_readwrite("_vPositiveCropContainerEmptyMargins", &PyGeometryInfo::_vPositiveCropContainerEmptyMargins)
+                          .def_readwrite("_friction", &PyGeometryInfo::_friction)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
                           .def("ConvertUnitScale",&PyGeometryInfo::ConvertUnitScale, PY_ARGS("unitScale") DOXY_FN(GeomeryInfo,ConvertUnitScale))
@@ -5715,11 +5740,8 @@ void init_openravepy_kinbody()
         std::string sInitFromBoxesDoc = std::string(DOXY_FN(KinBody,InitFromBoxes "const std::vector< AABB; bool")) + std::string("\nboxes is a Nx6 array, first 3 columsn are position, last 3 are extents");
         std::string sGetChainDoc = std::string(DOXY_FN(KinBody,GetChain)) + std::string("If returnjoints is false will return a list of links, otherwise will return a list of links (default is true)");
         std::string sComputeInverseDynamicsDoc = std::string(":param returncomponents: If True will return three N-element arrays that represents the torque contributions to M, C, and G.\n\n:param externalforcetorque: A dictionary of link indices and a 6-element array of forces/torques in that order.\n\n") + std::string(DOXY_FN(KinBody, ComputeInverseDynamics));
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ kinbody = class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, PyInterfaceBase>(m, "KinBody", py::dynamic_attr(), DOXY_CLASS(KinBody))
-#else
-        scope_ kinbody = class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, bases<PyInterfaceBase> >("KinBody", DOXY_CLASS(KinBody), no_init)
-#endif
+
+        kinbody
                          .def("Destroy",&PyKinBody::Destroy, DOXY_FN(KinBody,Destroy))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("InitFromKinBodyInfo", &PyKinBody::InitFromKinBodyInfo,
@@ -5846,6 +5868,7 @@ void init_openravepy_kinbody()
                          .def("GetJoints",getjoints2, PY_ARGS("indices") DOXY_FN(KinBody,GetJoints))
                          .def("GetPassiveJoints",&PyKinBody::GetPassiveJoints, DOXY_FN(KinBody,GetPassiveJoints))
                          .def("GetDependencyOrderedJoints",&PyKinBody::GetDependencyOrderedJoints, DOXY_FN(KinBody,GetDependencyOrderedJoints))
+                         .def("GetDependencyOrderedJointsAll",&PyKinBody::GetDependencyOrderedJointsAll, DOXY_FN(KinBody,GetDependencyOrderedJointsAll))
                          .def("GetClosedLoops",&PyKinBody::GetClosedLoops,DOXY_FN(KinBody,GetClosedLoops))
                          .def("GetRigidlyAttachedLinks",&PyKinBody::GetRigidlyAttachedLinks,PY_ARGS("linkindex") DOXY_FN(KinBody,GetRigidlyAttachedLinks))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -6332,6 +6355,7 @@ void init_openravepy_kinbody()
                                   .def("SetPositiveCropContainerEmptyMargins", &PyGeometry::SetPositiveCropContainerEmptyMargins, PY_ARGS("positiveCropContainerEmptyMargins") DOXY_FN(KinBody::Link::Geometry, SetPositiveCropContainerEmptyMargins))
                                   .def("SetRenderFilename",&PyGeometry::SetRenderFilename,PY_ARGS("color") DOXY_FN(KinBody::Link::Geometry,SetRenderFilename))
                                   .def("SetName",&PyGeometry::SetName,PY_ARGS("name") DOXY_FN(KinBody::Link::Geometry,setName))
+                                  .def("SetFriction",&PyGeometry::SetFriction,PY_ARGS("friction") DOXY_FN(KinBody::Link::Geometry,SetFriction))
                                   .def("SetVisible",&PyGeometry::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody::Link::Geometry,SetVisible))
                                   .def("IsDraw",&PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                   .def("IsVisible",&PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
@@ -6357,6 +6381,7 @@ void init_openravepy_kinbody()
                                   .def("GetRenderFilename",&PyGeometry::GetRenderFilename, DOXY_FN(KinBody::Link::Geometry,GetRenderFilename))
                                   .def("GetId",&PyGeometry::GetId, DOXY_FN(KinBody::Link::Geometry,GetId))
                                   .def("GetName",&PyGeometry::GetName, DOXY_FN(KinBody::Link::Geometry,GetName))
+                                  .def("GetFriction",&PyGeometry::GetFriction, DOXY_FN(KinBody::Link::Geometry,GetFriction))
                                   .def("GetTransparency",&PyGeometry::GetTransparency,DOXY_FN(KinBody::Link::Geometry,GetTransparency))
                                   .def("GetDiffuseColor",&PyGeometry::GetDiffuseColor,DOXY_FN(KinBody::Link::Geometry,GetDiffuseColor))
                                   .def("GetAmbientColor",&PyGeometry::GetAmbientColor,DOXY_FN(KinBody::Link::Geometry,GetAmbientColor))

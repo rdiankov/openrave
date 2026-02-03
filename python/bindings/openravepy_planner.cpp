@@ -434,10 +434,16 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SetStateValues_overloads, SetStateValues,
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_planner(py::module& m)
+PlannerBaseInitializer::PlannerBaseInitializer(py::module& m_): m(m_),
+    planner(m, "Planner", DOXY_CLASS(PlannerBase))
 #else
-void init_openravepy_planner()
+PlannerBaseInitializer::PlannerBaseInitializer():
+    planner("Planner", DOXY_CLASS(PlannerBase), no_init)
 #endif
+{
+}
+
+void PlannerBaseInitializer::init_openravepy_planner()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;
@@ -465,7 +471,7 @@ void init_openravepy_planner()
 #else
     object planneraction = enum_<PlannerAction>("PlannerAction" DOXY_ENUM(PlannerAction))
 #endif
-                           .value("None",PA_None)
+                           .value("None_",PA_None)
                            .value("Interrupt",PA_Interrupt)
                            .value("ReturnWithAnySolution",PA_ReturnWithAnySolution)
     ;
@@ -491,13 +497,17 @@ void init_openravepy_planner()
     ;
 
     {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        // PlannerParameters belongs to Planner
+        class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr > planningparameters(planner, "PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters));
+#else
+        class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr > planningparameters("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters));
+#endif
+
         bool (PyPlannerBase::*InitPlan1)(PyRobotBasePtr, PyPlannerBase::PyPlannerParametersPtr,bool) = &PyPlannerBase::InitPlan;
         bool (PyPlannerBase::*InitPlan2)(PyRobotBasePtr, const string &) = &PyPlannerBase::InitPlan;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        scope_ planner = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, PyInterfaceBase>(m, "Planner", DOXY_CLASS(PlannerBase))
-#else
-        scope_ planner = class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> >("Planner", DOXY_CLASS(PlannerBase), no_init)
-#endif
+
+        planner
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          .def("InitPlan", InitPlan1,
                               "robot"_a,
@@ -521,12 +531,8 @@ void init_openravepy_planner()
                          .def("GetParameters",&PyPlannerBase::GetParameters, DOXY_FN(PlannerBase,GetParameters))
                          .def("RegisterPlanCallback",&PyPlannerBase::RegisterPlanCallback, DOXY_FN(PlannerBase,RegisterPlanCallback))
         ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-        // PlannerParameters belongs to Planner
-        class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >(planner, "PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))
-#else
-        class_<PyPlannerBase::PyPlannerParameters, PyPlannerBase::PyPlannerParametersPtr >("PlannerParameters", DOXY_CLASS(PlannerBase::PlannerParameters))
-#endif
+
+        planningparameters
         .def(init<>())
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(init<PyPlannerBase::PyPlannerParametersPtr>(), "parameters"_a)

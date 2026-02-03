@@ -385,7 +385,8 @@ public:
                    && _vNegativeCropContainerMargins == other._vNegativeCropContainerMargins
                    && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins
                    && _vNegativeCropContainerEmptyMargins == other._vNegativeCropContainerEmptyMargins
-                   && _vPositiveCropContainerEmptyMargins == other._vPositiveCropContainerEmptyMargins;
+                   && _vPositiveCropContainerEmptyMargins == other._vPositiveCropContainerEmptyMargins
+                   && _friction == other._friction;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -488,6 +489,14 @@ public:
             _vGeomData2 = innerExtents;
         }
 
+        inline float GetFriction() const {
+            return _friction;
+        }
+
+        inline void SetFriction(const float& friction) {
+            _friction = friction;
+        }
+
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -548,6 +557,8 @@ public:
         GeometryType _type = GT_None; ///< the type of geometry primitive
         std::string _id;   ///< unique id of the geometry
         std::string _name; ///< the name of the geometry
+
+        float _friction = -1.0; ///< friction of the geometry (used for simulations to set per-surface friction)
 
         /// \brief filename for render model (optional)
         ///
@@ -816,6 +827,10 @@ public:
             return _info._meshcollision;
         }
 
+        inline float GetFriction() const {
+            return _info._friction;
+        }
+
         inline const KinBody::GeometryInfo& GetInfo() const {
             return _info;
         }
@@ -899,6 +914,9 @@ public:
 
         /// \brief set the positive crop empty margin of the geometry
         void SetPositiveCropContainerEmptyMargins(const Vector& positiveCropContainerEmptyMargins);
+
+        /// \brief sets the friction of the geometry
+        void SetFriction(const float& friction);
 
         /// \brief generates the dot mesh of a calibration board
         inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
@@ -3788,7 +3806,7 @@ protected:
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
-    std::vector<JointPtr> _vTopologicallySortedJointsAll; ///< Similar to _vDependencyOrderedJoints except includes _vecjoints and _vPassiveJoints
+    std::vector<JointPtr> _vTopologicallySortedJointsAll; ///< Similar to _vDependencyOrderedJoints except includes _vecjoints and _vPassiveJoints. See GetDependencyOrderedJointsAll.
     std::vector<int> _vTopologicallySortedJointIndicesAll; ///< the joint indices of the joints in _vTopologicallySortedJointsAll. Passive joint indices have _vecjoints.size() added to them.
     std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
     std::vector<LinkPtr> _veclinks; ///< \see GetLinks

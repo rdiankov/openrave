@@ -123,6 +123,18 @@ private:
     void _Update(const IkParameterization& ikparam);
 };
 
+struct IkParameterizationInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    IkParameterizationInitializer(py::module& m_);
+    void init_openravepy_ikparameterization();
+    py::module& m;
+#else
+    IkParameterizationInitializer();
+    void init_openravepy_ikparameterization();
+#endif
+};
+
 } // namespace openravepy
 
 #endif // OPENRAVEPY_IKPARAMETERIZATION_H

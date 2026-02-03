@@ -348,6 +348,20 @@ inline void LoadJsonValue(const rapidjson::Value& v, bool& t) {
     }
 }
 
+inline void LoadJsonValue(const rapidjson::Value& v, std::vector<bool>::reference t)
+{
+    if (v.IsInt())
+        t = v.GetInt();
+    else if (v.IsBool())
+        t = v.GetBool();
+    else if (v.IsString()) {
+        t = boost::lexical_cast<bool>(v.GetString());
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Bool", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t) {
     if(!v.IsArray() || (v.Size() != 3 && v.Size() != 4)) {
@@ -680,6 +694,11 @@ inline void SaveJsonValue(rapidjson::Value& v, uint64_t t, rapidjson::Document::
 }
 
 inline void SaveJsonValue(rapidjson::Value& v, bool t, rapidjson::Document::AllocatorType& alloc) {
+    v.SetBool(t);
+}
+
+inline void SaveJsonValue(rapidjson::Value& v, const std::vector<bool>::reference t, rapidjson::Document::AllocatorType& alloc)
+{
     v.SetBool(t);
 }
 

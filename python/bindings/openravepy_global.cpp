@@ -1031,6 +1031,11 @@ object pyRaveInvertFileLookup(const std::string& filename)
     return py::none_();
 }
 
+object RaveGlobalState()
+{
+    return openravepy::toPyUserData(OpenRAVE::RaveGlobalState());
+}
+
 void pyRaveDestroy()
 {
     PythonThreadSaver saver;
@@ -1515,6 +1520,47 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(DeserializeJSON_overloads, DeserializeJSO
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_global_basic(py::module& m)
+#else
+void init_openravepy_global_basic()
+#endif
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
+#else
+    enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
+#endif
+    .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
+    .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
+    .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
+    .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
+    .value("probleminstance",PT_Module)
+    .value(RaveGetInterfaceName(PT_Module).c_str(),PT_Module)
+    .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
+    .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
+    .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
+    .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
+    .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
+    .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
+    .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
+    .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >(m, "UserData", DOXY_CLASS(UserData))
+#else
+    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
+#endif
+    .def("close",&PyUserData::Close,"deprecated")
+    .def("Close",&PyUserData::Close,"force releasing the user handle point.")
+    ;
+}
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_global(py::module& m)
 #else
 void init_openravepy_global()
@@ -1578,26 +1624,6 @@ void init_openravepy_global()
     ;
 
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
-#else
-    enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
-#endif
-    .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
-    .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
-    .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
-    .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
-    .value("probleminstance",PT_Module)
-    .value(RaveGetInterfaceName(PT_Module).c_str(),PT_Module)
-    .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
-    .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
-    .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
-    .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
-    .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
-    .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
-    .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
-    .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
-    ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<CloningOptions>(m, "CloningOptions", py::arithmetic() DOXY_ENUM(CloningOptions))
 #else
@@ -1717,7 +1743,7 @@ void init_openravepy_global()
                         .value(GetLengthUnitString(LU_DeciMillimeter), LU_DeciMillimeter)
                         .value(GetLengthUnitString(LU_Micrometer), LU_Micrometer)
                         .value(GetLengthUnitString(LU_Nanometer), LU_Nanometer)
-                        .value(GetLengthUnitString(LU_Inch), LU_Inch)
+                        .value((std::string(GetLengthUnitString(LU_Inch))+"_").c_str(), LU_Inch)
                         .value(GetLengthUnitString(LU_Foot), LU_Foot)
     ;
 
@@ -1819,14 +1845,6 @@ void init_openravepy_global()
     .def("Close",&PyGraphHandle::Close,DOXY_FN(GraphHandle,Close))
     ;
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >(m, "UserData", DOXY_CLASS(UserData))
-#else
-    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
-#endif
-    .def("close",&PyUserData::Close,"deprecated")
-    .def("Close",&PyUserData::Close,"force releasing the user handle point.")
-    ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, PyUserData >(m, "SerializableData", DOXY_CLASS(SerializableData))
     .def(init<>())
@@ -2079,12 +2097,25 @@ void init_openravepy_global()
     ;
 
     {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr > configurationspecification(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification));
+#else
+        class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr > configurationspecification("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification)):
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        // Group belongs to ConfigurationSpecification
+        class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> > group(configurationspecification, "Group",DOXY_CLASS(ConfigurationSpecification::Group));
+        group.def(init<>());
+#else
+        class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> > group("Group",DOXY_CLASS(ConfigurationSpecification::Group));
+#endif
+
         int (PyConfigurationSpecification::*addgroup1)(const std::string&, int, const std::string&) = &PyConfigurationSpecification::AddGroup;
         int (PyConfigurationSpecification::*addgroup2)(const ConfigurationSpecification::Group&) = &PyConfigurationSpecification::AddGroup;
 
-        scope_ configurationspecification =
+        configurationspecification
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
             .def(init<>())
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
             .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
@@ -2097,7 +2128,6 @@ void init_openravepy_global()
             })
             .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #else
-            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
             .def(init<PyConfigurationSpecificationPtr>(py::args("spec")) )
             .def(init<const ConfigurationSpecification::Group&>(py::args("group")) )
             .def(init<const std::string&>(py::args("xmldata")) )
@@ -2229,13 +2259,7 @@ void init_openravepy_global()
         ;
 
         {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            // Group belongs to ConfigurationSpecification
-            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >(configurationspecification, "Group",DOXY_CLASS(ConfigurationSpecification::Group))
-                           .def(init<>())
-#else
-            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
-#endif
+            group
                            .def_readwrite("name",&ConfigurationSpecification::Group::name)
                            .def_readwrite("interpolation",&ConfigurationSpecification::Group::interpolation)
                            .def_readwrite("offset",&ConfigurationSpecification::Group::offset)
@@ -2278,6 +2302,17 @@ void init_openravepy_global()
 #endif
         ;
     }
+}
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_global_functions(py::module& m)
+#else
+void init_openravepy_global_functions()
+#endif
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+#endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
 #else
@@ -2407,9 +2442,9 @@ void init_openravepy_global()
     def("RaveHasInterface",OpenRAVE::RaveHasInterface, PY_ARGS("type","name") DOXY_FN1(RaveHasInterface));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    m.def("RaveGlobalState",openravepy::RaveGlobalState,DOXY_FN1(RaveGlobalState));
 #else
-    def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    def("RaveGlobalState",openravepy::RaveGlobalState,DOXY_FN1(RaveGlobalState));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveClone", openravepy::pyRaveClone,

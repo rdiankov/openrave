@@ -237,6 +237,7 @@ public:
     py::object GetJoints(py::object oindices) const;
     py::object GetPassiveJoints();
     py::object GetDependencyOrderedJoints();
+    py::object GetDependencyOrderedJointsAll();
     py::object GetClosedLoops();
     py::object GetRigidlyAttachedLinks(int linkindex) const;
     py::object GetChain(int linkindex1, int linkindex2,bool returnjoints = true) const;
@@ -366,6 +367,20 @@ protected:
 
 template <typename T>
 py::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, py::object oname = py::none_(), int index = -1);
+
+struct KinBodyInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    KinBodyInitializer(py::module& m_);
+    void init_openravepy_kinbody();
+    py::module& m;
+    py::class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, PyInterfaceBase> kinbody;
+#else
+    KinBodyInitializer();
+    void init_openravepy_kinbody();
+    py::class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, bases<PyInterfaceBase> > kinbody;
+#endif
+};
 
 } // namespace openravepy
 

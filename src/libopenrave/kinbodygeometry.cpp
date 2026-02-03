@@ -523,6 +523,10 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         break;
     }
 
+    if( _friction != rhs._friction ) {
+        return 32;
+    }
+
     return 0;
 }
 
@@ -1054,6 +1058,7 @@ void KinBody::GeometryInfo::Reset()
     _vPositiveCropContainerMargins = Vector(0,0,0);
     _vNegativeCropContainerEmptyMargins = Vector(0,0,0);
     _vPositiveCropContainerEmptyMargins = Vector(0,0,0);
+    _friction = -1.0;
 }
 
 const char* GetGeometryTypeString(GeometryType geometryType)
@@ -1271,6 +1276,8 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     if( !_bModifiable ) { // default is true
         orjson::SetJsonValueByKey(rGeometryInfo, "modifiable", _bModifiable, allocator);
     }
+
+    orjson::SetJsonValueByKey(rGeometryInfo, "friction", _friction, allocator);
 }
 
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)
@@ -1661,6 +1668,10 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     orjson::LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
     orjson::LoadJsonValueByKey(value, "ambientColor", _vAmbientColor);
     orjson::LoadJsonValueByKey(value, "modifiable", _bModifiable);
+
+    if (value.HasMember("friction")) {
+        orjson::LoadJsonValueByKey(value, "friction", _friction);
+    }
 
     _CheckValidityOfMeshCollisionIndices( _meshcollision.vertices,  _meshcollision.indices, _name, _id, _type, __FUNCTION__);
 }
@@ -2127,6 +2138,13 @@ void KinBody::Geometry::SetName(const std::string& name)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 }
 
+void KinBody::Geometry::SetFriction(const float& friction)
+{
+    LinkPtr parent(_parent);
+    _info._friction = friction;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
+}
+
 void KinBody::Geometry::UpdateInfo()
 {
 }
@@ -2288,6 +2306,12 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     if(GetPositiveCropContainerEmptyMargins() != info._vPositiveCropContainerEmptyMargins) {
         SetPositiveCropContainerEmptyMargins(info._vPositiveCropContainerEmptyMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerEmptyMargins changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    if (GetFriction() != info._friction) {
+        SetFriction(info._friction);
+        RAVELOG_VERBOSE_FORMAT("geometry %s friction changed", _info._friction);
         updateFromInfoResult = UFIR_Success;
     }
 

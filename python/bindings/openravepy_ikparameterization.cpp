@@ -414,10 +414,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyIkParameterization_DeserializeJSON_over
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_ikparameterization(py::module& m)
+IkParameterizationInitializer::IkParameterizationInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_ikparameterization()
+IkParameterizationInitializer::IkParameterizationInitializer()
 #endif
+{
+}
+
+void IkParameterizationInitializer::init_openravepy_ikparameterization()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a

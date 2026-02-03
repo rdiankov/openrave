@@ -372,10 +372,14 @@ PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::stri
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_iksolver(py::module& m)
+IkSolverBaseInitializer::IkSolverBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_iksolver()
+IkSolverBaseInitializer::IkSolverBaseInitializer()
 #endif
+{
+}
+
+void IkSolverBaseInitializer::init_openravepy_iksolver()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a

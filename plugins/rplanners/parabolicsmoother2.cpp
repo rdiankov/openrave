@@ -362,7 +362,6 @@ public:
             _logginguniformsampler->SetSeed(utils::GetMicroTime());
         }
         _environmentid = GetEnv()->GetId();
-        _vVisitedDiscretizationCache.resize(0x1000*0x1000,0); // pre-allocate in order to keep memory growth predictable
         _feasibilitychecker.SetEnvID(_environmentid); // set envid for logging purpose
     }
 
@@ -2567,6 +2566,7 @@ protected:
         dReal fiMinDiscretization = 4.0/(minTimeStep); // mindiscretization is basically the step length to discretize the current trajectory so as to record if
                                                        // the two sampled time instances fall into the same two bins. If so, skip the rest of computation.
         std::vector<uint8_t>& vVisitedDiscretization = _vVisitedDiscretizationCache;
+        vVisitedDiscretization.reserve(0x100000); // pre-allocate 1 MB in order to keep memory growth predictable
         vVisitedDiscretization.clear();
         int nEndTimeDiscretization = 0;
 

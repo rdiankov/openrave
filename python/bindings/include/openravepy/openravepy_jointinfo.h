@@ -111,6 +111,8 @@ public:
     py::list _vSideWalls;
     py::list _vAxialSlices;
     py::dict _calibrationBoardParameters;
+
+    float _friction = -1.0; /// << initialize to -1, so that it an be used as a flag (if friction is -1 - use _globalFriction in a simulation, otherwise use _friction - see odephysics.h)
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
@@ -290,6 +292,7 @@ public:
     void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
     void SetRenderFilename(const string& filename);
     void SetName(const std::string& name);
+    void SetFriction(const float& friction);
     bool IsDraw();
     bool IsVisible();
     bool IsModifiable();
@@ -314,6 +317,7 @@ public:
     object GetRenderFilename() const;
     std::string GetId() const;
     object GetName() const;
+    float GetFriction() const;
     float GetTransparency() const;
     object GetDiffuseColor() const;
     object GetAmbientColor() const;

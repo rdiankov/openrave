@@ -928,10 +928,26 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_collisionchecker(py::module& m)
+CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer(py::module& m_): m(m_),
+    collisionchecker(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
 #else
-void init_openravepy_collisionchecker()
+CollisionCheckerBaseInitializer::CollisionCheckerBaseInitializer():
+    collisionchecker("CollisionChecker", DOXY_CLASS(CollisionCheckerBase), no_init)
 #endif
+{
+}
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+CollisionReportInitializer::CollisionReportInitializer(py::module& m_): m(m_),
+    collisionreport(m, "CollisionReport", DOXY_CLASS(CollisionReport))
+#else
+CollisionReportInitializer::CollisionReportInitializer():
+    collisionreport("CollisionReport", DOXY_CLASS(CollisionReport))
+#endif
+{
+}
+
+void CollisionCheckerBaseInitializer::init_openravepy_collisionchecker()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
@@ -964,57 +980,6 @@ void init_openravepy_collisionchecker()
 #endif
     ;
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    // should this be inside CollisionReport, instead of module "m"?
-    class_<PYCONTACT, OPENRAVE_SHARED_PTR<PYCONTACT> >(m, "Contact", DOXY_CLASS(CONTACT))
-    .def(init<>())
-#else
-    class_<PYCONTACT, OPENRAVE_SHARED_PTR<PYCONTACT> >("Contact", DOXY_CLASS(CONTACT))
-#endif
-    .def_readonly("pos",&PYCONTACT::pos)
-    .def_readonly("norm",&PYCONTACT::norm)
-    .def_readonly("depth",&PYCONTACT::depth)
-    .def("__str__",&PYCONTACT::__str__)
-    .def("__unicode__",&PYCONTACT::__unicode__)
-    ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyCollisionPairInfo, OPENRAVE_SHARED_PTR<PyCollisionPairInfo> >(m, "CollisionPairInfo", DOXY_CLASS(CollisionPairInfo))
-#else
-    class_<PyCollisionPairInfo, OPENRAVE_SHARED_PTR<PyCollisionPairInfo> >("CollisionPairInfo", DOXY_CLASS(CollisionPairInfo))
-#endif
-    .def_readonly("bodyLinkGeom1Name", &PyCollisionPairInfo::bodyLinkGeom1Name)
-    .def_readonly("bodyLinkGeom2Name", &PyCollisionPairInfo::bodyLinkGeom2Name)
-    .def_readonly("contacts", &PyCollisionPairInfo::contacts)
-    .def("__str__",&PyCollisionPairInfo::__str__)
-    .def("__unicode__",&PyCollisionPairInfo::__unicode__)
-    .def("ExtractFirstBodyLinkGeomNames", &PyCollisionPairInfo::ExtractFirstBodyLinkGeomNames)
-    .def("ExtractSecondBodyLinkGeomNames", &PyCollisionPairInfo::ExtractSecondBodyLinkGeomNames)
-    ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> >(m, "CollisionReport", DOXY_CLASS(CollisionReport))
-    .def(init<>())
-#else
-    class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> >("CollisionReport", DOXY_CLASS(CollisionReport))
-#endif
-    .def_readonly("collisionInfos",&PyCollisionReport::collisionInfos)
-    .def_readonly("options",&PyCollisionReport::options)
-    .def_readonly("minDistance",&PyCollisionReport::minDistance)
-    .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
-    .def_readonly("nKeepPrevious", &PyCollisionReport::nKeepPrevious)
-    .def("__str__",&PyCollisionReport::__str__)
-    .def("__unicode__",&PyCollisionReport::__unicode__)
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("Reset", &PyCollisionReport::Reset,
-         "coloptions"_a = 0,
-         "Reset report"
-         )
-#else
-    .def("Reset",&PyCollisionReport::Reset,
-         Reset_overloads(PY_ARGS("coloptions")
-                         "Reset report"))
-#endif
-    ;
-
     bool (PyCollisionCheckerBase::*pcolb)(PyKinBodyPtr) = &PyCollisionCheckerBase::CheckCollision;
     bool (PyCollisionCheckerBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollision;
     bool (PyCollisionCheckerBase::*pcolbb)(PyKinBodyPtr,PyKinBodyPtr) = &PyCollisionCheckerBase::CheckCollision;
@@ -1040,11 +1005,7 @@ void init_openravepy_collisionchecker()
     bool (PyCollisionCheckerBase::*pcolobb)(object, object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionOBB;
     bool (PyCollisionCheckerBase::*pcolobbi)(object, object, object, PyCollisionReportPtr) = &PyCollisionCheckerBase::CheckCollisionOBB;
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, PyInterfaceBase>(m, "CollisionChecker", DOXY_CLASS(CollisionCheckerBase))
-#else
-    class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, bases<PyInterfaceBase> >("CollisionChecker", DOXY_CLASS(CollisionCheckerBase), no_init)
-#endif
+    collisionchecker
     .def("InitEnvironment", &PyCollisionCheckerBase::InitEnvironment, DOXY_FN(CollisionCheckerBase, InitEnvironment))
     .def("DestroyEnvironment", &PyCollisionCheckerBase::DestroyEnvironment, DOXY_FN(CollisionCheckerBase, DestroyEnvironment))
     .def("InitKinBody", &PyCollisionCheckerBase::InitKinBody, DOXY_FN(CollisionCheckerBase, InitKinBody))
@@ -1100,6 +1061,63 @@ void init_openravepy_collisionchecker()
 #else
     def("RaveCreateCollisionChecker",openravepy::RaveCreateCollisionChecker, PY_ARGS("env","name") DOXY_FN1(RaveCreateCollisionChecker));
 #endif
+}
+
+void CollisionReportInitializer::init_openravepy_collisionreport()
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    // should this be inside CollisionReport, instead of module "m"?
+    class_<PYCONTACT, OPENRAVE_SHARED_PTR<PYCONTACT> >(m, "Contact", DOXY_CLASS(CONTACT))
+    .def(init<>())
+#else
+    class_<PYCONTACT, OPENRAVE_SHARED_PTR<PYCONTACT> >("Contact", DOXY_CLASS(CONTACT))
+#endif
+    .def_readonly("pos",&PYCONTACT::pos)
+    .def_readonly("norm",&PYCONTACT::norm)
+    .def_readonly("depth",&PYCONTACT::depth)
+    .def("__str__",&PYCONTACT::__str__)
+    .def("__unicode__",&PYCONTACT::__unicode__)
+    ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyCollisionPairInfo, OPENRAVE_SHARED_PTR<PyCollisionPairInfo> >(m, "CollisionPairInfo", DOXY_CLASS(CollisionPairInfo))
+#else
+    class_<PyCollisionPairInfo, OPENRAVE_SHARED_PTR<PyCollisionPairInfo> >("CollisionPairInfo", DOXY_CLASS(CollisionPairInfo))
+#endif
+    .def_readonly("bodyLinkGeom1Name", &PyCollisionPairInfo::bodyLinkGeom1Name)
+    .def_readonly("bodyLinkGeom2Name", &PyCollisionPairInfo::bodyLinkGeom2Name)
+    .def_readonly("contacts", &PyCollisionPairInfo::contacts)
+    .def("__str__",&PyCollisionPairInfo::__str__)
+    .def("__unicode__",&PyCollisionPairInfo::__unicode__)
+    .def("ExtractFirstBodyLinkGeomNames", &PyCollisionPairInfo::ExtractFirstBodyLinkGeomNames)
+    .def("ExtractSecondBodyLinkGeomNames", &PyCollisionPairInfo::ExtractSecondBodyLinkGeomNames)
+    ;
+
+    collisionreport
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def(init<>())
+#endif
+    .def_readonly("collisionInfos",&PyCollisionReport::collisionInfos)
+    .def_readonly("options",&PyCollisionReport::options)
+    .def_readonly("minDistance",&PyCollisionReport::minDistance)
+    .def_readonly("numWithinTol",&PyCollisionReport::numWithinTol)
+    .def_readonly("nKeepPrevious", &PyCollisionReport::nKeepPrevious)
+    .def("__str__",&PyCollisionReport::__str__)
+    .def("__unicode__",&PyCollisionReport::__unicode__)
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("Reset", &PyCollisionReport::Reset,
+         "coloptions"_a = 0,
+         "Reset report"
+         )
+#else
+    .def("Reset",&PyCollisionReport::Reset,
+         Reset_overloads(PY_ARGS("coloptions")
+                         "Reset report"))
+#endif
+    ;
 }
 
 }
