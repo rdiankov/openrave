@@ -2696,8 +2696,13 @@ bool KinBody::GetChain(int linkindex1, int linkindex2, std::vector<LinkPtr>& vli
 bool KinBody::IsDOFInChain(int linkindex1, int linkindex2, int dofindex) const
 {
     CHECK_INTERNAL_COMPUTATION0;
-    int jointindex = _vDOFIndices.at(dofindex);
-    return (DoesAffect(jointindex,linkindex1)==0) != (DoesAffect(jointindex,linkindex2)==0);
+    const int jointindex = _vDOFIndices.at(dofindex);
+    const int numlinks = _veclinks.size();
+    OPENRAVE_ASSERT_FORMAT(jointindex >= 0 && jointindex < (int)_vecjoints.size(), "body %s jointindex %d invalid (num joints %d)", GetName()%jointindex%_vecjoints.size(), ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(linkindex1 >= 0 && linkindex1 < numlinks, "body %s linkindex %d invalid (num links %d)", GetName()%linkindex1%numlinks, ORE_InvalidArguments);
+    OPENRAVE_ASSERT_FORMAT(linkindex2 >= 0 && linkindex2 < numlinks, "body %s linkindex %d invalid (num links %d)", GetName()%linkindex2%numlinks, ORE_InvalidArguments);
+    const int jointindexoffset = jointindex*numlinks;
+    return (_vJointsAffectingLinks.at(jointindexoffset + linkindex1) == 0) != (_vJointsAffectingLinks.at(jointindexoffset + linkindex2) == 0);
 }
 
 int KinBody::GetJointIndex(const std::string& jointname) const
@@ -5641,21 +5646,21 @@ void KinBody::_ResetInternalCollisionCache()
 bool CompareNonAdjacentFarthest(int pair0, int pair1)
 {
     // order so that farthest links are first. if equal, then prioritize links that are furthest down the chain.
-    int pair0link0 = (pair0&0xffff);
-    int pair0link1 = ((pair0>>16)&0xffff);
-    int dist0 = pair0link1 - pair0link0; // link1 > link0
-    int pair1link0 = (pair1&0xffff);
-    int pair1link1 = ((pair1>>16)&0xffff);
-    int dist1 = pair1link1 - pair1link0; // link1 > link0
-    if( dist0 == dist1 ) {
-        if( pair0link1 == pair1link1 ) {
-            return pair0link0 > pair1link0;
-        }
-        else {
-            return pair0link1 > pair1link1;
-        }
-    }
-    return dist0 > dist1;
+    const uint32_t p0 = static_cast<uint32_t>(pair0);
+    const uint32_t p1 = static_cast<uint32_t>(pair1);
+
+    const uint32_t pair0link0 = p0 & 0xffffu;
+    const uint32_t pair0link1 = (p0 >> 16) & 0xffffu;
+    const uint32_t pair1link0 = p1 & 0xffffu;
+    const uint32_t pair1link1 = (p1 >> 16) & 0xffffu;
+
+    const uint32_t dist0 = pair0link1 - pair0link0; // ok because linkindex1 > linkindex0
+    const uint32_t dist1 = pair1link1 - pair1link0;
+
+    // Pack everything into one 64-bit key: (dist, link1, link0).
+    const uint64_t key0 = (static_cast<uint64_t>(dist0) << 32) | (pair0link1 << 16) | pair0link0;
+    const uint64_t key1 = (static_cast<uint64_t>(dist1) << 32) | (pair1link1 << 16) | pair1link0;
+    return key0 > key1;
 }
 
 const std::vector<int>& KinBody::GetNonAdjacentLinks(int adjacentoptions) const
@@ -5712,10 +5717,11 @@ private:
         // find out what needs to computed
         if( requestedoptions & AO_Enabled ) {
             _vNonAdjacentLinks.at(AO_Enabled).resize(0);
-            FOREACHC(itset, _vNonAdjacentLinks[0]) {
-                KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
-                if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _vNonAdjacentLinks[AO_Enabled].push_back(*itset);
+            for( const int pair : _vNonAdjacentLinks[0] ) {
+                const int linkindex1 = pair & 0xffff;
+                const int linkindex2 = pair >> 16;
+                if( _veclinks.at(linkindex1)->IsEnabled() && _veclinks.at(linkindex2)->IsEnabled() ) {
+                    _vNonAdjacentLinks[AO_Enabled].push_back(pair);
                 }
             }
             _nNonAdjacentLinkCache |= AO_Enabled;
