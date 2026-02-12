@@ -1204,11 +1204,12 @@ FCLCollisionManagerInstance& FCLCollisionChecker::_GetEnvManager(const std::vect
     // check the cache and cleanup any unused environments
     // TODO come up with cleaner way of capping num of entries, maybe based on least-recently-used cache approach.
     if( --_nGetEnvManagerCacheClearCount < 0 ) {
-        uint32_t curtime = OpenRAVE::utils::GetMilliTime();
+        const uint32_t curtime = OpenRAVE::utils::GetMilliTime();
         _nGetEnvManagerCacheClearCount = 100000;
         EnvManagersMap::iterator it = _envmanagers.begin();
         while(it != _envmanagers.end()) {
-            if( (it->second->GetLastSyncTimeStamp() - curtime) > 10000 ) {
+            const uint32_t ageMs = curtime - it->second->GetLastSyncTimeStamp();
+            if( ageMs > 10000 ) {
                 //RAVELOG_VERBOSE_FORMAT("env=%d erasing manager at %u", GetEnv()->GetId()%it->second->GetLastSyncTimeStamp());
                 _envmanagers.erase(it++);
             }
@@ -1234,7 +1235,11 @@ FCLCollisionManagerInstance& FCLCollisionChecker::_GetEnvManager(const std::vect
             _maxNumEnvManagers = _envmanagers.size();
         }
     }
-    it->second->EnsureBodies(_fclspace->GetEnvBodies());
+    const uint32_t envRevision = _fclspace->GetEnvironmentRevision();
+    if( it->second->GetLastEnsuredEnvironmentRevision() != envRevision ) {
+        it->second->EnsureBodies(_fclspace->GetEnvBodies());
+        it->second->SetLastEnsuredEnvironmentRevision(envRevision);
+    }
     it->second->Synchronize();
     //it->second->PrintStatus(OpenRAVE::Level_Info);
     //RAVELOG_VERBOSE_FORMAT("env=%d, returning env manager cache %x (self=%d)", GetEnv()->GetId()%it->second.get()%_bIsSelfCollisionChecker);

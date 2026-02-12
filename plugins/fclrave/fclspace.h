@@ -226,6 +226,10 @@ public:
         return _vecInitializedBodies;
     }
 
+    inline uint32_t GetEnvironmentRevision() const {
+        return _environmentRevision;
+    }
+
     inline CollisionObjectPtr GetLinkBV(const KinBody::Link &link) {
         return GetLinkBV(*link.GetParent(), link.GetIndex());
     }
@@ -341,6 +345,7 @@ private:
     std::vector<KinBodyConstPtr> _vecInitializedBodies; ///< vector of the kinbody initialized in this space. index is the environment body index. nullptr means uninitialized.
     std::vector<std::map< std::string, FCLKinBodyInfoPtr> > _cachedpinfo; ///< Associates to each body id and geometry group name the corresponding kinbody info if already initialized and not currently set as user data. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
     std::vector<FCLKinBodyInfoPtr> _currentpinfo; ///< maps kinbody environment id to the kinbodyinfo struct constaining fcl objects. Index of the vector is the environment id (id of the body in the env, not __nUniqueId of env) of the kinbody at that index. The index being environment id makes it easier to compare objects without getting a handle to their pointers. Whenever a FCLKinBodyInfoPtr goes into this map, it is removed from _cachedpinfo. Index of vector is the environment id. index 0 holds null pointer because kin bodies in the env should have positive index.
+    uint32_t _environmentRevision = 1; ///< Incremented when manager EnsureBodies refresh might be required (body membership or active geometry-group switches).
 
     std::vector<int> _vecAttachedEnvBodyIndicesCache; ///< cache
     std::vector<KinBodyPtr> _vecAttachedBodiesCache; ///< cache

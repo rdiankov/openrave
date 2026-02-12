@@ -65,6 +65,7 @@ void FCLSpace::DestroyEnvironment()
     _currentpinfo.erase(_currentpinfo.begin() + 1, _currentpinfo.end());
     _cachedpinfo.clear();
     _vecInitializedBodies.clear();
+    ++_environmentRevision;
 }
 
 void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo) {
@@ -208,7 +209,12 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
     }
     //_cachedpinfo[pbody->GetEnvironmentBodyIndex()] what to do with the cache?
     EnsureVectorSize(_vecInitializedBodies, maxEnvId + 1);
-    _vecInitializedBodies.at(envId) = pbody;
+    KinBodyConstPtr& initializedBody = _vecInitializedBodies.at(envId);
+    const bool bBodyMembershipChanged = !initializedBody || initializedBody.get() != pbody.get();
+    initializedBody = pbody;
+    if( bBodyMembershipChanged ) {
+        ++_environmentRevision;
+    }
 
     //Do I really need to synchronize anything at that point ?
     _Synchronize(*pinfo, *pbody);
@@ -285,6 +291,10 @@ bool FCLSpace::SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& gr
         // Revoke the information inside the cache so that a potentially outdated object does not survive
         cache.erase(groupname);
     }
+
+    // Geometry-group switches can swap the active FCLKinBodyInfo without changing body membership.
+    // Bump the environment revision so environment managers re-run EnsureBodies on next access.
+    ++_environmentRevision;
 
     return true;
 }
@@ -451,7 +461,11 @@ void FCLSpace::RemoveUserData(KinBodyConstPtr pbody) {
         RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
         const int envId = pbody->GetEnvironmentBodyIndex();
         if (envId < (int) _vecInitializedBodies.size()) {
-            _vecInitializedBodies.at(envId).reset();
+            KinBodyConstPtr& initializedBody = _vecInitializedBodies.at(envId);
+            if( !!initializedBody ) {
+                initializedBody.reset();
+                ++_environmentRevision;
+            }
         }
         FCLKinBodyInfoPtr& pinfo = GetInfo(*pbody);
         if( !!pinfo ) {

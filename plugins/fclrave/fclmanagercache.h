@@ -141,6 +141,14 @@ public:
         return _lastSyncTimeStamp;
     }
 
+    inline uint32_t GetLastEnsuredEnvironmentRevision() const {
+        return _lastEnsuredEnvironmentRevision;
+    }
+
+    inline void SetLastEnsuredEnvironmentRevision(uint32_t revision) {
+        _lastEnsuredEnvironmentRevision = revision;
+    }
+
     inline bool IsValid() const
     {
         return !_ptrackingbody.expired(); // expired is slightly faster than lock
@@ -201,6 +209,7 @@ private:
     BroadPhaseCollisionManagerPtr pmanager;
     std::vector<KinBodyCache> _vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
+    uint32_t _lastEnsuredEnvironmentRevision = 0; ///< Last FCLSpace::GetEnvironmentRevision() seen by EnsureBodies.
 
     std::vector<int8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode. includes environment body index of of bodies who should be excluded.
     CollisionGroup _tmpSortedBuffer; ///< cache, sorted so that we can efficiently search
