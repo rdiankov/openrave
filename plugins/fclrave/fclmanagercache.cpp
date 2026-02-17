@@ -462,6 +462,9 @@ void FCLCollisionManagerInstance::Synchronize() {
             }
         }
 
+        // Keep only tracked/ensured bodies synchronized here so callers do not need a separate full-scene synchronize pass.
+        _fclspace.Synchronize(body);
+
         pinfo = cache.pwinfo.lock();
         const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
         if (pinfo != pnewinfo) {
@@ -621,6 +624,7 @@ void FCLCollisionManagerInstance::Synchronize() {
             }
             // transform changed
             CollisionObjectPtr pcolobj;
+            bool bNeedsManagerWideUpdate = false;
             for (uint64_t ilink = 0; ilink < kinBodyInfo.vlinks.size(); ++ilink) {
                 if (OpenRAVE::IsLinkStateBitEnabled(cache.linkEnableStatesBitmasks, ilink)) {
                     pcolobj = _fclspace.GetLinkBV(*pinfo, ilink);
@@ -628,13 +632,9 @@ void FCLCollisionManagerInstance::Synchronize() {
                         // RAVELOG_VERBOSE_FORMAT("env=%d, %x (self=%d), body %s adding obj %x from link %d",
                         // body.GetEnv()->GetId()%this%_fclspace.IsSelfCollisionChecker()%body.GetName()%pColObjRaw%ilink);
                         if (cache.vcolobjs.at(ilink) == pcolobj) {
-#ifdef FCLRAVE_USE_BULK_UPDATE
-                            // same object, so just update
-                            pmanager->update(cache.vcolobjs.at(ilink).get(), false);
-#else
-                            // Performance issue !!
-                            pmanager->update(cache.vcolobjs.at(ilink).get());
-#endif
+                            // Same objects moved together with new transforms.
+                            // Defer to one broadphase manager-wide update call for this body change.
+                            bNeedsManagerWideUpdate = true;
                         } else {
                             fcl::CollisionObject* pColObjRaw = pcolobj.get();
 #ifdef FCLRAVE_USE_REPLACEOBJECT
@@ -676,6 +676,10 @@ void FCLCollisionManagerInstance::Synchronize() {
                         }
                     }
                 }
+            }
+
+            if (bNeedsManagerWideUpdate) {
+                pmanager->update();
             }
 
             cache.nLastStamp = kinBodyInfo.nLastStamp;

@@ -462,7 +462,8 @@ bool FCLCollisionChecker::CheckCollision(KinBodyConstPtr pbody, std::vector<KinB
         return false;
     }
 
-    _fclspace->Synchronize();
+    // Body manager synchronization will update the query body/attachments as needed.
+    // Environment manager synchronization covers tracked environment bodies.
     FCLCollisionManagerInstance& bodyManager = _GetBodyManager(pbody, !!(_options & OpenRAVE::CO_ActiveDOFs));
 
     std::vector<int> attachedBodyIndices;
