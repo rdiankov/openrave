@@ -46,6 +46,7 @@ class OPENRAVEPY_API PyIkFailureAccumulatorBase
 {
 public:
     PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator);
+    virtual ~PyIkFailureAccumulatorBase() = default;
 
     IkFailureAccumulatorBasePtr _pIkFailureAccumulator;
 };
