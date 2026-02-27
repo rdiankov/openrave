@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.170.0
+===============
+
+- Add uri to KinBodyInfo::SerializeJSON output
+
 Version 0.169.0
 ===============
 
