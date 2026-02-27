@@ -162,7 +162,10 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
     if( !_name.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "name", _name, allocator);
     }
-    if (!_referenceUri.empty()) {
+    if( !_uri.empty() ) {
+        orjson::SetJsonValueByKey(rKinBodyInfo, "uri", _uri, allocator);
+    }
+    if( !_referenceUri.empty()) {
         if( options & ISO_ReferenceUriHint ) {
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUriHint", _referenceUri, allocator);
         }
@@ -170,8 +173,6 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
             orjson::SetJsonValueByKey(rKinBodyInfo, "referenceUri", _referenceUri, allocator);
         }
     }
-
-    // perhaps should not save "uri" since that could affect how the body is loaded later
 
     if( !_interfaceType.empty() ) {
         orjson::SetJsonValueByKey(rKinBodyInfo, "interfaceType", _interfaceType, allocator);
