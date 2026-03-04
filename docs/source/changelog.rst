@@ -3,6 +3,300 @@
 ChangeLog
 #########
 
+Version 0.169.1
+===============
+
+- Scale connected body transform before serializing to JSON.
+
+Version 0.169.0
+===============
+
+- Add virtual destructor for PyIkFailureAccumulatorBase.
+
+Version 0.168.5
+===============
+
+- Reduce and delay preallocation of buffer region for JSON loading and parabolic smoother to reduce overall memory footprint.
+
+Version 0.168.4
+===============
+
+- Add support for serialization and deserialization of std::vector<bool> for openravejson.
+
+Version 0.168.3
+===============
+
+- Expose `KinBody::GetDependencyOrderedJointsAll()` to python bindings.
+
+Version 0.168.2
+===============
+
+- Fix bug with not preservering `grippername` when regrabbing.
+- Fix bug with copying `grabbedUserData` in `GrabbedInfo` in python.
+
+Version 0.168.1
+===============
+
+- Reordered classes declaration order to comply https://pybind11.readthedocs.io/en/stable/advanced/misc.html#avoiding-c-types-in-docstrings , which is required for pybind11-stubgen.
+
+Version 0.168.0
+===============
+
+- Introduce friction to kinbody geometry.
+- Add support for using per-object frictions in ODE plugin.
+- Enable friction model by default in ODE plugin.
+- Split ERP and CFM to to the ones for joint constraints and the ones for contact constraints (`erp`/`cfm` and `contactErp`/`contactCfm` respectively)
+
+Version 0.167.12
+===============
+
+- Guard list of plugins with mutex also when reading
+
+Version 0.167.11
+===============
+
+- Add copy/deepcopy python implementations to KinBodyInfo and RobotBaseInfo
+
+Version 0.167.10
+===============
+
+- Fix timing of SetTransform inside `KinBody::InitFromKinBodyInfo` to prevent miscalculation of base link transform
+
+Version 0.167.9
+===============
+
+- Fix issue when calling ExtractOne where a body without a transform referencing a body _with_ a transform would instead be transformed to the origin
+
+Version 0.167.8
+===============
+
+- Change regular expression implementation from pcrecpp to std::regex
+
+Version 0.167.7
+===============
+
+- Add support for `CheckCollision(link, link, report)` pybind interface back. It was unexpectedly removed in Version 0.167.2
+
+Version 0.167.6
+===============
+
+- Optimize `ReadKinBodyURI` and `LoadURI` by passing `#bodyid` to URL to download a single body from a scene that has multiple bodies via http.
+
+Version 0.167.5
+===============
+
+- Add OPT_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK to enable a Environment mutex that can predict potential deadlocks between Environment lock and GIL.
+
+Version 0.167.4
+===============
+
+- Revive robust hash computation logic at the `serialize` -> `DigestHash` migration.
+
+Version 0.167.3
+===============
+
+- Optimize link checkCollision not to synchronize unnecessary links.
+
+Version 0.167.2
+===============
+
+- Fix ODE ray collision checking where `CheckCollision` always returned false when the `CO_RayAnyHit` option was not set.
+- Add support for `CheckCollision(ray, link, report)` pybind interface.
+
+Version 0.167.1
+===============
+
+- Avoid N^2 loops in UpdateFromInfo.
+
+Version 0.167.0
+===============
+
+- Add `EnvironmentLoadContext` to the environment Load/Read methods to allow previously loaded files to be re-used, hence speeding up the load.
+
+Version 0.166.1
+===============
+
+- Add missing enum to `PlannerStatusCode` python binding
+
+Version 0.166.0
+===============
+
+- Ass support for `GetBodiesMatchingFilter`.
+- Allow fetching only bodies that have a certain readable.
+
+Version 0.165.0
+===============
+
+- Replace `serialize` used for hashing with `DigestHash`.
+
+Version 0.164.0
+===============
+
+- Add member `_grippername` to GrabbedInfo and Grabbed.
+
+Version 0.163.3
+===============
+
+- Apply `fUnitScale` to applicable values when serializing KinBody to JSON.
+
+Version 0.163.2
+===============
+
+- Do not set the 4th element of _vDiffuseColor to 1 when initializing KinBody.
+
+Version 0.163.1
+===============
+
+- Fix AddGripperInfo with removeduplicate=True did not remove duplicated gripperInfo.
+
+Version 0.163.0
+===============
+
+- Make classes in openravepy_int.so defined in the installed headers visible.
+
+Version 0.162.1
+===============
+
+- Apply ramp acceleration modification the same way as is done in `SegmentFeasible2` when initializing an input trajectory that is quadratic.
+
+Version 0.162.0
+===============
+
+- Add combined SetTransformAndVelocity method to reduce _UpdateGrabbedBodies calls
+
+Version 0.161.3
+===============
+
+- Fix for not respecting mustresolveuri in the json reader for invalid URIs.
+
+Version 0.161.2
+===============
+
+- Handle missing URIs when using CURL for loading JSON scenes.
+
+Version 0.161.1
+===============
+
+- Expose toAttributeList from openravepy library.
+
+Version 0.161.0
+===============
+
+- Remove the code for back electromotive force from torque limit calculation APIs.
+- Add common utility function for torque limit calculation.
+
+Version 0.160.0
+===============
+
+- Add new functions for AddKinBody/AddRobot to specify an exact environmentBodyIndex.
+- Use std::unique_lock instead of std::scoped_lock. Remove boost recursive mutex.
+
+Version 0.159.1
+===============
+
+- Fix the problem that connected body resolved joint names that are empty are not skipped in `_UpdateConnectedBodyInfo`.
+- Fix the problem that `CompareTransform` does not consider the quaternions `quat` and `-quat` to be the same rotation.
+- Fix wrong ComputeInverseDynamics for Prismatic joint.
+
+Version 0.159.0
+===============
+
+- Add HasReadableInterface API to minimize copying when using python bindings
+- Make the connected body's joint properties (such as velocity/acceleration limits) persistent by always keeping the connected body's `_info` up to date.
+
+Version 0.158.1
+===============
+
+- Set OPENRAVE_STD_SCOPED_LOCK and OPENRAVE_STD_STRING_VIEW by config.h (avoid cplusplus in openrave.h)
+
+Version 0.158.0
+===============
+
+- Fix bug of `_listNonColidingLinksWhenGrabbed` asymmetricity which might cause false positive/negative self collision checking and might make it less deterministic.
+  - Store the link pair for grabbed-grabber collision in `Grabbed` class.
+  - Store the link pair for inter-grabbed collision in `KinBody` class.
+
+Version 0.157.2
+===============
+
+- Add an interface to allow users to set `NeighborStateOptions` for jitterers to supply to their `_neighstatefn` calls, which affects how neighbor configurations are computed.
+
+Version 0.157.1
+===============
+
+- Exclude disabled and virtual links from manipulator child links AABB computation that is used for manipulator speed/acceleration computation in trajectory post-processing.
+
+Version 0.157.0
+===============
+
+- Add `KinBody::GetDirectlyAttachedBodies`
+- Create a default `JSONReadable` for rapidjson::Document deserialization
+
+Version 0.156.1
+===============
+
+- Fix with grabbedInfo not getting correctly updated when loading a partial environment.
+
+Version 0.156.0
+===============
+
+- Speed up environment loading for big scenes with lots of static links.
+- Deprecate restoring of grabbed bodies by `KinBodyStateSaver` from one env to another env since it's hard to restore any kind of bodies into different env. Instead, use the dedicated private API in `Environment::_Clone`.
+- Remove unnecessary APIs about `CheckGrabbedInfo` and `InvalidateListNonCollidingLinks`.
+- Add python enum for `GICR_UserDataNotMatch`
+
+Version 0.155.0
+===============
+
+- Add virtual destructors
+
+Version 0.154.0
+===============
+
+- Fix the bug that `KinBodyStateSaver` cannot restore the `_listNonCollidingIsValid`, `_listNonCollidingLinksWhenGrabbed`, and `_setGrabberLinkIndicesToIgnore` in `Grabbed`.
+- Resolve cyclic relationship between `KinBodyStateSaver` and `Grabbed` by eliminating `Save_GrabbedBodies` from `ComputeListNonCollidingLinks`.
+
+Version 0.153.0
+===============
+
+- Lazily calculate `_vAllPairsShortestPaths` on kinematics bodies to reduce overhead for bodies that do not make use of kinematics
+
+Version 0.152.0
+===============
+
+- Fix typo which prevented from proper state restoring for `KinBodyStateSaverRef`.
+- Use the same utility function between `KinBodyStateSaver` and `KinBodyStateSaverRef` to share the same bug fixes in the past for `Save_GrabbedBodies`.
+- Fix the bug which prevented from `KinBodyStateSaver/KinBodyStateSaverRef` retoring `_listNonCollidingLinksWhenGrabbed` for grabbed bodies.
+
+Version 0.151.3
+===============
+
+- Remove grabbed body from other grabbed bodies when `ReleaseAllWithLink` is called, as other API such as `Release`.
+- Fix `ResetGrabbed` not to unexpectedly change the internal states.
+
+Version 0.151.2
+===============
+
+- Support sensorgeometry field of ST_Force6D in PyAttachedSensorInfo
+- Viewer shutdown deadlock for openravepy
+
+Version 0.151.1
+===============
+
+- Fix: when loading environment from `{"referenceUri": "uri", "bodies": [...]}`, body infos were merged instead of overwritten.
+
+Version 0.151.0
+===============
+
+- Optimize ResetGrabbed to avoid detaching/reattaching bodies that are still grabbed with the new grab infos
+- Change the internal storage for grab records in kinbodies to use unordered maps instead of vectors
+- The function KinBody::GetGrabbedBody(int) has been removed, as grab information orderig is no longer contiguous/stable
+
+Version 0.150.0
+===============
+
+- Change AddLinkGeomCollision API to accept geomname.
+
 Version 0.149.1
 ===============
 

@@ -639,8 +639,9 @@ public:
                         report->minDistance = _report.minDistance;
                         report->vCollisionInfos[inewcollision].contacts = cpinfo.contacts;
                     }
+
+                    bCollision = true;
                     if( report->options&OpenRAVE::CO_RayAnyHit ) {
-                        bCollision = true;
                         break;
                     }
                 }

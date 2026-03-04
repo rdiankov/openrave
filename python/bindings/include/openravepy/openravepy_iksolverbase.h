@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyIkFailureInfo
+class OPENRAVEPY_API PyIkFailureInfo
 {
 public:
     PyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
@@ -42,15 +42,16 @@ public:
 
 typedef OPENRAVE_SHARED_PTR<PyIkFailureInfo> PyIkFailureInfoPtr;
 
-class PyIkFailureAccumulatorBase
+class OPENRAVEPY_API PyIkFailureAccumulatorBase
 {
 public:
     PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator);
+    virtual ~PyIkFailureAccumulatorBase() = default;
 
     IkFailureAccumulatorBasePtr _pIkFailureAccumulator;
 };
 
-class PyIkReturn
+class OPENRAVEPY_API PyIkReturn
 {
 public:
     PyIkReturn(const IkReturn& ret);
@@ -72,7 +73,7 @@ public:
 
 typedef OPENRAVE_SHARED_PTR<PyIkReturn> PyIkReturnPtr;
 
-class PyIkSolverBase : public PyInterfaceBase
+class OPENRAVEPY_API PyIkSolverBase : public PyInterfaceBase
 {
 protected:
     IkSolverBasePtr _pIkSolver;
@@ -102,5 +103,18 @@ public:
 
     object RegisterCustomFilter(int priority, object fncallback);
 };
+
+struct IkSolverBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    IkSolverBaseInitializer(py::module& m_);
+    void init_openravepy_iksolver();
+    py::module& m;
+#else
+    IkSolverBaseInitializer();
+    void init_openravepy_iksolver();
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_IKSOLVERBASE_H

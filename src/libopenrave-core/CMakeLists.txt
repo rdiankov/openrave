@@ -7,29 +7,12 @@ set(OPENRAVE_CORE_LIBRARIES ${openrave_libraries} ${OPENRAVE_CURL_LIBRARIES})
 set(OPENRAVE_CORE_STATIC_LIBRARIES ${openrave_static_libraries})
 set(openrave_core_SOURCES openrave-core.cpp environment-core.h openrave-core.h ravep.h  xmlreaders-core.cpp genericcollisionchecker.cpp genericphysicsengine.cpp genericrobot.cpp multicontroller.cpp generictrajectory.cpp jsonparser/gpgutils.cpp jsonparser/jsonreader.cpp jsonparser/jsonwriter.cpp jsonparser/jsondownloader.cpp)
 
-if( libpcrecpp_FOUND )
-  # pcre for url parsing
-  set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} ${libpcrecpp_CFLAGS_OTHER}")
-  set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${libpcrecpp_LDFLAGS_OTHER}")
-  if( TARGET "${libpcrecpp_LIBRARIES}" )
-    get_target_property(libpcrecpp_TYPE "${libpcrecpp_LIBRARIES}" TYPE)
-  endif()
-  if( libpcrecpp_TYPE STREQUAL STATIC_LIBRARY )
-    set(OPENRAVE_CORE_STATIC_LIBRARIES ${OPENRAVE_CORE_STATIC_LIBRARIES} ${libpcrecpp_LIBRARIES})
-  else()
-    set(OPENRAVE_CORE_LIBRARIES ${OPENRAVE_CORE_LIBRARIES} ${libpcrecpp_LIBRARIES})
-  endif()
-  include_directories(${libpcrecpp_INCLUDE_DIRS})
-  set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${libpcrecpp_LIBRARY_DIRS})
-  add_definitions(-DHAVE_PCRECPP)
-endif()
-
 if( COLLADA_DOM_FOUND )
   set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT ${COLLADA_DOM_CFLAGS_OTHER}")
   if( COLLADA_SUPPORT_WRITE_MEMORY )
     set(LIBOPENRAVE_COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_COLLADA_SUPPORT_WRITE_MEMORY")
   endif()
-  
+
   set(LIBOPENRAVE_LINK_FLAGS "${LIBOPENRAVE_LINK_FLAGS} ${COLLADA_DOM_LDFLAGS_OTHER}")
   set(OPENRAVE_LINK_DIRS ${OPENRAVE_LINK_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
   include_directories(SYSTEM ${COLLADA_DOM_INCLUDE_DIRS})
@@ -78,6 +61,10 @@ link_directories(${OPENRAVE_LINK_DIRS})
 
 add_library(libopenrave-core SHARED ${openrave_core_SOURCES})
 target_include_directories(libopenrave-core PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+if (OPT_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK)
+  target_include_directories(libopenrave-core PUBLIC ${Python3_INCLUDE_DIRS})
+endif()
+
 set_target_properties(libopenrave-core PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core
                                   SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
                                   VERSION ${OPENRAVE_VERSION}
@@ -87,6 +74,10 @@ target_link_libraries(libopenrave-core
   PRIVATE boost_assertion_failed ${IVCON_LIBRARY} ${OPENRAVE_CORE_STATIC_LIBRARIES} openrave_gpgme
   PUBLIC libopenrave ${OPENRAVE_CORE_LIBRARIES}
 )
+if (OPT_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK)
+  target_link_libraries(libopenrave-core PUBLIC ${Python3_LIBRARIES})
+endif()
+
 install(TARGETS libopenrave-core
   EXPORT openrave-targets
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}
@@ -97,7 +88,7 @@ if( OPT_CBINDINGS )
   add_library(libopenrave-core_c SHARED openrave-core_c.cpp)
   add_dependencies(libopenrave-core_c libopenrave-core)
   # remove "${LIBOPENRAVE_LINK_FLAGS} until can figure out symbol visibility issue
-  set_target_properties(libopenrave-core_c PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core_c 
+  set_target_properties(libopenrave-core_c PROPERTIES OUTPUT_NAME openrave${OPENRAVE_LIBRARY_SUFFIX}-core_c
    SOVERSION 0 # always have it 0 since we're including the soversion as part of the library name
     VERSION ${OPENRAVE_VERSION}
     COMPILE_FLAGS "${LIBOPENRAVE_COMPILE_FLAGS} -DOPENRAVE_C_CORE_DLL_EXPORTS -DOPENRAVE_C_CORE_DLL -DOPENRAVE_CORE_DLL"

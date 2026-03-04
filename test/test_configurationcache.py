@@ -11,8 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
-from openravepy import openravepy_configurationcache
+from common_test_openrave import EnvironmentSetup
+from openravepy import openravepy_configurationcache, databases, interfaces, planningutils
+from openravepy import RaveCreateCollisionChecker, CollisionReport, RaveCreateSpaceSampler, SampleDataType, Planner
+from numpy import array, pi, mean
+import time
 
 class TestConfigurationCache(EnvironmentSetup):
     def setup(self):
@@ -148,20 +151,20 @@ class TestConfigurationCache(EnvironmentSetup):
         sampler = RaveCreateSpaceSampler(env, u'MT19937')
         sampler.SetSpaceDOF(robot.GetActiveDOF())
         with env:
-             self.log.info('testing exhaustive insertion...')
-             for iter in range(0, 10000):
-                 if iter%1000==0:
-                     self.log.info('%d valid insertions %d nodes...',iter,cache.GetNumNodes())
+            self.log.info('testing exhaustive insertion...')
+            for iter in range(0, 10000):
+                if iter%1000==0:
+                    self.log.info('%d valid insertions %d nodes...',iter,cache.GetNumNodes())
 
-                 samplevalues = 0.3*(sampler.SampleSequence(SampleDataType.Real,1)-0.5)
-                 nn = cache.FindNearestNode(samplevalues, 4)
-                 if nn is None:
-                     cache.SetFreeSpaceThresh(8)
-                     inserted = cache.InsertConfigurationDist(samplevalues, None, 1)
-                     assert(inserted == 1)
-                     cache.SetFreeSpaceThresh(1)
+                samplevalues = 0.3*(sampler.SampleSequence(SampleDataType.Real,1)-0.5)
+                nn = cache.FindNearestNode(samplevalues, 4)
+                if nn is None:
+                    cache.SetFreeSpaceThresh(8)
+                    inserted = cache.InsertConfigurationDist(samplevalues, None, 1)
+                    assert(inserted == 1)
+                    cache.SetFreeSpaceThresh(1)
 
-             self.log.info('exhaustive insertion test passed')
+            self.log.info('exhaustive insertion test passed')
 
     def test_updates(self):
         env = self.env

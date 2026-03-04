@@ -22,27 +22,37 @@
 #ifndef  OPENRAVE_ENVIRONMENTBASE_H
 #define  OPENRAVE_ENVIRONMENTBASE_H
 
+#include <openrave/config.h>
+#include <mutex>
+
 namespace OpenRAVE {
 
-#if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
-#if __cplusplus >= 201703L
-#include <mutex>
+#if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK == 1 && OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK == 1
+/// \brief recursive mutex with the functionality to predict a potential deadlock at runtime. Under multi threadings, when 1. the current thread has not locked this recursive mutex yet and 2. the Python interpreter has been initialized, the GIL must be locked before locking this recursive mutex. The lock function of this class checks this condition, and raises an exception when the user violates the locking order.
+class OPENRAVE_API RecursiveMutexWithGILCheck
+{
+public:
+  RecursiveMutexWithGILCheck() = default;
+  void lock();
+  void unlock();
+  bool try_lock();
+private:
+  void _UpdateIsMultiThreading(); ///< set _initialLockThreadId to the thread id which locks this recursive mutex at first. set _isMultiThreading to true when another thread tries to lock this recursive mutex.
+  bool _isMultiThreading = false; ///< set it true if another thread from _initialThreadId locks this mutex once so that this mutex does not check the locking order with GIL unnecessarily in single thread.
+  std::recursive_mutex _mutex;
+  std::mutex _mutexForInitialLockThreadId; ///< mutex for _initialLockThreadId
+  std::thread::id _initialLockThreadId; ///< thread id of the first thread trying to lock this recursive mutex when it is not std::thread::id(). Cannot set this at constructor because some uesrs create this mutex in a different thread from the one using this mutex for optimization. protected by _mutexForInitialLockThreadId.
+  static thread_local uint64_t _lockCounter;
+};
+using EnvironmentMutex = RecursiveMutexWithGILCheck;
+#elif OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK == 1
 using EnvironmentMutex = ::std::recursive_mutex;
-using EnvironmentLock  = ::std::unique_lock<std::recursive_mutex>;
-using defer_lock_t     = ::std::defer_lock_t;
-using try_to_lock_t    = ::std::try_to_lock_t;
-#else
-using EnvironmentMutex = ::boost::recursive_try_mutex;
-using EnvironmentLock  = EnvironmentMutex::scoped_lock;
-using defer_lock_t     = ::boost::defer_lock_t;
-using try_to_lock_t    = ::boost::try_to_lock_t;
-#endif // __cplusplus >= 201703L
-#else
+#else  // OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK == 0
 using EnvironmentMutex = ::std::mutex;
-using EnvironmentLock  = ::std::unique_lock<std::mutex>;
+#endif
+using EnvironmentLock  = ::std::unique_lock<EnvironmentMutex>;
 using defer_lock_t     = ::std::defer_lock_t;
 using try_to_lock_t    = ::std::try_to_lock_t;
-#endif // OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK
 
 /// \brief used when adding interfaces to the environment
 enum InterfaceAddMode
@@ -52,6 +62,18 @@ enum InterfaceAddMode
     IAM_StrictIdChecking = 2, ///< id is strict, will throw exception if it conflicts. id is not strict
     IAM_StrictNameIdChecking = 3, ///< name and id are both strict, will throw exception if it conflicts.
 };
+
+/// \brief Cached context that can be passed to successive Load/LoadURI/ReadKinBodyURI calls to cache referenced objects across calls
+class EnvironmentLoadContext
+{
+public:
+    virtual ~EnvironmentLoadContext() {
+    }
+
+    /// \brief resets any type of cached data
+    virtual void Reset() = 0;
+};
+using EnvironmentLoadContextPtr = boost::shared_ptr<EnvironmentLoadContext>;
 
 /** \brief Maintains a world state, which serves as the gateway to all functions offered through %OpenRAVE. See \ref arch_environment.
  */
@@ -69,7 +91,7 @@ public:
 
     /// \brief initializes the environment
     virtual void Init(bool bStartSimulationThread) = 0;
-            
+
     /// \brief Resets all objects of the scene (preserves all problems, planners). <b>[multi-thread safe]</b>
     ///
     /// Do not call inside a SimulationStep call
@@ -269,6 +291,9 @@ public:
     };
     typedef SelectionOptions TriangulateOptions;
 
+    /// \brief creates a load context for this environmnet used to cache common filesystem load operations
+    virtual EnvironmentLoadContextPtr CreateEnvironmentLoadContext() = 0;
+
     /** \brief Loads a scene from a file and adds all objects in the environment. <b>[multi-thread safe]</b>
 
         For collada readers, the options are passed through to
@@ -276,17 +301,17 @@ public:
         DAE::getIOPlugin()->setOption(key,value).
         \endcode
      */
-    virtual bool Load(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool Load(const std::string& filename, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
 
     /** \brief Loads a scene from a URI and adds all objects in the environment. <b>[multi-thread safe]</b>
 
         \param uri the URI of the file to load. Scheme can be 'file:' or 'openrave:' or 'X:' if openravescheme is overwritten by atts
         \param atts a string set of attributes to pass to each loader. For example: 'openravescheme' can be overwritten.
      */
-    virtual bool LoadURI(const std::string& uri, const AttributesList& atts = AttributesList()) = 0;
+    virtual bool LoadURI(const std::string& uri, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
 
     /// \brief Loads a scene from in-memory data and adds all objects in the environment. <b>[multi-thread safe]</b>
-    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
+    virtual bool LoadData(const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri = std::string(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
 
     /// \brief loads a scene from rapidjson document
     ///
@@ -296,10 +321,11 @@ public:
     /// \param vRemovedBodies the bodies removed from the environment in this operation
     /// \param atts attributes that is passed to JSONReader for further options.
     /// \param uri the URI of the scene. Used to inject the URI into the environment.
-    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
+    virtual bool LoadJSON(const rapidjson::Value& rEnvInfo, UpdateFromInfoMode updateMode, std::vector<KinBodyPtr>& vCreatedBodies, std::vector<KinBodyPtr>& vModifiedBodies, std::vector<KinBodyPtr>& vRemovedBodies, const AttributesList& atts = AttributesList(), const std::string& uri = std::string(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
 
-    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList()) {
-        return LoadData(data,atts);
+    virtual bool LoadXMLData(const std::string& data, const AttributesList& atts = AttributesList(), EnvironmentLoadContextPtr loadContext = nullptr)
+    {
+        return LoadData(data, atts, "", loadContext);
     }
 
     /** \brief Saves a scene depending on the filename extension. Default is in COLLADA format
@@ -349,9 +375,9 @@ public:
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_robot.
      */
-    virtual RobotBasePtr ReadRobotURI(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList()) {
-        return ReadRobotURI(robot,filename,atts);
+    virtual RobotBasePtr ReadRobotURI(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
+    virtual RobotBasePtr ReadRobotXMLFile(RobotBasePtr robot, const std::string& filename, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) {
+        return ReadRobotURI(robot, filename, atts, loadContext);
     }
 
     /// \brief Creates a new robot from a file with no extra load options specified. <b>[multi-thread safe]</b>
@@ -369,9 +395,9 @@ public:
         \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId.  More info in \ref arch_robot.
 \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
-    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList()) {
-        return ReadRobotData(robot,data,atts);
+    virtual RobotBasePtr ReadRobotData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
+    virtual RobotBasePtr ReadRobotXMLData(RobotBasePtr robot, const std::string& data, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) {
+        return ReadRobotData(robot, data, atts, "", loadContext);
     }
 
     /** \brief Initialize a robot from rapidjson document.
@@ -383,7 +409,7 @@ public:
         \param uri the URI of the scene. Used to inject the URI into the environment.
         \returns the robot that is created.
      */
-    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
+    virtual RobotBasePtr ReadRobotJSON(RobotBasePtr robot, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
 
     /** \brief Initializes a kinematic body from a resource file. The body is not added to the environment when calling this function. <b>[multi-thread safe]</b>
 
@@ -391,17 +417,17 @@ public:
         \param body If a null pointer is passed, a new body will be created, otherwise an existing robot will be filled
         \param atts The attribute/value pair specifying loading options. Defined in \ref arch_kinbody.
      */
-    virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList()) {
-        return ReadKinBodyURI(body,filename,atts);
+    virtual KinBodyPtr ReadKinBodyURI(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
+    virtual KinBodyPtr ReadKinBodyXMLFile(KinBodyPtr body, const std::string& filename, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) {
+        return ReadKinBodyURI(body, filename, atts, loadContext);
     }
 
     /// \brief Creates a new kinbody from an XML file with no extra load options specified. <b>[multi-thread safe]</b>
-    virtual KinBodyPtr ReadKinBodyURI(const std::string& filename) {
-        return ReadKinBodyURI(KinBodyPtr(),filename,AttributesList());
+    virtual KinBodyPtr ReadKinBodyURI(const std::string& filename, const EnvironmentLoadContextPtr& loadContext = nullptr) {
+        return ReadKinBodyURI(KinBodyPtr(),filename,AttributesList(), loadContext);
     }
-    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename) {
-        return ReadKinBodyURI(filename);
+    virtual KinBodyPtr ReadKinBodyXMLFile(const std::string& filename, const EnvironmentLoadContextPtr& loadContext = nullptr) {
+        return ReadKinBodyURI(filename, loadContext);
     }
 
     /** \brief Initializes a kinematic body from in-memory data. <b>[multi-thread safe]</b>
@@ -411,9 +437,9 @@ public:
         \param atts The attribute/value pair specifying loading options. If contains "uri", then will set the new body's uri string to it. If the file is COLLADA, can also specify articulatdSystemId for the then atts can have articulatdSystemId. More info in \ref arch_kinbody.
         \param uri the URI of the scene. Used to inject the URI into the environment.
      */
-    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string()) = 0;
-    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList()) {
-        return ReadKinBodyData(body,data,atts);
+    virtual KinBodyPtr ReadKinBodyData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList(), const std::string& uri=std::string(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
+    virtual KinBodyPtr ReadKinBodyXMLData(KinBodyPtr body, const std::string& data, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) {
+        return ReadKinBodyData(body, data, atts, "", loadContext);
     }
 
     /** \brief Initializes a kinematic body from rapidjson document.
@@ -425,7 +451,7 @@ public:
         \param uri the URI of the scene. Used to inject the URI into the environment.
         \returns the body that is created.
      */
-    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string &uri = std::string()) = 0;
+    virtual KinBodyPtr ReadKinBodyJSON(KinBodyPtr body, const rapidjson::Value& rEnvInfo, const AttributesList& atts = AttributesList(), const std::string& uri = std::string(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
 
     /** \brief Initializes an interface from a resource file. <b>[multi-thread safe]</b>
 
@@ -433,9 +459,9 @@ public:
         \param filename the name of the resource file, its extension determines the format of the file. See \ref supported_formats.
         \param atts The attribute/value pair specifying loading options. See the individual interface descriptions at \ref interface_concepts.
      */
-    virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
-    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList()) {
-        return ReadInterfaceURI(pinterface,type,filename,atts);
+    virtual InterfaceBasePtr ReadInterfaceURI(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) = 0;
+    virtual InterfaceBasePtr ReadInterfaceXMLFile(InterfaceBasePtr pinterface, InterfaceType type, const std::string& filename, const AttributesList& atts = AttributesList(), const EnvironmentLoadContextPtr& loadContext = nullptr) {
+        return ReadInterfaceURI(pinterface, type, filename, atts, loadContext);
     }
 
     virtual InterfaceBasePtr ReadInterfaceURI(const std::string& filename, const AttributesList& atts = AttributesList()) = 0;
@@ -492,6 +518,22 @@ public:
 
     virtual void Add(InterfaceBasePtr pinterface, bool bAnonymous, const std::string& cmdargs=std::string()) RAVE_DEPRECATED;
 
+    /** \brief Add an body to the environment
+        \param[in] pbody the pointer to an initialized body
+        \param[in] addMode One of IAM_X
+        \param[in] requestedEnvironmentBodyIndex if positive and none of existing body uses it, this is assigned to pbody. If positive and existing body uses it, exception is thrown. If non-positive, environment body index is decided internally.
+        \throw openrave_exception Throw if interface is invalid or already added
+     */
+    virtual void AddKinBody(KinBodyPtr pbody, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex) = 0;
+
+    /** \brief Add an robot to the environment
+        \param[in] probot the pointer to an initialized robot
+        \param[in] addMode One of IAM_X
+        \param[in] requestedEnvironmentBodyIndex if positive and none of existing body uses it, this is assigned to probot. If positive and existing body uses it, exception is thrown. If non-positive, environment body index is decided internally.
+        \throw openrave_exception Throw if interface is invalid or already added
+     */
+    virtual void AddRobot(RobotBasePtr probot, InterfaceAddMode addMode, int requestedEnvironmentBodyIndex) = 0;
+
     /// \brief bodycallback(body, action)
     ///
     /// \param body KinBodyPtr
@@ -546,7 +588,7 @@ public:
 
     /// \brief Return the number of bodies currently in the environment. <b>[multi-thread safe]</b>
     virtual int GetNumBodies() const = 0;
-    
+
     /// \brief Query a sensor from its name. <b>[multi-thread safe]</b>
     /// \return first sensor that matches with name, note that sensors attached to robots have the robot name as a prefix.
     virtual SensorBasePtr GetSensor(const std::string& name) const =0;
@@ -562,6 +604,15 @@ public:
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout=0) const = 0;
+
+    /// \brief Get all bodies loaded in the environment (including robots) that match the specified filter function. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the bodies.
+    /// \param[out] bodies filled with all the bodies
+    /// \param filterFunction unary predicate that takes a reference to a KinBody and returns true if that body should be selected by the filter
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     ///
@@ -616,6 +667,14 @@ public:
 
     /// Get the corresponding body from its unique network id
     virtual KinBodyPtr GetBodyFromEnvironmentBodyIndex(int bodyIndex) const = 0;
+
+    /// Get the name of a kinbody based on its index in the environment
+    /// Returns false if the index does not map to a valid body in the environment
+    virtual bool GetBodyNameFromEnvironmentBodyIndex(int bodyIndex, std::string& out) const = 0;
+
+    /// Fetch the index of a body in the environment by name
+    /// Returns zero if no body with that name exists in the environment
+    virtual int GetEnvironmentBodyIndexByName(string_view bodyName) const = 0;
 
     /// Get the corresponding bodies from its unique network id
     ///
@@ -764,7 +823,7 @@ public:
     ///
     /// extents are half the width, height, and depth of the box
     /// \return handle to plotted boxes, graph is removed when handle is destroyed (goes out of scope). This requires the user to always store the handle in a persistent variable if the plotted graphics are to remain on the viewer.
-    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents) = 0;
+    virtual OpenRAVE::GraphHandlePtr drawboxarray(const std::vector<RaveVector<float>>& vpos, const RaveVector<float>& vextents, const std::vector<RaveVector<float>>& colors = {}) = 0;
 
     /// \brief Draws a AABB. <b>[multi-thread safe]</b>
     ///

@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyCameraIntrinsics
+class OPENRAVEPY_API PyCameraIntrinsics
 {
 public:
     PyCameraIntrinsics(const geometry::RaveCameraIntrinsics<float>& intrinsics = geometry::RaveCameraIntrinsics<float>());
@@ -38,7 +38,7 @@ public:
     dReal focal_length;
 };
 
-class PyCameraGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyCameraGeomData : public PySensorGeometry
 {
 public:
     PyCameraGeomData();
@@ -62,7 +62,7 @@ private:
     void _Update(OPENRAVE_SHARED_PTR<SensorBase::CameraGeomData const> pgeom);
 };
 
-class PyLaserGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyLaserGeomData : public PySensorGeometry
 {
 public:
     PyLaserGeomData();
@@ -81,7 +81,7 @@ public:
     dReal time_scan = 0.0;
 };
 
-class PyJointEncoderGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyJointEncoderGeomData : public PySensorGeometry
 {
 public:
     PyJointEncoderGeomData();
@@ -93,7 +93,7 @@ public:
     object resolution = py::none_();
 };
 
-class PyForce6DGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyForce6DGeomData : public PySensorGeometry
 {
 public:
     PyForce6DGeomData();
@@ -113,7 +113,7 @@ private:
     void _Update(OPENRAVE_SHARED_PTR<SensorBase::Force6DGeomData const> pgeom);
 };
 
-class PyIMUGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyIMUGeomData : public PySensorGeometry
 {
 public:
     PyIMUGeomData();
@@ -125,7 +125,7 @@ public:
     dReal time_measurement = 0.0;
 };
 
-class PyOdometryGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyOdometryGeomData : public PySensorGeometry
 {
 public:
     PyOdometryGeomData();
@@ -138,7 +138,7 @@ public:
 };
 
 // TODO fill rest of fields
-class PyTactileGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyTactileGeomData : public PySensorGeometry
 {
 public:
     PyTactileGeomData();
@@ -150,7 +150,7 @@ public:
     dReal thickness = 0.0;
 };
 
-class PyActuatorGeomData : public PySensorGeometry
+class OPENRAVEPY_API PyActuatorGeomData : public PySensorGeometry
 {
 public:
     PyActuatorGeomData();
@@ -169,7 +169,7 @@ public:
     dReal viscousfriction = 0.0;
 };
 
-class PySensorBase : public PyInterfaceBase
+class OPENRAVEPY_API PySensorBase : public PyInterfaceBase
 {
 protected:
     SensorBasePtr _psensor;
@@ -313,6 +313,20 @@ public:
     virtual std::string __repr__();
     virtual std::string __str__();
     virtual object __unicode__();
+};
+
+struct SensorBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    SensorBaseInitializer(py::module& m_);
+    void init_openravepy_sensor();
+    py::module& m;
+    py::class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, PyInterfaceBase> sensor;
+#else
+    SensorBaseInitializer();
+    void init_openravepy_sensor();
+    py::class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> > sensor;
+#endif
 };
 
 } // namespace openravepy

@@ -31,6 +31,11 @@
 #include <openravepy/openravepy_module.h>
 #include <openravepy/openravepy_physicalenginebase.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_controllerbase.h>
+#include <openravepy/openravepy_ikparameterization.h>
+#include <openravepy/openravepy_iksolverbase.h>
+#include <openravepy/openravepy_plannerbase.h>
+#include <openravepy/openravepy_trajectorybase.h>
 
 #define OPENRAVE_EXCEPTION_CLASS_NAME "_OpenRAVEException"
 
@@ -75,9 +80,10 @@ py::object toPyObject(const rapidjson::Value& value)
     }
     case rapidjson::kArrayType:
     {
-        py::list l;
+        py::list l(value.Size());
+        size_t writeIndex = 0;
         for (rapidjson::Value::ConstValueIterator it = value.Begin(); it != value.End(); ++it) {
-            l.append(toPyObject(*it));
+            l[writeIndex++] = toPyObject(*it);
         }
         return l;
     }
@@ -256,7 +262,9 @@ void toRapidJSONValue(const object &obj, rapidjson::Value &value, rapidjson::Doc
 #if PY_MAJOR_VERSION >= 3
     else if (PyUnicode_Check(obj.ptr()))
     {
-        value.SetString(PyUnicode_AsUTF8(obj.ptr()), PyUnicode_GET_SIZE(obj.ptr()), allocator);
+        ssize_t size;
+        const char *utf8 = PyUnicode_AsUTF8AndSize(obj.ptr(), &size);
+        value.SetString(utf8, size, allocator);
     }
 #else
     else if (PyString_Check(obj.ptr()))
@@ -756,6 +764,9 @@ void ViewerManager::_RunViewerThread()
         bool bShowViewer = true;
         {
             std::unique_lock<std::mutex> lock(_mutexViewer);
+            if (_bShutdown) {
+                break;
+            }
             if( _listviewerinfos.size() == 0 ) {
                 _conditionViewer.wait(lock);
                 if( _listviewerinfos.size() == 0 ) {
@@ -980,6 +991,7 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
 {
     std::stringstream sin(in);
     std::stringstream sout;
+    bool successSendCommand;
     {
         openravepy::PythonThreadSaverPtr statesaver;
         openravepy::PyEnvironmentLockSaverPtr envsaver;
@@ -997,9 +1009,10 @@ object PyInterfaceBase::SendCommand(const string& in, bool releasegil, bool lock
             }
         }
         sout << std::setprecision(std::numeric_limits<dReal>::digits10+1);     /// have to do this or otherwise precision gets lost
-        if( !_pbase->SendCommand(sout,sin) ) {
-            return py::none_();
-        }
+        successSendCommand = _pbase->SendCommand(sout,sin);
+    }
+    if( !successSendCommand ) {
+        return py::none_();
     }
     return py::to_object(sout.str());
 }
@@ -1045,6 +1058,11 @@ object PyReadablesContainer::GetReadableInterfaces()
 object PyReadablesContainer::GetReadableInterface(const std::string& id)
 {
     return toPyReadable(_pbase->GetReadableInterface(id));
+}
+
+bool PyReadablesContainer::HasReadableInterface(const std::string& id)
+{
+    return _pbase->HasReadableInterface(id);
 }
 
 void PyReadablesContainer::SetReadableInterface(const std::string& id, object oreadable)
@@ -1101,6 +1119,9 @@ static std::vector<KinBody::KinBodyInfoPtr> _ExtractBodyInfoArray(object vBodyIn
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for BodyInfos");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return vBodyInfos;
 }
@@ -1774,6 +1795,26 @@ bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBo
     return bCollision;
 }
 
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyLinkPtr pylink)
+{
+    return _penv->CheckCollision(pyray->r, openravepy::GetKinBodyLinkConst(pylink));
+}
+
+bool PyEnvironmentBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyLinkPtr pylink, PyCollisionReportPtr pyreport)
+{
+    CollisionReport report;
+    CollisionReportPtr preport;
+    if( !!pyreport ) {
+        preport = CollisionReportPtr(&report,utils::null_deleter());
+    }
+
+    bool bCollision = _penv->CheckCollision(pyray->r, openravepy::GetKinBodyLinkConst(pylink), preport);
+    if( !!pyreport ) {
+        pyreport->Init(report);
+    }
+    return bCollision;
+}
+
 object PyEnvironmentBase::CheckCollisionRays(py::numeric::array rays, PyKinBodyPtr pbody, bool bFrontFacingOnly)
 {
     object shape = rays.attr("shape");
@@ -2168,20 +2209,28 @@ object PyEnvironmentBase::ReadTrimeshData(const std::string& data, const std::st
     return toPyTriMesh(*ptrimesh);
 }
 
-void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, const std::string& cmdargs)
+
+InterfaceAddMode _ExtractAddMode(const py::object oAddMode, PyInterfaceBasePtr pinterface, const EnvironmentBasePtr& penv)
 {
     InterfaceAddMode addMode = IAM_StrictNameChecking;
     if( !IS_PYTHONOBJECT_NONE(oAddMode) ) {
         if (PyBool_Check(oAddMode.ptr())) {
             addMode = py::extract<bool>(oAddMode) ? IAM_AllowRenaming : IAM_StrictNameChecking;
-            if( pinterface->GetInterfaceType() != PT_Module ) {
-                RAVELOG_WARN_FORMAT("env=%s trying to use 'anonymous' flag when adding object '%s' of interface type '%d' via Add", _penv->GetNameId()%pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
+            const InterfaceType type = pinterface->GetInterfaceType();
+            if( type != PT_Module && type != PT_Robot && type != PT_KinBody ) {
+                RAVELOG_WARN_FORMAT("env=%s trying to use 'anonymous' flag when adding object '%s' of interface type '%d' via Add", penv->GetNameId()%pinterface->GetXMLId()%(int)pinterface->GetInterfaceType());
             }
         }
         else {
             addMode = py::extract<InterfaceAddMode>(oAddMode);
         }
     }
+    return addMode;
+}
+
+void PyEnvironmentBase::Add(PyInterfaceBasePtr pinterface, py::object oAddMode, const std::string& cmdargs)
+{
+    const InterfaceAddMode addMode = _ExtractAddMode(oAddMode, pinterface, _penv);
     PythonThreadSaver threadsaver;
     _penv->Add(pinterface->GetInterfaceBase(), addMode, cmdargs);
 }
@@ -2193,6 +2242,10 @@ void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody, bool bAnonymous) {
     RAVELOG_WARN("Calling AddKinBody with bAnonymous, should switch to IAM_X signals");
     CHECK_POINTER(pbody); _penv->Add(openravepy::GetKinBody(pbody),bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
 }
+void PyEnvironmentBase::AddKinBody(PyKinBodyPtr pbody, py::object oAddMode, int requestedEnvironmentBodyIndex) {
+    CHECK_POINTER(pbody);
+    _penv->AddKinBody(openravepy::GetKinBody(pbody), _ExtractAddMode(oAddMode, pbody, _penv), requestedEnvironmentBodyIndex);
+}
 void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot) {
     CHECK_POINTER(robot);
     _penv->Add(openravepy::GetRobot(robot), IAM_StrictNameChecking);
@@ -2201,6 +2254,10 @@ void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot, bool bAnonymous) {
     RAVELOG_WARN("Calling AddRobot with bAnonymous, should switch to IAM_X signals");
     CHECK_POINTER(robot);
     _penv->Add(openravepy::GetRobot(robot), bAnonymous ? IAM_AllowRenaming : IAM_StrictNameChecking);
+}
+void PyEnvironmentBase::AddRobot(PyRobotBasePtr robot, py::object oAddMode, int requestedEnvironmentBodyIndex) {
+    CHECK_POINTER(robot);
+    _penv->AddRobot(openravepy::GetRobot(robot), _ExtractAddMode(oAddMode, robot, _penv), requestedEnvironmentBodyIndex);
 }
 void PyEnvironmentBase::AddSensor(PySensorBasePtr sensor) {
     CHECK_POINTER(sensor);
@@ -2581,32 +2638,55 @@ size_t PyEnvironmentBase::_getGraphColors(object ocolors, std::vector<float>&vco
     return 1;
 }
 
-size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<float> >& vvectors) {
+size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<float> >& vvectors, size_t ncol) {
     std::vector<float> vpoints;
+    if (ncol != 3 && ncol != 4) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("num col must be 3 or 4: %d"), ncol,ORE_InvalidArguments);
+    }
     if( PyObject_HasAttrString(odata.ptr(),"shape") ) {
         object datashape = odata.attr("shape");
         switch(len(datashape)) {
         case 1: {
             const size_t n = len(odata);
-            if (n%3) {
+            if (n%ncol) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
             }
-            for(size_t i = 0; i < n/3; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
-                                                        py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
+            for(size_t i = 0; i < n/ncol; ++i) {
+                if (ncol == 3) {
+                    RaveVector<float> v(py::extract<float>(odata[py::to_object(3*i)]),
+                            py::extract<float>(odata[py::to_object(3*i+1)]),
+                            py::extract<float>(odata[py::to_object(3*i+2)]));
+                    vvectors.emplace_back(v);
+                } else {
+                    RaveVector<float> v(py::extract<float>(odata[py::to_object(4*i)]),
+                            py::extract<float>(odata[py::to_object(4*i+1)]),
+                            py::extract<float>(odata[py::to_object(4*i+2)]),
+                            py::extract<float>(odata[py::to_object(4*i+3)]));
+                    vvectors.emplace_back(v);
+                }
             }
-            return n/3;
+            return n/ncol;
         }
         case 2: {
             const size_t num = py::extract<size_t>(datashape[py::to_object(0)]);
             const size_t dim = py::extract<size_t>(datashape[py::to_object(1)]);
-            if(dim != 3) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%dim,ORE_InvalidArguments);
+            if(dim != ncol) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %dx%d"), num%ncol,ORE_InvalidArguments);
             }
             const object& o = odata.attr("flat");
             for(size_t i = 0; i < num; ++i) {
-                vvectors.emplace_back(RaveVector<float>(py::extract<float>(o[py::to_object(3*i)]),
-                                                        py::extract<float>(o[py::to_object(3*i+1)]), py::extract<float>(o[py::to_object(3*i+2)])));
+                if (ncol == 3) {
+                    RaveVector<float> v(py::extract<float>(odata[py::to_object(3*i)]),
+                            py::extract<float>(odata[py::to_object(3*i+1)]),
+                            py::extract<float>(odata[py::to_object(3*i+2)]));
+                    vvectors.emplace_back(v);
+                } else {
+                    RaveVector<float> v(py::extract<float>(odata[py::to_object(4*i)]),
+                            py::extract<float>(odata[py::to_object(4*i+1)]),
+                            py::extract<float>(odata[py::to_object(4*i+2)]),
+                            py::extract<float>(odata[py::to_object(4*i+3)]));
+                    vvectors.emplace_back(v);
+                }
             }
             return num;
         }
@@ -2616,12 +2696,22 @@ size_t PyEnvironmentBase::_getListVector(object odata, std::vector<RaveVector<fl
     }
     // assume it is a regular 1D list
     const size_t n = len(odata);
-    if (n%3) {
+    if (n%ncol) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("data have bad size %d"), n,ORE_InvalidArguments);
     }
-    for(size_t i = 0; i < n/3; ++i) {
-        vvectors.emplace_back(RaveVector<float>(py::extract<float>(odata[py::to_object(3*i)]),
-                                                py::extract<float>(odata[py::to_object(3*i+1)]), py::extract<float>(odata[py::to_object(3*i+2)])));
+    for(size_t i = 0; i < n/ncol; ++i) {
+        if (ncol == 3) {
+            RaveVector<float> v(py::extract<float>(odata[py::to_object(3*i)]),
+                    py::extract<float>(odata[py::to_object(3*i+1)]),
+                    py::extract<float>(odata[py::to_object(3*i+2)]));
+            vvectors.emplace_back(v);
+        } else {
+            RaveVector<float> v(py::extract<float>(odata[py::to_object(4*i)]),
+                    py::extract<float>(odata[py::to_object(4*i+1)]),
+                    py::extract<float>(odata[py::to_object(4*i+2)]),
+                    py::extract<float>(odata[py::to_object(4*i+3)]));
+            vvectors.emplace_back(v);
+        }
     }
     return vvectors.size();
 }
@@ -2724,18 +2814,22 @@ object PyEnvironmentBase::drawbox(object opos, object oextents, object ocolor)
     return toPyGraphHandle(_penv->drawbox(ExtractVector3(opos),ExtractVector3(oextents)));
 }
 
-object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocolor)
+object PyEnvironmentBase::drawboxarray(object opos, object oextents, object ocolors)
 {
-    RaveVector<float> vcolor(1,0.5,0.5,1);
-    if( !IS_PYTHONOBJECT_NONE(ocolor) ) {
-        vcolor = ExtractVector34(ocolor,1.0f);
+    std::vector<RaveVector<float> > vcolors;
+    size_t numcolors = 0;
+    if( !IS_PYTHONOBJECT_NONE(ocolors) ) {
+        numcolors = _getListVector(ocolors, vcolors, 4);
     }
     std::vector<RaveVector<float> > vvectors;
-    const size_t numpos = _getListVector(opos, vvectors);
+    const size_t numpos = _getListVector(opos, vvectors, 3);
     if (numpos <= 0) {
-        throw OpenRAVEException("a list of positions is empty",ORE_InvalidArguments);
+        throw OpenRAVEException("a list of positions is empty", ORE_InvalidArguments);
     }
-    return toPyGraphHandle(_penv->drawboxarray(vvectors,ExtractVector3(oextents)));
+    if (numcolors > 0 && numpos != numcolors) {
+        throw OpenRAVEException("number of positions and colors mismatch", ORE_InvalidArguments);
+    }
+    return toPyGraphHandle(_penv->drawboxarray(vvectors, ExtractVector3(oextents), vcolors));
 }
 
 object PyEnvironmentBase::drawaabb(object oaabb, object otransform, object ocolor, float transparency)
@@ -2857,20 +2951,33 @@ object PyEnvironmentBase::drawtrimesh(object opoints, object oindices, object oc
     return toPyGraphHandle(_penv->drawtrimesh(vpoints.data(),sizeof(float)*3,pindices,numTriangles,RaveVector<float>(1,0.5,0.5,1)));
 }
 
-object PyEnvironmentBase::GetBodies()
+static object _KinbodyVectorToPyArray(const std::vector<KinBodyPtr>& vBodies, const boost::shared_ptr<PyEnvironmentBase>& sharedEnvironmentThis)
 {
-    std::vector<KinBodyPtr> vbodies;
-    _penv->GetBodies(vbodies);
-    py::list bodies;
-    FOREACHC(itbody, vbodies) {
-        if( (*itbody)->IsRobot() ) {
-            bodies.append(openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(*itbody),shared_from_this()));
+    py::list bodies(vBodies.size()); // Preallocate
+    for (size_t bodyIndex = 0; bodyIndex < vBodies.size(); bodyIndex++) {
+        const KinBodyPtr& pBody = vBodies[bodyIndex];
+        if (pBody->IsRobot()) {
+            bodies[bodyIndex] = openravepy::toPyRobot(RaveInterfaceCast<RobotBase>(pBody), sharedEnvironmentThis);
         }
         else {
-            bodies.append(openravepy::toPyKinBody(*itbody,shared_from_this()));
+            bodies[bodyIndex] = openravepy::toPyKinBody(pBody, sharedEnvironmentThis);
         }
     }
     return bodies;
+}
+
+object PyEnvironmentBase::GetBodies()
+{
+    std::vector<KinBodyPtr> vBodies;
+    _penv->GetBodies(vBodies);
+    return _KinbodyVectorToPyArray(vBodies, shared_from_this());
+}
+
+object PyEnvironmentBase::GetBodiesWithReadableInterface(const std::string& readableInterfaceName)
+{
+    std::vector<KinBodyPtr> vBodies;
+    _penv->GetBodiesMatchingFilter(vBodies, std::bind(&KinBody::HasReadableInterface, std::placeholders::_1, std::ref(readableInterfaceName)));
+    return _KinbodyVectorToPyArray(vBodies, shared_from_this());
 }
 
 int PyEnvironmentBase::GetNumBodies()
@@ -3374,6 +3481,8 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a
+    init_python_bindings(m);
+    init_openravepy_global_basic(m);
 #else // USE_PYBIND11_PYTHON_BINDINGS
 #if BOOST_VERSION >= 103500
     docstring_options doc_options;
@@ -3387,14 +3496,15 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
     float_from_number<float>();
     float_from_number<double>();
     init_python_bindings();
+    init_openravepy_global_basic();
     typedef return_value_policy< copy_const_reference > return_copy_const_ref;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 
     static PyOpenRAVEException<OpenRAVEException> pyOpenRAVEException(m, OPENRAVE_EXCEPTION_CLASS_NAME, PyExc_Exception);
-    pyOpenRAVEException.def_property_readonly("message",[](py::object o) {
-        return o.attr("args")[0];
+    pyOpenRAVEException.def_property_readonly("message",[](py::object o) -> py::object {
+        return o.attr("args")[py::to_object(0)];
     });
     pyOpenRAVEException.def_property_readonly("errortype",[](py::object o) {
         py::object oargs = o.attr("args");
@@ -3508,6 +3618,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
         .def("GetReadableInterfaces",&PyReadablesContainer::GetReadableInterfaces, DOXY_FN(ReadablesContainer,GetReadableInterfaces))
         .def("GetReadableInterface",&PyReadablesContainer::GetReadableInterface, DOXY_FN(ReadablesContainer,GetReadableInterface))
         .def("SetReadableInterface",&PyReadablesContainer::SetReadableInterface, PY_ARGS("id","readable") DOXY_FN(ReadablesContainer,SetReadableInterface))
+        .def("HasReadableInterface",&PyReadablesContainer::HasReadableInterface, DOXY_FN(ReadablesContainer,HasReadableInterface))
         ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -3567,6 +3678,48 @@ Because race conditions can pop up when trying to lock the openrave environment 
         ;
     }
 
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+#define MODULE(m) m
+#else
+#define MODULE(m)
+#endif
+
+    // Declare classes first, cf https://pybind11.readthedocs.io/en/stable/advanced/misc.html#avoiding-c-types-in-docstrings
+    IkParameterizationInitializer ikParameterizationInitializer(MODULE(m));
+    IkSolverBaseInitializer ikSolverBaseInitializer(MODULE(m));
+    KinBodyInitializer kinBodyInitializer(MODULE(m));
+    CollisionCheckerBaseInitializer collisionCheckerBaseInitializer(MODULE(m));
+    CollisionReportInitializer collisionReportInitializer(MODULE(m));
+    SensorBaseInitializer sensorBaseInitializer(MODULE(m));
+    RobotBaseInitializer robotBaseInitializer(MODULE(m));
+    ModuleBaseInitializer moduleBaseInitializer(MODULE(m));
+    PhysicsEngineBaseInitializer physicsEngineBaseInitializer(MODULE(m));
+    TrajectoryBaseInitializer trajectoryBaseInitializer(MODULE(m));
+    PlannerBaseInitializer plannerBaseInitializer(MODULE(m));
+    ControllerBaseInitializer controllerBaseInitializer(MODULE(m));
+    openravepy::init_openravepy_global(MODULE(m));
+
+    // Now each initializer declares functions
+    ikParameterizationInitializer.init_openravepy_ikparameterization();
+    ikSolverBaseInitializer.init_openravepy_iksolver();
+    kinBodyInitializer.init_openravepy_kinbody();
+    collisionCheckerBaseInitializer.init_openravepy_collisionchecker();
+    collisionReportInitializer.init_openravepy_collisionreport();
+    sensorBaseInitializer.init_openravepy_sensor();
+    robotBaseInitializer.init_openravepy_robot();
+    moduleBaseInitializer.init_openravepy_module();
+    physicsEngineBaseInitializer.init_openravepy_physicsengine();
+    trajectoryBaseInitializer.init_openravepy_trajectory();
+    plannerBaseInitializer.init_openravepy_planner();
+    controllerBaseInitializer.init_openravepy_controller();
+
+    openravepy::InitPlanningUtils(MODULE(m));
+    openravepy::init_openravepy_sensorsystem(MODULE(m));
+    openravepy::init_openravepy_spacesampler(MODULE(m));
+    openravepy::init_openravepy_viewer(MODULE(m));
+    openravepy::init_openravepy_global_functions(MODULE(m));
+
+#undef MODULE
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object environmentbaseinfo = class_<PyEnvironmentBase::PyEnvironmentBaseInfo, OPENRAVE_SHARED_PTR<PyEnvironmentBase::PyEnvironmentBaseInfo> >(m, "EnvironmentBaseInfo", DOXY_CLASS(EnvironmentBase::EnvironmentBaseInfo))
@@ -3609,20 +3762,22 @@ Because race conditions can pop up when trying to lock the openrave environment 
         bool (PyEnvironmentBase::*pcolbr)(PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolbb)(PyKinBodyPtr,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolbbr)(PyKinBodyPtr, PyKinBodyPtr,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcoll)(object) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcollr)(object, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcolll)(object,object) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcolllr)(object,object, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcollb)(object, PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcollbr)(object, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcolle)(object,object,object) = &PyEnvironmentBase::CheckCollision;
-        bool (PyEnvironmentBase::*pcoller)(object, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolbe)(PyKinBodyPtr,object,object) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolber)(PyKinBodyPtr, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolyb)(OPENRAVE_SHARED_PTR<PyRay>,PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolybr)(OPENRAVE_SHARED_PTR<PyRay>, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolyl)(OPENRAVE_SHARED_PTR<PyRay>,PyLinkPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolylr)(OPENRAVE_SHARED_PTR<PyRay>, PyLinkPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcoly)(OPENRAVE_SHARED_PTR<PyRay>) = &PyEnvironmentBase::CheckCollision;
         bool (PyEnvironmentBase::*pcolyr)(OPENRAVE_SHARED_PTR<PyRay>, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcoll)(object) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcollr)(object, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcollb)(object, PyKinBodyPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcollbr)(object, PyKinBodyPtr, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolll)(object,object) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolllr)(object,object, PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcolle)(object,object,object) = &PyEnvironmentBase::CheckCollision;
+        bool (PyEnvironmentBase::*pcoller)(object, object,object,PyCollisionReportPtr) = &PyEnvironmentBase::CheckCollision;
 
         void (PyEnvironmentBase::*Lock1)() = &PyEnvironmentBase::Lock;
         bool (PyEnvironmentBase::*Lock2)(float) = &PyEnvironmentBase::Lock;
@@ -3636,8 +3791,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
         void (PyEnvironmentBase::*addkinbody1)(PyKinBodyPtr) = &PyEnvironmentBase::AddKinBody;
         void (PyEnvironmentBase::*addkinbody2)(PyKinBodyPtr,bool) = &PyEnvironmentBase::AddKinBody;
+        void (PyEnvironmentBase::*addkinbody3)(PyKinBodyPtr,object,int) = &PyEnvironmentBase::AddKinBody;
         void (PyEnvironmentBase::*addrobot1)(PyRobotBasePtr) = &PyEnvironmentBase::AddRobot;
         void (PyEnvironmentBase::*addrobot2)(PyRobotBasePtr,bool) = &PyEnvironmentBase::AddRobot;
+        void (PyEnvironmentBase::*addrobot3)(PyRobotBasePtr,object,int) = &PyEnvironmentBase::AddRobot;
         void (PyEnvironmentBase::*addsensor1)(PySensorBasePtr) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*addsensor2)(PySensorBasePtr,bool) = &PyEnvironmentBase::AddSensor;
         void (PyEnvironmentBase::*setuserdata1)(PyUserData) = &PyEnvironmentBase::SetUserData;
@@ -3683,20 +3840,22 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("CheckCollision",pcolbr, PY_ARGS("body","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbb, PY_ARGS("body1","body2") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolbbr, PY_ARGS("body1","body2","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; KinBodyConstPtr; CollisionReportPtr"))
-                     .def("CheckCollision",pcoll, PY_ARGS("link") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; CollisionReportPtr"))
-                     .def("CheckCollision",pcollr, PY_ARGS("link","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; CollisionReportPtr"))
-                     .def("CheckCollision",pcolll, PY_ARGS("link1","link2") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBody::LinkConstPtr; CollisionReportPtr"))
-                     .def("CheckCollision",pcolllr, PY_ARGS("link1","link2","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBody::LinkConstPtr; CollisionReportPtr"))
-                     .def("CheckCollision",pcollb, PY_ARGS("link","body") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBodyConstPtr; CollisionReportPtr"))
-                     .def("CheckCollision",pcollbr, PY_ARGS("link","body","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBodyConstPtr; CollisionReportPtr"))
-                     .def("CheckCollision",pcolle, PY_ARGS("link","bodyexcluded","linkexcluded") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; const std::vector; const std::vector; CollisionReportPtr"))
-                     .def("CheckCollision",pcoller, PY_ARGS("link","bodyexcluded","linkexcluded","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; const std::vector; const std::vector; CollisionReportPtr"))
                      .def("CheckCollision",pcolbe, PY_ARGS("body","bodyexcluded","linkexcluded") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; const std::vector; const std::vector; CollisionReportPtr"))
                      .def("CheckCollision",pcolber, PY_ARGS("body","bodyexcluded","linkexcluded","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBodyConstPtr; const std::vector; const std::vector; CollisionReportPtr"))
                      .def("CheckCollision",pcolyb, PY_ARGS("ray","body") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; KinBodyConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcolybr, PY_ARGS("ray","body","report") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; KinBodyConstPtr; CollisionReportPtr"))
+                     .def("CheckCollision",pcolyl, PY_ARGS("ray","link") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; KinBody::LinkConstPtr;"))
+                     .def("CheckCollision",pcolylr, PY_ARGS("ray","link","report") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; KinBody::LinkConstPtr; CollisionReportPtr"))
                      .def("CheckCollision",pcoly, PY_ARGS("ray") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
                      .def("CheckCollision",pcolyr, PY_ARGS("ray", "report") DOXY_FN(EnvironmentBase,CheckCollision "const RAY; CollisionReportPtr"))
+                     .def("CheckCollision",pcoll, PY_ARGS("link") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; CollisionReportPtr"))  // must follow the other 1-arg overloads; this function overload matches generic (object) signatures
+                     .def("CheckCollision",pcollr, PY_ARGS("link","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; CollisionReportPtr"))
+                     .def("CheckCollision",pcollb, PY_ARGS("link","body") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBodyConstPtr; CollisionReportPtr"))
+                     .def("CheckCollision",pcollbr, PY_ARGS("link","body","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBodyConstPtr; CollisionReportPtr"))
+                     .def("CheckCollision",pcolll, PY_ARGS("link1","link2") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBody::LinkConstPtr; CollisionReportPtr"))  // must follow the other 2-arg overloads; this function overload matches generic (object) signatures
+                     .def("CheckCollision",pcolllr, PY_ARGS("link1","link2","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; KinBody::LinkConstPtr; CollisionReportPtr"))
+                     .def("CheckCollision",pcolle, PY_ARGS("link","bodyexcluded","linkexcluded") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; const std::vector; const std::vector; CollisionReportPtr"))  // must follow the other 3-arg overloads; this function overload matches generic (object) signatures
+                     .def("CheckCollision",pcoller, PY_ARGS("link","bodyexcluded","linkexcluded","report") DOXY_FN(EnvironmentBase,CheckCollision "KinBody::LinkConstPtr; const std::vector; const std::vector; CollisionReportPtr"))
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("CheckCollisionRays",&PyEnvironmentBase::CheckCollisionRays,
                           "rays"_a,
@@ -3812,8 +3971,10 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
                      .def("AddKinBody",addkinbody1, PY_ARGS("body") DOXY_FN(EnvironmentBase,AddKinBody))
                      .def("AddKinBody",addkinbody2, PY_ARGS("body","anonymous") DOXY_FN(EnvironmentBase,AddKinBody))
+                     .def("AddKinBody",addkinbody3, PY_ARGS("body","addMode","requestedEnvironmentBodyIndex") DOXY_FN(EnvironmentBase,AddKinBody))
                      .def("AddRobot",addrobot1, PY_ARGS("robot") DOXY_FN(EnvironmentBase,AddRobot))
                      .def("AddRobot",addrobot2, PY_ARGS("robot","anonymous") DOXY_FN(EnvironmentBase,AddRobot))
+                     .def("AddRobot",addrobot3, PY_ARGS("robot","addMode","requestedEnvironmentBodyIndex") DOXY_FN(EnvironmentBase,AddRobot))
                      .def("AddSensor",addsensor1, PY_ARGS("sensor") DOXY_FN(EnvironmentBase,AddSensor))
                      .def("AddSensor",addsensor2, PY_ARGS("sensor","anonymous") DOXY_FN(EnvironmentBase,AddSensor))
                      .def("AddViewer",addsensor2, PY_ARGS("sensor","anonymous") DOXY_FN(EnvironmentBase,AddViewer))
@@ -3950,11 +4111,11 @@ Because race conditions can pop up when trying to lock the openrave environment 
                      .def("drawboxarray", &PyEnvironmentBase::drawboxarray,
                           "pos"_a,
                           "extents"_a,
-                          "color"_a = py::none_(),
+                          "colors"_a = py::none_(),
                           DOXY_FN(EnvironmentBase,drawboxarray)
                           )
 #else
-                     .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawboxarray_overloads(PY_ARGS("pos","extents","color") DOXY_FN(EnvironmentBase,drawboxarray)))
+                     .def("drawboxarray",&PyEnvironmentBase::drawboxarray,drawboxarray_overloads(PY_ARGS("pos","extents","colors") DOXY_FN(EnvironmentBase,drawboxarray)))
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                      .def("drawaabb", &PyEnvironmentBase::drawaabb,
@@ -3988,6 +4149,7 @@ Because race conditions can pop up when trying to lock the openrave environment 
 #endif
                      .def("GetRobots",&PyEnvironmentBase::GetRobots, DOXY_FN(EnvironmentBase,GetRobots))
                      .def("GetBodies",&PyEnvironmentBase::GetBodies, DOXY_FN(EnvironmentBase,GetBodies))
+                     .def("GetBodiesWithReadableInterface",&PyEnvironmentBase::GetBodiesWithReadableInterface, "Fetch fetch all bodies that have the given readable interface present")
                      .def("GetNumBodies",&PyEnvironmentBase::GetNumBodies, DOXY_FN(EnvironmentBase,GetNumBodies))
                      .def("GetSensors",&PyEnvironmentBase::GetSensors, DOXY_FN(EnvironmentBase,GetSensors))
                      .def("UpdatePublishedBodies",&PyEnvironmentBase::UpdatePublishedBodies, DOXY_FN(EnvironmentBase,UpdatePublishedBodies))
@@ -4304,44 +4466,6 @@ Because race conditions can pop up when trying to lock the openrave environment 
     scope().attr("__docformat__") = "restructuredtext";
     scope().attr("__pythonbinding__") = "Boost.Python." + std::to_string(BOOST_VERSION);
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    openravepy::init_openravepy_global(m);
-    openravepy::InitPlanningUtils(m);
-
-    openravepy::init_openravepy_collisionchecker(m);
-    openravepy::init_openravepy_controller(m);
-    openravepy::init_openravepy_ikparameterization(m);
-    openravepy::init_openravepy_iksolver(m);
-    openravepy::init_openravepy_kinbody(m);
-    openravepy::init_openravepy_robot(m);
-    openravepy::init_openravepy_module(m);
-    openravepy::init_openravepy_physicsengine(m);
-    openravepy::init_openravepy_planner(m);
-    openravepy::init_openravepy_trajectory(m);
-    openravepy::init_openravepy_sensor(m);
-    openravepy::init_openravepy_sensorsystem(m);
-    openravepy::init_openravepy_spacesampler(m);
-    openravepy::init_openravepy_viewer(m);
-#else
-    openravepy::init_openravepy_global();
-    openravepy::InitPlanningUtils();
-
-    openravepy::init_openravepy_collisionchecker();
-    openravepy::init_openravepy_controller();
-    openravepy::init_openravepy_ikparameterization();
-    openravepy::init_openravepy_iksolver();
-    openravepy::init_openravepy_kinbody();
-    openravepy::init_openravepy_robot();
-    openravepy::init_openravepy_module();
-    openravepy::init_openravepy_physicsengine();
-    openravepy::init_openravepy_planner();
-    openravepy::init_openravepy_trajectory();
-    openravepy::init_openravepy_sensor();
-    openravepy::init_openravepy_sensorsystem();
-    openravepy::init_openravepy_spacesampler();
-    openravepy::init_openravepy_viewer();
-#endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveGetEnvironmentId", openravepy::RaveGetEnvironmentId, DOXY_FN1(RaveGetEnvironmentId));

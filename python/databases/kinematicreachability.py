@@ -52,10 +52,8 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import array
+import numpy
+from numpy import array, r_, c_, dot, eye, mod, reshape, flatnonzero, prod, arange, hstack, linalg, sqrt, mean, zeros, tile, floor, mgrid, minimum, sum
 
 from ..openravepy_int import RaveFindDatabaseFile, IkParameterization, rotationMatrixFromQArray, poseFromMatrix
 from ..openravepy_ext import transformPoints, quatArrayTDist
@@ -64,7 +62,6 @@ from ..misc import SpaceSamplerExtra
 from . import DatabaseGenerator
 from . import convexdecomposition, inversekinematics
 
-import numpy
 import time
 import os.path
 from os import makedirs
@@ -196,16 +193,16 @@ class ReachabilityModel(DatabaseGenerator):
         self._CloseDatabase()
         try:
             f=h5py.File(filename,'r')
-            if f['version'].value != self.getversion():
+            if f['version'][()] != self.getversion():
                 log.error('version is wrong %s!=%s ',f['version'],self.getversion())
                 return False
 
             self.reachabilitystats = f['reachabilitystats']
             self.reachabilitydensity3d = f['reachabilitydensity3d']
             self.reachability3d = f['reachability3d']
-            self.pointscale = f['pointscale'].value
-            self.xyzdelta = f['xyzdelta'].value
-            self.quatdelta = f['quatdelta'].value
+            self.pointscale = f['pointscale'][()]
+            self.xyzdelta = f['xyzdelta'][()]
+            self.quatdelta = f['quatdelta'][()]
             self._databasefile = f
             f = None
             return self.has()

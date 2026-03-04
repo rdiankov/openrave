@@ -438,11 +438,11 @@ public:
 
     object CalculateActiveAngularVelocityJacobian(int index) const;
 
-    bool Grab(PyKinBodyPtr pbody);
+    bool Grab(PyKinBodyPtr pbody, const string& grippername=std::string());
 
     // since PyKinBody::Grab is overloaded with (pbody, plink) parameters, have to support both...?
-    bool Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore);
-    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object grabbedUserData);
+    bool Grab(PyKinBodyPtr pbody, object pylink_or_linkstoignore, const string& grippername=std::string());
+    bool Grab(PyKinBodyPtr pbody, object pylink, object linkstoignore, object grabbedUserData, const string& grippername=std::string());
 
     bool CheckLinkSelfCollision(int ilinkindex, object olinktrans, PyCollisionReportPtr pyreport=PyCollisionReportPtr());
 
@@ -461,6 +461,20 @@ public:
     virtual std::string __str__();
     virtual object __unicode__();
     virtual void __enter__();
+};
+
+struct RobotBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    RobotBaseInitializer(py::module& m_);
+    void init_openravepy_robot();
+    py::module& m;
+    py::class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody> robot;
+#else
+    RobotBaseInitializer();
+    void init_openravepy_robot();
+    py::class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> > robot;
+#endif
 };
 
 } // namespace openravepy

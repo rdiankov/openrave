@@ -119,5 +119,17 @@ private:
     static thread_local std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation. TLS to suppport concurrent data read ( getting waypoint, sampling and so on ) from multiple threads.
 };
 
+struct TrajectoryBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    TrajectoryBaseInitializer(py::module& m_);
+    void init_openravepy_trajectory();
+    py::module& m;
+#else
+    TrajectoryBaseInitializer();
+    void init_openravepy_trajectory();
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_TRAJECTORYBASE_H

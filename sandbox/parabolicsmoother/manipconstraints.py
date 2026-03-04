@@ -86,7 +86,7 @@ class ManipConstraintChecker2(object):
         checkpoints = []
         extents = aabb.extents()
         pos = aabb.pos()
-        for i in xrange(8):
+        for i in range(8):
             incr = hstack([extents[0] * signextents[3*i + 0],
                            extents[1] * signextents[3*i + 1],
                            extents[2] * signextents[3*i + 2],])
@@ -98,6 +98,12 @@ class ManipConstraintChecker2(object):
         bInitialized = False
         Tparentinv = linalg.inv(Tparent)
         for link in linklist:
+            if not link.IsEnabled():
+                # Links being disabled mean they are intentionally ignored. These links should not affect tool speed/accel computation.
+                continue
+            if len(link.GetGeometries()) == 0:
+                # Virtual links should also not be considered.
+                continue
             ablink = link.ComputeLocalAABB()
             Tdelta = Tparentinv.dot(link.GetTransform())
             Rdelta = array(Tdelta[0:3, 0:3])

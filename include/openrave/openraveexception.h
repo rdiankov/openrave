@@ -50,6 +50,7 @@ enum OpenRAVEErrorCode
     ORE_TimeDurationUnitInvalid = 18, ///< Cannot find the specific TimeDurationUnit
     ORE_AngleUnitInvalid = 19, ///< Cannot find the specific AngleUnit
     ORE_TimeStampUnitInvalid = 20, ///< Cannot find the specific TimeStampUnit
+    ORE_EnvironmentBodyIndexConflict=21, ///< body with same environment body index is trying to be added to the environment
 
     ORE_EnvironmentFormatUnrecognized = 0x0100, ///< the environment format to load is not recognized.
 
@@ -70,7 +71,7 @@ public:
     OpenRAVEException(const std::string& s, OpenRAVEErrorCode error=ORE_Failed);
     virtual ~OpenRAVEException() throw() {
     }
-    char const* what() const throw();
+    char const* what() const throw() override;
     const std::string& message() const;
     OpenRAVEErrorCode GetCode() const;
 private:

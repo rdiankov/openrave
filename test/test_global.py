@@ -11,9 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
-import imp
+from common_test_openrave import g_epsilon
+from openravepy import with_destroy, Environment, Ray, RaveInitialize, RaveDestroy, RaveLoadPlugin, RaveCreateProblem, IkParameterization, IkParameterizationType, matrixFromAxisAngle
+from numpy import pi
 
+import imp
+import os
+
+import logging
 log=logging.getLogger('openravepytest')
 
 @with_destroy

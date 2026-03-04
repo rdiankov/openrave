@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyPlannerProgress
+class OPENRAVEPY_API PyPlannerProgress
 {
 public:
     PyPlannerProgress();
@@ -33,7 +33,7 @@ public:
 };
 
 
-class PyPlannerStatus
+class OPENRAVEPY_API PyPlannerStatus
 {
 public:
     PyPlannerStatus();
@@ -48,7 +48,7 @@ public:
     uint32_t statusCode = 0;
 };
 
-class PyPlannerBase : public PyInterfaceBase
+class OPENRAVEPY_API PyPlannerBase : public PyInterfaceBase
 {
 protected:
     PlannerBasePtr _pplanner;
@@ -144,6 +144,20 @@ public:
     object RegisterPlanCallback(object fncallback);
 
     PlannerBasePtr GetPlanner();
+};
+
+struct PlannerBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    PlannerBaseInitializer(py::module& m_);
+    void init_openravepy_planner();
+    py::module& m;
+    py::class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, PyInterfaceBase> planner;
+#else
+    PlannerBaseInitializer();
+    void init_openravepy_planner();
+    py::class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> > planner;
+#endif
 };
 
 } // namespace openravepy

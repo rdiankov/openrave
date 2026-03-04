@@ -93,7 +93,11 @@ void RobotBase::ConnectedBodyInfo::SerializeJSON(rapidjson::Value &rConnectedBod
         }
     }
 
-    orjson::SetJsonValueByKey(rConnectedBodyInfo, "transform", _trelative, allocator);
+    {
+        Transform trelative = _trelative;
+        trelative.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(rConnectedBodyInfo, "transform", trelative, allocator);
+    }
 
     rapidjson::Value linkInfosValue;
     linkInfosValue.SetArray();
@@ -168,7 +172,9 @@ void RobotBase::ConnectedBodyInfo::DeserializeJSON(const rapidjson::Value &value
         orjson::LoadJsonValueByKey(value, "uri", _uri);
     }
 
-    orjson::LoadJsonValueByKey(value, "transform", _trelative);
+    if (orjson::LoadJsonValueByKey(value, "transform", _trelative)) {
+        _trelative.trans *= fUnitScale;
+    }
 
     if(value.HasMember("links") && value["links"].IsArray()) {
         _vLinkInfos.reserve(value["links"].Size() + _vLinkInfos.size());
@@ -225,6 +231,12 @@ bool RobotBase::ConnectedBodyInfo::operator==(const RobotBase::ConnectedBodyInfo
 
 RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot) : _pattachedrobot(probot)
 {
+    if( !!probot ) {
+        _updateInfoCallback = probot->RegisterChangeCallback(
+            RobotBase::Prop_JointLimits|RobotBase::Prop_JointAccelerationVelocityTorqueLimits,
+            boost::bind(&RobotBase::ConnectedBody::_UpdateConnectedBodyInfo, this)
+            );
+    }
 }
 
 RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot, const RobotBase::ConnectedBodyInfo &info)
@@ -236,6 +248,10 @@ RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot, const RobotBase::Co
             throw OPENRAVE_EXCEPTION_FORMAT("Link \"%s\" to which ConnectedBody %s is attached does not exist in robot %s", info._linkname%GetName()%probot->GetName(), ORE_InvalidArguments);
         }
         _pattachedlink = attachedLink;
+        _updateInfoCallback = probot->RegisterChangeCallback(
+            RobotBase::Prop_JointLimits|RobotBase::Prop_JointAccelerationVelocityTorqueLimits,
+            boost::bind(&RobotBase::ConnectedBody::_UpdateConnectedBodyInfo, this)
+            );
     }
     else {
         throw OPENRAVE_EXCEPTION_FORMAT("Valid robot is not given for ConnectedBody %s", GetName(), ORE_InvalidArguments);
@@ -264,6 +280,12 @@ RobotBase::ConnectedBody::ConnectedBody(RobotBasePtr probot, const ConnectedBody
     }
     _pattachedrobot = probot;
     _pattachedlink = probot->GetLink(LinkPtr(connectedBody._pattachedlink)->GetName());
+    if( !!probot ) {
+        _updateInfoCallback = probot->RegisterChangeCallback(
+            RobotBase::Prop_JointLimits|RobotBase::Prop_JointAccelerationVelocityTorqueLimits,
+            boost::bind(&RobotBase::ConnectedBody::_UpdateConnectedBodyInfo, this)
+            );
+    }
 }
 
 RobotBase::ConnectedBody::~ConnectedBody()
@@ -561,6 +583,47 @@ const std::string& RobotBase::ConnectedBody::GetInfoHash() const
     }
     return __hashinfo;
 }
+
+void RobotBase::ConnectedBody::_UpdateConnectedBodyInfo()
+{
+    if( _info._bIsActive != 0 ) {
+        RobotBasePtr pattachedrobot = _pattachedrobot.lock();
+        if( !!pattachedrobot ) {
+            for( const std::pair<std::string, RobotBase::JointPtr>& pair: _vResolvedJointNames ) {
+                const std::string& resolvedJointName = pair.first;
+                if( resolvedJointName.empty() ) {
+                    // Can be empty after being deinitialized
+                    continue;
+                }
+                KinBody::JointPtr pJoint = pattachedrobot->GetJoint(resolvedJointName);
+                if( !!pJoint ) {
+                    const KinBody::JointInfo& newJointInfo = pJoint->UpdateAndGetInfo(); // source of new information
+                    const std::string originalJointName = resolvedJointName.substr(_nameprefix.length());
+                    bool bUpdated = false;
+                    for( JointInfoPtr& pJointInfo: _info._vJointInfos ) {
+                        if( pJointInfo->_name == originalJointName ) {
+                            pJointInfo->_vmaxvel = newJointInfo._vmaxvel;
+                            pJointInfo->_vmaxaccel = newJointInfo._vmaxaccel;
+                            pJointInfo->_vmaxjerk = newJointInfo._vmaxjerk;
+                            pJointInfo->_vmaxtorque = newJointInfo._vmaxtorque;
+                            pJointInfo->_vmaxinertia = newJointInfo._vmaxinertia;
+                            pJointInfo->_vlowerlimit = newJointInfo._vlowerlimit;
+                            pJointInfo->_vupperlimit = newJointInfo._vupperlimit;
+                            bUpdated = true;
+                            break;
+                        }
+                    }
+                    if( !bUpdated ) {
+                        throw OPENRAVE_EXCEPTION_FORMAT(_("Failed to update info for connected body joint %s"), originalJointName, ORE_InvalidState);
+                    }
+                }
+                else {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("Robot %s does not have joint %s anymore"), pattachedrobot->GetName() % resolvedJointName, ORE_InvalidState);
+                }
+            }
+        }
+    }
+} // end _UpdateConnectedBodyInfo
 
 RobotBase::ConnectedBodyPtr RobotBase::AddConnectedBody(const RobotBase::ConnectedBodyInfo& connectedBodyInfo, bool removeduplicate)
 {

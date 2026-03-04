@@ -47,11 +47,11 @@ typedef boost::shared_ptr<JSONDownloadContext> JSONDownloadContextPtr;
 /// \brief Downloader to download one or multiple uris and their references, used by JSONDownloaderScope to share keep-alive connections and other resources
 class JSONDownloader {
 public:
-    JSONDownloader(std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& rapidJSONDocuments, const std::vector<std::string>& vOpenRAVESchemeAliases, const std::string& remoteUrl, const std::string& unixEndpoint);
+    JSONDownloader(EnvironmentLoadContextJSON& loadContext, const std::vector<std::string>& vOpenRAVESchemeAliases, const std::string& remoteUrl, const std::string& unixEndpoint);
     ~JSONDownloader();
 
 protected:
-    std::map<std::string, boost::shared_ptr<const rapidjson::Document> >& _rapidJSONDocuments; ///< cache for opened rapidjson Documents, newly downloaded documents will be inserted here, passed in via constructor
+    EnvironmentLoadContextJSON& _loadContext; ///< cache for opened rapidjson Documents, newly downloaded documents will be inserted here, passed in via constructor
     const std::vector<std::string>& _vOpenRAVESchemeAliases; ///< list of scheme aliases, passed in via constructor
     const std::string _remoteUrl; ///< remote url for scheme, passed in via constructor
     const std::string _unixEndpoint; ///< unix endpoint for establishing unix domain socket instead of tcp socket
@@ -70,14 +70,14 @@ typedef boost::shared_ptr<JSONDownloader> JSONDownloaderPtr;
 class JSONDownloaderScope {
 
 public:
-    JSONDownloaderScope(JSONDownloader& downloader, rapidjson::Document::AllocatorType& alloc, bool downloadRecursively = true);
+    JSONDownloaderScope(const std::string& contextdesc, JSONDownloader& downloader, rapidjson::Document::AllocatorType& alloc, bool downloadRecursively = true);
     ~JSONDownloaderScope();
 
     /// \brief Download one uri into supplied doc
     /// \param uri URI to download
     /// \param doc rapidjson document to store the downloaded and parsed document
     /// \param timeoutUS timeout in microseconds to wait for download to finish
-    void Download(const char* pUri, rapidjson::Document& doc, uint64_t timeoutUS = 10000000);
+    bool Download(const char* pUri, rapidjson::Document& doc, bool bMustResolveURI, uint64_t timeoutUS);
 
     /// \brief Queues uri to download
     /// \param uri URI to download
@@ -87,13 +87,13 @@ public:
 
     /// \brief Downloads all reference uris in the supplied env info, as well as all their further references
     /// \param rEnvInfo env info where reference uris should be discovered
-    void QueueDownloadReferenceURIs(const rapidjson::Value& rEnvInfo);
+    void QueueDownloadReferenceURIs(bool bMustResolveURI, const rapidjson::Value& rEnvInfo);
 
     /// \brief Wait for queued downloads to finish, downloaded documents are inserted into rapidJSONDocuments passed in constructor
     /// \param timeoutUS timeout in microseconds to wait for download to finish
-    void WaitForDownloads(uint64_t timeoutUS = 10000000);
+    bool WaitForDownloads(bool bMustResolveURI, uint64_t timeoutUS);
 
-protected: 
+protected:
 
     /// \brief Queue uri to be downloaded, optionally supply a rapidjson document to be used to store result
     void _QueueDownloadURI(const char* pUri, rapidjson::Document* pDoc);
@@ -105,6 +105,7 @@ protected:
 
     rapidjson::Document::AllocatorType& _alloc; ///< re-use allocator, passed in via constructor
 
+    std::string _contextdesc; ///< context where download is created
     bool _downloadRecursively = true; ///< whether to recurse all referenced uris
 
     std::map<CURL*, JSONDownloadContextPtr> _mapDownloadContexts; ///< map from curl handle to download context

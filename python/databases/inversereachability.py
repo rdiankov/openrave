@@ -51,11 +51,9 @@ __license__ = 'Apache License, Version 2.0'
 
 import time,bisect
 
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import array
+from numpy import array, r_, c_, e, pi, prod, arange, linalg, dot, cos, sin, reshape, flatnonzero, tile, argmax, transpose, random, inf, cumsum, mean, zeros, hstack, argsort, sqrt, std, eye, mgrid, ravel, sum
 
+from .. import planning_error
 from ..openravepy_int import RaveFindDatabaseFile, RaveCreateRobot, IkParameterization, rotationMatrixFromAxisAngle, poseFromMatrix, matrixFromPose, matrixFromQuat, matrixFromAxisAngle, poseMult, quatFromAxisAngle, IkFilterOptions
 from ..openravepy_ext import quatArrayTMult, quatArrayTDist, poseMultArrayT, normalizeZRotation
 from . import DatabaseGenerator
@@ -312,9 +310,9 @@ class InverseReachabilityModel(DatabaseGenerator):
         points = c_[equivalenceclass[2][:,0]+znormangle+zbaseangle,dot(equivalenceclass[2][:,1:3],transpose(Trot[0:2,0:2]))+ tile(Trot[0:2,2], (len(equivalenceclass[2]),1))]
         bounds = array((numpy.min(points,0)-bandwidth,numpy.max(points,0)+bandwidth))
         if bounds[1,0]-bounds[0,0] > 2*pi:
-           # already covering entire circle, so limit to 2*pi
-           bounds[0,0] = -pi
-           bounds[1,0] = pi
+            # already covering entire circle, so limit to 2*pi
+            bounds[0,0] = -pi
+            bounds[1,0] = pi
 
         points[:,0] *= rotweight
         kdtree = pyANN.KDTree(points)
@@ -636,7 +634,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                     newrobot.SetDOFValues(values)
                     newrobots.append(newrobot)
                     #time.sleep(0.1)
-            raw_input('press any key to continue')
+            input('press any key to continue')
         finally:
             for newrobot in newrobots:
                 self.env.Remove(newrobot)
@@ -695,7 +693,7 @@ class InverseReachabilityModel(DatabaseGenerator):
                         self.env.Add(newrobot,True)
                         newrobot.SetTransform(goals[i][0])
                         newrobot.SetDOFValues(goals[i][1])
-                raw_input('press any key to continue')
+                input('press any key to continue')
             finally:
                 h=None
                 for newrobot in newrobots:
@@ -724,7 +722,7 @@ class InverseReachabilityModel(DatabaseGenerator):
     @staticmethod
     def RunFromParser(Model=None,parser=None,args=None,**kwargs):
         if parser is None:
-           parser = InverseReachabilityModel.CreateOptionParser()
+            parser = InverseReachabilityModel.CreateOptionParser()
         (options, leftargs) = parser.parse_args(args=args)
         Model = lambda robot: InverseReachabilityModel(robot=robot)
         DatabaseGenerator.RunFromParser(Model=Model,parser=parser,args=args,**kwargs)

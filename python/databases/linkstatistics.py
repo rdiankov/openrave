@@ -60,16 +60,12 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2010 Rosen Diankov (rosen.diankov@gmail.com)'
 __license__ = 'Apache License, Version 2.0'
 
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import array
-
 import numpy
+from numpy import ones, tile, eye, zeros, dot, linalg, sum, abs, all
+
 from ..openravepy_ext import transformPoints
 from ..openravepy_int import RaveFindDatabaseFile, RaveDestroy, Environment, KinBody, rotationMatrixFromQuat, quatRotateDirection, rotationMatrixFromAxisAngle, RaveGetDefaultViewerType
 from . import DatabaseGenerator
-from .. import pyANN
 from . import convexdecomposition
 from ..misc import ComputeGeodesicSphereMesh, ComputeBoxMesh, ComputeCylinderYMesh, SpaceSamplerExtra
 import time
@@ -90,13 +86,6 @@ class LinkStatisticsModel(DatabaseGenerator):
     def has(self):
         return self.grabbedjointspheres is not None and len(self.grabbedjointspheres) > 0
     
-    @staticmethod
-    def _GetValue(value):
-        if hasattr(value,'value'):
-            return value.value
-        else:
-            return value
-
     def getversion(self):
         return 7
     
@@ -202,7 +191,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def _GetJointSpheresFromGrabbed(self, grabbedinfo):
         for testgrabbedinfo, testjointspheres in self.grabbedjointspheres:
             if len(testgrabbedinfo) == len(grabbedinfo):
-                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setIgnoreRobotLinkNames == testgrabbedinfo[i]._setIgnoreRobotLinkNames) for i in range(len(grabbedinfo))]):
+                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and grabbedinfo[i]._grippername == testgrabbedinfo[i]._grippername and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setIgnoreRobotLinkNames == testgrabbedinfo[i]._setIgnoreRobotLinkNames) for i in range(len(grabbedinfo))]):
                     return testjointspheres
         
         log.debug('adding new linkstatistic for grabbed bodies: %r', [g._grabbedname for g in grabbedinfo])

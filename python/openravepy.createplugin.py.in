@@ -44,7 +44,7 @@ except ImportError:
                 sys.path.append(get_python_lib(1,prefix=possibledirs[0]))
     import openravepy
 
-from openravepy import *
+from openravepy import InterfaceType
 
 def main():
     global openravepy

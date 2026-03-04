@@ -143,10 +143,7 @@ __author__ = 'Rosen Diankov'
 __copyright__ = 'Copyright (C) 2009-2012 Rosen Diankov <rosen.diankov@gmail.com>'
 __license__ = 'Apache License, Version 2.0'
 
-if not __openravepy_build_doc__:
-    from numpy import *
-else:
-    from numpy import array
+from numpy import array, float64, double, pi, sqrt, eye, cross, dot, linalg, reshape, mean, median, mod, random, sum, abs, all
 
 from ..openravepy_ext import RobotStateSaver
 from ..openravepy_int import RaveCreateModule, RaveCreateIkSolver, IkParameterization, IkParameterizationType, RaveFindDatabaseFile, RaveDestroy, Environment, openravepyCompilerVersion, IkFilterOptions, KinBody, normalizeAxisRotation, quatFromRotationMatrix, RaveGetDefaultViewerType
@@ -937,6 +934,7 @@ class InverseKinematicsModel(DatabaseGenerator):
 #                     IPython.embed(config=cfg, banner2 = 'inversekinematics dropping into ipython')
 #                     from IPython.frontend.terminal.embed import InteractiveShellEmbed
 #                     ipshell = InteractiveShellEmbed(config=cfg)
+                from importlib import reload
                 reload(self.ikfast) # in case changes occurred
                 
             try:
@@ -968,9 +966,9 @@ class InverseKinematicsModel(DatabaseGenerator):
                 # compile the code and create the shared object
                 compiler,compile_flags = self.getcompiler()
                 try:
-                   output_dir = os.path.relpath('/',getcwd())
+                    output_dir = os.path.relpath('/',getcwd())
                 except AttributeError: # python 2.5 does not have os.path.relpath
-                   output_dir = relpath('/',getcwd())
+                    output_dir = relpath('/',getcwd())
 
                 platformsourcefilename = os.path.splitext(output_filename)[0]+'.cpp' # needed in order to prevent interference with machines with different architectures 
                 shutil.copyfile(sourcefilename, platformsourcefilename)

@@ -245,7 +245,7 @@ public:
     /// \brief Clone the contents of the given trajectory to the current trajectory.
     /// \param preference the interface whose information to clone
     /// \param cloningoptions mask of CloningOptions
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
 
     /// \brief swap the contents of the data between the two trajectories.
     ///
@@ -277,7 +277,7 @@ protected:
     void _SamplePointsInRange(std::vector<dReal>& data, RangeGenerator<T>& timeRange, const ConfigurationSpecification& spec) const;
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_TRAJECTORY_HASH;
     }
 };

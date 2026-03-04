@@ -11,7 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup
+from openravepy import databases
+from openravepy import IkParameterization, IkParameterizationType, RaveCreateProblem
+import numpy
 
 class TestIkFast(EnvironmentSetup):
     freeincrot=0.1

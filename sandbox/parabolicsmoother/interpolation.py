@@ -42,7 +42,7 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
 
     vMin = inf # the tightest velocity bound
     aMin = inf # the tightest acceleration bound
-    for i in xrange(ndof):
+    for i in range(ndof):
         if not IsEqual(x1Vect[i], x0Vect[i]):
             vMin = min(vMin, vmVect[i]/Abs(dVect[i]))
             aMin = min(aMin, amVect[i]/Abs(dVect[i]))
@@ -60,13 +60,13 @@ def InterpolateZeroVelND(x0Vect, x1Vect, vmVect, amVect, delta=zero):
         raise NotImplementedError
 
     # Scale each DOF according to the obtained sd-profile
-    curves = [ParabolicCurve() for _ in xrange(ndof)] # a list of (empty) parabolic curves
+    curves = [ParabolicCurve() for _ in range(ndof)] # a list of (empty) parabolic curves
     for sdRamp in sdProfile:
         aVect = sdRamp.a * dVect
         v0Vect = sdRamp.v0 * dVect
         dur = sdRamp.duration
 
-        for j in xrange(ndof):
+        for j in range(ndof):
             ramp = Ramp(v0Vect[j], aVect[j], dur, x0Vect[j])
             curve = ParabolicCurve([ramp])
             curves[j].Append(curve)
@@ -110,7 +110,7 @@ def InterpolateArbitraryVelND(x0Vect_, x1Vect_, v0Vect_, v1Vect_, xminVect_, xma
     curves = []
     maxDuration = zero
     maxIndex = 0
-    for i in xrange(ndof):
+    for i in range(ndof):
         if delta == zero:
             curve = Interpolate1D(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], vmVect[i], amVect[i])
         else:
@@ -226,7 +226,7 @@ def InterpolateNDFixedDuration(x0Vect_, x1Vect_, v0Vect_, v1Vect_, duration, xmi
     duration = ConvertFloatToMPF(duration)
 
     curves = []
-    for idof in xrange(ndof):
+    for idof in range(ndof):
         curve = Interpolate1DFixedDuration(x0Vect[idof], x1Vect[idof], v0Vect[idof], v1Vect[idof], duration, vmVect[idof], amVect[idof])
         if curve.isEmpty:
             return ParabolicCurvesND()

@@ -658,10 +658,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(SaveToFile_overloads, SaveToFile, 1, 2)
 #endif //
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_trajectory(py::module& m)
+TrajectoryBaseInitializer::TrajectoryBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_trajectory()
+TrajectoryBaseInitializer::TrajectoryBaseInitializer()
 #endif
+{
+}
+
+void TrajectoryBaseInitializer::init_openravepy_trajectory()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a

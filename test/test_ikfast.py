@@ -18,11 +18,13 @@ See :ref:`ikfast-testing`_
 test_ikfast.py is being synchronized with the ikfast version, so don't try to regenerate if ikfast version hasn't changed. However, the module will use the cached IK data if possible.
 
 """
-from common_test_openrave import *
-from openravepy import ikfast
+from common_test_openrave import log
+from openravepy import Environment, IkParameterization, IkParameterizationType, RaveInitialize, RaveLoadPlugin, RaveDestroy, RaveCreateProblem, RaveSetDebugLevel, DebugLevel
+from openravepy import ikfast, databases
 from optparse import OptionParser
 
-import time, sys, logging, multiprocessing
+import nose, numpy, os, time, sys, logging, multiprocessing
+from itertools import combinations
 #from nose.plugins import multiprocess
 from noseplugins import multiprocess,xunitmultiprocess, capture, callableclass
 

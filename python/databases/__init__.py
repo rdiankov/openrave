@@ -121,7 +121,11 @@ class DatabaseGenerator(metaclass.AutoReloader):
         if hasattr(value,'value'):
             return value.value
         else:
-            return value
+            try:
+                return value[()]
+            except Exception:
+                return value
+
     def autogenerateparams(self,options=None):
         """Caches parameters for most commonly used robots/objects and starts the generation process for them"""
         raise NotImplementedError()

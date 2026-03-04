@@ -24,7 +24,7 @@
 namespace openravepy {
 using py::object;
 
-class PySideWall
+class OPENRAVEPY_API PySideWall
 {
 public:
     PySideWall();
@@ -36,7 +36,7 @@ public:
     int type = 0;
 };
 
-class PyAxialSlice
+class OPENRAVEPY_API PyAxialSlice
 {
 public:
     PyAxialSlice();
@@ -47,7 +47,7 @@ public:
     float radius = 0.0;
 };
 
-class PyGeometryInfo
+class OPENRAVEPY_API PyGeometryInfo
 {
 public:
     PyGeometryInfo();
@@ -111,11 +111,13 @@ public:
     py::list _vSideWalls;
     py::list _vAxialSlices;
     py::dict _calibrationBoardParameters;
+
+    float _friction = -1.0; /// << initialize to -1, so that it an be used as a flag (if friction is -1 - use _globalFriction in a simulation, otherwise use _friction - see odephysics.h)
 };
 
 typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
 
-class PyLinkInfo
+class OPENRAVEPY_API PyLinkInfo
 {
 public:
     PyLinkInfo();
@@ -147,7 +149,7 @@ private:
     void _Update(const KinBody::LinkInfo& info);
 };
 
-class PyElectricMotorActuatorInfo
+class OPENRAVEPY_API PyElectricMotorActuatorInfo
 {
 public:
     PyElectricMotorActuatorInfo();
@@ -178,7 +180,7 @@ private:
 };
 typedef OPENRAVE_SHARED_PTR<PyElectricMotorActuatorInfo> PyElectricMotorActuatorInfoPtr;
 
-class PyJointControlInfo_RobotController
+class OPENRAVEPY_API PyJointControlInfo_RobotController
 {
 public:
     PyJointControlInfo_RobotController();
@@ -194,7 +196,7 @@ public:
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_RobotController> PyJointControlInfo_RobotControllerPtr;
 
-class PyJointControlInfo_IO
+class OPENRAVEPY_API PyJointControlInfo_IO
 {
 public:
     PyJointControlInfo_IO();
@@ -210,7 +212,7 @@ public:
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_IO> PyJointControlInfo_IOPtr;
 
-class PyJointControlInfo_ExternalDevice
+class OPENRAVEPY_API PyJointControlInfo_ExternalDevice
 {
 public:
     PyJointControlInfo_ExternalDevice();
@@ -220,7 +222,7 @@ public:
 };
 typedef OPENRAVE_SHARED_PTR<PyJointControlInfo_ExternalDevice> PyJointControlInfo_ExternalDevicePtr;
 
-class PyJointInfo
+class OPENRAVEPY_API PyJointInfo
 {
 public:
     PyJointInfo();
@@ -266,7 +268,7 @@ private:
     void _Update(const KinBody::JointInfo& info);
 };
 
-class PyGeometry
+class OPENRAVEPY_API PyGeometry
 {
     KinBody::Link::GeometryPtr _pgeometry;
 public:
@@ -290,6 +292,7 @@ public:
     void SetPositiveCropContainerEmptyMargins(object positiveCropContainerEmptyMargins);
     void SetRenderFilename(const string& filename);
     void SetName(const std::string& name);
+    void SetFriction(const float& friction);
     bool IsDraw();
     bool IsVisible();
     bool IsModifiable();
@@ -314,6 +317,7 @@ public:
     object GetRenderFilename() const;
     std::string GetId() const;
     object GetName() const;
+    float GetFriction() const;
     float GetTransparency() const;
     object GetDiffuseColor() const;
     object GetAmbientColor() const;
@@ -334,7 +338,7 @@ public:
     long __hash__();
 };
 
-class PyLink : public PyReadablesContainer
+class OPENRAVEPY_API PyLink : public PyReadablesContainer
 {
     KinBody::LinkPtr _plink;
     PyEnvironmentBasePtr _pyenv;
@@ -443,7 +447,7 @@ public:
     long __hash__();
 };
 
-class PyJoint : public PyReadablesContainer
+class OPENRAVEPY_API PyJoint : public PyReadablesContainer
 {
     KinBody::JointPtr _pjoint;
     PyEnvironmentBasePtr _pyenv;
@@ -558,7 +562,7 @@ public:
     long __hash__();
 };
 
-class PyKinBodyStateSaver
+class OPENRAVEPY_API PyKinBodyStateSaver
 {
     PyEnvironmentBasePtr _pyenv;
     KinBody::KinBodyStateSaver _state;
@@ -580,7 +584,7 @@ public:
 };
 typedef OPENRAVE_SHARED_PTR<PyKinBodyStateSaver> PyKinBodyStateSaverPtr;
 
-class PyManageData
+class OPENRAVEPY_API PyManageData
 {
     KinBody::ManageDataPtr _pdata;
     PyEnvironmentBasePtr _pyenv;

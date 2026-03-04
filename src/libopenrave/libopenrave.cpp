@@ -16,6 +16,70 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 
+#if OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK == 1 && OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK == 1
+#include <pthread.h>
+#include <Python.h>
+namespace OpenRAVE {
+void RecursiveMutexWithGILCheck::lock()
+{
+    _UpdateIsMultiThreading();
+    if( _isMultiThreading ) { // ensure that this mutex is used by multiple threads.
+        if( _lockCounter == 0 ) {
+            if( Py_IsInitialized() ) {
+                const bool isGILLocked = PyGILState_Check();
+                if( isGILLocked ) {
+                    char threadName[16];
+                    pthread_getname_np(pthread_self(), threadName, sizeof(threadName));
+                    const std::thread::id currentId = std::this_thread::get_id();
+                    std::lock_guard<std::mutex> lock(_mutexForInitialLockThreadId);
+                    throw openrave_exception(str(boost::format("GIL is locked but this mutex is not locked by this thread yet. When locking this mutex for the first time from a Python thread, please release the GIL or use try_lock. thread name=\"%s\" (id=%s). intialLockThreadId=%s")%threadName%currentId%_initialLockThreadId));
+                }
+            }
+        }
+    }
+    _mutex.lock();
+    ++_lockCounter;
+}
+
+void RecursiveMutexWithGILCheck::unlock()
+{
+    --_lockCounter;
+    _mutex.unlock();
+}
+
+bool RecursiveMutexWithGILCheck::try_lock()
+{
+    _UpdateIsMultiThreading();
+    const bool bSuccess = _mutex.try_lock();
+    if( bSuccess ) {
+        ++_lockCounter;
+    }
+    return bSuccess;
+}
+
+void RecursiveMutexWithGILCheck::_UpdateIsMultiThreading()
+{
+    if( _isMultiThreading ) {
+        return;                 // already known as multi threading
+    }
+
+    const std::thread::id currentId = std::this_thread::get_id();
+    std::lock_guard<std::mutex> lock(_mutexForInitialLockThreadId);
+    if( _initialLockThreadId == std::thread::id() ) {
+        char threadName[16];
+        pthread_getname_np(pthread_self(), threadName, sizeof(threadName));
+        RAVELOG_DEBUG_FORMAT("thread \"%s\" (id=%s) is the first to try to lock this mutex.", threadName % currentId);
+        _initialLockThreadId = currentId; // the current thread is the first thready trying to lock this recursive mutex.
+    }
+    else if ( _initialLockThreadId != currentId ) {
+        _isMultiThreading = true;
+    }
+}
+
+thread_local uint64_t RecursiveMutexWithGILCheck::_lockCounter = 0;
+}
+#endif
+
 #include <boost/scoped_ptr.hpp>
 #include <boost/utility.hpp>
 
@@ -2399,7 +2463,7 @@ bool SensorBase::Force6DGeomData::SerializeJSON(rapidjson::Value& value, rapidjs
 {
     SensorBase::SensorGeometry::SerializeJSON(value, allocator, fUnitScale, options);
     orjson::SetJsonValueByKey(value, "polarity", polarity, allocator);
-    orjson::SetJsonValueByKey(value, "correctionMatrix", correction_matrix, allocator, correction_matrix.size());
+    orjson::SetJsonValueByKey(value, "correction_matrix", correction_matrix, allocator, correction_matrix.size());
     return true;
 }
 
@@ -2407,7 +2471,7 @@ bool SensorBase::Force6DGeomData::DeserializeJSON(const rapidjson::Value& value,
 {
     SensorBase::SensorGeometry::DeserializeJSON(value, fUnitScale);
     orjson::LoadJsonValueByKey(value, "polarity", polarity);
-    orjson::LoadJsonValueByKey(value, "correctionMatrix", correction_matrix);
+    orjson::LoadJsonValueByKey(value, "correction_matrix", correction_matrix);
     return true;
 }
 
@@ -2781,6 +2845,58 @@ bool StringReadable::SerializeJSON(rapidjson::Value& value, rapidjson::Document:
 bool StringReadable::DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale)
 {
     _data.assign(value.GetString(), value.GetStringLength());
+    return true;
+}
+
+JSONReadable::JSONReadable(const std::string& id) : JSONReadable(id, rapidjson::Value())
+{
+}
+
+JSONReadable::JSONReadable(const std::string& id, const rapidjson::Value& rValue) : Readable(id), _vAllocBuffer(4*1024, 0), _rAlloc(&_vAllocBuffer[0], _vAllocBuffer.size())
+{
+    _rValue.CopyFrom(rValue, _rAlloc);
+}
+
+JSONReadable::~JSONReadable()
+{
+}
+
+void JSONReadable::SetValue(const rapidjson::Value& rValue)
+{
+    _rAlloc.Clear();
+    _rValue.CopyFrom(rValue, _rAlloc);
+}
+
+rapidjson::Value& JSONReadable::GetValue()
+{
+    return _rValue;
+}
+
+const rapidjson::Value& JSONReadable::GetValue() const
+{
+    return _rValue;
+}
+
+rapidjson::Document::AllocatorType& JSONReadable::GetAllocator()
+{
+    return _rAlloc;
+}
+
+bool JSONReadable::SerializeXML(BaseXMLWriterPtr writer, int options) const
+{
+    return false;
+}
+
+bool JSONReadable::SerializeJSON(rapidjson::Value& rValue, rapidjson::Document::AllocatorType& rAlloc, dReal fUnitScale, int options) const
+{
+    rValue.CopyFrom(_rValue, rAlloc);
+    return true;
+}
+
+bool JSONReadable::DeserializeJSON(const rapidjson::Value& rValue, dReal fUnitScale)
+{
+    _rAlloc.Clear();
+    _rValue.CopyFrom(rValue, _rAlloc);
     return true;
 }
 

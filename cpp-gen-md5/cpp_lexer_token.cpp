@@ -59,7 +59,7 @@ public:
 
     TokenID next, _next_start;
     std::vector<std::string> list, _list_start;
-    
+
 
     TokenDB(TokenID next_): next(next_) { set(); }
 

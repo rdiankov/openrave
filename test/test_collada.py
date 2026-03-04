@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, expected_failure, g_robotfiles, g_epsilon, transdist
+from openravepy import Environment, Robot, KinBody, RaveCreateKinBody, misc, matrixFromAxisAngle
+from numpy import array, ones, eye, pi, random
 
 class TestCOLLADA(EnvironmentSetup):
     def test_collada_loading(self):
@@ -489,7 +491,7 @@ class TestCOLLADA(EnvironmentSetup):
             minfo._tLocalTool[0:3,3] = [0.1,0.2,0.3]
             minfo._vdirection = [-1,0,0]
             minfo._vGripperJointNames = ['j6']
-            minfo._vClosingDirection = [-1.0]
+            minfo._vClosingDirection = [-1]
             robot.AddManipulator(minfo)
             #robot.SetDOFLimits(-linspace(0.4,0.8,robot.GetDOF()),linspace(1.4,1.8,robot.GetDOF()))
             #robot.SetDOFVelocityLimits(linspace(1,10,robot.GetDOF()))

@@ -90,7 +90,7 @@ object PyIkFailureInfo::GetMapDataDict() {
     py::dict odata;
     const orcontainer::VectorBackedMap<std::vector<dReal>>& vCustomData = _ikFailureInfo._mapCustomData;
     for (orcontainer::VectorBackedMap<std::vector<dReal>>::Iterator it = vCustomData.GetBegin(); it != vCustomData.GetEnd(); ++it) {
-        odata[it.GetNameId()] = toPyArray(it.GetValue());
+        odata[py::to_object(it.GetNameId())] = toPyArray(it.GetValue());
     }
     return odata;
 }
@@ -372,10 +372,14 @@ PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::stri
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_iksolver(py::module& m)
+IkSolverBaseInitializer::IkSolverBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_iksolver()
+IkSolverBaseInitializer::IkSolverBaseInitializer()
 #endif
+{
+}
+
+void IkSolverBaseInitializer::init_openravepy_iksolver()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a

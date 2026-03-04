@@ -21,6 +21,7 @@ namespace OpenRAVE {
 
 void RaveDatabase::Destroy()
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     while (!_vPlugins.empty()) {
         _vPlugins.back()->Destroy();
         _vPlugins.pop_back();
@@ -29,6 +30,7 @@ void RaveDatabase::Destroy()
 
 void RaveDatabase::OnRaveInitialized()
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     for (const PluginPtr& pluginPtr : _vPlugins) {
         if (pluginPtr) {
             pluginPtr->OnRaveInitialized();
@@ -38,6 +40,7 @@ void RaveDatabase::OnRaveInitialized()
 
 void RaveDatabase::OnRavePreDestroy()
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     for (const PluginPtr& pluginPtr : _vPlugins) {
         if (pluginPtr) {
             pluginPtr->OnRavePreDestroy();
@@ -47,6 +50,7 @@ void RaveDatabase::OnRavePreDestroy()
 
 bool RaveDatabase::HasInterface(InterfaceType type, const std::string& interfacename) const
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     for (const PluginPtr& plugin : _vPlugins) {
         if (plugin->HasInterface(type, interfacename)) {
             return true;
@@ -57,6 +61,7 @@ bool RaveDatabase::HasInterface(InterfaceType type, const std::string& interface
 
 void RaveDatabase::GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >& pluginInfo) const
 {
+    std::lock_guard<std::mutex> lock(_mutex);
     for (const PluginPtr& entry : _vPlugins) {
         PLUGININFO info;
         info.interfacenames = entry->GetInterfaces();
@@ -68,6 +73,7 @@ void RaveDatabase::GetPluginInfo(std::list< std::pair<std::string, PLUGININFO> >
 void RaveDatabase::GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::string>>& interfacenames) const
 {
     interfacenames.clear();
+    std::lock_guard<std::mutex> lock(_mutex);
     for (const PluginPtr& plugin : _vPlugins) {
         const RavePlugin::InterfaceMap& interfaces = plugin->GetInterfaces();
         for (const std::pair<const InterfaceType, std::vector<std::string>>& entry : interfaces) {
@@ -78,7 +84,7 @@ void RaveDatabase::GetLoadedInterfaces(std::map<InterfaceType, std::vector<std::
 
 UserDataPtr RaveDatabase::AddVirtualPlugin(InterfaceType type, std::string name, std::function<InterfaceBasePtr(EnvironmentBasePtr, std::istream&)> createfn)
 {
-    std::unique_lock<std::mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutex);
     _vPlugins.emplace_back(boost::make_shared<VirtualPlugin>(type, std::move(name), std::move(createfn)));
     return _vPlugins.back();
 }
@@ -109,7 +115,12 @@ InterfaceBasePtr RaveDatabase::Create(EnvironmentBasePtr penv, InterfaceType typ
             return InterfaceBasePtr();
         }
         std::string interfacename = name.substr(0, position);
-        for (const PluginPtr& plugin : _vPlugins) {
+        std::vector<PluginPtr> vPlugins;
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+            vPlugins = _vPlugins; // Copy
+        }
+        for (const PluginPtr& plugin : vPlugins) {
             if (plugin->HasInterface(type, interfacename)) {
                 try {
                     pointer = plugin->OpenRAVECreateInterface(type, name, RaveGetInterfaceHash(type), OPENRAVE_ENVIRONMENT_HASH, penv);

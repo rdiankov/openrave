@@ -341,19 +341,8 @@ bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink1, LinkConstPtr plink
         return false;
     }
 
-    KinBodyPtr plink1parent = plink1->GetParent(true);
-    if( !plink1parent ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("Failed to get link %s parent", plink1parent->GetName(), OpenRAVE::ORE_InvalidArguments);
-    }
-    KinBodyPtr plink2parent = plink2->GetParent(true);
-    if( !plink2parent ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("Failed to get link %s parent", plink2parent->GetName(), OpenRAVE::ORE_InvalidArguments);
-    }
-
-    _fclspace->SynchronizeWithAttached(*plink1parent);
-    if( plink1parent != plink2parent ) {
-        _fclspace->SynchronizeWithAttached(*plink2parent);
-    }
+    _fclspace->SynchronizeLink(*plink1);
+    _fclspace->SynchronizeLink(*plink2);
 
     CollisionObjectPtr pcollLink1 = _fclspace->GetLinkBV(*plink1), pcollLink2 = _fclspace->GetLinkBV(*plink2);
 
@@ -400,7 +389,7 @@ bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink, KinBodyConstPtr pbo
         return false;
     }
 
-    _fclspace->SynchronizeWithAttached(*plink->GetParent());
+    _fclspace->SynchronizeLink(*plink);
     _fclspace->SynchronizeWithAttached(*pbody);
     CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(*plink);
 
@@ -437,7 +426,8 @@ bool FCLCollisionChecker::CheckCollision(LinkConstPtr plink, std::vector<KinBody
         return false;
     }
 
-    _fclspace->Synchronize();
+    _fclspace->SynchronizeLink(*plink);
+    _fclspace->SynchronizeExcluded(plink->GetParent());
     CollisionObjectPtr pcollLink = _fclspace->GetLinkBV(*plink);
 
     if( !pcollLink ) {

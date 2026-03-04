@@ -3,8 +3,8 @@
 
     http://www.boost.org/
 
-    Copyright (c) 2001-2007 Hartmut Kaiser. Distributed under the Boost 
-    Software License, Version 1.0. (See accompanying file 
+    Copyright (c) 2001-2007 Hartmut Kaiser. Distributed under the Boost
+    Software License, Version 1.0. (See accompanying file
     LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 =============================================================================*/
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
         std::cerr << "Usage: quick_start infile" << std::endl;
         return -1;
     }
-    
+
 // current file position is saved for exception handling
 boost::wave::util::file_position_type current_position;
 
@@ -46,34 +46,34 @@ boost::wave::util::file_position_type current_position;
         instream.unsetf(std::ios::skipws);
         instring = std::string(std::istreambuf_iterator<char>(instream.rdbuf()),
                                 std::istreambuf_iterator<char>());
-            
-    //  The template boost::wave::cpplexer::lex_token<> is the token type to be 
+
+    //  The template boost::wave::cpplexer::lex_token<> is the token type to be
     //  used by the Wave library.
         typedef boost::wave::cpplexer::lex_token<> token_type;
-    
+
     //  The template boost::wave::cpplexer::lex_iterator<> is the lexer type to
     //  be used by the Wave library.
         typedef boost::wave::cpplexer::lex_iterator<token_type> lex_iterator_type;
-        
+
     //  This is the resulting context type to use. The first template parameter
     //  should match the iterator type to be used during construction of the
     //  corresponding context object (see below).
         typedef boost::wave::context<std::string::iterator, lex_iterator_type>
             context_type;
 
-    // The preprocessor iterator shouldn't be constructed directly. It is 
-    // to be generated through a wave::context<> object. This wave:context<> 
-    // object is to be used additionally to initialize and define different 
+    // The preprocessor iterator shouldn't be constructed directly. It is
+    // to be generated through a wave::context<> object. This wave:context<>
+    // object is to be used additionally to initialize and define different
     // parameters of the actual preprocessing (not done here).
     //
-    // The preprocessing of the input stream is done on the fly behind the 
+    // The preprocessing of the input stream is done on the fly behind the
     // scenes during iteration over the context_type::iterator_type stream.
     context_type ctx (instring.begin(), instring.end(), argv[1]);
 
     // analyze the input file
     context_type::iterator_type first = ctx.begin();
     context_type::iterator_type last = ctx.end();
-        
+
         while (first != last) {
             current_position = (*first).get_position();
             std::cout << (*first).get_value();
@@ -82,15 +82,15 @@ boost::wave::util::file_position_type current_position;
     }
     catch (boost::wave::cpp_exception const& e) {
     // some preprocessing error
-        std::cerr 
+        std::cerr
             << e.file_name() << "(" << e.line_no() << "): "
             << e.description() << std::endl;
         return 2;
     }
     catch (std::exception const& e) {
     // use last recognized token to retrieve the error position
-        std::cerr 
-            << current_position.get_file() 
+        std::cerr
+            << current_position.get_file()
             << "(" << current_position.get_line() << "): "
             << "exception caught: " << e.what()
             << std::endl;
@@ -98,8 +98,8 @@ boost::wave::util::file_position_type current_position;
     }
     catch (...) {
     // use last recognized token to retrieve the error position
-        std::cerr 
-            << current_position.get_file() 
+        std::cerr
+            << current_position.get_file()
             << "(" << current_position.get_line() << "): "
             << "unexpected exception caught." << std::endl;
         return 4;

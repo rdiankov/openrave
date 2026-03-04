@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyManipulatorInfo
+class OPENRAVEPY_API PyManipulatorInfo
 {
 public:
     PyManipulatorInfo();
@@ -52,7 +52,7 @@ private:
     void _Update(const RobotBase::ManipulatorInfo& info);
 };
 
-class PyAttachedSensorInfo
+class OPENRAVEPY_API PyAttachedSensorInfo
 {
 public:
     PyAttachedSensorInfo();
@@ -76,7 +76,7 @@ private:
     void _Update(const RobotBase::AttachedSensorInfo& info);
 };
 
-class PyConnectedBodyInfo
+class OPENRAVEPY_API PyConnectedBodyInfo
 {
 public:
     PyConnectedBodyInfo();

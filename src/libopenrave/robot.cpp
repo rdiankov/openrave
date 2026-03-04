@@ -121,7 +121,7 @@ void RobotBase::GripperInfo::DeserializeJSON(const rapidjson::Value& value, dRea
             continue;
         }
 
-        // update objects recursively 
+        // update objects recursively
         orjson::UpdateJsonByKey(docGripperInfo, memberName.c_str(), it->value, docGripperInfo.GetAllocator());
 
     }
@@ -405,10 +405,10 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
     return updateFromInfoResult;
 }
 
-void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
+void RobotBase::AttachedSensor::DigestHash(HashContext& o, int options) const
 {
     o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
-    SerializeRound(o,_info._trelative);
+    o << _info._trelative;
     o << (!pdata ? -1 : pdata->GetType()) << " ";
     // it is also important to serialize some of the geom parameters for the sensor (in case models are cached to it)
     if( !!_psensor ) {
@@ -435,13 +435,66 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
 {
-    if( __hashstructure.size() == 0 ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_RobotSensors);
-        __hashstructure = utils::GetMD5HashString(ss.str());
+    if (__hashstructure.empty()) {
+        HashContext hashContext;
+        DigestHash(hashContext, SO_RobotSensors);
+        __hashstructure = hashContext.HexDigest();
     }
     return __hashstructure;
+}
+
+void RobotBase::_PreprocessRestoreGrabbedBodies(std::unordered_map<int, KinBody::SavedGrabbedData>& grabbedDataByEnvironmentIndex,
+                                                const std::vector<int8_t>& vConnectedBodyActiveStates) const
+{
+    // For now, if a robot's connected body active states change, have to reset _setGrabberLinkIndicesToIgnore
+    bool bConnectedBodyStatesChanged = vConnectedBodyActiveStates.size() != _vecConnectedBodies.size();
+    if( !bConnectedBodyStatesChanged ) {
+        for( size_t iConnectedBody = 0; iConnectedBody < vConnectedBodyActiveStates.size(); ++iConnectedBody ) {
+            if(vConnectedBodyActiveStates[iConnectedBody] != _vecConnectedBodies[iConnectedBody]->IsActive() ) {
+                bConnectedBodyStatesChanged = true;
+                break;
+            }
+        }
+    }
+
+    if( bConnectedBodyStatesChanged ) {
+        if( !grabbedDataByEnvironmentIndex.empty() ) {
+            RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", GetEnv()->GetNameId()%GetName()%grabbedDataByEnvironmentIndex.size());
+            for (std::unordered_map<int, SavedGrabbedData>::value_type& grabPair : grabbedDataByEnvironmentIndex) {
+                grabPair.second.listNonCollidingIsValid = false;
+            }
+        }
+    }
+}
+
+void RobotBase::_RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const bool bRestoreGrabbedBodiesOnly)
+{
+    // In the old code, this is done by KinBodyStateSaver's Save_GrabbedBodies|Save_LinkVelocities|Save_ActiveDOF|Save_ActiveManipulator
+    // The restoring order was: RobotBase::Save_GrabbedBodies -> RobotBase::Save_ActiveDOF -> RobotBase::Save_ActiveManipulator -> KinBody::Save_GrabbedBodies -> KinBody::Save_LinkVelocities
+    // This function re-implement it by individual API call.
+
+    // RobotBase::Save_GrabbedBodies. It requires the same data of Save_ConnectedBodies.
+    std::vector<int8_t> vOriginalConnectedBodyActiveStates;
+    pOriginalRobot->GetConnectedBodyActiveStates(vOriginalConnectedBodyActiveStates);
+    std::unordered_map<int, KinBody::SavedGrabbedData> originalGrabbedDataByEnvironmentIndex;
+    pOriginalRobot->_SaveKinBodySavedGrabbedData(originalGrabbedDataByEnvironmentIndex);
+    _PreprocessRestoreGrabbedBodies(originalGrabbedDataByEnvironmentIndex, vOriginalConnectedBodyActiveStates);
+
+    // RobotBase::Save_ActiveDOF, RobotBase::Save_ActiveManipulator
+    if( !bRestoreGrabbedBodiesOnly ) {
+        RobotBase::RobotStateSaver saver(pOriginalRobot, KinBody::Save_ActiveDOF|KinBody::Save_ActiveManipulator);
+        saver.Restore(shared_robot());
+    }
+
+    // KinBody::Save_GrabbedBodies
+    const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
+    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, pOriginalRobot->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed, /*bCalledFromClone*/ true);
+
+    // KinBody::Save_LinkVelocities
+    if( !bRestoreGrabbedBodiesOnly ) {
+        RobotBase::RobotStateSaver saver(pOriginalRobot, KinBody::Save_LinkVelocities);
+        saver.Restore(shared_robot());
+    }
 }
 
 RobotBase::RobotStateSaver::RobotStateSaver(RobotBasePtr probot, int options) : KinBodyStateSaver(probot, options), _probot(probot)
@@ -575,25 +628,7 @@ void RobotBase::RobotStateSaver::_RestoreRobot(boost::shared_ptr<RobotBase> prob
     }
 
     if( _options & Save_GrabbedBodies ) {
-        // For now, if a robot's connected body active states change, have to reset _setGrabberLinkIndicesToIgnore
-        bool bConnectedBodyStatesChanged = _vConnectedBodyActiveStates.size() != probot->_vecConnectedBodies.size();
-        if( !bConnectedBodyStatesChanged ) {
-            for( size_t iConnectedBody = 0; iConnectedBody < _vConnectedBodyActiveStates.size(); ++iConnectedBody ) {
-                if(_vConnectedBodyActiveStates[iConnectedBody] != probot->_vecConnectedBodies[iConnectedBody]->IsActive() ) {
-                    bConnectedBodyStatesChanged = true;
-                    break;
-                }
-            }
-        }
-
-        if( bConnectedBodyStatesChanged ) {
-            if( !_vGrabbedBodies.empty() ) {
-                RAVELOG_WARN_FORMAT("env=%s, robot '%s' connected body states changed while grabbing %d bodies, so invalidating", probot->GetEnv()->GetNameId()%probot->GetName()%_vGrabbedBodies.size());
-                for(GrabbedPtr& grabbed : _vGrabbedBodies) {
-                    grabbed->InvalidateListNonCollidingLinks();
-                }
-            }
-        }
+        probot->_PreprocessRestoreGrabbedBodies(_grabbedDataByEnvironmentIndex, _vConnectedBodyActiveStates);
     }
 
     if( _options & Save_ActiveDOF ) {
@@ -793,7 +828,9 @@ void RobotBase::RobotBaseInfo::_DeserializeReadableInterface(const std::string& 
         _mReadableInterfaces[id] = pReadableString;
         return;
     }
-    RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
+    JSONReadablePtr pReadableJSON(new JSONReadable(id, rReadable));
+    _mReadableInterfaces[id] = pReadableJSON;
+    // RAVELOG_WARN_FORMAT("deserialize readable interface %s failed", id);
 }
 
 RobotBase::RobotBase(EnvironmentBasePtr penv) : KinBody(PT_Robot, penv)
@@ -2089,46 +2126,46 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), rGrabbedUserData);
+    return Grab(pbody, pmanip->GetEndEffector(), rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, rGrabbedUserData);
+    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setIgnoreBodyLinkNames, rGrabbedUserData);
+    return Grab(pbody, pmanip->GetEndEffector(), setIgnoreBodyLinkNames, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith, rGrabbedUserData);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rGrabbedUserData);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
-    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rGrabbedUserData);
+    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rGrabbedUserData, grippername);
 }
 
 void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
@@ -2284,18 +2321,23 @@ bool RobotBase::AddGripperInfo(GripperInfoPtr gripperInfo, bool removeduplicate)
         throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add gripperInfo to robot %s since its name is empty."),GetName(),ORE_InvalidArguments);
     }
 
+    int iremoveindex = -1;
     for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
         if( _vecGripperInfos[igripper]->name == gripperInfo->name ) {
             if( removeduplicate ) {
-                _vecGripperInfos[igripper] = gripperInfo;
+                iremoveindex = igripper;
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"),gripperInfo->name,ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"), gripperInfo->name, ORE_InvalidArguments);
             }
         }
     }
-
-    _vecGripperInfos.push_back(gripperInfo);
+    if( iremoveindex >= 0 ) {
+        _vecGripperInfos[iremoveindex] = gripperInfo;
+    }
+    else {
+        _vecGripperInfos.push_back(gripperInfo);
+    }
     return true;
 }
 
@@ -2576,17 +2618,17 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
 }
 
-void RobotBase::serialize(std::ostream& o, int options) const
+void RobotBase::DigestHash(HashContext& hash, int options) const
 {
-    KinBody::serialize(o,options);
-    if( options & SO_RobotManipulators ) {
-        FOREACHC(itmanip,_vecManipulators) {
-            (*itmanip)->serialize(o,options);
+    KinBody::DigestHash(hash, options);
+    if (options & SO_RobotManipulators) {
+        FOREACHC(itmanip, _vecManipulators) {
+            (*itmanip)->DigestHash(hash, options);
         }
     }
-    if( options & SO_RobotSensors ) {
-        FOREACHC(itsensor,_vecAttachedSensors) {
-            (*itsensor)->serialize(o,options);
+    if (options & SO_RobotSensors) {
+        FOREACHC(itsensor, _vecAttachedSensors) {
+            (*itsensor)->DigestHash(hash, options);
         }
     }
 }
@@ -2594,11 +2636,10 @@ void RobotBase::serialize(std::ostream& o, int options) const
 const std::string& RobotBase::GetRobotStructureHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( __hashrobotstructure.size() == 0 ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_Geometry|SO_RobotManipulators|SO_RobotSensors);
-        __hashrobotstructure = utils::GetMD5HashString(ss.str());
+    if (__hashrobotstructure.empty()) {
+        HashContext hashContext;
+        DigestHash(hashContext, SO_Kinematics | SO_Geometry | SO_RobotManipulators | SO_RobotSensors);
+        __hashrobotstructure = hashContext.HexDigest();
     }
     return __hashrobotstructure;
 }

@@ -182,7 +182,7 @@ inline py::array_t<T> toPyArray(const boost::array<T, N>& v)
 #endif // OPENRAVE_BINDINGS_PYARRAY
 
 template <typename type>
-class PyOpenRAVEException : public py::object {
+class OPENRAVEPY_API PyOpenRAVEException : public py::object {
 public:
     PyOpenRAVEException() = default;
     PyOpenRAVEException(handle scope, const char *name, PyObject *base = PyExc_Exception, PyObject* dict = NULL) {
@@ -264,8 +264,28 @@ public:
 private:
     static py::detail::function_record *get_function_record(handle h) {
         h = py::detail::get_function(h);
-        return h ? (py::detail::function_record *) py::reinterpret_borrow<py::capsule>(PyCFunction_GET_SELF(h.ptr()))
-               : nullptr;
+        if (!h) {
+            return nullptr;
+        }
+
+        handle func_self = PyCFunction_GET_SELF(h.ptr());
+        if (!func_self) {
+            throw py::error_already_set();
+        }
+
+#if PYBIND11_VERSION_MAJOR < 3
+        if (!py::isinstance<py::capsule>(func_self)) {
+            return nullptr;
+        }
+        py::capsule cap = py::reinterpret_borrow<py::capsule>(func_self);
+        // Better check, but need pybind11 2.10.2
+        // if (!py::detail::is_function_record_capsule(cap)) {
+        //     return nullptr;
+        // }
+        return cap.get_pointer<py::detail::function_record>();
+#else
+        return py::detail::function_record_ptr_from_PyObject(func_self.ptr());
+#endif
     }
 
     void def_property_static_impl(const char *name,

@@ -13,7 +13,8 @@
 # limitations under the License.
 """Note that Windows is also running this test
 """
-from common_test_openrave import *
+#from common_test_openrave import *
+from openravepy import RaveGetDebugLevel, RaveSetDebugLevel, openravepyCompilerVersion
 import os, sys, platform
 import shutil
 

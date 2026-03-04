@@ -114,10 +114,12 @@ public:
         std::string _id;
         std::string _grabbedname;
         std::string _robotlinkname;
+        std::string _grippername;
 #else
         py::object _id = py::none_();
         py::object _grabbedname = py::none_();
         py::object _robotlinkname = py::none_();
+        py::object _grippername = py::none_();
 #endif
         py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -235,6 +237,7 @@ public:
     py::object GetJoints(py::object oindices) const;
     py::object GetPassiveJoints();
     py::object GetDependencyOrderedJoints();
+    py::object GetDependencyOrderedJointsAll();
     py::object GetClosedLoops();
     py::object GetRigidlyAttachedLinks(int linkindex) const;
     py::object GetChain(int linkindex1, int linkindex2,bool returnjoints = true) const;
@@ -313,14 +316,13 @@ public:
     py::object GetConfigurationSpecificationIndices(py::object oindices,const std::string& interpolation="") const;
     void SetConfigurationValues(py::object ovalues, uint32_t checklimits=KinBody::CLA_CheckLimits);
     py::object GetConfigurationValues() const;
-    bool Grab(PyKinBodyPtr pbody, py::object pylink_or_linkstoignore);
-    bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object grabbedUserData);
+    bool Grab(PyKinBodyPtr pbody, py::object pylink_or_linkstoignore, const string& grippername=std::string());
+    bool Grab(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object grabbedUserData, const string& grippername=std::string());
     void Release(PyKinBodyPtr pbody);
     void ReleaseAllGrabbed();
     void ReleaseAllGrabbedWithLink(py::object pylink);
     void RegrabAll();
     py::object IsGrabbing(PyKinBodyPtr pbody) const;
-    int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink) const;
     int CheckGrabbedInfo(PyKinBodyPtr pbody, py::object pylink, py::object linkstoignore, py::object grabbedUserData) const;
     int GetNumGrabbed() const;
     py::object GetGrabbed() const;
@@ -340,7 +342,7 @@ public:
     py::object GetAdjacentLinks() const;
     py::object GetManageData() const;
     int GetUpdateStamp() const;
-    std::string serialize(int options) const;
+    std::string DigestHash(int options) const;
     UpdateFromInfoResult UpdateFromKinBodyInfo(py::object oInfo);
     std::string GetKinematicsGeometryHash() const;
     PyStateRestoreContextBase* CreateKinBodyStateSaver(py::object options=py::none_());
@@ -367,6 +369,20 @@ protected:
 
 template <typename T>
 py::object GetCustomParameters(const std::map<std::string, std::vector<T> >& parameters, py::object oname = py::none_(), int index = -1);
+
+struct KinBodyInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    KinBodyInitializer(py::module& m_);
+    void init_openravepy_kinbody();
+    py::module& m;
+    py::class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, PyInterfaceBase> kinbody;
+#else
+    KinBodyInitializer();
+    void init_openravepy_kinbody();
+    py::class_<PyKinBody, OPENRAVE_SHARED_PTR<PyKinBody>, bases<PyInterfaceBase> > kinbody;
+#endif
+};
 
 } // namespace openravepy
 
