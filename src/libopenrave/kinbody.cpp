@@ -4245,7 +4245,7 @@ void KinBody::_SetSelfCollisionChecker(CollisionCheckerBasePtr& selfCollisionChe
     }
 }
 
-const CollisionCheckerBasePtr& KinBody::GetSelfCollisionChecker() const
+const CollisionCheckerBasePtr KinBody::GetSelfCollisionChecker() const
 {
     return _vSelfCollisionCheckers.size() > 0 ? _vSelfCollisionCheckers.front() : CollisionCheckerBasePtr();
 }

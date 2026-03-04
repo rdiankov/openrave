@@ -3232,7 +3232,7 @@ public:
     virtual void SetSelfCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr collisionchecker);
 
     /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
-    virtual const CollisionCheckerBasePtr& GetSelfCollisionChecker() const;
+    virtual const CollisionCheckerBasePtr GetSelfCollisionChecker() const;
 
     virtual void GetSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const;
 

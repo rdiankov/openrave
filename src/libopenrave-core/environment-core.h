@@ -3764,7 +3764,7 @@ protected:
             for (KinBodyPtr& potherbody : _vecbodies) {
                 if (!!potherbody && pbodyref != potherbody) {
                     const CollisionCheckerBasePtr& pOtherSelfColChecker = potherbody->GetSelfCollisionChecker();
-                    if (!!pOtherSelfColChecker && pOtherSelfColChecker != _pCurrentChecker) {
+                    if (!!pOtherSelfColChecker && pOtherSelfColChecker != GetCollisionChecker()) {
                         pOtherSelfColChecker->RemoveKinBody(pbodyref); // should be okay to call RemoveKinBody even when the pbodyref has not been added to the pOtherSelfColChecker
                     }
                 }
