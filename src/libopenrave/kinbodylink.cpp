@@ -223,16 +223,19 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         extraGeometriesValue.SetObject();
         const bool bIsCurrentGeometryGroupDefault = _IsDefaultGeometryGroupName(_currentGeometryGroupName);
         FOREACHC(im, _mapExtraGeometries) {
-            if( bIsCurrentGeometryGroupDefault ) {
-                if( _IsDefaultGeometryGroupName(im->first) ) {
-                    continue;
-                }
+            if( im->first.find("envsafety_") == std::string::npos && im->first.find("robotsafety_") == std::string::npos ) {
+                continue;
             }
-            else {
-                if( im->first == _currentGeometryGroupName) {
-                    continue;
-                }
-            }
+            // if( bIsCurrentGeometryGroupDefault ) {
+            //     if( _IsDefaultGeometryGroupName(im->first) ) {
+            //         continue;
+            //     }
+            // }
+            // else {
+            //     if( im->first == _currentGeometryGroupName) {
+            //         continue;
+            //     }
+            // }
             rapidjson::Value geometriesValue;
             geometriesValue.SetArray();
             FOREACHC(iv, im->second){
@@ -1213,6 +1216,13 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
 
     if ( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
         RAVELOG_VERBOSE_FORMAT("link %s updated due to readable interface change", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // mapExtra
+    if (_info._mapExtraGeometries != info._mapExtraGeometries) {
+        _info._mapExtraGeometries = info._mapExtraGeometries;
+        RAVELOG_VERBOSE_FORMAT("link %s extrageometries", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
