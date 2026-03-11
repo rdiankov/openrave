@@ -1263,21 +1263,22 @@ void RobotBase::GetActiveDOFValues(std::vector<dReal>& values) const
         return;
     }
 
-    values.resize(GetActiveDOF());
-    if( values.size() == 0 ) {
+    if( GetActiveDOF() == 0 ) {
+        values.clear();
         return;
     }
-    vector<dReal>::iterator itvalues = values.begin();
-    if( _vActiveDOFIndices.size() != 0 ) {
-        GetDOFValues(_vTempRobotJoints);
-        FOREACHC(it, _vActiveDOFIndices) {
-            *itvalues++ = _vTempRobotJoints[*it];
-        }
-    }
 
+    values.reserve(GetActiveDOF());
+    if( _vActiveDOFIndices.size() != 0 ) {
+        // values will be resized to _vActiveDOFIndices.size()
+        GetDOFValues(values, _vActiveDOFIndices);
+    }
     if( _nAffineDOFs == DOF_NoTransform ) {
         return;
     }
+
+    values.resize(GetActiveDOF()); // GetActiveDOF() > _vActiveDOFIndices.size()
+    vector<dReal>::iterator itvalues = values.begin() + _vActiveDOFIndices.size();
     Transform t = GetTransform();
     if( _nAffineDOFs & DOF_RotationQuat ) {
         t.rot = quatMultiply(quatInverse(_vRotationQuatLimitStart), t.rot);
