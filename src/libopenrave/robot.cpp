@@ -1235,9 +1235,8 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, uint32_t bC
     }
     OPENRAVE_ASSERT_OP_FORMAT((int)values.size(),>=,GetActiveDOF(), "not enough values %d<%d",values.size()%GetActiveDOF(),ORE_InvalidArguments);
 
-    Transform t;
     if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
-        t = GetTransform();
+        Transform t = GetTransform();
         RaveGetTransformFromAffineDOFValues(t, values.begin()+_vActiveDOFIndices.size(),_nAffineDOFs,vActvAffineRotationAxis);
         if( _nAffineDOFs & DOF_RotationQuat ) {
             t.rot = quatMultiply(_vRotationQuatLimitStart, t.rot);
@@ -1245,19 +1244,15 @@ void RobotBase::SetActiveDOFValues(const std::vector<dReal>& values, uint32_t bC
         if( _vActiveDOFIndices.size() == 0 ) {
             SetTransform(t);
         }
-    }
 
-    if( _vActiveDOFIndices.size() > 0 ) {
         GetDOFValues(_vTempRobotJoints);
         for(size_t i = 0; i < _vActiveDOFIndices.size(); ++i) {
             _vTempRobotJoints[_vActiveDOFIndices[i]] = values[i];
         }
-        if( (int)_vActiveDOFIndices.size() < _nActiveDOF ) {
-            SetDOFValues(_vTempRobotJoints, t, bCheckLimits);
-        }
-        else {
-            SetDOFValues(_vTempRobotJoints, bCheckLimits);
-        }
+        SetDOFValues(_vTempRobotJoints, t, bCheckLimits);
+    }
+    else {
+        SetDOFValues(values, bCheckLimits, _vActiveDOFIndices);
     }
 }
 
