@@ -1220,10 +1220,13 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     }
 
     // mapExtra
-    if (_info._mapExtraGeometries != info._mapExtraGeometries) {
-        _info._mapExtraGeometries = info._mapExtraGeometries;
-        RAVELOG_VERBOSE_FORMAT("link %s extrageometries", _info._id);
-        updateFromInfoResult = UFIR_Success;
+    for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : info._mapExtraGeometries) {
+        if( _info._mapExtraGeometries.find(keyValue.first) == _info._mapExtraGeometries.end() ) {
+            _info._mapExtraGeometries.insert(make_pair(keyValue.first, keyValue.second));
+            RAVELOG_DEBUG_FORMAT("link %s extrageometries %s", _info._id % keyValue.first);
+            RAVELOG_VERBOSE_FORMAT("link %s extrageometries %s", _info._id % keyValue.first);
+            updateFromInfoResult = UFIR_Success;
+        }
     }
 
     return updateFromInfoResult;
