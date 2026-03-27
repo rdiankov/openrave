@@ -395,7 +395,7 @@ else()
 endif()
 
 add_library(openrave-msgpack INTERFACE IMPORTED)
-find_package(msgpack-cxx 6.1.1)
+find_package(msgpack-cxx 6.0.0)
 if (NOT msgpack-cxx_FOUND)
   pkg_check_modules(msgpack msgpack)
   target_link_libraries(openrave-msgpack INTERFACE ${msgpack_LIBRARIES})
