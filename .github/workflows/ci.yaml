@@ -48,7 +48,7 @@ jobs:
         set -e
         git clone https://github.com/assimp/assimp.git && mkdir assimp/build
         cd assimp/build
-        git checkout v5.4.3
+        git checkout v5.2.5
         cmake .. -GNinja
         ninja -j4
         sudo ninja install
