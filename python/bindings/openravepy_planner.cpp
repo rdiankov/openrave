@@ -22,6 +22,7 @@
 #include <openravepy/openravepy_collisionreport.h>
 #include <openravepy/openravepy_trajectorybase.h>
 #include <openravepy/openravepy_plannerbase.h>
+#include <openravepy/openravepy_ikparameterization.h>
 
 namespace openravepy {
 
@@ -125,8 +126,8 @@ void PyPlannerBase::PyPlannerParameters::SetConfigurationSpecification(PyEnviron
     _paramswrite->SetConfigurationSpecification(openravepy::GetEnvironment(pyenv), openravepy::GetConfigurationSpecification(pyspec));
 }
 
-object PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification() const {
-    return py::to_object(openravepy::toPyConfigurationSpecification(_paramswrite->_configurationspecification));
+PyConfigurationSpecificationPtr PyPlannerBase::PyPlannerParameters::GetConfigurationSpecification() const {
+    return openravepy::toPyConfigurationSpecification(_paramswrite->_configurationspecification);
 }
 
 void PyPlannerBase::PyPlannerParameters::SetExtraParameters(const std::string& s) {
@@ -274,7 +275,7 @@ std::string PyPlannerBase::PyPlannerParameters::__repr__() {
 std::string PyPlannerBase::PyPlannerParameters::__str__() {
     return boost::str(boost::format("<PlannerParameters, dof=%d>")%_paramsread->GetDOF());
 }
-object PyPlannerBase::PyPlannerParameters::__unicode__() {
+py::str PyPlannerBase::PyPlannerParameters::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 bool PyPlannerBase::PyPlannerParameters::__eq__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p) {

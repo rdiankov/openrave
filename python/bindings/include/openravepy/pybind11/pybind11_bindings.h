@@ -10,6 +10,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <pybind11/typing.h>
 #include <boost/shared_ptr.hpp>
 PYBIND11_DECLARE_HOLDER_TYPE(T, OPENRAVE_SHARED_PTR<T>);
 namespace pybind11 {
@@ -112,10 +113,10 @@ namespace openravepy
 {
 namespace py = pybind11;
 
-inline py::object ConvertStringToUnicode(const std::string& s)
+inline py::str ConvertStringToUnicode(const std::string& s)
 {
     PyObject *pyo = PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr);
-    return py::reinterpret_steal<py::object>(pyo);
+    return py::reinterpret_steal<py::str>(pyo);
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY

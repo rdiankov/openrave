@@ -30,7 +30,7 @@ public:
     PyManipulatorInfo(const RobotBase::ManipulatorInfo& info);
     RobotBase::ManipulatorInfoPtr GetManipulatorInfo() const;
 
-    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     object _id = py::none_();
@@ -59,7 +59,7 @@ public:
     PyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& info);
     RobotBase::AttachedSensorInfoPtr GetAttachedSensorInfo() const;
 
-    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     object _id = py::none_();
@@ -83,7 +83,7 @@ public:
     PyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& info);
     RobotBase::ConnectedBodyInfoPtr GetConnectedBodyInfo() const;
 
-    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     object _id = py::none_();
