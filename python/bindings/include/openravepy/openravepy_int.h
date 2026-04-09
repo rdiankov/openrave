@@ -168,7 +168,7 @@ OPENRAVEPY_API py::array_t<dReal> toPyArray(const Transform& t);
 OPENRAVEPY_API py::list toPyArray(const std::vector<KinBody::GeometryInfo>& infos);
 OPENRAVEPY_API py::list toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
 OPENRAVEPY_API ReadablePtr ExtractReadable(py::object o);
-OPENRAVEPY_API py::object toPyReadable(ReadablePtr p);
+OPENRAVEPY_API py::typing::Optional<PyReadablePtr> toPyReadable(ReadablePtr p);
 OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
 OPENRAVEPY_API PyIkParameterizationPtr toPyIkParameterization(const IkParameterization& ikparam);
 OPENRAVEPY_API PyIkParameterizationPtr toPyIkParameterization(const std::string& serializeddata);
@@ -595,6 +595,21 @@ public:
     RAY r;
 };
 
+class OPENRAVEPY_API PyReadable
+{
+public:
+    PyReadable(ReadablePtr readable) : _readable(readable) {
+    }
+    virtual ~PyReadable() {}
+    std::string GetXMLId() const;
+    py::typing::Optional<py::str> SerializeXML(int options=0);
+    py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const;
+    bool DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+    ReadablePtr GetReadable();
+protected:
+    ReadablePtr _readable;
+};
+
 class PyAABB;
 typedef OPENRAVE_SHARED_PTR<PyAABB> PyAABBPtr;
 
@@ -668,7 +683,7 @@ public:
     virtual ~PyReadablesContainer() = default;
 
     virtual py::dict GetReadableInterfaces();
-    virtual py::object GetReadableInterface(const std::string& xmltag);
+    virtual py::typing::Optional<PyReadablePtr> GetReadableInterface(const std::string& xmltag);
     virtual bool HasReadableInterface(const std::string& xmltag);
 
     virtual void SetReadableInterface(const std::string& xmltag, py::object oreadable);

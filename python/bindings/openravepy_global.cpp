@@ -77,64 +77,58 @@ py::str PyRay::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
-class PyReadable
+std::string PyReadable::GetXMLId() const
 {
-public:
-    PyReadable(ReadablePtr readable) : _readable(readable) {
+    // some readable are not xml readable and does have a xml id
+    if (!_readable) {
+        return "";
     }
-    virtual ~PyReadable() {
+    return _readable->GetXMLId();
+}
+
+py::typing::Optional<py::str> PyReadable::SerializeXML(int options)
+{
+    // some readable are not xml readable and does not get serialized here
+    if (!_readable) {
+        return py::none_();
     }
-    std::string GetXMLId() const {
-        // some readable are not xml readable and does have a xml id
-        if (!_readable) {
-            return "";
-        }
-        return _readable->GetXMLId();
+    std::string xmlid;
+    OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
+    if( !_readable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
+        return py::none_();
     }
 
-    py::typing::Optional<py::str> SerializeXML(int options=0) {
-        // some readable are not xml readable and does not get serialized here
-        if (!_readable) {
-            return py::none_();
-        }
-        std::string xmlid;
-        OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        if( !_readable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
-            return py::none_();
-        }
+    std::stringstream ss;
+    writer.Serialize(ss);
+    return ConvertStringToUnicode(ss.str());
+}
 
-        std::stringstream ss;
-        writer.Serialize(ss);
-        return ConvertStringToUnicode(ss.str());
+py::object PyReadable::SerializeJSON(dReal fUnitScale, int options) const
+{
+    if (!_readable) {
+        return py::none_();
     }
-
-    py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
-    {
-        if (!_readable) {
-            return py::none_();
-        }
-        rapidjson::Document doc;
-        if( !_readable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
-            return py::none_();
-        }
-        return toPyObject(doc);
+    rapidjson::Document doc;
+    if( !_readable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
+        return py::none_();
     }
+    return toPyObject(doc);
+}
 
-    bool DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
-    {
-        rapidjson::Document doc;
-        toRapidJSONValue(obj, doc, doc.GetAllocator());
-        return _readable->DeserializeJSON(doc, fUnitScale);
-    }
+bool PyReadable::DeserializeJSON(py::object obj, dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    return _readable->DeserializeJSON(doc, fUnitScale);
+}
 
-    ReadablePtr GetReadable() {
-        return _readable;
-    }
-protected:
-    ReadablePtr _readable;
-};
+ReadablePtr PyReadable::GetReadable()
+{
+    return _readable;
+}
 
-ReadablePtr ExtractReadable(object o) {
+ReadablePtr ExtractReadable(object o)
+{
     if( !IS_PYTHONOBJECT_NONE(o) ) {
         extract_<PyReadablePtr> pyreadable(o);
         return ((PyReadablePtr)pyreadable)->GetReadable();
@@ -142,7 +136,8 @@ ReadablePtr ExtractReadable(object o) {
     return ReadablePtr();
 }
 
-object toPyReadable(ReadablePtr p) {
+py::typing::Optional<PyReadablePtr> toPyReadable(ReadablePtr p)
+{
     if( !p ) {
         return py::none_();
     }
@@ -1551,6 +1546,37 @@ void init_openravepy_global_basic()
     .def("close",&PyUserData::Close,"deprecated")
     .def("Close",&PyUserData::Close,"force releasing the user handle point.")
     ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyReadable, PyReadablePtr >(m, "Readable", DOXY_CLASS(eadable))
+#else
+    class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
+#endif
+    .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeXML", &PyReadable::SerializeXML,
+         "options"_a = 0,
+         DOXY_FN(eadable, Serialize)
+         )
+#else
+    .def("SerializeXML", &PyReadable::SerializeXML, SerializeXML_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeJSON", &PyReadable::SerializeJSON,
+         "unitScale"_a = 1.0,
+         "options"_a = 0,
+         DOXY_FN(Readable, SerializeJSON)
+         )
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON,
+         "obj"_a,
+         "unitScale"_a = 1.0,
+         DOXY_FN(Readable, DeserializeJSON)
+         )
+#else
+    .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
+#endif
+    ;
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -2048,36 +2074,6 @@ void init_openravepy_global()
     class_<InterfaceBase, InterfaceBasePtr>(m, "InterfaceBase", DOXY_CLASS(InterfaceBase))
 #else
     class_<InterfaceBase, InterfaceBasePtr, boost::noncopyable >("InterfaceBase", DOXY_CLASS(InterfaceBase), no_init)
-#endif
-    ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyReadable, PyReadablePtr >(m, "Readable", DOXY_CLASS(eadable))
-#else
-    class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
-#endif
-    .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("SerializeXML", &PyReadable::SerializeXML,
-         "options"_a = 0,
-         DOXY_FN(eadable, Serialize)
-         )
-#else
-    .def("SerializeXML", &PyReadable::SerializeXML, SerializeXML_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("SerializeJSON", &PyReadable::SerializeJSON,
-         "unitScale"_a = 1.0,
-         "options"_a = 0,
-         DOXY_FN(Readable, SerializeJSON)
-         )
-    .def("DeserializeJSON", &PyReadable::DeserializeJSON,
-         "obj"_a,
-         "unitScale"_a = 1.0,
-         DOXY_FN(Readable, DeserializeJSON)
-         )
-#else
-    .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
-    .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS

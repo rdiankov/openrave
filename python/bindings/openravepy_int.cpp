@@ -1056,7 +1056,7 @@ py::dict PyReadablesContainer::GetReadableInterfaces()
     return ointerfaces;
 }
 
-object PyReadablesContainer::GetReadableInterface(const std::string& id)
+py::typing::Optional<PyReadablePtr> PyReadablesContainer::GetReadableInterface(const std::string& id)
 {
     return toPyReadable(_pbase->GetReadableInterface(id));
 }
