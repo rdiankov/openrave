@@ -602,6 +602,24 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
+    /// \brief Apply a function to every body in the environment. Thread-safe.
+    ///
+    /// This method allows for iterating over all of the bodies in the env without having to copy the list of bodies first.
+    /// The pointer to the body is exposed to the caller to allow the caller to safely keep a reference to bodies after the iteration is over -
+    /// e.g, if the user wants to select a subset of bodies from the environment, this is more efficient than copying + filtering locally.
+    /// The environment interface mutex is locked internally.
+    /// The callback function must not call any methods that would cause bodies to be added or removed from the environment,
+    /// as this would cause a deadlock attempting to exclusively lock the interface mutex while the thread already holds it in shared mode.
+    virtual void IterateBodies(const std::function<void(const KinBodyPtr&)>& mapFunction) = 0;
+
+    /// \brief Remove bodies from the environment based on some unary predicate. Thread-safe.
+    ///
+    /// Applies the predicate function to every body in the environment, and then removes all bodies for which the predicate returns true.
+    /// Note that removal of bodies happens concurrently with body iteration.
+    /// The environment interface mutex is locked internally in exclusive mode,
+    /// so the predicate must not make any calls that would also attempt to lock this mutex.
+    virtual void RemoveBodiesIf(const std::function<bool(const KinBody&)>& predicate) = 0;
+
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the bodies.

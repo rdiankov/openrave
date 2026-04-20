@@ -1645,6 +1645,38 @@ public:
         return _mutexEnvironment;
     }
 
+    virtual void IterateBodies(const std::function<void(const KinBodyPtr&)>& mapFunction) override
+    {
+        // Ensure we take both the environment and interface mutexes before iterating
+        EnvironmentLock lockenv(GetMutex());
+        SharedLock lockIterateBodies(_mutexInterfaces);
+
+        // Map the provided function over all of the live bodies in the environment
+        for (const KinBodyPtr& pBody : _vecbodies) {
+            if (!!pBody) {
+                mapFunction(pBody);
+            }
+        }
+    }
+
+    virtual void RemoveBodiesIf(const std::function<bool(const KinBody&)>& predicate) override
+    {
+        // Iterate the bodies in the environment, and remove all bodies for which the predicate returns true
+        EnvironmentLock lockenv(GetMutex());
+        ExclusiveLock lockRemoveBodies(_mutexInterfaces); // Need exclusive lock here since we may be modifying _vecbodies
+        for (const KinBodyPtr& pBody : _vecbodies) {
+            // Ignore body indices that are empty
+            if (!pBody) {
+                continue;
+            }
+
+            // If the predicate matches the body, invalidate it.
+            if (predicate(*pBody)) {
+                _InvalidateKinBodyFromEnvBodyIndex(pBody->GetEnvironmentBodyIndex());
+            }
+        }
+    }
+
     virtual void GetBodies(std::vector<KinBodyPtr>& bodies, uint64_t timeout) const override
     {
         TimedSharedLock lock853(_mutexInterfaces, timeout);
