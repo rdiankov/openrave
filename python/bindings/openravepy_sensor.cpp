@@ -109,11 +109,11 @@ SensorBase::SensorType PyCameraGeomData::GetType() {
     return SensorBase::ST_Camera;
 }
 
-object PyCameraGeomData::SerializeJSON(dReal fUnitScale, object options) {
+py::dict PyCameraGeomData::SerializeJSON(dReal fUnitScale, object options) {
     rapidjson::Document doc;
     SensorBase::SensorGeometryPtr pgeom = GetGeometry();
     pgeom->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
-    return toPyObject(doc);
+    return py::dict(toPyObject(doc));
 }
 
 void PyCameraGeomData::DeserializeJSON(object obj, dReal fUnitScale) {
@@ -218,11 +218,11 @@ PyForce6DGeomData::~PyForce6DGeomData() {
 SensorBase::SensorType PyForce6DGeomData::GetType() {
     return SensorBase::ST_Force6D;
 }
-object PyForce6DGeomData::SerializeJSON(dReal fUnitScale, object options) {
+py::dict PyForce6DGeomData::SerializeJSON(dReal fUnitScale, object options) {
     rapidjson::Document doc;
     SensorBase::SensorGeometryPtr pgeom = GetGeometry();
     pgeom->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, pyGetIntFromPy(options, 0));
-    return toPyObject(doc);
+    return py::dict(toPyObject(doc));
 }
 
 void PyForce6DGeomData::DeserializeJSON(object obj, dReal fUnitScale) {
@@ -624,14 +624,14 @@ void PySensorBase::SetSensorGeometry(PySensorGeometryPtr pygeometry) {
 void PySensorBase::SetTransform(object transform) {
     _psensor->SetTransform(ExtractTransform(transform));
 }
-object PySensorBase::GetTransform() {
+py::array_t<dReal> PySensorBase::GetTransform() {
     return ReturnTransform(_psensor->GetTransform());
 }
-object PySensorBase::GetTransformPose() {
+py::array_t<dReal> PySensorBase::GetTransformPose() {
     return toPyArray(_psensor->GetTransform());
 }
 
-object PySensorBase::GetName() const {
+py::str PySensorBase::GetName() const {
     return ConvertStringToUnicode(_psensor->GetName());
 }
 
@@ -646,7 +646,7 @@ std::string PySensorBase::__repr__() {
 std::string PySensorBase::__str__() {
     return boost::str(boost::format("<%s:%s - %s>")%RaveGetInterfaceName(_psensor->GetInterfaceType())%_psensor->GetXMLId()%_psensor->GetName());
 }
-object PySensorBase::__unicode__() {
+py::str PySensorBase::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
@@ -655,9 +655,9 @@ SensorBasePtr GetSensor(PySensorBasePtr pysensor)
     return !pysensor ? SensorBasePtr() : pysensor->GetSensor();
 }
 
-PyInterfaceBasePtr toPySensor(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv)
+PySensorBasePtr toPySensor(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv)
 {
-    return !psensor ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PySensorBase(psensor,pyenv));
+    return !psensor ? PySensorBasePtr() : PySensorBasePtr(new PySensorBase(psensor,pyenv));
 }
 
 object toPySensorData(SensorBasePtr psensor, PyEnvironmentBasePtr pyenv)

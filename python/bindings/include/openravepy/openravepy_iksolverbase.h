@@ -28,14 +28,14 @@ class OPENRAVEPY_API PyIkFailureInfo
 public:
     PyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
     IkReturnAction GetAction();
-    object GetConfiguration();
-    object GetIkParam();
+    py::array_t<dReal> GetConfiguration();
+    py::typing::Optional<PyIkParameterizationPtr> GetIkParam();
     object GetCollisionReport();
     std::string GetDescription();
     object GetMapData(uint64_t key);
     object GetMapDataDict();
 
-    py::object SerializeJSON();
+    py::dict SerializeJSON();
 
     IkFailureInfo _ikFailureInfo;
 };
@@ -46,6 +46,7 @@ class OPENRAVEPY_API PyIkFailureAccumulatorBase
 {
 public:
     PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator);
+    virtual ~PyIkFailureAccumulatorBase() = default;
 
     IkFailureAccumulatorBasePtr _pIkFailureAccumulator;
 };

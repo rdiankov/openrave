@@ -12,6 +12,11 @@
 
 namespace boost {
 namespace python {
+namespace typing {
+template <typename T>
+using Optional = boost::python::object;
+}
+
 template <typename T>
 inline object to_object(const T& t) {
     return object(t);
@@ -35,6 +40,8 @@ inline object none_() {
     return object();
 }
 using array_int = object; // py::array_int
+template <typename T>
+using array_t = numeric::array;
 } // namespace boost::python
 } // namespace boost
 
@@ -52,9 +59,9 @@ namespace openravepy {
 
 namespace py = boost::python;
 
-inline py::object ConvertStringToUnicode(const std::string& s)
+inline py::str ConvertStringToUnicode(const std::string& s)
 {
-    return py::handle_to_object(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr));
+    return py::str(py::handle<>(PyUnicode_Decode(s.c_str(), s.size(), "utf-8", nullptr)));
 }
 
 #ifdef OPENRAVE_BINDINGS_PYARRAY

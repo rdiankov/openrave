@@ -55,18 +55,18 @@ public:
     void Init(const KinBody::GeometryInfo& info);
 
     object ComputeInnerEmptyVolume();
-    object ComputeAABB(object otransform);
+    PyAABBPtr ComputeAABB(object otransform);
     void ConvertUnitScale(dReal fUnitScale);
 
-    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
     KinBody::GeometryInfoPtr GetGeometryInfo();
     void FillGeometryInfo(KinBody::GeometryInfo& geominfo);
 
-    object GetBoxHalfExtents();
-    object GetCageBaseHalfExtents();
-    object GetContainerOuterExtents();
-    object GetContainerInnerExtents();
+    py::array_t<dReal> GetBoxHalfExtents();
+    py::array_t<dReal> GetCageBaseHalfExtents();
+    py::array_t<dReal> GetContainerOuterExtents();
+    py::array_t<dReal> GetContainerInnerExtents();
     void SetBoxHalfExtents(object oHalfExtents);
     void SetCageBaseHalfExtents(object oHalfExtents);
     void SetContainerOuterExtents(object oOuterExtents);
@@ -124,7 +124,7 @@ public:
     PyLinkInfo(const KinBody::LinkInfo& info);
     KinBody::LinkInfoPtr GetLinkInfo();
 
-    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     py::list _vgeometryinfos;
@@ -155,7 +155,7 @@ public:
     PyElectricMotorActuatorInfo();
     PyElectricMotorActuatorInfo(const ElectricMotorActuatorInfo& info);
     ElectricMotorActuatorInfoPtr GetElectricMotorActuatorInfo();
-    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     std::string model_type;
@@ -228,8 +228,8 @@ public:
     PyJointInfo();
     PyJointInfo(const KinBody::JointInfo& info);
     KinBody::JointInfoPtr GetJointInfo();
-    object GetDOF();
-    object SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
+    int GetDOF();
+    py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     KinBody::JointType _type = KinBody::JointNone;
@@ -280,7 +280,7 @@ public:
     uint8_t GetSideWallExists() const;
 
     object GetCollisionMesh();
-    object ComputeAABB(object otransform) const;
+    PyAABBPtr ComputeAABB(object otransform) const;
     void SetDraw(bool bDraw);
     bool SetVisible(bool visible);
     void SetTransparency(float f);
@@ -297,8 +297,8 @@ public:
     bool IsVisible();
     bool IsModifiable();
     GeometryType GetType();
-    object GetTransform();
-    object GetTransformPose();
+    py::array_t<dReal> GetTransform();
+    py::array_t<dReal> GetTransformPose();
     dReal GetSphereRadius() const;
     dReal GetCylinderRadius() const;
     dReal GetCylinderHeight() const;
@@ -308,31 +308,31 @@ public:
     dReal GetPrismHeight() const;
     dReal GetCapsuleRadius() const;
     dReal GetCapsuleHeight() const;
-    object GetBoxExtents() const;
-    object GetContainerOuterExtents() const;
-    object GetContainerInnerExtents() const;
-    object GetContainerBottomCross() const;
-    object GetContainerBottom() const;
-    object GetRenderScale() const;
-    object GetRenderFilename() const;
+    py::array_t<dReal> GetBoxExtents() const;
+    py::array_t<dReal> GetContainerOuterExtents() const;
+    py::array_t<dReal> GetContainerInnerExtents() const;
+    py::array_t<dReal> GetContainerBottomCross() const;
+    py::array_t<dReal> GetContainerBottom() const;
+    py::array_t<dReal> GetRenderScale() const;
+    py::str GetRenderFilename() const;
     std::string GetId() const;
-    object GetName() const;
+    py::str GetName() const;
     float GetFriction() const;
     float GetTransparency() const;
-    object GetDiffuseColor() const;
-    object GetAmbientColor() const;
-    object GetNegativeCropContainerMargins() const;
-    object GetPositiveCropContainerMargins() const;
-    object GetNegativeCropContainerEmptyMargins() const;
-    object GetPositiveCropContainerEmptyMargins() const;
-    object GetCalibrationBoardNumDots() const;
-    object GetCalibrationBoardDotsDistances() const;
-    object GetCalibrationBoardDotColor() const;
-    object GetCalibrationBoardPatternName() const;
-    object GetCalibrationBoardDotDiameterDistanceRatios() const;
+    py::array_t<dReal> GetDiffuseColor() const;
+    py::array_t<dReal> GetAmbientColor() const;
+    py::array_t<dReal> GetNegativeCropContainerMargins() const;
+    py::array_t<dReal> GetPositiveCropContainerMargins() const;
+    py::array_t<dReal> GetNegativeCropContainerEmptyMargins() const;
+    py::array_t<dReal> GetPositiveCropContainerEmptyMargins() const;
+    py::tuple GetCalibrationBoardNumDots() const;
+    py::tuple GetCalibrationBoardDotsDistances() const;
+    py::array_t<dReal> GetCalibrationBoardDotColor() const;
+    py::str GetCalibrationBoardPatternName() const;
+    py::tuple GetCalibrationBoardDotDiameterDistanceRatios() const;
     int GetNumberOfAxialSlices() const;
-    object GetInfo();
-    object ComputeInnerEmptyVolume() const;
+    PyGeometryInfoPtr GetInfo();
+    py::tuple ComputeInnerEmptyVolume() const;
     bool __eq__(OPENRAVE_SHARED_PTR<PyGeometry> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyGeometry> p);
     long __hash__();
@@ -350,7 +350,7 @@ public:
     KinBody::LinkPtr GetLink();
 
     std::string GetId() const;
-    object GetName() const;
+    py::str GetName() const;
     int GetIndex();
     void Enable(bool bEnable);
     bool IsEnabled() const;
@@ -367,28 +367,28 @@ public:
     bool IsParentLink(OPENRAVE_SHARED_PTR<PyLink> pylink) const;
 
     object GetCollisionData();
-    object ComputeLocalAABB() const;
+    PyAABBPtr ComputeLocalAABB() const;
 
-    object ComputeAABB() const;
-    object ComputeAABBFromTransform(object otransform) const;
+    PyAABBPtr ComputeAABB() const;
+    PyAABBPtr ComputeAABBFromTransform(object otransform) const;
 
-    object ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
-    object ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
-    object ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const;
+    PyAABBPtr ComputeLocalAABBForGeometryGroup(const std::string& geomgroupname) const;
+    PyAABBPtr ComputeAABBForGeometryGroup(const std::string& geomgroupname) const;
+    PyAABBPtr ComputeAABBForGeometryGroupFromTransform(const std::string& geomgroupname, object otransform) const;
 
-    object GetTransform() const;
-    object GetTransformPose() const;
+    py::array_t<dReal> GetTransform() const;
+    py::array_t<dReal> GetTransformPose() const;
 
-    object GetCOMOffset() const;
-    object GetLocalCOM() const;
-    object GetGlobalCOM() const;
+    py::array_t<dReal> GetCOMOffset() const;
+    py::array_t<dReal> GetLocalCOM() const;
+    py::array_t<dReal> GetGlobalCOM() const;
 
-    object GetLocalInertia() const;
-    object GetGlobalInertia() const;
+    py::array_t<dReal> GetLocalInertia() const;
+    py::array_t<dReal> GetGlobalInertia() const;
     dReal GetMass() const;
-    object GetPrincipalMomentsOfInertia() const;
-    object GetLocalMassFrame() const;
-    object GetGlobalMassFrame() const;
+    py::array_t<dReal> GetPrincipalMomentsOfInertia() const;
+    py::array_t<dReal> GetLocalMassFrame() const;
+    py::array_t<dReal> GetGlobalMassFrame() const;
     void SetLocalMassFrame(object omassframe);
     void SetPrincipalMomentsOfInertia(object oinertiamoments);
     void SetMass(dReal mass);
@@ -398,8 +398,8 @@ public:
     void SetForce(object oforce, object opos, bool bAdd);
     void SetTorque(object otorque, bool bAdd);
 
-    object GetGeometries() const;
-    object GetGeometry(const std::string& geomname) const;
+    py::list GetGeometries() const;
+    py::typing::Optional<PyGeometryPtr> GetGeometry(const std::string& geomname) const;
 
     void InitGeometries(object ogeometryinfos);
 
@@ -409,19 +409,19 @@ public:
     void RemoveGeometryByName(const std::string& geometryname, bool removeFromAllGroups);
     void SetGeometriesFromGroup(const std::string& name);
 
-    object GetGeometriesFromGroup(const std::string& name);
+    py::list GetGeometriesFromGroup(const std::string& name);
 
     void SetGroupGeometries(const std::string& name, object ogeometryinfos);
 
     int GetGroupNumGeometries(const std::string& geomname);
 
-    object GetRigidlyAttachedLinks() const;
+    py::list GetRigidlyAttachedLinks() const;
 
     bool IsRigidlyAttached(OPENRAVE_SHARED_PTR<PyLink> plink);
 
     void SetVelocity(object olinear, object oangular);
 
-    object GetVelocity() const;
+    py::array_t<dReal> GetVelocity() const;
 
     object GetFloatParameters(object oname=py::none_(), int index=-1) const;
 
@@ -436,12 +436,12 @@ public:
     void SetStringParameters(const std::string& key, object ovalue);
 
     void UpdateInfo();
-    object GetInfo();
-    object UpdateAndGetInfo();
+    PyLinkInfoPtr GetInfo();
+    PyLinkInfoPtr UpdateAndGetInfo();
 
     std::string __repr__();
     std::string __str__();
-    object __unicode__();
+    py::str __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyLink> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyLink> p);
     long __hash__();
@@ -458,7 +458,7 @@ public:
     KinBody::JointPtr GetJoint();
 
     std::string GetId() const;
-    object GetName() const;
+    py::str GetName() const;
     bool IsMimic(int iaxis=-1);
     string GetMimicEquation(int iaxis=0, int itype=0, const std::string& format="");
     object GetMimicDOFIndices(int iaxis=0);
@@ -468,8 +468,8 @@ public:
     dReal GetMaxAccel(int iaxis=0) const;
     dReal GetMaxJerk(int iaxis=0) const;
     dReal GetMaxTorque(int iaxis=0) const;
-    object GetInstantaneousTorqueLimits(int iaxis=0) const;
-    object GetNominalTorqueLimits(int iaxis=0) const;
+    py::tuple GetInstantaneousTorqueLimits(int iaxis=0) const;
+    py::tuple GetNominalTorqueLimits(int iaxis=0) const;
 
     dReal GetMaxInertia(int iaxis=0) const;
 
@@ -489,28 +489,28 @@ public:
     bool IsStatic() const;
 
     int GetDOF() const;
-    object GetValues() const;
+    py::array_t<dReal> GetValues() const;
     dReal GetValue(int iaxis) const;
-    object GetVelocities() const;
+    py::array_t<dReal> GetVelocities() const;
 
-    object GetAnchor() const;
-    object GetAxis(int iaxis=0);
+    py::array_t<dReal> GetAnchor() const;
+    py::array_t<dReal> GetAxis(int iaxis=0);
     PyLinkPtr GetHierarchyParentLink() const;
     PyLinkPtr GetHierarchyChildLink() const;
-    object GetInternalHierarchyAxis(int iaxis);
-    object GetInternalHierarchyLeftTransform();
-    object GetInternalHierarchyLeftTransformPose();
-    object GetInternalHierarchyRightTransform();
-    object GetInternalHierarchyRightTransformPose();
+    py::array_t<dReal> GetInternalHierarchyAxis(int iaxis);
+    py::array_t<dReal> GetInternalHierarchyLeftTransform();
+    py::array_t<dReal> GetInternalHierarchyLeftTransformPose();
+    py::array_t<dReal> GetInternalHierarchyRightTransform();
+    py::array_t<dReal> GetInternalHierarchyRightTransformPose();
 
-    object GetLimits() const;
-    object GetVelocityLimits() const;
-    object GetAccelerationLimits() const;
-    object GetJerkLimits() const;
-    object GetHardVelocityLimits() const;
-    object GetHardAccelerationLimits() const;
-    object GetHardJerkLimits() const;
-    object GetTorqueLimits() const;
+    py::tuple GetLimits() const;
+    py::tuple GetVelocityLimits() const;
+    py::array_t<dReal> GetAccelerationLimits() const;
+    py::array_t<dReal> GetJerkLimits() const;
+    py::array_t<dReal> GetHardVelocityLimits() const;
+    py::array_t<dReal> GetHardAccelerationLimits() const;
+    py::array_t<dReal> GetHardJerkLimits() const;
+    py::array_t<dReal> GetTorqueLimits() const;
 
     dReal GetWrapOffset(int iaxis=0);
     void SetWrapOffset(dReal offset, int iaxis=0);
@@ -523,15 +523,15 @@ public:
     void SetHardJerkLimits(object omaxlimits);
     void SetTorqueLimits(object omaxlimits);
 
-    object GetResolutions() const;
+    py::array_t<dReal> GetResolutions() const;
     dReal GetResolution(int iaxis);
     void SetResolution(dReal resolution);
 
-    object GetWeights() const;
+    py::array_t<dReal> GetWeights() const;
     dReal GetWeight(int iaxis);
     void SetWeights(object o);
 
-    object SubtractValues(object ovalues0, object ovalues1);
+    py::array_t<dReal> SubtractValues(object ovalues0, object ovalues1);
 
     dReal SubtractValue(dReal value0, dReal value1, int iaxis);
 
@@ -551,12 +551,12 @@ public:
 
     JointControlMode GetControlMode() const;
     void UpdateInfo();
-    object GetInfo();
-    object UpdateAndGetInfo();
+    PyJointInfoPtr GetInfo();
+    PyJointInfoPtr UpdateAndGetInfo();
 
     std::string __repr__();
     std::string __str__();
-    object __unicode__();
+    py::str __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyJoint> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyJoint> p);
     long __hash__();
@@ -580,7 +580,7 @@ public:
     void Release();
 
     std::string __str__();
-    object __unicode__();
+    py::str __unicode__();
 };
 typedef OPENRAVE_SHARED_PTR<PyKinBodyStateSaver> PyKinBodyStateSaverPtr;
 
@@ -605,7 +605,7 @@ public:
 
     string __repr__();
     string __str__();
-    object __unicode__();
+    py::str __unicode__();
     bool __eq__(OPENRAVE_SHARED_PTR<PyManageData> p);
     bool __ne__(OPENRAVE_SHARED_PTR<PyManageData> p);
     long __hash__();
