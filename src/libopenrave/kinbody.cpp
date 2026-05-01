@@ -867,6 +867,12 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
     }
 
+    // Note that we apply the transform of this body _after_ we have latched the _baseLinkInBodyTransform
+    // Setting the transform of a body is effectively just setting the transform of all the links,
+    // and so if we do this _then_ latch the position of the links, we incorrectly  add the position of the
+    // entire body in the scene to the base link offset.
+    SetTransform(info._transform);
+
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
     }

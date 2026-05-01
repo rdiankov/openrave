@@ -942,10 +942,16 @@ protected:
     template<typename T>
     void _ExtractTransform(const rapidjson::Value& bodyValue, boost::shared_ptr<T> pbody, dReal fUnitScale)
     {
-        Transform transform;
-        if (bodyValue.HasMember("transform")) {
-            orjson::LoadJsonValueByKey(bodyValue, "transform", transform);
+        // Does the body info specify a transform?
+        rapidjson::Value::ConstMemberIterator transformIt = bodyValue.FindMember("transform");
+        if (transformIt == bodyValue.MemberEnd()) {
+            // If not, don't overwrite existing
+            return;
         }
+
+        // Apply (scaled) transform from body json
+        Transform transform;
+        orjson::LoadJsonValue(transformIt->value, transform);
         transform.trans *= fUnitScale;
         pbody->SetTransform(transform);
     }

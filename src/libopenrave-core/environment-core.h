@@ -3512,9 +3512,6 @@ protected:
         _unitInfo.lengthUnit = LU_Meter; // default unit settings
         _unitInfo.angleUnit = AU_Radian; // default unit settings
 
-        _vRapidJsonLoadBuffer.resize(4000000);
-        _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
-
         _handlegenericrobot = RaveRegisterInterface(PT_Robot,"GenericRobot", RaveGetInterfaceHash(PT_Robot), GetHash(), CreateGenericRobot);
         _handlegenerictrajectory = RaveRegisterInterface(PT_Trajectory,"GenericTrajectory", RaveGetInterfaceHash(PT_Trajectory), GetHash(), CreateGenericTrajectory);
         _handlemulticontroller = RaveRegisterInterface(PT_Controller,"GenericMultiController", RaveGetInterfaceHash(PT_Controller), GetHash(), CreateMultiController);
@@ -4520,9 +4517,18 @@ protected:
         return data.size() > 0 && !std::isprint(data[0]);
     }
 
+    void _EnsureLoadEnvBuffer()
+    {
+        if( !_prLoadEnvAlloc ) {
+            _vRapidJsonLoadBuffer.resize(4000000);
+            _prLoadEnvAlloc.reset(new rapidjson::MemoryPoolAllocator<>(&_vRapidJsonLoadBuffer[0], _vRapidJsonLoadBuffer.size()));
+        }
+    }
+
     void _ClearRapidJsonBuffer()
     {
         // TODO resize smartly
+        _EnsureLoadEnvBuffer();
         _prLoadEnvAlloc->Clear();
     }
 

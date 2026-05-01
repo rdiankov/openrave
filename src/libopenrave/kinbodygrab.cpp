@@ -581,7 +581,7 @@ void KinBody::RegrabAll()
         }
 
         GrabbedPtr pNewGrabbed(new Grabbed(pBody, pGrabbed->_pGrabbingLink));
-        pGrabbed->_grippername = pGrabbed->_grippername;
+        pNewGrabbed->_grippername = pGrabbed->_grippername;
         pNewGrabbed->_tRelative = pGrabbed->_tRelative;
         pNewGrabbed->_setGrabberLinkIndicesToIgnore = pGrabbed->_setGrabberLinkIndicesToIgnore;
         CopyRapidJsonDoc(pGrabbed->_rGrabbedUserData, pNewGrabbed->_rGrabbedUserData);

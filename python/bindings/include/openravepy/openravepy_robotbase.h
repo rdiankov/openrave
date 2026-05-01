@@ -36,7 +36,7 @@ public:
         PyRobotBaseInfo(const RobotBase::RobotBaseInfo& info);
         RobotBase::RobotBaseInfoPtr GetRobotBaseInfo() const;
 
-        py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+        py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
         py::object _vManipulatorInfos = py::none_();
@@ -44,7 +44,7 @@ public:
         py::object _vConnectedBodyInfos = py::none_();
         py::object _vGripperInfos = py::none_();
         virtual std::string __str__();
-        virtual py::object __unicode__();
+        virtual py::str __unicode__();
 
 protected:
         void _Update(const RobotBase::RobotBaseInfo& info);
@@ -65,49 +65,49 @@ public:
 
         RobotBase::ManipulatorPtr GetManipulator() const;
 
-        object GetTransform() const;
+        py::array_t<dReal> GetTransform() const;
 
-        object GetTransformPose() const;
+        py::array_t<dReal> GetTransformPose() const;
 
-        object GetVelocity() const;
+        py::array_t<dReal> GetVelocity() const;
 
         std::string GetId() const;
-        object GetName() const;
+        py::str GetName() const;
 
         void SetName(const std::string& s);
 
-        object GetGripperName() const;
+        py::str GetGripperName() const;
 
-        object GetToolChangerConnectedBodyToolName() const;
-        object GetToolChangerLinkName() const;
+        py::str GetToolChangerConnectedBodyToolName() const;
+        py::str GetToolChangerLinkName() const;
 
-        object GetRestrictGraspSetNames() const;
+        py::list GetRestrictGraspSetNames() const;
 
         PyRobotBasePtr GetRobot();
 
         bool SetIkSolver(PyIkSolverBasePtr iksolver);
         object GetIkSolver();
-        object GetBase();
-        object GetIkChainEndLink();
-        object GetEndEffector();
+        PyLinkPtr GetBase();
+        PyLinkPtr GetIkChainEndLink();
+        PyLinkPtr GetEndEffector();
         void ReleaseAllGrabbed();
-        object GetGraspTransform();
-        object GetLocalToolTransform();
-        object GetLocalToolTransformPose();
+        py::array_t<dReal> GetGraspTransform();
+        py::array_t<dReal> GetLocalToolTransform();
+        py::array_t<dReal> GetLocalToolTransformPose();
         void SetLocalToolTransform(object otrans);
         void SetLocalToolDirection(object odirection);
         py::array_int GetGripperJoints();
         py::array_int GetGripperIndices();
         py::array_int GetArmJoints();
         py::array_int GetArmIndices();
-        object GetArmDOFValues();
-        object GetGripperDOFValues();
+        py::array_t<dReal> GetArmDOFValues();
+        py::array_t<dReal> GetGripperDOFValues();
         int GetArmDOF();
         int GetGripperDOF();
-        object GetClosingDirection();
-        object GetChuckingDirection();
-        object GetDirection();
-        object GetLocalToolDirection();
+        py::array_t<dReal> GetClosingDirection();
+        py::array_t<int> GetChuckingDirection();
+        py::array_t<dReal> GetDirection();
+        py::array_t<dReal> GetLocalToolDirection();
         bool IsGrabbing(PyKinBodyPtr pbody);
 
         int GetNumFreeParameters() const;
@@ -144,16 +144,16 @@ public:
         object FindIKSolutions(object oparam, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorBasePtr=nullptr) const;
         object FindIKSolutions(object oparam, object freeparams, int filteroptions, bool ikreturn=false, bool releasegil=false, PyIkFailureAccumulatorBasePtr=nullptr) const;
 
-        object GetIkParameterization(object oparam, bool inworld=true);
+        PyIkParameterizationPtr GetIkParameterization(object oparam, bool inworld=true);
 
-        object GetChildJoints();
-        object GetChildDOFIndices();
+        py::list GetChildJoints();
+        py::list GetChildDOFIndices();
 
-        object GetChildLinks();
+        py::list GetChildLinks();
 
         bool IsChildLink(object pylink);
 
-        object GetIndependentLinks();
+        py::list GetIndependentLinks();
 
         object GetArmConfigurationSpecification(const std::string& interpolation="") const;
         object GetIkConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="") const;
@@ -166,19 +166,19 @@ public:
         bool CheckIndependentCollision() const;
         bool CheckIndependentCollision(PyCollisionReportPtr pReport) const;
 
-        object CalculateJacobian();
-        object CalculateRotationJacobian();
+        py::array_t<dReal> CalculateJacobian();
+        py::array_t<dReal> CalculateRotationJacobian();
 
-        object CalculateAngularVelocityJacobian();
+        py::array_t<dReal> CalculateAngularVelocityJacobian();
 
-        object GetInfo();
+        PyManipulatorInfoPtr GetInfo();
         std::string GetStructureHash() const;
         std::string GetKinematicsStructureHash() const;
         std::string GetInverseKinematicsStructureHash(IkParameterizationType iktype) const;
 
         std::string __repr__();
         std::string __str__();
-        object __unicode__();
+        py::str __unicode__();
         bool __eq__(OPENRAVE_SHARED_PTR<PyManipulator> p);
         bool __ne__(OPENRAVE_SHARED_PTR<PyManipulator> p);
         long __hash__();
@@ -195,14 +195,14 @@ public:
         virtual ~PyAttachedSensor();
 
         RobotBase::AttachedSensorPtr GetAttachedSensor() const;
-        object GetSensor();
-        object GetAttachingLink() const;
-        object GetRelativeTransform() const;
-        object GetTransform() const;
-        object GetTransformPose() const;
+        PySensorBasePtr GetSensor();
+        PyLinkPtr GetAttachingLink() const;
+        py::array_t<dReal> GetRelativeTransform() const;
+        py::array_t<dReal> GetTransform() const;
+        py::array_t<dReal> GetTransformPose() const;
         PyRobotBasePtr GetRobot() const;
         std::string GetId() const;
-        object GetName() const;
+        py::str GetName() const;
 
         object GetData();
 
@@ -211,13 +211,13 @@ public:
 
         void UpdateInfo(SensorBase::SensorType type=SensorBase::ST_Invalid);
 
-        object UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid);
+        PyAttachedSensorInfoPtr UpdateAndGetInfo(SensorBase::SensorType type=SensorBase::ST_Invalid);
 
-        object GetInfo();
+        PyAttachedSensorInfoPtr GetInfo();
 
         std::string __repr__();
         std::string __str__();
-        object __unicode__();
+        py::str __unicode__();
         bool __eq__(OPENRAVE_SHARED_PTR<PyAttachedSensor> p);
         bool __ne__(OPENRAVE_SHARED_PTR<PyAttachedSensor> p);
         long __hash__();
@@ -236,32 +236,32 @@ public:
         RobotBase::ConnectedBodyPtr GetConnectedBody() const;
 
         std::string GetId() const;
-        object GetName() const;
+        py::str GetName() const;
 
-        object GetInfo();
+        PyConnectedBodyInfoPtr GetInfo();
 
         bool SetActive(int active);
 
         int IsActive();
-        object GetTransform() const;
-        object GetTransformPose() const;
+        py::array_t<dReal> GetTransform() const;
+        py::array_t<dReal> GetTransformPose() const;
 
-        object GetRelativeTransform() const;
-        object GetRelativeTransformPose() const;
+        py::array_t<dReal> GetRelativeTransform() const;
+        py::array_t<dReal> GetRelativeTransformPose() const;
 
         void SetLinkEnable(bool enable);
 
         void SetLinkVisible(bool visible);
 
-        object GetResolvedLinks();
+        py::list GetResolvedLinks();
 
-        object GetResolvedJoints();
+        py::list GetResolvedJoints();
 
-        object GetResolvedManipulators();
+        py::list GetResolvedManipulators();
 
-        object GetResolvedAttachedSensors();
+        py::list GetResolvedAttachedSensors();
 
-        object GetResolvedGripperInfos();
+        py::list GetResolvedGripperInfos();
 
         bool CanProvideManipulator(const std::string& resolvedManipulatorName);
 
@@ -271,7 +271,7 @@ public:
 
         std::string __str__();
 
-        object __unicode__();
+        py::str __unicode__();
 
         bool __eq__(OPENRAVE_SHARED_PTR<PyConnectedBody> p);
 
@@ -300,7 +300,7 @@ public:
         void Release();
 
         std::string __str__();
-        object __unicode__();
+        py::str __unicode__();
     };
     typedef OPENRAVE_SHARED_PTR<PyRobotStateSaver> PyRobotStateSaverPtr;
 
@@ -310,9 +310,9 @@ public:
 
     bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, const std::string& uri=std::string());
 
-    object GetManipulators();
+    py::list GetManipulators();
 
-    object GetManipulators(const std::string& manipname);
+    py::list GetManipulators(const std::string& manipname);
     PyManipulatorPtr GetManipulator(const std::string& manipname);
     PyManipulatorPtr SetActiveManipulator(const std::string& manipname);
     PyManipulatorPtr SetActiveManipulator(PyManipulatorPtr pmanip);
@@ -324,9 +324,9 @@ public:
     PyAttachedSensorPtr AddAttachedSensor(PyAttachedSensorInfoPtr pattsensorinfo, bool removeduplicate=false);
     bool RemoveAttachedSensor(PyAttachedSensorPtr pyattsensor);
 
-    object GetSensors();
+    py::list GetSensors();
 
-    object GetAttachedSensors();
+    py::list GetAttachedSensors();
     OPENRAVE_SHARED_PTR<PyAttachedSensor> GetSensor(const std::string& sensorname);
 
     OPENRAVE_SHARED_PTR<PyAttachedSensor> GetAttachedSensor(const std::string& sensorname);
@@ -335,11 +335,11 @@ public:
 
     bool RemoveConnectedBody(PyConnectedBodyPtr pConnectedBody);
 
-    object GetConnectedBodies();
+    py::list GetConnectedBodies();
 
     PyConnectedBodyPtr GetConnectedBody(const std::string& bodyname);
 
-    object GetConnectedBodyActiveStates() const;
+    py::array_t<int8_t> GetConnectedBodyActiveStates() const;
 
     void SetConnectedBodyActiveStates(object oactivestates);
 
@@ -347,7 +347,7 @@ public:
     bool RemoveGripperInfo(const std::string& name);
 
     object GetGripperInfo(const std::string& name);
-    object GetGripperInfos();
+    py::list GetGripperInfos();
 
     object GetController() const;
 
@@ -365,7 +365,7 @@ public:
     int GetAffineDOF() const;
     int GetAffineDOFIndex(DOFAffine dof) const;
 
-    object GetAffineRotationAxis() const;
+    py::array_t<dReal> GetAffineRotationAxis() const;
     void SetAffineTranslationLimits(object lower, object upper);
     void SetAffineRotationAxisLimits(object lower, object upper);
     void SetAffineRotation3DLimits(object lower, object upper);
@@ -383,60 +383,60 @@ public:
     void SetAffineRotation3DWeights(object weights);
     void SetAffineRotationQuatWeights(dReal weights);
 
-    object GetAffineTranslationLimits() const;
+    py::tuple GetAffineTranslationLimits() const;
 
-    object GetAffineRotationAxisLimits() const;
-    object GetAffineRotation3DLimits() const;
-    object GetAffineRotationQuatLimits() const;
-    object GetAffineTranslationMaxVels() const;
-    object GetAffineRotationAxisMaxVels() const;
-    object GetAffineRotation3DMaxVels() const;
+    py::tuple GetAffineRotationAxisLimits() const;
+    py::tuple GetAffineRotation3DLimits() const;
+    py::array_t<dReal> GetAffineRotationQuatLimits() const;
+    py::array_t<dReal> GetAffineTranslationMaxVels() const;
+    py::array_t<dReal> GetAffineRotationAxisMaxVels() const;
+    py::array_t<dReal> GetAffineRotation3DMaxVels() const;
     dReal GetAffineRotationQuatMaxVels() const;
-    object GetAffineTranslationResolution() const;
-    object GetAffineRotationAxisResolution() const;
-    object GetAffineRotation3DResolution() const;
+    py::array_t<dReal> GetAffineTranslationResolution() const;
+    py::array_t<dReal> GetAffineRotationAxisResolution() const;
+    py::array_t<dReal> GetAffineRotation3DResolution() const;
     dReal GetAffineRotationQuatResolution() const;
-    object GetAffineTranslationWeights() const;
-    object GetAffineRotationAxisWeights() const;
-    object GetAffineRotation3DWeights() const;
+    py::array_t<dReal> GetAffineTranslationWeights() const;
+    py::array_t<dReal> GetAffineRotationAxisWeights() const;
+    py::array_t<dReal> GetAffineRotation3DWeights() const;
     dReal GetAffineRotationQuatWeights() const;
 
     void SetActiveDOFValues(object values, uint32_t checklimits=KinBody::CLA_CheckLimits) const;
-    object GetActiveDOFValues() const;
+    py::array_t<dReal> GetActiveDOFValues() const;
 
-    object GetActiveDOFWeights() const;
+    py::array_t<dReal> GetActiveDOFWeights() const;
 
     void SetActiveDOFVelocities(object velocities, uint32_t checklimits=KinBody::CLA_CheckLimits);
-    object GetActiveDOFVelocities() const;
+    py::array_t<dReal> GetActiveDOFVelocities() const;
 
-    object GetActiveDOFLimits() const;
+    py::tuple GetActiveDOFLimits() const;
 
-    object GetActiveDOFMaxVel() const;
+    py::array_t<dReal> GetActiveDOFMaxVel() const;
 
-    object GetActiveDOFMaxAccel() const;
+    py::array_t<dReal> GetActiveDOFMaxAccel() const;
 
-    object GetActiveDOFMaxJerk() const;
+    py::array_t<dReal> GetActiveDOFMaxJerk() const;
 
-    object GetActiveDOFHardMaxVel() const;
+    py::array_t<dReal> GetActiveDOFHardMaxVel() const;
 
-    object GetActiveDOFHardMaxAccel() const;
+    py::array_t<dReal> GetActiveDOFHardMaxAccel() const;
 
-    object GetActiveDOFHardMaxJerk() const;
+    py::array_t<dReal> GetActiveDOFHardMaxJerk() const;
 
-    object GetActiveDOFResolutions() const;
+    py::array_t<dReal> GetActiveDOFResolutions() const;
 
     object GetActiveConfigurationSpecification(const std::string& interpolation="") const;
 
-    object GetActiveJointIndices();
-    object GetActiveDOFIndices();
+    py::array_t<int> GetActiveJointIndices();
+    py::array_t<int> GetActiveDOFIndices();
 
-    object SubtractActiveDOFValues(object ovalues0, object ovalues1);
+    py::array_t<dReal> SubtractActiveDOFValues(object ovalues0, object ovalues1);
 
-    object CalculateActiveJacobian(int index, object offset) const;
+    py::array_t<dReal> CalculateActiveJacobian(int index, object offset) const;
 
-    object CalculateActiveRotationJacobian(int index, object q) const;
+    py::array_t<dReal> CalculateActiveRotationJacobian(int index, object q) const;
 
-    object CalculateActiveAngularVelocityJacobian(int index) const;
+    py::array_t<dReal> CalculateActiveAngularVelocityJacobian(int index) const;
 
     bool Grab(PyKinBodyPtr pbody, const string& grippername=std::string());
 
@@ -459,8 +459,22 @@ public:
 
     virtual std::string __repr__();
     virtual std::string __str__();
-    virtual object __unicode__();
+    virtual py::str __unicode__();
     virtual void __enter__();
+};
+
+struct RobotBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    RobotBaseInitializer(py::module& m_);
+    void init_openravepy_robot();
+    py::module& m;
+    py::class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, PyKinBody> robot;
+#else
+    RobotBaseInitializer();
+    void init_openravepy_robot();
+    py::class_<PyRobotBase, OPENRAVE_SHARED_PTR<PyRobotBase>, bases<PyKinBody, PyInterfaceBase> > robot;
+#endif
 };
 
 } // namespace openravepy

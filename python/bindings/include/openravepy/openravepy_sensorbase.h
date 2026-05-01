@@ -47,7 +47,7 @@ public:
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
 
-    virtual object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+    virtual py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
     virtual void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
 
     std::string hardware_id;
@@ -102,7 +102,7 @@ public:
     virtual SensorBase::SensorType GetType();
     virtual SensorBase::SensorGeometryPtr GetGeometry();
 
-    virtual object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+    virtual py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
     virtual void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
 
     std::string hardware_id;
@@ -303,16 +303,30 @@ public:
     void SetSensorGeometry(PySensorGeometryPtr pygeometry);
 
     void SetTransform(object transform);
-    object GetTransform();
-    object GetTransformPose();
+    py::array_t<dReal> GetTransform();
+    py::array_t<dReal> GetTransformPose();
 
-    object GetName() const;
+    py::str GetName() const;
 
     void SetName(const std::string& name);
 
     virtual std::string __repr__();
     virtual std::string __str__();
-    virtual object __unicode__();
+    virtual py::str __unicode__();
+};
+
+struct SensorBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    SensorBaseInitializer(py::module& m_);
+    void init_openravepy_sensor();
+    py::module& m;
+    py::class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, PyInterfaceBase> sensor;
+#else
+    SensorBaseInitializer();
+    void init_openravepy_sensor();
+    py::class_<PySensorBase, OPENRAVE_SHARED_PTR<PySensorBase>, bases<PyInterfaceBase> > sensor;
+#endif
 };
 
 } // namespace openravepy

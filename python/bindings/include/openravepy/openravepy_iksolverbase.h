@@ -28,14 +28,14 @@ class OPENRAVEPY_API PyIkFailureInfo
 public:
     PyIkFailureInfo(const IkFailureInfo& ikFailureInfo);
     IkReturnAction GetAction();
-    object GetConfiguration();
-    object GetIkParam();
+    py::array_t<dReal> GetConfiguration();
+    py::typing::Optional<PyIkParameterizationPtr> GetIkParam();
     object GetCollisionReport();
     std::string GetDescription();
     object GetMapData(uint64_t key);
     object GetMapDataDict();
 
-    py::object SerializeJSON();
+    py::dict SerializeJSON();
 
     IkFailureInfo _ikFailureInfo;
 };
@@ -46,6 +46,7 @@ class OPENRAVEPY_API PyIkFailureAccumulatorBase
 {
 public:
     PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator);
+    virtual ~PyIkFailureAccumulatorBase() = default;
 
     IkFailureAccumulatorBasePtr _pIkFailureAccumulator;
 };
@@ -102,5 +103,18 @@ public:
 
     object RegisterCustomFilter(int priority, object fncallback);
 };
+
+struct IkSolverBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    IkSolverBaseInitializer(py::module& m_);
+    void init_openravepy_iksolver();
+    py::module& m;
+#else
+    IkSolverBaseInitializer();
+    void init_openravepy_iksolver();
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_IKSOLVERBASE_H

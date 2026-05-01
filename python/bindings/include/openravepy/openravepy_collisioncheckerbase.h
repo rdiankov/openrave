@@ -46,9 +46,9 @@ public:
 
     bool SetBodyGeometryGroup(PyKinBodyPtr pybody, const std::string& groupname);
 
-    object GetGeometryGroup();
+    py::str GetGeometryGroup();
 
-    object GetBodyGeometryGroup(PyKinBodyPtr pybody);
+    py::str GetBodyGeometryGroup(PyKinBodyPtr pybody);
 
     void RemoveKinBody(PyKinBodyPtr pbody);
 
@@ -86,7 +86,7 @@ public:
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyLinkPtr plink, PyCollisionReportPtr pReport);
 
-    object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false, object oCheckPreemptFn=py::none_());
+    py::tuple CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false, object oCheckPreemptFn=py::none_());
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray);
 
@@ -101,6 +101,20 @@ public:
     bool CheckCollisionOBB(object oaabb, object otransform, object bodiesincluded, PyCollisionReportPtr pReport);
 
     virtual bool CheckSelfCollision(object o1, PyCollisionReportPtr pReport);
+};
+
+struct CollisionCheckerBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    CollisionCheckerBaseInitializer(py::module& m_);
+    void init_openravepy_collisionchecker();
+    py::module& m;
+    py::class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, PyInterfaceBase> collisionchecker;
+#else
+    CollisionCheckerBaseInitializer();
+    void init_openravepy_collisionchecker();
+    py::class_<PyCollisionCheckerBase, OPENRAVE_SHARED_PTR<PyCollisionCheckerBase>, bases<PyInterfaceBase> > collisionchecker;
+#endif
 };
 
 } // namespace openravepy

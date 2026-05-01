@@ -80,23 +80,25 @@ void pyComputeTrajectoryDerivatives(PyTrajectoryBasePtr pytraj, int maxderiv)
     OpenRAVE::planningutils::ComputeTrajectoryDerivatives(openravepy::GetTrajectory(pytraj),maxderiv);
 }
 
-object pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
+PyTrajectoryBasePtr pyReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
-    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
+    return openravepy::toPyTrajectory(OpenRAVE::planningutils::ReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj));
 }
 
-object pyGetReverseTrajectory(PyTrajectoryBasePtr pytraj)
+PyTrajectoryBasePtr pyGetReverseTrajectory(PyTrajectoryBasePtr pytraj)
 {
-    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj)));
+    return openravepy::toPyTrajectory(OpenRAVE::planningutils::GetReverseTrajectory(openravepy::GetTrajectory(pytraj)),openravepy::toPyEnvironment(pytraj));
 }
 
 void pyVerifyTrajectory(object pyparameters, PyTrajectoryBasePtr pytraj, dReal samplingstep, bool releasegil=true)
 {
+    PlannerBase::PlannerParametersConstPtr parameters = openravepy::GetPlannerParametersConst(pyparameters);
+    TrajectoryBasePtr traj = openravepy::GetTrajectory(pytraj);
     openravepy::PythonThreadSaverPtr statesaver;
     if( releasegil ) {
         statesaver.reset(new openravepy::PythonThreadSaver());
     }
-    OpenRAVE::planningutils::VerifyTrajectory(openravepy::GetPlannerParametersConst(pyparameters), openravepy::GetTrajectory(pytraj),samplingstep);
+    OpenRAVE::planningutils::VerifyTrajectory(parameters, traj, samplingstep);
 }
 
 // GIL is assumed locked
@@ -356,13 +358,13 @@ void pySegmentTrajectory(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endt
     OpenRAVE::planningutils::SegmentTrajectory(openravepy::GetTrajectory(pytraj), starttime, endtime);
 }
 
-object pyGetTrajectorySegment(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endtime)
+PyTrajectoryBasePtr pyGetTrajectorySegment(PyTrajectoryBasePtr pytraj, dReal starttime, dReal endtime)
 {
     PyEnvironmentBasePtr pyenv = openravepy::toPyEnvironment(pytraj);
-    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::GetTrajectorySegment(openravepy::GetTrajectory(pytraj), starttime, endtime), pyenv));
+    return openravepy::toPyTrajectory(OpenRAVE::planningutils::GetTrajectorySegment(openravepy::GetTrajectory(pytraj), starttime, endtime), pyenv);
 }
 
-object pyMergeTrajectories(object pytrajectories)
+PyTrajectoryBasePtr pyMergeTrajectories(object pytrajectories)
 {
     std::list<TrajectoryBaseConstPtr> listtrajectories;
     PyEnvironmentBasePtr pyenv;
@@ -377,7 +379,7 @@ object pyMergeTrajectories(object pytrajectories)
         }
         listtrajectories.push_back(openravepy::GetTrajectory(pytrajectory));
     }
-    return py::to_object(openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv));
+    return openravepy::toPyTrajectory(OpenRAVE::planningutils::MergeTrajectories(listtrajectories),pyenv);
 }
 
 class PyDHParameter
@@ -387,24 +389,24 @@ public:
     }
     PyDHParameter(const OpenRAVE::planningutils::DHParameter& p, PyEnvironmentBasePtr pyenv) : joint(toPyKinBodyJoint(OPENRAVE_CONST_POINTER_CAST<KinBody::Joint>(p.joint), pyenv)), parentindex(p.parentindex), transform(ReturnTransform(p.transform)), d(p.d), a(p.a), theta(p.theta), alpha(p.alpha) {
     }
-    PyDHParameter(object joint_, int parentindex_, object transform_, dReal d_, dReal a_, dReal theta_, dReal alpha_) : joint(joint_), parentindex(parentindex_), transform(transform_), d(d_), a(a_), theta(theta_), alpha(alpha_) {
+    PyDHParameter(PyJointPtr joint_, int parentindex_, object transform_, dReal d_, dReal a_, dReal theta_, dReal alpha_) : joint(joint_), parentindex(parentindex_), transform(transform_), d(d_), a(a_), theta(theta_), alpha(alpha_) {
     }
     virtual ~PyDHParameter() {
     }
     std::string __repr__() {
-        return boost::str(boost::format("<DHParameter(joint=%s, parentindex=%d, d=%f, a=%f, theta=%f, alpha=%f)>")%reprPyKinBodyJoint(joint)%parentindex%d%a%theta%alpha);
+        return boost::str(boost::format("<DHParameter(joint=%s, parentindex=%d, d=%f, a=%f, theta=%f, alpha=%f)>")%reprPyKinBodyJoint(py::to_object(joint))%parentindex%d%a%theta%alpha);
     }
     std::string __str__() {
         TransformMatrix tm = ExtractTransformMatrix(transform);
-        return boost::str(boost::format("<joint %s, transform [[%f, %f, %f, %f], [%f, %f, %f, %f], [%f, %f, %f, %f]], parentindex %d>")%strPyKinBodyJoint(joint)%tm.m[0]%tm.m[1]%tm.m[2]%tm.trans[0]%tm.m[4]%tm.m[5]%tm.m[6]%tm.trans[1]%tm.m[8]%tm.m[9]%tm.m[10]%tm.trans[2]%parentindex);
+        return boost::str(boost::format("<joint %s, transform [[%f, %f, %f, %f], [%f, %f, %f, %f], [%f, %f, %f, %f]], parentindex %d>")%strPyKinBodyJoint(py::to_object(joint))%tm.m[0]%tm.m[1]%tm.m[2]%tm.trans[0]%tm.m[4]%tm.m[5]%tm.m[6]%tm.trans[1]%tm.m[8]%tm.m[9]%tm.m[10]%tm.trans[2]%parentindex);
     }
-    object __unicode__() {
+    py::str __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
 
-    object joint = py::none_();
+    PyJointPtr joint = PyJointPtr();
     int parentindex = -1;
-    object transform = ReturnTransform(Transform());
+    py::array_t<dReal> transform = ReturnTransform(Transform());
     dReal d = 0.0;
     dReal a = 0.0;
     dReal theta = 0.0;
@@ -767,19 +769,19 @@ void InitPlanningUtils()
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >(planningutils, "DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
-        .def(init<object, int, object, dReal, dReal, dReal, dReal>(), "joint"_a, "parentindex"_a, "transform"_a, "d"_a, "a"_a, "theta"_a, "alpha"_a)
+        .def(init<PyJointPtr, int, object, dReal, dReal, dReal, dReal>(), "joint"_a, "parentindex"_a, "transform"_a, "d"_a, "a"_a, "theta"_a, "alpha"_a)
         .def("__copy__", [](const planningutils::PyDHParameter& self){
                 return self;
             })
         .def("__deepcopy__", [](const planningutils::PyDHParameter& self, const py::dict& memo) {
                 return planningutils::PyDHParameter(
-                    /*self.joint*/ py::none_(), self.parentindex, self.transform, self.d, self.a, self.theta, self.alpha
+                    /*self.joint*/ PyJointPtr(), self.parentindex, self.transform, self.d, self.a, self.theta, self.alpha
                     );
             })
 #else
         class_<planningutils::PyDHParameter, OPENRAVE_SHARED_PTR<planningutils::PyDHParameter> >("DHParameter", DOXY_CLASS(planningutils::DHParameter))
         .def(init<>())
-        .def(init<object, int, object, dReal, dReal, dReal, dReal>(py::args("joint","parentindex","transform","d","a","theta","alpha")))
+        .def(init<PyJointPtr, int, object, dReal, dReal, dReal, dReal>(py::args("joint","parentindex","transform","d","a","theta","alpha")))
 #endif
         .def_readwrite("joint",&planningutils::PyDHParameter::joint)
         .def_readwrite("transform",&planningutils::PyDHParameter::transform)
@@ -804,7 +806,7 @@ void InitPlanningUtils()
                     RAVELOG_WARN("Invalid state!");
                 }
                 planningutils::PyDHParameter pyparams;
-                pyparams.joint = extract<object>(state[0]); // py::none_()?
+                pyparams.joint = extract<PyJointPtr>(state[0]); // py::none_()?
                 pyparams.parentindex = extract<int>(state[1]);
                 pyparams.transform = extract<object>(state[2]);
                 pyparams.d = extract<dReal>(state[3]);

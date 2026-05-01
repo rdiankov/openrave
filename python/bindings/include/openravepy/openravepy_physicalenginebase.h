@@ -61,6 +61,18 @@ public:
     void SimulateStep(dReal fTimeElapsed);
 };
 
+struct PhysicsEngineBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    PhysicsEngineBaseInitializer(py::module& m_);
+    void init_openravepy_physicsengine();
+    py::module& m;
+#else
+    PhysicsEngineBaseInitializer();
+    void init_openravepy_physicsengine();
+#endif
+};
+
 } // namespace openravepy
 
 #endif // OPENRAVEPY_INTERNAL_PHYSICSENGINE_H

@@ -35,7 +35,7 @@ public:
 
     IkParameterizationType GetType() const;
     std::string GetId() const;
-    object GetName() const;
+    py::str GetName() const;
 
     int GetDOF();
 
@@ -45,11 +45,11 @@ public:
 
     int GetNumberOfValues(object o);
 
-    object GetConfigurationSpecification();
+    PyConfigurationSpecificationPtr GetConfigurationSpecification();
 
-    object GetConfigurationSpecification(object ointerpolation, const std::string& robotname="", const std::string& manipname="");
+    PyConfigurationSpecificationPtr GetConfigurationSpecification(object ointerpolation, const std::string& robotname="", const std::string& manipname="");
 
-    static object GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="");
+    static PyConfigurationSpecificationPtr GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation="", const std::string& robotname="", const std::string& manipname="");
     void SetTransform6D(object o);
     void SetRotation3D(object o);
     void SetTranslation3D(object o);
@@ -67,26 +67,26 @@ public:
     void SetTranslationYAxisAngleXNorm4D(object otrans, dReal angle);
     void SetTranslationZAxisAngleYNorm4D(object otrans, dReal angle);
 
-    object GetTransform6D();
-    object GetTransform6DPose();
-    object GetRotation3D();
-    object GetTranslation3D();
-    object GetDirection3D();
+    py::array_t<dReal> GetTransform6D();
+    py::array_t<dReal> GetTransform6DPose();
+    py::array_t<dReal> GetRotation3D();
+    py::array_t<dReal> GetTranslation3D();
+    py::array_t<dReal> GetDirection3D();
     PyRay GetRay4D();
-    object GetLookat3D();
+    py::array_t<dReal> GetLookat3D();
     PyRay GetTranslationDirection5D();
-    object GetTranslationXY2D();
-    object GetTranslationXYOrientation3D();
-    object GetTranslationLocalGlobal6D();
-    object GetTranslationXAxisAngle4D();
-    object GetTranslationYAxisAngle4D();
-    object GetTranslationZAxisAngle4D();
-    object GetTranslationXAxisAngleZNorm4D();
-    object GetTranslationYAxisAngleXNorm4D();
-    object GetTranslationZAxisAngleYNorm4D();
-    dReal ComputeDistanceSqr(OPENRAVE_SHARED_PTR<PyIkParameterization> pyikparam);
+    py::array_t<dReal> GetTranslationXY2D();
+    py::array_t<dReal> GetTranslationXYOrientation3D();
+    py::tuple GetTranslationLocalGlobal6D();
+    py::tuple GetTranslationXAxisAngle4D();
+    py::tuple GetTranslationYAxisAngle4D();
+    py::tuple GetTranslationZAxisAngle4D();
+    py::tuple GetTranslationXAxisAngleZNorm4D();
+    py::tuple GetTranslationYAxisAngleXNorm4D();
+    py::tuple GetTranslationZAxisAngleYNorm4D();
+    dReal ComputeDistanceSqr(PyIkParameterizationPtr pyikparam);
 
-    object Transform(object otrans) const;
+    PyIkParameterizationPtr Transform(object otrans) const;
 
     void SetCustomValues(const std::string& name, object ovalues);
 
@@ -106,12 +106,12 @@ public:
 
     void MultiplyTransformRight(object otrans);
 
-    py::object SerializeJSON(dReal fUnitScale=1.0);
+    py::dict SerializeJSON(dReal fUnitScale=1.0);
     void DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
 
     std::string __repr__();
     std::string __str__();
-    object __unicode__();
+    py::str __unicode__();
 
     PyIkParameterizationPtr __mul__(object otrans);
 
@@ -121,6 +121,18 @@ public:
 
 private:
     void _Update(const IkParameterization& ikparam);
+};
+
+struct IkParameterizationInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    IkParameterizationInitializer(py::module& m_);
+    void init_openravepy_ikparameterization();
+    py::module& m;
+#else
+    IkParameterizationInitializer();
+    void init_openravepy_ikparameterization();
+#endif
 };
 
 } // namespace openravepy

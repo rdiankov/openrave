@@ -17,8 +17,13 @@
 #define NO_IMPORT_ARRAY
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_kinbody.h>
+#include <openravepy/openravepy_robotbase.h>
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_configurationspecification.h>
+#include <openravepy/openravepy_viewer.h>
+#include <openravepy/openravepy_ikparameterization.h>
+#include <openravepy/openravepy_trajectorybase.h>
+#include <openravepy/openravepy_collisioncheckerbase.h>
 #include <openrave/xmlreaders.h>
 #include <openrave/utils.h>
 
@@ -55,10 +60,10 @@ PyRay::PyRay(object newpos, object newdir)
     r.dir = ExtractVector3(newdir);
 }
 
-object PyRay::dir() {
+py::array_t<dReal> PyRay::dir() {
     return toPyVector3(r.dir);
 }
-object PyRay::pos() {
+py::array_t<dReal> PyRay::pos() {
     return toPyVector3(r.pos);
 }
 
@@ -68,68 +73,62 @@ std::string PyRay::__repr__() {
 std::string PyRay::__str__() {
     return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%r.pos.x%r.pos.y%r.pos.z%r.dir.x%r.dir.y%r.dir.z);
 }
-object PyRay::__unicode__() {
+py::str PyRay::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
-class PyReadable
+std::string PyReadable::GetXMLId() const
 {
-public:
-    PyReadable(ReadablePtr readable) : _readable(readable) {
+    // some readable are not xml readable and does have a xml id
+    if (!_readable) {
+        return "";
     }
-    virtual ~PyReadable() {
+    return _readable->GetXMLId();
+}
+
+py::typing::Optional<py::str> PyReadable::SerializeXML(int options)
+{
+    // some readable are not xml readable and does not get serialized here
+    if (!_readable) {
+        return py::none_();
     }
-    std::string GetXMLId() const {
-        // some readable are not xml readable and does have a xml id
-        if (!_readable) {
-            return "";
-        }
-        return _readable->GetXMLId();
+    std::string xmlid;
+    OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
+    if( !_readable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
+        return py::none_();
     }
 
-    object SerializeXML(int options=0) {
-        // some readable are not xml readable and does not get serialized here
-        if (!_readable) {
-            return py::none_();
-        }
-        std::string xmlid;
-        OpenRAVE::xmlreaders::StreamXMLWriter writer(xmlid);
-        if( !_readable->SerializeXML(OpenRAVE::xmlreaders::StreamXMLWriterPtr(&writer,utils::null_deleter()),options) ) {
-            return py::none_();
-        }
+    std::stringstream ss;
+    writer.Serialize(ss);
+    return ConvertStringToUnicode(ss.str());
+}
 
-        std::stringstream ss;
-        writer.Serialize(ss);
-        return ConvertStringToUnicode(ss.str());
+py::object PyReadable::SerializeJSON(dReal fUnitScale, int options) const
+{
+    if (!_readable) {
+        return py::none_();
     }
-
-    py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const
-    {
-        if (!_readable) {
-            return py::none_();
-        }
-        rapidjson::Document doc;
-        if( !_readable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
-            return py::none_();
-        }
-        return toPyObject(doc);
+    rapidjson::Document doc;
+    if( !_readable->SerializeJSON(doc, doc.GetAllocator(), fUnitScale, options) ) {
+        return py::none_();
     }
+    return toPyObject(doc);
+}
 
-    bool DeserializeJSON(py::object obj, dReal fUnitScale=1.0)
-    {
-        rapidjson::Document doc;
-        toRapidJSONValue(obj, doc, doc.GetAllocator());
-        return _readable->DeserializeJSON(doc, fUnitScale);
-    }
+bool PyReadable::DeserializeJSON(py::object obj, dReal fUnitScale)
+{
+    rapidjson::Document doc;
+    toRapidJSONValue(obj, doc, doc.GetAllocator());
+    return _readable->DeserializeJSON(doc, fUnitScale);
+}
 
-    ReadablePtr GetReadable() {
-        return _readable;
-    }
-protected:
-    ReadablePtr _readable;
-};
+ReadablePtr PyReadable::GetReadable()
+{
+    return _readable;
+}
 
-ReadablePtr ExtractReadable(object o) {
+ReadablePtr ExtractReadable(object o)
+{
     if( !IS_PYTHONOBJECT_NONE(o) ) {
         extract_<PyReadablePtr> pyreadable(o);
         return ((PyReadablePtr)pyreadable)->GetReadable();
@@ -137,7 +136,8 @@ ReadablePtr ExtractReadable(object o) {
     return ReadablePtr();
 }
 
-object toPyReadable(ReadablePtr p) {
+py::typing::Optional<PyReadablePtr> toPyReadable(ReadablePtr p)
+{
     if( !p ) {
         return py::none_();
     }
@@ -219,53 +219,41 @@ public:
     }
 };
 
-class PyAABB
-{
-public:
-    PyAABB() {
-    }
-    PyAABB(object newpos, object newextents) {
-        ab.pos = ExtractVector3(newpos);
-        ab.extents = ExtractVector3(newextents);
-    }
-    PyAABB(const AABB& newab) : ab(newab) {
-    }
+py::array_t<dReal> PyAABB::extents() {
+    return toPyVector3(ab.extents);
+}
 
-    object extents() {
-        return toPyVector3(ab.extents);
-    }
-    object pos() {
-        return toPyVector3(ab.pos);
-    }
+py::array_t<dReal> PyAABB::pos() {
+    return toPyVector3(ab.pos);
+}
 
-    dict toDict() {
-        // for ujson serialization
-        dict d;
-        d["pos"] = pos();
-        d["extents"] = extents();
-        return d;
-    }
+py::dict PyAABB::toDict() {
+    // for ujson serialization
+    py::dict d;
+    d["pos"] = pos();
+    d["extents"] = extents();
+    return d;
+}
 
-    PyAABB GetCombined(const PyAABB& rhs) {
-        return PyAABB(ab.GetCombined(rhs.ab));
-    }
+PyAABBPtr PyAABB::GetCombined(const PyAABB& rhs) {
+    return PyAABBPtr(new PyAABB(ab.GetCombined(rhs.ab)));
+}
 
-    PyAABB GetTransformed(object otrans) {
-        return PyAABB(ab.GetTransformed(ExtractTransform(otrans)));
-    }
+PyAABBPtr PyAABB::GetTransformed(py::object otrans) {
+    return PyAABBPtr(new PyAABB(ab.GetTransformed(ExtractTransform(otrans))));
+}
 
-    virtual std::string __repr__() {
-        return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
-    }
-    virtual std::string __str__() {
-        return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
-    }
-    virtual object __unicode__() {
-        return ConvertStringToUnicode(__str__());
-    }
+std::string PyAABB::__repr__() {
+    return boost::str(boost::format("AABB([%.15e,%.15e,%.15e],[%.15e,%.15e,%.15e])")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
+}
 
-    AABB ab;
-};
+std::string PyAABB::__str__() {
+    return boost::str(boost::format("<%.15e %.15e %.15e %.15e %.15e %.15e>")%ab.pos.x%ab.pos.y%ab.pos.z%ab.extents.x%ab.extents.y%ab.extents.z);
+}
+
+py::str PyAABB::__unicode__() {
+    return ConvertStringToUnicode(__str__());
+}
 
 class AABB_pickle_suite
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
@@ -285,9 +273,9 @@ AABB ExtractAABB(object o)
     return ((OPENRAVE_SHARED_PTR<PyAABB>)pyaabb)->ab;
 }
 
-object toPyAABB(const AABB& ab)
+PyAABBPtr toPyAABB(const AABB& ab)
 {
-    return py::to_object(OPENRAVE_SHARED_PTR<PyAABB>(new PyAABB(ab)));
+    return PyAABBPtr(new PyAABB(ab));
 }
 
 class PyOrientedBox
@@ -326,7 +314,7 @@ public:
     virtual std::string __str__() {
         return boost::str(boost::format("<%s>")%__repr__());
     }
-    virtual object __unicode__() {
+    virtual py::str __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
 
@@ -530,7 +518,7 @@ public:
     std::string __str__() {
         return boost::str(boost::format("<trimesh: verts %d, tris=%d>")%len(vertices)%len(indices));
     }
-    object __unicode__() {
+    py::str __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
 
@@ -602,10 +590,10 @@ void PyConfigurationSpecification::DeserializeJSON(object obj) {
     _Update(spec);
 }
 
-object PyConfigurationSpecification::SerializeJSON() {
+py::dict PyConfigurationSpecification::SerializeJSON() {
     rapidjson::Document doc;
     _spec.SerializeJSON(doc);
-    return toPyObject(doc);
+    return py::dict(toPyObject(doc));
 }
 
 const ConfigurationSpecification::Group& PyConfigurationSpecification::GetGroupFromName(const std::string& name) {
@@ -701,7 +689,7 @@ object PyConfigurationSpecification::ExtractIkParameterization(object odata, int
     std::vector<dReal> vdata = ExtractArray<dReal>(odata);
     bool bfound = _spec.ExtractIkParameterization(ikparam, vdata.begin(), timederivative, robotname, manipulatorname);
     if( bfound ) {
-        return toPyIkParameterization(ikparam);
+        return py::to_object(toPyIkParameterization(ikparam));
     }
     else {
         return py::none_();
@@ -858,7 +846,7 @@ std::string PyConfigurationSpecification::__str__() {
     ss << "<configuration dof=\"" << _spec.GetDOF() << "\">";
     return ss.str();
 }
-object PyConfigurationSpecification::__unicode__() {
+py::str PyConfigurationSpecification::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
@@ -1022,13 +1010,18 @@ void pyRaveSetDataAccess(object oaccess)
 }
 
 // return None if nothing found
-object pyRaveInvertFileLookup(const std::string& filename)
+py::typing::Optional<py::str> pyRaveInvertFileLookup(const std::string& filename)
 {
     std::string newfilename;
     if( OpenRAVE::RaveInvertFileLookup(newfilename, filename) ) {
         return ConvertStringToUnicode(newfilename);
     }
     return py::none_();
+}
+
+object RaveGlobalState()
+{
+    return openravepy::toPyUserData(OpenRAVE::RaveGlobalState());
 }
 
 void pyRaveDestroy()
@@ -1073,33 +1066,33 @@ PyInterfaceBasePtr pyRaveClone(PyInterfaceBasePtr pyreference, int cloningoption
     InterfaceBasePtr pclone = OpenRAVE::RaveClone<InterfaceBase>(pyreference->GetInterfaceBase(), cloningoptions, penv);
     switch(pclone->GetInterfaceType()) {
     case PT_Planner: return toPyPlanner(RaveInterfaceCast<PlannerBase>(pclone), pyenv);
-    case PT_Robot: return toPyRobot(RaveInterfaceCast<RobotBase>(pclone), pyenv);
+    case PT_Robot: return static_cast<PyInterfaceBasePtr>(toPyRobot(RaveInterfaceCast<RobotBase>(pclone), pyenv));
     case PT_SensorSystem: return toPySensorSystem(RaveInterfaceCast<SensorSystemBase>(pclone), pyenv);
     case PT_Controller: return toPyController(RaveInterfaceCast<ControllerBase>(pclone), pyenv);
     case PT_Module: return toPyModule(RaveInterfaceCast<ModuleBase>(pclone), pyenv);
     case PT_InverseKinematicsSolver: return toPyIkSolver(RaveInterfaceCast<IkSolverBase>(pclone), pyenv);
-    case PT_KinBody: return toPyKinBody(RaveInterfaceCast<KinBody>(pclone), pyenv);
+    case PT_KinBody: return static_cast<PyInterfaceBasePtr>(toPyKinBody(RaveInterfaceCast<KinBody>(pclone), pyenv));
     case PT_PhysicsEngine: return toPyPhysicsEngine(RaveInterfaceCast<PhysicsEngineBase>(pclone), pyenv);
     case PT_Sensor: return toPySensor(RaveInterfaceCast<SensorBase>(pclone), pyenv);
-    case PT_CollisionChecker: return toPyCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(pclone), pyenv);
-    case PT_Trajectory: return toPyTrajectory(RaveInterfaceCast<TrajectoryBase>(pclone), pyenv);
-    case PT_Viewer: return toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyenv);
+    case PT_CollisionChecker: return static_cast<PyInterfaceBasePtr>(toPyCollisionChecker(RaveInterfaceCast<CollisionCheckerBase>(pclone), pyenv));
+    case PT_Trajectory: return static_cast<PyInterfaceBasePtr>(toPyTrajectory(RaveInterfaceCast<TrajectoryBase>(pclone), pyenv));
+    case PT_Viewer: return static_cast<PyInterfaceBasePtr>(toPyViewer(RaveInterfaceCast<ViewerBase>(pclone), pyenv));
     case PT_SpaceSampler: return toPySpaceSampler(RaveInterfaceCast<SpaceSamplerBase>(pclone), pyenv);
     }
     throw openrave_exception(_("invalid interface type"),ORE_InvalidArguments);
 }
 
-object quatFromAxisAngle1(object oaxis)
+py::array_t<dReal> quatFromAxisAngle1(object oaxis)
 {
     return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis)));
 }
 
-object quatFromAxisAngle2(object oaxis, dReal angle)
+py::array_t<dReal> quatFromAxisAngle2(object oaxis, dReal angle)
 {
     return toPyVector4(quatFromAxisAngle(ExtractVector3(oaxis),angle));
 }
 
-object quatFromRotationMatrix(object R)
+py::array_t<dReal> quatFromRotationMatrix(object R)
 {
     TransformMatrix t;
     t.rotfrommat(extract<dReal>(R[py::to_object(0)][py::to_object(0)]), extract<dReal>(R[py::to_object(0)][py::to_object(1)]), extract<dReal>(R[py::to_object(0)][py::to_object(2)]),
@@ -1108,17 +1101,17 @@ object quatFromRotationMatrix(object R)
     return toPyVector4(quatFromMatrix(t));
 }
 
-object InterpolateQuatSlerp(object q1, object q2, dReal t, bool forceshortarc=true)
+py::array_t<dReal> InterpolateQuatSlerp(object q1, object q2, dReal t, bool forceshortarc=true)
 {
     return toPyVector4(InterpolateQuatSlerp(ExtractVector4(q1),ExtractVector4(q2),t, forceshortarc));
 }
 
-object InterpolateQuatSquad(object q0, object q1, object q2, object q3, dReal t, bool forceshortarc=true)
+py::array_t<dReal> InterpolateQuatSquad(object q0, object q1, object q2, object q3, dReal t, bool forceshortarc=true)
 {
     return toPyVector4(InterpolateQuatSquad(ExtractVector4(q0),ExtractVector4(q1),ExtractVector4(q2),ExtractVector4(q3), t, forceshortarc));
 }
 
-object axisAngleFromRotationMatrix(object R)
+py::array_t<dReal> axisAngleFromRotationMatrix(object R)
 {
     TransformMatrix t;
     t.rotfrommat(extract<dReal>(R[py::to_object(0)][py::to_object(0)]), extract<dReal>(R[py::to_object(0)][py::to_object(1)]), extract<dReal>(R[py::to_object(0)][py::to_object(2)]),
@@ -1127,12 +1120,12 @@ object axisAngleFromRotationMatrix(object R)
     return toPyVector3(axisAngleFromMatrix(t));
 }
 
-object axisAngleFromQuat(object oquat)
+py::array_t<dReal> axisAngleFromQuat(object oquat)
 {
     return toPyVector3(axisAngleFromQuat(ExtractVector4(oquat)));
 }
 
-object rotationMatrixFromQuat(object oquat)
+py::array_t<dReal> rotationMatrixFromQuat(object oquat)
 {
     return toPyArrayRotation(matrixFromQuat(ExtractVector4(oquat)));
 }
@@ -1147,37 +1140,37 @@ object rotationMatrixFromQArray(object qarray)
     return orots;
 }
 
-object matrixFromQuat(object oquat)
+py::array_t<dReal> matrixFromQuat(object oquat)
 {
     return toPyArray(matrixFromQuat(ExtractVector4(oquat)));
 }
 
-object rotationMatrixFromAxisAngle1(object oaxis)
+py::array_t<dReal> rotationMatrixFromAxisAngle1(object oaxis)
 {
     return toPyArrayRotation(matrixFromAxisAngle(ExtractVector3(oaxis)));
 }
 
-object rotationMatrixFromAxisAngle2(object oaxis, dReal angle)
+py::array_t<dReal> rotationMatrixFromAxisAngle2(object oaxis, dReal angle)
 {
     return toPyArrayRotation(matrixFromAxisAngle(ExtractVector3(oaxis),angle));
 }
 
-object matrixFromAxisAngle1(object oaxis)
+py::array_t<dReal> matrixFromAxisAngle1(object oaxis)
 {
     return toPyArray(matrixFromAxisAngle(ExtractVector3(oaxis)));
 }
 
-object matrixFromAxisAngle2(object oaxis, dReal angle)
+py::array_t<dReal> matrixFromAxisAngle2(object oaxis, dReal angle)
 {
     return toPyArray(matrixFromAxisAngle(ExtractVector3(oaxis),angle));
 }
 
-object matrixFromPose(object opose)
+py::array_t<dReal>matrixFromPose(object opose)
 {
     return toPyArray(TransformMatrix(ExtractTransformType<dReal>(opose)));
 }
 
-object matrixFromPoses(object oposes)
+py::list matrixFromPoses(object oposes)
 {
     py::list omatrices;
     int N = len(oposes);
@@ -1187,7 +1180,7 @@ object matrixFromPoses(object oposes)
     return omatrices;
 }
 
-object poseFromMatrix(object o)
+py::array_t<dReal> poseFromMatrix(object o)
 {
     TransformMatrix t;
     for(int i = 0; i < 3; ++i) {
@@ -1199,7 +1192,7 @@ object poseFromMatrix(object o)
     return toPyArray(Transform(t));
 }
 
-object poseFromMatrices(object otransforms)
+py::array_t<dReal> poseFromMatrices(object otransforms)
 {
     const int N = len(otransforms);
     if( N == 0 ) {
@@ -1236,7 +1229,7 @@ object poseFromMatrices(object otransforms)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object InvertPoses(object o)
+py::array_t<dReal> InvertPoses(object o)
 {
     const int N = len(o);
     if( N == 0 ) {
@@ -1265,51 +1258,51 @@ object InvertPoses(object o)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object InvertPose(object opose)
+py::array_t<dReal> InvertPose(object opose)
 {
     Transform t = ExtractTransformType<dReal>(opose);
     return toPyArray(t.inverse());
 }
 
-object quatRotateDirection(object source, object target)
+py::array_t<dReal> quatRotateDirection(object source, object target)
 {
     return toPyVector4(quatRotateDirection(ExtractVector3(source), ExtractVector3(target)));
 }
 
-object ExtractAxisFromQuat(object oquat, int iaxis)
+py::array_t<dReal> ExtractAxisFromQuat(object oquat, int iaxis)
 {
     return toPyVector3(ExtractAxisFromQuat(ExtractVector4(oquat), iaxis));
 }
 
-object normalizeAxisRotation(object axis, object quat)
+py::tuple normalizeAxisRotation(object axis, object quat)
 {
     std::pair<dReal, Vector > res = normalizeAxisRotation(ExtractVector3(axis), ExtractVector4(quat));
     return py::make_tuple(res.first,toPyVector4(res.second));
 }
 
-object MultiplyQuat(object oquat1, object oquat2)
+py::array_t<dReal> MultiplyQuat(object oquat1, object oquat2)
 {
     return toPyVector4(OpenRAVE::geometry::quatMultiply(ExtractVector4(oquat1),ExtractVector4(oquat2)));
 }
 
-object InvertQuat(object oquat)
+py::array_t<dReal> InvertQuat(object oquat)
 {
     return toPyVector4(OpenRAVE::geometry::quatInverse(ExtractVector4(oquat)));
 }
 
-object MultiplyPose(object opose1, object opose2)
+py::array_t<dReal> MultiplyPose(object opose1, object opose2)
 {
     return toPyArray(ExtractTransformType<dReal>(opose1)*ExtractTransformType<dReal>(opose2));
 }
 
-object poseTransformPoint(object opose, object opoint)
+py::array_t<dReal> poseTransformPoint(object opose, object opoint)
 {
     Transform t = ExtractTransformType<dReal>(opose);
     Vector newpoint = t*ExtractVector3(opoint);
     return toPyVector3(newpoint);
 }
 
-py::object poseTransformPoints(py::object opose, py::object opoints)
+py::array_t<dReal> poseTransformPoints(py::object opose, py::object opoints)
 {
     // Extract pose data from opose
     dReal rotx, roty, rotz, rotw, transx, transy, transz;
@@ -1434,7 +1427,7 @@ py::object poseTransformPoints(py::object opose, py::object opoints)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-object TransformLookat(object olookat, object ocamerapos, object ocameraup)
+py::array_t<dReal> TransformLookat(object olookat, object ocamerapos, object ocameraup)
 {
     return toPyArray(transformLookat(ExtractVector3(olookat),ExtractVector3(ocamerapos),ExtractVector3(ocameraup)));
 }
@@ -1444,7 +1437,7 @@ object OrientedBoxFromAABB(object oab, object otransform)
     return toPyOrientedBox(OrientedBoxFromAABB(ExtractAABB(oab), ExtractTransform(otransform)));
 }
 
-object AABBFromOrientedBox(object oobb)
+PyAABBPtr AABBFromOrientedBox(object oobb)
 {
     return toPyAABB(AABBFromOrientedBox(ExtractOrientedBox(oobb)));
 }
@@ -1515,6 +1508,78 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(DeserializeJSON_overloads, DeserializeJSO
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_global_basic(py::module& m)
+#else
+void init_openravepy_global_basic()
+#endif
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
+#else
+    enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
+#endif
+    .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
+    .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
+    .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
+    .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
+    .value("probleminstance",PT_Module)
+    .value(RaveGetInterfaceName(PT_Module).c_str(),PT_Module)
+    .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
+    .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
+    .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
+    .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
+    .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
+    .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
+    .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
+    .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >(m, "UserData", DOXY_CLASS(UserData))
+#else
+    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
+#endif
+    .def("close",&PyUserData::Close,"deprecated")
+    .def("Close",&PyUserData::Close,"force releasing the user handle point.")
+    ;
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    class_<PyReadable, PyReadablePtr >(m, "Readable", DOXY_CLASS(eadable))
+#else
+    class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
+#endif
+    .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeXML", &PyReadable::SerializeXML,
+         "options"_a = 0,
+         DOXY_FN(eadable, Serialize)
+         )
+#else
+    .def("SerializeXML", &PyReadable::SerializeXML, SerializeXML_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
+#endif
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    .def("SerializeJSON", &PyReadable::SerializeJSON,
+         "unitScale"_a = 1.0,
+         "options"_a = 0,
+         DOXY_FN(Readable, SerializeJSON)
+         )
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON,
+         "obj"_a,
+         "unitScale"_a = 1.0,
+         DOXY_FN(Readable, DeserializeJSON)
+         )
+#else
+    .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
+    .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
+#endif
+    ;
+}
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_global(py::module& m)
 #else
 void init_openravepy_global()
@@ -1578,26 +1643,6 @@ void init_openravepy_global()
     ;
 
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<InterfaceType>(m, "InterfaceType", py::arithmetic() DOXY_ENUM(InterfaceType))
-#else
-    enum_<InterfaceType>("InterfaceType" DOXY_ENUM(InterfaceType))
-#endif
-    .value(RaveGetInterfaceName(PT_Planner).c_str(),PT_Planner)
-    .value(RaveGetInterfaceName(PT_Robot).c_str(),PT_Robot)
-    .value(RaveGetInterfaceName(PT_SensorSystem).c_str(),PT_SensorSystem)
-    .value(RaveGetInterfaceName(PT_Controller).c_str(),PT_Controller)
-    .value("probleminstance",PT_Module)
-    .value(RaveGetInterfaceName(PT_Module).c_str(),PT_Module)
-    .value(RaveGetInterfaceName(PT_IkSolver).c_str(),PT_IkSolver)
-    .value(RaveGetInterfaceName(PT_KinBody).c_str(),PT_KinBody)
-    .value(RaveGetInterfaceName(PT_PhysicsEngine).c_str(),PT_PhysicsEngine)
-    .value(RaveGetInterfaceName(PT_Sensor).c_str(),PT_Sensor)
-    .value(RaveGetInterfaceName(PT_CollisionChecker).c_str(),PT_CollisionChecker)
-    .value(RaveGetInterfaceName(PT_Trajectory).c_str(),PT_Trajectory)
-    .value(RaveGetInterfaceName(PT_Viewer).c_str(),PT_Viewer)
-    .value(RaveGetInterfaceName(PT_SpaceSampler).c_str(),PT_SpaceSampler)
-    ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     enum_<CloningOptions>(m, "CloningOptions", py::arithmetic() DOXY_ENUM(CloningOptions))
 #else
@@ -1717,7 +1762,7 @@ void init_openravepy_global()
                         .value(GetLengthUnitString(LU_DeciMillimeter), LU_DeciMillimeter)
                         .value(GetLengthUnitString(LU_Micrometer), LU_Micrometer)
                         .value(GetLengthUnitString(LU_Nanometer), LU_Nanometer)
-                        .value(GetLengthUnitString(LU_Inch), LU_Inch)
+                        .value((std::string(GetLengthUnitString(LU_Inch))+"_").c_str(), LU_Inch)
                         .value(GetLengthUnitString(LU_Foot), LU_Foot)
     ;
 
@@ -1819,14 +1864,6 @@ void init_openravepy_global()
     .def("Close",&PyGraphHandle::Close,DOXY_FN(GraphHandle,Close))
     ;
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >(m, "UserData", DOXY_CLASS(UserData))
-#else
-    class_<PyUserData, OPENRAVE_SHARED_PTR<PyUserData> >("UserData", DOXY_CLASS(UserData), no_init)
-#endif
-    .def("close",&PyUserData::Close,"deprecated")
-    .def("Close",&PyUserData::Close,"force releasing the user handle point.")
-    ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PySerializableData, OPENRAVE_SHARED_PTR<PySerializableData>, PyUserData >(m, "SerializableData", DOXY_CLASS(SerializableData))
     .def(init<>())
@@ -2040,36 +2077,6 @@ void init_openravepy_global()
 #endif
     ;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    class_<PyReadable, PyReadablePtr >(m, "Readable", DOXY_CLASS(eadable))
-#else
-    class_<PyReadable, PyReadablePtr >("Readable", DOXY_CLASS(eadable), no_init)
-#endif
-    .def("GetXMLId", &PyReadable::GetXMLId, DOXY_FN(eadable, GetXMLId))
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("SerializeXML", &PyReadable::SerializeXML,
-         "options"_a = 0,
-         DOXY_FN(eadable, Serialize)
-         )
-#else
-    .def("SerializeXML", &PyReadable::SerializeXML, SerializeXML_overloads(PY_ARGS("options") DOXY_FN(Readable, Serialize)))
-#endif
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-    .def("SerializeJSON", &PyReadable::SerializeJSON,
-         "unitScale"_a = 1.0,
-         "options"_a = 0,
-         DOXY_FN(Readable, SerializeJSON)
-         )
-    .def("DeserializeJSON", &PyReadable::DeserializeJSON,
-         "obj"_a,
-         "unitScale"_a = 1.0,
-         DOXY_FN(Readable, DeserializeJSON)
-         )
-#else
-    .def("SerializeJSON", &PyReadable::SerializeJSON, SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(Readable, SerializeJSON)))
-    .def("DeserializeJSON", &PyReadable::DeserializeJSON, DeserializeJSON_overloads(PY_ARGS("obj", "unitScale") DOXY_FN(Readable, DeserializeJSON)))
-#endif
-    ;
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >(m, "PluginInfo", DOXY_CLASS(PLUGININFO))
 #else
     class_<PyPluginInfo, OPENRAVE_SHARED_PTR<PyPluginInfo> >("PluginInfo", DOXY_CLASS(PLUGININFO),no_init)
@@ -2079,12 +2086,25 @@ void init_openravepy_global()
     ;
 
     {
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr > configurationspecification(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification));
+#else
+        class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr > configurationspecification("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification)):
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        // Group belongs to ConfigurationSpecification
+        class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> > group(configurationspecification, "Group",DOXY_CLASS(ConfigurationSpecification::Group));
+        group.def(init<>());
+#else
+        class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> > group("Group",DOXY_CLASS(ConfigurationSpecification::Group));
+#endif
+
         int (PyConfigurationSpecification::*addgroup1)(const std::string&, int, const std::string&) = &PyConfigurationSpecification::AddGroup;
         int (PyConfigurationSpecification::*addgroup2)(const ConfigurationSpecification::Group&) = &PyConfigurationSpecification::AddGroup;
 
-        scope_ configurationspecification =
+        configurationspecification
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >(m, "ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
             .def(init<>())
             .def(init<PyConfigurationSpecificationPtr>(), "pyspec"_a)
             .def(init<const ConfigurationSpecification::Group&>(), "group"_a)
@@ -2097,7 +2117,6 @@ void init_openravepy_global()
             })
             .def("GetGroupFromName", &PyConfigurationSpecification::GetGroupFromName, DOXY_FN(ConfigurationSpecification,GetGroupFromName))
 #else
-            class_<PyConfigurationSpecification, PyConfigurationSpecificationPtr >("ConfigurationSpecification",DOXY_CLASS(ConfigurationSpecification))
             .def(init<PyConfigurationSpecificationPtr>(py::args("spec")) )
             .def(init<const ConfigurationSpecification::Group&>(py::args("group")) )
             .def(init<const std::string&>(py::args("xmldata")) )
@@ -2229,13 +2248,7 @@ void init_openravepy_global()
         ;
 
         {
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-            // Group belongs to ConfigurationSpecification
-            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >(configurationspecification, "Group",DOXY_CLASS(ConfigurationSpecification::Group))
-                           .def(init<>())
-#else
-            scope_ group = class_<ConfigurationSpecification::Group, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> >("Group",DOXY_CLASS(ConfigurationSpecification::Group))
-#endif
+            group
                            .def_readwrite("name",&ConfigurationSpecification::Group::name)
                            .def_readwrite("interpolation",&ConfigurationSpecification::Group::interpolation)
                            .def_readwrite("offset",&ConfigurationSpecification::Group::offset)
@@ -2278,6 +2291,17 @@ void init_openravepy_global()
 #endif
         ;
     }
+}
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_global_functions(py::module& m)
+#else
+void init_openravepy_global_functions()
+#endif
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    using namespace py::literals;  // "..."_a
+#endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveSetDebugLevel",openravepy::pyRaveSetDebugLevel, PY_ARGS("level") DOXY_FN1(RaveSetDebugLevel));
 #else
@@ -2407,9 +2431,9 @@ void init_openravepy_global()
     def("RaveHasInterface",OpenRAVE::RaveHasInterface, PY_ARGS("type","name") DOXY_FN1(RaveHasInterface));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    m.def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    m.def("RaveGlobalState",openravepy::RaveGlobalState,DOXY_FN1(RaveGlobalState));
 #else
-    def("RaveGlobalState",OpenRAVE::RaveGlobalState,DOXY_FN1(RaveGlobalState));
+    def("RaveGlobalState",openravepy::RaveGlobalState,DOXY_FN1(RaveGlobalState));
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     m.def("RaveClone", openravepy::pyRaveClone,

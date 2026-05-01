@@ -44,7 +44,7 @@ public:
     object description = py::none_();
     object errorOrigin = py::none_();
     object jointValues = py::none_();
-    object ikparam = py::none_();
+    PyIkParameterizationPtr ikparam = PyIkParameterizationPtr();
     uint32_t statusCode = 0;
 };
 
@@ -72,7 +72,7 @@ public:
 
         void SetConfigurationSpecification(PyEnvironmentBasePtr pyenv, PyConfigurationSpecificationPtr pyspec);
 
-        object GetConfigurationSpecification() const;
+        PyConfigurationSpecificationPtr GetConfigurationSpecification() const;
 
         void SetExtraParameters(const std::string& s);
 
@@ -120,7 +120,7 @@ public:
 
         std::string __repr__();
         std::string __str__();
-        object __unicode__();
+        py::str __unicode__();
         bool __eq__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p);
         bool __ne__(OPENRAVE_SHARED_PTR<PyPlannerParameters> p);
         long __hash__();
@@ -144,6 +144,20 @@ public:
     object RegisterPlanCallback(object fncallback);
 
     PlannerBasePtr GetPlanner();
+};
+
+struct PlannerBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    PlannerBaseInitializer(py::module& m_);
+    void init_openravepy_planner();
+    py::module& m;
+    py::class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, PyInterfaceBase> planner;
+#else
+    PlannerBaseInitializer();
+    void init_openravepy_planner();
+    py::class_<PyPlannerBase, OPENRAVE_SHARED_PTR<PyPlannerBase>, bases<PyInterfaceBase> > planner;
+#endif
 };
 
 } // namespace openravepy

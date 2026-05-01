@@ -110,9 +110,23 @@ public:
             }
             else if( name == "elastic_reduction_parameter" || name == "erp" ) {
                 _ss >> _physics->_globalerp;
+                RAVELOG_DEBUG_FORMAT("global ERP: %f", _physics->_globalerp);
             }
             else if( name == "constraint_force_mixing" || name == "cfm" ) {
                 _ss >> _physics->_globalcfm;
+                RAVELOG_DEBUG_FORMAT("global CFM: %f", _physics->_globalcfm);
+            }
+            else if( name == "contacterp" ) {
+                _ss >> _physics->_contactErp;
+                RAVELOG_DEBUG_FORMAT("contact ERP: %f", _physics->_contactErp);
+            }
+            else if( name == "contactcfm" ) {
+                _ss >> _physics->_contactCfm;
+                RAVELOG_DEBUG_FORMAT("contact CFM: %f", _physics->_contactCfm);
+            }
+            else if( name == "visualizecontact" ) {
+                _ss >> _physics->_visualizeContact;
+                RAVELOG_DEBUG_FORMAT("visualizeContact flags: %d", _physics->_visualizeContact);
             }
             else if( name == "contact" ) {         // check out http://www.ode.org/ode-latest-userguide.html#sec_7_3_7
 
@@ -170,8 +184,8 @@ public:
             }
         }
 
-        static const boost::array<string, 11>& GetTags() {
-            static const boost::array<string, 11> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing", "dcontactapprox", "numiterations", "surfacelayer" }};
+        static const boost::array<string, 14>& GetTags() {
+            static const boost::array<string, 14> tags = {{"friction","selfcollision", "gravity", "contact", "erp", "cfm", "elastic_reduction_parameter", "constraint_force_mixing", "contacterp", "contactcfm", "visualizecontact", "dcontactapprox", "numiterations", "surfacelayer" }};
             return tags;
         }
 
@@ -210,10 +224,11 @@ The possible properties that can be set are: ";
         _globalfriction = 0.4;
         _globalerp = 0.01;
         _globalcfm = 1e-5;
+        _contactErp = 0.01;
+        _contactCfm = 1e-5;
         _num_iterations = 20;
-        //Default to openrave 0.6.6 behavior, but this really should default to
-        //enable the friction pyramid model.
-        _surface_mode = 0;
+        _visualizeContact = false;
+        _surface_mode = dContactApprox1;
         _surfacelayer = 0.001;
         _options = OpenRAVE::PEO_SelfCollisions;
 
@@ -319,6 +334,9 @@ The possible properties that can be set are: ";
         _globalfriction = r->_globalfriction;
         _globalcfm = r->_globalcfm;
         _globalerp = r->_globalerp;
+        _contactCfm = r->_contactCfm;
+        _contactErp = r->_contactErp;
+        _visualizeContact = r->_visualizeContact;
         _surface_mode = r->_surface_mode;
         _num_iterations = r->_num_iterations;
         if( !!_odespace && _odespace->IsInitialized() ) {
@@ -543,7 +561,25 @@ The possible properties that can be set are: ";
                 pinfo->nLastStamp = (*itbody)->GetUpdateStamp()-1;
             }
         }
-
+        if( _visualizeContact ) {
+            OpenRAVE::RaveVector<float> vColor(1, 0, 0, 1);
+            std::vector<float> points(_contactFeedbackArray.size() * 6);
+            for (int ipoint = 0; ipoint < _contactFeedbackArray.size(); ++ipoint) {
+                const ContactFeedback& contactFeedback = _contactFeedbackArray[ipoint];
+                points[6*ipoint + 0] = contactFeedback._contact.geom.pos[0];
+                points[6*ipoint + 1] = contactFeedback._contact.geom.pos[1];
+                points[6*ipoint + 2] = contactFeedback._contact.geom.pos[2];
+                OpenRAVE::RaveVector<float> force(contactFeedback._feedback->f1[0], contactFeedback._feedback->f1[1], contactFeedback._feedback->f1[2]);
+                if( force.dot(_gravity) > 0 ) {  // show upward force
+                    force = -force;
+                }
+                points[6*ipoint + 3] = contactFeedback._contact.geom.pos[0] + force[0] * 0.01;
+                points[6*ipoint + 4] = contactFeedback._contact.geom.pos[1] + force[1] * 0.01;
+                points[6*ipoint + 5] = contactFeedback._contact.geom.pos[2] + force[2] * 0.01;
+            }
+            _graphicsHandles = GetEnv()->drawlinelist(&points[0], _contactFeedbackArray.size()*2, 3*sizeof(float), 5.0f, vColor);
+        }
+        _contactFeedbackArray.clear();
         _listcallbacks.clear();
     }
 
@@ -627,17 +663,36 @@ private:
             }
         }
 
+        // Get frictions before processing collisions.
+        // Friction is a property of a contact surface in ODE which is linked to ODE geoms.
+        // Hence _friction is stored on the geom level in OpenRAVE.
+        // For simplicity we assume that OpenRAVE link has a uniform material, therefore every geom in a link has the same _friction value.
+        // Hence we can just take the friction of the first geom GetGeometry(0).
+        // TODO: Being able to get corresponding OpenRAVE's geometry from ODE's dGeomID so that we can use friction coefficient from the actual geometries that have the collision.
+        float friction1 = pkb1->GetGeometry(0)->GetInfo().GetFriction();
+        float friction2 = pkb2->GetGeometry(0)->GetInfo().GetFriction();
+        // If custom friction wasn't set - use _globalfriction as default
+        if (friction1 < 0){
+            friction1 = _globalfriction;
+        }
+        if (friction2 < 0){
+            friction2 = _globalfriction;
+        }
+        // take the lower value of the friction to not overestimate grip
+        float combinedFriction = min(friction1, friction2);
+
         // process collisions
         for (int i=0; i<n; i++) {
-            contact[i].surface.mode = _surface_mode;
-            contact[i].surface.mu = (dReal)_globalfriction;
-            contact[i].surface.mu2 = (dReal)_globalfriction;
+            contact[i].surface.mode = _surface_mode | dContactSoftERP | dContactSoftCFM;
+            contact[i].surface.mu = (dReal)combinedFriction;
+            contact[i].surface.mu2 = (dReal)combinedFriction;
+
             //        contact[i].surface.slip1 = 0.7;
             //        contact[i].surface.slip2 = 0.7;
             //        contact[i].surface.mode = dContactSoftERP | dContactSoftCFM | dContactApprox1 | dContactSlip1 | dContactSlip2;
             //        contact[i].surface.mu = 50.0; // was: dInfinity
-            //        contact[i].surface.soft_erp = 0.96;
-            //        contact[i].surface.soft_cfm = 0.04;
+            contact[i].surface.soft_erp = _contactErp;
+            contact[i].surface.soft_cfm = _contactCfm;
             dJointID c = dJointCreateContact (_odespace->GetWorld(),_odespace->GetContactGroup(),contact+i);
 
             // make sure that static objects are not enabled by adding a joint attaching them
@@ -648,6 +703,11 @@ private:
                 b2 = dBodyIsEnabled(b2) ? b2 : 0;
             }
             dJointAttach (c, b1, b2);
+            if( _visualizeContact ) {
+                ContactFeedback contactFeedback(contact[i]);
+                dJointSetFeedback(c, contactFeedback._feedback.get());
+                _contactFeedbackArray.emplace_back(contactFeedback);
+            }
 
             //wprintf(L"intersection %s %s\n", ((KinBody::Link*)dBodyGetData(b1))->GetName(), ((KinBody::Link*)dBodyGetData(b2))->GetName());
 
@@ -685,6 +745,8 @@ private:
     Vector _gravity;
     int _options;
     dReal _globalfriction, _globalcfm, _globalerp;
+    dReal _contactCfm, _contactErp;
+    bool _visualizeContact;
 
     /**
      * _surface_mode stores global surface settings in dSurfaceParameters.
@@ -700,6 +762,19 @@ private:
     typedef void (*JointSetFn)(dJointID, int param, dReal val);
     typedef dReal (*JointGetFn)(dJointID);
     typedef void (*JointAddForceFn)(dJointID, const dReal* vals);
+
+    struct ContactFeedback {
+        dContact _contact; ///< dynamically created contact joint
+        std::shared_ptr<dJointFeedback> _feedback; /// joint feedback that is associated to _contact. use shared_ptr to make this class copyable
+        ContactFeedback() : _feedback(new dJointFeedback) {
+        }
+        ContactFeedback(const dContact& contact) : _contact(contact), _feedback(new dJointFeedback) {
+        }
+        ContactFeedback(const ContactFeedback& other) : _contact(other._contact), _feedback(other._feedback) {
+        }
+    };
+    std::vector<ContactFeedback> _contactFeedbackArray; ///< to visualize contact
+    OpenRAVE::GraphHandlePtr _graphicsHandles; ///< to visualize contact
 
     JointSetFn _jointset[12];
     JointAddForceFn _jointadd[12];
