@@ -66,7 +66,7 @@ std::string PYCONTACT::__str__() const
     ss << "pos=["<<vpos.x<<", "<<vpos.y<<", "<<vpos.z<<"], norm=["<<vnorm.x<<", "<<vnorm.y<<", "<<vnorm.z<<"]";
     return ss.str();
 }
-object PYCONTACT::__unicode__() const
+py::str PYCONTACT::__unicode__() const
 {
     return ConvertStringToUnicode(__str__());
 }
@@ -86,12 +86,12 @@ std::string PyCollisionPairInfo::__str__() const
     ss << "<(" << bodyLinkGeom1Name << ")x(" << bodyLinkGeom2Name << ") c=" << py::len(contacts) << ">";
     return ss.str();
 }
-object PyCollisionPairInfo::__unicode__() const
+py::str PyCollisionPairInfo::__unicode__() const
 {
     return ConvertStringToUnicode(__str__());
 }
 
-py::object PyCollisionPairInfo::ExtractFirstBodyLinkGeomNames()
+py::tuple PyCollisionPairInfo::ExtractFirstBodyLinkGeomNames()
 {
     CollisionPairInfo cpinfo;
     cpinfo.bodyLinkGeom1Name = bodyLinkGeom1Name;
@@ -100,7 +100,7 @@ py::object PyCollisionPairInfo::ExtractFirstBodyLinkGeomNames()
     return py::make_tuple(ConvertStringToUnicode(std::string(bodyname)), ConvertStringToUnicode(std::string(linkname)), ConvertStringToUnicode(std::string(geomname)));
 }
 
-py::object PyCollisionPairInfo::ExtractSecondBodyLinkGeomNames()
+py::tuple PyCollisionPairInfo::ExtractSecondBodyLinkGeomNames()
 {
     CollisionPairInfo cpinfo;
     cpinfo.bodyLinkGeom2Name = bodyLinkGeom2Name;
@@ -154,7 +154,7 @@ std::string PyCollisionReport::__str__() const
     return s.str();
 }
 
-object PyCollisionReport::__unicode__() const
+py::str PyCollisionReport::__unicode__() const
 {
     return ConvertStringToUnicode(__str__());
 }
@@ -200,12 +200,12 @@ bool PyCollisionCheckerBase::SetBodyGeometryGroup(PyKinBodyPtr pybody, const std
     return _pCollisionChecker->SetBodyGeometryGroup(openravepy::GetKinBody(pybody), groupname);
 }
 
-object PyCollisionCheckerBase::GetGeometryGroup()
+py::str PyCollisionCheckerBase::GetGeometryGroup()
 {
     return ConvertStringToUnicode(_pCollisionChecker->GetGeometryGroup());
 }
 
-object PyCollisionCheckerBase::GetBodyGeometryGroup(PyKinBodyPtr pybody)
+py::str PyCollisionCheckerBase::GetBodyGeometryGroup(PyKinBodyPtr pybody)
 {
     return ConvertStringToUnicode(_pCollisionChecker->GetBodyGeometryGroup(openravepy::GetKinBody(pybody)));
 }
@@ -637,7 +637,7 @@ bool PyCollisionCheckerBase::CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, Py
     return bCollision;
 }
 
-object PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbody, bool bFrontFacingOnly, object oCheckPreemptFn)
+py::tuple PyCollisionCheckerBase::CheckCollisionRays(object rays, PyKinBodyPtr pbody, bool bFrontFacingOnly, object oCheckPreemptFn)
 {
     object shape = rays.attr("shape");
     const int num = extract<int>(shape[0]);
@@ -869,9 +869,9 @@ CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr pyCollisio
     return !pyCollisionChecker ? CollisionCheckerBasePtr() : pyCollisionChecker->GetCollisionChecker();
 }
 
-PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr pCollisionChecker, PyEnvironmentBasePtr pyenv)
+PyCollisionCheckerBasePtr toPyCollisionChecker(CollisionCheckerBasePtr pCollisionChecker, PyEnvironmentBasePtr pyenv)
 {
-    return !pCollisionChecker ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyCollisionCheckerBase(pCollisionChecker,pyenv));
+    return !pCollisionChecker ? PyCollisionCheckerBasePtr() : PyCollisionCheckerBasePtr(new PyCollisionCheckerBase(pCollisionChecker,pyenv));
 }
 
 bool IsCollisionReport(object o)

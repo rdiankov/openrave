@@ -44,48 +44,48 @@ public:
 
     void Remove(size_t startindex, size_t endindex);
 
-    object Sample(dReal time) const;
+    py::array_t<dReal> Sample(dReal time) const;
 
-    object Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> Sample(dReal time, PyConfigurationSpecificationPtr pyspec) const;
 
-    object SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> SampleFromPrevious(object odata, dReal time, PyConfigurationSpecificationPtr pyspec) const;
 
-    object SamplePoints2D(object otimes) const;
+    py::array_t<dReal> SamplePoints2D(object otimes) const;
 
-    object SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> SamplePoints2D(object otimes, PyConfigurationSpecificationPtr pyspec) const;
 
-    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint) const;
+    py::array_t<dReal> SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint) const;
 
-    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
 
-    object SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const;
+    py::array_t<dReal> SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint) const;
 
-    object SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, PyConfigurationSpecificationPtr pyspec) const;
 
-    object GetConfigurationSpecification() const;
+    PyConfigurationSpecificationPtr GetConfigurationSpecification() const;
 
     size_t GetNumWaypoints() const;
 
-    object GetWaypoints(size_t startindex, size_t endindex) const;
+    py::array_t<dReal> GetWaypoints(size_t startindex, size_t endindex) const;
 
-    object GetWaypoints(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> GetWaypoints(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const;
 
     // similar to GetWaypoints except returns a 2D array, one row for every waypoint
-    object GetWaypoints2D(size_t startindex, size_t endindex) const;
+    py::array_t<dReal> GetWaypoints2D(size_t startindex, size_t endindex) const;
 
-    object __getitem__(int index) const;
+    py::array_t<dReal> __getitem__(int index) const;
 
-    object __getitem__(py::slice indices) const;
+    py::array_t<dReal> __getitem__(py::slice indices) const;
 
-    object GetAllWaypoints2D() const;
+    py::array_t<dReal> GetAllWaypoints2D() const;
 
-    object GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> GetWaypoints2D(size_t startindex, size_t endindex, PyConfigurationSpecificationPtr pyspec) const;
 
-    object GetAllWaypoints2D(PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> GetAllWaypoints2D(PyConfigurationSpecificationPtr pyspec) const;
 
-    object GetWaypoint(int index) const;
+    py::array_t<dReal> GetWaypoint(int index) const;
 
-    object GetWaypoint(int index, PyConfigurationSpecificationPtr pyspec) const;
+    py::array_t<dReal> GetWaypoint(int index, PyConfigurationSpecificationPtr pyspec) const;
 
     size_t GetFirstWaypointIndexAfterTime(dReal time) const;
 
@@ -93,7 +93,7 @@ public:
 
     void deserialize(const string& s);
 
-    object serialize(object options=py::none_());
+    py::bytes serialize(object options=py::none_());
 
     void SaveToFile(const std::string& filename, object options=py::none_());
 
@@ -105,15 +105,15 @@ public:
     void Init(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup);
     void Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup);
     void Insert(size_t index, object odata, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup, bool bOverwrite);
-    object Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object SampleFromPrevious(object odata, dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object GetWaypoints(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
-    object GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> Sample(dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> SampleFromPrevious(object odata, dReal time, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> SamplePoints2D(object otimes, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> SamplePointsSameDeltaTime2D(dReal deltatime, bool ensureLastPoint, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> SampleRangeSameDeltaTime2D(dReal deltatime, dReal startTime, dReal stopTime, bool ensureLastPoint, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> GetWaypoints(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> GetWaypoints2D(size_t startindex, size_t endindex, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> GetAllWaypoints2D(OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
+    py::array_t<dReal> GetWaypoint(int index, OPENRAVE_SHARED_PTR<ConfigurationSpecification::Group> pygroup) const;
 
 private:
     static thread_local std::vector<dReal> _vdataCache, _vtimesCache; ///< caches to avoid memory allocation. TLS to suppport concurrent data read ( getting waypoint, sampling and so on ) from multiple threads.

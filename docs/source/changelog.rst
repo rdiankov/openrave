@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.170.0
+===============
+
+- Fix type stub of Python binding
+
 Version 0.169.1
 ===============
 

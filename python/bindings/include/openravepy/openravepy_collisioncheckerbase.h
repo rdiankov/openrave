@@ -46,9 +46,9 @@ public:
 
     bool SetBodyGeometryGroup(PyKinBodyPtr pybody, const std::string& groupname);
 
-    object GetGeometryGroup();
+    py::str GetGeometryGroup();
 
-    object GetBodyGeometryGroup(PyKinBodyPtr pybody);
+    py::str GetBodyGeometryGroup(PyKinBodyPtr pybody);
 
     void RemoveKinBody(PyKinBodyPtr pbody);
 
@@ -86,7 +86,7 @@ public:
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyLinkPtr plink, PyCollisionReportPtr pReport);
 
-    object CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false, object oCheckPreemptFn=py::none_());
+    py::tuple CheckCollisionRays(object rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false, object oCheckPreemptFn=py::none_());
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray);
 
