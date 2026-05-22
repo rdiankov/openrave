@@ -223,9 +223,6 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         extraGeometriesValue.SetObject();
         const bool bIsCurrentGeometryGroupDefault = _IsDefaultGeometryGroupName(_currentGeometryGroupName);
         FOREACHC(im, _mapExtraGeometries) {
-            if( im->first.find("envsafety_") == std::string::npos && im->first.find("robotsafety_") == std::string::npos ) {
-                continue;
-            }
             // if( bIsCurrentGeometryGroupDefault ) {
             //     if( _IsDefaultGeometryGroupName(im->first) ) {
             //         continue;
@@ -239,7 +236,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
             rapidjson::Value geometriesValue;
             geometriesValue.SetArray();
             FOREACHC(iv, im->second){
-                if(!!(*iv))
+                if(!!(*iv) && (*iv)->_bIsSafetyGeometry)
                 {
                     rapidjson::Value geometryValue;
                     (*iv)->SerializeJSON(geometryValue, allocator, fUnitScale, options);
