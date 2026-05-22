@@ -1052,6 +1052,7 @@ void KinBody::GeometryInfo::Reset()
     _fTransparency = 0;
     _bVisible = true;
     _bModifiable = true;
+    _bIsSafetyGeometry = false;
     _calibrationBoardParameters.clear();
     _modifiedFields = 0xffffffff;
     _vNegativeCropContainerMargins = Vector(0,0,0);
@@ -1275,6 +1276,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     }
     if( !_bModifiable ) { // default is true
         orjson::SetJsonValueByKey(rGeometryInfo, "modifiable", _bModifiable, allocator);
+    }
+    if( _bIsSafetyGeometry ) { // default is false
+        orjson::SetJsonValueByKey(rGeometryInfo, "isSafetyGeometry", _bIsSafetyGeometry, allocator);
     }
 
     orjson::SetJsonValueByKey(rGeometryInfo, "friction", _friction, allocator);
@@ -1668,6 +1672,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     orjson::LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
     orjson::LoadJsonValueByKey(value, "ambientColor", _vAmbientColor);
     orjson::LoadJsonValueByKey(value, "modifiable", _bModifiable);
+    orjson::LoadJsonValueByKey(value, "isSafetyGeometry", _bIsSafetyGeometry);
 
     if (value.HasMember("friction")) {
         orjson::LoadJsonValueByKey(value, "friction", _friction);
@@ -2278,6 +2283,13 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     if (IsModifiable() != info._bModifiable) {
         _info._bModifiable = info._bModifiable;
         RAVELOG_VERBOSE_FORMAT("geometry %s modifiable changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // isSafetyGeometry
+    if (_info._bIsSafetyGeometry != info._bIsSafetyGeometry) {
+        _info._bIsSafetyGeometry = info._bIsSafetyGeometry;
+        RAVELOG_VERBOSE_FORMAT("geometry %s isSafetyGeometry changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 

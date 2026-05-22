@@ -381,6 +381,7 @@ public:
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
+                   && _bIsSafetyGeometry == other._bIsSafetyGeometry
                    && _calibrationBoardParameters == other._calibrationBoardParameters
                    && _vNegativeCropContainerMargins == other._vNegativeCropContainerMargins
                    && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins
@@ -577,6 +578,7 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
+        bool _bIsSafetyGeometry = false; ///< if true, geometry is used for safety geometry.
         Vector _vNegativeCropContainerMargins = Vector(0,0,0); ///< The negative crop margins component
         Vector _vPositiveCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
         Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
