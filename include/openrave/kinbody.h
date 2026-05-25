@@ -753,6 +753,9 @@ public:
         inline bool IsModifiable() const {
             return _info._bModifiable;
         }
+        inline bool IsSafetyGeometry() const {
+            return _info._bIsSafetyGeometry;
+        }
 
         inline dReal GetSphereRadius() const {
             return _info.GetSphereRadius();

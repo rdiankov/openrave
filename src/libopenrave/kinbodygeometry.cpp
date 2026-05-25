@@ -1677,6 +1677,9 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     if (value.HasMember("friction")) {
         orjson::LoadJsonValueByKey(value, "friction", _friction);
     }
+    if (value.HasMember("isSafetyGeometry")) {
+        orjson::LoadJsonValueByKey(value, "isSafetyGeometry", _bIsSafetyGeometry);
+    }
 
     _CheckValidityOfMeshCollisionIndices( _meshcollision.vertices,  _meshcollision.indices, _name, _id, _type, __FUNCTION__);
 }
@@ -2287,7 +2290,7 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     }
 
     // isSafetyGeometry
-    if (_info._bIsSafetyGeometry != info._bIsSafetyGeometry) {
+    if (IsSafetyGeometry() != info._bIsSafetyGeometry) {
         _info._bIsSafetyGeometry = info._bIsSafetyGeometry;
         RAVELOG_VERBOSE_FORMAT("geometry %s isSafetyGeometry changed", _info._id);
         updateFromInfoResult = UFIR_Success;

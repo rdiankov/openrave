@@ -333,6 +333,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _fTransparency = info._fTransparency;
     _bVisible = info._bVisible;
     _bModifiable = info._bModifiable;
+    _bIsSafetyGeometry = info._bIsSafetyGeometry;
     py::dict calibrationBoardParameters;
     if (info._type == GT_CalibrationBoard && info._calibrationBoardParameters.size() > 0 ) {
         const KinBody::GeometryInfo::CalibrationBoardParameters& parameters = info._calibrationBoardParameters[0];
@@ -455,6 +456,7 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
     info._fTransparency = _fTransparency;
     info._bVisible = _bVisible;
     info._bModifiable = _bModifiable;
+    info._bIsSafetyGeometry = _bIsSafetyGeometry;
     info._friction = _friction;
     if (info._type == GT_CalibrationBoard) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -1498,6 +1500,9 @@ bool PyGeometry::IsVisible() {
 }
 bool PyGeometry::IsModifiable() {
     return _pgeometry->IsModifiable();
+}
+bool PyGeometry::IsSafetyGeometry() {
+    return _pgeometry->IsSafetyGeometry();
 }
 GeometryType PyGeometry::GetType() {
     return _pgeometry->GetType();
@@ -4641,6 +4646,7 @@ public:
             r._fTransparency,
             r._bVisible,
             r._bModifiable,
+            r._bIsSafetyGeometry,
             r._calibrationBoardParameters,
             py::make_tuple(
                 r._vNegativeCropContainerMargins,
@@ -4674,13 +4680,14 @@ public:
         r._fTransparency = py::extract<float>(state[9]);
         r._bVisible = py::extract<bool>(state[10]);
         r._bModifiable = py::extract<bool>(state[11]);
-        r._calibrationBoardParameters = (py::dict) state[12];
-        r._vNegativeCropContainerMargins = state[13][py::to_object(0)];
-        r._vPositiveCropContainerMargins = state[13][py::to_object(1)];
-        r._vNegativeCropContainerEmptyMargins = state[13][py::to_object(2)];
-        r._vPositiveCropContainerEmptyMargins = state[13][py::to_object(3)];
-        r._vSideWalls = state[14][py::to_object(0)];
-        r._vAxialSlices = state[14][py::to_object(1)];
+        r._bIsSafetyGeometry = py::extract<bool>(state[12]);
+        r._calibrationBoardParameters = (py::dict) state[13];
+        r._vNegativeCropContainerMargins = state[14][py::to_object(0)];
+        r._vPositiveCropContainerMargins = state[14][py::to_object(1)];
+        r._vNegativeCropContainerEmptyMargins = state[14][py::to_object(2)];
+        r._vPositiveCropContainerEmptyMargins = state[14][py::to_object(3)];
+        r._vSideWalls = state[15][py::to_object(0)];
+        r._vAxialSlices = state[15][py::to_object(1)];
     }
 };
 
@@ -5228,6 +5235,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                           .def_readwrite("_fTransparency",&PyGeometryInfo::_fTransparency)
                           .def_readwrite("_bVisible",&PyGeometryInfo::_bVisible)
                           .def_readwrite("_bModifiable",&PyGeometryInfo::_bModifiable)
+                          .def_readwrite("_bIsSafetyGeometry",&PyGeometryInfo::_bIsSafetyGeometry)
                           .def_readwrite("_vSideWalls", &PyGeometryInfo::_vSideWalls)
                           .def_readwrite("_vAxialSlices", &PyGeometryInfo::_vAxialSlices)
                           .def_readwrite("_calibrationBoardParameters", &PyGeometryInfo::_calibrationBoardParameters)
@@ -6413,6 +6421,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                                   .def("IsDraw",&PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                   .def("IsVisible",&PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
                                   .def("IsModifiable",&PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
+                                  .def("IsSafetyGeometry",&PyGeometry::IsSafetyGeometry, DOXY_FN(KinBody::Link::Geometry,IsSafetyGeometry))
                                   .def("GetType",&PyGeometry::GetType, DOXY_FN(KinBody::Link::Geometry,GetType))
                                   .def("GetTransform",&PyGeometry::GetTransform, DOXY_FN(KinBody::Link::Geometry,GetTransform))
                                   .def("GetTransformPose",&PyGeometry::GetTransformPose, DOXY_FN(KinBody::Link::Geometry,GetTransform))
