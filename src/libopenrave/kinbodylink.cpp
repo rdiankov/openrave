@@ -221,18 +221,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     if(_mapExtraGeometries.size() > 0 ) {
         rapidjson::Value extraGeometriesValue;
         extraGeometriesValue.SetObject();
-        const bool bIsCurrentGeometryGroupDefault = _IsDefaultGeometryGroupName(_currentGeometryGroupName);
         FOREACHC(im, _mapExtraGeometries) {
-            // if( bIsCurrentGeometryGroupDefault ) {
-            //     if( _IsDefaultGeometryGroupName(im->first) ) {
-            //         continue;
-            //     }
-            // }
-            // else {
-            //     if( im->first == _currentGeometryGroupName) {
-            //         continue;
-            //     }
-            // }
             rapidjson::Value geometriesValue;
             geometriesValue.SetArray();
             FOREACHC(iv, im->second){
@@ -243,9 +232,13 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
                     geometriesValue.PushBack(geometryValue, allocator);
                 }
             }
-            extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
+            if( geometriesValue.Size() > 0 ) {
+                extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
+            }
         }
-        value.AddMember("extraGeometries", extraGeometriesValue, allocator);
+        if( extraGeometriesValue.MemberCount() > 0 ) {
+            value.AddMember("extraGeometries", extraGeometriesValue, allocator);
+        }
     }
 
     orjson::SetJsonValueByKey(value, "isStatic", _bStatic, allocator);
