@@ -2274,6 +2274,21 @@ void GetDHParameters(std::vector<DHParameter>& vparameters, KinBodyConstPtr pbod
     }
 }
 
+static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
+{
+    for( const OpenRAVE::KinBody::LinkPtr& pLink : body.GetLinks() ) {
+        const OpenRAVE::KinBody::LinkInfo& linkInfo = pLink->GetInfo();
+        for( const std::pair<const std::string, std::vector<OpenRAVE::KinBody::GeometryInfoPtr> >& groupGeoms : linkInfo._mapExtraGeometries ) {
+            for( const OpenRAVE::KinBody::GeometryInfoPtr& pGeomInfo : groupGeoms.second ) {
+                if( !!pGeomInfo && pGeomInfo->_bIsSafetyGeometry ) {
+                    return groupGeoms.first;
+                }
+            }
+        }
+    }
+    return std::string();
+}
+
 DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerParametersConstPtr parameters, const std::list<KinBodyPtr>& listCheckBodies, int filtermask) : _listCheckBodies(listCheckBodies), _filtermask(filtermask), _torquelimitmode(DC_NominalTorque), _perturbation(0.1)
 {
     BOOST_ASSERT(listCheckBodies.size()>0);
@@ -2282,6 +2297,20 @@ DynamicsCollisionConstraint::DynamicsCollisionConstraint(PlannerBase::PlannerPar
     if( !!parameters ) {
         _specvel = parameters->_configurationspecification.ConvertToVelocitySpecification();
         _setvelstatefn = _specvel.GetSetFn(_listCheckBodies.front()->GetEnv());
+    }
+
+    FOREACHC(itbody, _listCheckBodies) {
+        KinBodyPtr pbody = *itbody;
+        // if zero dof, do not check dynamic limits nor torque limits.
+        if( pbody->GetDOF() == 0 ) {
+            continue;
+        }
+        const std::string safetyGeometryGroup = _GetSafetyGeometryGroup(*pbody);
+        CollisionCheckerBasePtr pCollision;
+        if( !safetyGeometryGroup.empty() ) {
+            pCollision = pbody->GetEnv()->GetCollisionCheckerByGroupName(safetyGeometryGroup);
+        }
+        _vSafetyCollisionCheckers.push_back(pCollision);
     }
 }
 
@@ -2380,8 +2409,10 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
     }
     if( options & CFO_CheckTimeBasedConstraints && vdofvelocities.size() > 0 && vdofaccels.size() > 0 && (_torquelimitmode != DC_Unknown && _torquelimitmode != DC_IgnoreTorque) ) {
         // check dynamics only when velocities and accelerations are given
+        int iBody = -1;
         FOREACHC(itbody, _listCheckBodies) {
             KinBodyPtr pbody = *itbody;
+            iBody++;
 
             // if zero dof, do not check dynamic limits nor torque limits.
             if( pbody->GetDOF() == 0 ) {
@@ -2511,6 +2542,30 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                             }
                             return CFO_CheckTimeBasedConstraints;
                         }
+                    }
+                }
+            }
+
+            // col check
+            if( (options&CFO_CheckEnvCollisions) ) {
+                CollisionCheckerBasePtr& pCollisionChecker = _vSafetyCollisionCheckers.at(iBody);
+                if( pCollisionChecker ) {
+                    // TODO : report?
+                    _vdofindices.resize(pbody->GetDOF());
+                    for(int i = 0; i < pbody->GetDOF(); ++i) {
+                        _vdofindices[i] = i;
+                    }
+                    OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
+                    if( pRobot->CheckVelocityProjectedCollision(_vfulldofvalues,
+                                                                _vfulldofvelocities,
+                                                                _vdofindices,
+                                                                std::vector<OpenRAVE::KinBodyConstPtr>(),
+                                                                pCollisionChecker) ) {
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            _PrintOnFailure(str(boost::format("rejected collision")%pbody->GetName()));
+                        }
+                        filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, 0.9);
+                        return CFO_CheckTimeBasedConstraints;
                     }
                 }
             }
