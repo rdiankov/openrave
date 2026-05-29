@@ -2490,6 +2490,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                 }
             }
             else {
+                continue;
                 // if no support for dynamic limits, try ComputeInverseDynamics
                 _vtorquevalues.resize(0);
                 FOREACHC(itjoint, pbody->GetJoints()) {
@@ -2545,9 +2546,26 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     }
                 }
             }
+        }
+    }
+    // RAVELOG_DEBUG_FORMAT("Check1 %d", (options & CFO_CheckTimeBasedConstraints));
+    if( options & CFO_CheckTimeBasedConstraints && vdofvelocities.size() > 0 ) {
+        // check dynamics only when velocities and accelerations are given
+        int iBody = -1;
+        FOREACHC(itbody, _listCheckBodies) {
+            KinBodyPtr pbody = *itbody;
+            iBody++;
+
+            // if zero dof, do not check dynamic limits nor torque limits.
+            if( pbody->GetDOF() == 0 ) {
+                continue;
+            }
 
             // col check
-            if( (options&CFO_CheckEnvCollisions) ) {
+            // RAVELOG_DEBUG_FORMAT("Check2 %d", (options&CFO_CheckEnvCollisions));
+            //RAVELOG_DEBUG_FORMAT("CHECK");
+            //if( (options&CFO_CheckEnvCollisions) ) {
+            if( true ) {
                 CollisionCheckerBasePtr& pCollisionChecker = _vSafetyCollisionCheckers.at(iBody);
                 if( pCollisionChecker ) {
                     // TODO : report?
@@ -2555,18 +2573,22 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     for(int i = 0; i < pbody->GetDOF(); ++i) {
                         _vdofindices[i] = i;
                     }
+                    pbody->GetDOFValues(_vfulldofvalues);
+                    pbody->GetDOFVelocities(_vfulldofvelocities);
                     OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
                     if( pRobot->CheckVelocityProjectedCollision(_vfulldofvalues,
                                                                 _vfulldofvelocities,
                                                                 _vdofindices,
                                                                 std::vector<OpenRAVE::KinBodyConstPtr>(),
                                                                 pCollisionChecker) ) {
+                        pbody->SetDOFValues(_vfulldofvalues);
                         if( IS_DEBUGLEVEL(Level_Verbose) ) {
                             _PrintOnFailure(str(boost::format("rejected collision")%pbody->GetName()));
                         }
                         filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, 0.9);
                         return CFO_CheckTimeBasedConstraints;
                     }
+                    pbody->SetDOFValues(_vfulldofvalues);
                 }
             }
         }
