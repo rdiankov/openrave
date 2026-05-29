@@ -1375,6 +1375,15 @@ private:
     /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromRobotInfo(const RobotBaseInfo& info);
 
+    virtual bool CheckVelocityProjectedCollision(const std::vector<dReal>& vDOFPositions,
+                                                 const std::vector<dReal>& vDOFVelocities,
+                                                 const std::vector<int>& vDOFIndices,
+                                                 const std::vector<OpenRAVE::KinBodyConstPtr>& vSafetyGeometryBodies,
+                                                 CollisionCheckerBasePtr& pCollisionChecker)
+    {
+        return true;
+    }
+
 protected:
     RobotBase(EnvironmentBasePtr penv);
 
