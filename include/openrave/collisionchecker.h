@@ -247,6 +247,9 @@ public:
     /// \brief checks collision between two bodies. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of the pbody1.
     virtual bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr()) = 0;
 
+    /// \brief Same semantics as CheckCollision(pbody1, pbody2, report), but bypasses the broad-phase acceleration structures and directly runs the narrow-phase collision query between every relevant geometry pair of the two bodies (with a bounding-volume overlap pre-filter). Intended for the case of checking a body against a single other body where building/maintaining a broad-phase manager is not worth the overhead. Attached bodies are respected. If CO_ActiveDOFs is set, will only check affected links of pbody1. The default implementation throws; collision checkers that support it override this.
+    virtual bool CheckNarrowPhaseBodyCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr()) OPENRAVE_DUMMY_IMPLEMENTATION;
+
     /// \brief checks collision of a link and a scene. Attached bodies are ignored. CO_ActiveDOFs option is ignored.
     virtual bool CheckCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
 

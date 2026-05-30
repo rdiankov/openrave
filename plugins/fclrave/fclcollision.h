@@ -168,6 +168,8 @@ public:
 
     bool CheckCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr()) override;
 
+    bool CheckNarrowPhaseBodyCollision(KinBodyConstPtr pbody1, KinBodyConstPtr pbody2, CollisionReportPtr report = CollisionReportPtr()) override;
+
     bool CheckCollision(LinkConstPtr plink,CollisionReportPtr report = CollisionReportPtr()) override;
 
     bool CheckCollision(LinkConstPtr plink1, LinkConstPtr plink2, CollisionReportPtr report = CollisionReportPtr()) override;
@@ -231,6 +233,9 @@ private:
     inline BroadPhaseCollisionManagerPtr _CreateManager();
 
     FCLCollisionManagerInstance& _GetBodyManager(KinBodyConstPtr pbody, bool bactiveDOFs);
+
+    /// \brief Appends to vLinkInfos the LinkInfo of every enabled link (with a valid bounding volume) of pbody and its attached bodies. If bactiveDOFs is set and pbody is a robot, only links affected by the robot's active DOFs are appended (matching the broad-phase body manager). Used by CheckNarrowPhaseBodyCollision to iterate geometries without a broad-phase manager.
+    void _AppendNarrowPhaseLinkInfos(KinBodyConstPtr pbody, bool bactiveDOFs, std::vector<const FCLSpace::FCLKinBodyInfo::LinkInfo*>& vLinkInfos);
 
     /// \brief gets environment manager corresponding to excludedBodyEnvIndices
     /// \param excludedBodyEnvIndices vector of environment body indices for excluded bodies. sorted in ascending order
