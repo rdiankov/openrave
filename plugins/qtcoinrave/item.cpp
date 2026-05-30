@@ -260,6 +260,15 @@ void KinBodyItem::Load()
                     psep->addChild(cy);
                     break;
                 }
+                case GT_Plane: {
+                    // visualize the infinite plane (local XY-plane) as a thin square box (5m x 5m, 1mm thick)
+                    SoCube* c = new SoCube();
+                    c->width = 5.0f;    // x
+                    c->height = 5.0f;   // y
+                    c->depth = 0.001f;  // z (1mm)
+                    psep->addChild(c);
+                    break;
+                }
                 case GT_Prism:
                 case GT_Capsule:
                 case GT_ConicalFrustum:
