@@ -2568,6 +2568,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
             if( true ) {
                 CollisionCheckerBasePtr& pCollisionChecker = _vSafetyCollisionCheckers.at(iBody);
                 if( pCollisionChecker ) {
+                    // RAVELOG_DEBUG("Check3");
                     // TODO : report?
                     _vdofindices.resize(pbody->GetDOF());
                     for(int i = 0; i < pbody->GetDOF(); ++i) {
@@ -2575,19 +2576,66 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                     }
                     pbody->GetDOFValues(_vfulldofvalues);
                     pbody->GetDOFVelocities(_vfulldofvelocities);
+                    // RAVELOG_DEBUG("Check3-1");
+                    // {
+                    //     std::stringstream ssss;
+                    //     ssss << "x=[";
+                    //     for(const double f : _vfulldofvalues) {
+                    //         ssss << f << ",";
+                    //     }
+                    //     ssss << "];v=[";
+                    //     for(const double f : _vfulldofvelocities) {
+                    //         ssss << f << ",";
+                    //     }
+                    //     ssss << "]";
+                    //     RAVELOG_DEBUG(ssss.str());
+                    // }
                     OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
-                    if( pRobot->CheckVelocityProjectedCollision(_vfulldofvalues,
-                                                                _vfulldofvelocities,
-                                                                _vdofindices,
-                                                                std::vector<OpenRAVE::KinBodyConstPtr>(),
-                                                                pCollisionChecker) ) {
-                        pbody->SetDOFValues(_vfulldofvalues);
-                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
-                            _PrintOnFailure(str(boost::format("rejected collision")%pbody->GetName()));
+                    bool bSolved = false;
+                    double fMultResult = 1.0;
+                    std::vector<double> vvel = _vfulldofvelocities;
+                    for(const double fMult : {1.0, 0.8, 0.6, 0.4}) {
+                        vvel = _vfulldofvelocities;
+                        for(double& v : vvel ) {
+                            v *= fMult;
                         }
-                        filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, 0.9);
+                        const bool bIsColliding = pRobot->CheckVelocityProjectedCollision(_vfulldofvalues,
+                                                                                          //_vfulldofvelocities,
+                                                                                          vvel,
+                                                                                          _vdofindices,
+                                                                                          std::vector<OpenRAVE::KinBodyConstPtr>(),
+                                                                                          pCollisionChecker);
+                        if( bIsColliding ) {
+                            //continue;
+                            fMultResult = 0.8;
+                            break;
+                        }
+                        bSolved = true;
+                        fMultResult = fMult;
+                        break;
+                    }
+                    // const bool bIsColliding = OpenRAVE::RaveFabs(_vfulldofvelocities[0]) > 2.18*0.7;
+                    if( fMultResult < 1.0 ) {
+                        pbody->SetDOFValues(_vfulldofvalues);
+                        // RAVELOG_DEBUG("Check4-1 rejected");
+                        // std::stringstream ssss;
+                        // ssss << "x=[";
+                        // for(const double f : _vfulldofvalues) {
+                        //     ssss << f << ",";
+                        // }
+                        // ssss << "];v=[";
+                        // for(const double f : _vfulldofvelocities) {
+                        //     ssss << f << ",";
+                        // }
+                        // ssss << "]";
+                        // RAVELOG_DEBUG(ssss.str());
+                        if( IS_DEBUGLEVEL(Level_Verbose) ) {
+                            _PrintOnFailure(str(boost::format("rejected collision %s")%pbody->GetName()));
+                        }
+                        filterreturn->_fTimeBasedSurpassMult = std::min(filterreturn->_fTimeBasedSurpassMult, fMultResult);
                         return CFO_CheckTimeBasedConstraints;
                     }
+                    // RAVELOG_DEBUG("Check4-2");
                     pbody->SetDOFValues(_vfulldofvalues);
                 }
             }
