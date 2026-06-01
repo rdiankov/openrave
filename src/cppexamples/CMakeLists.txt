@@ -37,6 +37,7 @@ build_openrave_plugin(plugincpp)
 build_openrave_plugin(customreader)
 
 build_openrave_executable(orcollision)
+build_openrave_executable(orsafetycollision)
 build_openrave_executable(orconveyormovement)
 build_openrave_executable(orloadviewer)
 build_openrave_executable(ikfastloader)

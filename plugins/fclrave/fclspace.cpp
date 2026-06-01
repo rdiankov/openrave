@@ -82,6 +82,14 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
         fcl::AABB enclosingBV;
 
+        // GT_Plane is an infinite plane: its broadphase bounding volume cannot be a finite box.
+        // If the link contains a plane, build the linkBV from fcl::Plane (a thin, surface-infinite
+        // slab) instead of the enclosing box below. tPlaneInLink is the plane geometry's transform
+        // in the link frame.
+        bool bLinkHasPlane = false;
+        size_t numLinkGeoms = 0;
+        Transform tPlaneInLink;
+
         // Glue code for a unified access to geometries
         if(pinfo->_geometrygroup.size() > 0 && plink->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
             const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = plink->GetGeometriesFromGroup(pinfo->_geometrygroup);
@@ -109,6 +117,12 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
                 CollisionObjectPtr pfclcoll = boost::make_shared<fcl::CollisionObject>(pfclgeom);
                 pfclcoll->setUserData(linkinfo.get());
                 linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo.GetTransform(), pfclcoll));
+
+                ++numLinkGeoms;
+                if( geominfo._type == OpenRAVE::GT_Plane ) {
+                    bLinkHasPlane = true;
+                    tPlaneInLink = geominfo.GetTransform();
+                }
 
                 KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
                 if( itgeominfo == vgeometryinfos.begin() ) {
@@ -143,6 +157,12 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
                 linkinfo->vgeoms.push_back(TransformCollisionPair(geominfo.GetTransform(), pfclcoll));
 
+                ++numLinkGeoms;
+                if( geominfo._type == OpenRAVE::GT_Plane ) {
+                    bLinkHasPlane = true;
+                    tPlaneInLink = geominfo.GetTransform();
+                }
+
                 KinBody::Link::Geometry _tmpgeometry(boost::shared_ptr<KinBody::Link>(), geominfo);
                 if( itgeom == vgeometries.begin() ) {
                     enclosingBV = ConvertAABBToFcl(_tmpgeometry.ComputeAABB(Transform()));
@@ -159,6 +179,24 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
         if( linkinfo->vgeoms.size() == 0 ) {
             RAVELOG_DEBUG_FORMAT("env=%s, Initializing body '%s' (index=%d) link '%s' with 0 geometries (env %d) (userdatakey %s, group=%s, bodygroup=%s)", _penv->GetNameId()%pbody->GetName()%pbody->GetEnvironmentBodyIndex()%plink->GetName()%_penv->GetId()%_userdatakey%_geometrygroup%pinfo->_geometrygroup);
+        }
+        else if( bLinkHasPlane ) {
+            // The link contains an infinite plane, which has no finite enclosing box. Use a
+            // fcl::Plane as the broadphase bounding volume: its native AABB is a thin slab at the
+            // plane (infinite along the surface), giving exact broadphase culling. The plane is
+            // expressed in the link frame so that _SynchronizeLink, which applies only the link's
+            // rotation+translation to the linkBV, places it correctly in the world.
+            if( numLinkGeoms > 1 ) {
+                RAVELOG_WARN_FORMAT("env=%s, body '%s' link '%s' has a GT_Plane geometry together with %d other geometries; the broadphase bounding volume is tailored to the plane, so the plane should ideally be the only geometry of its link.", _penv->GetNameId()%pbody->GetName()%plink->GetName()%(numLinkGeoms-1));
+            }
+            const Vector nLink = tPlaneInLink.rotate(Vector(0, 0, 1)); // plane normal in the link frame
+            const OpenRAVE::dReal dLink = nLink.dot(tPlaneInLink.trans); // plane passes through the geometry origin
+            CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Plane>(ConvertVectorToFCL(nLink), dLink);
+            pfclgeomBV->setUserData(nullptr);
+            CollisionObjectPtr pfclcollBV = boost::make_shared<fcl::CollisionObject>(pfclgeomBV);
+            pfclcollBV->setUserData(linkinfo.get());
+            // zero offset: the plane orientation is baked into its normal/offset above
+            linkinfo->linkBV = std::make_pair(Vector(), pfclcollBV);
         }
         else {
             CollisionGeometryPtr pfclgeomBV = std::make_shared<fcl::Box>(enclosingBV.max_ - enclosingBV.min_);
@@ -518,6 +556,11 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
 
     case OpenRAVE::GT_Capsule:
         return std::make_shared<fcl::Capsule>(info._vGeomData.x, info._vGeomData.y);
+
+    case OpenRAVE::GT_Plane:
+        // infinite plane: the local XY-plane (unit normal +Z through the geometry origin).
+        // The geometry transform is applied to the collision object by _SynchronizeLink.
+        return std::make_shared<fcl::Plane>(fcl::Vec3f(0, 0, 1), 0);
 
     case OpenRAVE::GT_Container:
     {

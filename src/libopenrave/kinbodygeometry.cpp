@@ -519,6 +519,10 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
 
         break;
 
+    case GT_Plane:
+        // transform-only geometry; the transform is already compared above
+        break;
+
     case GT_None:
         break;
     }
@@ -532,8 +536,8 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
 
 bool KinBody::GeometryInfo::InitCollisionMesh(float fTessellation)
 {
-    if( _type == GT_None || _type == GT_TriMesh || _type == GT_Prism ) {
-        return true;
+    if( _type == GT_None || _type == GT_TriMesh || _type == GT_Prism || _type == GT_Plane ) {
+        return true; // GT_Plane is an infinite plane, no finite triangulated mesh to generate
     }
 
     // is clear() better since it releases the memory?
@@ -1024,6 +1028,10 @@ void KinBody::GeometryInfo::ConvertUnitScale(dReal fUnitScale)
         }
         break;
 
+    case GT_Plane:
+        // transform-only geometry; the transform is already scaled above
+        break;
+
     case GT_None:
         break;
     }
@@ -1087,6 +1095,8 @@ const char* GetGeometryTypeString(GeometryType geometryType)
         return "prism";
     case GT_Capsule:
         return "capsule";
+    case GT_Plane:
+        return "plane";
     case GT_None:
         return "";
     }
@@ -1258,6 +1268,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         rGeometryInfo.AddMember(rapidjson::Document::StringRefType("calibrationBoardParameters"), rCalibrationBoardParameters, allocator);
         break;
     }
+    case GT_Plane:
+        // transform-only geometry; only the "type" key (already written above) is needed
+        break;
     default:
         break;
     }
@@ -1335,6 +1348,9 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
         }
         else if (typestr == "capsule") {
             type = GT_Capsule;
+        }
+        else if (typestr == "plane") {
+            type = GT_Plane;
         }
         else if (typestr.empty()) {
             type = GT_None;
@@ -1716,6 +1732,15 @@ AABB KinBody::GeometryInfo::ComputeAABB(const Transform& tGeometryWorld) const
         ab.extents.x = 0;
         ab.extents.y = 0;
         ab.extents.z = 0;
+        break;
+    case GT_Plane:
+        // an infinite plane has no finite AABB; return a degenerate box at the geometry origin so
+        // that body/environment bounds are not polluted. fclrave does not use this for broadphase
+        // culling of planes (it builds the broadphase BV directly from fcl::Plane).
+        ab.extents.x = 0;
+        ab.extents.y = 0;
+        ab.extents.z = 0;
+        ab.pos = tglobal.trans;
         break;
     case GT_CalibrationBoard: // the tangible part of the board is basically the box
     case GT_Box: // origin of box is at the center
