@@ -220,7 +220,7 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
     // TODO revive
     if(_mapExtraGeometries.size() > 0 ) {
         rapidjson::Value extraGeometriesValue;
-        extraGeometriesValue.SetObject();
+        extraGeometriesValue.SetArray();
         FOREACHC(im, _mapExtraGeometries) {
             rapidjson::Value geometriesValue;
             geometriesValue.SetArray();
@@ -233,10 +233,14 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
                 }
             }
             if( geometriesValue.Size() > 0 ) {
-                extraGeometriesValue.AddMember(rapidjson::Value(im->first.c_str(), allocator).Move(), geometriesValue, allocator);
+                rapidjson::Value extraGeometryValue(rapidjson::kObjectType);
+                extraGeometryValue.AddMember("id", rapidjson::Value(im->first.c_str(), allocator).Move(), allocator);
+                extraGeometryValue.AddMember("name", rapidjson::Value(im->first.c_str(), allocator).Move(), allocator);
+                extraGeometryValue.AddMember("geometries", geometriesValue.Move(), allocator);
+                extraGeometriesValue.PushBack(extraGeometryValue, allocator);
             }
         }
-        if( extraGeometriesValue.MemberCount() > 0 ) {
+        if( extraGeometriesValue.Size() > 0 ) {
             value.AddMember("extraGeometries", extraGeometriesValue, allocator);
         }
     }
@@ -349,17 +353,26 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
     _mapExtraGeometries.clear();
     // TODO : Need?
-    if (value.HasMember("extraGeometries")) {
-        for (rapidjson::Value::ConstMemberIterator it = value["extraGeometries"].MemberBegin(); it != value["extraGeometries"].MemberEnd(); ++it) {
-            if (_mapExtraGeometries.find(it->name.GetString()) == _mapExtraGeometries.end()) {
-                _mapExtraGeometries[it->name.GetString()] = std::vector<GeometryInfoPtr>();
+    if (value.HasMember("extraGeometries") && value["extraGeometries"].IsArray()) {
+        for(int iExtra = 0; iExtra < value["extraGeometries"].Size(); ++iExtra) {
+            std::string extraId;
+            const rapidjson::Value& rExtraGeometry = value["extraGeometries"][iExtra];
+            orjson::LoadJsonValueByKey(rExtraGeometry, "id", extraId);
+            if( !rExtraGeometry.HasMember("geometries") || !rExtraGeometry["geometries"].IsArray() ) {
+                continue;
+                // TODO warn
             }
-            std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[it->name.GetString()];
-            vgeometries.reserve(it->value.Size() + vgeometries.size());
+            if (_mapExtraGeometries.find(extraId) == _mapExtraGeometries.end()) {
+                _mapExtraGeometries[extraId] = std::vector<GeometryInfoPtr>();
+            }
+            std::vector<GeometryInfoPtr>& vgeometries = _mapExtraGeometries[extraId];
+            const rapidjson::Value& rGeometries = rExtraGeometry["geometries"];
+            vgeometries.reserve(rGeometries.Size() + vgeometries.size());
             size_t iGeometry = 0;
-            for(rapidjson::Value::ConstValueIterator im = it->value.Begin(); im != it->value.End(); ++im, ++iGeometry) {
-                std::string id = orjson::GetStringJsonValueByKey(*im, "id");
-                UpdateOrCreateInfoWithNameCheck(*im, vgeometries, "name", fUnitScale, options);
+            for(int iGeom = 0; iGeom < rGeometries.Size(); ++iGeom) {
+                const rapidjson::Value& rGeom = rGeometries[iGeom];
+                std::string id = orjson::GetStringJsonValueByKey(rGeom, "id");
+                UpdateOrCreateInfoWithNameCheck(rGeom, vgeometries, "name", fUnitScale, options);
             }
         }
     }
