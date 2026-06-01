@@ -1808,6 +1808,17 @@ protected:
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
 
+        // TODO :
+        std::vector<RobotBasePtr> robots;
+        GetEnv()->GetRobots(robots);
+        OpenRAVE::KinBodyPtr pbody = robots.at(0);
+        const std::string safetyGeometryGroup = _GetSafetyGeometryGroup(*pbody);
+        CollisionCheckerBasePtr pCollisionChecker;
+        if( !safetyGeometryGroup.empty() ) {
+            pCollisionChecker = pbody->GetEnv()->GetCollisionCheckerByGroupName(safetyGeometryGroup);
+        }
+        const std::vector<int> vdofindices = {0,1,2,3,4,5};
+
         // Main shortcut loop
         size_t index;
         size_t iters = 0;
@@ -1971,6 +1982,64 @@ protected:
 
                     RampOptimizer::CheckReturn retcheck(0);
                     iIterProgress += 0x10;
+
+                    RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d", iters % shortcutRampNDVect.size());
+                    for (size_t irampnd = 0; irampnd < shortcutRampNDVect.size(); ++irampnd) {
+                        OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
+                        const double fDuration = shortcutRampNDVect[irampnd].GetDuration();
+                        double fTime = 0;
+                        std::vector<dReal> vTmp, xTmp;
+                        while(fTime < fDuration ) {
+                            // RAVELOG_DEBUG_FORMAT("  checking iter=%d;time=%f/%f", iters % fTime % fDuration);
+                            shortcutRampNDVect[irampnd].EvalPos(fTime, xTmp);
+                            shortcutRampNDVect[irampnd].EvalVel(fTime, vTmp);
+                            // std::stringstream ssss;
+                            // ssss << "x=[";
+                            // for(const double f : xTmp) {
+                            //     ssss << f << ",";
+                            // }
+                            // ssss << "];v=[";
+                            // for(const double f : vTmp) {
+                            //     ssss << f << ",";
+                            // }
+                            // ssss << "]";
+                            // RAVELOG_DEBUG(ssss.str());
+                            const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(xTmp, vTmp,
+                                                                                               vdofindices,
+                                                                                               std::vector<OpenRAVE::KinBodyConstPtr>(),
+                                                                                               pCollisionChecker);
+                            if( bIsColliding0 ) {
+                                RAVELOG_DEBUG_FORMAT("SpeedCheck violated at 0 iter=%d;time=%f/%f", iters % fTime % fDuration);
+                                retcheck.fTimeBasedSurpassMult = 0.9;
+                                retcheck.retcode = CFO_CheckTimeBasedConstraints;
+                                break;
+                            }
+                            fTime += 0.01;
+                        }
+                        if( retcheck.retcode != 0 ) {
+                            break;
+                        }
+                    }
+                    RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d done", iters % shortcutRampNDVectOut.size());
+                    if( retcheck.retcode != 0 ) {
+                        double fVelMult = retcheck.fTimeBasedSurpassMult;
+                        fCurVelMult *= fVelMult;
+                        if( fCurVelMult < 0.01 ) {
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+                            RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", _environmentid%iters%numIters%fCurVelMult);
+                            ++vShortcutStats[SS_MaxManipSpeedFailed];
+                            shortcutprogress << SS_MaxManipSpeedFailed << "\n";
+
+#endif
+                            break;
+                        }
+                        for (size_t j = 0; j < vellimits.size(); ++j) {
+                            dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                            vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
+                        }
+                        //break;
+                        continue;
+                    }
 
                     do { // Start checking constraints.
                         if( _parameters->SetStateValues(x1Vect) != 0 ) {
@@ -2505,6 +2574,20 @@ protected:
 
         return nummerges;
     }
+static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
+{
+    for( const OpenRAVE::KinBody::LinkPtr& pLink : body.GetLinks() ) {
+        const OpenRAVE::KinBody::LinkInfo& linkInfo = pLink->GetInfo();
+        for( const std::pair<const std::string, std::vector<OpenRAVE::KinBody::GeometryInfoPtr> >& groupGeoms : linkInfo._mapExtraGeometries ) {
+            for( const OpenRAVE::KinBody::GeometryInfoPtr& pGeomInfo : groupGeoms.second ) {
+                if( !!pGeomInfo && pGeomInfo->_bIsSafetyGeometry ) {
+                    return groupGeoms.first;
+                }
+            }
+        }
+    }
+    return std::string();
+}
 
     /// \brief Return the number of successful shortcut.
     int _Shortcut(RampOptimizer::ParabolicPath& parabolicpath, int numIters, RampOptimizer::RandomNumberGeneratorBase* rng, dReal minTimeStep)
@@ -2573,6 +2656,17 @@ protected:
 #ifdef SMOOTHER2_PROGRESS_DEBUG
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
+
+        // TODO :
+        std::vector<RobotBasePtr> robots;
+        GetEnv()->GetRobots(robots);
+        OpenRAVE::KinBodyPtr pbody = robots.at(0);
+        const std::string safetyGeometryGroup = _GetSafetyGeometryGroup(*pbody);
+        CollisionCheckerBasePtr pCollisionChecker;
+        if( !safetyGeometryGroup.empty() ) {
+            pCollisionChecker = pbody->GetEnv()->GetCollisionCheckerByGroupName(safetyGeometryGroup);
+        }
+        const std::vector<int> vdofindices = {0,1,2,3,4,5};
 
         // Main shortcut loop
         int iters = 0;
@@ -2745,6 +2839,48 @@ protected:
                     }
                 }
 
+                // {
+                //     std::vector<double> vvel = vellimits;
+                //     double fMultResult = 1.0;
+                //     // for(const double fMult : {1.0, 0.8, 0.6, 0.4}) {
+                //     vvel = v0Vect;
+                //     // for(double& v : vvel ) {
+                //     //     v *= fMult;
+                //     // }
+                //     OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
+                //     const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(x0Vect,
+                //                                                                        v0Vect,
+                //                                                                        vdofindices,
+                //                                                                        std::vector<OpenRAVE::KinBodyConstPtr>(),
+                //                                                                        pCollisionChecker);
+                //     // if( bIsColliding ) {
+                //     //     continue;
+                //     // }
+                //     // fMultResult = fMult;
+                //     // break;
+                //     if( bIsColliding0 ) {
+                //         RAVELOG_DEBUG_FORMAT("SpeedCheck violated at 0 iter=%d", iters);
+                //         // for (size_t jdof = 0; jdof < vellimits; ++jdof) {
+                //         //     vellimits[jdof] *= 0.9;
+                //         // }
+                //         //continue;
+                //         break;
+                //     }
+                //     const bool bIsColliding1 = pRobot->CheckVelocityProjectedCollision(x1Vect,
+                //                                                                        v1Vect,
+                //                                                                        vdofindices,
+                //                                                                        std::vector<OpenRAVE::KinBodyConstPtr>(),
+                //                                                                        pCollisionChecker);
+                //     if( bIsColliding1 ) {
+                //         RAVELOG_DEBUG_FORMAT("SpeedCheck violated at 1 iter=%d", iters);
+                //         // for (size_t jdof = 0; jdof < vellimits; ++jdof) {
+                //         //     vellimits[jdof] *= 0.9;
+                //         // }
+                //         //continue;
+                //         break;
+                //     }
+                // }
+
                 std::vector<dReal> reductionFactors2; // keeps track of the reduction factors got from this shortcut
 
                 dReal fCurVelMult = fStartTimeVelMult;
@@ -2834,6 +2970,64 @@ protected:
                         }
                         _parameters->_getstatefn(x1Vect);
                         iIterProgress += 0x10;
+
+                        RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d", iters % shortcutRampNDVect.size());
+                        for (size_t irampnd = 0; irampnd < shortcutRampNDVect.size(); ++irampnd) {
+                            OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
+                            const double fDuration = shortcutRampNDVect[irampnd].GetDuration();
+                            double fTime = 0;
+                            std::vector<dReal> vTmp, xTmp;
+                            while(fTime < fDuration ) {
+                                // RAVELOG_DEBUG_FORMAT("  checking iter=%d;time=%f/%f", iters % fTime % fDuration);
+                                shortcutRampNDVect[irampnd].EvalPos(fTime, xTmp);
+                                shortcutRampNDVect[irampnd].EvalVel(fTime, vTmp);
+                                // std::stringstream ssss;
+                                // ssss << "x=[";
+                                // for(const double f : xTmp) {
+                                //     ssss << f << ",";
+                                // }
+                                // ssss << "];v=[";
+                                // for(const double f : vTmp) {
+                                //     ssss << f << ",";
+                                // }
+                                // ssss << "]";
+                                // RAVELOG_DEBUG(ssss.str());
+                                const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(xTmp, vTmp,
+                                                                                                   vdofindices,
+                                                                                                   std::vector<OpenRAVE::KinBodyConstPtr>(),
+                                                                                                   pCollisionChecker);
+                                if( bIsColliding0 ) {
+                                    RAVELOG_DEBUG_FORMAT("SpeedCheck violated at 0 iter=%d;time=%f/%f", iters % fTime % fDuration);
+                                    retcheck.fTimeBasedSurpassMult = 0.9;
+                                    retcheck.retcode = CFO_CheckTimeBasedConstraints;
+                                    break;
+                                }
+                                fTime += 0.01;
+                            }
+                            if( retcheck.retcode != 0 ) {
+                                break;
+                            }
+                        }
+                        RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d done", iters % shortcutRampNDVectOut.size());
+                        if( retcheck.retcode != 0 ) {
+                            double fVelMult = retcheck.fTimeBasedSurpassMult;
+                            fCurVelMult *= fVelMult;
+                            if( fCurVelMult < 0.01 ) {
+#ifdef SMOOTHER2_PROGRESS_DEBUG
+                                RAVELOG_DEBUG_FORMAT("env=%d, shortcut iter=%d/%d: maxmanipspeed violated but fCurVelMult is too small (%.15e). continue to the next iteration", _environmentid%iters%numIters%fCurVelMult);
+                                ++vShortcutStats[SS_MaxManipSpeedFailed];
+                                shortcutprogress << SS_MaxManipSpeedFailed << "\n";
+
+#endif
+                                break;
+                            }
+                            for (size_t j = 0; j < vellimits.size(); ++j) {
+                                dReal fMinVel = max(RaveFabs(v0Vect[j]), RaveFabs(v1Vect[j]));
+                                vellimits[j] = max(fMinVel, fVelMult * vellimits[j]);
+                            }
+                            //break;
+                            continue;
+                        }
 
                         retcheck = _feasibilitychecker.Check2(shortcutRampNDVect, 0xffff|CFO_FromTrajectorySmoother, shortcutRampNDVectOut);
 #ifdef SMOOTHER2_TIMING_DEBUG
