@@ -696,6 +696,41 @@ AABB KinBody::Link::ComputeAABBForGeometryGroupFromTransform(const std::string& 
     return AABB(tLink.trans, Vector(0, 0, 0));
 }
 
+/// \brief hash the contents of a GeometryInfo into the provided hash context.
+///
+/// This mirrors KinBody::Geometry::DigestHash, but operates directly on a GeometryInfo so that
+/// geometries that are not instantiated as Link::Geometry (e.g. the extra geometry groups stored in
+/// LinkInfo::_mapExtraGeometries) can also be hashed.
+static void _DigestHashGeometryInfo(HashContext& hash, const KinBody::GeometryInfo& info, int options)
+{
+    hash << info.GetTransform();
+    hash << static_cast<int>(info._type);
+    hash << info._vRenderScale;
+    if (info._type == GT_TriMesh) {
+        hash << info._meshcollision.vertices.size();
+        hash << info._meshcollision.vertices;
+        hash << info._meshcollision.indices.size();
+        hash << info._meshcollision.indices;
+    }
+    else {
+        hash << info._vGeomData;
+        if (info._type == GT_Cage) {
+            hash << info._vGeomData2;
+            for (size_t iwall = 0; iwall < info._vSideWalls.size(); ++iwall) {
+                const KinBody::GeometryInfo::SideWall& s = info._vSideWalls[iwall];
+                hash << s.transf;
+                hash << s.vExtents;
+                hash << static_cast<uint32_t>(s.type);
+            }
+        }
+        else if (info._type == GT_Container) {
+            hash << info._vGeomData2;
+            hash << info._vGeomData3;
+            hash << info._vGeomData4;
+        }
+    }
+}
+
 void KinBody::Link::DigestHash(HashContext& hash, int options) const
 {
     hash << _index;
@@ -703,6 +738,31 @@ void KinBody::Link::DigestHash(HashContext& hash, int options) const
         hash << _vGeometries.size();
         FOREACHC(it, _vGeometries) {
             (*it)->DigestHash(hash, options);
+        }
+        // Also hash the safety geometries (_bIsSafetyGeometry) of the extra geometry groups directly from
+        // _info. The active geometries above (_vGeometries) only reflect the currently selected group, so
+        // without this a change to the safety geometries stored in _mapExtraGeometries would leave the
+        // kinematics-geometry hash unchanged. Non-safety extra geometries are intentionally ignored, matching
+        // LinkInfo::SerializeJSON. _mapExtraGeometries is an ordered std::map, so iteration order is deterministic.
+        FOREACHC(itextra, _info._mapExtraGeometries) {
+            // count safety geometries first so that groups without any safety geometry (and the non-safety
+            // geometries themselves) do not affect the hash
+            size_t numSafetyGeometries = 0;
+            FOREACHC(itgeominfo, itextra->second) {
+                if (!!*itgeominfo && (*itgeominfo)->_bIsSafetyGeometry) {
+                    ++numSafetyGeometries;
+                }
+            }
+            if (numSafetyGeometries == 0) {
+                continue;
+            }
+            hash << itextra->first;
+            hash << numSafetyGeometries;
+            FOREACHC(itgeominfo, itextra->second) {
+                if (!!*itgeominfo && (*itgeominfo)->_bIsSafetyGeometry) {
+                    _DigestHashGeometryInfo(hash, **itgeominfo, options);
+                }
+            }
         }
     }
     if (options & SO_Dynamics) {
