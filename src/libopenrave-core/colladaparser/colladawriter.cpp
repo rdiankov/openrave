@@ -2838,6 +2838,22 @@ private:
                         }
                     }
                 }
+                // also write the safety geometry groups
+                FOREACHC(itgeomgroup, (*itlink)->GetInfo()._mapExtraGeometriesSafety) {
+                    int igeom = 0;
+                    FOREACHC(itgeominfo, itgeomgroup->second) {
+                        daeElementRef bind_instance_geometry = ptec->add("bind_instance_geometry");
+                        bind_instance_geometry->setAttribute("type", itgeomgroup->first.c_str());
+                        bind_instance_geometry->setAttribute("link", vlinksidrefs.at((*itlink)->GetIndex()).c_str());
+                        if( IsWrite("geometry") ) {
+                            string geomid = _GetExtraGeometryId(*itlink,itgeomgroup->first,igeom);
+                            igeom++;
+                            domGeometryRef pdomgeom = WriteGeometry(boost::make_shared<const KinBody::Link::Geometry>(*itlink, **itgeominfo), geomid);
+                            bind_instance_geometry->setAttribute("url", (string("#")+geomid).c_str());
+                            bind_instance_geometry->setAttribute("material", (string("#")+geomid+string("_mat")).c_str());
+                        }
+                    }
+                }
             }
         }
     }

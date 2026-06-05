@@ -2278,7 +2278,7 @@ static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
 {
     for( const OpenRAVE::KinBody::LinkPtr& pLink : body.GetLinks() ) {
         const OpenRAVE::KinBody::LinkInfo& linkInfo = pLink->GetInfo();
-        for( const std::pair<const std::string, std::vector<OpenRAVE::KinBody::GeometryInfoPtr> >& groupGeoms : linkInfo._mapExtraGeometries ) {
+        for( const std::pair<const std::string, std::vector<OpenRAVE::KinBody::GeometryInfoPtr> >& groupGeoms : linkInfo._mapExtraGeometriesSafety ) {
             for( const OpenRAVE::KinBody::GeometryInfoPtr& pGeomInfo : groupGeoms.second ) {
                 if( !!pGeomInfo && pGeomInfo->_bIsSafetyGeometry ) {
                     return groupGeoms.first;

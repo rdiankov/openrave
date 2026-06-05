@@ -1053,6 +1053,13 @@ public:
         /// safety_xx - safety geometry.
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
+        /// safety geometries, stored separately from _mapExtraGeometries (which holds non-safety extra
+        /// geometry groups). Keyed by geometry group name, the same way as _mapExtraGeometries. A given group
+        /// name must live in at most one of the two maps. The name-keyed group APIs (GetGeometriesFromGroup,
+        /// SetGeometriesFromGroup, GetGroupNumGeometries) and the group-name enumeration transparently consult
+        /// both maps, so callers (e.g. collision checkers) do not need to know which map a group lives in.
+        std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometriesSafety;
+
         ///\brief unique id of the link
         std::string _id;
         /// \brief unique link name

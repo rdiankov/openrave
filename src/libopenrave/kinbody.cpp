@@ -706,7 +706,11 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
         else {
             std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
             if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
+                // fall back to the safety geometry groups
+                it = (*itlink)->_info._mapExtraGeometriesSafety.find(geomname);
+                if( it == (*itlink)->_info._mapExtraGeometriesSafety.end() ) {
+                    throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
+                }
             }
             pvinfos = &it->second;
         }
@@ -740,8 +744,20 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
     }
     FOREACH(itlink, _veclinks) {
         Link& link = **itlink;
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
         const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
+        // route the group into the safety map if it holds safety geometries, otherwise the regular extra map.
+        // keep the two maps' group names disjoint by erasing any stale entry from the other map.
+        bool bIsSafetyGroup = false;
+        for(const KinBody::GeometryInfoPtr& pGeometry : geometries) {
+            if( !!pGeometry && pGeometry->_bIsSafetyGeometry ) {
+                bIsSafetyGroup = true;
+                break;
+            }
+        }
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >& targetMap = bIsSafetyGroup ? link._info._mapExtraGeometriesSafety : link._info._mapExtraGeometries;
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >& otherMap = bIsSafetyGroup ? link._info._mapExtraGeometries : link._info._mapExtraGeometriesSafety;
+        otherMap.erase(geomname);
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = targetMap.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
         it->second.resize(geometries.size());
         std::copy(geometries.begin(),geometries.end(),it->second.begin());
     }
@@ -5883,6 +5899,19 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
             }
             newlink._info._mapExtraGeometries = newMapExtraGeometries;
         }
+        {
+            // deep copy safety extra geometries as well
+            std::map< std::string, std::vector<GeometryInfoPtr> > newMapExtraGeometriesSafety;
+            for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : newlink._info._mapExtraGeometriesSafety) {
+                std::vector<GeometryInfoPtr> newvalues;
+                newvalues.reserve(keyValue.second.size());
+                for (const GeometryInfoPtr& geomInfoPtr : keyValue.second) {
+                    newvalues.push_back(GeometryInfoPtr(new GeometryInfo(*geomInfoPtr)));
+                }
+                newMapExtraGeometriesSafety[keyValue.first] = newvalues;
+            }
+            newlink._info._mapExtraGeometriesSafety = newMapExtraGeometriesSafety;
+        }
 
         _veclinks.push_back(pnewlink);
         _vLinkTransformPointers.push_back(&newlink._info._t);
@@ -6745,6 +6774,13 @@ void KinBody::_GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupName
     vGroupNames.clear();
     FOREACH(itlink, _veclinks) {
         FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometries) {
+            if( itExtraGeom->first.find(groupName) == 0 &&
+                (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
+                vGroupNames.push_back(itExtraGeom->first);
+            }
+        }
+        // also enumerate the safety geometry groups so that callers (e.g. collision checkers) see all groups
+        FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometriesSafety) {
             if( itExtraGeom->first.find(groupName) == 0 &&
                 (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
                 vGroupNames.push_back(itExtraGeom->first);
