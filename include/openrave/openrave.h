@@ -513,6 +513,11 @@ typedef boost::shared_ptr<BaseJSONReader> BaseJSONReaderPtr;
 typedef boost::shared_ptr<BaseJSONReader const> BaseJSONReaderConstPtr;
 typedef boost::function<BaseJSONReaderPtr(ReadablePtr, const AttributesList&)> CreateJSONReaderFn;
 
+/// \brief factory for readable ids that have no id-specific json reader registered.
+/// Receives the readable id since one factory serves many ids.
+/// May return an empty pointer to decline, in which case the built-in OpenRAVE-default deserialization is used.
+typedef boost::function<BaseJSONReaderPtr(const std::string&, ReadablePtr, const AttributesList&)> CreateDefaultJSONReaderFn;
+
 } // end namespace OpenRAVE
 
 // define the math functions
@@ -2885,6 +2890,15 @@ OPENRAVE_API UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::st
     \return a pointer holding the registration, releasing the pointer will unregister the XML reader
  */
 OPENRAVE_API UserDataPtr RaveRegisterJSONReader(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn);
+
+/** \brief Registers a fallback json reader used for all readable ids of an interface type that have no id-specific reader.
+
+    When deserializing a readable id that has no reader registered via RaveRegisterJSONReader, the default reader factory is called with the readable id, the existing readable (if any), and the list of attributes.
+    The factory may return an empty pointer to decline handling the readable, in which case the built-in deserialization (StringReadable/JSONReadable) is used.
+    \param fn CreateDefaultJSONReaderFn(id, pReadable, atts) - passed in the readable id, the existing readable, and the list of attributes
+    \return a pointer holding the registration, releasing the pointer will unregister the reader
+ */
+OPENRAVE_API UserDataPtr RaveRegisterDefaultJSONReader(InterfaceType type, const CreateDefaultJSONReaderFn& fn);
 
 /// \brief return the environment's unique id, returns 0 if environment could not be found or not registered
 OPENRAVE_API int RaveGetEnvironmentId(EnvironmentBaseConstPtr env);
