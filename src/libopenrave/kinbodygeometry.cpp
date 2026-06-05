@@ -2188,6 +2188,114 @@ void KinBody::Geometry::ExtractInfo(KinBody::GeometryInfo& info) const
     info._modifiedFields = 0;
 }
 
+UpdateFromInfoResult KinBody::GeometryInfo::UpdateFromInfo(const KinBody::GeometryInfo& info)
+{
+    if( !info._id.empty() && _id != info._id ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("Do not allow updating geometry info (id='%s') with a different info id='%s'", _id%info._id, ORE_Assert);
+    }
+    UpdateFromInfoResult updateFromInfoResult = UFIR_NoChange;
+
+    // name
+    if( _name != info._name ) {
+        _name = info._name;
+        RAVELOG_VERBOSE_FORMAT("geometry info %s name changed", _id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // --- collision-shape-relevant fields: any change requires a rebuild ---
+
+    // type
+    if( _type != info._type ) {
+        RAVELOG_VERBOSE_FORMAT("geometry info %s type changed", _id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // transform
+    if( info.IsModifiedField(GIF_Transform) && _t.CompareTransform(info._t, g_fEpsilon) ) {
+        RAVELOG_VERBOSE_FORMAT("geometry info %s transform changed", _id);
+        return UFIR_RequireReinitialize;
+    }
+
+    // shape data
+    switch( _type ) {
+    case GT_Box:
+        if( _vGeomData != info._vGeomData ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s box extents changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_CalibrationBoard:
+        if( _vGeomData != info._vGeomData || _calibrationBoardParameters != info._calibrationBoardParameters ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s calibration board changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_Container:
+        if( _vGeomData != info._vGeomData || _vGeomData2 != info._vGeomData2 || _vGeomData3 != info._vGeomData3 || _vGeomData4 != info._vGeomData4 ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s container extents changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_Cage:
+        if( _vGeomData != info._vGeomData || _vGeomData2 != info._vGeomData2 || _vSideWalls != info._vSideWalls ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s cage changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_Sphere:
+        if( _vGeomData.x != info._vGeomData.x ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s sphere changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_Cylinder:
+    case GT_Capsule:
+        if( _vGeomData.x != info._vGeomData.x || _vGeomData.y != info._vGeomData.y ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s cylinder/capsule changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_ConicalFrustum:
+        if( GetConicalFrustumTopRadius() != info.GetConicalFrustumTopRadius() ||
+            GetConicalFrustumBottomRadius() != info.GetConicalFrustumBottomRadius() ||
+            GetConicalFrustumHeight() != info.GetConicalFrustumHeight() ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s conical frustum changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_Axial:
+        if( _vAxialSlices != info._vAxialSlices ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s axial changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    case GT_Prism:
+    case GT_TriMesh:
+        if( info.IsModifiedField(GIF_Mesh) && _meshcollision != info._meshcollision ) {
+            RAVELOG_VERBOSE_FORMAT("geometry info %s mesh changed", _id);
+            return UFIR_RequireReinitialize;
+        }
+        break;
+    default:
+        break;
+    }
+
+    // --- non-shape fields: update in place ---
+    if( _fTransparency != info._fTransparency )                                 { _fTransparency = info._fTransparency; updateFromInfoResult = UFIR_Success; }
+    if( _bVisible != info._bVisible )                                           { _bVisible = info._bVisible; updateFromInfoResult = UFIR_Success; }
+    if( _vDiffuseColor != info._vDiffuseColor )                                 { _vDiffuseColor = info._vDiffuseColor; updateFromInfoResult = UFIR_Success; }
+    if( _vAmbientColor != info._vAmbientColor )                                 { _vAmbientColor = info._vAmbientColor; updateFromInfoResult = UFIR_Success; }
+    if( _bModifiable != info._bModifiable )                                     { _bModifiable = info._bModifiable; updateFromInfoResult = UFIR_Success; }
+    if( _bIsSafetyGeometry != info._bIsSafetyGeometry )                         { _bIsSafetyGeometry = info._bIsSafetyGeometry; updateFromInfoResult = UFIR_Success; }
+    if( _vNegativeCropContainerMargins != info._vNegativeCropContainerMargins ) { _vNegativeCropContainerMargins = info._vNegativeCropContainerMargins; updateFromInfoResult = UFIR_Success; }
+    if( _vPositiveCropContainerMargins != info._vPositiveCropContainerMargins ) { _vPositiveCropContainerMargins = info._vPositiveCropContainerMargins; updateFromInfoResult = UFIR_Success; }
+    if( _vNegativeCropContainerEmptyMargins != info._vNegativeCropContainerEmptyMargins ) { _vNegativeCropContainerEmptyMargins = info._vNegativeCropContainerEmptyMargins; updateFromInfoResult = UFIR_Success; }
+    if( _vPositiveCropContainerEmptyMargins != info._vPositiveCropContainerEmptyMargins ) { _vPositiveCropContainerEmptyMargins = info._vPositiveCropContainerEmptyMargins; updateFromInfoResult = UFIR_Success; }
+    if( _friction != info._friction )                                           { _friction = info._friction; updateFromInfoResult = UFIR_Success; }
+
+    return updateFromInfoResult;
+}
+
 UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryInfo& info)
 {
     if(!info._id.empty() && _info._id != info._id) {

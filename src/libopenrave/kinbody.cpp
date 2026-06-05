@@ -6395,6 +6395,7 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
 
 void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 {
+    RAVELOG_DEBUG_FORMAT("ExtractInfo %s", _name);
     info._modifiedFields = 0;
     info._id = _id;
     info._uri = GetURI();
@@ -6517,6 +6518,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
         }
         info._prAssociatedFileEntries->CopyFrom(*_prAssociatedFileEntries, info._prAssociatedFileEntries->GetAllocator());
     }
+    RAVELOG_DEBUG_FORMAT("ExtractInfo done %s", _name);
 }
 
 UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
