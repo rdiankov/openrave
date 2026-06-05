@@ -407,6 +407,12 @@ public:
         /// \return 0 if geometries are similar within epsilon. Otherwise a non-zero code indicating what was not the same
         int Compare(const GeometryInfo& rhs, dReal fUnitScale, dReal fEpsilon) const;
 
+        /// \brief Update this geometry info in place from another geometry info.
+        /// \return UFIR_NoChange if nothing changed; UFIR_Success if non-shape fields were updated in place;
+        ///         UFIR_RequireReinitialize if the collision shape (type/transform/extents/mesh) changed and
+        ///         the owning structure must be rebuilt.
+        UpdateFromInfoResult UpdateFromInfo(const GeometryInfo& info);
+
         /// \brief converts the unit scale of the geometry
         void ConvertUnitScale(dReal fUnitScale);
 
