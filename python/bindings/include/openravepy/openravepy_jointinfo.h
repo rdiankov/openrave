@@ -139,6 +139,7 @@ public:
     py::dict _mapIntParameters;
     py::dict _mapStringParameters;
     py::dict _mapExtraGeometries;
+    py::dict _mapExtraGeometriesSafety;
     object _vForcedAdjacentLinks = py::list();
     py::object _readableInterfaces = py::none_();
     bool _bStatic = false;

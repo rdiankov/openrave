@@ -634,6 +634,9 @@ void PyLinkInfo::_Update(const KinBody::LinkInfo& info) {
     FOREACHC(it, info._mapExtraGeometries) {
         _mapExtraGeometries[it->first.c_str()] = toPyArray(it->second);
     }
+    FOREACHC(it, info._mapExtraGeometriesSafety) {
+        _mapExtraGeometriesSafety[it->first.c_str()] = toPyArray(it->second);
+    }
     _vForcedAdjacentLinks = vForcedAdjacentLinks;
     _bStatic = info._bStatic;
     _bIsEnabled = info._bIsEnabled;
@@ -751,6 +754,29 @@ KinBody::LinkInfoPtr PyLinkInfo::GetLinkInfo() {
         for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++) {
             PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
             info._mapExtraGeometries[name].push_back(pygeom->GetGeometryInfo());
+        }
+    }
+#endif
+
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    for(const std::pair<py::handle, py::handle>& item : _mapExtraGeometriesSafety) {
+        std::string name = extract<std::string>(item.first);
+        info._mapExtraGeometriesSafety[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometriesSafety[name].reserve(len(item.second));
+        for(size_t j = 0; j < len(item.second); j++) {
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(item.second[py::to_object(j)]);
+            info._mapExtraGeometriesSafety[name].push_back(pygeom->GetGeometryInfo());
+        }
+    }
+#else
+    num = len(_mapExtraGeometriesSafety);
+    okeyvalueiter = _mapExtraGeometriesSafety.iteritems();
+    for(size_t i = 0; i < num; ++i) {
+        object okeyvalue = okeyvalueiter.attr("next") ();
+        std::string name = extract<std::string>(okeyvalue[0]);
+        info._mapExtraGeometriesSafety[name] = std::vector<KinBody::GeometryInfoPtr>(); info._mapExtraGeometriesSafety[name].reserve(len(okeyvalue[1]));
+        for(size_t j = 0; j < (size_t)len(okeyvalue[1]); j++) {
+            PyGeometryInfoPtr pygeom = py::extract<PyGeometryInfoPtr>(okeyvalue[1][j]);
+            info._mapExtraGeometriesSafety[name].push_back(pygeom->GetGeometryInfo());
         }
     }
 #endif
@@ -4716,7 +4742,7 @@ class LinkInfo_pickle_suite
 public:
     static py::tuple getstate(const PyLinkInfo& r)
     {
-        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._bIgnoreSelfCollision, r._mapStringParameters, r._mapExtraGeometries);
+        return py::make_tuple(r._vgeometryinfos, r._name, r._t, r._tMassFrame, r._mass, r._vinertiamoments, r._mapFloatParameters, r._mapIntParameters, r._vForcedAdjacentLinks, r._bStatic, r._bIsEnabled, r._bIgnoreSelfCollision, r._mapStringParameters, r._mapExtraGeometries, r._mapExtraGeometriesSafety);
     }
     static void setstate(PyLinkInfo& r, py::tuple state) {
         int num = len(state);
@@ -4752,6 +4778,12 @@ public:
         }
         else {
             r._mapExtraGeometries.clear();
+        }
+        if( num > 14 ) {
+            r._mapExtraGeometriesSafety = dict(state[14]);
+        }
+        else {
+            r._mapExtraGeometriesSafety.clear();
         }
     }
 };
@@ -5374,6 +5406,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                       .def_readwrite("_mapIntParameters",&PyLinkInfo::_mapIntParameters)
                       .def_readwrite("_mapStringParameters",&PyLinkInfo::_mapStringParameters)
                       .def_readwrite("_mapExtraGeometries",&PyLinkInfo::_mapExtraGeometries)
+                      .def_readwrite("_mapExtraGeometriesSafety",&PyLinkInfo::_mapExtraGeometriesSafety)
                       .def_readwrite("_vForcedAdjacentLinks",&PyLinkInfo::_vForcedAdjacentLinks)
                       .def_readwrite("_readableInterfaces",&PyLinkInfo::_readableInterfaces)
                       .def_readwrite("_bStatic",&PyLinkInfo::_bStatic)
