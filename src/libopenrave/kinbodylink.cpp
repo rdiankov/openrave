@@ -378,20 +378,9 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
 
             // deserialize the group's geometries into a temporary, then distribute them by safety flag
             std::vector<GeometryInfoPtr> vgeometries;
-            vgeometries.reserve(rGeometries.Size());
+             _mapExtraGeometriesSafety[extraId].reserve(rGeometries.Size());
             for(int iGeom = 0; iGeom < rGeometries.Size(); ++iGeom) {
-                UpdateOrCreateInfoWithNameCheck(rGeometries[iGeom], vgeometries, "name", fUnitScale, options);
-            }
-            for(const GeometryInfoPtr& pGeom : vgeometries) {
-                if( !pGeom ) {
-                    continue;
-                }
-                if( pGeom->_bIsSafetyGeometry ) {
-                    _mapExtraGeometriesSafety[extraId].push_back(pGeom);
-                }
-                // else {
-                //     _mapExtraGeometries[extraId].push_back(pGeom);
-                // }
+                UpdateOrCreateInfoWithNameCheck(rGeometries[iGeom],  _mapExtraGeometriesSafety[extraId], "name", fUnitScale, options);
             }
         }
     }
@@ -947,7 +936,15 @@ void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupnam
             throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo % GetParent()->GetName(), ORE_InvalidArguments);
         }
     }
-    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>::iterator it = _info._mapExtraGeometries.insert(make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>())).first;
+    bool bIsSafetyGroup = false;
+    for(const KinBody::GeometryInfoPtr& pGeometry : geometries) {
+        if( !!pGeometry && pGeometry->_bIsSafetyGeometry ) {
+            bIsSafetyGroup = true;
+            break;
+        }
+    }
+    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = (bIsSafetyGroup ? _info._mapExtraGeometriesSafety : _info._mapExtraGeometries);
+    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>::iterator it = mapExtraGeometries.insert(make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(), geometries.end(), it->second.begin());
 }
