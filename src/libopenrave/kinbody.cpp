@@ -755,8 +755,8 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
             }
         }
         std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >& targetMap = bIsSafetyGroup ? link._info._mapExtraGeometriesSafety : link._info._mapExtraGeometries;
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >& otherMap = bIsSafetyGroup ? link._info._mapExtraGeometries : link._info._mapExtraGeometriesSafety;
-        otherMap.erase(geomname);
+        // std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >& otherMap = bIsSafetyGroup ? link._info._mapExtraGeometries : link._info._mapExtraGeometriesSafety;
+        // otherMap.erase(geomname);
         std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = targetMap.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
         it->second.resize(geometries.size());
         std::copy(geometries.begin(),geometries.end(),it->second.begin());

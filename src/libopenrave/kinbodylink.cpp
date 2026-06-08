@@ -928,6 +928,21 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
     }
 }
 
+static bool _HasSafetyGeometry(const std::vector<KinBody::GeometryInfoPtr>& geometries)
+{
+    for(const KinBody::GeometryInfoPtr& pGeometry : geometries) {
+        if( !!pGeometry && pGeometry->_bIsSafetyGeometry ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& _EnsureMapExtraGeometries(KinBody::LinkInfo& info, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+{
+    return (_HasSafetyGeometry(geometries) ? info._mapExtraGeometriesSafety : info._mapExtraGeometries);
+}
+
 void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
     FOREACH(itgeominfo, geometries) {
@@ -936,14 +951,7 @@ void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupnam
             throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo % GetParent()->GetName(), ORE_InvalidArguments);
         }
     }
-    bool bIsSafetyGroup = false;
-    for(const KinBody::GeometryInfoPtr& pGeometry : geometries) {
-        if( !!pGeometry && pGeometry->_bIsSafetyGeometry ) {
-            bIsSafetyGroup = true;
-            break;
-        }
-    }
-    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = (bIsSafetyGroup ? _info._mapExtraGeometriesSafety : _info._mapExtraGeometries);
+    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, geometries);
     std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>::iterator it = mapExtraGeometries.insert(make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(), geometries.end(), it->second.begin());
@@ -990,7 +998,8 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             }
         }
         if( addToGroups ) {
-            FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
+            std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, {pginfo});
+            FOREACH(itgeometrygroup, mapExtraGeometries) {
                 FOREACH(itgeometryinfo, itgeometrygroup->second) {
                     if( (*itgeometryinfo)->_name == ginfo._name ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
@@ -1004,7 +1013,8 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
     _vGeometries.back()->InitCollisionMesh();
     _info._vgeometryinfos.push_back(pginfo);
     if( addToGroups ) {
-        FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
+        std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, {pginfo});
+        FOREACH(itgeometrygroup, mapExtraGeometries) {
             itgeometrygroup->second.push_back(pginfo);
         }
     }
@@ -1019,8 +1029,9 @@ void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const st
 
     const KinBody::GeometryInfo& ginfo = *pginfo;
 
-    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
-    if( it == _info._mapExtraGeometries.end() ) {
+    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, {pginfo});
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = mapExtraGeometries.find(groupname);
+    if( it == mapExtraGeometries.end() ) {
         throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
     }
     if( ginfo._name.size() > 0 ) {
@@ -1063,6 +1074,18 @@ void KinBody::Link::RemoveGeometryByName(const std::string& geometryname, bool r
 
     if( removeFromAllGroups ) {
         FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
+            std::vector<KinBody::GeometryInfoPtr>::iterator itgeometryinfo2 = itgeometrygroup->second.begin();
+            while(itgeometryinfo2 != itgeometrygroup->second.end()) {
+                if( (*itgeometryinfo2)->_name == geometryname ) {
+                    itgeometryinfo2 = itgeometrygroup->second.erase(itgeometryinfo2);
+                    bChanged = true;
+                }
+                else {
+                    ++itgeometryinfo2;
+                }
+            }
+        }
+        FOREACH(itgeometrygroup, _info._mapExtraGeometriesSafety) {
             std::vector<KinBody::GeometryInfoPtr>::iterator itgeometryinfo2 = itgeometrygroup->second.begin();
             while(itgeometryinfo2 != itgeometrygroup->second.end()) {
                 if( (*itgeometryinfo2)->_name == geometryname ) {
