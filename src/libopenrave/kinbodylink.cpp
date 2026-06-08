@@ -1357,7 +1357,13 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         std::map<std::string, std::vector<GeometryInfoPtr> >::iterator itExistingGroup = _info._mapExtraGeometriesSafety.find(groupname);
         if (itExistingGroup == _info._mapExtraGeometriesSafety.end()) {
             // a new safety geometry group appeared, so the link must be rebuilt
-            _info._mapExtraGeometriesSafety.insert(std::make_pair(groupname, vNewSafetyGeometries));
+            _info._mapExtraGeometriesSafety.insert(std::make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>{}));
+            std::vector<KinBody::GeometryInfoPtr>& vSafetyGeometries =_info._mapExtraGeometriesSafety[groupname];
+            for (const GeometryInfoPtr& pGeometryInfo : vNewSafetyGeometries) {
+                if (!!pGeometryInfo) {
+                    vSafetyGeometries.emplace_back(GeometryInfoPtr(new KinBody::GeometryInfo(*pGeometryInfo)));
+                }
+            }
             RAVELOG_VERBOSE_FORMAT("link %s safety extra geometry group '%s' added", _info._id % groupname);
             return UFIR_RequireReinitialize;
         }
