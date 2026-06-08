@@ -893,7 +893,6 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
         }
         pvinfos = &it->second;
     }
-    _info._currentGeometryGroupName = groupname;
     _vGeometries.resize(pvinfos->size());
     for(size_t i = 0; i < pvinfos->size(); ++i) {
         _vGeometries[i].reset(new Geometry(shared_from_this(),*pvinfos->at(i)));
