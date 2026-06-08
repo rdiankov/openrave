@@ -525,6 +525,21 @@ public:
         ConfigurationSpecification timeSpec;
         timeSpec.AddDeltaTimeGroup();
 
+        FOREACH(itbody, vusedbodies) {
+            if( !(*itbody) || !(*itbody)->IsRobot() ) {
+                continue;
+            }
+            std::vector<int> vUsedDOFIndices, vUsedConfigIndices;
+            posSpec.ExtractUsedIndices(KinBodyConstPtr(*itbody), vUsedDOFIndices, vUsedConfigIndices);
+            if( vUsedDOFIndices.size() != _parameters->_vConfigVelocityLimit.size() ) {
+                continue;
+            }
+            _vUsedDOFIndices = vUsedDOFIndices;
+            _pUsedBody = (*itbody);
+            break;
+        }
+
+
         std::vector<ConfigurationSpecification::Group>::const_iterator itcompatposgroup = ptraj->GetConfigurationSpecification().FindCompatibleGroup(posSpec._vgroups.at(0), false);
         OPENRAVE_ASSERT_FORMAT(itcompatposgroup != ptraj->GetConfigurationSpecification()._vgroups.end(), "Failed to find group %s in the passed-in trajectory", posSpec._vgroups.at(0).name, ORE_InvalidArguments);
 
@@ -1808,16 +1823,14 @@ protected:
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
 
-        // TODO :
-        std::vector<RobotBasePtr> robots;
-        GetEnv()->GetRobots(robots);
-        OpenRAVE::KinBodyPtr pbody = robots.at(0);
+        OpenRAVE::KinBodyPtr pbody = _pUsedBody;
+        OPENRAVE_ASSERT_OP(!!pbody, ==, true);
+        OPENRAVE_ASSERT_OP(_vUsedDOFIndices.size(), ==, _parameters->_vConfigVelocityLimit.size());
         const std::string safetyGeometryGroup = _GetSafetyGeometryGroup(*pbody);
         CollisionCheckerBasePtr pCollisionChecker;
         if( !safetyGeometryGroup.empty() ) {
             pCollisionChecker = pbody->GetEnv()->GetCollisionCheckerByGroupName(safetyGeometryGroup);
         }
-        const std::vector<int> vdofindices = {0,1,2,3,4,5};
 
         // Main shortcut loop
         size_t index;
@@ -2005,7 +2018,7 @@ protected:
                             // ssss << "]";
                             // RAVELOG_DEBUG(ssss.str());
                             const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(xTmp, vTmp,
-                                                                                               vdofindices,
+                                                                                               _vUsedDOFIndices,
                                                                                                std::vector<OpenRAVE::KinBodyConstPtr>(),
                                                                                                pCollisionChecker);
                             if( bIsColliding0 ) {
@@ -2657,16 +2670,15 @@ static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
         uint32_t latestSuccessfulShortcutTimestamp = utils::GetMicroTime(), curtime;
 #endif
 
-        // TODO :
-        std::vector<RobotBasePtr> robots;
-        GetEnv()->GetRobots(robots);
-        OpenRAVE::KinBodyPtr pbody = robots.at(0);
+        OpenRAVE::KinBodyPtr pbody = _pUsedBody;
+        OPENRAVE_ASSERT_OP(!!pbody, ==, true);
+        OPENRAVE_ASSERT_OP(_vUsedDOFIndices.size(), ==, _parameters->_vConfigVelocityLimit.size());
         const std::string safetyGeometryGroup = _GetSafetyGeometryGroup(*pbody);
         CollisionCheckerBasePtr pCollisionChecker;
         if( !safetyGeometryGroup.empty() ) {
             pCollisionChecker = pbody->GetEnv()->GetCollisionCheckerByGroupName(safetyGeometryGroup);
         }
-        const std::vector<int> vdofindices = {0,1,2,3,4,5};
+        
 
         // Main shortcut loop
         int iters = 0;
@@ -2993,7 +3005,7 @@ static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
                                 // ssss << "]";
                                 // RAVELOG_DEBUG(ssss.str());
                                 const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(xTmp, vTmp,
-                                                                                                   vdofindices,
+                                                                                                   _vUsedDOFIndices,
                                                                                                    std::vector<OpenRAVE::KinBodyConstPtr>(),
                                                                                                    pCollisionChecker);
                                 if( bIsColliding0 ) {
@@ -3864,6 +3876,8 @@ static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
     bool _bUseNewHeuristic;
 
     std::stringstream _sslog; // for logging purpose
+    OpenRAVE::KinBodyPtr _pUsedBody;
+    std::vector<int> _vUsedDOFIndices;
 
 }; // end class ParabolicSmoother2
 
