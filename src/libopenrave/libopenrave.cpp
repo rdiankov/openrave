@@ -580,6 +580,7 @@ public:
         _pdefaultsampler.reset();
         _mapxmlreaders.clear();
         _mapjsonreaders.clear();
+        _defaultJsonReaderByInterfaceType.clear();
 
         // process the callbacks
         std::list<boost::function<void()> > listDestroyCallbacks;
@@ -767,14 +768,53 @@ protected:
         return UserDataPtr(new JSONReaderFunctionData(type,id,fn,shared_from_this()));
     }
 
+    class DefaultJSONReaderFunctionData : public UserData
+    {
+    public:
+        DefaultJSONReaderFunctionData(InterfaceType type, const CreateDefaultJSONReaderFn& createJsonReaderFn, boost::shared_ptr<RaveGlobal> global)
+            : _global(global), _type(type)
+        {
+            std::lock_guard<std::mutex> lock(global->_mutexinternal);
+            _previousDefaultJsonReader = global->_defaultJsonReaderByInterfaceType[_type];
+            global->_defaultJsonReaderByInterfaceType[_type] = createJsonReaderFn;
+        }
+        virtual ~DefaultJSONReaderFunctionData()
+        {
+            boost::shared_ptr<RaveGlobal> global = _global.lock();
+            if (!!global) {
+                std::lock_guard<std::mutex> lock(global->_mutexinternal);
+                global->_defaultJsonReaderByInterfaceType[_type] = _previousDefaultJsonReader;
+            }
+        }
+
+    protected:
+        boost::weak_ptr<RaveGlobal> _global;
+        InterfaceType _type;
+
+        CreateDefaultJSONReaderFn _previousDefaultJsonReader;
+    };
+
+    UserDataPtr RegisterDefaultJSONReader(InterfaceType type, const CreateDefaultJSONReaderFn& fn)
+    {
+        return UserDataPtr(new DefaultJSONReaderFunctionData(type, fn, shared_from_this()));
+    }
+
     const BaseJSONReaderPtr CallJSONReader(InterfaceType type, const std::string& id, ReadablePtr pReadable, const AttributesList& atts)
     {
+        // Check if there's a registered reader for this readable ID
         JSONREADERSMAP::iterator it = _mapjsonreaders[type].find(id);
-        if( it == _mapjsonreaders[type].end() ) {
-            //throw openrave_exception(str(boost::format(_("No function registered for interface %s xml tag %s"))%GetInterfaceName(type)%id),ORE_InvalidArguments);
-            return BaseJSONReaderPtr();
+        if( it != _mapjsonreaders[type].end() ) {
+            return it->second(pReadable, atts);
         }
-        return it->second(pReadable, atts);
+
+        // If there's no type-specific reader, check if there's a registered default reader
+        std::map<InterfaceType, CreateDefaultJSONReaderFn>::iterator itDefault = _defaultJsonReaderByInterfaceType.find(type);
+        if (itDefault != _defaultJsonReaderByInterfaceType.end() && !!itDefault->second) {
+            return itDefault->second(id, pReadable, atts);
+        }
+
+        // No special readers registered - fall back to the basic JSON reader
+        return BaseJSONReaderPtr();
     }
 
     boost::shared_ptr<RaveDatabase> GetDatabase() const {
@@ -1161,6 +1201,7 @@ private:
     std::mutex _mutexinternal;
     std::map<InterfaceType, XMLREADERSMAP > _mapxmlreaders;
     std::map<InterfaceType, JSONREADERSMAP > _mapjsonreaders;
+    std::map<InterfaceType, CreateDefaultJSONReaderFn> _defaultJsonReaderByInterfaceType;
     std::map<InterfaceType,string> _mapinterfacenames;
     std::map<IkParameterizationType,string> _mapikparameterization, _mapikparameterizationlower;
     std::map<int, EnvironmentBase*> _mapenvironments;
@@ -1449,6 +1490,11 @@ UserDataPtr RaveRegisterXMLReader(InterfaceType type, const std::string& xmltag,
 UserDataPtr RaveRegisterJSONReader(InterfaceType type, const std::string& id, const CreateJSONReaderFn& fn)
 {
     return RaveGlobal::instance()->RegisterJSONReader(type,id,fn);
+}
+
+UserDataPtr RaveRegisterDefaultJSONReader(InterfaceType type, const CreateDefaultJSONReaderFn& fn)
+{
+    return RaveGlobal::instance()->RegisterDefaultJSONReader(type,fn);
 }
 
 BaseXMLReaderPtr RaveCallXMLReader(InterfaceType type, const std::string& xmltag, InterfaceBasePtr pinterface, const AttributesList& atts)

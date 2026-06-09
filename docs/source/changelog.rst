@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.171.0
+===============
+
+- Add RaveRegisterDefaultJSONReader to allow users to register a default fallback JSON reader if no specific reader is registered via RaveRegisterJSONReader
+
 Version 0.170.0
 ===============
 
