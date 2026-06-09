@@ -1996,7 +1996,7 @@ protected:
                     RampOptimizer::CheckReturn retcheck(0);
                     iIterProgress += 0x10;
 
-                    RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d", iters % shortcutRampNDVect.size());
+                    // RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d", iters % shortcutRampNDVect.size());
                     for (size_t irampnd = 0; irampnd < shortcutRampNDVect.size(); ++irampnd) {
                         OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
                         const double fDuration = shortcutRampNDVect[irampnd].GetDuration();
@@ -2022,7 +2022,7 @@ protected:
                                                                                                std::vector<OpenRAVE::KinBodyConstPtr>(),
                                                                                                pCollisionChecker);
                             if( bIsColliding0 ) {
-                                RAVELOG_DEBUG_FORMAT("SpeedCheck violated at 0 iter=%d;time=%f/%f", iters % fTime % fDuration);
+                                // RAVELOG_DEBUG_FORMAT("SpeedCheck violated at 0 iter=%d;time=%f/%f", iters % fTime % fDuration);
                                 retcheck.fTimeBasedSurpassMult = 0.9;
                                 retcheck.retcode = CFO_CheckTimeBasedConstraints;
                                 break;
@@ -2033,7 +2033,7 @@ protected:
                             break;
                         }
                     }
-                    RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d done", iters % shortcutRampNDVectOut.size());
+                    // RAVELOG_DEBUG_FORMAT("SpeedChecking at 0 iter=%d;%d done", iters % shortcutRampNDVectOut.size());
                     if( retcheck.retcode != 0 ) {
                         double fVelMult = retcheck.fTimeBasedSurpassMult;
                         fCurVelMult *= fVelMult;
