@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.172.0
+===============
+
+- Drop the case-insensitive behaviour of the readable interface map
+
 Version 0.171.0
 ===============
 
