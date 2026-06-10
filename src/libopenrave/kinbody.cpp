@@ -16,6 +16,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "libopenrave.h"
 #include <algorithm>
+#include <iterator>
 #include <unordered_set>
 
 // used for functions that are also used internally
@@ -932,6 +933,129 @@ void KinBody::SetId(const std::string& newid)
         }
         _id = newid;
     }
+}
+
+ReadablePtr KinBody::SetReadableInterface(const std::string& id, ReadablePtr readable)
+{
+    // Set the new readable
+    ReadablePtr pPrevious = ReadablesContainer::SetReadableInterface(id, readable);
+
+    // If this created / deleted a readable (instead of just changing), then the set of readable IDs on this body have changed.
+    // Notify the environment that our set membership needs to be updated.
+    const bool bWasPresent = !!pPrevious;
+    const bool bIsPresent = !!readable;
+    if (bWasPresent != bIsPresent) {
+        _NotifyEnvironmentReadableInterfaceChanged(id, bIsPresent);
+    }
+    return pPrevious;
+}
+
+void KinBody::SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting)
+{
+    // If we aren't added to the env, just update directly.
+    // No need to update the env.
+    if (GetEnvironmentBodyIndex() <= 0) {
+        ReadablesContainer::SetReadableInterfaces(mapReadables, bClearAllExisting);
+        return;
+    }
+
+    // If we are in the env, track which readable IDs got added / removed
+    std::set<std::string> idsBefore, idsAfter;
+    _GetReadableInterfaceIds(idsBefore);
+    ReadablesContainer::SetReadableInterfaces(mapReadables, bClearAllExisting);
+    _GetReadableInterfaceIds(idsAfter);
+    _NotifyEnvironmentReadableInterfacesChanged(idsBefore, idsAfter);
+}
+
+void KinBody::ClearReadableInterfaces()
+{
+    // If we aren't added to the env, just update directly.
+    // No need to update the env.
+    if (GetEnvironmentBodyIndex() <= 0) {
+        ReadablesContainer::ClearReadableInterfaces();
+        return;
+    }
+
+    // If we are in the env, track the set of IDs we previously had so we can remove them
+    std::set<std::string> idsBefore;
+    _GetReadableInterfaceIds(idsBefore);
+    ReadablesContainer::ClearReadableInterfaces();
+    _NotifyEnvironmentReadableInterfacesChanged(idsBefore, std::set<std::string>());
+}
+
+void KinBody::ClearReadableInterface(const std::string& id)
+{
+    const bool bWasPresent = HasReadableInterface(id);
+    ReadablesContainer::ClearReadableInterface(id);
+    if (bWasPresent) {
+        _NotifyEnvironmentReadableInterfaceChanged(id, false);
+    }
+}
+
+bool KinBody::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces)
+{
+    // If we aren't added to the env, just update directly.
+    // No need to update the env.
+    if (GetEnvironmentBodyIndex() <= 0) {
+        return ReadablesContainer::UpdateReadableInterfaces(newReadableInterfaces);
+    }
+
+    // Check the set of readables before, and if updating actually changed anything, post the difference to the env
+    std::set<std::string> idsBefore, idsAfter;
+    _GetReadableInterfaceIds(idsBefore);
+    const bool bChanged = ReadablesContainer::UpdateReadableInterfaces(newReadableInterfaces);
+    if (bChanged) {
+        _GetReadableInterfaceIds(idsAfter);
+        _NotifyEnvironmentReadableInterfacesChanged(idsBefore, idsAfter);
+    }
+    return bChanged;
+}
+
+void KinBody::_GetReadableInterfaceIds(std::set<std::string>& ids) const
+{
+    ids.clear();
+    boost::shared_lock<boost::shared_mutex> lock(GetReadableInterfaceMutex());
+    for (const std::pair<const std::string, ReadablePtr>& itReadable : GetReadableInterfaces()) {
+        if (!!itReadable.second) {
+            ids.insert(itReadable.first);
+        }
+    }
+}
+
+void KinBody::_NotifyEnvironmentReadableInterfaceChanged(const std::string& id, bool bPresent)
+{
+    // If we aren't added to the env, do nothing. We don't exist.
+    const int envBodyIndex = GetEnvironmentBodyIndex();
+    if (envBodyIndex <= 0) {
+        return;
+    }
+
+    if (bPresent) {
+        GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, std::vector<std::string>{id}, std::vector<std::string>());
+    }
+    else {
+        GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, std::vector<std::string>(), std::vector<std::string>{id});
+    }
+}
+
+void KinBody::_NotifyEnvironmentReadableInterfacesChanged(const std::set<std::string>& idsBefore, const std::set<std::string>& idsAfter)
+{
+    // If we aren't added to the env, do nothing. We don't exist.
+    const int envBodyIndex = GetEnvironmentBodyIndex();
+    if (envBodyIndex <= 0) {
+        return;
+    }
+
+    // Work out which readables were added/removed
+    std::vector<std::string> addedIds, removedIds;
+    std::set_difference(idsAfter.begin(), idsAfter.end(), idsBefore.begin(), idsBefore.end(), std::back_inserter(addedIds));
+    std::set_difference(idsBefore.begin(), idsBefore.end(), idsAfter.begin(), idsAfter.end(), std::back_inserter(removedIds));
+    if (addedIds.empty() && removedIds.empty()) {
+        return;
+    }
+
+    // Notify the env to update
+    GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, addedIds, removedIds);
 }
 
 void KinBody::SetDOFTorques(const std::vector<dReal>& torques, bool bAdd)

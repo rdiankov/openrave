@@ -466,6 +466,7 @@ public:
 
             _mapBodyNameIndex.clear();
             _mapBodyIdIndex.clear();
+            _ClearReadableInterfaceBodyIndices();
 
             _vPublishedBodies.clear();
             _nBodiesModifiedStamp++;
@@ -1676,6 +1677,32 @@ public:
             if (!filterFunction(*pbody)) {
                 continue;
             }
+            bodies.push_back(pbody);
+        }
+    }
+
+    void GetBodiesWithReadableInterface(std::vector<KinBodyPtr>& bodies, const std::string& id, uint64_t timeout) const override
+    {
+        TimedSharedLock lockInterfaces(_mutexInterfaces, timeout);
+        if (!lockInterfaces) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
+        }
+
+        // If we don't have a set of bodies for this interface ID, there's nothing to return.
+        bodies.clear();
+        const std::unordered_map<std::string, std::unordered_set<int>>::const_iterator it = kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+        if (it == kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+            return;
+        }
+
+        // If we do, we already know how many there are, so we can directly reserve our output
+        bodies.reserve(it->second.size());
+
+        // Each body index in the set maps directly to _vecbodies for easy copying
+        for (const int envBodyIndex : it->second) {
+            // The cache should always map to a valid, added body
+            const KinBodyPtr& pbody = _vecbodies.at(envBodyIndex);
+            BOOST_ASSERT(!!pbody);
             bodies.push_back(pbody);
         }
     }
@@ -3491,7 +3518,76 @@ public:
         return true;
     }
 
-protected:
+    /// Notify the env that one of the kinbodies in it has updated its set of readable IDs
+    void NotifyKinBodyReadableInterfacesChanged(int envBodyIndex, const std::vector<std::string>& addedReadableInterfaceIds, const std::vector<std::string>& removedReadableInterfaceIds) override
+    {
+        // Must be called with a valid body index
+        BOOST_ASSERT(envBodyIndex > 0);
+
+        // Add / remove the relevant set entries
+        ExclusiveLock lock(_mutexInterfaces);
+        for (const std::string& id : addedReadableInterfaceIds) {
+            kinBodyEnvironmentIdByReadableInterfaceId[id].insert(envBodyIndex);
+        }
+        for (const std::string& id : removedReadableInterfaceIds) {
+            std::unordered_map<std::string, std::unordered_set<int>>::iterator it = kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+            if (it != kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                it->second.erase(envBodyIndex);
+                if (it->second.empty()) {
+                    kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
+                }
+            }
+        }
+    }
+
+protected :
+    /// \brief registers all currently non-null readable interfaces of a body that is being added to the environment into the cache.
+    void _RegisterAddedBodyReadableInterfaces(const KinBodyPtr& pbody)
+    {
+        // This should only be called _as_ a body is added to the environment
+        const int envBodyIndex = pbody->GetEnvironmentBodyIndex();
+        BOOST_ASSERT(envBodyIndex > 0);
+
+        // For each readable on this body, add an entry to the relevant lookup cache
+        {
+            boost::shared_lock<boost::shared_mutex> readableLock(pbody->GetReadableInterfaceMutex());
+            const ReadablesContainer::READERSMAP& mapReadables = pbody->GetReadableInterfaces();
+            for (const std::pair<const std::string, ReadablePtr>& itReadable : mapReadables) {
+                // Null readables don't count
+                if (!itReadable.second) {
+                    continue;
+                }
+
+                // Add this body index to the set for this readable
+                kinBodyEnvironmentIdByReadableInterfaceId[itReadable.first].insert(envBodyIndex);
+            }
+        }
+    }
+
+    /// \brief purges an env body index from every readable interface entry in the cache, used when a body is removed from the environment.
+    void _UnregisterRemovedBodyReadableInterfaces(int envBodyIndex)
+    {
+        // Must be called with a valid old generation index
+        BOOST_ASSERT(envBodyIndex > 0);
+
+        // For each type of readable, drop this index from the lookup set
+        // If the set is now empty, drop the set entirely.
+        for (std::unordered_map<std::string, std::unordered_set<int>>::iterator it = kinBodyEnvironmentIdByReadableInterfaceId.begin(); it != kinBodyEnvironmentIdByReadableInterfaceId.end();) {
+            it->second.erase(envBodyIndex);
+            if (it->second.empty()) {
+                it = kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+    }
+
+    /// \brief clears the entire GetBodiesWithReadableInterface cache, used when all bodies are removed from the environment at once.
+    inline void _ClearReadableInterfaceBodyIndices()
+    {
+        kinBodyEnvironmentIdByReadableInterfaceId.clear();
+    }
 
     void _Init()
     {
@@ -3593,6 +3689,7 @@ protected:
         if (_mapBodyIdIndex.erase(id) == 0) {
             RAVELOG_WARN_FORMAT("env=%s, pbody of id '%s' not found in _mapBodyIdIndex of size %d, this should not happen!", GetNameId()%id%_mapBodyIdIndex.size());
         }
+        _UnregisterRemovedBodyReadableInterfaces(bodyIndex); // remove from GetBodiesWithReadableInterface cache before the env body index is unassigned
         _UnassignEnvironmentBodyIndex(body);
 
         KinBodyPtr pbody;
@@ -3673,6 +3770,7 @@ protected:
                 _vecbodies.clear();
                 _mapBodyNameIndex.clear();
                 _mapBodyIdIndex.clear();
+                _ClearReadableInterfaceBodyIndices();
                 _environmentIndexRecyclePool.clear();
 
                 _vPublishedBodies.clear();
@@ -4056,6 +4154,9 @@ protected:
             _mapBodyIdIndex[id] = envBodyIndex;
             //RAVELOG_DEBUG_FORMAT("env=%d: id=%s -> bodyIndex=%d, _mapBodyIdIndex has %d elements", GetId()%id%newBodyIndex%_mapBodyIdIndex.size());
         }
+
+        // Register any readable interfaces currently on this body to our fast-lookup cache
+        _RegisterAddedBodyReadableInterfaces(pbody);
     }
 
     /// \brief assign body / sensor to unique id by adding suffix
@@ -4550,6 +4651,11 @@ protected:
     string_map<int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
 
     std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. protected by _mutexInterfaces
+
+    /// Map of readable interface ID -> set of body indices that are currently tagged with that readable interface.
+    /// Used by GetBodiesWithReadableInterface for O(1) lookup instead of O(N) on bodies in the environment.
+    /// Protected by _mutexInterfaces
+    std::unordered_map<std::string, std::unordered_set<int>> kinBodyEnvironmentIdByReadableInterfaceId;
 
     int _assignedBodySensorNameIdSuffix; // cache of suffix used to make body (including robot) and sensor name and id unique in env
 

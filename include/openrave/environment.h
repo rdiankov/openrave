@@ -602,6 +602,17 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
+    /// \brief Get all bodies added to the environment that currently have a non-null readable interface with the given id. <b>[multi-thread safe]</b>
+    ///
+    /// Uses an internal cache that is kept in sync as bodies are added, removed, and have their readable interfaces modified.
+    /// Therefore this does not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
+    /// A separate **interface mutex** is locked for reading the bodies.
+    /// \param[out] bodies filled with the matching bodies, sorted by environment body index in ascending order
+    /// \param id the readable interface id to match
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void GetBodiesWithReadableInterface(std::vector<KinBodyPtr>& bodies, const std::string& id, uint64_t timeout=0) const = 0;
+
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the bodies.
@@ -925,6 +936,14 @@ public:
     /// \param newId id after change
     /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
     virtual bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
+
+    /// \brief notifies that the set of readable interfaces of a kin body added to this env changed.
+    ///
+    /// Should be called when readable interfaces of a body added to this env become non-null or null, so the environment can keep the cache used by GetBodiesWithReadableInterface in sync.
+    /// \param envBodyIndex environment body index of the body whose readable interfaces changed
+    /// \param addedReadableInterfaceIds ids of readable interfaces that became non-null
+    /// \param removedReadableInterfaceIds ids of readable interfaces that became null (were removed)
+    virtual void NotifyKinBodyReadableInterfacesChanged(int envBodyIndex, const std::vector<std::string>& addedReadableInterfaceIds, const std::vector<std::string>& removedReadableInterfaceIds) = 0;
 
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
