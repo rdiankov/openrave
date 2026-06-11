@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.172.0
+===============
+
+- Add MapBodies API for mapping functions across all bodies in the environment directly, without creating temporaries via GetBodies
+
 Version 0.171.0
 ===============
 
