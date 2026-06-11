@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.172.0
+===============
+
+- Require that readable interface lookup is now case-sensitive to allow switching to a faster container type
+
 Version 0.171.0
 ===============
 
