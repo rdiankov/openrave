@@ -1680,7 +1680,7 @@ public:
         }
     }
 
-    void MapBodies(const std::function<void(const KinBody&)>& mapFunction, uint64_t timeout = 0) const override
+    void MapBodies(const std::function<void(KinBody&)>& mapFunction, uint64_t timeout = 0) const override
     {
         TimedSharedLock lockInterfaces(_mutexInterfaces, timeout);
         if (!lockInterfaces) {
