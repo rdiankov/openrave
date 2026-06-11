@@ -1680,6 +1680,21 @@ public:
         }
     }
 
+    void MapBodies(const std::function<void(KinBody&)>& mapFunction, uint64_t timeout = 0) const override
+    {
+        TimedSharedLock lockInterfaces(_mutexInterfaces, timeout);
+        if (!lockInterfaces) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
+        }
+
+        for (const KinBodyPtr& pbody : _vecbodies) {
+            if (!pbody) {
+                continue;
+            }
+            mapFunction(*pbody);
+        }
+    }
+
     virtual void GetRobots(std::vector<RobotBasePtr>& robots, uint64_t timeout) const override
     {
         TimedSharedLock lock186(_mutexInterfaces, timeout);
