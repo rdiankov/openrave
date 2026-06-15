@@ -80,6 +80,7 @@ class RampNDFeasibilityChecker {
 public:
     RampNDFeasibilityChecker(FeasibilityCheckerBase* feas);
     RampNDFeasibilityChecker(FeasibilityCheckerBase* feas, DistanceCheckerBase* dist, int maxiter);
+    virtual ~RampNDFeasibilityChecker() = default;
 
     virtual int Check(const std::vector<RampND>& rampsndVect, int options=0xffff);
     virtual CheckReturn Check2(const RampND& rampnd, int options, std::vector<RampND>& rampsndVectOut)
@@ -103,6 +104,7 @@ public:
 
 class RandomNumberGeneratorBase {
 public:
+    virtual ~RandomNumberGeneratorBase() = default;
     virtual dReal Rand()
     {
         return ::OpenRAVE::RampOptimizerInternal::Rand();

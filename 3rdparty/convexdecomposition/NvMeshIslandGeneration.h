@@ -65,6 +65,7 @@ namespace CONVEX_DECOMPOSITION
 class MeshIslandGeneration
 {
 public:
+  virtual ~MeshIslandGeneration() = default;
 
   virtual NxU32 islandGenerate(NxU32 tcount,const NxU32 *indices,const NxF32 *vertices) = 0;
   virtual NxU32 islandGenerate(NxU32 tcount,const NxU32 *indices,const NxF64 *vertices) = 0;

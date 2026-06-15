@@ -26,7 +26,7 @@ public:
     /*
      */
     CubicInterpolator(size_t ndof, int envid=0);
-    ~CubicInterpolator()
+    virtual ~CubicInterpolator()
     {
     }
 

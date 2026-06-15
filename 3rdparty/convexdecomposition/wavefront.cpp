@@ -79,6 +79,7 @@ namespace WAVEFRONT
 class InPlaceParserInterface
 {
 public:
+	virtual ~InPlaceParserInterface() = default;
 	virtual NxI32 ParseLine(NxI32 lineno,NxI32 argc,const char **argv) =0;  // return TRUE to continue parsing, return FALSE to abort parsing process
 };
 
@@ -540,6 +541,7 @@ public:
 class GeometryInterface
 {
 public:
+	virtual ~GeometryInterface() = default;
 
 	virtual void NodeTriangle(const GeometryVertex *v1,const GeometryVertex *v2,const GeometryVertex *v3, bool textured)
 	{

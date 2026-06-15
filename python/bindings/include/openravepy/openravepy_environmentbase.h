@@ -91,6 +91,7 @@ public:
 public:
         PyEnvironmentBaseInfo();
         PyEnvironmentBaseInfo(const EnvironmentBase::EnvironmentBaseInfo& info);
+        virtual ~PyEnvironmentBaseInfo() = default;
         py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
         EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;

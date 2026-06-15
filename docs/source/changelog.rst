@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.0
+===============
+
+Add virtual destructors
+
 Version 0.173.0
 ===============
 

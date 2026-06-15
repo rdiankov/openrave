@@ -238,6 +238,8 @@ public:
                 *it *= *it;
             }
         }
+        virtual ~ActiveDistMetric() = default;
+
         virtual dReal Eval(const std::vector<dReal>& c0, const std::vector<dReal>& c1)
         {
             dReal out = 0;

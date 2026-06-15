@@ -137,6 +137,7 @@ public:
 public:
         PyKinBodyInfo();
         PyKinBodyInfo(const KinBody::KinBodyInfo& info);
+        virtual ~PyKinBodyInfo() = default;
         py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
         KinBody::KinBodyInfoPtr GetKinBodyInfo() const;

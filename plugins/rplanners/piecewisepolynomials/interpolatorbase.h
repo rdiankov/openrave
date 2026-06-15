@@ -32,7 +32,7 @@ public:
     {
     }
     InterpolatorBase(size_t ndof, int envid=0);
-    ~InterpolatorBase()
+    virtual ~InterpolatorBase()
     {
     }
 

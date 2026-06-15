@@ -96,6 +96,7 @@ public:
 class RemoveTjunctions
 {
 public:
+   virtual ~RemoveTjunctions() = default;
 
    virtual NxU32 removeTjunctions(RemoveTjunctionsDesc &desc) =0; // returns number of triangles output and the descriptor is filled with the appropriate results.
 

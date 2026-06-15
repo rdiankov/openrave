@@ -52,7 +52,7 @@ public:
     {
     };
     Polynomial(const dReal T, const std::vector<dReal>& c);
-    ~Polynomial()
+    virtual ~Polynomial()
     {
     }
 

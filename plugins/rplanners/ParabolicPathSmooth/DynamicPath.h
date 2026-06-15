@@ -108,6 +108,8 @@ public:
     RampFeasibilityChecker(FeasibilityCheckerBase* feas);
     RampFeasibilityChecker(FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters);
 
+    virtual ~RampFeasibilityChecker() = default;
+
     /// \brief checks constraints given options
     ///
     /// \return if non-zero then failed. The return code gives the cause of the failure. \see OpenRAVE::ConstraintFilterOptions enum.
@@ -132,6 +134,7 @@ public:
 class RandomNumberGeneratorBase
 {
 public:
+    virtual ~RandomNumberGeneratorBase() = default;
     virtual Real Rand() {
         return ::ParabolicRampInternal::Rand();
     }

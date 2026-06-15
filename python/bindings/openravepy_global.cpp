@@ -289,6 +289,7 @@ public:
     }
     PyOrientedBox(const OrientedBox& newobb) : obb(newobb) {
     }
+    virtual ~PyOrientedBox() = default;
 
     object extents() {
         return toPyVector3(obb.extents);
