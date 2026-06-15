@@ -1690,8 +1690,8 @@ public:
 
         // If we don't have a set of bodies for this interface ID, there's nothing to return.
         bodies.clear();
-        const std::unordered_map<std::string, std::unordered_set<int>>::const_iterator it = kinBodyEnvironmentIdByReadableInterfaceId.find(id);
-        if (it == kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+        const std::unordered_map<std::string, std::unordered_set<int>>::const_iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+        if (it == _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
             return;
         }
 
@@ -3542,14 +3542,14 @@ public:
         // Add / remove the relevant set entries
         ExclusiveLock lock(_mutexInterfaces);
         for (const std::string& id : addedReadableInterfaceIds) {
-            kinBodyEnvironmentIdByReadableInterfaceId[id].insert(envBodyIndex);
+            _kinBodyEnvironmentIdByReadableInterfaceId[id].insert(envBodyIndex);
         }
         for (const std::string& id : removedReadableInterfaceIds) {
-            std::unordered_map<std::string, std::unordered_set<int>>::iterator it = kinBodyEnvironmentIdByReadableInterfaceId.find(id);
-            if (it != kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+            std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+            if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
                 it->second.erase(envBodyIndex);
                 if (it->second.empty()) {
-                    kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
+                    _kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
                 }
             }
         }
@@ -3574,7 +3574,7 @@ protected :
                 }
 
                 // Add this body index to the set for this readable
-                kinBodyEnvironmentIdByReadableInterfaceId[itReadable.first].insert(envBodyIndex);
+                _kinBodyEnvironmentIdByReadableInterfaceId[itReadable.first].insert(envBodyIndex);
             }
         }
     }
@@ -3587,10 +3587,10 @@ protected :
 
         // For each type of readable, drop this index from the lookup set
         // If the set is now empty, drop the set entirely.
-        for (std::unordered_map<std::string, std::unordered_set<int>>::iterator it = kinBodyEnvironmentIdByReadableInterfaceId.begin(); it != kinBodyEnvironmentIdByReadableInterfaceId.end();) {
+        for (std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.begin(); it != _kinBodyEnvironmentIdByReadableInterfaceId.end();) {
             it->second.erase(envBodyIndex);
             if (it->second.empty()) {
-                it = kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
+                it = _kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
             }
             else {
                 ++it;
@@ -3601,7 +3601,7 @@ protected :
     /// \brief clears the entire GetBodiesWithReadableInterface cache, used when all bodies are removed from the environment at once.
     inline void _ClearReadableInterfaceBodyIndices()
     {
-        kinBodyEnvironmentIdByReadableInterfaceId.clear();
+        _kinBodyEnvironmentIdByReadableInterfaceId.clear();
     }
 
     void _Init()
@@ -4670,7 +4670,7 @@ protected :
     /// Map of readable interface ID -> set of body indices that are currently tagged with that readable interface.
     /// Used by GetBodiesWithReadableInterface for O(1) lookup instead of O(N) on bodies in the environment.
     /// Protected by _mutexInterfaces
-    std::unordered_map<std::string, std::unordered_set<int>> kinBodyEnvironmentIdByReadableInterfaceId;
+    std::unordered_map<std::string, std::unordered_set<int>> _kinBodyEnvironmentIdByReadableInterfaceId;
 
     int _assignedBodySensorNameIdSuffix; // cache of suffix used to make body (including robot) and sensor name and id unique in env
 
