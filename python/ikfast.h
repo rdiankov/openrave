@@ -59,7 +59,6 @@ public:
     IkSingleDOFSolutionBase() {
         indices.fill(0xFF);
     }
-    virtual ~IkSingleDOFSolutionBase() {}
 
     T fmul = 0.0, foffset = 0.0; ///< joint value is fmul*sol[freeind]+foffset
     signed char freeind = -1; ///< if >= 0, mimics another joint

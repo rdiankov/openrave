@@ -8,6 +8,10 @@ if( OPT_IKFAST_FLOAT32 )
   set(PLUGIN_COMPILE_FLAGS "${PLUGIN_COMPILE_FLAGS} -DOPENRAVE_IKFAST_FLOAT32")
 endif()
 
+if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
+  add_definitions("-Wno-error=non-virtual-dtor")
+endif()
+
 #file(GLOB ik_files "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../python) # for ikfast.h
