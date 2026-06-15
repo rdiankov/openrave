@@ -273,6 +273,7 @@ class OPENRAVEPY_API PyGeometry
     KinBody::Link::GeometryPtr _pgeometry;
 public:
     PyGeometry(KinBody::Link::GeometryPtr pgeometry);
+    virtual ~PyGeometry() = default;
 
     virtual void SetCollisionMesh(object pytrimesh);
 

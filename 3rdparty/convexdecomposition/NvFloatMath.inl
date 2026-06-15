@@ -2279,7 +2279,7 @@ public:
 class KdTreeInterface
 {
 public:
-  virtual ~KdTreeInterface() {}
+  virtual ~KdTreeInterface() = default;
   virtual const NxF64 * getPositionDouble(NxU32 index) const = 0;
   virtual const NxF32  * getPositionFloat(NxU32 index) const = 0;
 };

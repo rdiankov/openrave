@@ -111,7 +111,7 @@ public:
 class SpatialTreeBase
 {
 public:
-    virtual ~SpatialTreeBase() {}
+    virtual ~SpatialTreeBase() = default;
 
     virtual void Init(boost::weak_ptr<PlannerBase> planner, int dof, boost::function<dReal(const std::vector<dReal>&, const std::vector<dReal>&)>& distmetricfn, dReal fStepLength, dReal maxdistance) = 0;
 

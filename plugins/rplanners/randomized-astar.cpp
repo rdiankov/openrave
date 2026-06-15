@@ -22,7 +22,7 @@ class RandomizedAStarPlanner : public PlannerBase
 public:
         SimpleCostMetric(RobotBasePtr robot) {
         }
-        virtual ~SimpleCostMetric() {}
+        virtual ~SimpleCostMetric() = default;
         virtual float Eval(const vector<dReal>& pConfiguration) {
             return 1;
         }

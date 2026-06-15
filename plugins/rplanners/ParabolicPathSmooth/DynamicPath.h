@@ -108,7 +108,7 @@ public:
     RampFeasibilityChecker(FeasibilityCheckerBase* feas);
     RampFeasibilityChecker(FeasibilityCheckerBase* feas,DistanceCheckerBase* distance,int maxiters);
 
-    virtual ~RampFeasibilityChecker() {}
+    virtual ~RampFeasibilityChecker() = default;
 
     /// \brief checks constraints given options
     ///
@@ -134,7 +134,7 @@ public:
 class RandomNumberGeneratorBase
 {
 public:
-    virtual ~RandomNumberGeneratorBase() {}
+    virtual ~RandomNumberGeneratorBase() = default;
     virtual Real Rand() {
         return ::ParabolicRampInternal::Rand();
     }

@@ -422,7 +422,7 @@ NxF64 fm_computeMeshVolume(const NxF64 *vertices,NxU32 tcount,const NxU32 *indic
 class fm_VertexIndex
 {
 public:
-  virtual ~fm_VertexIndex() {}
+  virtual ~fm_VertexIndex() = default;
   virtual NxU32          getIndex(const NxF32 pos[3],bool &newPos) = 0;  // get welded index for this NxF32 vector[3]
   virtual NxU32          getIndex(const NxF64 pos[3],bool &newPos) = 0;  // get welded index for this NxF64 vector[3]
   virtual const NxF32 *   getVerticesFloat(void) const = 0;
@@ -483,7 +483,7 @@ void           fm_releaseLineSweep(fm_LineSweep *sweep);
 class fm_Triangulate
 {
 public:
-  virtual ~fm_Triangulate() {}
+  virtual ~fm_Triangulate() = default;
   virtual const NxF64 *       triangulate3d(NxU32 pcount,
                                              const NxF64 *points,
                                              NxU32 vstride,
@@ -557,7 +557,7 @@ void    fm_OBBtoAABB(const NxF32 obmin[3],const NxF32 obmax[3],const NxF32 matri
 class fm_Tesselate
 {
 public:
-  virtual ~fm_Tesselate() {}
+  virtual ~fm_Tesselate() = default;
   virtual const NxU32 * tesselate(fm_VertexIndex *vindex,NxU32 tcount,const NxU32 *indices,NxF32 longEdge,NxU32 maxDepth,NxU32 &outcount) = 0;
 };
 

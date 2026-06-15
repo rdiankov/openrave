@@ -53,7 +53,7 @@ public:
         _lastiter = -1;
         _nMaxIterations = 100;
     }
-    virtual ~JacobianInverseSolver() {}
+    virtual ~JacobianInverseSolver() = default;
 
     /// \brief initializes with the manipulator, but doesn't store it!
     ///

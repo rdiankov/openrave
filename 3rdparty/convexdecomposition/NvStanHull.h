@@ -167,7 +167,7 @@ public:
 class ConvexHullTriangleInterface
 {
 public:
-    virtual ~ConvexHullTriangleInterface() {}
+	virtual ~ConvexHullTriangleInterface() = default;
 	virtual void ConvexHullTriangle(const ConvexHullVertex &v1,const ConvexHullVertex &v2,const ConvexHullVertex &v3) = 0;
 };
 

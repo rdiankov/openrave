@@ -79,7 +79,7 @@ NxI32      tc_interlockedCompareExchange(void *dest, const NxI32 exchange1, cons
 class ThreadMutex
 {
 public:
-  virtual ~ThreadMutex() {}
+  virtual ~ThreadMutex() = default;
   virtual void lock(void) = 0;
   virtual void unlock(void) = 0;
   virtual bool tryLock(void) = 0;
@@ -92,7 +92,7 @@ void          tc_releaseThreadMutex(ThreadMutex *tm);
 class ThreadInterface
 {
 public:
-  virtual ~ThreadInterface() {}
+  virtual ~ThreadInterface() = default;
   virtual void threadMain(void) = 0;
 };
 
@@ -107,7 +107,7 @@ void          tc_releaseThread(Thread *t);
 class ThreadEvent
 {
 public:
-  virtual ~ThreadEvent() {}
+  virtual ~ThreadEvent() = default;
   virtual void setEvent(void) = 0; // signal the event
   virtual void resetEvent(void) = 0;
   virtual void waitForSingleObject(NxU32 ms) = 0;
