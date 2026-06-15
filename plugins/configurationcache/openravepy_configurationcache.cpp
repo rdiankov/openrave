@@ -35,6 +35,8 @@ namespace py = boost::python;
 
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_module.h>
+#include <openravepy/openravepy_robotbase.h>
+#include <openravepy/openravepy_environmentbase.h>
 using py::object;
 using py::extract;
 using py::extract_;
@@ -70,7 +72,7 @@ class PyConfigurationCache
 public:
     PyConfigurationCache(object pyrobot)
     {
-        _pyenv = openravepy::toPyEnvironment(pyrobot);
+        _pyenv = py::to_object(openravepy::toPyEnvironment(pyrobot));
         _cache.reset(new configurationcache::ConfigurationCache(openravepy::GetRobot(pyrobot)));
     }
     virtual ~PyConfigurationCache(){
@@ -174,7 +176,7 @@ public:
         return _cache->GetInsertionDistanceMult();
     }
 
-    object GetRobot() {
+    openravepy::PyKinBodyPtr GetRobot() {
         return openravepy::toPyKinBody(_cache->GetRobot(), _pyenv);
     }
 

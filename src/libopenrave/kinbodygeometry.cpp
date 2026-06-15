@@ -270,6 +270,22 @@ static void AppendCylinderTriangulation(const Vector& pos, const dReal radius, c
     return AppendConicalFrustumTriangulation(pos, radius, radius, halfHeight, numverts, tri);
 }
 
+/// \brief check validity of mesh collision indices. if invalid, throw.
+/// \param[in] vertices, indices : coming from TriMesh
+/// \param[in] name, id, type : coming from GeometryInfo. used for exception message.
+/// \param[in] context : used for exception message.
+static void _CheckValidityOfMeshCollisionIndices(const std::vector<Vector>& vertices,
+                                                 const std::vector<int32_t>& indices,
+                                                 const std::string& name, const std::string& id, const GeometryType type, const char* context)
+{
+    for(const int32_t meshIndex : indices) {
+        if( (int)vertices.size() <= meshIndex || meshIndex < 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("geometry(name=\"%s\";id=\"%s\";type=%d) has incorrect mesh indices %d in \"%s\", which is out of range of vertices which size is %d."),
+                                            name%id%(int)type%context%meshIndex%vertices.size(), ORE_InvalidArguments);
+        }
+    }
+}
+
 void KinBody::GeometryInfo::GenerateCalibrationBoardDotMesh(TriMesh& tri, float fTessellation) const
 {
     // reset dots mesh
@@ -505,6 +521,10 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
 
     case GT_None:
         break;
+    }
+
+    if( _friction != rhs._friction ) {
+        return 32;
     }
 
     return 0;
@@ -1038,6 +1058,7 @@ void KinBody::GeometryInfo::Reset()
     _vPositiveCropContainerMargins = Vector(0,0,0);
     _vNegativeCropContainerEmptyMargins = Vector(0,0,0);
     _vPositiveCropContainerEmptyMargins = Vector(0,0,0);
+    _friction = -1.0;
 }
 
 const char* GetGeometryTypeString(GeometryType geometryType)
@@ -1255,6 +1276,8 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
     if( !_bModifiable ) { // default is true
         orjson::SetJsonValueByKey(rGeometryInfo, "modifiable", _bModifiable, allocator);
     }
+
+    orjson::SetJsonValueByKey(rGeometryInfo, "friction", _friction, allocator);
 }
 
 void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const dReal fUnitScale, int options)
@@ -1645,6 +1668,12 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
     orjson::LoadJsonValueByKey(value, "diffuseColor", _vDiffuseColor);
     orjson::LoadJsonValueByKey(value, "ambientColor", _vAmbientColor);
     orjson::LoadJsonValueByKey(value, "modifiable", _bModifiable);
+
+    if (value.HasMember("friction")) {
+        orjson::LoadJsonValueByKey(value, "friction", _friction);
+    }
+
+    _CheckValidityOfMeshCollisionIndices( _meshcollision.vertices,  _meshcollision.indices, _name, _id, _type, __FUNCTION__);
 }
 
 inline void _UpdateExtrema(const Vector& v, Vector& vmin, Vector& vmax)
@@ -1888,29 +1917,33 @@ AABB KinBody::Geometry::ComputeAABB(const Transform& t) const
     return _info.ComputeAABB(t);
 }
 
-void KinBody::Geometry::serialize(std::ostream& o, int options) const
+void KinBody::Geometry::DigestHash(HashContext& hash, int options) const
 {
-    SerializeRound(o,_info._t);
-    o << (int)_info._type << " ";
-    SerializeRound3(o,_info._vRenderScale);
-    if( _info._type == GT_TriMesh ) {
-        _info._meshcollision.serialize(o,options);
+    hash << _info._t;
+    hash << static_cast<int>(_info._type);
+    hash << _info._vRenderScale;
+    if (_info._type == GT_TriMesh) {
+        hash << _info._meshcollision.vertices.size();
+        hash << _info._meshcollision.vertices;
+        hash << _info._meshcollision.indices.size();
+        hash << _info._meshcollision.indices;
     }
+
     else {
-        SerializeRound3(o,_info._vGeomData);
-        if( _info._type == GT_Cage ) {
-            SerializeRound3(o,_info._vGeomData2);
+        hash << _info._vGeomData;
+        if (_info._type == GT_Cage) {
+            hash << _info._vGeomData2;
             for (size_t iwall = 0; iwall < _info._vSideWalls.size(); ++iwall) {
-                const GeometryInfo::SideWall &s = _info._vSideWalls[iwall];
-                SerializeRound(o,s.transf);
-                SerializeRound3(o,s.vExtents);
-                o << (uint32_t)s.type;
+                const GeometryInfo::SideWall& s = _info._vSideWalls[iwall];
+                hash << s.transf;
+                hash << s.vExtents;
+                hash << static_cast<uint32_t>(s.type);
             }
         }
-        else if( _info._type == GT_Container ) {
-            SerializeRound3(o,_info._vGeomData2);
-            SerializeRound3(o,_info._vGeomData3);
-            SerializeRound3(o,_info._vGeomData4);
+        else if (_info._type == GT_Container) {
+            hash << _info._vGeomData2;
+            hash << _info._vGeomData3;
+            hash << _info._vGeomData4;
         }
     }
 }
@@ -2105,6 +2138,13 @@ void KinBody::Geometry::SetName(const std::string& name)
     parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
 }
 
+void KinBody::Geometry::SetFriction(const float& friction)
+{
+    LinkPtr parent(_parent);
+    _info._friction = friction;
+    parent->GetParent()->_PostprocessChangedParameters(Prop_LinkGeometry);
+}
+
 void KinBody::Geometry::UpdateInfo()
 {
 }
@@ -2266,6 +2306,12 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     if(GetPositiveCropContainerEmptyMargins() != info._vPositiveCropContainerEmptyMargins) {
         SetPositiveCropContainerEmptyMargins(info._vPositiveCropContainerEmptyMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerEmptyMargins changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    if (GetFriction() != info._friction) {
+        SetFriction(info._friction);
+        RAVELOG_VERBOSE_FORMAT("geometry %s friction changed", _info._friction);
         updateFromInfoResult = UFIR_Success;
     }
 

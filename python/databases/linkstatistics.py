@@ -86,13 +86,6 @@ class LinkStatisticsModel(DatabaseGenerator):
     def has(self):
         return self.grabbedjointspheres is not None and len(self.grabbedjointspheres) > 0
     
-    @staticmethod
-    def _GetValue(value):
-        if hasattr(value,'value'):
-            return value.value
-        else:
-            return value
-
     def getversion(self):
         return 7
     
@@ -198,7 +191,7 @@ class LinkStatisticsModel(DatabaseGenerator):
     def _GetJointSpheresFromGrabbed(self, grabbedinfo):
         for testgrabbedinfo, testjointspheres in self.grabbedjointspheres:
             if len(testgrabbedinfo) == len(grabbedinfo):
-                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setIgnoreRobotLinkNames == testgrabbedinfo[i]._setIgnoreRobotLinkNames) for i in range(len(grabbedinfo))]):
+                if all([(grabbedinfo[i]._grabbedname == testgrabbedinfo[i]._grabbedname and grabbedinfo[i]._robotlinkname == testgrabbedinfo[i]._robotlinkname and grabbedinfo[i]._grippername == testgrabbedinfo[i]._grippername and sum(abs(grabbedinfo[i]._trelative-testgrabbedinfo[i]._trelative)) <= 1e-7 and grabbedinfo[i]._setIgnoreRobotLinkNames == testgrabbedinfo[i]._setIgnoreRobotLinkNames) for i in range(len(grabbedinfo))]):
                     return testjointspheres
         
         log.debug('adding new linkstatistic for grabbed bodies: %r', [g._grabbedname for g in grabbedinfo])

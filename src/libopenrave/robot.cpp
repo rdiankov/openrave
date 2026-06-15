@@ -405,10 +405,10 @@ UpdateFromInfoResult RobotBase::AttachedSensor::UpdateFromInfo(const RobotBase::
     return updateFromInfoResult;
 }
 
-void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
+void RobotBase::AttachedSensor::DigestHash(HashContext& o, int options) const
 {
     o << (pattachedlink.expired() ? -1 : LinkPtr(pattachedlink)->GetIndex()) << " ";
-    SerializeRound(o,_info._trelative);
+    o << _info._trelative;
     o << (!pdata ? -1 : pdata->GetType()) << " ";
     // it is also important to serialize some of the geom parameters for the sensor (in case models are cached to it)
     if( !!_psensor ) {
@@ -435,11 +435,10 @@ void RobotBase::AttachedSensor::serialize(std::ostream& o, int options) const
 
 const std::string& RobotBase::AttachedSensor::GetStructureHash() const
 {
-    if( __hashstructure.size() == 0 ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_RobotSensors);
-        __hashstructure = utils::GetMD5HashString(ss.str());
+    if (__hashstructure.empty()) {
+        HashContext hashContext;
+        DigestHash(hashContext, SO_RobotSensors);
+        __hashstructure = hashContext.HexDigest();
     }
     return __hashstructure;
 }
@@ -489,7 +488,7 @@ void RobotBase::_RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const 
 
     // KinBody::Save_GrabbedBodies
     const int options = 0; // the following function works without Save_GrabbedBodies. also, the original code in Environment's Clone does not set Save_LinkTransformation, used in the following function. Thus, we don't need any options here and set it to 0.
-    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, /*bCalledFromClone*/ true);
+    _RestoreGrabbedBodiesFromSavedData(*pOriginalRobot, options, originalGrabbedDataByEnvironmentIndex, pOriginalRobot->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed, /*bCalledFromClone*/ true);
 
     // KinBody::Save_LinkVelocities
     if( !bRestoreGrabbedBodiesOnly ) {
@@ -2127,46 +2126,46 @@ void RobotBase::SetNonCollidingConfiguration()
     RegrabAll();
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr pbody, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), rGrabbedUserData);
+    return Grab(pbody, pmanip->GetEndEffector(), rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, rGrabbedUserData);
+    return Grab(pbody, pmanip->GetEndEffector(), setRobotLinksToIgnore, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr pbody, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr pbody, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
     ManipulatorPtr pmanip = GetActiveManipulator();
     if( !pmanip ) {
         return false;
     }
-    return Grab(pbody, pmanip->GetEndEffector(), setIgnoreBodyLinkNames, rGrabbedUserData);
+    return Grab(pbody, pmanip->GetEndEffector(), setIgnoreBodyLinkNames, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith, rGrabbedUserData);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
-    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rGrabbedUserData);
+    return KinBody::Grab(body, pRobotLinkToGrabWith, setRobotLinksToIgnore, rGrabbedUserData, grippername);
 }
 
-bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData)
+bool RobotBase::Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData, const std::string& grippername)
 {
-    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rGrabbedUserData);
+    return KinBody::Grab(body, pBodyLinkToGrabWith, setIgnoreBodyLinkNames, rGrabbedUserData, grippername);
 }
 
 void RobotBase::SetActiveManipulator(ManipulatorConstPtr pmanip)
@@ -2322,18 +2321,23 @@ bool RobotBase::AddGripperInfo(GripperInfoPtr gripperInfo, bool removeduplicate)
         throw OPENRAVE_EXCEPTION_FORMAT(_("Cannot add gripperInfo to robot %s since its name is empty."),GetName(),ORE_InvalidArguments);
     }
 
+    int iremoveindex = -1;
     for(int igripper = 0; igripper < (int)_vecGripperInfos.size(); ++igripper) {
         if( _vecGripperInfos[igripper]->name == gripperInfo->name ) {
             if( removeduplicate ) {
-                _vecGripperInfos[igripper] = gripperInfo;
+                iremoveindex = igripper;
             }
             else {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"),gripperInfo->name,ORE_InvalidArguments);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("gripper with name %s already exists"), gripperInfo->name, ORE_InvalidArguments);
             }
         }
     }
-
-    _vecGripperInfos.push_back(gripperInfo);
+    if( iremoveindex >= 0 ) {
+        _vecGripperInfos[iremoveindex] = gripperInfo;
+    }
+    else {
+        _vecGripperInfos.push_back(gripperInfo);
+    }
     return true;
 }
 
@@ -2614,17 +2618,17 @@ void RobotBase::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     }
 }
 
-void RobotBase::serialize(std::ostream& o, int options) const
+void RobotBase::DigestHash(HashContext& hash, int options) const
 {
-    KinBody::serialize(o,options);
-    if( options & SO_RobotManipulators ) {
-        FOREACHC(itmanip,_vecManipulators) {
-            (*itmanip)->serialize(o,options);
+    KinBody::DigestHash(hash, options);
+    if (options & SO_RobotManipulators) {
+        FOREACHC(itmanip, _vecManipulators) {
+            (*itmanip)->DigestHash(hash, options);
         }
     }
-    if( options & SO_RobotSensors ) {
-        FOREACHC(itsensor,_vecAttachedSensors) {
-            (*itsensor)->serialize(o,options);
+    if (options & SO_RobotSensors) {
+        FOREACHC(itsensor, _vecAttachedSensors) {
+            (*itsensor)->DigestHash(hash, options);
         }
     }
 }
@@ -2632,11 +2636,10 @@ void RobotBase::serialize(std::ostream& o, int options) const
 const std::string& RobotBase::GetRobotStructureHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
-    if( __hashrobotstructure.size() == 0 ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics|SO_Geometry|SO_RobotManipulators|SO_RobotSensors);
-        __hashrobotstructure = utils::GetMD5HashString(ss.str());
+    if (__hashrobotstructure.empty()) {
+        HashContext hashContext;
+        DigestHash(hashContext, SO_Kinematics | SO_Geometry | SO_RobotManipulators | SO_RobotSensors);
+        __hashrobotstructure = hashContext.HexDigest();
     }
     return __hashrobotstructure;
 }

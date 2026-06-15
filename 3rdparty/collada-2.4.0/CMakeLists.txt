@@ -9,8 +9,6 @@ if( LIBXML2_INCLUDE_DIR )
 endif()
 
 include_directories(${MINIZIP_INCLUDE_DIR})
-include_directories(BEFORE ${libpcrecpp_INCLUDE_DIRS})
-link_directories(${libpcrecpp_LIBRARY_DIRS})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/include/1.5)
 file(GLOB dom_files1_4 ${CMAKE_CURRENT_SOURCE_DIR}/src/1.4/dom/*.cpp)
@@ -20,19 +18,15 @@ file(GLOB libxmlplugin_files ${CMAKE_CURRENT_SOURCE_DIR}/src/modules/LIBXMLPlugi
 file(GLOB stddatabase_files ${CMAKE_CURRENT_SOURCE_DIR}/src/modules/STLDatabase/*.cpp)
 file(GLOB stderrplugin_files ${CMAKE_CURRENT_SOURCE_DIR}/src/modules/stdErrPlugin/*.cpp)
 
-set(COLLADA_LIBS minizip ${libpcrecpp_LIBRARIES} ${ZLIB_LIBRARIES})
+set(COLLADA_LIBS minizip ${ZLIB_LIBRARIES})
 set(COLLADA_LIBS ${COLLADA_LIBS} ${Boost_FILESYSTEM_LIBRARY} ${Boost_SYSTEM_LIBRARY})
 
 add_library(collada15reader STATIC ${dom_files1_5} ${dae_files} ${libxmlplugin_files} ${stddatabase_files} ${stderrplugin_files})
 
-if( NOT libpcrecpp_FOUND )
-  add_dependencies(collada15reader pcre_local)
-endif()
-
 add_dependencies(collada15reader libopenrave)
 target_link_libraries(collada15reader ${COLLADA_LIBS})
-set_target_properties(collada15reader PROPERTIES COMPILE_FLAGS "${libpcrecpp_CFLAGS_OTHERS} -DDOM_INCLUDE_LIBXML -DCOLLADA_DOM_DAEFLOAT_IS64 -DCOLLADA_DOM_SUPPORT150 -Wno-shadow ${Boost_CFLAGS}"
-  LINK_FLAGS "${libpcrecpp_LDFLAGS_OTHERS}")
+set_target_properties(collada15reader PROPERTIES COMPILE_FLAGS "-DDOM_INCLUDE_LIBXML -DCOLLADA_DOM_DAEFLOAT_IS64 -DCOLLADA_DOM_SUPPORT150 -Wno-shadow ${Boost_CFLAGS}"
+)
 
 else()
 if( NOT Boost_FILESYSTEM_FOUND )

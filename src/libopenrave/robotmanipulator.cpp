@@ -39,7 +39,11 @@ void RobotBase::ManipulatorInfo::SerializeJSON(rapidjson::Value& value, rapidjso
 {
     orjson::SetJsonValueByKey(value, "id", _id, allocator);
     orjson::SetJsonValueByKey(value, "name", _name, allocator);
-    orjson::SetJsonValueByKey(value, "transform", _tLocalTool, allocator);
+    {
+        Transform tLocalTool = _tLocalTool;
+        tLocalTool.trans *= fUnitScale;
+        orjson::SetJsonValueByKey(value, "transform", tLocalTool, allocator);
+    }
     if( _vChuckingDirection.size() > 0 ) {
         orjson::SetJsonValueByKey(value, "chuckingDirections", _vChuckingDirection, allocator);
     }
@@ -61,7 +65,9 @@ void RobotBase::ManipulatorInfo::DeserializeJSON(const rapidjson::Value& value, 
 {
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
-    orjson::LoadJsonValueByKey(value, "transform", _tLocalTool);
+    if (orjson::LoadJsonValueByKey(value, "transform", _tLocalTool)) {
+        _tLocalTool.trans *= fUnitScale;
+    }
 
     // Now recommended to use chuckingDirection in GripperInfo. However, we still read it from ManipulatorInfo for backward compatibility, e.g. the saved scene is not migrated.
     rapidjson::Value::ConstMemberIterator itChuckingDirections = value.FindMember("chuckingDirections");
@@ -1511,19 +1517,19 @@ void RobotBase::Manipulator::CalculateAngularVelocityJacobian(boost::multi_array
     }
 }
 
-void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameterizationType iktype) const
+void RobotBase::Manipulator::DigestHash(HashContext& o, int options, IkParameterizationType iktype) const
 {
     if( options & SO_RobotManipulators ) {
-        o << (!__pBase ? -1 : __pBase->GetIndex()) << " " << (!__pEffector ? -1 : __pEffector->GetIndex()) << " ";
+        o << (!__pBase ? -1 : __pBase->GetIndex()) << (!__pEffector ? -1 : __pEffector->GetIndex());
         // don't include __varmdofindices and __vgripperdofindices since they are generated from the data
-        o << __vGripperJointNames.size() << " ";
+        o << __vGripperJointNames.size();
         FOREACHC(it, __vGripperJointNames) {
-            o << *it << " ";
+            o << *it;
         }
         FOREACHC(it, __vChuckingDirection) {
-            o << *it << " ";
+            o << *it;
         }
-        SerializeRound(o,_info._tLocalTool);
+        o << _info._tLocalTool;
     }
     if( options & (SO_Kinematics|SO_InverseKinematics) ) {
         RobotBasePtr probot(__probot);
@@ -1538,26 +1544,25 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
             FOREACH(itjoint, vjoints) {
                 tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform() * (*itjoint)->GetInternalHierarchyRightTransform();
             }
-            tcur = tcur;
             // if 6D transform IK, then don't inlucde the local tool transform!
             if( !!(options & SO_Kinematics) || iktype != IKP_Transform6D ) {
                 tcur *= _info._tLocalTool;
             }
-            SerializeRound(o,tcur);
-            o << __varmdofindices.size() << " ";
+            o << tcur;
+            o << __varmdofindices.size();
 
             tcur = Transform();
             int index = 0;
             FOREACH(itjoint, vjoints) {
                 if( !(*itjoint)->IsStatic() ) {
-                    o << (*itjoint)->GetType() << " ";
+                    o << static_cast<size_t>((*itjoint)->GetType());
                 }
 
                 if( (*itjoint)->GetDOFIndex() >= 0 && find(__varmdofindices.begin(),__varmdofindices.end(),(*itjoint)->GetDOFIndex()) != __varmdofindices.end() ) {
                     tcur = tcur * (*itjoint)->GetInternalHierarchyLeftTransform();
                     for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
-                        SerializeRound3(o,tcur.trans);
-                        SerializeRound3(o,tcur.rotate((*itjoint)->GetInternalHierarchyAxis(idof)));
+                        o << tcur.trans;
+                        o << tcur.rotate((*itjoint)->GetInternalHierarchyAxis(idof));
                     }
                     tcur = tcur * (*itjoint)->GetInternalHierarchyRightTransform();
                 }
@@ -1567,9 +1572,9 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
                     if( (*itjoint)->IsMimic() ) {
                         for(int idof = 0; idof < (*itjoint)->GetDOF(); ++idof) {
                             if( (*itjoint)->IsMimic(idof) ) {
-                                o << "mimic " << index << " ";
+                                o << index;
                                 for(int ieq = 0; ieq < 3; ++ieq) {
-                                    o << (*itjoint)->GetMimicEquation(idof,ieq) << " ";
+                                    o << (*itjoint)->GetMimicEquation(idof,ieq);
                                 }
                             }
                         }
@@ -1582,7 +1587,7 @@ void RobotBase::Manipulator::serialize(std::ostream& o, int options, IkParameter
 
     // output direction if SO_Kinematics|SO_RobotManipulators. if IK hash, then output only on certain ik types.
     if( !!(options & (SO_Kinematics|SO_RobotManipulators)) || (!!(options&SO_InverseKinematics) && (iktype == IKP_TranslationDirection5D || iktype == IKP_Direction3D || iktype == IKP_Ray4D)) ) {
-        SerializeRound3(o,_info._vdirection);
+        o << _info._vdirection;
     }
 }
 
@@ -1605,22 +1610,20 @@ ConfigurationSpecification RobotBase::Manipulator::GetIkConfigurationSpecificati
 
 const std::string& RobotBase::Manipulator::GetStructureHash() const
 {
-    if( __hashstructure.size() == 0 ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_RobotManipulators|SO_Kinematics);
-        __hashstructure = utils::GetMD5HashString(ss.str());
+    if (__hashstructure.empty()) {
+        HashContext hashContext;
+        DigestHash(hashContext, SO_RobotManipulators | SO_Kinematics);
+        __hashstructure = hashContext.HexDigest();
     }
     return __hashstructure;
 }
 
 const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
 {
-    if( __hashkinematicsstructure.size() == 0 ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_Kinematics);
-        __hashkinematicsstructure = utils::GetMD5HashString(ss.str());
+    if (__hashkinematicsstructure.empty()) {
+        HashContext hashContext;
+        DigestHash(hashContext, SO_Kinematics);
+        __hashkinematicsstructure = hashContext.HexDigest();
     }
     return __hashkinematicsstructure;
 }
@@ -1628,11 +1631,10 @@ const std::string& RobotBase::Manipulator::GetKinematicsStructureHash() const
 const std::string& RobotBase::Manipulator::GetInverseKinematicsStructureHash(IkParameterizationType iktype) const
 {
     std::map<IkParameterizationType, std::string>::const_iterator it = __maphashikstructure.find(iktype);
-    if( it == __maphashikstructure.end() ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
-        serialize(ss,SO_InverseKinematics,iktype);
-        __maphashikstructure[iktype] = utils::GetMD5HashString(ss.str());
+    if (it == __maphashikstructure.end()) {
+        HashContext hashContext;
+        DigestHash(hashContext, SO_InverseKinematics, iktype);
+        __maphashikstructure[iktype] = hashContext.HexDigest();
         return __maphashikstructure[iktype];
     }
     else {

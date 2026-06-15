@@ -100,6 +100,22 @@ protected:
     boost::function<void()> _fn;
 };
 
+/// \brief check validity of mesh collision indices. if invalid, throw.
+/// \param[in] vertices, indices : coming from TriMesh
+/// \param[in] name, id, type : coming from GeometryInfo. used for exception message.
+/// \param[in] context : used for exception message.
+static void _CheckValidityOfMeshCollisionIndices(const std::vector<Vector>& vertices,
+                                                 const std::vector<int32_t>& indices,
+                                                 const std::string& name, const std::string& id, const GeometryType type, const char* context)
+{
+    for(const int32_t meshIndex : indices) {
+        if( (int)vertices.size() <= meshIndex || meshIndex < 0 ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("geometry(name=\"%s\";id=\"%s\";type=%d) has incorrect mesh indices %d in \"%s\", which is out of range of vertices which size is %d."),
+                                            name%id%(int)type%context%meshIndex%vertices.size(), ORE_InvalidArguments);
+        }
+    }
+}
+
 typedef boost::shared_ptr<ChangeCallbackData> ChangeCallbackDataPtr;
 
 bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
@@ -513,8 +529,8 @@ bool KinBody::InitFromBoxes(const std::vector<AABB>& vaabbs, bool visible, const
         info._t.trans = itab->pos;
         info._bVisible = visible;
         info._vGeomData = itab->extents;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info._vDiffuseColor = Vector(1, 0.5f, 0.5f);
+        info._vAmbientColor = Vector(0.1, 0.0f, 0.0f);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
@@ -558,8 +574,8 @@ bool KinBody::InitFromBoxes(const std::vector<OBB>& vobbs, bool visible, const s
         info._t = tm;
         info._bVisible = visible;
         info._vGeomData = itobb->extents;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info._vDiffuseColor = Vector(1, 0.5f, 0.5f);
+        info._vAmbientColor = Vector(0.1, 0.0f, 0.0f);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         numvertices += geom->GetCollisionMesh().vertices.size();
@@ -598,8 +614,8 @@ bool KinBody::InitFromSpheres(const std::vector<Vector>& vspheres, bool visible,
         info._t.trans.x = itv->x; info._t.trans.y = itv->y; info._t.trans.z = itv->z;
         info._bVisible = visible;
         info._vGeomData.x = itv->w;
-        info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-        info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+        info._vDiffuseColor = Vector(1, 0.5f, 0.5f);
+        info._vAmbientColor = Vector(0.1, 0.0f, 0.0f);
         Link::GeometryPtr geom(new Link::Geometry(plink,info));
         geom->_info.InitCollisionMesh();
         plink->_vGeometries.push_back(geom);
@@ -627,8 +643,8 @@ bool KinBody::InitFromTrimesh(const TriMesh& trimesh, bool visible, const std::s
     GeometryInfo info;
     info._type = GT_TriMesh;
     info._bVisible = visible;
-    info._vDiffuseColor=Vector(1,0.5f,0.5f,1);
-    info._vAmbientColor=Vector(0.1,0.0f,0.0f,0);
+    info._vDiffuseColor = Vector(1, 0.5f, 0.5f);
+    info._vAmbientColor = Vector(0.1, 0.0f, 0.0f);
     info._meshcollision = trimesh;
     Link::GeometryPtr geom(new Link::Geometry(plink,info));
     plink->_vGeometries.push_back(geom);
@@ -714,6 +730,12 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
 void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries)
 {
     OPENRAVE_ASSERT_OP( linkgeometries.size(), ==, _veclinks.size() );
+    for(const std::vector<KinBody::GeometryInfoPtr>& vGeometries : linkgeometries) {
+        for(const KinBody::GeometryInfoPtr& pGeometry : vGeometries) {
+            const KinBody::GeometryInfo& geometry = *pGeometry;
+            _CheckValidityOfMeshCollisionIndices(geometry._meshcollision.vertices, geometry._meshcollision.indices, geometry._name, geometry._id, geometry._type, __FUNCTION__);
+        }
+    }
     FOREACH(itlink, _veclinks) {
         Link& link = **itlink;
         std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
@@ -845,6 +867,12 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
         _baseLinkInBodyTransform = _invBaseLinkInBodyTransform = Transform();
     }
 
+    // Note that we apply the transform of this body _after_ we have latched the _baseLinkInBodyTransform
+    // Setting the transform of a body is effectively just setting the transform of all the links,
+    // and so if we do this _then_ latch the position of the links, we incorrectly  add the position of the
+    // entire body in the scene to the base link offset.
+    SetTransform(info._transform);
+
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
     }
@@ -947,10 +975,10 @@ void KinBody::GetDOFValues(std::vector<dReal>& v, const std::vector<int>& dofind
                 }
                 ss << "]; jointorder=[";
                 FOREACH(itj, _vDOFOrderedJoints) {
-                    ss << (*itj)->GetName() << ", ";
+                    ss << (*itj)->GetName() << "=(" << (*it)->GetValue(0) << "," << (*it)->GetDOFIndex() << "),  ";
                 }
                 ss << "];";
-                throw OPENRAVE_EXCEPTION_FORMAT(_("dof indices mismatch joint %s (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), (*it)->GetName()%(*it)->GetDOFIndex()%toadd%v.size()%ss.str(), ORE_InvalidState);
+                throw OPENRAVE_EXCEPTION_FORMAT(_("env=%s, body '%s' (%d) dof indices mismatch joint '%s' (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"), GetEnv()->GetNameId()%GetName()%GetEnvironmentBodyIndex()%(*it)->GetName()%(*it)->GetDOFIndex()%toadd%v.size()%ss.str(), ORE_InvalidState);
             }
             (*it)->GetValues(v,true);
         }
@@ -1325,6 +1353,8 @@ void KinBody::SetDOFLimits(const std::vector<dReal>& lower, const std::vector<dR
 
 void KinBody::SetDOFVelocityLimits(const std::vector<dReal>& v)
 {
+    OPENRAVE_ASSERT_OP_FORMAT((int)v.size(),>=,GetDOF(), "env=%s, body '%s' not enough values %d<%d for setting velocity", GetEnv()->GetNameId()%GetName()%v.size()%GetDOF(),ORE_InvalidArguments);
+
     std::vector<dReal>::const_iterator itv = v.begin();
     FOREACHC(it, _vDOFOrderedJoints) {
         std::copy(itv,itv+(*it)->GetDOF(), (*it)->_info._vmaxvel.begin());
@@ -1437,46 +1467,66 @@ void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>
     }
 }
 
-// like apply transform except everything is relative to the first frame
-void KinBody::SetTransform(const Transform& bodyTransform)
+void KinBody::_SetTransformNoPostProcess(const Transform& bodyTransform)
 {
-    if( _veclinks.size() == 0 ) {
+    if (_veclinks.empty()) {
         return;
     }
+
     Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
     Transform tbaseinv = _veclinks.front()->GetTransform().inverse();
     Transform tapply = baseLinkTransform * tbaseinv;
     FOREACH(itlink, _veclinks) {
         (*itlink)->SetTransform(tapply * (*itlink)->GetTransform());
     }
+}
+
+bool KinBody::_SetVelocityNoPostProcess(const Vector& linearvel, const Vector& angularvel)
+{
+    if (_veclinks.empty()) {
+        return false;
+    }
+
+    bool bSuccess = false;
+    if (_veclinks.size() == 1) {
+        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocity(_veclinks[0], linearvel, angularvel);
+    }
+    else {
+        std::vector<std::pair<Vector, Vector>>& velocities = _vVelocitiesCache;
+        velocities.resize(_veclinks.size());
+        velocities.at(0).first = linearvel;
+        velocities.at(0).second = angularvel;
+        Vector vlinktrans = _veclinks.at(0)->GetTransform().trans;
+        for (size_t ilink = 1; ilink < _veclinks.size(); ++ilink) {
+            velocities[ilink].first = linearvel + angularvel.cross(_veclinks[ilink]->GetTransform().trans - vlinktrans);
+            velocities[ilink].second = angularvel;
+        }
+
+        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(), velocities);
+    }
+
+    return bSuccess;
+}
+
+void KinBody::SetTransformAndVelocity(const Transform& bodyTransform, const Vector& linearvel, const Vector& angularvel)
+{
+    _SetTransformNoPostProcess(bodyTransform);
+    _SetVelocityNoPostProcess(linearvel, angularvel);
+    _UpdateGrabbedBodies();
+    _PostprocessChangedParameters(Prop_LinkTransforms);
+}
+
+// like apply transform except everything is relative to the first frame
+void KinBody::SetTransform(const Transform& bodyTransform)
+{
+    _SetTransformNoPostProcess(bodyTransform);
     _UpdateGrabbedBodies();
     _PostprocessChangedParameters(Prop_LinkTransforms);
 }
 
 bool KinBody::SetVelocity(const Vector& linearvel, const Vector& angularvel)
 {
-    if (_veclinks.size() == 0) {
-        return false;
-    }
-
-    bool bSuccess = false;
-    if( _veclinks.size() == 1 ) {
-        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocity(_veclinks[0], linearvel, angularvel);
-    }
-    else {
-        std::vector<std::pair<Vector,Vector> >& velocities = _vVelocitiesCache;
-        velocities.resize(_veclinks.size());
-        velocities.at(0).first = linearvel;
-        velocities.at(0).second = angularvel;
-        Vector vlinktrans = _veclinks.at(0)->GetTransform().trans;
-        for(size_t ilink = 1; ilink < _veclinks.size(); ++ilink) {
-            velocities[ilink].first = linearvel + angularvel.cross(_veclinks[ilink]->GetTransform().trans-vlinktrans);
-            velocities[ilink].second = angularvel;
-        }
-
-        bSuccess = GetEnv()->GetPhysicsEngine()->SetLinkVelocities(shared_kinbody(),velocities);
-    }
-
+    const bool bSuccess = _SetVelocityNoPostProcess(linearvel, angularvel);
     _UpdateGrabbedBodies();
     return bSuccess;
 }
@@ -2169,7 +2219,7 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         return;
     }
     int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
-    OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, not enough values %d<%d", GetEnv()->GetNameId()%dof%GetDOF(),ORE_InvalidArguments);
+    OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, body '%s' not enough values %d<%d", GetEnv()->GetNameId()%GetName()%dof%GetDOF(),ORE_InvalidArguments);
 
     GetDOFValues(_vTempJoints);
     if( dofindices.size() > 0 ) {
@@ -3588,7 +3638,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == JointSlider ) {
-                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                doftorques.at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -3626,7 +3676,7 @@ void KinBody::ComputeInverseDynamics(std::vector<dReal>& doftorques, const std::
                 faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
             }
             else if( pjoint->GetType() == JointSlider ) {
-                faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                faxistorque = pjoint->GetAxis(0).dot3(vcomforce);
             }
             else {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -3813,7 +3863,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
                     vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
                 }
                 else if( pjoint->GetType() == JointSlider ) {
-                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                    vDOFTorqueComponents[j].at(pjoint->GetDOFIndex()) += pjoint->GetAxis(0).dot3(vcomforce);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -3827,7 +3877,7 @@ void KinBody::ComputeInverseDynamics(boost::array< std::vector<dReal>, 3>& vDOFT
                     faxistorque = pjoint->GetAxis(0).dot3(vjointtorque + vcomtoanchor.cross(vcomforce));
                 }
                 else if( pjoint->GetType() == JointSlider ) {
-                    faxistorque = pjoint->GetAxis(0).dot3(vcomforce)/(2*PI);
+                    faxistorque = pjoint->GetAxis(0).dot3(vcomforce);
                 }
                 else {
                     throw OPENRAVE_EXCEPTION_FORMAT(_("joint 0x%x not supported"), pjoint->GetType(), ORE_Assert);
@@ -4155,7 +4205,7 @@ void KinBody::SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker)
     }
 }
 
-CollisionCheckerBasePtr KinBody::GetSelfCollisionChecker() const
+const CollisionCheckerBasePtr& KinBody::GetSelfCollisionChecker() const
 {
     return _selfcollisionchecker;
 }
@@ -4787,7 +4837,7 @@ void KinBody::_ComputeInternalInformation()
             else {
                 // NOTE: possibly try to choose roots that do not involve mimic joints. ikfast might have problems
                 // dealing with very complex formulas
-                LinkPtr plink0 = joint.GetFirstAttached(), plink1 = joint.GetSecondAttached();
+                const LinkPtr& plink0 = joint.GetFirstAttached(), plink1 = joint.GetSecondAttached();
                 if( vlinkdepths[plink0->GetIndex()] < vlinkdepths[plink1->GetIndex()] ) {
                     parentlinkindex = plink0->GetIndex();
                 }
@@ -4909,7 +4959,7 @@ void KinBody::_ComputeInternalInformation()
                 stringstream ss;
                 ss << GetName() << " closedloop found: ";
                 FOREACH(itlinkindex,*itclosedloop) {
-                    LinkPtr plink = _veclinks.at(*itlinkindex);
+                    const LinkPtr& plink = _veclinks.at(*itlinkindex);
                     ss << plink->GetName() << "(" << plink->GetIndex() << ") ";
                 }
                 RAVELOG_VERBOSE(ss.str());
@@ -4954,7 +5004,7 @@ void KinBody::_ComputeInternalInformation()
 
         // breadth first search for rigid links
         for(size_t icurlink = 0; icurlink<vattachedlinks.size(); ++icurlink) {
-            LinkPtr plink=_veclinks.at(vattachedlinks[icurlink]);
+            const LinkPtr& plink = _veclinks.at(vattachedlinks[icurlink]);
             FOREACHC(itjoint, _vecjoints) {
                 if( (*itjoint)->IsStatic() ) {
                     if(((*itjoint)->GetFirstAttached() == plink)&& !!(*itjoint)->GetSecondAttached() &&(find(vattachedlinks.begin(),vattachedlinks.end(),(*itjoint)->GetSecondAttached()->GetIndex()) == vattachedlinks.end())) {
@@ -5877,6 +5927,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     // clone the grabbed bodies, note that this can fail if the new cloned environment hasn't added the bodies yet (check out Environment::Clone)
     _listAttachedBodies.clear(); // will be set in the environment
     _grabbedBodiesByEnvironmentIndex.clear();
+    _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.clear();
     if ((cloningoptions & Clone_IgnoreGrabbedBodies) != Clone_IgnoreGrabbedBodies) {
         for (const MapGrabbedByEnvironmentIndex::value_type& otherGrabPair : r->_grabbedBodiesByEnvironmentIndex) {
             const GrabbedPtr& pgrabbedref = otherGrabPair.second;
@@ -5901,29 +5952,27 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 //BOOST_ASSERT(pgrabbedbody->GetName() == pbodyref->GetName());
 
                 GrabbedPtr pgrabbed(new Grabbed(pgrabbedbody,_veclinks.at(KinBody::LinkPtr(pgrabbedref->_pGrabbingLink)->GetIndex())));
+                pgrabbed->_grippername = pgrabbedref->_grippername;
                 pgrabbed->_tRelative = pgrabbedref->_tRelative;
                 pgrabbed->_setGrabberLinkIndicesToIgnore = pgrabbedref->_setGrabberLinkIndicesToIgnore; // can do this since link indices are the same
                 CopyRapidJsonDoc(pgrabbedref->_rGrabbedUserData, pgrabbed->_rGrabbedUserData);
                 if( pgrabbedref->IsListNonCollidingLinksValid() ) {
-                    FOREACHC(itLinkRef, pgrabbedref->_listNonCollidingLinksWhenGrabbed) {
-                        if( (*itLinkRef)->GetParent() == r ) {
-                            pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(_veclinks.at((*itLinkRef)->GetIndex()));
+                    for( const std::pair<LinkConstPtr, LinkConstPtr>& grabbedGrabberLinkPair: pgrabbedref->_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed ) {
+                        if( grabbedGrabberLinkPair.second->GetParent() != r ) {
+                            RAVELOG_WARN_FORMAT("env=%s, could not restore grabber link '%s' since the parent in the list is different from cloning reference.", GetEnv()->GetNameId() % grabbedGrabberLinkPair.second->GetName());
+                            continue;
                         }
-                        else {
-                            KinBodyPtr pOtherGrabbedBody = GetEnv()->GetKinBody((*itLinkRef)->GetParent()->GetName());
-                            if( !!pOtherGrabbedBody ) {
-                                KinBody::LinkPtr plink = pOtherGrabbedBody->GetLink((*itLinkRef)->GetName());
-                                if( !!plink ) {
-                                    pgrabbed->_listNonCollidingLinksWhenGrabbed.push_back(plink);
-                                }
-                                else {
-                                    RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find non-colliding link %s in body %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetName()%(*itLinkRef)->GetParent()->GetName());
-                                }
-                            }
-                            else {
-                                RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find body %s for non-colliding link %s.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%(*itLinkRef)->GetParent()->GetName()%(*itLinkRef)->GetName());
-                            }
+                        const int linkIndex = grabbedGrabberLinkPair.second->GetIndex();
+                        if( linkIndex < 0 || linkIndex >= (int)_veclinks.size()) {
+                            RAVELOG_WARN_FORMAT("env=%s, could not restore grabber link '%s' since its index %d is out of range (num links in grabber is %d)", GetEnv()->GetNameId() % grabbedGrabberLinkPair.second->GetName() % linkIndex % _veclinks.size());
+                            continue;
                         }
+                        const KinBody::LinkPtr pGrabbedBodyLink = pgrabbedbody->GetLink(grabbedGrabberLinkPair.first->GetName());
+                        if( !pGrabbedBodyLink ) {
+                            RAVELOG_WARN_FORMAT("env=%s, could not restore grabbed link '%s' since it's not in the links of body '%s'.", GetEnv()->GetNameId() % grabbedGrabberLinkPair.first->GetName() % pgrabbedbody->GetName());
+                            continue;
+                        }
+                        pgrabbed->_listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed.emplace_back(pGrabbedBodyLink, _veclinks[linkIndex]);
                     }
                     pgrabbed->SetLinkNonCollidingIsValid(true);
                 }
@@ -5941,6 +5990,64 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
                 _grabbedBodiesByEnvironmentIndex[pgrabbedbody->GetEnvironmentBodyIndex()] = std::move(pgrabbed);
             }
         } // end for pgrabbedref
+
+        // map list of inter grabbed.
+        for( const std::pair<uint64_t, ListNonCollidingLinkPairs>& keyValuePair: r->_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed ) {
+            const ListNonCollidingLinkPairs& interGrabbedLinkPairs = keyValuePair.second;
+            const uint64_t envBodyIndicesPair = keyValuePair.first;
+            if( interGrabbedLinkPairs.empty() ) {
+                continue;
+            }
+            if( !_IsListNonCollidingLinksValidFromEnvironmentBodyIndex(_GetFirstEnvironmentBodyIndexFromPair(envBodyIndicesPair)) ||
+                !_IsListNonCollidingLinksValidFromEnvironmentBodyIndex(_GetSecondEnvironmentBodyIndexFromPair(envBodyIndicesPair)) ) {
+                continue;
+            }
+            const KinBodyPtr pFirstRef = interGrabbedLinkPairs.front().first->GetParent(true);
+            const KinBodyPtr pSecondRef = interGrabbedLinkPairs.front().second->GetParent(true);
+            if( !pFirstRef || !pSecondRef ) {
+                continue; // somehow, relevant code in the above does not show warning nor exception. so, follow it for now.
+            }
+            const KinBodyPtr pFirst = GetEnv()->GetKinBody(pFirstRef->GetName());
+            if( !pFirst ) {
+                RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find grabbed body %s for non-colliding link.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%pFirstRef->GetName());
+                continue;
+            }
+            const KinBodyPtr pSecond = GetEnv()->GetKinBody(pSecondRef->GetName());
+            if( !pSecond ) {
+                RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find grabbed body %s for non-colliding link.", GetEnv()->GetNameId()%GetName()%r->GetEnv()->GetNameId()%pSecondRef->GetName());
+                continue;
+            }
+            ListNonCollidingLinkPairs listNonCollidingLinkPairs;
+            const int envBodyIndexFirst = pFirst->GetEnvironmentBodyIndex();
+            const int envBodyIndexSecond = pSecond->GetEnvironmentBodyIndex();
+            const bool bHasSmallerFirstIndex = envBodyIndexFirst < envBodyIndexSecond;
+            for( const std::pair<LinkConstPtr, LinkConstPtr>& interGrabbedLinkPair: interGrabbedLinkPairs ) {
+                const KinBody::LinkPtr pFirstLink = pFirst->GetLink(interGrabbedLinkPair.first->GetName());
+                if( !pFirstLink ) {
+                    RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find non-colliding link %s in grabbed body %s.", GetEnv()->GetNameId() % GetName() % r->GetEnv()->GetNameId() % interGrabbedLinkPair.first->GetName() % pFirst->GetName());
+                    continue;
+                }
+                const KinBody::LinkPtr pSecondLink = pSecond->GetLink(interGrabbedLinkPair.second->GetName());
+                if( !pSecondLink ) {
+                    RAVELOG_WARN_FORMAT("env=%s, When cloning body '%s' from env=%s, could not find non-colliding link %s in grabbed body %s.", GetEnv()->GetNameId() % GetName() % r->GetEnv()->GetNameId() % interGrabbedLinkPair.second->GetName() % pSecond->GetName());
+                    continue;
+                }
+                if( bHasSmallerFirstIndex ) {
+                    listNonCollidingLinkPairs.emplace_back(pFirstLink, pSecondLink);
+                }
+                else {
+                    listNonCollidingLinkPairs.emplace_back(pSecondLink, pFirstLink);
+                }
+            }
+            if( listNonCollidingLinkPairs.size() > 0 ) {
+                if( bHasSmallerFirstIndex ) {
+                    _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.emplace(_ComputeEnvironmentBodyIndicesPair(envBodyIndexFirst, envBodyIndexSecond), std::move(listNonCollidingLinkPairs));
+                }
+                else {
+                    _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.emplace(_ComputeEnvironmentBodyIndicesPair(envBodyIndexSecond, envBodyIndexFirst), std::move(listNonCollidingLinkPairs));
+                }
+            }
+        }
     } // end if not Clone_IgnoreGrabbedBodies
 
     // Clone self-collision checker
@@ -5968,6 +6075,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 
     _lastModifiedAtUS = r->_lastModifiedAtUS;
     _revisionId = r->_revisionId;
+    _wasEverGrabbed = r->_wasEverGrabbed;
 
     _nUpdateStampId++; // update the stamp instead of copying
 }
@@ -6019,19 +6127,19 @@ void KinBody::Serialize(BaseXMLWriterPtr writer, int options) const
     InterfaceBase::Serialize(writer,options);
 }
 
-void KinBody::serialize(std::ostream& o, int options) const
+void KinBody::DigestHash(HashContext& hash, int options) const
 {
-    o << _veclinks.size() << " ";
+    hash << _veclinks.size();
     FOREACHC(it,_veclinks) {
-        (*it)->serialize(o,options);
+        (*it)->DigestHash(hash,options);
     }
-    o << _vecjoints.size() << " ";
+    hash << _vecjoints.size();
     FOREACHC(it,_vecjoints) {
-        (*it)->serialize(o,options);
+        (*it)->DigestHash(hash,options);
     }
-    o << _vPassiveJoints.size() << " ";
+    hash << _vPassiveJoints.size();
     FOREACHC(it,_vPassiveJoints) {
-        (*it)->serialize(o,options);
+        (*it)->DigestHash(hash,options);
     }
 }
 
@@ -6051,11 +6159,10 @@ const std::string& KinBody::GetKinematicsGeometryHash() const
 {
     CHECK_INTERNAL_COMPUTATION;
     if( __hashKinematicsGeometryDynamics.size() == 0 ) {
-        ostringstream ss;
-        ss << std::fixed << std::setprecision(SERIALIZATION_PRECISION);
+        HashContext hash;
         // should add dynamics since that affects a lot how part is treated.
-        serialize(ss,SO_Kinematics|SO_Geometry|SO_Dynamics);
-        __hashKinematicsGeometryDynamics = utils::GetMD5HashString(ss.str());
+        DigestHash(hash, SO_Kinematics|SO_Geometry|SO_Dynamics);
+        __hashKinematicsGeometryDynamics = hash.HexDigest();
     }
     return __hashKinematicsGeometryDynamics;
 }

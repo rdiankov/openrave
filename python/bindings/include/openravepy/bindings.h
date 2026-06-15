@@ -212,7 +212,7 @@ struct select_npy_type<bool>
 
 namespace openravepy {
 
-class PyVoidHandle
+class OPENRAVEPY_API PyVoidHandle
 {
 public:
     PyVoidHandle() {
@@ -225,7 +225,7 @@ public:
     OPENRAVE_SHARED_PTR<void> _handle;
 };
 
-class PyVoidHandleConst
+class OPENRAVEPY_API PyVoidHandleConst
 {
 public:
     PyVoidHandleConst() {
@@ -321,7 +321,11 @@ inline std::string GetPyErrorString()
 }
 
 /// should call in the beginning of all BOOST_PYTHON_MODULE
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_python_bindings(py::module& m);
+#else
 void init_python_bindings();
+#endif
 
 } // namespace openravepy
 

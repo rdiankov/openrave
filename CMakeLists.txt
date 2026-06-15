@@ -4,8 +4,8 @@ set( CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE )
 
 # Define here the needed parameters
 set (OPENRAVE_VERSION_MAJOR 0)
-set (OPENRAVE_VERSION_MINOR 157)
-set (OPENRAVE_VERSION_PATCH 1)
+set (OPENRAVE_VERSION_MINOR 173)
+set (OPENRAVE_VERSION_PATCH 0)
 set (OPENRAVE_VERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR}.${OPENRAVE_VERSION_PATCH})
 set (OPENRAVE_SOVERSION ${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR})
 message(STATUS "Compiling OpenRAVE Version ${OPENRAVE_VERSION}, soversion=${OPENRAVE_SOVERSION}")
@@ -15,6 +15,8 @@ message(STATUS "Using cmake version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION
 cmake_policy(SET CMP0002 NEW)
 # http://www.cmake.org/cmake/help/cmake-2.6.html#policy:CMP0003
 cmake_policy(SET CMP0003 NEW)
+# https://cmake.org/cmake/help/v3.8/policy/CMP0067.html
+cmake_policy(SET CMP0067 NEW)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14) # C++14 for std::shared_timed_mutex
@@ -59,6 +61,7 @@ option(OPT_CURL "Use curl for downloading resources" ON)
 option(OPT_INSTALL_3DMODELDATA "If ON, then install the 3D model data." ON)
 option(OPT_EXTRA_ROBOTS "If ON, then install extra robots as part of 3D model data" ON)
 option(OPT_ENVIRONMENT_RECURSIVE_LOCK "Use recursive mutex for the Environment. Defaults to ON." ON)
+option(OPT_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK "Use recursive mutex with GIL check for the Environment. Defaults to OFF." OFF)
 option(OPT_STATIC_PLUGINS "Statically compile in plugins" OFF)
 option(OPT_PIC "Build position independent code" ON)
 option(OPT_ENCRYPTION "Robot and KinBody encryption backed by GPG." ON)
@@ -72,8 +75,16 @@ set(CPACK_DEBIAN_PACKAGE_NAME openrave${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSI
 if (OPT_ENVIRONMENT_RECURSIVE_LOCK)
   message(STATUS "using threads and synchronization primitives from std.")
   set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 1)
+  if (OPT_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK)
+    message(STATUS "using a custom mutex that can detect a potential deadlock between GIL and environment mutex.")
+    set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK 1)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+  else()
+    set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK 0)
+  endif()
 else()
   set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK 0)
+  set(OPENRAVE_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK 0)
 endif()
 
 if(OPT_DOUBLE_PRECISION)
@@ -111,6 +122,22 @@ include(InstallSymlink)
 include(GNUInstallDirs)
 
 find_package(PkgConfig) # pkg_check_modules
+
+check_cxx_source_compiles("
+#include <string_view>
+int main()
+{
+    std::string_view view;
+    return 0;
+}"
+OPENRAVE_STD_STRING_VIEW
+)
+# need to convert to int to set config.h
+if(OPENRAVE_STD_STRING_VIEW)
+  set(OPENRAVE_STD_STRING_VIEW 1)
+else()
+  set(OPENRAVE_STD_STRING_VIEW 0)
+endif()
 
 if( WIN32 )
   # does not support symlinks
@@ -163,12 +190,17 @@ endif()
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
   add_definitions("-Werror=return-type")
+
+  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined ${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-Werror=return-local-addr")
 elseif( COMPILER_IS_CLANG )
   add_definitions("-Werror=return-stack-address")
+  # prevents CLANG from "error: integer value -1 is outside the valid range of values [0, 3]
+  # for the enumeration type 'sign_mixture_enum' [-Wenum-constexpr-conversion]"
+  add_definitions("-Wno-error=enum-constexpr-conversion")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
@@ -243,7 +275,7 @@ if( MSVC )
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/msvc_include/stdint.h DESTINATION include/openrave-${OPENRAVE_VERSION_MAJOR}.${OPENRAVE_VERSION_MINOR} COMPONENT ${COMPONENT_PREFIX}dev)
     include_directories(${CMAKE_CURRENT_SOURCE_DIR}/msvc_include)
   endif()
-  
+
   # have to install dlls manually
   if( MSVC70 OR MSVC71 )
     set(MSVC_PREFIX "vc70")
@@ -255,7 +287,7 @@ if( MSVC )
     set(MSVC_PREFIX "vc100")
   endif()
   set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}-${MSVC_PREFIX}-mt" CACHE STRING "Suffix to append to library names")
-  
+
   # force multi-threaded DLL boost
   set(Boost_USE_MULTITHREAD ON)
   set(Boost_USE_STATIC_LIBS OFF)
@@ -364,17 +396,17 @@ endif()
 
 if( ASSIMP_FOUND )
   message(STATUS "assimp version ${ASSIMP_VERSION}, ${ASSIMP_PACKAGE_VERSION}, ${ASSIMP_INCLUDE_DIRS}")
-  # For older versions of libassimp2, 
-  # like the one in Ubuntu 12.04 
-  set(CMAKE_REQUIRED_LIBRARIES assimp) 
-  check_cxx_source_compiles(" 
-  #include <assimp/Logger.h> 
-  int main() 
-  { 
-      Assimp::Logger::WARN; 
-      return 0; 
-  }" 
-  IS_ASSIMP_PRE_R896 
+  # For older versions of libassimp2,
+  # like the one in Ubuntu 12.04
+  set(CMAKE_REQUIRED_LIBRARIES assimp)
+  check_cxx_source_compiles("
+  #include <assimp/Logger.h>
+  int main()
+  {
+      Assimp::Logger::WARN;
+      return 0;
+  }"
+  IS_ASSIMP_PRE_R896
   )
   set(CMAKE_REQUIRED_LIBRARIES)
   if( ${ASSIMP_VERSION} STRGREATER "2.0.0" )
@@ -444,25 +476,6 @@ if (NOT (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND
   endif()
 endif ()
 
-# always include libpcrecpp since we need it for URL parsing
-pkg_check_modules(libpcrecpp libpcrecpp)
-if( libpcrecpp_FOUND )
-  set(CMAKE_REQUIRED_INCLUDES ${libpcrecpp_INCLUDE_DIRS} ${REQUIRED_INCLUDES})
-  check_include_file_cxx(pcrecpp.h HAVE_PCRECPP_H)
-  set(CMAKE_REQUIRED_INCLUDES)
-  if( NOT HAVE_PCRECPP_H )
-    set(libpcrecpp_FOUND 0)
-  endif()
-endif()
-
-if( NOT libpcrecpp_FOUND )
-  message(STATUS "System pcre not found, using local from sources")
-  # include the local pcre
-  add_subdirectory(3rdparty/pcre-8.02)
-
-  set(libpcrecpp_FOUND 1)
-endif()
-
 if( OPT_COLLADA )
   if( MSVC )
     # MSVC has prepackaged collada libraries
@@ -480,7 +493,7 @@ if( OPT_COLLADA )
       set(COLLADA_SUPPORT_WRITE_MEMORY 1)
     endif()
   endif()
-  
+
   find_package(ZLIB)
   if( NOT ZLIB_FOUND )
     message(STATUS "compiling zlib from souces")
@@ -802,13 +815,13 @@ if (OPT_PYTHON3)
   find_package(pybind11 2.9.2) # 2.9.2 is the last version of pybind11 to support Python 2.
 
   if (pybind11_FOUND)
-    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Module Python3::NumPy pybind11::module libopenrave libopenrave-core)
+    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Python Python3::NumPy pybind11::module libopenrave libopenrave-core)
     target_compile_options(openravepy3_meta INTERFACE "-fvisibility=hidden") # pybind11 requires less visibility
     target_compile_definitions(openravepy3_meta INTERFACE "OPENRAVE_CORE_DLL=1" "USE_PYBIND11_PYTHON_BINDINGS=1")
     set(USE_PYBIND11_PYTHON3_BINDINGS ON)
   else()
     find_package(Boost REQUIRED COMPONENTS python thread)
-    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Module Python3::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
+    target_link_libraries(openravepy3_meta INTERFACE rt Python3::Python Python3::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
     target_compile_definitions(openravepy3_meta INTERFACE "OPENRAVE_CORE_DLL=1")
     set(USE_PYBIND11_PYTHON3_BINDINGS OFF)
   endif()
@@ -971,7 +984,7 @@ if(CMAKE_CPACK_COMMAND AND UNIX AND OPT_BUILD_PACKAGES)
     set(CPACK_COMPONENT_OPENRAVE-MINIMAL_DESCRIPTION "Uninstall this package to remove all OpenRAVE installations")
     set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} openrave openrave-minimal openrave-python-minimal)
   endif()
-  
+
   #TODO: extra robot CAD model files from: https://openrave.svn.sourceforge.net/svnroot/openrave/data/robots
 
   set(DPUT_HOST "ppa:openrave/testing" CACHE STRING "PPA repository to upload the debian sources")

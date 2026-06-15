@@ -1,4 +1,4 @@
-﻿// compiler options program for Microsoft Visual Studio C++
+// compiler options program for Microsoft Visual Studio C++
 #include <string>
 #include <iostream>
 using namespace std;

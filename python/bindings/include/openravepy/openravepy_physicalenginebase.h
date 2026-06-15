@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyPhysicsEngineBase : public PyInterfaceBase
+class OPENRAVEPY_API PyPhysicsEngineBase : public PyInterfaceBase
 {
 protected:
     PhysicsEngineBasePtr _pPhysicsEngine;
@@ -59,6 +59,18 @@ public:
     object GetGravity();
 
     void SimulateStep(dReal fTimeElapsed);
+};
+
+struct PhysicsEngineBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    PhysicsEngineBaseInitializer(py::module& m_);
+    void init_openravepy_physicsengine();
+    py::module& m;
+#else
+    PhysicsEngineBaseInitializer();
+    void init_openravepy_physicsengine();
+#endif
 };
 
 } // namespace openravepy

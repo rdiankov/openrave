@@ -348,6 +348,20 @@ inline void LoadJsonValue(const rapidjson::Value& v, bool& t) {
     }
 }
 
+inline void LoadJsonValue(const rapidjson::Value& v, std::vector<bool>::reference t)
+{
+    if (v.IsInt())
+        t = v.GetInt();
+    else if (v.IsBool())
+        t = v.GetBool();
+    else if (v.IsString()) {
+        t = boost::lexical_cast<bool>(v.GetString());
+    }
+    else {
+        throw OPENRAVE_EXCEPTION_FORMAT("Cannot convert JSON type %s to Bool", GetJsonString(v), OpenRAVE::ORE_InvalidArguments);
+    }
+}
+
 template<class T>
 inline void LoadJsonValue(const rapidjson::Value& v, OpenRAVE::RaveVector<T>& t) {
     if(!v.IsArray() || (v.Size() != 3 && v.Size() != 4)) {
@@ -683,6 +697,11 @@ inline void SaveJsonValue(rapidjson::Value& v, bool t, rapidjson::Document::Allo
     v.SetBool(t);
 }
 
+inline void SaveJsonValue(rapidjson::Value& v, const std::vector<bool>::reference t, rapidjson::Document::AllocatorType& alloc)
+{
+    v.SetBool(t);
+}
+
 inline void SaveJsonValue(rapidjson::Value& v, double t, rapidjson::Document::AllocatorType& alloc) {
     v.SetDouble(t);
 }
@@ -983,6 +1002,26 @@ inline const char* GetCStringJsonValueByKey(const rapidjson::Value& v, const cha
         }
     }
     return pDefaultValue; // not present
+}
+
+inline string_view GetCStringViewJsonValueByKey(const rapidjson::Value& v, const char* key, const string_view defaultValue = "")
+{
+    if (!v.IsObject()) {
+        throw OPENRAVE_EXCEPTION_FORMAT0("Cannot load value of non-object (\"" + std::string(GetJsonTypeName(v)) + "\") for key \"" + std::string(key) + "\".", OpenRAVE::ORE_InvalidArguments);
+    }
+    rapidjson::Value::ConstMemberIterator itMember = v.FindMember(key);
+    if (itMember != v.MemberEnd()) {
+        const rapidjson::Value& child = itMember->value;
+        if (!child.IsNull()) {
+            if (child.IsString()) {
+                return string_view{child.GetString(), child.GetStringLength()};
+            }
+            else {
+                throw OPENRAVE_EXCEPTION_FORMAT0("In GetCStringJsonValueByKey, expecting a String, but got a different object type", OpenRAVE::ORE_InvalidArguments);
+            }
+        }
+    }
+    return defaultValue; // not present
 }
 
 template<class T>

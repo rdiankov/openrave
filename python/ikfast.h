@@ -36,6 +36,7 @@
 #include <list>
 #include <stdexcept>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <iomanip>
 

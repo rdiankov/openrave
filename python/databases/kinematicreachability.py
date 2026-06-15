@@ -193,16 +193,16 @@ class ReachabilityModel(DatabaseGenerator):
         self._CloseDatabase()
         try:
             f=h5py.File(filename,'r')
-            if f['version'].value != self.getversion():
+            if f['version'][()] != self.getversion():
                 log.error('version is wrong %s!=%s ',f['version'],self.getversion())
                 return False
 
             self.reachabilitystats = f['reachabilitystats']
             self.reachabilitydensity3d = f['reachabilitydensity3d']
             self.reachability3d = f['reachability3d']
-            self.pointscale = f['pointscale'].value
-            self.xyzdelta = f['xyzdelta'].value
-            self.quatdelta = f['quatdelta'].value
+            self.pointscale = f['pointscale'][()]
+            self.xyzdelta = f['xyzdelta'][()]
+            self.quatdelta = f['quatdelta'][()]
             self._databasefile = f
             f = None
             return self.has()

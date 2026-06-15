@@ -165,7 +165,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
             linkinfo->linkBV = std::make_pair(trans, pfclcollBV);
         }
 
-        //link->nLastStamp = pinfo->nLastStamp;
+        linkinfo->nLastStamp = pinfo->nLastStamp;
         linkinfo->bodylinkname = pbody->GetName() + "/" + plink->GetName();
         pinfo->vlinks.push_back(linkinfo);
 #ifdef FCLRAVE_COLLISION_OBJECTS_STATISTICS
@@ -392,6 +392,30 @@ void FCLSpace::SynchronizeWithAttached(const KinBody &body)
     }
 }
 
+void FCLSpace::SynchronizeExcluded(const KinBodyConstPtr& pbodyexcluded)
+{
+    // We synchronize only the initialized bodies, which differs from oderave
+    for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
+        if (!pbody) {
+            continue;
+        }
+        if (pbody == pbodyexcluded) {
+            continue;
+        }
+        Synchronize(*pbody);
+    }
+}
+
+void FCLSpace::SynchronizeLink(const KinBody::Link &link)
+{
+    const KinBody &body = *link.GetParent();
+    FCLKinBodyInfoPtr& pinfo = GetInfo(body);
+    if( !pinfo ) {
+        return;
+    }
+    _SynchronizeLink(*pinfo, body, link.GetIndex());
+}
+
 FCLSpace::FCLKinBodyInfoPtr& FCLSpace::GetInfo(const KinBody &body)
 {
     int envId = body.GetEnvironmentBodyIndex();
@@ -600,6 +624,40 @@ CollisionGeometryPtr FCLSpace::_CreateFCLGeomFromGeometryInfo(const KinBody::Geo
     }
 }
 
+void FCLSpace::_SynchronizeLink(FCLKinBodyInfo& info, const KinBody& body, int linkIndex)
+{
+    FCLSpace::FCLKinBodyInfo::LinkInfo& linkInfo = *info.vlinks[linkIndex];
+    if( linkInfo.nLastStamp != body.GetUpdateStamp() ) {
+        linkInfo.nLastStamp = body.GetUpdateStamp();
+        CollisionObjectPtr& pcoll = linkInfo.linkBV.second; // avoid copying shared pointer for performance
+        if( !pcoll ) {
+            return;
+        }
+        const Transform& linkTransform = body.GetLinks()[linkIndex]->GetTransform();
+        Transform pose = linkTransform;
+        pose.trans += pose.rotate(linkInfo.linkBV.first);
+        const fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
+        const fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
+
+        pcoll->setTranslation(newPosition);
+        pcoll->setQuatRotation(newOrientation);
+        // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
+        pcoll->computeAABB();
+
+        for (const TransformCollisionPair& pgeom : linkInfo.vgeoms) {
+            fcl::CollisionObject& coll = *pgeom.second;
+            const Transform pose1 = linkTransform * pgeom.first;
+            const fcl::Vec3f newPosition1 = ConvertVectorToFCL(pose1.trans);
+            const fcl::Quaternion3f newOrientation1 = ConvertQuaternionToFCL(pose1.rot);
+
+            coll.setTranslation(newPosition1);
+            coll.setQuatRotation(newOrientation1);
+            // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
+            coll.computeAABB();
+        }
+    }
+}
+
 void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
 {
     //KinBodyPtr pbody = info.GetBody();
@@ -610,34 +668,7 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
         }
 
         for(size_t i = 0; i < body.GetLinks().size(); ++i) {
-            FCLSpace::FCLKinBodyInfo::LinkInfo& linkInfo = *info.vlinks[i];
-            CollisionObjectPtr& pcoll = linkInfo.linkBV.second; // avoid copying shared pointer for performance
-            if( !pcoll ) {
-                continue;
-            }
-            const Transform& linkTransform = body.GetLinks()[i]->GetTransform();
-            Transform pose = linkTransform;
-            pose.trans += pose.rotate(linkInfo.linkBV.first);
-            const fcl::Vec3f newPosition = ConvertVectorToFCL(pose.trans);
-            const fcl::Quaternion3f newOrientation = ConvertQuaternionToFCL(pose.rot);
-
-            pcoll->setTranslation(newPosition);
-            pcoll->setQuatRotation(newOrientation);
-            // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-            pcoll->computeAABB();
-
-            //info.vlinks[i]->nLastStamp = info.nLastStamp;
-            for (const TransformCollisionPair& pgeom : linkInfo.vgeoms) {
-                fcl::CollisionObject& coll = *pgeom.second;
-                const Transform pose1 = linkTransform * pgeom.first;
-                const fcl::Vec3f newPosition1 = ConvertVectorToFCL(pose1.trans);
-                const fcl::Quaternion3f newOrientation1 = ConvertQuaternionToFCL(pose1.rot);
-
-                coll.setTranslation(newPosition1);
-                coll.setQuatRotation(newOrientation1);
-                // Do not forget to recompute the AABB otherwise getAABB won't give an up to date AABB
-                coll.computeAABB();
-            }
+            _SynchronizeLink(info, body, i);
         }
 
         // Does this have any use ?

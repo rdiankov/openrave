@@ -12,7 +12,7 @@ if(NOT OPENGL_FOUND)
 endif()
 
 #include(${CMAKE_SOURCE_DIR}/modules-cmake/FindOSG.cmake)
-find_package(OpenSceneGraph 3.4 COMPONENTS osgDB osgGA osgFX osgText osgViewer osgManipulator)
+find_package(OpenSceneGraph 3.4 COMPONENTS osgDB osgGA osgFX osgText osgViewer osgManipulator osgUtil)
 
 if (Qt5Gui_FOUND AND Qt5Core_FOUND AND Qt5Widgets_FOUND AND Qt5OpenGL_FOUND AND OPENGL_FOUND AND OPENSCENEGRAPH_FOUND)
   message(STATUS "Detected Qt/OSG GUI, making plugin")

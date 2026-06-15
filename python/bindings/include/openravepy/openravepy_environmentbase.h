@@ -91,7 +91,7 @@ public:
 public:
         PyEnvironmentBaseInfo();
         PyEnvironmentBaseInfo(const EnvironmentBase::EnvironmentBaseInfo& info);
-        py::object SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
+        py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
         EnvironmentBase::EnvironmentBaseInfoPtr GetEnvironmentBaseInfo() const;
         int _revision = 0;
@@ -106,10 +106,10 @@ public:
         py::list _keywords;
         py::object _vBodyInfos = py::none_();
         py::object _name = py::none_();
-        py::object _description = py::none_();
+        py::str _description = py::none_();
 #endif
         virtual std::string __str__();
-        virtual py::object __unicode__();
+        virtual py::str __unicode__();
 
 protected:
         void _Update(const EnvironmentBase::EnvironmentBaseInfo& info);
@@ -144,7 +144,7 @@ public:
     void Clone(PyEnvironmentBasePtr pyreference, const std::string& clonedEnvName, int options);
 
     bool SetCollisionChecker(PyCollisionCheckerBasePtr pchecker);
-    object GetCollisionChecker();
+    py::typing::Optional<PyCollisionCheckerBasePtr> GetCollisionChecker();
     bool CheckCollision(PyKinBodyPtr pbody1);
     bool CheckCollision(PyKinBodyPtr pbody1, PyCollisionReportPtr pReport);
 
@@ -175,6 +175,10 @@ public:
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyKinBodyPtr pbody, PyCollisionReportPtr pReport);
 
+    bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyLinkPtr plink);
+
+    bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray, PyLinkPtr plink, PyCollisionReportPtr pReport);
+
     object CheckCollisionRays(py::numeric::array rays, PyKinBodyPtr pbody,bool bFrontFacingOnly=false);
 
     bool CheckCollision(OPENRAVE_SHARED_PTR<PyRay> pyray);
@@ -188,21 +192,21 @@ public:
     bool LoadData(const std::string &data);
     bool LoadData(const std::string &data, object odictatts);
 
-    void Save(const std::string &filename, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
+    void Save(const std::string &filename, const EnvironmentBase::SelectionOptions options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
-    object WriteToMemory(const std::string &filetype, const int options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
+    object WriteToMemory(const std::string &filetype, const EnvironmentBase::SelectionOptions options = EnvironmentBase::SelectionOptions::SO_Everything, object odictatts = py::none_());
 
     /// will be unlocking GIL since doing FS or memory-intensive operations
     //@{
-    object ReadRobotURI(const std::string &filename);
-    object ReadRobotURI(const std::string &filename, object odictatts);
-    object ReadRobotData(const std::string &data, object odictatts=py::none_(), const std::string&uri=std::string());
-    object ReadRobotJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
-    object ReadKinBodyURI(const std::string &filename);
-    object ReadKinBodyURI(const std::string &filename, object odictatts);
-    object ReadKinBodyData(const std::string &data);
-    object ReadKinBodyData(const std::string &data, object odictatts);
-    object ReadKinBodyJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
+    py::typing::Optional<PyRobotBasePtr> ReadRobotURI(const std::string &filename);
+    py::typing::Optional<PyRobotBasePtr> ReadRobotURI(const std::string &filename, object odictatts);
+    PyRobotBasePtr ReadRobotData(const std::string &data, object odictatts=py::none_(), const std::string&uri=std::string());
+    PyRobotBasePtr ReadRobotJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
+    py::typing::Optional<PyKinBodyPtr> ReadKinBodyURI(const std::string &filename);
+    py::typing::Optional<PyKinBodyPtr> ReadKinBodyURI(const std::string &filename, object odictatts);
+    PyKinBodyPtr ReadKinBodyData(const std::string &data);
+    PyKinBodyPtr ReadKinBodyData(const std::string &data, object odictatts);
+    PyKinBodyPtr ReadKinBodyJSON(py::object oEnvInfo, object odictatts=py::none_(), const std::string &uri = std::string());
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename);
     PyInterfaceBasePtr ReadInterfaceURI(const std::string& filename, object odictatts);
     //@}
@@ -217,8 +221,10 @@ public:
 
     void AddKinBody(PyKinBodyPtr pbody);
     void AddKinBody(PyKinBodyPtr pbody, bool bAnonymous);
+    void AddKinBody(PyKinBodyPtr pbody, py::object oAddMode, int requestedEnvironmentBodyIndex);
     void AddRobot(PyRobotBasePtr robot);
     void AddRobot(PyRobotBasePtr robot, bool bAnonymous);
+    void AddRobot(PyRobotBasePtr robot, py::object oAddMode, int requestedEnvironmentBodyIndex);
     void AddSensor(PySensorBasePtr sensor);
     void AddSensor(PySensorBasePtr sensor, bool bAnonymous);
     void AddViewer(PyViewerBasePtr viewer);
@@ -227,13 +233,13 @@ public:
 
     bool RemoveKinBodyByName(const std::string& name);
 
-    object GetKinBody(const std::string &name);
-    object GetRobot(const std::string &name);
-    object GetSensor(const std::string &name);
+    py::typing::Optional<PyKinBodyPtr> GetKinBody(const std::string &name);
+    py::typing::Optional<PyRobotBasePtr> GetRobot(const std::string &name);
+    py::typing::Optional<PySensorBasePtr> GetSensor(const std::string &name);
 
-    object GetBodyFromEnvironmentId(int id);
-    object GetBodyFromEnvironmentBodyIndex(int id);
-    object GetBodiesFromEnvironmentBodyIndices(object bodyIndices);
+    py::typing::Optional<PyKinBodyPtr> GetBodyFromEnvironmentId(int id);
+    py::typing::Optional<PyKinBodyPtr> GetBodyFromEnvironmentBodyIndex(int id);
+    py::list GetBodiesFromEnvironmentBodyIndices(object bodyIndices);
 
     int GetMaxEnvironmentBodyIndex();
 
@@ -241,7 +247,7 @@ public:
     bool RemoveProblem(PyModuleBasePtr prob);
     bool Remove(PyInterfaceBasePtr obj);
 
-    object GetModules();
+    py::list GetModules();
 
     bool SetPhysicsEngine(PyPhysicsEngineBasePtr pengine);
     object GetPhysicsEngine();
@@ -283,7 +289,7 @@ public:
     /// \brief sets the default viewer
     bool SetDefaultViewer(bool showviewer=true);
 
-    object GetViewer();
+    py::typing::Optional<PyViewerBasePtr> GetViewer();
 
     /// returns the number of points
     static size_t _getGraphPoints(object opoints, std::vector<float>&vpoints);
@@ -292,7 +298,7 @@ public:
     static size_t _getGraphColors(object ocolors, std::vector<float>&vcolors);
 
     /// returns the number of vectors
-    static size_t _getListVector(object odata, std::vector<RaveVector<float> >& vvectors);
+    static size_t _getListVector(object odata, std::vector<RaveVector<float> >& vvectors, size_t numcol);
 
     static std::pair<size_t,size_t> _getGraphPointsColors(object opoints, object ocolors, std::vector<float>&vpoints, std::vector<float>&vcolors);
 
@@ -307,7 +313,7 @@ public:
     object drawlabel(const std::string &label, object worldPosition, object ocolor=py::none_(), float height=0.05);
 
     object drawbox(object opos, object oextents, object ocolor=py::none_());
-    object drawboxarray(object opos, object oextents, object ocolor=py::none_());
+    object drawboxarray(object opos, object oextents, object ocolors=py::none_());
     object drawaabb(object oaabb, object otransform, object ocolor=py::none_(), float transparency=0.0f);
     object drawobb(object oobb, object ocolor=py::none_(), float transparency=0.0f);
 
@@ -321,22 +327,23 @@ public:
 
     object drawtrimesh(object opoints, object oindices=py::none_(), object ocolors=py::none_());
 
-    object GetBodies();
+    py::list GetBodies();
+    py::list GetBodiesWithReadableInterface(const std::string& readableInterfaceName);
     int GetNumBodies();
 
-    object GetRobots();
+    py::list GetRobots();
 
-    object GetSensors();
+    py::list GetSensors();
 
     void UpdatePublishedBodies();
 
-    object GetPublishedBodies(uint64_t timeout=0);
+    py::list GetPublishedBodies(uint64_t timeout=0);
 
-    object GetPublishedBody(const std::string &name, uint64_t timeout = 0);
+    py::typing::Optional<py::dict> GetPublishedBody(const std::string &name, uint64_t timeout = 0);
 
-    object GetPublishedBodyJointValues(const std::string &name, uint64_t timeout=0);
+    py::typing::Optional<py::array_t<dReal> > GetPublishedBodyJointValues(const std::string &name, uint64_t timeout=0);
 
-    object GetPublishedBodyTransformsMatchingPrefix(const std::string &prefix, uint64_t timeout=0);
+    py::dict GetPublishedBodyTransformsMatchingPrefix(const std::string &prefix, uint64_t timeout=0);
 
     object Triangulate(PyKinBodyPtr pbody);
 
@@ -363,13 +370,13 @@ public:
 
     int GetRevision() const;
 
-    py::object GetName() const;
+    py::str GetName() const;
 
-    py::object GetNameId() const;
+    py::str GetNameId() const;
 
     void SetDescription(const std::string& sceneDescription);
 
-    py::object GetDescription() const;
+    py::str GetDescription() const;
 
     void SetKeywords(object oSceneKeywords);
 
@@ -396,7 +403,7 @@ public:
     long __hash__();
     std::string __repr__();
     std::string __str__();
-    object __unicode__();
+    py::str __unicode__();
 
     EnvironmentBasePtr GetEnv() const;
 };

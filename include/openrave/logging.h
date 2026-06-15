@@ -200,7 +200,14 @@ OPENRAVE_API log4cxx::LevelPtr RaveGetVerboseLogLevel();
             } \
             /* vswprintf does not tell us how much space is needed, so we need to grow until it is satisfied */ \
             wslen *= 2; \
-            wsallocated = (wchar_t*)realloc(wsallocated, wslen*sizeof(wchar_t)); \
+            wchar_t* wsnext = (wchar_t*)realloc(wsallocated, wslen*sizeof(wchar_t)); \
+            /* realloc() can return NULL, need to remember previous allocation to avoid memory leaks */ \
+            if (wsnext != NULL) {  \
+                wsallocated = wsnext;  \
+            } else {     \
+                wr = -1; \
+                break;   \
+            } \
             ws = wsallocated; \
         } \
         if (wr >= 0) { \

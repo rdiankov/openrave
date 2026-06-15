@@ -19,6 +19,7 @@
 #include <openravepy/openravepy_environmentbase.h>
 #include <openravepy/openravepy_collisionreport.h>
 #include <openravepy/openravepy_iksolverbase.h>
+#include <openravepy/openravepy_ikparameterization.h>
 #include <openrave/utils.h>
 
 namespace openravepy {
@@ -53,12 +54,12 @@ PyIkFailureInfo::PyIkFailureInfo(const IkFailureInfo& ikFailureInfo) : _ikFailur
 IkReturnAction PyIkFailureInfo::GetAction() {
     return _ikFailureInfo._action;
 }
-object PyIkFailureInfo::GetConfiguration() {
+py::array_t<dReal> PyIkFailureInfo::GetConfiguration() {
     return toPyArray(_ikFailureInfo._vconfig);
 }
-object PyIkFailureInfo::GetIkParam() {
+py::typing::Optional<PyIkParameterizationPtr> PyIkFailureInfo::GetIkParam() {
     if( _ikFailureInfo.HasValidIkParam() ) {
-        return toPyIkParameterization(_ikFailureInfo.GetIkParam());
+        return py::to_object(toPyIkParameterization(_ikFailureInfo.GetIkParam()));
     }
     else {
         return py::none_();
@@ -94,10 +95,10 @@ object PyIkFailureInfo::GetMapDataDict() {
     }
     return odata;
 }
-object PyIkFailureInfo::SerializeJSON() {
+py::dict PyIkFailureInfo::SerializeJSON() {
     rapidjson::Document rIkFailureInfo(rapidjson::kObjectType);
     _ikFailureInfo.SaveToJson(rIkFailureInfo, rIkFailureInfo.GetAllocator());
-    return toPyObject(rIkFailureInfo);
+    return py::dict(toPyObject(rIkFailureInfo));
 }
 
 PyIkFailureAccumulatorBase::PyIkFailureAccumulatorBase(IkFailureAccumulatorBasePtr pIkFailureAccumulator) {
@@ -372,10 +373,14 @@ PyIkSolverBasePtr RaveCreateIkSolver(PyEnvironmentBasePtr pyenv, const std::stri
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_iksolver(py::module& m)
+IkSolverBaseInitializer::IkSolverBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_iksolver()
+IkSolverBaseInitializer::IkSolverBaseInitializer()
 #endif
+{
+}
+
+void IkSolverBaseInitializer::init_openravepy_iksolver()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a

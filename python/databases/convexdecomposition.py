@@ -214,15 +214,15 @@ class ConvexDecompositionModel(DatabaseGenerator):
         f = None
         try:
             f=h5py.File(filename,'r')
-            if f['version'].value != self.getversion():
+            if f['version'][()] != self.getversion():
                 log.error(u'version is wrong %s!=%s ',f['version'],self.getversion())
                 return False
             
             self.convexparams = {}
             gparams = f['params']
             for name,value in gparams.items():
-                self.convexparams[name] = value.value
-            self._padding = f['padding'].value
+                self.convexparams[name] = value[()]
+            self._padding = f['padding'][()]
             glinkgeometry = f['linkgeometry']
             self.linkgeometry = []
             for ilink, glink in glinkgeometry.items():
@@ -233,7 +233,7 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     for j, ghull in ghulls.items():
                         if 'vertices' in ghull and len(ghull['vertices'].shape) == 2 and 'indices' in ghull and len(ghull['indices'].shape\
 ) == 2 and 'planes' in ghull and len(ghull['planes'].shape) == 2:
-                            hull = [ghull['vertices'].value, ghull['indices'].value, ghull['planes'].value]
+                            hull = [ghull['vertices'][()], ghull['indices'][()], ghull['planes'][()]]
                             geometryhulls.append(hull)
                         else:
                             log.warn('could not open link %s geometry %s hull %s: %r', ilink, ig, j, ghull)
@@ -260,7 +260,6 @@ class ConvexDecompositionModel(DatabaseGenerator):
                         link.GetGeometries()[ig].SetCollisionMesh(self.GenerateTrimeshFromHulls(hulls))
 
     def getfilename(self,read=False):
-        filename = 'convexdecomposition_%.3f.pp'%self._padding
         return RaveFindDatabaseFile(os.path.join('robot.'+self.robot.GetKinematicsGeometryHash(), 'convexdecomposition_%.3f.pp'%self._padding),read)
     
     def autogenerate(self,options=None):
@@ -571,6 +570,11 @@ class ConvexDecompositionModel(DatabaseGenerator):
                     ginfo._meshcollision.indices[ioffset:(ioffset+len(hull[1])),:] = hull[1]+voffset
                     voffset += len(hull[0])
                     ioffset += len(hull[1])
+                # check
+                nMaxMeshIndex = len(ginfo._meshcollision.vertices) - 1
+                for meshIndex in ginfo._meshcollision.indices:
+                    assert numpy.all(meshIndex >= 0) and numpy.all(meshIndex <= nMaxMeshIndex), 'env=%s, geometry(name=\"%s\";id=\"%s\";type=%d) has incorrect mesh indices %r in convexhull, which is out of range of vertices which size is %d.' % (self.robot.GetEnv().GetNameId(), geometries[ig].GetName(), geometries[ig].GetId(), geometries[ig].GetType(), meshIndex, len(ginfo._meshcollision.vertices))
+                # append
                 geometryinfos.append(ginfo)
             return geometryinfos
     
