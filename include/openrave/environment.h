@@ -607,7 +607,7 @@ public:
     /// Uses an internal cache that is kept in sync as bodies are added, removed, and have their readable interfaces modified.
     /// Therefore this does not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
     /// A separate **interface mutex** is locked for reading the bodies.
-    /// \param[out] bodies filled with the matching bodies, sorted by environment body index in ascending order
+    /// \param[out] bodies filled with the matching bodies
     /// \param id the readable interface id to match
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
     /// \throw openrave_exception with ORE_Timeout error code
