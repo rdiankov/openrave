@@ -2193,14 +2193,13 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
     if( _veclinks.size() == 0 ) {
         return;
     }
-    // Reuse the SetTransform loop instead of setting link[0] directly and propagating a relative
-    // transform to link[i>0]. The direct set lets the floating-point error in
-    // baseLinkTransform * link[0].GetTransform().inverse() be the same on every call, so the
-    // non-root link transforms drift by that same epsilon each call and accumulate. Applying
-    // tapply to every link (including link[0]) lets link[0] absorb the same epsilon, so the next
-    // call's tapply is approximately (identity - epsilon) and the drift cancels rather than
-    // compounds. For DOF>0 bodies the subsequent SetDOFValues recomputes link transforms via FK
-    // and overwrites this loop's output, so the change only affects 0-DOF multi-link bodies.
+    // _SetTransformNoPostProcess applies tapply = baseLinkTransform * link[0].inverse() to every
+    // link, including link[0] itself. Routing link[0] through tapply (rather than assigning it
+    // baseLinkTransform exactly) makes link[0] absorb the same floating-point epsilon as the other
+    // links, so on a repeated identical call tapply is approximately (identity - epsilon) and the
+    // round-trip drift cancels instead of accumulating across calls. For DOF>0 bodies the
+    // SetDOFValues call below recomputes link[i>0] via forward kinematics, so this matters mainly
+    // for 0-DOF multi-link bodies.
     _SetTransformNoPostProcess(bodyTransform);
     SetDOFValues(vJointValues, checklimits);
 }
