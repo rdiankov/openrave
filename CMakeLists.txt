@@ -190,6 +190,7 @@ endif()
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
   add_definitions("-fno-strict-aliasing -Wall -Werror=shadow")
   add_definitions("-Werror=return-type")
+  add_definitions("-Werror=non-virtual-dtor")
 
   set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined ${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
@@ -198,9 +199,6 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-Werror=return-local-addr")
 elseif( COMPILER_IS_CLANG )
   add_definitions("-Werror=return-stack-address")
-  # prevents CLANG from "error: integer value -1 is outside the valid range of values [0, 3]
-  # for the enumeration type 'sign_mixture_enum' [-Wenum-constexpr-conversion]"
-  add_definitions("-Wno-error=enum-constexpr-conversion")
 endif()
 
 set(OPENRAVE_EXPORT_CXXFLAGS)
