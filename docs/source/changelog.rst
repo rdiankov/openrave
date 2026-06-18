@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.173.1
+===============
+
+- Fix a problem that active-link mask in FCL collision manager is not refreshed when tracked FCLKinBodyInfo is swapped.
+
 Version 0.173.0
 ===============
 
