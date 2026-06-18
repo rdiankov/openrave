@@ -3534,23 +3534,32 @@ public:
     }
 
     /// Notify the env that one of the kinbodies in it has updated its set of readable IDs
-    void NotifyKinBodyReadableInterfacesChanged(int envBodyIndex, const std::vector<std::string>& addedReadableInterfaceIds, const std::vector<std::string>& removedReadableInterfaceIds) override
+    void NotifyKinBodyReadableInterfacesChanged(int envBodyIndex, const std::vector<std::string>& updatedReadableInterfaceIds) override
     {
         // Must be called with a valid body index
         BOOST_ASSERT(envBodyIndex > 0);
 
-        // Add / remove the relevant set entries
+        // Lock the env first, then the body readables
         ExclusiveLock lock(_mutexInterfaces);
-        for (const std::string& id : addedReadableInterfaceIds) {
-            _kinBodyEnvironmentIdByReadableInterfaceId[id].insert(envBodyIndex);
-        }
-        for (const std::string& id : removedReadableInterfaceIds) {
-            std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
-            if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
-                it->second.erase(envBodyIndex);
-                if (it->second.empty()) {
-                    _kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
+        OpenRAVE::KinBodyPtr pBody = _vecbodies.at(envBodyIndex);
+        boost::unique_lock<boost::shared_mutex> lockReadables(pBody->GetReadableInterfaceMutex());
+
+        // Re-check the set of readables on the body, removing it from any invalid indexes and adding it to any valid indexes
+        const ReadablesContainer::READERSMAP& bodyReadables = pBody->GetReadableInterfaces();
+        for (const std::string& readableId : updatedReadableInterfaceIds) {
+            // Readable doesn't exist, drop from the index
+            if (bodyReadables.find(readableId) == bodyReadables.end()) {
+                std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(readableId);
+                if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                    it->second.erase(envBodyIndex);
+                    if (it->second.empty()) {
+                        _kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
+                    }
                 }
+            }
+            // Readable exists, add to the index
+            else {
+                _kinBodyEnvironmentIdByReadableInterfaceId[readableId].insert(envBodyIndex);
             }
         }
     }

@@ -949,9 +949,8 @@ public:
     ///
     /// Should be called when readable interfaces of a body added to this env become non-null or null, so the environment can keep the cache used by GetBodiesWithReadableInterface in sync.
     /// \param envBodyIndex environment body index of the body whose readable interfaces changed
-    /// \param addedReadableInterfaceIds ids of readable interfaces that became non-null
-    /// \param removedReadableInterfaceIds ids of readable interfaces that became null (were removed)
-    virtual void NotifyKinBodyReadableInterfacesChanged(int envBodyIndex, const std::vector<std::string>& addedReadableInterfaceIds, const std::vector<std::string>& removedReadableInterfaceIds) = 0;
+    /// \param updatedReadableInterfaceIds ids of readable interfaces that were added or removed
+    virtual void NotifyKinBodyReadableInterfacesChanged(int envBodyIndex, const std::vector<std::string>& updatedReadableInterfaceIds) = 0;
 
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase

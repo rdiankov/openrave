@@ -3719,8 +3719,7 @@ protected:
     ///
     /// Only does something if the body is currently added to an environment (env body index is non-zero). \see KinBody::SetName for the cloning caveat.
     /// \param id the readable interface id whose presence changed
-    /// \param bPresent true if the readable interface is now non-null, false if it was removed
-    void _NotifyEnvironmentReadableInterfaceChanged(const std::string& id, bool bPresent);
+    void _NotifyEnvironmentReadableInterfaceChanged(const std::string& id);
 
     /// \brief notifies the environment of readable interface changes given the full sets of non-null readable interface ids before and after a bulk change.
     ///

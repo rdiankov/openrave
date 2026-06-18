@@ -945,7 +945,7 @@ ReadablePtr KinBody::SetReadableInterface(const std::string& id, ReadablePtr rea
     const bool bWasPresent = !!pPrevious;
     const bool bIsPresent = !!readable;
     if (bWasPresent != bIsPresent) {
-        _NotifyEnvironmentReadableInterfaceChanged(id, bIsPresent);
+        _NotifyEnvironmentReadableInterfaceChanged(id);
     }
     return pPrevious;
 }
@@ -988,7 +988,7 @@ void KinBody::ClearReadableInterface(const std::string& id)
     const bool bWasPresent = HasReadableInterface(id);
     ReadablesContainer::ClearReadableInterface(id);
     if (bWasPresent) {
-        _NotifyEnvironmentReadableInterfaceChanged(id, false);
+        _NotifyEnvironmentReadableInterfaceChanged(id);
     }
 }
 
@@ -1022,7 +1022,7 @@ void KinBody::_GetReadableInterfaceIds(std::set<std::string>& ids) const
     }
 }
 
-void KinBody::_NotifyEnvironmentReadableInterfaceChanged(const std::string& id, bool bPresent)
+void KinBody::_NotifyEnvironmentReadableInterfaceChanged(const std::string& id)
 {
     // If we aren't added to the env, do nothing. We don't exist.
     const int envBodyIndex = GetEnvironmentBodyIndex();
@@ -1030,12 +1030,7 @@ void KinBody::_NotifyEnvironmentReadableInterfaceChanged(const std::string& id, 
         return;
     }
 
-    if (bPresent) {
-        GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, std::vector<std::string>{id}, std::vector<std::string>());
-    }
-    else {
-        GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, std::vector<std::string>(), std::vector<std::string>{id});
-    }
+    GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, std::vector<std::string>{id});
 }
 
 void KinBody::_NotifyEnvironmentReadableInterfacesChanged(const std::set<std::string>& idsBefore, const std::set<std::string>& idsAfter)
@@ -1047,15 +1042,14 @@ void KinBody::_NotifyEnvironmentReadableInterfacesChanged(const std::set<std::st
     }
 
     // Work out which readables were added/removed
-    std::vector<std::string> addedIds, removedIds;
-    std::set_difference(idsAfter.begin(), idsAfter.end(), idsBefore.begin(), idsBefore.end(), std::back_inserter(addedIds));
-    std::set_difference(idsBefore.begin(), idsBefore.end(), idsAfter.begin(), idsAfter.end(), std::back_inserter(removedIds));
-    if (addedIds.empty() && removedIds.empty()) {
+    std::vector<std::string> affectedIds;
+    std::set_difference(idsAfter.begin(), idsAfter.end(), idsBefore.begin(), idsBefore.end(), std::back_inserter(affectedIds));
+    if (affectedIds.empty()) {
         return;
     }
 
     // Notify the env to update
-    GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, addedIds, removedIds);
+    GetEnv()->NotifyKinBodyReadableInterfacesChanged(envBodyIndex, affectedIds);
 }
 
 void KinBody::SetDOFTorques(const std::vector<dReal>& torques, bool bAdd)
