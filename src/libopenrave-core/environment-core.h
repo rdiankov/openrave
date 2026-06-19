@@ -3548,7 +3548,8 @@ public:
         const ReadablesContainer::READERSMAP& bodyReadables = pBody->GetReadableInterfaces();
         for (const std::string& readableId : updatedReadableInterfaceIds) {
             // Readable doesn't exist, drop from the index
-            if (bodyReadables.find(readableId) == bodyReadables.end()) {
+            const ReadablesContainer::READERSMAP::const_iterator readableIt = bodyReadables.find(readableId);
+            if (readableIt == bodyReadables.end() || !readableIt->second) {
                 std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(readableId);
                 if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
                     it->second.erase(envBodyIndex);
