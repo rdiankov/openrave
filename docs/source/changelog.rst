@@ -8,6 +8,11 @@ Version 0.174.0
 
 - Add EnvironmentBase::GetBodiesWithReadableInterface, which uses a cache of bodies keyed by their non-null readable interfaces so that looking up bodies by readable interface no longer scales with the number of bodies in the environment.
 
+Version 0.173.1
+===============
+
+- Fix a problem that active-link mask in FCL collision manager is not refreshed when tracked FCLKinBodyInfo is swapped.
+
 Version 0.173.0
 ===============
 
