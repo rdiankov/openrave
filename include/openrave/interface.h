@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
+#include <unordered_map>
+
 #include <rapidjson/document.h>
 
 namespace OpenRAVE {
@@ -80,7 +82,7 @@ class OPENRAVE_API ReadablesContainer
 public:
     virtual ~ReadablesContainer() = default;
 
-    typedef std::map<std::string, ReadablePtr, CaseInsensitiveCompare> READERSMAP;
+    typedef std::unordered_map<std::string, ReadablePtr> READERSMAP;
 
     /// \brief Returns the raw map reference, this is \b not multithread safe and the GetReadableInterfaceMutex should be locked before using.
     inline const READERSMAP& GetReadableInterfaces() const
