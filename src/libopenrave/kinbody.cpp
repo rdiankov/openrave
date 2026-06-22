@@ -1043,7 +1043,7 @@ void KinBody::_NotifyEnvironmentReadableInterfacesChanged(const std::set<std::st
 
     // Work out which readables were added/removed
     std::vector<std::string> affectedIds;
-    std::set_difference(idsAfter.begin(), idsAfter.end(), idsBefore.begin(), idsBefore.end(), std::back_inserter(affectedIds));
+    std::set_symmetric_difference(idsAfter.begin(), idsAfter.end(), idsBefore.begin(), idsBefore.end(), std::back_inserter(affectedIds));
     if (affectedIds.empty()) {
         return;
     }
