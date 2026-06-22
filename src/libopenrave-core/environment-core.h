@@ -3539,6 +3539,25 @@ public:
         // Must be called with a valid body index
         BOOST_ASSERT(envBodyIndex > 0);
 
+        // There is an edge case where, during env destruction, _vecbodies is cleared _before_ destroy is called on any kinbodies.
+        // The bodies are thus in an indeterminate state - removed from _vecbodies, but envBodyIndex still set.
+        // Destroy() clears _bInit before any of this happens, so we can use this to exit early.
+        // When this happens, we treat all changed readable interfaces as removals.
+        if (!_bInit) {
+            RAVELOG_VERBOSE_FORMAT("env=%s, readable interfaces changed due to env destruction for body previously at index %d, assuming all deleted", GetNameId() % envBodyIndex);
+            ExclusiveLock lock(_mutexInterfaces);
+            for (const std::string& readableId : updatedReadableInterfaceIds) {
+                std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(readableId);
+                if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                    it->second.erase(envBodyIndex);
+                    if (it->second.empty()) {
+                        _kinBodyEnvironmentIdByReadableInterfaceId.erase(it);
+                    }
+                }
+            }
+            return;
+        }
+
         // Lock the env first, then the body readables
         ExclusiveLock lock(_mutexInterfaces);
         OpenRAVE::KinBodyPtr pBody = _vecbodies.at(envBodyIndex);
