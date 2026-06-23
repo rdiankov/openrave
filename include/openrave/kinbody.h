@@ -166,6 +166,7 @@ public:
     boost::array<dReal, 3> robotControllerAxisOffset = {0.0, 0.0, 0.0}; ///< indicates the offset, in the robot controller units, that should be applied to the joint values, per joint axis.
     boost::array<std::string, 3> robotControllerAxisManufacturerCode = {"", "", ""}; ///< indicates the manufacturer (vendor) codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices.
     boost::array<std::string, 3> robotControllerAxisProductCode = {"", "", ""}; ///< indicates the product codes of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices. This is usually determined by each manufacturer. Manufacturer code and product code together makes a globally unique identification in the protocol. This is different from ElectricMotorActuatorInfo::model_type, which is the name of the motor type attached to the servo devices.
+    boost::array<std::string, 3> robotControllerAxisRevisionNo = {"", "", ""}; ///< indicates the revision numbers of the servo devices per joint axis, in order for the robot controller to validate communication with the servo devices. Manufacturer code, product code, and revision number together makes a globally unique identification in the protocol.
 };
 typedef boost::shared_ptr<JointControlInfo_RobotController> JointControlInfo_RobotControllerPtr;
 

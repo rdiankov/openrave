@@ -856,6 +856,7 @@ PyJointControlInfo_RobotController::PyJointControlInfo_RobotController()
     robotControllerAxisOffset = toPyVector3(Vector(0.0, 0.0, 0.0));
     robotControllerAxisManufacturerCode = py::cast(std::array<std::string, 3>({"", "", ""}));
     robotControllerAxisProductCode = py::cast(std::array<std::string, 3>({"", "", ""}));
+    robotControllerAxisRevisionNo = py::cast(std::array<std::string, 3>({"", "", ""}));
 }
 
 PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const JointControlInfo_RobotController& jci)
@@ -866,6 +867,7 @@ PyJointControlInfo_RobotController::PyJointControlInfo_RobotController(const Joi
     robotControllerAxisOffset = toPyVector3(Vector(jci.robotControllerAxisOffset[0], jci.robotControllerAxisOffset[1], jci.robotControllerAxisOffset[2]));
     robotControllerAxisManufacturerCode = py::cast(std::array<std::string, 3>({jci.robotControllerAxisManufacturerCode[0], jci.robotControllerAxisManufacturerCode[1], jci.robotControllerAxisManufacturerCode[2]}));
     robotControllerAxisProductCode = py::cast(std::array<std::string, 3>({jci.robotControllerAxisProductCode[0], jci.robotControllerAxisProductCode[1], jci.robotControllerAxisProductCode[2]}));
+    robotControllerAxisRevisionNo = py::cast(std::array<std::string, 3>({jci.robotControllerAxisRevisionNo[0], jci.robotControllerAxisRevisionNo[1], jci.robotControllerAxisRevisionNo[2]}));
 }
 
 JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJointControlInfo()
@@ -906,6 +908,13 @@ JointControlInfo_RobotControllerPtr PyJointControlInfo_RobotController::GetJoint
         OPENRAVE_ASSERT_FORMAT0(num <= info.robotControllerAxisProductCode.size(), _("unexpected size"), ORE_InvalidState);
         for( size_t i = 0; i < num; ++i ) {
             info.robotControllerAxisProductCode[i] = py::extract<std::string>(robotControllerAxisProductCode[i]);
+        }
+    }
+    if( !IS_PYTHONOBJECT_NONE(robotControllerAxisRevisionNo) ) {
+        size_t num = len(robotControllerAxisRevisionNo);
+        OPENRAVE_ASSERT_FORMAT0(num <= info.robotControllerAxisRevisionNo.size(), _("unexpected size"), ORE_InvalidState);
+        for( size_t i = 0; i < num; ++i ) {
+            info.robotControllerAxisRevisionNo[i] = py::extract<std::string>(robotControllerAxisRevisionNo[i]);
         }
     }
     return pinfo;
@@ -4772,7 +4781,7 @@ class JointControlInfo_RobotController_pickle_suite
 public:
     static py::tuple getstate(const PyJointControlInfo_RobotController& r)
     {
-        return py::make_tuple(r.controllerType, r.robotControllerAxisIndex, r.robotControllerAxisMult, r.robotControllerAxisOffset, r.robotControllerAxisManufacturerCode, r.robotControllerAxisProductCode);
+        return py::make_tuple(r.controllerType, r.robotControllerAxisIndex, r.robotControllerAxisMult, r.robotControllerAxisOffset, r.robotControllerAxisManufacturerCode, r.robotControllerAxisProductCode, r.robotControllerAxisRevisionNo);
     }
     static void setstate(PyJointControlInfo_RobotController& r, py::tuple state) {
         r.controllerType = py::extract<int>(state[0]);
@@ -4781,6 +4790,7 @@ public:
         r.robotControllerAxisOffset = state[3];
         r.robotControllerAxisManufacturerCode = state[4];
         r.robotControllerAxisProductCode = state[5];
+        r.robotControllerAxisRevisionNo = state[6];
     }
 };
 
@@ -5411,6 +5421,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
         .def_readwrite("robotControllerAxisOffset", &PyJointControlInfo_RobotController::robotControllerAxisOffset)
         .def_readwrite("robotControllerAxisManufacturerCode", &PyJointControlInfo_RobotController::robotControllerAxisManufacturerCode)
         .def_readwrite("robotControllerAxisProductCode", &PyJointControlInfo_RobotController::robotControllerAxisProductCode)
+        .def_readwrite("robotControllerAxisRevisionNo", &PyJointControlInfo_RobotController::robotControllerAxisRevisionNo)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         .def(py::pickle(
                  [](const PyJointControlInfo_RobotController &pyinfo) {

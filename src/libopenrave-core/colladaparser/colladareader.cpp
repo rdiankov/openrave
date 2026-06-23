@@ -1778,6 +1778,9 @@ public:
                                             else if( pchild->getElementName() == std::string("robotControllerAxisProductCode") ) {
                                                 jci.robotControllerAxisProductCode.at(ijointaxis) = std::string(pchild->getCharData());
                                             }
+                                            else if( pchild->getElementName() == std::string("robotControllerAxisRevisionNo") ) {
+                                                jci.robotControllerAxisRevisionNo.at(ijointaxis) = std::string(pchild->getCharData());
+                                            }
                                         }
                                     }
                                     continue;

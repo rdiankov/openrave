@@ -1726,6 +1726,9 @@ private:
                             daeElementRef param_robotControllerAxisProductCode = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisProductCode");
                             param_robotControllerAxisProductCode->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
                             param_robotControllerAxisProductCode->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisProductCode[iaxis].c_str());
+                            daeElementRef param_robotControllerAxisRevisionNo = param_jointcontrolinfo_robotcontroller->add("robotControllerAxisRevisionNo");
+                            param_robotControllerAxisRevisionNo->setAttribute("axis", boost::lexical_cast<std::string>(iaxis).c_str());
+                            param_robotControllerAxisRevisionNo->setCharData(pjoint->_info._jci_robotcontroller->robotControllerAxisRevisionNo[iaxis].c_str());
                         }
                         break;
                     } // end case JCM_RobotController
