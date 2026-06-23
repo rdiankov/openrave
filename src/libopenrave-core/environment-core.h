@@ -3561,6 +3561,15 @@ public:
         // Lock the env first, then the body readables
         ExclusiveLock lock(_mutexInterfaces);
         OpenRAVE::KinBodyPtr pBody = _vecbodies.at(envBodyIndex);
+
+        // Under normal operation, the body should always exist: kinbodies only call this method if they are added to the env, so they _must_ be in vecbodies.
+        // However, since this API is public, someone could theoretically provide bad data. If this happens, log and ignore.
+        if (!pBody) {
+            RAVELOG_WARN_FORMAT("env=%s, readable interfaces changed for body index %s but no such body in _vecbodies", GetNameId() % envBodyIndex);
+            return;
+        }
+
+        // If there was a valid body, lock the readable mutex before updating the index
         boost::unique_lock<boost::shared_mutex> lockReadables(pBody->GetReadableInterfaceMutex());
 
         // Re-check the set of readables on the body, removing it from any invalid indexes and adding it to any valid indexes
