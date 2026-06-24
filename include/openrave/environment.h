@@ -602,6 +602,14 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
+    /// \brief Maps a function over the set of bodies in the environment. <b>[multi-thread safe]</b>
+    ///
+    /// A separate **interface mutex** is locked for reading the bodies.
+    /// \param mapFunction function to be mapped over all bodies
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void MapBodies(const std::function<void(KinBody&)>& mapfunction, uint64_t timeout = 0) const = 0;
+
     /// \brief Fill an array with all robots loaded in the environment. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the bodies.
