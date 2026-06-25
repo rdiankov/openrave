@@ -3656,14 +3656,13 @@ public:
 
     /// \name Readable interface overrides
     ///
-    /// These override the ReadablesContainer methods so that, while this body is added to an environment,  any change to which readable interfaces are non-null is reported to the environment.
-    /// This allows the environment to maintain a cache of which bodies have which readable IDs, to allow faster lookup.
+    /// We override the ReadablesContainer methods that might add readable interfaces so that, if this body is added to an environment, we can notify it about the addition.
+    /// This lets the environment maintain a cache of which bodies _might_ hold which readable interfaces, providing optimized GetBodiesWithReadableInterface lookups.
+    /// Removals are not inspected because the cache is allowed to overapproximate.
     /// The base readable container behaviour is unchanged.
     //@{
     ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable) override;
     void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting) override;
-    void ClearReadableInterfaces() override;
-    void ClearReadableInterface(const std::string& id) override;
     bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) override;
     //@}
 
@@ -3715,19 +3714,11 @@ protected:
     /// recomputes the hashes if geometry changed.
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
-    /// \brief notifies the environment that a single readable interface of this body became present or absent.
+    /// \brief notifies the environment that this body may have gained one or more readable interfaces.
     ///
     /// Only does something if the body is currently added to an environment (env body index is non-zero). \see KinBody::SetName for the cloning caveat.
-    /// \param id the readable interface id whose presence changed
-    void _NotifyEnvironmentReadableInterfaceChanged(const std::string& id);
-
-    /// \brief notifies the environment of readable interface changes given the full sets of non-null readable interface ids before and after a bulk change.
-    ///
-    /// Only does something if the body is currently added to an environment (env body index is non-zero). \see KinBody::SetName for the cloning caveat.
-    void _NotifyEnvironmentReadableInterfacesChanged(const std::set<std::string>& idsBefore, const std::set<std::string>& idsAfter);
-
-    /// \brief collects the ids of all currently non-null readable interfaces of this body. <b>[multi-thread safe]</b>
-    void _GetReadableInterfaceIds(std::set<std::string>& ids) const;
+    /// This is a no-op at the environment level if the added readable interface IDs are not actively being tracked.
+    void _NotifyEnvironmentReadableInterfacesAdded();
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
     bool _IsAttached(const KinBody &body, std::set<KinBodyConstPtr>& setChecked) const;

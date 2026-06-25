@@ -602,11 +602,15 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
-    /// \brief Get all bodies added to the environment that currently have a non-null readable interface with the given id. <b>[multi-thread safe]</b>
+    /// \brief Get all bodies added to the environment that **might** currently have a non-null readable interface with the given id. <b>[multi-thread safe]</b>
     ///
-    /// Uses an internal cache that is kept in sync as bodies are added, removed, and have their readable interfaces modified.
-    /// Therefore this does not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
-    /// A separate **interface mutex** is locked for reading the bodies.
+    /// The very first time a given id is requested, every body in the environment is scanned once to build a cache entry for that id.
+    /// From then on the cache for that id is maintained incrementally as bodies gain the interface or are removed, so subsequent
+    /// lookups do not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
+    /// Ids that are never requested are never tracked, so environments that do not use this method pay no maintenance cost.
+    /// Note however that this function acts like a bloom filter: it will never _not_ return bodies that _do_ have the interface,
+    /// but may return bodies that _do not_ actually have the interface if they had it once but it was later removed.
+    /// A separate **interface mutex** is locked exclusively (the cache may be populated/pruned during the call).
     /// \param[out] bodies filled with the matching bodies
     /// \param id the readable interface id to match
     /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
@@ -945,12 +949,13 @@ public:
     /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
     virtual bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
 
-    /// \brief notifies that the set of readable interfaces of a kin body added to this env changed.
+    /// \brief notifies that a kin body added to this env may have gained one or more readable interfaces.
     ///
-    /// Should be called when readable interfaces of a body added to this env become non-null or null, so the environment can keep the cache used by GetBodiesWithReadableInterface in sync.
+    /// Should be called after any non-null readable interface is added to / updated on a body so that it can be indexed for GetBodiesWithReadableInterface.
+    /// Removals do not need to be reported: the cache is allowed to over-approximate.
+    /// If no id is currently being tracked, this returns immediately without taking any environment lock.
     /// \param envBodyIndex environment body index of the body whose readable interfaces changed
-    /// \param updatedReadableInterfaceIds ids of readable interfaces that were added or removed
-    virtual void NotifyKinBodyReadableInterfacesChanged(int envBodyIndex, const std::vector<std::string>& updatedReadableInterfaceIds) = 0;
+    virtual void NotifyKinBodyReadableInterfacesAdded(int envBodyIndex) = 0;
 
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
