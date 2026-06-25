@@ -1744,8 +1744,12 @@ public:
             // If a different readable ID got initialized during the exclusive -> shared window, a rehash could have occurred, invalidating it.
             it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
 
-            // Since readalble IDs are never forgotten once tracked, this should always return a valid iterator
-            BOOST_ASSERT(it != _kinBodyEnvironmentIdByReadableInterfaceId.end());
+            // Since readable IDs are never forgotten once tracked, this should always return a valid iterator.
+            // The only exception is when the env is being destroyed - in this case, just log a warning
+            if (it == _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                RAVELOG_WARN_FORMAT("env=%s, kinbody readable cache unexpectedly empty after initialization when scanning for readable id %s, env may be destroyed", GetNameId()%id);
+                return;
+            }
         }
 
         // Copy all bodies that match the selection set into the output
