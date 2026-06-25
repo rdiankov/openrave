@@ -1684,6 +1684,7 @@ public:
 
     void GetBodiesWithReadableInterface(std::vector<KinBodyPtr>& bodies, const std::string& id, uint64_t timeout) const override
     {
+        // Start with a read mutex, since we only need exclusive access on the first time rebuild path
         TimedSharedLock lockInterfaces(_mutexInterfaces, timeout);
         if (!lockInterfaces) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
@@ -1695,21 +1696,56 @@ public:
         std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
         if (it == _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
             // First time this id has ever been requested: build its cache entry by scanning every body once.
-            // From now on this id is tracked, and NotifyKinBodyReadableInterfacesAdded keeps it up to date as bodies gain the interface.
-            it = _kinBodyEnvironmentIdByReadableInterfaceId.emplace(id, std::unordered_set<int>()).first;
+            // Note that for this we need *exclusive* access to the interface mutex, so drop it and re-acquire.
+            // This forces us to do a doublechecked read as well, but since this is the one time init path, this is fine.
+            {
+            struct ScopedRelease
+            {
+                ScopedRelease(TimedSharedLock& lock)
+                    : _lock(lock)
+                {
+                    _lock.unlock();
+                }
+                ~ScopedRelease()
+                {
+                    _lock.lock();
+                }
+                TimedSharedLock& _lock;
+            } scopedRelease{lockInterfaces};
 
-            // Publish that we are now tracking *before* scanning.
-            // NotifyKinBodyReadableInterfacesAdded reads this flag lock-free; if a body concurrently gains this interface,
-            // its notify must either observe the flag as true (and then block on the env lock to register itself) or,
-            // if it still observes false, its interface-add is ordered before this scan (via the body's readable mutex) so the scan below sees it.
-            // Setting the flag after the scan would open a window where the body is missed by both.
-            _bTrackingReadableInterfaces.store(true, std::memory_order_release);
+            // Re-acquire the interface lock in exclusive mode, and double-check that we still need to seed the cache.
+            // If two threads raced to initialize, someone else may have already initialized it during the window where we upgraded our lock.
+            TimedExclusiveLock exclusiveLockInterfaces(_mutexInterfaces, timeout);
+            if (!exclusiveLockInterfaces) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
+            }
+            it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+            if (it == _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                // Create a new bucket for this readable ID
+                it = _kinBodyEnvironmentIdByReadableInterfaceId.emplace(id, std::unordered_set<int>()).first;
 
-            for (const KinBodyPtr& pbody : _vecbodies) {
-                if (!!pbody && _BodyHasNonNullReadableInterface(*pbody, id)) {
-                    it->second.insert(pbody->GetEnvironmentBodyIndex());
+                // Publish that we are now tracking *before* scanning.
+                // NotifyKinBodyReadableInterfacesAdded reads this flag lock-free; if a body concurrently gains this interface,
+                // its notify must either observe the flag as true (and then block on the env lock to register itself) or,
+                // if it still observes false, its interface-add is ordered before this scan (via the body's readable mutex) so the scan below sees it.
+                // Setting the flag after the scan would open a window where the body is missed by both.
+                _bTrackingReadableInterfaces.store(true, std::memory_order_release);
+
+                for (const KinBodyPtr& pbody : _vecbodies) {
+                    if (!!pbody && _BodyHasNonNullReadableInterface(*pbody, id)) {
+                        it->second.insert(pbody->GetEnvironmentBodyIndex());
+                    }
                 }
             }
+
+            } // On exiting this scope, we release our exclusive lock and downgrade back to shared.
+
+            // Now that we are finally back in read-only access mode, we need to once again revalidate the set iterator.
+            // If a different readable ID got initialized during the exclusive -> shared window, a rehash could have occurred, invalidating it.
+            it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+
+            // Since readalble IDs are never forgotten once tracked, this should always return a valid iterator
+            BOOST_ASSERT(it != _kinBodyEnvironmentIdByReadableInterfaceId.end());
         }
 
         // Copy all bodies that match the selection set into the output
@@ -1718,7 +1754,7 @@ public:
         bodies.reserve(matchedBodyIndices.size());
         for (int envBodyIndex : matchedBodyIndices) {
             // Ignore invalid body indices
-            if (envBodyIndex < 0 || envBodyIndex >= (int)_vecbodies.size()) {
+            if (envBodyIndex <= 0 || envBodyIndex >= (int)_vecbodies.size()) {
                 continue;
             }
 
@@ -3572,7 +3608,7 @@ public:
         ExclusiveLock lock(_mutexInterfaces);
 
         OpenRAVE::KinBodyPtr pBody;
-        if (envBodyIndex >= 0 && envBodyIndex < (int)_vecbodies.size()) {
+        if (envBodyIndex > 0 && envBodyIndex < (int)_vecbodies.size()) {
             pBody = _vecbodies[envBodyIndex];
         }
 
