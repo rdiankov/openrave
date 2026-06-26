@@ -955,7 +955,7 @@ public:
     /// Removals do not need to be reported: the cache is allowed to over-approximate.
     /// If no id is currently being tracked, this returns immediately without taking any environment lock.
     /// \param envBodyIndex environment body index of the body whose readable interfaces changed
-    virtual void NotifyKinBodyReadableInterfacesAdded(int envBodyIndex) = 0;
+    virtual void NotifyKinBodyReadableInterfacesAdded(const KinBody& body) = 0;
 
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase

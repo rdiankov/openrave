@@ -973,12 +973,13 @@ bool KinBody::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>&
 void KinBody::_NotifyEnvironmentReadableInterfacesAdded()
 {
     // If we aren't added to the env, do nothing. We don't exist.
-    const int envBodyIndex = GetEnvironmentBodyIndex();
-    if (envBodyIndex <= 0) {
+    // The env re-checks this, but this avoids the virtual call.
+    if (GetEnvironmentBodyIndex() <= 0) {
         return;
     }
 
-    GetEnv()->NotifyKinBodyReadableInterfacesAdded(envBodyIndex);
+    // Pass ourselves directly to the notification function as proof that our environment body index maps to a real body in the environment.
+    GetEnv()->NotifyKinBodyReadableInterfacesAdded(*this);
 }
 
 void KinBody::SetDOFTorques(const std::vector<dReal>& torques, bool bAdd)

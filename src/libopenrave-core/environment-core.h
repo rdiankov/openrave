@@ -1684,7 +1684,7 @@ public:
 
     void GetBodiesWithReadableInterface(std::vector<KinBodyPtr>& bodies, const std::string& id, uint64_t timeout) const override
     {
-        // Start with a read mutex, since we only need exclusive access on the first time rebuild path
+        // Need the interface lock for _vecbodies
         TimedSharedLock lockInterfaces(_mutexInterfaces, timeout);
         if (!lockInterfaces) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
@@ -1692,77 +1692,56 @@ public:
 
         bodies.clear();
 
-        // Check if we have a cached lookup set for this readable interface
-        std::unordered_map<std::string, std::unordered_set<int>>::iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
-        if (it == _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
-            // First time this id has ever been requested: build its cache entry by scanning every body once.
-            // Note that for this we need *exclusive* access to the interface mutex, so drop it and re-acquire.
-            // This forces us to do a doublechecked read as well, but since this is the one time init path, this is fine.
-            {
-            struct ScopedRelease
-            {
-                ScopedRelease(TimedSharedLock& lock)
-                    : _lock(lock)
-                {
-                    _lock.unlock();
-                }
-                ~ScopedRelease()
-                {
-                    _lock.lock();
-                }
-                TimedSharedLock& _lock;
-            } scopedRelease{lockInterfaces};
-
-            // Re-acquire the interface lock in exclusive mode, and double-check that we still need to seed the cache.
-            // If two threads raced to initialize, someone else may have already initialized it during the window where we upgraded our lock.
-            TimedExclusiveLock exclusiveLockInterfaces(_mutexInterfaces, timeout);
-            if (!exclusiveLockInterfaces) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
+        // Snapshot the candidate set of body indices for this id. Common case: the id is already tracked, so a shared lock suffices.
+        std::vector<int> candidateBodyIndices;
+        bool bTracked = false;
+        {
+            boost::shared_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
+            const std::unordered_map<std::string, std::unordered_set<int>>::const_iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+            if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                bTracked = true;
+                candidateBodyIndices.assign(it->second.begin(), it->second.end());
             }
-            it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
-            if (it == _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
-                // Create a new bucket for this readable ID
-                it = _kinBodyEnvironmentIdByReadableInterfaceId.emplace(id, std::unordered_set<int>()).first;
+        }
 
+        // If this is the first time this id has ever been requested, we need to build its cache entry
+        if (!bTracked) {
+            // We need **exclusive** cache access for this rebuild, since we're mutating.
+            std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
+
+            // Double-check: another thread may have seeded this id during the window between our previous lock
+            const std::pair<std::unordered_map<std::string, std::unordered_set<int>>::iterator, bool> emplaced = _kinBodyEnvironmentIdByReadableInterfaceId.emplace(id, std::unordered_set<int>());
+            std::unordered_set<int>& matchedBodyIndices = emplaced.first->second;
+            if (emplaced.second) {
+                // We created the bucket, so we own seeding it.
                 // Publish that we are now tracking *before* scanning.
                 // NotifyKinBodyReadableInterfacesAdded reads this flag lock-free; if a body concurrently gains this interface,
                 // its notify must either observe the flag as true (and then block on the env lock to register itself) or,
                 // if it still observes false, its interface-add is ordered before this scan (via the body's readable mutex) so the scan below sees it.
-                // Setting the flag after the scan would open a window where the body is missed by both.
                 _bTrackingReadableInterfaces.store(true, std::memory_order_release);
 
+                // Scan all bodies in the env for this readable and add their index to the cache
+                // Since all these bodies are in vecbodies, they _must_ have valid environment body indices.
                 for (const KinBodyPtr& pbody : _vecbodies) {
                     if (!!pbody && _BodyHasNonNullReadableInterface(*pbody, id)) {
-                        it->second.insert(pbody->GetEnvironmentBodyIndex());
+                        matchedBodyIndices.insert(pbody->GetEnvironmentBodyIndex());
                     }
                 }
             }
 
-            } // On exiting this scope, we release our exclusive lock and downgrade back to shared.
-
-            // Now that we are finally back in read-only access mode, we need to once again revalidate the set iterator.
-            // If a different readable ID got initialized during the exclusive -> shared window, a rehash could have occurred, invalidating it.
-            it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
-
-            // Since readable IDs are never forgotten once tracked, this should always return a valid iterator.
-            // The only exception is when the env is being destroyed - in this case, just log a warning
-            if (it == _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
-                RAVELOG_WARN_FORMAT("env=%s, kinbody readable cache unexpectedly empty after initialization when scanning for readable id %s, env may be destroyed", GetNameId()%id);
-                return;
-            }
+            // Copy out the newly generated set
+            candidateBodyIndices.assign(matchedBodyIndices.begin(), matchedBodyIndices.end());
         }
 
-        // Copy all bodies that match the selection set into the output
-        // Note that this set may be an over-approximation.
-        const std::unordered_set<int>& matchedBodyIndices = it->second;
-        bodies.reserve(matchedBodyIndices.size());
-        for (int envBodyIndex : matchedBodyIndices) {
+        // Resolve candidate indices to bodies.
+        bodies.reserve(candidateBodyIndices.size());
+        for (int envBodyIndex : candidateBodyIndices) {
             // Ignore invalid body indices
             if (envBodyIndex <= 0 || envBodyIndex >= (int)_vecbodies.size()) {
                 continue;
             }
 
-            // If this body slot is non-null, add it to the return set
+            // If this body slot is still live, copy it into the output
             const KinBodyPtr& pbody = _vecbodies[envBodyIndex];
             if (!!pbody) {
                 bodies.emplace_back(pbody);
@@ -3597,33 +3576,24 @@ public:
     }
 
     /// Notify the env that one of the kinbodies in it may have gained one or more readable interfaces.
-    void NotifyKinBodyReadableInterfacesAdded(int envBodyIndex) override
+    /// Called by a KinBody after a readable interface is added/updated on it.
+    void NotifyKinBodyReadableInterfacesAdded(const KinBody& body) override
     {
-        // Must be called with a valid body index
-        BOOST_ASSERT(envBodyIndex > 0);
-
         // Fast path: if no interface id has ever been requested via GetBodiesWithReadableInterface, there is nothing to track.
         // This is the common case for systems that never look bodies up by interface, and it costs only a single atomic read - no lock.
         if (!_bTrackingReadableInterfaces.load(std::memory_order_acquire)) {
             return;
         }
 
-        // Lock the env first, then the body readables (done inside the helper).
-        ExclusiveLock lock(_mutexInterfaces);
-
-        OpenRAVE::KinBodyPtr pBody;
-        if (envBodyIndex > 0 && envBodyIndex < (int)_vecbodies.size()) {
-            pBody = _vecbodies[envBodyIndex];
-        }
-
-        // Under normal operation the body should always exist: kinbodies only call this method while added to the env, so they _must_
-        // be in _vecbodies. However, since this API is public, someone could theoretically provide bad data. If so, log and ignore.
-        if (!pBody) {
-            RAVELOG_WARN_FORMAT("env=%s, readable interfaces changed for body index %d but no such body in _vecbodies", GetNameId() % envBodyIndex);
+        // If this body isn't added to the environment then we don't need to index it
+        const int envBodyIndex = body.GetEnvironmentBodyIndex();
+        if (envBodyIndex <= 0) {
             return;
         }
 
-        _AddBodyToTrackedReadableInterfaceIndices(*pBody, envBodyIndex);
+        // Take only the cache lock; the body readable mutex is taken inside the helper (lock order: cache -> body readable).
+        std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
+        _AddBodyToTrackedReadableInterfaceIndices(body);
     }
 
 protected :
@@ -3640,8 +3610,8 @@ protected :
     ///
     /// Only iterates the (typically very few) ids that have actually been requested via GetBodiesWithReadableInterface.
     /// Only ever adds indices (over-approximation); stale entries are pruned when the body is removed from the env.
-    /// \pre _mutexInterfaces is exclusively held.
-    void _AddBodyToTrackedReadableInterfaceIndices(const KinBody& body, int envBodyIndex)
+    /// \pre _mutexReadableInterfaceCache is exclusively held.
+    void _AddBodyToTrackedReadableInterfaceIndices(const KinBody& body)
     {
         // Nothing is being tracked, so there is nothing to update.
         if (_kinBodyEnvironmentIdByReadableInterfaceId.empty()) {
@@ -3657,28 +3627,31 @@ protected :
         for (std::pair<const std::string, std::unordered_set<int>>& trackedEntry : _kinBodyEnvironmentIdByReadableInterfaceId) {
             const ReadablesContainer::READERSMAP::const_iterator it = mapReadables.find(trackedEntry.first);
             if (it != mapReadables.end() && !!it->second) {
-                trackedEntry.second.insert(envBodyIndex);
+                trackedEntry.second.insert(body.GetEnvironmentBodyIndex());
             }
         }
     }
 
     /// \brief registers a body being added to the environment into the cache of any interface id currently being tracked.
-    /// \pre _mutexInterfaces is exclusively held.
-    void _RegisterAddedBodyReadableInterfaces(const KinBodyPtr& pbody)
+    /// \pre _mutexInterfaces is exclusively held (lock order: _mutexInterfaces -> _mutexReadableInterfaceCache).
+    void _RegisterAddedBodyReadableInterfaces(const KinBody& body)
     {
         // This should only be called _as_ a body is added to the environment
-        const int envBodyIndex = pbody->GetEnvironmentBodyIndex();
+        const int envBodyIndex = body.GetEnvironmentBodyIndex();
         BOOST_ASSERT(envBodyIndex > 0);
 
-        _AddBodyToTrackedReadableInterfaceIndices(*pbody, envBodyIndex);
+        std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
+        _AddBodyToTrackedReadableInterfaceIndices(body);
     }
 
     /// \brief purges an env body index from every readable interface entry in the cache, used when a body is removed from the environment.
-    /// \pre _mutexInterfaces is exclusively held.
+    /// \pre _mutexInterfaces is exclusively held (lock order: _mutexInterfaces -> _mutexReadableInterfaceCache).
     void _UnregisterRemovedBodyReadableInterfaces(int envBodyIndex)
     {
         // Must be called with a valid old generation index
         BOOST_ASSERT(envBodyIndex > 0);
+
+        std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
 
         // Nothing is being tracked, so there is nothing to update.
         if (_kinBodyEnvironmentIdByReadableInterfaceId.empty()) {
@@ -3695,6 +3668,7 @@ protected :
     /// \brief clears the entire GetBodiesWithReadableInterface cache, used when all bodies are removed from the environment at once.
     inline void _ClearReadableInterfaceBodyIndices()
     {
+        std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
         _kinBodyEnvironmentIdByReadableInterfaceId.clear();
         _bTrackingReadableInterfaces.store(false, std::memory_order_release);
     }
@@ -4266,7 +4240,7 @@ protected :
         }
 
         // Register any readable interfaces currently on this body to our fast-lookup cache
-        _RegisterAddedBodyReadableInterfaces(pbody);
+        _RegisterAddedBodyReadableInterfaces(*pbody);
     }
 
     /// \brief assign body / sensor to unique id by adding suffix
@@ -4762,13 +4736,19 @@ protected :
 
     std::set<int> _environmentIndexRecyclePool; ///< body indices which can be reused later, because kin bodies who had these id's previously are already removed from the environment. This is to prevent env id's from growing without bound when kin bodies are removed and added repeatedly. protected by _mutexInterfaces
 
-    /// Lazily built cache mapping a readable interface id -> set of body indices that have held that interface, used by
-    /// GetBodiesWithReadableInterface to avoid scanning every body in the environment. Only ids that have actually been requested
-    /// are present as keys (ids are added on first lookup and stay tracked thereafter). For a tracked id the set is an
-    /// over-approximation of the matching bodies: body indices are only ever added (when a body gains the interface or is added to
-    /// the env), never removed when a body merely drops the interface; stale entries are pruned lazily during GetBodiesWithReadableInterface.
-    /// mutable because GetBodiesWithReadableInterface (a const method) populates and prunes it. Protected by _mutexInterfaces.
+    /// Lazily built cache mapping a readable interface id -> set of body indices that have held that interface.
+    /// Used by GetBodiesWithReadableInterface to avoid scanning every body in the environment.
+    /// Only ids that have actually been requested are present as keys (ids are added on first lookup and stay tracked thereafter).
+    /// For a tracked id the set is an over-approximation of the matching bodies: body indices are only ever added while a body exists inside the env.
+    /// Bodies with removed readables are only cleaned up when they are removed from the environment.
+    ///
+    /// Protected by _mutexReadableInterfaceCache.
+    /// This is locked separately to avoid conflicts with _mutexInterfaces, which could occur if changing readables during a MapBodies call.
+    /// Lock ordering: _mutexInterfaces -> _mutexReadableInterfaceCache -> body readable mutex.
     mutable std::unordered_map<std::string, std::unordered_set<int>> _kinBodyEnvironmentIdByReadableInterfaceId;
+
+    /// Guards _kinBodyEnvironmentIdByReadableInterfaceId and _bTrackingReadableInterfaces. See the lock-ordering note above.
+    mutable boost::shared_mutex _mutexReadableInterfaceCache;
 
     /// True iff _kinBodyEnvironmentIdByReadableInterfaceId is tracking at least one interface id (i.e. GetBodiesWithReadableInterface
     /// has been called at least once since the last full clear). Lets NotifyKinBodyReadableInterfacesAdded skip locking entirely in the
