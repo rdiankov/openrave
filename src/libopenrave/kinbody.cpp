@@ -934,52 +934,54 @@ void KinBody::SetId(const std::string& newid)
     }
 }
 
-ReadablePtr KinBody::SetReadableInterface(const std::string& id, ReadablePtr readable)
+ReadablePtr KinBody::SetReadableInterface(const std::string& id, const ReadablePtr& readable)
 {
     // Set the new readable
-    ReadablePtr pPrevious = ReadablesContainer::SetReadableInterface(id, readable);
+    std::unique_lock<boost::shared_mutex> lockReadableInterface(GetReadableInterfaceMutex());
+    ReadablePtr pPrevious = ReadablesContainer::_SetReadableInterface(id, readable);
 
-    // Only an absent -> present transition can make this body newly match a GetBodiesWithReadableInterface query.
-    // Removals (present -> absent) are intentionally not reported: the environment cache is allowed to over-approximate.
-    const bool bWasPresent = !!pPrevious;
-    const bool bIsPresent = !!readable;
-    if (bIsPresent && !bWasPresent) {
-        _NotifyEnvironmentReadableInterfacesAdded();
+    if( !pPrevious ) {
+        // there was no previous interface, so notify
+        if (GetEnvironmentBodyIndex() >= 0) {
+            std::vector<const char*> vAddedIds(1); vAddedIds[0] = id.c_str();
+            GetEnv()->NotifyKinBodyReadableInterfacesAdded(lockReadableInterface, *this, vAddedIds);
+        }
     }
     return pPrevious;
 }
 
 void KinBody::SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting)
 {
-    ReadablesContainer::SetReadableInterfaces(mapReadables, bClearAllExisting);
+    std::unique_lock<boost::shared_mutex> lockReadableInterface(GetReadableInterfaceMutex());
+    ReadablesContainer::_SetReadableInterfaces(mapReadables, bClearAllExisting);
 
-    // This bulk update may have added one or more interfaces.
-    // We do not compute the exact diff here to avoid extra work - let the environment short-circuit if nothing is being tracked.
-    _NotifyEnvironmentReadableInterfacesAdded();
+    if (GetEnvironmentBodyIndex() >= 0) {
+        // This bulk update may have added one or more interfaces.
+        // We do not compute the exact diff here to avoid extra work - let the environment short-circuit if nothing is being tracked.
+        std::vector<const char*> vAddedIds; vAddedIds.reserve(GetReadableInterfaces().size());
+        for(const READERSMAP::value_type& info : GetReadableInterfaces()) {
+            vAddedIds.push_back(info.first.c_str());
+        }
+        if( !vAddedIds.empty() ) {
+            GetEnv()->NotifyKinBodyReadableInterfacesAdded(lockReadableInterface, *this, vAddedIds);
+        }
+    }
 }
 
 bool KinBody::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces)
 {
-    const bool bChanged = ReadablesContainer::UpdateReadableInterfaces(newReadableInterfaces);
+    std::unique_lock<boost::shared_mutex> lockReadableInterface(GetReadableInterfaceMutex());
+    std::vector<const char*> vAddedIds;
+    bool bNeedEnvNotify = GetEnvironmentBodyIndex() >= 0; // If we aren't added to the env, do nothing. We don't exist. The env re-checks this, but this avoids the virtual call.
+    const bool bChanged = ReadablesContainer::_UpdateReadableInterfaces(newReadableInterfaces, bNeedEnvNotify ? &vAddedIds : nullptr);
 
     // Only notify if something actually changed; the change may have been an addition.
     // As above, the environment short-circuits cheaply when it is not tracking any interface id, so we do not bother distinguishing additions from removals here.
-    if (bChanged) {
-        _NotifyEnvironmentReadableInterfacesAdded();
+    if (!vAddedIds.empty()) {
+        // Pass ourselves directly to the notification function as proof that our environment body index maps to a real body in the environment.
+        GetEnv()->NotifyKinBodyReadableInterfacesAdded(lockReadableInterface, *this, vAddedIds);
     }
     return bChanged;
-}
-
-void KinBody::_NotifyEnvironmentReadableInterfacesAdded()
-{
-    // If we aren't added to the env, do nothing. We don't exist.
-    // The env re-checks this, but this avoids the virtual call.
-    if (GetEnvironmentBodyIndex() <= 0) {
-        return;
-    }
-
-    // Pass ourselves directly to the notification function as proof that our environment body index maps to a real body in the environment.
-    GetEnv()->NotifyKinBodyReadableInterfacesAdded(*this);
 }
 
 void KinBody::SetDOFTorques(const std::vector<dReal>& torques, bool bAdd)

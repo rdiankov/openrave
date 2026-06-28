@@ -954,8 +954,10 @@ public:
     /// Should be called after any non-null readable interface is added to / updated on a body so that it can be indexed for GetBodiesWithReadableInterface.
     /// Removals do not need to be reported: the cache is allowed to over-approximate.
     /// If no id is currently being tracked, this returns immediately without taking any environment lock.
-    /// \param envBodyIndex environment body index of the body whose readable interfaces changed
-    virtual void NotifyKinBodyReadableInterfacesAdded(const KinBody& body) = 0;
+    /// \param lockReadableInterface is the interface lock on body.GetReadableInterfaceMutex()
+    /// \param body must be added to this environment and its GetEnvironmentBodyIndex() should be > 0
+    /// \param vAddedIds the interfaces that were added
+    virtual void NotifyKinBodyReadableInterfacesAdded(std::unique_lock<boost::shared_mutex>& lockReadableInterface, const KinBody& body, const std::vector<const char*>& vAddedIds) = 0;
 
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase
