@@ -602,19 +602,18 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
-    /// \brief Get all bodies added to the environment that **might** currently have a non-null readable interface with the given id. <b>[multi-thread safe]</b>
-    ///
-    /// The very first time a given id is requested, every body in the environment is scanned once to build a cache entry for that id.
-    /// From then on the cache for that id is maintained incrementally as bodies gain the interface or are removed, so subsequent
-    /// lookups do not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
-    /// Ids that are never requested are never tracked, so environments that do not use this method pay no maintenance cost.
-    /// Note however that this function acts like a bloom filter: it will never _not_ return bodies that _do_ have the interface,
-    /// but may return bodies that _do not_ actually have the interface if they had it once but it was later removed.
-    /// A separate **interface mutex** is locked exclusively (the cache may be populated/pruned during the call).
-    /// \param[out] bodies filled with the matching bodies
-    /// \param id the readable interface id to match
-    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
-    /// \throw openrave_exception with ORE_Timeout error code
+    /** \brief Get all bodies added to the environment that **might** currently have a non-null readable interface with the given id. <b>[multi-thread safe]</b>
+    
+        The very first time a given id is requested, every body in the environment is scanned once to build a cache entry for that id.
+        From then on the cache for that id is maintained incrementally as bodies gain the interface or are removed, so subsequent
+        lookups do not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
+        Ids that are never requested are never tracked, so environments that do not use this method pay no maintenance cost.
+        To avoid too many locks, bodies returned might not all have the readable interface.
+        \param[out] bodies filled with the bodies that contain or have contained in the past the readable interface with that id.
+        \param id the readable interface id to match
+        \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+        \throw openrave_exception with ORE_Timeout error code
+    */
     virtual void GetBodiesWithReadableInterface(std::vector<KinBodyPtr>& bodies, const std::string& id, uint64_t timeout=0) const = 0;
 
     /// \brief Maps a function over the set of bodies in the environment. <b>[multi-thread safe]</b>
