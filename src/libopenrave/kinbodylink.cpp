@@ -359,13 +359,11 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         }
     }
 
-    // Parse the "extraGeometries" groups. Each parsed geometry is routed by its _bIsSafetyGeometry flag:
-    // safety geometries go into _mapExtraGeometriesSafety, the rest into _mapExtraGeometries. A given group
-    // name ends up in at most one of the two maps (mixing safety/non-safety under one group name is not
-    // supported, since the group-lookup APIs assume disjoint names).
+    // Parse the "extraGeometries" section. The whole section is the safety partition: every group it
+    // contains is routed into _mapExtraGeometriesSafety. The non-safety _mapExtraGeometries is never
+    // serialized/deserialized (it is regenerated at runtime). The key is still named "extraGeometries"
+    // for backward compatibility; renaming it to "safetyGeometries" is a deferred cleanup.
     if (value.HasMember("extraGeometries") && value["extraGeometries"].IsArray()) { // TODO : rename to safetyGeometries
-        //_mapExtraGeometries.clear();
-        //_mapExtraGeometriesSafety.clear();
         for(int iExtra = 0; iExtra < value["extraGeometries"].Size(); ++iExtra) {
             std::string extraId;
             const rapidjson::Value& rExtraGeometry = value["extraGeometries"][iExtra];
@@ -376,9 +374,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
             }
             const rapidjson::Value& rGeometries = rExtraGeometry["geometries"];
 
-            // deserialize the group's geometries into a temporary, then distribute them by safety flag
-            std::vector<GeometryInfoPtr> vgeometries;
-             _mapExtraGeometriesSafety[extraId].reserve(rGeometries.Size());
+            _mapExtraGeometriesSafety[extraId].reserve(rGeometries.Size());
             for(int iGeom = 0; iGeom < rGeometries.Size(); ++iGeom) {
                 UpdateOrCreateInfoWithNameCheck(rGeometries[iGeom],  _mapExtraGeometriesSafety[extraId], "name", fUnitScale, options);
             }
@@ -927,38 +923,38 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
     }
 }
 
-static bool _HasSafetyGeometry(const std::vector<KinBody::GeometryInfoPtr>& geometries)
-{
-    for(const KinBody::GeometryInfoPtr& pGeometry : geometries) {
-        if( !!pGeometry && pGeometry->_bIsSafetyGeometry ) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& _EnsureMapExtraGeometries(KinBody::LinkInfo& info, const std::vector<KinBody::GeometryInfoPtr>& geometries)
-{
-    return (_HasSafetyGeometry(geometries) ? info._mapExtraGeometriesSafety : info._mapExtraGeometries);
-}
-
-void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+static void _StoreGroupGeometriesIntoMap(std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries, const std::string& bodyname, const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
     FOREACH(itgeominfo, geometries) {
         if (!(*itgeominfo)) {
             int igeominfo = itgeominfo - geometries.begin();
-            throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo % GetParent()->GetName(), ORE_InvalidArguments);
+            throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo % bodyname, ORE_InvalidArguments);
         }
     }
-    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, geometries);
     std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>::iterator it = mapExtraGeometries.insert(make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(), geometries.end(), it->second.begin());
 }
 
+void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+{
+    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometries, GetParent()->GetName(), groupname, geometries);
+}
+
+void KinBody::Link::_SetSafetyGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+{
+    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometriesSafety, GetParent()->GetName(), groupname, geometries);
+}
+
 void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
     _SetGroupGeometriesNoPostprocess(groupname, geometries);
+    GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+}
+
+void KinBody::Link::SetSafetyGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+{
+    _SetSafetyGroupGeometriesNoPostprocess(groupname, geometries);
     GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
@@ -1018,8 +1014,8 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             }
         }
         if( addToGroups ) {
-            std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, {pginfo});
-            FOREACH(itgeometrygroup, mapExtraGeometries) {
+            // a regular geometry added to all groups only goes into the non-safety extra groups; safety groups are managed via SetSafetyGroupGeometries
+            FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
                 FOREACH(itgeometryinfo, itgeometrygroup->second) {
                     if( (*itgeometryinfo)->_name == ginfo._name ) {
                         throw OPENRAVE_EXCEPTION_FORMAT(_("newly added geometry %s for group %s has conflicting name for link %s"), ginfo._name%itgeometrygroup->first%GetName(), ORE_InvalidArguments);
@@ -1033,8 +1029,7 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
     _vGeometries.back()->InitCollisionMesh();
     _info._vgeometryinfos.push_back(pginfo);
     if( addToGroups ) {
-        std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, {pginfo});
-        FOREACH(itgeometrygroup, mapExtraGeometries) {
+        FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
             itgeometrygroup->second.push_back(pginfo);
         }
     }
@@ -1049,10 +1044,13 @@ void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const st
 
     const KinBody::GeometryInfo& ginfo = *pginfo;
 
-    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries = _EnsureMapExtraGeometries(_info, {pginfo});
-    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = mapExtraGeometries.find(groupname);
-    if( it == mapExtraGeometries.end() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
+    // the named group may live in either the regular extra map or the safety map; add to whichever holds it
+    std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
+    if( it == _info._mapExtraGeometries.end() ) {
+        it = _info._mapExtraGeometriesSafety.find(groupname);
+        if( it == _info._mapExtraGeometriesSafety.end() ) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("geometry group %s does not exist for link %s"), groupname%GetName(), ORE_InvalidArguments);
+        }
     }
     if( ginfo._name.size() > 0 ) {
         FOREACHC(itgeometryinfo, it->second) {

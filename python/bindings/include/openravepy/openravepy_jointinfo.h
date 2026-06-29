@@ -102,7 +102,6 @@ public:
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
-    bool _bIsSafetyGeometry = false;
 
     object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
@@ -298,7 +297,6 @@ public:
     bool IsDraw();
     bool IsVisible();
     bool IsModifiable();
-    bool IsSafetyGeometry();
     GeometryType GetType();
     py::array_t<dReal> GetTransform();
     py::array_t<dReal> GetTransformPose();
@@ -359,6 +357,7 @@ public:
     bool IsEnabled() const;
     bool SetVisible(bool visible);
     bool IsVisible() const;
+    bool SetSafetyGeometriesVisible(bool visible, const std::string& groupname=std::string());
     bool IsStatic() const;
     void SetIgnoreSelfCollision(bool bIgnore);
     bool IsSelfCollisionIgnored() const;
@@ -415,6 +414,8 @@ public:
     py::list GetGeometriesFromGroup(const std::string& name);
 
     void SetGroupGeometries(const std::string& name, object ogeometryinfos);
+
+    void SetSafetyGroupGeometries(const std::string& name, object ogeometryinfos);
 
     int GetGroupNumGeometries(const std::string& geomname);
 

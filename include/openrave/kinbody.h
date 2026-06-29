@@ -382,7 +382,6 @@ public:
                    && _fTransparency == other._fTransparency
                    && _bVisible == other._bVisible
                    && _bModifiable == other._bModifiable
-                   && _bIsSafetyGeometry == other._bIsSafetyGeometry
                    && _calibrationBoardParameters == other._calibrationBoardParameters
                    && _vNegativeCropContainerMargins == other._vNegativeCropContainerMargins
                    && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins
@@ -585,7 +584,6 @@ public:
         float _fTransparency = 0; ///< value from 0-1 for the transparency of the rendered object, 0 is opaque
         bool _bVisible = true; ///< if true, geometry is visible as part of the 3d model (default is true)
         bool _bModifiable = true; ///< if true, object geometry can be dynamically modified (default is true)
-        bool _bIsSafetyGeometry = false; ///< if true, geometry is used for safety geometry.
         Vector _vNegativeCropContainerMargins = Vector(0,0,0); ///< The negative crop margins component
         Vector _vPositiveCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
         Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
@@ -759,9 +757,6 @@ public:
         }
         inline bool IsModifiable() const {
             return _info._bModifiable;
-        }
-        inline bool IsSafetyGeometry() const {
-            return _info._bIsSafetyGeometry;
         }
 
         inline dReal GetSphereRadius() const {
@@ -1387,11 +1382,21 @@ public:
         /// any be careful not to modify the geometries afterwards
         void SetGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
+        /// \brief stores safety geometries (LinkInfo::_mapExtraGeometriesSafety) for a group, for later retrieval
+        ///
+        /// Counterpart of SetGroupGeometries that targets the dedicated safety geometry map instead of the
+        /// regular extra geometry map. Unlike the regular extra geometries, safety geometries are serialized
+        /// and deep-copied.
+        void SetSafetyGroupGeometries(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+
 private:
         /// \brief stores geometries for later retrieval
         ///
         /// This call is identical to SetGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
         void _SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
+
+        /// \brief identical to SetSafetyGroupGeometries but does not post a Prop_LinkGeometryGroup update. Caller must ensure this occurs.
+        void _SetSafetyGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
 public:
         /// \brief returns the number of geometries stored from a particular key
