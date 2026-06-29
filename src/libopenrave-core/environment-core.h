@@ -3559,9 +3559,9 @@ public:
         return true;
     }
 
-    void NotifyKinBodyReadableInterfacesAdded(std::unique_lock<boost::shared_mutex>& lockReadableInterface, const KinBody& body, const std::vector<const char*>& vAddedIds) override
+    void NotifyKinBodyReadableInterfacesAdded(int environmentBodyIndex, const std::vector<const char*>& vAddedIds) override
     {
-        if( vAddedIds.empty() || _kinBodyEnvironmentIdByReadableInterfaceId.empty()) { // empty() should be thread safe
+        if( vAddedIds.empty() || _kinBodyEnvironmentIdByReadableInterfaceId.empty() || environmentBodyIndex <= 0 ) { // empty() should be thread safe
             // nothing to do
             return;
         }
@@ -3572,9 +3572,7 @@ public:
             std::unordered_map<std::string, std::unordered_set<int> >::iterator itEnvironmentIds = _kinBodyEnvironmentIdByReadableInterfaceId.find(pAddedId);
             if( itEnvironmentIds != _kinBodyEnvironmentIdByReadableInterfaceId.end() ) {
                 // If this body isn't added to the environment then we don't need to index it
-                const int envBodyIndex = body.GetEnvironmentBodyIndex();
-                BOOST_ASSERT(envBodyIndex > 0);
-                itEnvironmentIds->second.insert(envBodyIndex);
+                itEnvironmentIds->second.insert(environmentBodyIndex);
             }
         }
     }
