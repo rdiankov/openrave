@@ -6762,12 +6762,6 @@ void KinBody::_GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupName
 {
     vGroupNames.clear();
     FOREACH(itlink, _veclinks) {
-        FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometries) {
-            if( itExtraGeom->first.find(groupName) == 0 &&
-                (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
-                vGroupNames.push_back(itExtraGeom->first);
-            }
-        }
         // also enumerate the safety geometry groups so that callers (e.g. collision checkers) see all groups
         FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometriesSafety) {
             if( itExtraGeom->first.find(groupName) == 0 &&
