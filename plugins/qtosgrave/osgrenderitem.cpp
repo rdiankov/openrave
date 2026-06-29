@@ -778,6 +778,16 @@ void KinBodyItem::_AddSafetyGeometryOverlay(const KinBody::LinkPtr& porlink, OSG
         return;
     }
 
+    // The safety overlay is a separate visualization channel anchored to its host link: it is drawn only
+    // when the link's real geometry is on screen, so hiding the link (Link/KinBody::SetVisible(false)) also
+    // suppresses its envelope, without ever touching the safety geometries' own visibility flags. A link
+    // with no standard geometry counts as "shown" so its envelope is not permanently suppressed
+    // (Link::IsVisible() returns false for an empty geometry list).
+    const bool bHostShown = porlink->GetGeometries().empty() || porlink->IsVisible();
+    if( !bHostShown ) {
+        return;
+    }
+
     // One group per link holds all of this link's safety geometries, mainly for scene-graph clarity.
     OSGGroupPtr posglinksafety = new osg::Group();
     posglinksafety->setName(str(boost::format("link%dsafety")%porlink->GetIndex()));
