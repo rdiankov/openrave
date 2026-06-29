@@ -1683,54 +1683,56 @@ public:
 
     void GetBodiesWithReadableInterface(std::vector<KinBodyPtr>& vBodiesWithReadableInterface, const std::string& id, uint64_t timeout) const override
     {
-        // Need the interface lock for _vecbodies
-        TimedSharedLock lockInterfaces(_mutexInterfaces, timeout);
-        if (!lockInterfaces) {
-            throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
-        }
-
         vBodiesWithReadableInterface.clear();
+        std::unordered_set<int> matchedBodyIndices;
 
-        // Snapshot the candidate set of body indices for this id. Common case: the id is already tracked, so a shared lock suffices.
         {
-            boost::shared_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
-            const std::unordered_map<std::string, std::unordered_set<int> >::const_iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
-            if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
-                vBodiesWithReadableInterface.reserve(it->second.size());
-                for (int environmentBodyIndex : it->second) {
-                    // Ignore invalid body indices
-                    if (environmentBodyIndex <= 0 || environmentBodyIndex >= (int)_vecbodies.size()) {
-                        continue;
+            // Need the interface lock for _vecbodies
+            TimedSharedLock lockInterfaces(_mutexInterfaces, timeout);
+            if (!lockInterfaces) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
+            }
+
+            // Snapshot the candidate set of body indices for this id. Common case: the id is already tracked, so a shared lock suffices.
+            {
+                boost::shared_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
+                const std::unordered_map<std::string, std::unordered_set<int> >::const_iterator it = _kinBodyEnvironmentIdByReadableInterfaceId.find(id);
+                if (it != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                    vBodiesWithReadableInterface.reserve(it->second.size());
+                    for (int environmentBodyIndex : it->second) {
+                        // Ignore invalid body indices
+                        if (environmentBodyIndex <= 0 || environmentBodyIndex >= (int)_vecbodies.size()) {
+                            continue;
+                        }
+
+                        // If this body slot is still live, copy it into the output
+                        const KinBodyPtr& pbody = _vecbodies[environmentBodyIndex];
+                        if (!!pbody) {
+                            vBodiesWithReadableInterface.emplace_back(pbody);
+                        }
                     }
 
-                    // If this body slot is still live, copy it into the output
-                    const KinBodyPtr& pbody = _vecbodies[environmentBodyIndex];
-                    if (!!pbody) {
-                        vBodiesWithReadableInterface.emplace_back(pbody);
-                    }
+                    return;
                 }
+            }
 
-                return;
+            // If this is the first time this id has ever been requested, we need to build its cache entry
+            // We need **exclusive** cache access for this rebuild, since we're mutating.
+
+            // Scan all bodies in the env for this readable and add their index to the cache
+            // Since all these bodies are in vecbodies, they _must_ have valid environment body indices.
+            for (const KinBodyPtr& pbody : _vecbodies) {
+                if (!!pbody && pbody->HasReadableInterface(id)) {
+                    matchedBodyIndices.insert(pbody->GetEnvironmentBodyIndex());
+
+                    vBodiesWithReadableInterface.push_back(pbody);
+                }
             }
         }
 
-        // If this is the first time this id has ever been requested, we need to build its cache entry
-        // We need **exclusive** cache access for this rebuild, since we're mutating.
+        EnvironmentLock lockenv(GetMutex()); // lock the environment to prevent any NotifyKinBodyReadableInterfacesAdded
         std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
-
-        // Double-check: another thread may have seeded this id during the window between our previous lock
-        std::unordered_set<int>& matchedBodyIndices = _kinBodyEnvironmentIdByReadableInterfaceId[id];
-        matchedBodyIndices.clear(); // clear just in case there are race conditions
-
-        // Scan all bodies in the env for this readable and add their index to the cache
-        // Since all these bodies are in vecbodies, they _must_ have valid environment body indices.
-        for (const KinBodyPtr& pbody : _vecbodies) {
-            if (!!pbody && pbody->HasReadableInterface(id)) {
-                matchedBodyIndices.insert(pbody->GetEnvironmentBodyIndex());
-
-                vBodiesWithReadableInterface.push_back(pbody);
-            }
-        }
+        _kinBodyEnvironmentIdByReadableInterfaceId[id] = std::move(matchedBodyIndices);
     }
 
     void MapBodies(const std::function<void(KinBody&)>& mapFunction, uint64_t timeout = 0) const override
@@ -4703,10 +4705,10 @@ protected:
     ///
     /// Protected by _mutexReadableInterfaceCache.
     /// This is locked separately to avoid conflicts with _mutexInterfaces, which could occur if changing readables during a MapBodies call.
-    /// Lock ordering: _mutexInterfaces -> _mutexReadableInterfaceCache -> body readable mutex.
     mutable std::unordered_map<std::string, std::unordered_set<int> > _kinBodyEnvironmentIdByReadableInterfaceId;
 
-    /// Guards _kinBodyEnvironmentIdByReadableInterfaceId. See the lock-ordering note above.
+    /// Guards _kinBodyEnvironmentIdByReadableInterfaceId.
+    /// Lock ordering: _mutexInterfaces -> _mutexReadableInterfaceCache
     mutable boost::shared_mutex _mutexReadableInterfaceCache;
 
     int _assignedBodySensorNameIdSuffix; // cache of suffix used to make body (including robot) and sensor name and id unique in env
