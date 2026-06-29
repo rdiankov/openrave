@@ -1399,6 +1399,15 @@ public:
         /// \return if -1, then the geometries are not in _mapExtraGeometries, otherwise the number
         int GetGroupNumGeometries(const std::string& name) const;
 
+        /// \brief sets the visibility of the safety extra geometries (LinkInfo::_mapExtraGeometriesSafety)
+        ///
+        /// Safety geometries are stored only as GeometryInfo (not instantiated as Link::Geometry), so their
+        /// visibility is changed on the info directly. Posts Prop_LinkDraw so that viewers refresh.
+        /// \param visible new visibility flag applied to the safety geometries
+        /// \param groupname if non-empty, only the safety group with this name is affected; if empty, all safety groups are affected
+        /// \return true if any geometry's visibility actually changed
+        bool SetSafetyGeometriesVisible(bool visible, const std::string& groupname=std::string());
+
         /// \brief swaps the geometries with the link
         void SwapGeometries(boost::shared_ptr<Link>& link);
 

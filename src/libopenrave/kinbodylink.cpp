@@ -976,6 +976,27 @@ int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const
     return -1;
 }
 
+bool KinBody::Link::SetSafetyGeometriesVisible(bool visible, const std::string& groupname)
+{
+    bool bChanged = false;
+    for( std::pair<const std::string, std::vector<GeometryInfoPtr> >& grouppair : _info._mapExtraGeometriesSafety ) {
+        if( !groupname.empty() && grouppair.first != groupname ) {
+            continue;
+        }
+        for( GeometryInfoPtr& pinfo : grouppair.second ) {
+            if( !!pinfo && pinfo->_bVisible != visible ) {
+                pinfo->_bVisible = visible;
+                bChanged = true;
+            }
+        }
+    }
+    if( bChanged ) {
+        // visibility is purely visual, so notify draw listeners (e.g. the viewer) without invalidating collision caches
+        GetParent()->_PostprocessChangedParameters(Prop_LinkDraw);
+    }
+    return bChanged;
+}
+
 void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroups)
 {
     if( !pginfo ) {

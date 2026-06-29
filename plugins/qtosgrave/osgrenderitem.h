@@ -199,6 +199,11 @@ protected:
     virtual void _HandleGeometryChangedCallback();
     virtual void _HandleDrawChangedCallback();
 
+    /// \brief Builds a translucent overlay of the link's safety geometries (LinkInfo::_mapExtraGeometriesSafety)
+    ///        and attaches it under posglinktrans, in addition to the active geometries. Per-geometry
+    ///        visibility follows GeometryInfo::_bVisible, exactly like the active geometries.
+    void _AddSafetyGeometryOverlay(const KinBody::LinkPtr& porlink, OSGMatrixTransformPtr posglinktrans);
+
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LinkNodes;
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> GeomNodes;
 

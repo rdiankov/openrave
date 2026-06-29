@@ -628,6 +628,10 @@ void KinBodyItem::Load()
                 _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
             }
         }
+
+        // Build the translucent safety-geometry overlay for this link. It is rendered in addition to
+        // the active geometries; each safety geometry shows according to its own _bVisible flag.
+        _AddSafetyGeometryOverlay(porlink, posglinktrans);
     }
 
     //  Is an object without joints
@@ -766,6 +770,93 @@ void KinBodyItem::_PrintNodeFeatures(OSGNodePtr node)
 //
 //    return normals;
 //}
+
+void KinBodyItem::_AddSafetyGeometryOverlay(const KinBody::LinkPtr& porlink, OSGMatrixTransformPtr posglinktrans)
+{
+    const KinBody::LinkInfo& linkinfo = porlink->GetInfo();
+    if( linkinfo._mapExtraGeometriesSafety.empty() ) {
+        return;
+    }
+
+    // One group per link holds all of this link's safety geometries, mainly for scene-graph clarity.
+    OSGGroupPtr posglinksafety = new osg::Group();
+    posglinksafety->setName(str(boost::format("link%dsafety")%porlink->GetIndex()));
+
+    // Mujin primary orange (#e76125), rendered translucent so the real geometry stays visible underneath.
+    const osg::Vec4f safetyColor(0.905f, 0.380f, 0.145f, 1.0f);
+    const float safetyTransparency = 0.65f;
+
+    FOREACHC(itgroup, linkinfo._mapExtraGeometriesSafety) {
+        FOREACHC(itinfo, itgroup->second) {
+            const KinBody::GeometryInfoPtr& pinfo = *itinfo;
+            if( !pinfo ) {
+                continue;
+            }
+            // Visibility is driven purely by the per-geometry flag, mirroring the active path.
+            if( !pinfo->_bVisible ) {
+                continue;
+            }
+            // if( !pinfo->_bVisible && _viewmode == VG_RenderOnly ) {
+            //     continue;
+            // }
+            // Render every safety geometry uniformly from its collision mesh, regardless of primitive
+            // type. Generate the mesh on demand if it has not been computed yet.
+            if( pinfo->_meshcollision.vertices.empty() ) {
+                pinfo->InitCollisionMesh();
+            }
+            const TriMesh& mesh = pinfo->_meshcollision;
+            if( mesh.indices.empty() ) {
+                continue;
+            }
+
+            osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
+            osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array();
+            vertices->reserveArray(mesh.vertices.size());
+            for(size_t i = 0; i < mesh.vertices.size(); ++i) {
+                const RaveVector<float> v = mesh.vertices[i];
+                vertices->push_back(osg::Vec3(v.x, v.y, v.z));
+            }
+            geom->setVertexArray(vertices.get());
+
+            osg::DrawElementsUInt* prim = new osg::DrawElementsUInt(osg::PrimitiveSet::TRIANGLES, mesh.indices.size());
+            for(size_t i = 0; i < mesh.indices.size(); ++i) {
+                (*prim)[i] = mesh.indices[i];
+            }
+            geom->addPrimitiveSet(prim);
+            geom->setUseVertexBufferObjects(true);
+            osgUtil::SmoothingVisitor::smooth(*geom);
+
+            osg::ref_ptr<osg::Geode> geode = new osg::Geode;
+            geode->addDrawable(geom);
+
+            // geometry-local transform (relative to the link)
+            OSGMatrixTransformPtr pgeomtrans = new osg::MatrixTransform();
+            SetMatrixTransform(*pgeomtrans, pinfo->GetTransform());
+            pgeomtrans->addChild(geode);
+
+            // translucent material + transparent-bin setup (mirrors the active-geometry path)
+            osg::ref_ptr<osg::StateSet> state = pgeomtrans->getOrCreateStateSet();
+            osg::ref_ptr<osg::Material> mat = new osg::Material;
+            mat->setDiffuse(osg::Material::FRONT_AND_BACK, safetyColor);
+            mat->setAmbient(osg::Material::FRONT_AND_BACK, safetyColor);
+            mat->setEmission(osg::Material::FRONT, osg::Vec4(0.0, 0.0, 0.0, 1.0));
+            mat->setTransparency(osg::Material::FRONT_AND_BACK, safetyTransparency);
+            state->setAttributeAndModes(mat, osg::StateAttribute::ON | osg::StateAttribute::OVERRIDE);
+            state->setAttributeAndModes(new osg::BlendFunc(osg::BlendFunc::SRC_ALPHA, osg::BlendFunc::ONE_MINUS_SRC_ALPHA));
+            state->setMode(GL_BLEND, osg::StateAttribute::ON);
+            state->setRenderingHint(osg::StateSet::TRANSPARENT_BIN);
+            osg::Depth* depth = new osg::Depth;
+            depth->setWriteMask(false); // do not occlude the real geometry behind it
+            state->setAttributeAndModes(depth, osg::StateAttribute::ON);
+
+            posglinksafety->addChild(pgeomtrans);
+        }
+    }
+
+    if( posglinksafety->getNumChildren() > 0 ) {
+        posglinktrans->addChild(posglinksafety);
+    }
+}
 
 void KinBodyItem::_HandleGeometryChangedCallback()
 {
