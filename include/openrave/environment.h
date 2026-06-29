@@ -932,25 +932,28 @@ public:
     /// if parameter is not present, will return defaultValue
     virtual uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const = 0;
 
-    /// \brief notifys name of kin body is changed.
+    /// \brief notifys name of kin body is changed.  <b>[not multi-thread safe]</b>
     ///
     /// Should be called when name of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
+    /// Should be called with GetMutex() locked.
     /// \param oldName name before change
     /// \param newName name after change
     /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
     virtual bool NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) = 0;
 
-    /// \brief retries the named parameter to be tracked by the environment.
+    /// \brief retries the named parameter to be tracked by the environment.  <b>[not multi-thread safe]</b>
     ///
+    /// Should be called with GetMutex() locked.
     /// Should be called when id of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
     /// \param oldId id before change
     /// \param newId id after change
     /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
     virtual bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
 
-    /// \brief notifies that a kin body added to this env may have gained one or more readable interfaces.
+    /// \brief notifies that a kin body added to this env may have gained one or more readable interfaces.  <b>[not multi-thread safe]</b>
     ///
     /// Called internally from a KinBody, should not KinBody::GetReadableInterfaceMutex() locked when this is called
+    /// Should be called with GetMutex() locked.
     /// Should be called after any non-null readable interface is added to / updated on a body so that it can be indexed for GetBodiesWithReadableInterface.
     /// Removals do not need to be reported: the cache is allowed to over-approximate.
     /// If no id is currently being tracked, this returns immediately without taking any environment lock.
