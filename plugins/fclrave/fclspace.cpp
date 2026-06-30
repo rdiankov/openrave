@@ -76,6 +76,13 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
     pinfo->vlinks.clear();
     pinfo->vlinks.reserve(pbody->GetLinks().size());
+
+    // Safety geometry groups are matched strictly: a link that does not carry the group contributes no
+    // geometry (so safety checking only happens between bodies that both opt in by carrying the group). Every
+    // other group -- the empty/default group, "self", padding, ... -- falls back to the link's active geometry
+    // when absent, preserving the historical behavior. Classified once here since it depends only on the body
+    // and the group, not the link.
+    const bool bIsSafetyGroup = pbody->IsSafetyGeometryGroup(pinfo->_geometrygroup);
     FOREACHC(itlink, pbody->GetLinks()) {
         const KinBody::LinkPtr& plink = *itlink;
         boost::shared_ptr<FCLKinBodyInfo::LinkInfo> linkinfo(new FCLKinBodyInfo::LinkInfo(plink));
@@ -134,8 +141,10 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
             }
             linkinfo->bFromExtraGeometries = true;
         }
-        else if ( _geometrygroup.empty() || _geometrygroup == "self" ) {
-            // if this checker is for default geometries checking, allow to check collision with geometries with other group names. let's say, allow to check with "padding" of robot and "self" of obstacle.
+        else if ( !bIsSafetyGroup ) {
+            // The link does not carry the requested group. For non-safety groups (including the empty/default
+            // group), fall back to the link's active geometry -- this matches the historical behavior and lets,
+            // e.g., a "padding" group of one body be checked against the "self"/active geometry of another.
             const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
             FOREACH(itgeom, vgeometries) {
                 const KinBody::GeometryPtr& pgeom = *itgeom;
@@ -174,7 +183,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
             linkinfo->bFromExtraGeometries = false;
         }
         else {
-            // if not the default geometries checking, strictly check the geometry group name, so that the checking is done only among the geometries with the given group name.
+            // safety geometry group that this link does not carry -> contribute no geometry (strict). This is the
+            // only behavior added on top of the historical (production) logic; non-safety groups never reach here.
         }
 
         if( linkinfo->vgeoms.size() == 0 ) {
