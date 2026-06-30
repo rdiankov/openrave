@@ -636,7 +636,7 @@ CollisionOptionsStateSaverAll::CollisionOptionsStateSaverAll(const EnvironmentBa
     // if failed, restore first, and the throw.
     if( iCheckerFailed >= 0 ) {
         _Restore();
-        throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%(_vOldOptions[iCheckerFailed] | options)%_vCheckers[iCheckerFailed]->GetXMLId()));
+        throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%_ComputeNewOption(_vOldOptions[iCheckerFailed], options, modificationType)%_vCheckers[iCheckerFailed]->GetXMLId()));
     }
 }
 
