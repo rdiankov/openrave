@@ -755,6 +755,20 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
     _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
+bool KinBody::IsSafetyGeometryGroup(const std::string& groupname) const
+{
+    if( groupname.empty() ) {
+        return false;
+    }
+    FOREACHC(itlink, _veclinks) {
+        const std::map< std::string, std::vector<GeometryInfoPtr> >& mapSafety = (*itlink)->_info._mapExtraGeometriesSafety;
+        if( mapSafety.find(groupname) != mapSafety.end() ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void KinBody::_InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo)
 {
     linkPtr->_vGeometries.clear();
