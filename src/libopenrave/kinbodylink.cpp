@@ -923,27 +923,32 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
     }
 }
 
-static void _StoreGroupGeometriesIntoMap(std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapExtraGeometries, const std::string& bodyname, const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+static void _StoreGroupGeometriesIntoMap(std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapTarget, const std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapConflicting, const char* conflictingKind, const std::string& bodyname, const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
+    // a group name must live in at most one of the safety / non-safety maps: a group (and therefore a
+    // collision checker that uses it) cannot mix safety and non-safety geometry.
+    if( mapConflicting.find(groupname) != mapConflicting.end() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("cannot set geometry group '%s' for body %s: a %s geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), groupname%bodyname%conflictingKind, ORE_InvalidArguments);
+    }
     FOREACH(itgeominfo, geometries) {
         if (!(*itgeominfo)) {
             int igeominfo = itgeominfo - geometries.begin();
             throw OPENRAVE_EXCEPTION_FORMAT("GeometryInfo index %d is invalid for body %s", igeominfo % bodyname, ORE_InvalidArguments);
         }
     }
-    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>::iterator it = mapExtraGeometries.insert(make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>())).first;
+    std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>::iterator it = mapTarget.insert(make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>())).first;
     it->second.resize(geometries.size());
     std::copy(geometries.begin(), geometries.end(), it->second.begin());
 }
 
 void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometries, GetParent()->GetName(), groupname, geometries);
+    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometries, _info._mapExtraGeometriesSafety, "safety", GetParent()->GetName(), groupname, geometries);
 }
 
 void KinBody::Link::_SetSafetyGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometriesSafety, GetParent()->GetName(), groupname, geometries);
+    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometriesSafety, _info._mapExtraGeometries, "non-safety", GetParent()->GetName(), groupname, geometries);
 }
 
 void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)

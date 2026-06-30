@@ -2690,6 +2690,13 @@ private:
     /// This method is faster than Link::SetGeometriesFromGroup since it makes only one change callback.
     virtual void SetLinkGroupGeometries(const std::string& name, const std::vector< std::vector<KinBody::GeometryInfoPtr> >& linkgeometries);
 
+    /// \brief returns true if the given geometry group is a safety geometry group on this body
+    ///
+    /// True iff some link stores the group in LinkInfo::_mapExtraGeometriesSafety. Safety groups are matched
+    /// strictly during collision checking: a link/body that does not carry the group contributes no geometry,
+    /// rather than falling back to its active geometry. Returns false for the empty (default) group.
+    bool IsSafetyGeometryGroup(const std::string& groupname) const;
+
     /// \brief Unique name of the body.
     virtual const std::string& GetName() const {
         return _name;
