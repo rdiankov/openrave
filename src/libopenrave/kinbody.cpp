@@ -953,41 +953,37 @@ ReadablePtr KinBody::SetReadableInterface(const std::string& id, const ReadableP
 
 void KinBody::SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting)
 {
-    std::vector<const char*> vAddedIds;
-    {
-        std::unique_lock<boost::shared_mutex> lockReadableInterface(GetReadableInterfaceMutex());
-        ReadablesContainer::_SetReadableInterfaces(mapReadables, bClearAllExisting);
+    std::unique_lock<boost::shared_mutex> lockReadableInterface(GetReadableInterfaceMutex());
+    ReadablesContainer::_SetReadableInterfaces(mapReadables, bClearAllExisting);
 
-        if (GetEnvironmentBodyIndex() > 0) {
-            // This bulk update may have added one or more interfaces.
-            // We do not compute the exact diff here to avoid extra work - let the environment short-circuit if nothing is being tracked.
-            vAddedIds.reserve(GetReadableInterfaces().size());
-            for(const READERSMAP::value_type& info : GetReadableInterfaces()) {
-                vAddedIds.push_back(info.first.c_str());
-            }
+    if (GetEnvironmentBodyIndex() > 0) {
+        // This bulk update may have added one or more interfaces.
+        // We do not compute the exact diff here to avoid extra work - let the environment short-circuit if nothing is being tracked.
+        std::vector<const char*> vAddedIds;
+        vAddedIds.reserve(GetReadableInterfaces().size());
+        for(const READERSMAP::value_type& info : GetReadableInterfaces()) {
+            vAddedIds.push_back(info.first.c_str());
         }
-    }
-    if( !vAddedIds.empty() ) {
-        GetEnv()->NotifyKinBodyReadableInterfacesAdded(GetEnvironmentBodyIndex(), vAddedIds);
+
+        if( !vAddedIds.empty() ) {
+            GetEnv()->NotifyKinBodyReadableInterfacesAdded(GetEnvironmentBodyIndex(), vAddedIds);
+        }
     }
 }
 
 bool KinBody::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces)
 {
     std::vector<const char*> vAddedIds;
-    bool bChanged;
-    {
-        std::unique_lock<boost::shared_mutex> lockReadableInterface(GetReadableInterfaceMutex());
-        bool bNeedEnvNotify = GetEnvironmentBodyIndex() > 0; // If we aren't added to the env, do nothing. We don't exist. The env re-checks this, but this avoids the virtual call.
-        bChanged = ReadablesContainer::_UpdateReadableInterfaces(newReadableInterfaces, bNeedEnvNotify ? &vAddedIds : nullptr);
-    }
+    std::unique_lock<boost::shared_mutex> lockReadableInterface(GetReadableInterfaceMutex());
+    bool bNeedEnvNotify = GetEnvironmentBodyIndex() > 0; // If we aren't added to the env, do nothing. We don't exist. The env re-checks this, but this avoids the virtual call.
+    bool bChanged = ReadablesContainer::_UpdateReadableInterfaces(newReadableInterfaces, bNeedEnvNotify ? &vAddedIds : nullptr);
 
-    // Only notify if something actually changed; the change may have been an addition.
-    // As above, the environment short-circuits cheaply when it is not tracking any interface id, so we do not bother distinguishing additions from removals here.
+    // keep the lock since vAddedIds contains pointers
     if (!vAddedIds.empty()) {
-        // Pass ourselves directly to the notification function as proof that our environment body index maps to a real body in the environment.
+        // Only notify if something actually changed; the change may have been an addition.
         GetEnv()->NotifyKinBodyReadableInterfacesAdded(GetEnvironmentBodyIndex(), vAddedIds);
     }
+
     return bChanged;
 }
 
