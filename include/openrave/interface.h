@@ -96,7 +96,7 @@ public:
     /// \brief Returns whether a readable interface exists. <b>[multi-thread safe]</b>
     virtual bool HasReadableInterface(const std::string& id) const;
 
-    /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
+    /// \brief Set a new readable interface and return the previously set interface if it exists.
     virtual ReadablePtr SetReadableInterface(const std::string& id, const ReadablePtr& readable);
 
     /// \brief sets a set of readable interfaces all at once. The pointers are copied
