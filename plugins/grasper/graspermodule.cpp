@@ -963,15 +963,13 @@ public:
             probot->GetActiveManipulator()->GetIndependentLinks(vindependentlinks);
             Transform trobotstart = probot->GetTransform();
 
-            // use CO_ActiveDOFs since might be calling FindIKSolution
-            std::vector<CollisionCheckerBasePtr> vCollisionCheckers, vClonedCollisionCheckers;
-            GetEnv()->GetCollisionCheckers(vCollisionCheckers);
+            // use CO_ActiveDOFs since might be calling FindIKSolution. The cloned env's collision checkers run
+            // with contacts on as the baseline (used for contact-normal computation); the grasp-IK feasibility
+            // checks below temporarily remove CO_Contacts. Mirrors origin/production, generalized to all checkers.
+            std::vector<CollisionCheckerBasePtr> vClonedCollisionCheckers;
             pcloneenv->GetCollisionCheckers(vClonedCollisionCheckers);
-            std::vector<int> vCollisionOptions(vCollisionOptions.size());
-            for(int iChecker = 0; iChecker < (int)vCollisionOptions.size(); ++iChecker) {
-                vCollisionOptions[iChecker] = vCollisionCheckers[iChecker]->GetCollisionOptions()|(worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0);
-                vCollisionOptions[iChecker] &= ~CO_Contacts;
-                vClonedCollisionCheckers.at(iChecker)->SetCollisionOptions(vCollisionOptions[iChecker]|CO_Contacts);
+            for(const CollisionCheckerBasePtr& pClonedChecker : vClonedCollisionCheckers) {
+                pClonedChecker->SetCollisionOptions(pClonedChecker->GetCollisionOptions() | (worker_params->bCheckGraspIK ? CO_ActiveDOFs : 0) | CO_Contacts);
             }
 
             while(_bContinueWorker) {
@@ -1049,7 +1047,7 @@ public:
                 }
 
                 if ( worker_params->bCheckGraspIK ) {
-                    CollisionOptionsStateSaverAll optionstate(pcloneenv,vCollisionOptions,false); // remove contacts
+                    CollisionOptionsStateSaverAll optionstate(pcloneenv, CO_Contacts, false, COMT_Remove); // remove contacts
                     Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                     RobotBase::RobotStateSaver linksaver(probot);
                     probot->SetTransform(trobotstart);
@@ -1114,7 +1112,7 @@ public:
                         BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
 
                         if ( worker_params->bCheckGraspIK ) {
-                            CollisionOptionsStateSaverAll optionstate(pcloneenv,vCollisionOptions,false); // remove contacts
+                            CollisionOptionsStateSaverAll optionstate(pcloneenv, CO_Contacts, false, COMT_Remove); // remove contacts
                             RobotBase::RobotStateSaver linksaver(probot);
                             ptraj->GetWaypoint(-1,vtrajpoint);
                             Transform t = probot->GetTransform();
