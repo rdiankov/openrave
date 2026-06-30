@@ -242,7 +242,7 @@ void IvObjectDragger::CheckCollision(bool flag)
         if( !!pbody ) {
             EnvironmentLock lock(_penv->GetMutex());
             if( !!lock ) {
-                CollisionOptionsStateSaverAll optionSaver(_penv, CO_Contacts, false, COMT_Set);
+                CollisionOptionsStateSaver optionSaver(_penv, CO_Contacts, false, COMT_Set);
                 CollisionReportPtr preport(new CollisionReport());
                 if( pbody->GetBody()->CheckSelfCollision(preport) ) {
                     RAVELOG_VERBOSE(str(boost::format("self-collision %s\n")%preport->__str__()));
@@ -450,7 +450,7 @@ void IvJointDragger::CheckCollision(bool flag)
         if( !!pbody ) {
             EnvironmentLock lock(_penv->GetMutex());
             if( !!lock ) {
-                CollisionOptionsStateSaverAll optionSaver(_penv, CO_Contacts, false, COMT_Set);
+                CollisionOptionsStateSaver optionSaver(_penv, CO_Contacts, false, COMT_Set);
                 if (_penv->CheckCollision(KinBodyConstPtr(pbody->GetBody())) || pbody->GetBody()->CheckSelfCollision()) {
                     _SetColor(COLLISION_COLOR);
                 }

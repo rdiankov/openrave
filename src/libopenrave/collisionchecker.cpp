@@ -598,23 +598,14 @@ int CollisionReport::SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, c
     return 0;
 }
 
-CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required)
+CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int options, bool required, CollisionOptionsModificationType modificationType)
 {
-    _oldoptions = p->GetCollisionOptions();
-    _p = p;
-    if( !_p->SetCollisionOptions(newoptions) ) {
-        if( required ) {
-            throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%newoptions%_p->GetXMLId()));
-        }
-    }
+    _vCheckers.push_back(p);
+    _vOldOptions.push_back(p->GetCollisionOptions());
+    _ApplyOptions(options, required, modificationType);
 }
 
-CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
-{
-    _p->SetCollisionOptions(_oldoptions);
-}
-
-CollisionOptionsStateSaverAll::CollisionOptionsStateSaverAll(const EnvironmentBasePtr pEnv, const int options, const bool required, const CollisionOptionsModificationType modificationType)
+CollisionOptionsStateSaver::CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required, CollisionOptionsModificationType modificationType)
 {
     // initialize checkers and old options
     pEnv->GetCollisionCheckers(_vCheckers);
@@ -622,7 +613,16 @@ CollisionOptionsStateSaverAll::CollisionOptionsStateSaverAll(const EnvironmentBa
     for(const CollisionCheckerBasePtr& pChecker : _vCheckers) {
         _vOldOptions.push_back(pChecker->GetCollisionOptions());
     }
+    _ApplyOptions(options, required, modificationType);
+}
 
+CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
+{
+    _Restore();
+}
+
+void CollisionOptionsStateSaver::_ApplyOptions(int options, bool required, CollisionOptionsModificationType modificationType)
+{
     // try setting
     int iCheckerFailed = -1;
     for(int iChecker = 0; iChecker < (int)_vCheckers.size(); ++iChecker) {
@@ -633,26 +633,21 @@ CollisionOptionsStateSaverAll::CollisionOptionsStateSaverAll(const EnvironmentBa
         }
     }
 
-    // if failed, restore first, and the throw.
+    // if failed, restore first, and then throw.
     if( iCheckerFailed >= 0 ) {
         _Restore();
         throw openrave_exception(str(boost::format(_("Failed to set collision options %d in checker %s\n"))%_ComputeNewOption(_vOldOptions[iCheckerFailed], options, modificationType)%_vCheckers[iCheckerFailed]->GetXMLId()));
     }
 }
 
-CollisionOptionsStateSaverAll::~CollisionOptionsStateSaverAll()
-{
-    _Restore();
-}
-
-void CollisionOptionsStateSaverAll::_Restore()
+void CollisionOptionsStateSaver::_Restore()
 {
     for(int iChecker = 0; iChecker < (int)_vCheckers.size(); ++iChecker) {
         _vCheckers.at(iChecker)->SetCollisionOptions(_vOldOptions.at(iChecker));
     }
 }
 
-int CollisionOptionsStateSaverAll::_ComputeNewOption(const int oldOptions, const int optionsModification, const CollisionOptionsModificationType modificationType)
+int CollisionOptionsStateSaver::_ComputeNewOption(int oldOptions, int optionsModification, CollisionOptionsModificationType modificationType)
 {
     switch( modificationType )
     {
@@ -665,7 +660,7 @@ int CollisionOptionsStateSaverAll::_ComputeNewOption(const int oldOptions, const
     default:
         break;
     }
-    throw openrave_exception(str(boost::format(_("Uknown CollisionOptionModificationType %s\n"))%modificationType));
+    throw openrave_exception(str(boost::format(_("Unknown CollisionOptionsModificationType %s\n"))%modificationType));
 }
 
 } // end namespace OpenRAVE

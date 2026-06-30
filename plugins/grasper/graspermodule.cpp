@@ -1047,7 +1047,7 @@ public:
                 }
 
                 if ( worker_params->bCheckGraspIK ) {
-                    CollisionOptionsStateSaverAll optionstate(pcloneenv, CO_Contacts, false, COMT_Remove); // remove contacts
+                    CollisionOptionsStateSaver optionstate(pcloneenv, CO_Contacts, false, COMT_Remove); // remove contacts
                     Transform Tgoalgrasp = probot->GetActiveManipulator()->GetTransform();
                     RobotBase::RobotStateSaver linksaver(probot);
                     probot->SetTransform(trobotstart);
@@ -1112,7 +1112,7 @@ public:
                         BOOST_ASSERT(ptraj->GetNumWaypoints() > 0);
 
                         if ( worker_params->bCheckGraspIK ) {
-                            CollisionOptionsStateSaverAll optionstate(pcloneenv, CO_Contacts, false, COMT_Remove); // remove contacts
+                            CollisionOptionsStateSaver optionstate(pcloneenv, CO_Contacts, false, COMT_Remove); // remove contacts
                             RobotBase::RobotStateSaver linksaver(probot);
                             ptraj->GetWaypoint(-1,vtrajpoint);
                             Transform t = probot->GetTransform();

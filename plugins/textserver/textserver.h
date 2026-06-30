@@ -2067,7 +2067,7 @@ protected:
 
         CollisionReportPtr preport(new CollisionReport());
         vector<KinBody::LinkConstPtr> empty;
-        CollisionOptionsStateSaverAll optionsaver(GetEnv(), CO_Contacts, false, COMT_Add);
+        CollisionOptionsStateSaver optionsaver(GetEnv(), CO_Contacts, false, COMT_Add);
         if( linkindex >= 0 ) {
             if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(linkindex)), vignore, empty,preport)) {
                 os << "1 ";
@@ -2114,7 +2114,7 @@ protected:
         EnvironmentLock lock(GetEnv()->GetMutex());
         KinBodyPtr pbody = orMacroGetBody(is);
 
-        CollisionOptionsStateSaverAll optionSaver(GetEnv(), CO_Contacts, false, COMT_Add);
+        CollisionOptionsStateSaver optionSaver(GetEnv(), CO_Contacts, false, COMT_Add);
 
         CollisionReportPtr preport(new CollisionReport());
         RAY r;

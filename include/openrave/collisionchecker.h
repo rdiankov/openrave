@@ -369,20 +369,7 @@ private:
     friend class KinBody;
 };
 
-/// \brief Helper class to save and restore the collision options. If options are not supported and required is true, throws an exception.
-class OPENRAVE_API CollisionOptionsStateSaver
-{
-public:
-    CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int newoptions, bool required=true);
-    virtual ~CollisionOptionsStateSaver();
-private:
-    int _oldoptions;     ///< saved options
-    CollisionCheckerBasePtr _p;
-};
-
-typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
-
-/// \brief type used for CollisionOptionsStateSaverAll, about how the option from the argument is treated.
+/// \brief type used for CollisionOptionsStateSaver, about how the option from the argument is treated.
 enum CollisionOptionsModificationType
 {
     COMT_Add = 0,    ///< add, e.g. SetCollisionOptions(GetCollisionOptions() | options)
@@ -390,27 +377,46 @@ enum CollisionOptionsModificationType
     COMT_Set = 2,    ///< set, e.g. SetCollisionOptions(options)
 };
 
-/// \brief Helper class to save and restore the collision options for all collision checkers in env. If options are not supported and required is true, throws an exception.
-class OPENRAVE_API CollisionOptionsStateSaverAll
+/// \brief Helper class to save and restore collision options. If options are not supported and required is true, throws an exception.
+///
+/// Operates either on a single collision checker, or on all collision checkers in an environment
+/// (env->GetCollisionCheckers()). The options argument is applied per-checker according to modificationType
+/// (add / remove / set). Each affected checker's options are saved on construction and restored on destruction.
+/// Note the default modificationType differs between the two constructors: the single-checker form defaults to
+/// COMT_Set (its historical behavior), the environment form defaults to COMT_Add.
+class OPENRAVE_API CollisionOptionsStateSaver
 {
 public:
-    /// \brief Constructor
-    /// \param[in] pEnv : Environment
-    /// \param[in] modificationType, options : modification type and modification for options.
-    /// \parma[in] required : If options are not supported and required is true, throws an exception.
-    CollisionOptionsStateSaverAll(const EnvironmentBasePtr pEnv, const int options, const bool required=true, const CollisionOptionsModificationType modificationType=COMT_Add);
+    /// \brief save/modify the options of a single collision checker.
+    /// \param[in] p : collision checker
+    /// \param[in] options : option bits applied according to modificationType
+    /// \param[in] required : if the resulting options are not supported and required is true, throws an exception
+    /// \param[in] modificationType : how options is applied to the checker's current options (default: set)
+    CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int options, bool required=true, CollisionOptionsModificationType modificationType=COMT_Set);
 
-    virtual ~CollisionOptionsStateSaverAll();
+    /// \brief save/modify the options of all collision checkers in env (env->GetCollisionCheckers()).
+    /// \param[in] pEnv : environment
+    /// \param[in] options : option bits applied according to modificationType
+    /// \param[in] required : if the resulting options are not supported and required is true, throws an exception
+    /// \param[in] modificationType : how options is applied to each checker's current options (default: add)
+    CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required=true, CollisionOptionsModificationType modificationType=COMT_Add);
+
+    virtual ~CollisionOptionsStateSaver();
 private:
-    /// \brief restore the options. Assume _vOldOptions and _vCheckers have same sizes.
+    /// \brief apply options to the already-populated _vCheckers (with _vOldOptions already saved). On failure with required, restores and throws.
+    void _ApplyOptions(int options, bool required, CollisionOptionsModificationType modificationType);
+
+    /// \brief restore the saved options. Assumes _vOldOptions and _vCheckers have the same size.
     void _Restore();
 
     /// \brief compute the new options based on modificationType.
-    static int _ComputeNewOption(const int oldOptions, const int optionsModification, const CollisionOptionsModificationType modificationType);
+    static int _ComputeNewOption(int oldOptions, int optionsModification, CollisionOptionsModificationType modificationType);
 
-    std::vector<int> _vOldOptions; ///< vector of options
-    std::vector<CollisionCheckerBasePtr> _vCheckers; ///< vector of checkers
+    std::vector<int> _vOldOptions; ///< saved options, one per checker in _vCheckers
+    std::vector<CollisionCheckerBasePtr> _vCheckers; ///< checkers being managed (single-checker form has size 1)
 };
+
+typedef boost::shared_ptr<CollisionOptionsStateSaver> CollisionOptionsStateSaverPtr;
 
 /** \brief Helper class to save and restore the nKeepPrevious variable in a collision report. Should be used by anyone using multiple CheckCollision calls and aggregating results.
 
