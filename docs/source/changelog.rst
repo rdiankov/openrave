@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+
+Version 0.173.2
+===============
+
+- Expose PyGrabbedInfo from openravepy_int.h
+
 Version 0.173.1
 ===============
 
