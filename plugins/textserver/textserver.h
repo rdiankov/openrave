@@ -2067,7 +2067,7 @@ protected:
 
         CollisionReportPtr preport(new CollisionReport());
         vector<KinBody::LinkConstPtr> empty;
-        CollisionOptionsStateSaver optionsaver(GetEnv()->GetCollisionChecker(),CO_Contacts);
+        CollisionOptionsStateSaverAll optionsaver(GetEnv(), CO_Contacts, false, COMT_Add);
         if( linkindex >= 0 ) {
             if( GetEnv()->CheckCollision(KinBody::LinkConstPtr(pbody->GetLinks().at(linkindex)), vignore, empty,preport)) {
                 os << "1 ";
