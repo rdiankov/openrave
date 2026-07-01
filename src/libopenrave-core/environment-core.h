@@ -3589,7 +3589,11 @@ protected:
     /// \pre _mutexInterfaces is exclusively held (lock order: _mutexInterfaces -> _mutexReadableInterfaceCache).
     void _RegisterAddedBodyReadableInterfaces(const KinBody& body)
     {
-        if( !_kinBodyEnvironmentIdByReadableInterfaceId.empty() ) { // empty() should be thread safe
+        // Note that we check empty() **without** locking _mutexReadableInterfaceCache.
+        // This is only safe because the write path for _kinBodyEnvironmentIdByReadableInterfaceId is serialized on the environment mutex -
+        // the only way to modify the contents are by modifying readables on a body in the environment (requires the env mutex, which we hold here),
+        // or via the first-call cache warmup in GetBodiesbyReadableInterface, which _also_ takes the environment lock.
+        if( !_kinBodyEnvironmentIdByReadableInterfaceId.empty() ) {
             // This should only be called _as_ a body is added to the environment
             const int envBodyIndex = body.GetEnvironmentBodyIndex();
             BOOST_ASSERT(envBodyIndex > 0);
