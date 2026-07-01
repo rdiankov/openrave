@@ -603,7 +603,7 @@ public:
     virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
     /** \brief Get all bodies added to the environment that **might** currently have a non-null readable interface with the given id. <b>[multi-thread safe]</b>
-    
+
         The very first time a given id is requested, every body in the environment is scanned once to build a cache entry for that id.
         From then on the cache for that id is maintained incrementally as bodies gain the interface or are removed, so subsequent
         lookups do not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
