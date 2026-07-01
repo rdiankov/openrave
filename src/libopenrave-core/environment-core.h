@@ -3600,12 +3600,14 @@ protected:
                 return;
             }
 
+            // Check if any of the readables on this body are tracked in _kinBodyEnvironmentIdByReadableInterfaceId, and if so, register them.
+            // We iterate the readables on the _body_ in the outer loop since that set is likely to be smaller than the set of all readables tracked.
             std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
-            // check with all readable interfaces tracked by _kinBodyEnvironmentIdByReadableInterfaceId
-            for (std::pair<const std::string, std::unordered_set<int> >& trackedEntry : _kinBodyEnvironmentIdByReadableInterfaceId) {
-                const ReadablesContainer::READERSMAP::const_iterator it = mapReadables.find(trackedEntry.first);
-                if (it != mapReadables.end() && !!it->second) {
-                    trackedEntry.second.insert(body.GetEnvironmentBodyIndex());
+            for (const ReadablesContainer::READERSMAP::value_type& bodyReadableIt : mapReadables) {
+                const std::string& readableId = bodyReadableIt.first;
+                const std::unordered_map<std::string, std::unordered_set<int>>::iterator kinBodyCacheIt = _kinBodyEnvironmentIdByReadableInterfaceId.find(readableId);
+                if (kinBodyCacheIt != _kinBodyEnvironmentIdByReadableInterfaceId.end()) {
+                    kinBodyCacheIt->second.insert(body.GetEnvironmentBodyIndex());
                 }
             }
         }
