@@ -3568,17 +3568,19 @@ public:
 
     void NotifyKinBodyReadableInterfacesAdded(int environmentBodyIndex, const std::vector<const char*>& vAddedIds) override
     {
-        if( vAddedIds.empty() || _kinBodyEnvironmentIdByReadableInterfaceId.empty() || environmentBodyIndex <= 0 ) { // empty() should be thread safe
+        // Note that we check empty() **without** locking _mutexReadableInterfaceCache.
+        // This is only safe because the write path for _kinBodyEnvironmentIdByReadableInterfaceId is serialized on the environment mutex,
+        // which the caller must hold if this codepath is being hit for a body that is actually added to the env.
+        if (vAddedIds.empty() || environmentBodyIndex <= 0 || _kinBodyEnvironmentIdByReadableInterfaceId.empty()) {
             // nothing to do
             return;
         }
 
-        // Take only the cache lock; the body readable mutex is taken inside the helper (lock order: cache -> body readable).
+        // Only need to take the cache lock here - the caller is obligated to already hold the env lock
         std::unique_lock<boost::shared_mutex> cacheLock(_mutexReadableInterfaceCache);
-        for(const char* pAddedId : vAddedIds) {
+        for (const char* pAddedId : vAddedIds) {
             std::unordered_map<std::string, std::unordered_set<int> >::iterator itEnvironmentIds = _kinBodyEnvironmentIdByReadableInterfaceId.find(pAddedId);
             if( itEnvironmentIds != _kinBodyEnvironmentIdByReadableInterfaceId.end() ) {
-                // If this body isn't added to the environment then we don't need to index it
                 itEnvironmentIds->second.insert(environmentBodyIndex);
             }
         }
@@ -3624,7 +3626,10 @@ protected:
         // Must be called with a valid old generation index
         BOOST_ASSERT(envBodyIndex > 0);
 
-        if (_kinBodyEnvironmentIdByReadableInterfaceId.empty()) { // empty() should be thread safe
+        // Note that we check empty() **without** locking _mutexReadableInterfaceCache.
+        // This is only safe because the write path for _kinBodyEnvironmentIdByReadableInterfaceId is serialized on the environment mutex,
+        // which must already be held since this operation is happening on a body that is added to the environment.
+        if (_kinBodyEnvironmentIdByReadableInterfaceId.empty()) {
             // Nothing is being tracked, so there is nothing to update.
             return;
         }

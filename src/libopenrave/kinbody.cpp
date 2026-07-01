@@ -944,7 +944,7 @@ ReadablePtr KinBody::SetReadableInterface(const std::string& id, const ReadableP
     if (GetEnvironmentBodyIndex() > 0) {
         if( !pPrevious && !!readable ) {
             // there was no previous interface, so notify
-            std::vector<const char*> vAddedIds(1); vAddedIds[0] = id.c_str();
+            std::vector<const char*> vAddedIds{id.c_str()};
             GetEnv()->NotifyKinBodyReadableInterfacesAdded(GetEnvironmentBodyIndex(), vAddedIds);
         }
     }
