@@ -92,7 +92,6 @@ const std::list<EnvironmentBase::CollisionCallbackFn>& FCLCollisionChecker::Coll
 FCLCollisionChecker::FCLCollisionChecker(OpenRAVE::EnvironmentBasePtr penv, std::istream& sinput)
     : OpenRAVE::CollisionCheckerBase(penv)
     , _broadPhaseCollisionManagerAlgorithm("DynamicAABBTree2")
-    // , _broadPhaseCollisionManagerAlgorithm("Naive")
     , _bIsSelfCollisionChecker(true) // DynamicAABBTree2 should be slightly faster than Naive
 {
     _bParentlessCollisionObject = false;
@@ -1167,9 +1166,6 @@ FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* FCLCollisionChecker::GetCollisionGeom
 }
 
 BroadPhaseCollisionManagerPtr FCLCollisionChecker::_CreateManager() {
-    // if( GetGeometryGroup().find("envsafety") != std::string::npos ) {
-    //     return CreateManagerFromBroadphaseAlgorithm("Naive");
-    // }
     return CreateManagerFromBroadphaseAlgorithm(_broadPhaseCollisionManagerAlgorithm);
 }
 
