@@ -43,35 +43,10 @@ static void _PostProcessOnCheckSelfCollision(CollisionReportPtr& report, Collisi
     }
 }
 
-bool KinBody::_CheckSelfCollisionSingle(const CollisionCheckerBasePtr& collisionchecker, CollisionReportPtr& report) const
-{
-    if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
-        if( !!report ) {
-            _PrintStatusOnCheckSelfCollisoin(report, *this);
-        }
-        return true;
-        //bCollision = true;
-    }
-    return false;
-}
-
-void KinBody::_EnsureSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const
-{
-    if( _vSelfCollisionCheckers.size() > 0 ) {
-        vCheckers = _vSelfCollisionCheckers;
-    }
-    else {
-        GetEnv()->GetCollisionCheckers(vCheckers);
-    }
-}
-
 bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBasePtr collisionchecker) const
 {
-    const bool bHasCollisionCheckerFromArgument = !!collisionchecker;
     if( !collisionchecker ) {
-        if( _vSelfCollisionCheckers.size() > 0 ) {
-            collisionchecker = _vSelfCollisionCheckers.front();
-        }
+        collisionchecker = _selfcollisionchecker;
         if( !collisionchecker ) {
             collisionchecker = GetEnv()->GetCollisionChecker();
             if( !collisionchecker ) {
@@ -83,14 +58,6 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
             // have to set the same options as GetEnv()->GetCollisionChecker() since stuff like CO_ActiveDOFs is only set on the global checker
             collisionchecker->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
         }
-        // TODO : no need of saver?
-        if( _vSelfCollisionCheckers.size() > 1 ) {
-            for(int iChecker = 1; iChecker < (int)_vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
-                if( !!_vSelfCollisionCheckers.at(iChecker) ) {
-                    _vSelfCollisionCheckers.at(iChecker)->SetCollisionOptions(GetEnv()->GetCollisionChecker()->GetCollisionOptions());
-                }
-            }
-        }
     }
 
     bool bAllLinkCollisions = !!(collisionchecker->GetCollisionOptions()&CO_AllLinkCollisions);
@@ -100,21 +67,16 @@ bool KinBody::CheckSelfCollision(CollisionReportPtr report, CollisionCheckerBase
         report->nKeepPrevious = 1; // have to keep the previous since aggregating results
     }
 
-    bool bCollision = _CheckSelfCollisionSingle(collisionchecker, report);
-    if( !bAllLinkCollisions && bCollision ) {
-        return true;
-    }
-    if( !bHasCollisionCheckerFromArgument && _vSelfCollisionCheckers.size() > 1 ) {
-        for(int iChecker = 1; iChecker < (int)_vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
-            if( !!_vSelfCollisionCheckers.at(iChecker) ) {
-                if( _CheckSelfCollisionSingle(_vSelfCollisionCheckers.at(iChecker), report) ) {
-                    if( !bAllLinkCollisions ) {
-                        return true;
-                    }
-                    bCollision = true;
-                }
-            }
+    bool bCollision = false;
+    if( collisionchecker->CheckStandaloneSelfCollision(shared_kinbody_const(), report) ) {
+        if( !!report ) {
+            _PrintStatusOnCheckSelfCollisoin(report, *this);
         }
+        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+            return true;
+        }
+
+        bCollision = true;
     }
 
     // if collision checker is set to distance checking, have to compare reports for the minimum distance
@@ -430,7 +392,7 @@ bool KinBody::CheckLinkCollision(int ilinkindex, CollisionReportPtr report)
 
 bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
 {
-    CollisionCheckerBasePtr pchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
     CollisionReportKeepSaver reportsaver(report);
     if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
@@ -445,14 +407,6 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
                 return true;
             }
             bincollision = true;
-        }
-        for(int iChecker = 1; iChecker < (int)_vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
-            if( _vSelfCollisionCheckers.at(iChecker)->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                bincollision = true;
-            }
         }
     }
 
@@ -486,7 +440,7 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report)
 
 bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report)
 {
-    CollisionCheckerBasePtr pchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr pchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
     CollisionReportKeepSaver reportsaver(report);
     if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
@@ -503,14 +457,6 @@ bool KinBody::CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans
                 return true;
             }
             bincollision = true;
-        }
-        for(int iChecker = 1; iChecker < (int)_vSelfCollisionCheckers.size(); ++iChecker) { // skip the first one.
-            if( _vSelfCollisionCheckers.at(iChecker)->CheckStandaloneSelfCollision(LinkConstPtr(plink),report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                bincollision = true;
-            }
         }
     }
 

@@ -418,9 +418,9 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
     pGrabbed->_tRelative = tGrabbingLink.inverse() * tGrabbedBody;
     pGrabbed->_setGrabberLinkIndicesToIgnore = setGrabberLinksToIgnore;
 
-    if( _vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front() && _vSelfCollisionCheckers.front() != GetEnv()->GetCollisionChecker() ) {
+    if( !!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker() ) {
         // collision checking will not be automatically updated with environment calls, so need to do this manually
-        _vSelfCollisionCheckers.front()->InitKinBody(pGrabbedBody);
+        _selfcollisionchecker->InitKinBody(pGrabbedBody);
     }
 
     std::pair<Vector, Vector> velocity = pGrabbingLink->GetVelocity();
@@ -549,7 +549,7 @@ void KinBody::ReleaseAllGrabbedWithLink(const KinBody::Link& bodyLinkToReleaseWi
 
 void KinBody::RegrabAll()
 {
-    CollisionCheckerBasePtr collisionchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     CollisionOptionsStateSaver colsaver(collisionchecker,0); // have to reset the collision options
 
     // Remove bodies from _listAttachedBodies first and then will add them back later. Maybe this is for triggering
@@ -911,7 +911,7 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
     }
 
     // Ensure that we reset the collision checker options when done
-    CollisionCheckerBasePtr collisionchecker = (_vSelfCollisionCheckers.size() > 0 && !!_vSelfCollisionCheckers.front()) ? _vSelfCollisionCheckers.front() : GetEnv()->GetCollisionChecker();
+    CollisionCheckerBasePtr collisionchecker = !!_selfcollisionchecker ? _selfcollisionchecker : GetEnv()->GetCollisionChecker();
     CollisionOptionsStateSaver colsaver(collisionchecker, 0);
 
     // Next, for each incoming grab info, either update the existing grab or create a new one if it doesn't exist
@@ -937,8 +937,8 @@ void KinBody::ResetGrabbed(const std::vector<KinBody::GrabbedInfoConstPtr>& vGra
         OPENRAVE_ASSERT_FORMAT(pBody.get() != this, "env=%s, body '%s' cannot grab itself", GetEnv()->GetNameId()%pBody->GetName(), ORE_InvalidArguments);
 
         // If we have a collision checker that is _not_ the default environment collision checker, we need to update it manually
-        if (!!_vSelfCollisionCheckers.size() > 0 && _vSelfCollisionCheckers.front() != GetEnv()->GetCollisionChecker()) {
-            _vSelfCollisionCheckers.front()->InitKinBody(pBody);
+        if (!!_selfcollisionchecker && _selfcollisionchecker != GetEnv()->GetCollisionChecker()) {
+            _selfcollisionchecker->InitKinBody(pBody);
         }
 
         // Update the body's transform in the environment before grabbing it.

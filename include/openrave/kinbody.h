@@ -3268,12 +3268,9 @@ public:
     /// This function allows self-collisions to use a different, un-padded geometry for self-collisions
     /// \param collisionchecker The new collision checker to use. If empty, will use the environment set collision checker.
     virtual void SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker);
-    virtual void SetSelfCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr collisionchecker);
 
     /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
-    virtual const CollisionCheckerBasePtr GetSelfCollisionChecker() const;
-
-    virtual void GetSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const;
+    virtual const CollisionCheckerBasePtr& GetSelfCollisionChecker() const;
 
     /// Collision checking utilities that use internal structures of the kinbody like grabbed info or the self-collision checker.
     /// @name Collision Checking Utilities
@@ -3846,14 +3843,6 @@ protected:
     /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
     static int _GetSecondEnvironmentBodyIndexFromPair(const uint64_t pair);
 
-    void _SetSelfCollisionChecker(CollisionCheckerBasePtr& selfCollisionChecker,
-                                  const CollisionCheckerBasePtr& collisionchecker,
-                                  const bool bResetInternalCache, const bool bInitGrabbedBodies);
-
-    bool _CheckSelfCollisionSingle(const CollisionCheckerBasePtr& collisionchecker, CollisionReportPtr& report) const;
-
-    void _EnsureSelfCollisionCheckers(std::vector<CollisionCheckerBasePtr>& vCheckers) const;
-
     void _GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupNames, const char* groupName) const;
 
     void _EnsureSafetyCollisionCheckers();
@@ -3911,8 +3900,7 @@ protected:
 
 
     ConfigurationSpecification _spec;
-    std::vector<std::string> _vSelfCollisionCheckerGroupNames; //< group names of collision checkers used. "" group is for regular
-    std::vector<CollisionCheckerBasePtr> _vSelfCollisionCheckers; //< vector of collision checkers. size and order are same as _vCollisionCheckerGroupNames.
+    CollisionCheckerBasePtr _selfcollisionchecker; ///< optional checker to use for self-collisions
 
     KinematicsGeneratorPtr _pKinematicsGenerator; ///< holds the generator for kinematics. KinBody calls it everytime its kinematics change
     KinematicsFunctionsPtr _pCurrentKinematicsFunctions; ///< currently generated kinematics functions

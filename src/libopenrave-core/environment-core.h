@@ -1037,13 +1037,10 @@ public:
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             pChecker->InitKinBody(pbody);
         }
-        std::vector<CollisionCheckerBasePtr> vSelfCollisionCheckers;
-        pbody->GetSelfCollisionCheckers(vSelfCollisionCheckers);
-        for(CollisionCheckerBasePtr pSelfChecker : vSelfCollisionCheckers) {
-            if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
-                // also initialize external collision checker if specified for this body
-                pSelfChecker->InitKinBody(pbody);
-            }
+        CollisionCheckerBasePtr pSelfChecker = pbody->GetSelfCollisionChecker();
+        if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) {
+            // also initialize external collision checker if specified for this body
+            pSelfChecker->InitKinBody(pbody);
         }
         _pPhysicsEngine->InitKinBody(pbody);
         // send all the changed callbacks of the body since anything could have changed
@@ -1084,13 +1081,10 @@ public:
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             pChecker->InitKinBody(robot);
         }
-        std::vector<CollisionCheckerBasePtr> vSelfCollisionCheckers;
-        robot->GetSelfCollisionCheckers(vSelfCollisionCheckers);
-        for(CollisionCheckerBasePtr pSelfChecker : vSelfCollisionCheckers) {
-            if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
-                // also initialize external collision checker if specified for this body
-                pSelfChecker->InitKinBody(robot);
-            }
+        CollisionCheckerBasePtr pSelfChecker = robot->GetSelfCollisionChecker();
+        if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) {
+            // also initialize external collision checker if specified for this body
+            pSelfChecker->InitKinBody(robot);
         }
         _pPhysicsEngine->InitKinBody(robot);
         // send all the changed callbacks of the body since anything could have changed
@@ -3764,12 +3758,9 @@ protected:
         }
 
         // If the body has a self-collision checker that differs from the env checker, need to remove from that as well
-        std::vector<CollisionCheckerBasePtr> vSelfCollisionCheckers;
-        body.GetSelfCollisionCheckers(vSelfCollisionCheckers);
-        for(CollisionCheckerBasePtr pSelfChecker : vSelfCollisionCheckers) {
-            if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) { // if there is no relevant env checker with the given group name, GetCollisionCheckerByGroupName returns nullptr. In such case, we should call InitKinBody.
-                pSelfChecker->RemoveKinBody(pbodyref);
-            }
+        CollisionCheckerBasePtr pSelfChecker = body.GetSelfCollisionChecker();
+        if( !!pSelfChecker && std::find(_vCollisionCheckers.begin(), _vCollisionCheckers.end(), pSelfChecker) == _vCollisionCheckers.end() ) {
+            pSelfChecker->RemoveKinBody(pbodyref);
         }
 
         // If this body has ever been grabbed, then it's possible that it exists in the collision checker of whatever body grabbed it.
