@@ -100,6 +100,9 @@ protected:
     boost::function<void()> _fn;
 };
 
+// forward declaration; defined near the end of this file
+static void _EnsureSafetyCollisionCheckers(const KinBody& body);
+
 /// \brief check validity of mesh collision indices. if invalid, throw.
 /// \param[in] vertices, indices : coming from TriMesh
 /// \param[in] name, id, type : coming from GeometryInfo. used for exception message.
@@ -5228,7 +5231,7 @@ void KinBody::_ComputeInternalInformation()
         }
     }
 
-    _EnsureSafetyCollisionCheckers();
+    _EnsureSafetyCollisionCheckers(*this);
 
     _bAreAllJoints1DOFAndNonCircular = true;
     for (size_t ijoint = 0; ijoint < _vecjoints.size(); ++ijoint) {
@@ -6162,7 +6165,7 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
     }
 
     if( !!(parameters & (Prop_LinkGeometryGroup|Prop_LinkGeometry)) ) {
-        _EnsureSafetyCollisionCheckers();
+        _EnsureSafetyCollisionCheckers(*this);
     }
 }
 
@@ -6735,17 +6738,25 @@ static void _GetGeometryGroupNamesInLinks(const std::vector<KinBody::LinkPtr>& v
     }
 }
 
-void KinBody::_EnsureSafetyCollisionCheckers()
+/// \brief Ensure the environment has a collision checker registered for each "envsafety_" safety geometry group used by the body.
+///
+/// For every safety geometry group name with the "envsafety_" prefix found across the body's links, if the
+/// environment does not already have a collision checker registered under that group name, creates one of the
+/// same type as the environment's default collision checker, binds it to that geometry group, and registers it
+/// through Environment::SetCollisionCheckerByGroupName. Idempotent: existing per-group checkers are left untouched.
+/// \param[in] body : the body whose links' safety geometry groups drive the per-group checker creation.
+static void _EnsureSafetyCollisionCheckers(const KinBody& body)
 {
     // special handling for "safety" geometry group. TODO : how to remove the unused extraGeometries. TODO : how to update the existing geometries.
     // for env-body safety geometries
+    const EnvironmentBasePtr penv = body.GetEnv();
     std::vector<std::string> vSafetyGroupNames;
-    _GetGeometryGroupNamesInLinks(GetLinks(), vSafetyGroupNames, "envsafety_");
+    _GetGeometryGroupNamesInLinks(body.GetLinks(), vSafetyGroupNames, "envsafety_");
     for(const std::string& groupName : vSafetyGroupNames) {
-        if( !GetEnv()->GetCollisionCheckerByGroupName(groupName) ) {
-            CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
+        if( !penv->GetCollisionCheckerByGroupName(groupName) ) {
+            CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(penv, penv->GetCollisionChecker()->GetXMLId());
             pChecker->SetGeometryGroup(groupName);
-            GetEnv()->SetCollisionCheckerByGroupName(groupName, pChecker);
+            penv->SetCollisionCheckerByGroupName(groupName, pChecker);
         }
     }
 }
