@@ -453,16 +453,6 @@ void KinBodyItem::Load()
                     pgeometrydata->addChild(geode.get());
                     break;
                 }
-                //  Geometry is an infinite plane (local XY-plane). Visualize it as a thin square box (5m x 5m, 1mm thick).
-                case GT_Plane: {
-                    osg::ref_ptr<osg::Box> box = new osg::Box();
-                    box->setHalfLengths(osg::Vec3f(2.5f, 2.5f, 0.0005f)); // full size 5m x 5m x 1mm
-                    osg::ref_ptr<osg::Geode> geode = new osg::Geode;
-                    osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
-                    geode->addDrawable(sd.get());
-                    pgeometrydata->addChild(geode.get());
-                    break;
-                }
                 //  Extract geometry from collision Mesh
                 case GT_Prism:
                 case GT_ConicalFrustum:

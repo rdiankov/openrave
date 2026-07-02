@@ -62,7 +62,6 @@ enum GeometryType : uint8_t
     GT_ConicalFrustum = 9, ///< a geometry defined by a conical frustum, oriented towards z-axis
     GT_Prism = 10, ///< Non-trimesh right prisms with arbitrary non-convex cross-section and infinite height, which represent “walls” or “safe zones”. _meshcollision.vertices[2 * i].xy describes the cross-section.
     GT_Capsule = 11, ///< Non-trimesh capsules (oriented towards z-axis), representing "robot link model" or "gripper model", which are able of degenerating to perfect spheres with the height tends to zero.
-    GT_Plane = 12, ///< an infinite plane. The plane is the local XY-plane (unit normal +Z passing through the geometry origin); the geometry transform orients and positions it. Backed by fcl::Plane.
 };
 
 OPENRAVE_API const char* GetGeometryTypeString(GeometryType geometryType);
