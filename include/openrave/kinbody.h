@@ -1044,7 +1044,6 @@ public:
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like. the user can store any pairs of group geometry name and extra geometries. For example,
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
-        /// safety_xx - safety geometry.
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
         /// safety geometries, stored separately from _mapExtraGeometries (which holds non-safety extra
