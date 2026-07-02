@@ -6714,12 +6714,19 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
     }
 }
 
-void KinBody::_GetGeometryGroupNamesInLinks(std::vector<std::string>& vGroupNames, const char* groupName) const
+/// \brief Collect the distinct safety geometry group names across the given links whose name starts with the given prefix.
+///
+/// Scans every link's LinkInfo::_mapExtraGeometriesSafety and appends each safety geometry group name that begins
+/// with groupName, skipping duplicates. Clears vGroupNames before filling it.
+/// \param[in] vlinks : links to scan.
+/// \param[out] vGroupNames : receives the matching safety geometry group names, deduplicated.
+/// \param[in] groupName : prefix that a safety geometry group name must start with to be included (for example, "envsafety_").
+static void _GetGeometryGroupNamesInLinks(const std::vector<KinBody::LinkPtr>& vlinks, std::vector<std::string>& vGroupNames, const char* groupName)
 {
     vGroupNames.clear();
-    FOREACH(itlink, _veclinks) {
+    FOREACHC(itlink, vlinks) {
         // also enumerate the safety geometry groups so that callers (e.g. collision checkers) see all groups
-        FOREACH(itExtraGeom, (*itlink)->_info._mapExtraGeometriesSafety) {
+        FOREACHC(itExtraGeom, (*itlink)->GetInfo()._mapExtraGeometriesSafety) {
             if( itExtraGeom->first.find(groupName) == 0 &&
                 (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
                 vGroupNames.push_back(itExtraGeom->first);
@@ -6733,7 +6740,7 @@ void KinBody::_EnsureSafetyCollisionCheckers()
     // special handling for "safety" geometry group. TODO : how to remove the unused extraGeometries. TODO : how to update the existing geometries.
     // for env-body safety geometries
     std::vector<std::string> vSafetyGroupNames;
-    _GetGeometryGroupNamesInLinks(vSafetyGroupNames, "envsafety_");
+    _GetGeometryGroupNamesInLinks(GetLinks(), vSafetyGroupNames, "envsafety_");
     for(const std::string& groupName : vSafetyGroupNames) {
         if( !GetEnv()->GetCollisionCheckerByGroupName(groupName) ) {
             CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(GetEnv(), GetEnv()->GetCollisionChecker()->GetXMLId());
