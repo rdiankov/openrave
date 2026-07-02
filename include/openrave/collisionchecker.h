@@ -395,8 +395,8 @@ public:
     /// \param[in] pEnv : environment
     /// \param[in] options : option bits applied according to modificationType
     /// \param[in] required : if the resulting options are not supported and required is true, throws an exception
-    /// \param[in] modificationType : how options is applied to each checker's current options (default: add)
-    CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required=true, CollisionOptionsModificationType modificationType=COMT_Add);
+    /// \param[in] modificationType : how options is applied to each checker's current options (default: set)
+    CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required=true, CollisionOptionsModificationType modificationType=COMT_Set);
 
     virtual ~CollisionOptionsStateSaver();
 private:

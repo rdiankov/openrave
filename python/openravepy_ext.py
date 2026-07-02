@@ -40,12 +40,12 @@ class CollisionOptionsStateSaver(object):
     """Saves/restores the state of the collision checker options.
 
     checkerOrEnv may be a single collision checker, or an environment (then all of its collision checkers are saved).
-    options is applied per checker according to modificationType (Add/Remove/Set); default Set for a single checker, Add for an environment.
+    options is applied per checker according to modificationType (Add/Remove/Set); default Set.
     """
     def __init__(self,checkerOrEnv,options=None,required=True,modificationType=None):
         if hasattr(checkerOrEnv, 'GetCollisionCheckers'):
             self.checkers = checkerOrEnv.GetCollisionCheckers()
-            self.modificationType = openravepy_int.CollisionOptionsModificationType.Add if modificationType is None else modificationType
+            self.modificationType = openravepy_int.CollisionOptionsModificationType.Set if modificationType is None else modificationType
         else:
             self.checkers = [checkerOrEnv]
             self.modificationType = openravepy_int.CollisionOptionsModificationType.Set if modificationType is None else modificationType

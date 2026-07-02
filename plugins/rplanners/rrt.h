@@ -58,7 +58,7 @@ Uses the Rapidly-Exploring Random Trees Algorithm.\n\
         }
 
         PlannerParameters::StateSaver savestate(params);
-        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false);
+        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false,COMT_Add);
 
         if( (int)params->vinitialconfig.size() % params->GetDOF() ) {
             const std::string msg(str(boost::format("env=%s, initial config wrong dim: %d %% %d != 0")%GetEnv()->GetNameId()%params->vinitialconfig.size()%params->GetDOF()));
@@ -314,7 +314,7 @@ Some python code to display data::\n\
 
         _fGoalBiasProb = dReal(0.01);
         PlannerParameters::StateSaver savestate(_parameters);
-        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false);
+        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false,COMT_Add);
 
         // TODO perhaps distmetricfn should take into number of revolutions of circular joints
         _treeBackward.Init(shared_planner(), _parameters->GetDOF(), _parameters->_distmetricfn, _parameters->_fStepLength, _parameters->_distmetricfn(_parameters->_vConfigLowerLimit, _parameters->_vConfigUpperLimit));
@@ -386,7 +386,7 @@ Some python code to display data::\n\
         // the main planning loop
         PlannerStatus planningstatus;
         PlannerParameters::StateSaver savestate(_parameters);
-        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false);
+        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false,COMT_Add);
 
         SpatialTreeBase* TreeA = &_treeForward;
         SpatialTreeBase* TreeB = &_treeBackward;
@@ -715,7 +715,7 @@ public:
             return status;
         }
 
-        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false);
+        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false,COMT_Add);
 
         //read in all goals
         int goal_index = 0;
@@ -775,7 +775,7 @@ public:
 
         // the main planning loop
         PlannerParameters::StateSaver savestate(_parameters);
-        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false);
+        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false,COMT_Add);
 
         std::vector<dReal> vtempinitialconfig;
         PlannerAction callbackaction = PA_None;
@@ -995,7 +995,7 @@ public:
         vector<dReal> vSampleConfig;
 
         PlannerParameters::StateSaver savestate(_parameters);
-        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false);
+        CollisionOptionsStateSaver optionstate(GetEnv(),CO_ActiveDOFs,false,COMT_Add);
 
         int iter = 0;
         while(iter < _parameters->_nMaxIterations && _treeForward.GetNumNodes() < _parameters->_nExpectedDataSize ) {

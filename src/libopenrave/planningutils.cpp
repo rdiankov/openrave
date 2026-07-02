@@ -602,7 +602,7 @@ PlannerStatus _PlanActiveDOFTrajectory(TrajectoryBasePtr traj, RobotBasePtr prob
 
     EnvironmentBasePtr env = traj->GetEnv();
     EnvironmentLock lockenv(env->GetMutex());
-    CollisionOptionsStateSaver optionstate(env,CO_ActiveDOFs,false);
+    CollisionOptionsStateSaver optionstate(env,CO_ActiveDOFs,false,COMT_Add);
     PlannerBasePtr planner = RaveCreatePlanner(env,plannername.size() > 0 ? plannername : string("parabolicsmoother"));
     TrajectoryTimingParametersPtr params(new TrajectoryTimingParameters());
     params->SetRobotActiveJoints(probot);
@@ -677,7 +677,7 @@ PlannerStatus ActiveDOFTrajectorySmoother::PlanPath(TrajectoryBasePtr traj, int 
     }
 
     EnvironmentBasePtr env = traj->GetEnv();
-    CollisionOptionsStateSaver optionstate(env,CO_ActiveDOFs,false);
+    CollisionOptionsStateSaver optionstate(env,CO_ActiveDOFs,false,COMT_Add);
     PlannerStatus status = _planner->PlanPath(traj, planningoptions);
     if( status.GetStatusCode() & PS_HasSolution ) {
         if( RaveGetDebugLevel() & Level_VerifyPlans ) {
