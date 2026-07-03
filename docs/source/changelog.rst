@@ -3,6 +3,10 @@
 ChangeLog
 #########
 
+Version 0.174.0
+===============
+
+- Add EnvironmentBase::GetBodiesWithReadableInterface, which uses a cache of bodies keyed by their non-null readable interfaces so that looking up bodies by readable interface no longer scales with the number of bodies in the environment.
 
 Version 0.173.2
 ===============
