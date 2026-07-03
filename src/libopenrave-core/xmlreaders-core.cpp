@@ -976,8 +976,6 @@ public:
                     // geometry is not in the default group, so we add it to the LinkInfo without instantiating it
                     string groupname = geomreader->GetGroupName();
                     if( groupname != "self" ) {
-                        // XML extra geometries go into the regular (non-safety) extra map. Safety geometries are
-                        // authored via JSON (the "extraGeometries" section) / SetSafetyGroupGeometries, not XML.
                         _plink->_info._mapExtraGeometries[groupname].push_back(info);
                         _pcurreader.reset();
                         return false;

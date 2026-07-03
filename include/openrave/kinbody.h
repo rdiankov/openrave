@@ -3841,14 +3841,6 @@ protected:
     /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
     static int _GetSecondEnvironmentBodyIndexFromPair(const uint64_t pair);
 
-    /// \brief Ensure the environment has a collision checker registered for each "envsafety_" safety geometry group used by this body.
-    ///
-    /// For every safety geometry group name with the "envsafety_" prefix found across this body's links, if the
-    /// environment does not already have a collision checker registered under that group name, creates one of the
-    /// same type as the environment's default collision checker, binds it to that geometry group, and registers it
-    /// through Environment::SetCollisionCheckerByGroupName. Idempotent: existing per-group checkers are left untouched.
-    void _EnsureSafetyCollisionCheckers();
-
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints

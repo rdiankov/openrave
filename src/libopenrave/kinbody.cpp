@@ -101,7 +101,49 @@ protected:
 };
 
 // forward declaration; defined near the end of this file
-static void _EnsureSafetyCollisionCheckers(const KinBody& body);
+/// \brief Collect the distinct safety geometry group names across the given links whose name starts with the given prefix.
+///
+/// Scans every link's LinkInfo::_mapExtraGeometriesSafety and appends each safety geometry group name that begins
+/// with groupName, skipping duplicates. Clears vGroupNames before filling it.
+/// \param[in] vlinks : links to scan.
+/// \param[out] vGroupNames : receives the matching safety geometry group names, deduplicated.
+/// \param[in] groupName : prefix that a safety geometry group name must start with to be included (for example, "envsafety_").
+static void _GetGeometryGroupNamesInLinks(const std::vector<KinBody::LinkPtr>& vlinks, std::vector<std::string>& vGroupNames, const char* groupName)
+{
+    vGroupNames.clear();
+    FOREACHC(itlink, vlinks) {
+        // also enumerate the safety geometry groups so that callers (e.g. collision checkers) see all groups
+        FOREACHC(itExtraGeom, (*itlink)->GetInfo()._mapExtraGeometriesSafety) {
+            if( itExtraGeom->first.find(groupName) == 0 &&
+                (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
+                vGroupNames.push_back(itExtraGeom->first);
+            }
+        }
+    }
+}
+
+/// \brief Ensure the environment has a collision checker registered for each "envsafety_" safety geometry group used by the body.
+///
+/// For every safety geometry group name with the "envsafety_" prefix found across the body's links, if the
+/// environment does not already have a collision checker registered under that group name, creates one of the
+/// same type as the environment's default collision checker, binds it to that geometry group, and registers it
+/// through Environment::SetCollisionCheckerByGroupName. Idempotent: existing per-group checkers are left untouched.
+/// \param[in] body : the body whose links' safety geometry groups drive the per-group checker creation.
+static void _EnsureSafetyCollisionCheckers(const KinBody& body)
+{
+    // special handling for "safety" geometry group. TODO : how to remove the unused extraGeometries. TODO : how to update the existing geometries.
+    // for env-body safety geometries
+    const EnvironmentBasePtr penv = body.GetEnv();
+    std::vector<std::string> vSafetyGroupNames;
+    _GetGeometryGroupNamesInLinks(body.GetLinks(), vSafetyGroupNames, "envsafety_");
+    for(const std::string& groupName : vSafetyGroupNames) {
+        if( !penv->GetCollisionCheckerByGroupName(groupName) ) {
+            CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(penv, penv->GetCollisionChecker()->GetXMLId());
+            pChecker->SetGeometryGroup(groupName);
+            penv->SetCollisionCheckerByGroupName(groupName, pChecker);
+        }
+    }
+}
 
 /// \brief check validity of mesh collision indices. if invalid, throw.
 /// \param[in] vertices, indices : coming from TriMesh
@@ -6713,50 +6755,6 @@ void KinBody::SetKinematicsGenerator(KinematicsGeneratorPtr pGenerator)
         if( !!_pCurrentKinematicsFunctions ) {
             RAVELOG_DEBUG_FORMAT("env=%d, resetting custom kinematics functions for body %s", GetEnv()->GetId()%GetName());
             _pCurrentKinematicsFunctions.reset();
-        }
-    }
-}
-
-/// \brief Collect the distinct safety geometry group names across the given links whose name starts with the given prefix.
-///
-/// Scans every link's LinkInfo::_mapExtraGeometriesSafety and appends each safety geometry group name that begins
-/// with groupName, skipping duplicates. Clears vGroupNames before filling it.
-/// \param[in] vlinks : links to scan.
-/// \param[out] vGroupNames : receives the matching safety geometry group names, deduplicated.
-/// \param[in] groupName : prefix that a safety geometry group name must start with to be included (for example, "envsafety_").
-static void _GetGeometryGroupNamesInLinks(const std::vector<KinBody::LinkPtr>& vlinks, std::vector<std::string>& vGroupNames, const char* groupName)
-{
-    vGroupNames.clear();
-    FOREACHC(itlink, vlinks) {
-        // also enumerate the safety geometry groups so that callers (e.g. collision checkers) see all groups
-        FOREACHC(itExtraGeom, (*itlink)->GetInfo()._mapExtraGeometriesSafety) {
-            if( itExtraGeom->first.find(groupName) == 0 &&
-                (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
-                vGroupNames.push_back(itExtraGeom->first);
-            }
-        }
-    }
-}
-
-/// \brief Ensure the environment has a collision checker registered for each "envsafety_" safety geometry group used by the body.
-///
-/// For every safety geometry group name with the "envsafety_" prefix found across the body's links, if the
-/// environment does not already have a collision checker registered under that group name, creates one of the
-/// same type as the environment's default collision checker, binds it to that geometry group, and registers it
-/// through Environment::SetCollisionCheckerByGroupName. Idempotent: existing per-group checkers are left untouched.
-/// \param[in] body : the body whose links' safety geometry groups drive the per-group checker creation.
-static void _EnsureSafetyCollisionCheckers(const KinBody& body)
-{
-    // special handling for "safety" geometry group. TODO : how to remove the unused extraGeometries. TODO : how to update the existing geometries.
-    // for env-body safety geometries
-    const EnvironmentBasePtr penv = body.GetEnv();
-    std::vector<std::string> vSafetyGroupNames;
-    _GetGeometryGroupNamesInLinks(body.GetLinks(), vSafetyGroupNames, "envsafety_");
-    for(const std::string& groupName : vSafetyGroupNames) {
-        if( !penv->GetCollisionCheckerByGroupName(groupName) ) {
-            CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(penv, penv->GetCollisionChecker()->GetXMLId());
-            pChecker->SetGeometryGroup(groupName);
-            penv->SetCollisionCheckerByGroupName(groupName, pChecker);
         }
     }
 }
