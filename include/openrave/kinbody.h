@@ -302,7 +302,8 @@ class OPENRAVE_API KinBody : public InterfaceBase
 {
 public:
     /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
-    enum KinBodyProperty {
+    enum KinBodyProperty
+    {
         Prop_JointMimic=0x1,     ///< joint mimic equations
         Prop_JointLimits=0x2,     ///< regular limits
         Prop_JointOffset=0x4,
@@ -588,7 +589,8 @@ public:
         Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
         Vector _vPositiveCropContainerEmptyMargins = Vector(0,0,0); ///< The positive crop empty margins component
 
-        struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
+        struct CalibrationBoardParameters///< used by GT_CalibrationBoard
+        {
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
             } ///< constructor
             int numDotsX; ///< number of dots in x direction, minimum 3
@@ -1546,7 +1548,8 @@ private:
 
         For multi-dof joints, the order is transform(parentlink) * transform(axis0) * transform(axis1) ...
      */
-    enum JointType {
+    enum JointType
+    {
         JointNone = 0,
         JointHinge = 0x01,
         JointRevolute = 0x01,
@@ -2477,7 +2480,8 @@ public:
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
-        enum KinBodyInfoField {
+        enum KinBodyInfoField
+        {
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
             KBIF_URI = (1 << 2), // _uri field
@@ -3692,6 +3696,18 @@ public:
     inline const boost::shared_ptr<rapidjson::Document>& GetAssociatedFileEntries() const {
         return _prAssociatedFileEntries;
     }
+
+    /// \name Readable interface overrides
+    ///
+    /// We override the ReadablesContainer methods that might add readable interfaces so that, if this body is added to an environment, we can notify it about the addition.
+    /// This lets the environment maintain a cache of which bodies _might_ hold which readable interfaces, providing optimized GetBodiesWithReadableInterface lookups.
+    /// Removals are not inspected because the cache is allowed to overapproximate.
+    /// The base readable container behaviour is unchanged.
+    //@{
+    ReadablePtr SetReadableInterface(const std::string& id, const ReadablePtr& readable) override;
+    void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting) override;
+    bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) override;
+    //@}
 
 protected:
     using MapGrabbedByEnvironmentIndex = std::unordered_map<int, GrabbedPtr>;
