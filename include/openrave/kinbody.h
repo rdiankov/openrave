@@ -1395,7 +1395,9 @@ private:
         /// This call is identical to SetGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
         void _SetGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
-        /// \brief identical to SetSafetyGroupGeometries but does not post a Prop_LinkGeometryGroup update. Caller must ensure this occurs.
+        /// \brief stores safety geometries for later retrieval
+        ///
+        /// This call is identical to SetSafetyGroupGeometries except that it does not automatically post a Prop_LinkGeometryGroup update to the body. It will be up to the caller to ensure this occurs.
         void _SetSafetyGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
 public:
@@ -1405,9 +1407,7 @@ public:
         int GetGroupNumGeometries(const std::string& name) const;
 
         /// \brief sets the visibility of the safety extra geometries (LinkInfo::_mapExtraGeometriesSafety)
-        ///
-        /// Safety geometries are stored only as GeometryInfo (not instantiated as Link::Geometry), so their
-        /// visibility is changed on the info directly. Posts Prop_LinkDraw so that viewers refresh.
+        ///        Posts Prop_LinkDraw so that viewers refresh.
         /// \param visible new visibility flag applied to the safety geometries
         /// \param groupname if non-empty, only the safety group with this name is affected; if empty, all safety groups are affected
         /// \return true if any geometry's visibility actually changed
@@ -2694,9 +2694,7 @@ private:
 
     /// \brief returns true if the given geometry group is a safety geometry group on this body
     ///
-    /// True iff some link stores the group in LinkInfo::_mapExtraGeometriesSafety. Safety groups are matched
-    /// strictly during collision checking: a link/body that does not carry the group contributes no geometry,
-    /// rather than falling back to its active geometry. Returns false for the empty (default) group.
+    /// \return true iff some link stores the group in LinkInfo::_mapExtraGeometriesSafety. false for the empty (default) group.
     bool IsSafetyGeometryGroup(const std::string& groupname) const;
 
     /// \brief Unique name of the body.
