@@ -1540,6 +1540,7 @@ public:
     }
 
     virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& groupname) const {
+        EnvironmentLock lockenv(GetMutex());
         const std::vector<std::string>::const_iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), groupname);
         if( itName != _vCollisionCheckerGroupNames.end() ) {
             const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
