@@ -1523,7 +1523,7 @@ public:
             return _SetCollisionChecker(_vCollisionCheckers.at(iChecker), pChecker, groupname);
         }
         else {
-            if( groupname.size() > 0 ) { // TODO : "self"? or ""?
+            if( groupname.size() > 0 ) { // assume the regular collision checker with groupname="" is added in other code path.
                 OPENRAVE_ASSERT_OP_FORMAT(_vCollisionCheckers.size(), >, 0, "env='%s' failed to add collision checker by group name since there is no default collision checker.", GetNameId(),ORE_InvalidArguments);
             }
             OPENRAVE_ASSERT_FORMAT((!!pChecker), "env='%s' failed to add collision checker by group name since null collision checker is specified..", GetNameId(),ORE_InvalidArguments);
