@@ -1309,7 +1309,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         updateFromInfoResult = UFIR_Success;
     }
 
-    // safety extra geometries (stored in _mapExtraGeometriesSafety) are reconciled here.
+    // safety extra geometries are reconciled here.
     for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : info._mapExtraGeometriesSafety) {
         const std::string& groupname = keyValue.first;
         const std::vector<GeometryInfoPtr>& vNewSafetyGeometries = keyValue.second;
@@ -1334,11 +1334,6 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
         // the existing safety geometries; these shared_ptrs are updated in place by the helper below
         std::vector<GeometryInfoPtr> vExistingSafetyGeometries = itExistingGroup->second;
 
-        // Reuse the same matching/recursion helper used for active geometries. It matches by id/name and
-        // calls GeometryInfo::UpdateFromInfo on each. Use a local result here: unlike the active geometries,
-        // these are stored (non-live) GeometryInfo entries with no Geometry/collision object to mutate, so
-        // ANY change must trigger a reinitialize to take effect - both the add/remove/shape case (helper
-        // returns false) and the in-place case (helper returns true with result == UFIR_Success).
         UpdateFromInfoResult extraGeometriesResult = UFIR_NoChange;
         if (!UpdateChildrenFromInfo(vNewSafetyGeometries, vExistingSafetyGeometries, extraGeometriesResult)) {
             RAVELOG_VERBOSE_FORMAT("link %s safety extra geometry group '%s' changed (added/removed/shape), require reinitialize", _info._id % groupname);
