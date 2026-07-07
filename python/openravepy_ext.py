@@ -71,11 +71,6 @@ class CollisionOptionsStateSaver(object):
             for oldoptions, checker in zip(self.oldoptions, self.checkers):
                 checker.SetCollisionOptions(oldoptions)
 
-class CollisionOptionsStateSaverAll(CollisionOptionsStateSaver):
-    """Deprecated alias for the environment form of CollisionOptionsStateSaver."""
-    def __init__(self,env,optionsModification=None,required=True,modificationType=None):
-        super(CollisionOptionsStateSaverAll, self).__init__(env, options=optionsModification, required=required, modificationType=modificationType)
-
 def with_destroy(fn):
     """a decorator that always calls openravepy_int.RaveDestroy at the function end"""
     def newfn(*args,**kwargs):
