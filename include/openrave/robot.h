@@ -1375,14 +1375,21 @@ private:
     /// \brief update RobotBase according to new RobotBaseInfo, returns false if update cannot be performed and requires InitFromInfo
     virtual UpdateFromInfoResult UpdateFromRobotInfo(const RobotBaseInfo& info);
 
-    /// \brief Check 
-    virtual bool CheckVelocityProjectedCollision(const std::vector<dReal>& vDOFPositions,
+    /// \brief Check collision at the configuration predicted from the given velocity.
+    ///
+    /// \param[in] vDOFPositions : current DOF values corresponding to vDOFIndices.
+    /// \param[in] vDOFVelocities : DOF velocities used to predict the future configuration.
+    /// \param[in] vDOFIndices : DOF indices that vDOFPositions and vDOFVelocities correspond to.
+    /// \param[in] vSafetyGeometryBodies : if non-empty, restrict collision checking to these bodies.
+    /// \param[in,out] pCollisionChecker : collision checker used to test the predicted configuration.
+    /// \return true if the predicted configuration is in collision.
+    virtual bool CheckVelocityPredictedCollision(const std::vector<dReal>& vDOFPositions,
                                                  const std::vector<dReal>& vDOFVelocities,
                                                  const std::vector<int>& vDOFIndices,
                                                  const std::vector<OpenRAVE::KinBodyConstPtr>& vSafetyGeometryBodies,
                                                  CollisionCheckerBasePtr& pCollisionChecker)
     {
-        return true;
+        return false;
     }
 
 protected:

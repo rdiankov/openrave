@@ -2017,7 +2017,7 @@ protected:
                             // }
                             // ssss << "]";
                             // RAVELOG_DEBUG(ssss.str());
-                            const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(xTmp, vTmp,
+                            const bool bIsColliding0 = pRobot->CheckVelocityPredictedCollision(xTmp, vTmp,
                                                                                                _vUsedDOFIndices,
                                                                                                std::vector<OpenRAVE::KinBodyConstPtr>(),
                                                                                                pCollisionChecker);
@@ -2859,7 +2859,7 @@ static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
                 //     //     v *= fMult;
                 //     // }
                 //     OpenRAVE::RobotBasePtr pRobot = OPENRAVE_DYNAMIC_POINTER_CAST<RobotBase>(pbody);
-                //     const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(x0Vect,
+                //     const bool bIsColliding0 = pRobot->CheckVelocityPredictedCollision(x0Vect,
                 //                                                                        v0Vect,
                 //                                                                        vdofindices,
                 //                                                                        std::vector<OpenRAVE::KinBodyConstPtr>(),
@@ -2877,7 +2877,7 @@ static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
                 //         //continue;
                 //         break;
                 //     }
-                //     const bool bIsColliding1 = pRobot->CheckVelocityProjectedCollision(x1Vect,
+                //     const bool bIsColliding1 = pRobot->CheckVelocityPredictedCollision(x1Vect,
                 //                                                                        v1Vect,
                 //                                                                        vdofindices,
                 //                                                                        std::vector<OpenRAVE::KinBodyConstPtr>(),
@@ -3003,7 +3003,7 @@ static std::string _GetSafetyGeometryGroup(const OpenRAVE::KinBody& body)
                                 // }
                                 // ssss << "]";
                                 // RAVELOG_DEBUG(ssss.str());
-                                const bool bIsColliding0 = pRobot->CheckVelocityProjectedCollision(xTmp, vTmp,
+                                const bool bIsColliding0 = pRobot->CheckVelocityPredictedCollision(xTmp, vTmp,
                                                                                                    _vUsedDOFIndices,
                                                                                                    std::vector<OpenRAVE::KinBodyConstPtr>(),
                                                                                                    pCollisionChecker);

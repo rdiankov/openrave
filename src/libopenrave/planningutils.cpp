@@ -2598,7 +2598,7 @@ int DynamicsCollisionConstraint::_CheckState(const std::vector<dReal>& vdofveloc
                         for(double& v : vvel ) {
                             v *= fMult;
                         }
-                        const bool bIsColliding = pRobot->CheckVelocityProjectedCollision(_vfulldofvalues,
+                        const bool bIsColliding = pRobot->CheckVelocityPredictedCollision(_vfulldofvalues,
                                                                                           //_vfulldofvelocities,
                                                                                           vvel,
                                                                                           _vdofindices,
