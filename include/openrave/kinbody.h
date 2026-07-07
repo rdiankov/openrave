@@ -1047,13 +1047,14 @@ public:
         /// extra-purpose geometries like
         /// Key : geometry group name. Value : non-safety geometry.
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
+        /// Invariant: a group name must live in at most one of _mapExtraGeometries and _mapExtraGeometriesSafety, i.e. a geometry group cannot mix safety and non-safety geometry.
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
         /// safety geometries, stored separately from _mapExtraGeometries
-        /// Key : geometry group name. Value : non-safety geometry.
-        /// A given group name must live in at most one of the two maps.
-        /// The name-keyed group APIs (GetGeometriesFromGroup etc) the group-name enumeration transparently consult both maps.
-        /// so, callers (e.g. collision checkers) do not need to know which map a group lives in.
+        /// Key : geometry group name. Value : safety geometry.
+        /// Invariant: a group name must live in at most one of _mapExtraGeometries and _mapExtraGeometriesSafety, i.e. a geometry group cannot mix safety and non-safety geometry.
+        /// The name-keyed group APIs (GetGeometriesFromGroup etc) and the group-name enumeration transparently consult both maps,
+        /// so callers (e.g. collision checkers) do not need to know which map a group lives in.
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometriesSafety;
 
         ///\brief unique id of the link
