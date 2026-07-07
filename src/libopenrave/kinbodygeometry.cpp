@@ -1917,35 +1917,45 @@ AABB KinBody::Geometry::ComputeAABB(const Transform& t) const
     return _info.ComputeAABB(t);
 }
 
-void KinBody::Geometry::DigestHash(HashContext& hash, int options) const
+/// \brief hashes the contents of a GeometryInfo into the provided hash context.
+///
+/// Shared implementation used by KinBody::Geometry::DigestHash and by the extra/safety geometry hashing in
+/// KinBody::Link::DigestHash (which hashes GeometryInfo objects that are not instantiated as Link::Geometry,
+/// e.g. the groups stored in LinkInfo::_mapExtraGeometriesSafety). Keeping a single implementation ensures both
+/// paths produce identical hashes for the same geometry data.
+void DigestHashGeometryInfo(HashContext& hash, const KinBody::GeometryInfo& info, int options)
 {
-    hash << _info._t;
-    hash << static_cast<int>(_info._type);
-    hash << _info._vRenderScale;
-    if (_info._type == GT_TriMesh) {
-        hash << _info._meshcollision.vertices.size();
-        hash << _info._meshcollision.vertices;
-        hash << _info._meshcollision.indices.size();
-        hash << _info._meshcollision.indices;
+    hash << info.GetTransform();
+    hash << static_cast<int>(info._type);
+    hash << info._vRenderScale;
+    if (info._type == GT_TriMesh) {
+        hash << info._meshcollision.vertices.size();
+        hash << info._meshcollision.vertices;
+        hash << info._meshcollision.indices.size();
+        hash << info._meshcollision.indices;
     }
-
     else {
-        hash << _info._vGeomData;
-        if (_info._type == GT_Cage) {
-            hash << _info._vGeomData2;
-            for (size_t iwall = 0; iwall < _info._vSideWalls.size(); ++iwall) {
-                const GeometryInfo::SideWall& s = _info._vSideWalls[iwall];
+        hash << info._vGeomData;
+        if (info._type == GT_Cage) {
+            hash << info._vGeomData2;
+            for (size_t iwall = 0; iwall < info._vSideWalls.size(); ++iwall) {
+                const KinBody::GeometryInfo::SideWall& s = info._vSideWalls[iwall];
                 hash << s.transf;
                 hash << s.vExtents;
                 hash << static_cast<uint32_t>(s.type);
             }
         }
-        else if (_info._type == GT_Container) {
-            hash << _info._vGeomData2;
-            hash << _info._vGeomData3;
-            hash << _info._vGeomData4;
+        else if (info._type == GT_Container) {
+            hash << info._vGeomData2;
+            hash << info._vGeomData3;
+            hash << info._vGeomData4;
         }
     }
+}
+
+void KinBody::Geometry::DigestHash(HashContext& hash, int options) const
+{
+    DigestHashGeometryInfo(hash, _info, options);
 }
 
 void KinBody::Geometry::SetCollisionMesh(const TriMesh& mesh)

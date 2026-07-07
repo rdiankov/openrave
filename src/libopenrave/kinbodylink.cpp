@@ -691,41 +691,6 @@ AABB KinBody::Link::ComputeAABBForGeometryGroupFromTransform(const std::string& 
     return AABB(tLink.trans, Vector(0, 0, 0));
 }
 
-/// \brief hash the contents of a GeometryInfo into the provided hash context.
-///
-/// This mirrors KinBody::Geometry::DigestHash, but operates directly on a GeometryInfo so that
-/// geometries that are not instantiated as Link::Geometry (e.g. the extra geometry groups stored in
-/// LinkInfo::_mapExtraGeometries) can also be hashed.
-static void _DigestHashGeometryInfo(HashContext& hash, const KinBody::GeometryInfo& info, int options)
-{
-    hash << info.GetTransform();
-    hash << static_cast<int>(info._type);
-    hash << info._vRenderScale;
-    if (info._type == GT_TriMesh) {
-        hash << info._meshcollision.vertices.size();
-        hash << info._meshcollision.vertices;
-        hash << info._meshcollision.indices.size();
-        hash << info._meshcollision.indices;
-    }
-    else {
-        hash << info._vGeomData;
-        if (info._type == GT_Cage) {
-            hash << info._vGeomData2;
-            for (size_t iwall = 0; iwall < info._vSideWalls.size(); ++iwall) {
-                const KinBody::GeometryInfo::SideWall& s = info._vSideWalls[iwall];
-                hash << s.transf;
-                hash << s.vExtents;
-                hash << static_cast<uint32_t>(s.type);
-            }
-        }
-        else if (info._type == GT_Container) {
-            hash << info._vGeomData2;
-            hash << info._vGeomData3;
-            hash << info._vGeomData4;
-        }
-    }
-}
-
 void KinBody::Link::DigestHash(HashContext& hash, int options) const
 {
     hash << _index;
@@ -734,16 +699,12 @@ void KinBody::Link::DigestHash(HashContext& hash, int options) const
         FOREACHC(it, _vGeometries) {
             (*it)->DigestHash(hash, options);
         }
-        // Also hash the safety geometries (stored in _mapExtraGeometriesSafety). The active geometries above
-        // (_vGeometries) only reflect the currently selected group, so without this a change to the safety
-        // geometries would leave the kinematics-geometry hash unchanged. _mapExtraGeometriesSafety is an
-        // ordered std::map, so iteration order is deterministic.
         FOREACHC(itextra, _info._mapExtraGeometriesSafety) {
             hash << itextra->first;
             hash << itextra->second.size();
             FOREACHC(itgeominfo, itextra->second) {
                 if (!!*itgeominfo) {
-                    _DigestHashGeometryInfo(hash, **itgeominfo, options);
+                    DigestHashGeometryInfo(hash, **itgeominfo, options);
                 }
             }
         }
@@ -1000,7 +961,6 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
             }
         }
         if( addToGroups ) {
-            // a regular geometry added to all groups only goes into the non-safety extra groups; safety groups are managed via SetSafetyGroupGeometries
             FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
                 FOREACH(itgeometryinfo, itgeometrygroup->second) {
                     if( (*itgeometryinfo)->_name == ginfo._name ) {
