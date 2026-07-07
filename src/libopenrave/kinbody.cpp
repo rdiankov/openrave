@@ -850,6 +850,15 @@ void KinBody::_InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos)
             throw OPENRAVE_EXCEPTION_FORMAT(_("link '%s' is declared more than once in body '%s', uri is '%s'"), info._name%GetName()%GetURI(), ORE_InvalidArguments);
         }
 
+        // a group name must live in at most one of the safety / non-safety extra geometry maps: a group (and
+        // therefore a collision checker that uses it) cannot mix safety and non-safety geometry. The incoming
+        // LinkInfo is user-constructed, so both maps could carry the same name.
+        for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& safetyGroupPair : info._mapExtraGeometriesSafety) {
+            if( info._mapExtraGeometries.find(safetyGroupPair.first) != info._mapExtraGeometries.end() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("cannot initialize link '%s' of body '%s': geometry group '%s' exists in both the safety and non-safety extra geometry maps; a geometry group cannot mix safety and non-safety geometry"), info._name%GetName()%safetyGroupPair.first, ORE_InvalidArguments);
+            }
+        }
+
         // Initialize the link from the associated info and add to our list of links
         plink->_index = static_cast<int>(_veclinks.size());
         _InitLinkFromInfo(plink, info);
