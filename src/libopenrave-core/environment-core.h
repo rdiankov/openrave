@@ -1537,8 +1537,8 @@ public:
         return _vCollisionCheckers.size() > 0 ? _vCollisionCheckers.front() : CollisionCheckerBasePtr();
     }
 
-    virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& name) const {
-        const std::vector<std::string>::const_iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), name);
+    virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& groupname) const {
+        const std::vector<std::string>::const_iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), groupname);
         if( itName != _vCollisionCheckerGroupNames.end() ) {
             const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
             return _vCollisionCheckers.at(iChecker);
