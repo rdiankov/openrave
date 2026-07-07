@@ -118,6 +118,16 @@ int KinBody::LinkInfo::Compare(const LinkInfo& rhs, int linkCompareOptions, dRea
     return 0;
 }
 
+void KinBody::LinkInfo::CheckExtraGeometryGroupConflict(const std::string& groupname, bool bSafetyGroup) const
+{
+    // a group name must live in at most one of the safety / non-safety maps: a group (and therefore a
+    // collision checker that uses it) cannot mix safety and non-safety geometry.
+    const std::map<std::string, std::vector<GeometryInfoPtr> >& mapConflicting = bSafetyGroup ? _mapExtraGeometries : _mapExtraGeometriesSafety;
+    if( mapConflicting.find(groupname) != mapConflicting.end() ) {
+        throw OPENRAVE_EXCEPTION_FORMAT(_("cannot store %s geometry group '%s' for link '%s' (id '%s'): a %s geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), (bSafetyGroup ? "safety" : "non-safety")%groupname%_name%_id%(bSafetyGroup ? "non-safety" : "safety"), ORE_InvalidArguments);
+    }
+}
+
 void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
 {
     FOREACH(itgeometry, _vgeometryinfos) {
@@ -363,10 +373,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
                 RAVELOG_WARN_FORMAT("ignored an entry (id '%s') in extraGeometries in link %s due to missing or invalid 'geometries' array", extraId%_id);
                 continue;
             }
-            // a group name must live in at most one of the safety / non-safety maps.
-            if( _mapExtraGeometries.find(extraId) != _mapExtraGeometries.end() ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("cannot deserialize safety geometry group '%s' for link %s: a non-safety geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), extraId%_id, ORE_InvalidArguments);
-            }
+            CheckExtraGeometryGroupConflict(extraId, /*bSafetyGroup*/ true);
             const rapidjson::Value& rGeometries = rExtraGeometry["geometries"];
 
             _mapExtraGeometriesSafety[extraId].reserve(rGeometries.Size());
@@ -869,13 +876,8 @@ const std::vector<KinBody::GeometryInfoPtr>& KinBody::Link::GetGeometriesFromGro
     }
 }
 
-static void _StoreGroupGeometriesIntoMap(std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapTarget, const std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapConflicting, const char* conflictingKind, const std::string& bodyname, const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
+static void _StoreGroupGeometriesIntoMap(std::map<std::string, std::vector<KinBody::GeometryInfoPtr>>& mapTarget, const std::string& bodyname, const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    // a group name must live in at most one of the safety / non-safety maps: a group (and therefore a
-    // collision checker that uses it) cannot mix safety and non-safety geometry.
-    if( mapConflicting.find(groupname) != mapConflicting.end() ) {
-        throw OPENRAVE_EXCEPTION_FORMAT(_("cannot set geometry group '%s' for body %s: a %s geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), groupname%bodyname%conflictingKind, ORE_InvalidArguments);
-    }
     FOREACH(itgeominfo, geometries) {
         if (!(*itgeominfo)) {
             int igeominfo = itgeominfo - geometries.begin();
@@ -889,12 +891,14 @@ static void _StoreGroupGeometriesIntoMap(std::map<std::string, std::vector<KinBo
 
 void KinBody::Link::_SetGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometries, _info._mapExtraGeometriesSafety, "safety", GetParent()->GetName(), groupname, geometries);
+    _info.CheckExtraGeometryGroupConflict(groupname, /*bSafetyGroup*/ false);
+    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometries, GetParent()->GetName(), groupname, geometries);
 }
 
 void KinBody::Link::_SetSafetyGroupGeometriesNoPostprocess(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
 {
-    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometriesSafety, _info._mapExtraGeometries, "non-safety", GetParent()->GetName(), groupname, geometries);
+    _info.CheckExtraGeometryGroupConflict(groupname, /*bSafetyGroup*/ true);
+    _StoreGroupGeometriesIntoMap(_info._mapExtraGeometriesSafety, GetParent()->GetName(), groupname, geometries);
 }
 
 void KinBody::Link::SetGroupGeometries(const std::string& groupname, const std::vector<KinBody::GeometryInfoPtr>& geometries)
@@ -907,6 +911,14 @@ void KinBody::Link::SetSafetyGroupGeometries(const std::string& groupname, const
 {
     _SetSafetyGroupGeometriesNoPostprocess(groupname, geometries);
     GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
+}
+
+bool KinBody::Link::IsSafetyGeometryGroup(const std::string& groupname) const
+{
+    if( groupname.empty() ) {
+        return false;
+    }
+    return _info._mapExtraGeometriesSafety.find(groupname) != _info._mapExtraGeometriesSafety.end();
 }
 
 int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const
@@ -1323,10 +1335,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
 
         std::map<std::string, std::vector<GeometryInfoPtr> >::iterator itExistingGroup = _info._mapExtraGeometriesSafety.find(groupname);
         if (itExistingGroup == _info._mapExtraGeometriesSafety.end()) {
-            // a group name must live in at most one of the safety / non-safety maps.
-            if( _info._mapExtraGeometries.find(groupname) != _info._mapExtraGeometries.end() ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("cannot add safety geometry group '%s' to link %s: a non-safety geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), groupname%_info._id, ORE_InvalidArguments);
-            }
+            _info.CheckExtraGeometryGroupConflict(groupname, /*bSafetyGroup*/ true);
             // a new safety geometry group appeared, so the link must be rebuilt
             _info._mapExtraGeometriesSafety.insert(std::make_pair(groupname, std::vector<KinBody::GeometryInfoPtr>{}));
             std::vector<KinBody::GeometryInfoPtr>& vSafetyGeometries =_info._mapExtraGeometriesSafety[groupname];

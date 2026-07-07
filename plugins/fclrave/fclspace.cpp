@@ -86,6 +86,10 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
         // Glue code for a unified access to geometries
         if(pinfo->_geometrygroup.size() > 0 && plink->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
+            const bool bLinkIsSafetyGroup = plink->IsSafetyGeometryGroup(pinfo->_geometrygroup);
+            if( bIsSafetyGroup != bLinkIsSafetyGroup ) {
+                throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, geometry group '%s' of body '%s': the body-level safety classification (%d) does not match the one (%d) of link '%s'; a geometry group cannot mix safety and non-safety geometry")%_penv->GetNameId()%pinfo->_geometrygroup%pbody->GetName()%(int)bIsSafetyGroup%(int)bLinkIsSafetyGroup%plink->GetName()), OpenRAVE::ORE_InvalidState);
+            }
             const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = plink->GetGeometriesFromGroup(pinfo->_geometrygroup);
             FOREACH(itgeominfo, vgeometryinfos) {
                 const KinBody::GeometryInfoPtr& pgeominfo = *itgeominfo;

@@ -1043,6 +1043,9 @@ public:
             return _name;
         }
 
+        /// \brief throws ORE_InvalidArguments if storing group 'groupname' into the map selected by bSafetyGroup would violate the invariant that a group name lives in at most one of _mapExtraGeometries / _mapExtraGeometriesSafety.
+        void CheckExtraGeometryGroupConflict(const std::string& groupname, bool bSafetyGroup) const;
+
         std::vector<GeometryInfoPtr> _vgeometryinfos;
         /// extra-purpose geometries like
         /// Key : geometry group name. Value : non-safety geometry.
@@ -1402,6 +1405,9 @@ private:
         void _SetSafetyGroupGeometriesNoPostprocess(const std::string& name, const std::vector<KinBody::GeometryInfoPtr>& geometries);
 
 public:
+        /// \brief returns true if this link stores the geometry group in its safety extra geometry map (LinkInfo::_mapExtraGeometriesSafety). Returns false for an empty name. See KinBody::IsSafetyGeometryGroup for the body-level classification.
+        bool IsSafetyGeometryGroup(const std::string& name) const;
+
         /// \brief returns the number of geometries stored from a particular key
         ///
         /// \return if -1, then the geometries are not in _mapExtraGeometries, otherwise the number
