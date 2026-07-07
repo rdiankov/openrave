@@ -1540,7 +1540,6 @@ public:
     }
 
     virtual CollisionCheckerBasePtr GetCollisionCheckerByGroupName(const std::string& groupname) const {
-        EnvironmentLock lockenv(GetMutex());
         const std::vector<std::string>::const_iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), groupname);
         if( itName != _vCollisionCheckerGroupNames.end() ) {
             const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
@@ -4048,9 +4047,7 @@ protected:
         EnvironmentLock lock(GetMutex());
 
         bool bCollisionCheckerChanged = false;
-        std::vector<CollisionCheckerBasePtr> vInputCheckers;
-        r->GetCollisionCheckers(vInputCheckers);
-        if( r->_vCollisionCheckerGroupNames.size() > 0 ) {
+        if( !!r->GetCollisionChecker() ) {
             const bool bIsDifferentGroupNames = (r->_vCollisionCheckerGroupNames != _vCollisionCheckerGroupNames);
             if( bIsDifferentGroupNames ) {
                 _vCollisionCheckerGroupNames = r->_vCollisionCheckerGroupNames;
@@ -4059,6 +4056,8 @@ protected:
                     _vCollisionCheckers.push_back(CollisionCheckerBasePtr());
                 }
             }
+            std::vector<CollisionCheckerBasePtr> vInputCheckers;
+            r->GetCollisionCheckers(vInputCheckers);
             for(int iChecker = 0; iChecker < (int)r->_vCollisionCheckerGroupNames.size(); ++iChecker) {
                 const CollisionCheckerBasePtr pInputChecker = vInputCheckers.at(iChecker);
                 if( !pInputChecker ) {
@@ -4081,6 +4080,7 @@ protected:
         else {
             _vCollisionCheckerGroupNames.clear();
             _vCollisionCheckers.clear();
+            SetCollisionChecker(CollisionCheckerBasePtr());
         }
 
         bool bPhysicsEngineChanged = false;
