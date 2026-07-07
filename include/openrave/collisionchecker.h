@@ -367,20 +367,20 @@ private:
 };
 
 /// \brief type used for CollisionOptionsStateSaver, about how the option from the argument is treated.
-enum CollisionOptionsModificationType
+enum CollisionOptionsOperation
 {
-    COMT_Add = 0,    ///< add, e.g. SetCollisionOptions(GetCollisionOptions() | options)
-    COMT_Remove = 1, ///< remove, e.g. SetCollisionOptions(GetCollisionOptions() & (~options))
-    COMT_Set = 2,    ///< set, e.g. SetCollisionOptions(options)
+    COO_Add = 0,    ///< add, e.g. SetCollisionOptions(GetCollisionOptions() | options)
+    COO_Remove = 1, ///< remove, e.g. SetCollisionOptions(GetCollisionOptions() & (~options))
+    COO_Set = 2,    ///< set, e.g. SetCollisionOptions(options)
 };
 
-/// \brief Helper class to save and restore collision options. If options are not supported and required is true, throws an exception.
+/// \brief Helper class to save and restore collision options. If options are not supported in the collision checker and 'required' is true, throws an exception.
 ///
 /// Operates either on a single collision checker, or on all collision checkers in an environment
 /// (env->GetCollisionCheckers()). The options argument is applied per-checker according to modificationType
 /// (add / remove / set). Each affected checker's options are saved on construction and restored on destruction.
 /// Note the default modificationType differs between the two constructors: the single-checker form defaults to
-/// COMT_Set (its historical behavior), the environment form defaults to COMT_Add.
+/// COO_Set (its historical behavior), the environment form defaults to COO_Add.
 class OPENRAVE_API CollisionOptionsStateSaver
 {
 public:
@@ -389,25 +389,25 @@ public:
     /// \param[in] options : option bits applied according to modificationType
     /// \param[in] required : if the resulting options are not supported and required is true, throws an exception
     /// \param[in] modificationType : how options is applied to the checker's current options (default: set)
-    CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int options, bool required=true, CollisionOptionsModificationType modificationType=COMT_Set);
+    CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int options, bool required=true, CollisionOptionsOperation modificationType=COO_Set);
 
     /// \brief save/modify the options of all collision checkers in env (env->GetCollisionCheckers()).
     /// \param[in] pEnv : environment
     /// \param[in] options : option bits applied according to modificationType
     /// \param[in] required : if the resulting options are not supported and required is true, throws an exception
     /// \param[in] modificationType : how options is applied to each checker's current options (default: set)
-    CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required=true, CollisionOptionsModificationType modificationType=COMT_Set);
+    CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required=true, CollisionOptionsOperation modificationType=COO_Set);
 
     virtual ~CollisionOptionsStateSaver();
 private:
     /// \brief apply options to the already-populated _vCheckers (with _vOldOptions already saved). On failure with required, restores and throws.
-    void _ApplyOptions(int options, bool required, CollisionOptionsModificationType modificationType);
+    void _ApplyOptions(int options, bool required, CollisionOptionsOperation modificationType);
 
     /// \brief restore the saved options. Assumes _vOldOptions and _vCheckers have the same size.
     void _Restore();
 
     /// \brief compute the new options based on modificationType.
-    static int _ComputeNewOption(int oldOptions, int optionsModification, CollisionOptionsModificationType modificationType);
+    static int _ComputeNewOption(int oldOptions, int optionsModification, CollisionOptionsOperation modificationType);
 
     std::vector<int> _vOldOptions; ///< saved options, one per checker in _vCheckers
     std::vector<CollisionCheckerBasePtr> _vCheckers; ///< checkers being managed (single-checker form has size 1)
