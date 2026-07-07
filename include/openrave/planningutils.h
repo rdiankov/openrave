@@ -497,7 +497,7 @@ protected:
     std::vector<dReal> _doftorques, _dofaccelerations; ///< in body DOF space
     boost::shared_ptr<ConfigurationSpecification::SetConfigurationStateFn> _setvelstatefn;
     std::vector<dReal> _vfulldofdynamicaccelerationlimits, _vfulldofdynamicjerklimits, _vfulldofvalues, _vfulldofvelocities; ///< in body full DOF space. the size is GetDOF().
-    std::vector<CollisionCheckerBasePtr> _vSafetyCollisionCheckers;
+    std::vector<CollisionCheckerBasePtr> _vSafetyCollisionCheckers; ///< collision checkers used for safety geometry collision checking during planning.
 };
 
 typedef boost::shared_ptr<DynamicsCollisionConstraint> DynamicsCollisionConstraintPtr;
