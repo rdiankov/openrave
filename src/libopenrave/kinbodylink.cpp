@@ -1166,8 +1166,9 @@ void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
         _vGeometries[i]->ExtractInfo(*info._vgeometryinfos[i]);
     }
 
-    // deep copy the safety geometries. The struct copy above only shares the GeometryInfoPtrs, so without this
-    // the caller could mutate this link's stored safety geometry infos (e.g. through UpdateFromInfo).
+    // the use case of _mapExtraGeometriesSafety is close to _vgeometryinfos, so deep copy it here.
+    // the caller could mutate the pointers of GeometryInfos in _mapExtraGeometriesSafety (e.g. through UpdateFromInfo).
+    // note that this function does not deep copy the _mapExtraGeometries to reduce the memory footprint and computation time.
     for (std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : info._mapExtraGeometriesSafety) {
         for (GeometryInfoPtr& pGeometryInfo : keyValue.second) {
             if (!!pGeometryInfo) {
