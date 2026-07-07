@@ -135,9 +135,9 @@ std::vector<KinBody::JointInfoPtr> ExtractJointInfoArray(object pyJointInfoList)
 
 KinBody::GrabbedInfoPtr ExtractGrabbedInfo(py::object oGrabbedInfo)
 {
-    extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> > pygrabbedinfo(oGrabbedInfo);
+    extract_<OPENRAVE_SHARED_PTR<PyGrabbedInfo> > pygrabbedinfo(oGrabbedInfo);
     if (pygrabbedinfo.check()) {
-        return ((OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo>)pygrabbedinfo)->GetGrabbedInfo();
+        return ((OPENRAVE_SHARED_PTR<PyGrabbedInfo>)pygrabbedinfo)->GetGrabbedInfo();
     }
 
     return KinBody::GrabbedInfoPtr();
@@ -154,9 +154,9 @@ std::vector<KinBody::GrabbedInfoPtr> ExtractGrabbedInfoArray(object pyGrabbedInf
         vGrabbedInfos.resize(arraySize);
 
         for(size_t iGrabbedInfo = 0; iGrabbedInfo < arraySize; iGrabbedInfo++) {
-            extract_<OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> > pygrabbedinfo(pyGrabbedInfoList[py::to_object(iGrabbedInfo)]);
+            extract_<OPENRAVE_SHARED_PTR<PyGrabbedInfo> > pygrabbedinfo(pyGrabbedInfoList[py::to_object(iGrabbedInfo)]);
             if (pygrabbedinfo.check()) {
-                vGrabbedInfos[iGrabbedInfo] = ((OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo>)pygrabbedinfo)->GetGrabbedInfo();
+                vGrabbedInfos[iGrabbedInfo] = ((OPENRAVE_SHARED_PTR<PyGrabbedInfo>)pygrabbedinfo)->GetGrabbedInfo();
             }
             else {
                 throw openrave_exception(_("Bad GrabbedInfo"));
@@ -2492,14 +2492,14 @@ long PyManageData::__hash__() {
     return static_cast<long>(uintptr_t(_pdata.get()));
 }
 
-PyKinBody::PyGrabbedInfo::PyGrabbedInfo() {
+PyGrabbedInfo::PyGrabbedInfo() {
 }
 
-PyKinBody::PyGrabbedInfo::PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
+PyGrabbedInfo::PyGrabbedInfo(const RobotBase::GrabbedInfo& info) {
     _Update(info);
 }
 
-RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
+RobotBase::GrabbedInfoPtr PyGrabbedInfo::GetGrabbedInfo() const
 {
     RobotBase::GrabbedInfoPtr pinfo(new RobotBase::GrabbedInfo());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
@@ -2541,7 +2541,7 @@ RobotBase::GrabbedInfoPtr PyKinBody::PyGrabbedInfo::GetGrabbedInfo() const
     return pinfo;
 }
 
-py::dict PyKinBody::PyGrabbedInfo::SerializeJSON(dReal fUnitScale, py::object ooptions)
+py::dict PyGrabbedInfo::SerializeJSON(dReal fUnitScale, py::object ooptions)
 {
     rapidjson::Document doc;
     KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
@@ -2549,7 +2549,7 @@ py::dict PyKinBody::PyGrabbedInfo::SerializeJSON(dReal fUnitScale, py::object oo
     return py::dict(toPyObject(doc));
 }
 
-void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale, py::object options)
+void PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale, py::object options)
 {
     rapidjson::Document doc;
     toRapidJSONValue(obj, doc, doc.GetAllocator());
@@ -2558,13 +2558,13 @@ void PyKinBody::PyGrabbedInfo::DeserializeJSON(py::object obj, dReal fUnitScale,
     _Update(info);
 }
 
-py::str PyKinBody::PyGrabbedInfo::GetGrabbedInfoHash() const
+py::str PyGrabbedInfo::GetGrabbedInfoHash() const
 {
     KinBody::GrabbedInfoPtr pInfo = GetGrabbedInfo();
     return ConvertStringToUnicode(pInfo->GetGrabbedInfoHash());
 }
 
-std::string PyKinBody::PyGrabbedInfo::__str__() {
+std::string PyGrabbedInfo::__str__() {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     return boost::str(boost::format("<grabbedinfo:%s -> %s>")%_robotlinkname%_grabbedname);
 #else
@@ -2574,7 +2574,7 @@ std::string PyKinBody::PyGrabbedInfo::__str__() {
 #endif
 }
 
-void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
+void PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     _id = info._id;
     _grabbedname = info._grabbedname;
@@ -2599,10 +2599,14 @@ void PyKinBody::PyGrabbedInfo::_Update(const RobotBase::GrabbedInfo& info) {
     _grabbedUserData = toPyObject(info._rGrabbedUserData);
 }
 
-py::str PyKinBody::PyGrabbedInfo::__unicode__() {
+py::str PyGrabbedInfo::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 
+PyGrabbedInfoPtr toPyGrabbedInfo(const KinBody::GrabbedInfo& grabbedInfo)
+{
+    return PyGrabbedInfoPtr(new PyGrabbedInfo(grabbedInfo));
+}
 
 PyKinBody::PyKinBodyInfo::PyKinBodyInfo() {
 }
@@ -2716,7 +2720,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
 
     py::list vGrabbedInfos;
     FOREACHC(itGrabbedInfo, info._vGrabbedInfos) {
-        PyKinBody::PyGrabbedInfo grabbedInfo = PyKinBody::PyGrabbedInfo(**itGrabbedInfo);
+        PyGrabbedInfo grabbedInfo = PyGrabbedInfo(**itGrabbedInfo);
         vGrabbedInfos.append(grabbedInfo);
     }
     _vGrabbedInfos = vGrabbedInfos;
@@ -4890,11 +4894,11 @@ class GrabbedInfo_pickle_suite
 #endif
 {
 public:
-    static py::tuple getstate(const PyKinBody::PyGrabbedInfo& r)
+    static py::tuple getstate(const PyGrabbedInfo& r)
     {
         return py::make_tuple(r._grabbedname, r._robotlinkname, r._trelative, r._setIgnoreRobotLinkNames, r._grippername, r._grabbedUserData);
     }
-    static void setstate(PyKinBody::PyGrabbedInfo& r, py::tuple state) {
+    static void setstate(PyGrabbedInfo& r, py::tuple state) {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         r._grabbedname = extract<std::string>(state[0]);
         r._robotlinkname = extract<std::string>(state[1]);
@@ -5136,7 +5140,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                 RAVELOG_WARN("Invalid state!");
             }
             // TGN: should I convert this to primitive data types?
-            // ... the same as I did for PyKinBody::PyGrabbedInfo
+            // ... the same as I did for PyGrabbedInfo
             PyElectricMotorActuatorInfo pyinfo;
             ElectricMotorActuatorInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
@@ -5606,42 +5610,42 @@ void KinBodyInitializer::init_openravepy_kinbody()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> >(m, "GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
+    object grabbedinfo = class_<PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyGrabbedInfo> >(m, "GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
                          .def(init<>())
 #else
-    object grabbedinfo = class_<PyKinBody::PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyKinBody::PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
+    object grabbedinfo = class_<PyGrabbedInfo, OPENRAVE_SHARED_PTR<PyGrabbedInfo> >("GrabbedInfo", DOXY_CLASS(KinBody::GrabbedInfo))
 #endif
-                         .def_readwrite("_id",&PyKinBody::PyGrabbedInfo::_id)
-                         .def_readwrite("_grabbedname",&PyKinBody::PyGrabbedInfo::_grabbedname)
-                         .def_readwrite("_robotlinkname",&PyKinBody::PyGrabbedInfo::_robotlinkname)
-                         .def_readwrite("_grippername",&PyKinBody::PyGrabbedInfo::_grippername)
-                         .def_readwrite("_trelative",&PyKinBody::PyGrabbedInfo::_trelative)
-                         .def_readwrite("_grabbedUserData",&PyKinBody::PyGrabbedInfo::_grabbedUserData)
-                         .def_readwrite("_setIgnoreRobotLinkNames",&PyKinBody::PyGrabbedInfo::_setIgnoreRobotLinkNames)
+                         .def_readwrite("_id",&PyGrabbedInfo::_id)
+                         .def_readwrite("_grabbedname",&PyGrabbedInfo::_grabbedname)
+                         .def_readwrite("_robotlinkname",&PyGrabbedInfo::_robotlinkname)
+                         .def_readwrite("_grippername",&PyGrabbedInfo::_grippername)
+                         .def_readwrite("_trelative",&PyGrabbedInfo::_trelative)
+                         .def_readwrite("_grabbedUserData",&PyGrabbedInfo::_grabbedUserData)
+                         .def_readwrite("_setIgnoreRobotLinkNames",&PyGrabbedInfo::_setIgnoreRobotLinkNames)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON,
+                         .def("SerializeJSON", &PyGrabbedInfo::SerializeJSON,
                               "unitScale"_a = 1.0,
                               "options"_a = py::none_(),
                               DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)
                               )
-                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON,
+                         .def("DeserializeJSON", &PyGrabbedInfo::DeserializeJSON,
                               "obj"_a,
                               "unitScale"_a = 1.0,
                               "options"_a = py::none_(),
                               DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)
                               )
 #else
-                         .def("SerializeJSON", &PyKinBody::PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
-                         .def("DeserializeJSON", &PyKinBody::PyGrabbedInfo::DeserializeJSON, PyGrabbedInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)))
+                         .def("SerializeJSON", &PyGrabbedInfo::SerializeJSON, PyGrabbedInfo_SerializeJSON_overloads(PY_ARGS("unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, SerializeJSON)))
+                         .def("DeserializeJSON", &PyGrabbedInfo::DeserializeJSON, PyGrabbedInfo_DeserializeJSON_overloads(PY_ARGS("obj", "unitScale", "options") DOXY_FN(KinBody::GrabbedInfo, DeserializeJSON)))
 #endif // USE_PYBIND11_PYTHON_BINDINGS
-                         .def("GetGrabbedInfoHash", &PyKinBody::PyGrabbedInfo::GetGrabbedInfoHash)
-                         .def("__str__",&PyKinBody::PyGrabbedInfo::__str__)
-                         .def("__unicode__",&PyKinBody::PyGrabbedInfo::__unicode__)
+                         .def("GetGrabbedInfoHash", &PyGrabbedInfo::GetGrabbedInfoHash)
+                         .def("__str__",&PyGrabbedInfo::__str__)
+                         .def("__unicode__",&PyGrabbedInfo::__unicode__)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
                          // https://pybind11.readthedocs.io/en/stable/advanced/classes.html#pickling-support
                          .def(py::pickle(
                                   // __getstate__
-                                  [](const PyKinBody::PyGrabbedInfo &pyinfo) {
+                                  [](const PyGrabbedInfo &pyinfo) {
             return GrabbedInfo_pickle_suite::getstate(pyinfo);
         },
                                   // __setstate__
@@ -5650,18 +5654,18 @@ void KinBodyInitializer::init_openravepy_kinbody()
                 RAVELOG_WARN("Invalid state!");
             }
             /* Create a new C++ instance */
-            PyKinBody::PyGrabbedInfo pyinfo;
+            PyGrabbedInfo pyinfo;
             GrabbedInfo_pickle_suite::setstate(pyinfo, state);
             return pyinfo;
         }
                                   ))
-                         .def("__copy__", [](const PyKinBody::PyGrabbedInfo& self){
+                         .def("__copy__", [](const PyGrabbedInfo& self){
             return self;
         })
                          .def("__deepcopy__",
-                              [](const PyKinBody::PyGrabbedInfo &pyinfo, const py::dict& memo) {
+                              [](const PyGrabbedInfo &pyinfo, const py::dict& memo) {
             py::tuple state = GrabbedInfo_pickle_suite::getstate(pyinfo);
-            PyKinBody::PyGrabbedInfo pyinfo_new;
+            PyGrabbedInfo pyinfo_new;
             GrabbedInfo_pickle_suite::setstate(pyinfo_new, state);
             return pyinfo_new;
         }
