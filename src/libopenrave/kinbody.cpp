@@ -5311,6 +5311,10 @@ void KinBody::_ComputeInternalInformation()
     std::string selfgroup("self");
     FOREACH(itlink, _veclinks) {
         if( (*itlink)->_info._mapExtraGeometries.find(selfgroup) == (*itlink)->_info._mapExtraGeometries.end() ) {
+            // a group name must live in at most one of the safety / non-safety maps.
+            if( (*itlink)->_info._mapExtraGeometriesSafety.find(selfgroup) != (*itlink)->_info._mapExtraGeometriesSafety.end() ) {
+                throw OPENRAVE_EXCEPTION_FORMAT(_("cannot create the auto-generated '%s' extra geometry group for body '%s' link '%s': a safety geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), selfgroup%GetName()%(*itlink)->GetName(), ORE_InvalidArguments);
+            }
             std::vector<GeometryInfoPtr> vgeoms;
             FOREACH(itgeom, (*itlink)->_vGeometries) {
                 vgeoms.push_back(GeometryInfoPtr(new GeometryInfo((*itgeom)->GetInfo())));

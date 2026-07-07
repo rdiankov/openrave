@@ -363,8 +363,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
                 RAVELOG_WARN_FORMAT("ignored an entry (id '%s') in extraGeometries in link %s due to missing or invalid 'geometries' array", extraId%_id);
                 continue;
             }
-            // a group name must live in at most one of the safety / non-safety maps: a group (and therefore a
-            // collision checker that uses it) cannot mix safety and non-safety geometry.
+            // a group name must live in at most one of the safety / non-safety maps.
             if( _mapExtraGeometries.find(extraId) != _mapExtraGeometries.end() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("cannot deserialize safety geometry group '%s' for link %s: a non-safety geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), extraId%_id, ORE_InvalidArguments);
             }
@@ -1324,8 +1323,7 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
 
         std::map<std::string, std::vector<GeometryInfoPtr> >::iterator itExistingGroup = _info._mapExtraGeometriesSafety.find(groupname);
         if (itExistingGroup == _info._mapExtraGeometriesSafety.end()) {
-            // a group name must live in at most one of the safety / non-safety maps: a group (and therefore a
-            // collision checker that uses it) cannot mix safety and non-safety geometry.
+            // a group name must live in at most one of the safety / non-safety maps.
             if( _info._mapExtraGeometries.find(groupname) != _info._mapExtraGeometries.end() ) {
                 throw OPENRAVE_EXCEPTION_FORMAT(_("cannot add safety geometry group '%s' to link %s: a non-safety geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), groupname%_info._id, ORE_InvalidArguments);
             }
