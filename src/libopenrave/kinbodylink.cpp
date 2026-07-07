@@ -360,8 +360,8 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
             const rapidjson::Value& rExtraGeometry = value["extraGeometries"][iExtra];
             orjson::LoadJsonValueByKey(rExtraGeometry, "id", extraId);
             if( !rExtraGeometry.HasMember("geometries") || !rExtraGeometry["geometries"].IsArray() ) {
+                RAVELOG_WARN_FORMAT("ignored an entry (id '%s') in extraGeometries in link %s due to missing or invalid 'geometries' array", extraId%_id);
                 continue;
-                // TODO warn
             }
             const rapidjson::Value& rGeometries = rExtraGeometry["geometries"];
 
