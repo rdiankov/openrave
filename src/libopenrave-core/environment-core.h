@@ -1687,87 +1687,31 @@ public:
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(plink->GetParent());
-        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
-        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
-        bool bCollision = false;
-        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
-            if( pChecker->CheckCollision(ray,plink,report) ) {
-                if( !bAllLinkCollisions ) {
-                    return true;
-                }
-                bCollision = true;
-            }
-        }
-        return bCollision;
+        return GetCollisionChecker()->CheckCollision(ray,plink,report);
     }
     virtual bool CheckCollision(const RAY& ray, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
-        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
-        bool bCollision = false;
-        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
-            if( pChecker->CheckCollision(ray,pbody,report) ) {
-                if( !bAllLinkCollisions ) {
-                    return true;
-                }
-                bCollision = true;
-            }
-        }
-        return bCollision;
+        return GetCollisionChecker()->CheckCollision(ray,pbody,report);
     }
     virtual bool CheckCollision(const RAY& ray, CollisionReportPtr report) override
     {
-        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
-        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
-        bool bCollision = false;
-        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
-            if( pChecker->CheckCollision(ray,report) ) {
-                if( !bAllLinkCollisions ) {
-                    return true;
-                }
-                bCollision = true;
-            }
-        }
-        return bCollision;
+        return GetCollisionChecker()->CheckCollision(ray,report);
     }
 
     virtual bool CheckCollision(const TriMesh& trimesh, KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
-        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
-        bool bCollision = false;
-        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
-            if( pChecker->CheckCollision(trimesh,pbody,report) ) {
-                if( !bAllLinkCollisions ) {
-                    return true;
-                }
-                bCollision = true;
-            }
-        }
-        return bCollision;
+        return GetCollisionChecker()->CheckCollision(trimesh,pbody,report);
     }
 
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody);
-        // TODO : need to implement check self collision like this?
-        OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckStandaloneSelfCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
-        const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
-        bool bCollision = false;
-        for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
-            if( pChecker->CheckStandaloneSelfCollision(pbody,report) ) {
-                if( !bAllLinkCollisions ) {
-                    return true;
-                }
-                bCollision = true;
-            }
-        }
-        return bCollision;
+        return GetCollisionChecker()->CheckStandaloneSelfCollision(pbody,report);
     }
 
     virtual void StepSimulation(dReal fTimeStep) override
