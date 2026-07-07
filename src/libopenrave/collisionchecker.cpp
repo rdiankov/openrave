@@ -598,14 +598,14 @@ int CollisionReport::SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, c
     return 0;
 }
 
-CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int options, bool required, CollisionOptionsModificationType modificationType)
+CollisionOptionsStateSaver::CollisionOptionsStateSaver(CollisionCheckerBasePtr p, int options, bool required, CollisionOptionsOperation modificationType)
 {
     _vCheckers.push_back(p);
     _vOldOptions.push_back(p->GetCollisionOptions());
     _ApplyOptions(options, required, modificationType);
 }
 
-CollisionOptionsStateSaver::CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required, CollisionOptionsModificationType modificationType)
+CollisionOptionsStateSaver::CollisionOptionsStateSaver(EnvironmentBasePtr pEnv, int options, bool required, CollisionOptionsOperation modificationType)
 {
     // initialize checkers and old options
     pEnv->GetCollisionCheckers(_vCheckers);
@@ -621,7 +621,7 @@ CollisionOptionsStateSaver::~CollisionOptionsStateSaver()
     _Restore();
 }
 
-void CollisionOptionsStateSaver::_ApplyOptions(int options, bool required, CollisionOptionsModificationType modificationType)
+void CollisionOptionsStateSaver::_ApplyOptions(int options, bool required, CollisionOptionsOperation modificationType)
 {
     // try setting
     int iCheckerFailed = -1;
@@ -647,20 +647,20 @@ void CollisionOptionsStateSaver::_Restore()
     }
 }
 
-int CollisionOptionsStateSaver::_ComputeNewOption(int oldOptions, int optionsModification, CollisionOptionsModificationType modificationType)
+int CollisionOptionsStateSaver::_ComputeNewOption(int oldOptions, int optionsModification, CollisionOptionsOperation modificationType)
 {
     switch( modificationType )
     {
-    case COMT_Add:
+    case COO_Add:
         return oldOptions | optionsModification;
-    case COMT_Remove:
+    case COO_Remove:
         return oldOptions & (~optionsModification);
-    case COMT_Set:
+    case COO_Set:
         return optionsModification;
     default:
         break;
     }
-    throw openrave_exception(str(boost::format(_("Unknown CollisionOptionsModificationType %s\n"))%modificationType));
+    throw openrave_exception(str(boost::format(_("Unknown CollisionOptionsOperation %s\n"))%modificationType));
 }
 
 } // end namespace OpenRAVE

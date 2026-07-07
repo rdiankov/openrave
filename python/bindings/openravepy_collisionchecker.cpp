@@ -981,13 +981,13 @@ void CollisionCheckerBaseInitializer::init_openravepy_collisionchecker()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    enum_<CollisionOptionsModificationType>(m, "CollisionOptionsModificationType", py::arithmetic() DOXY_ENUM(CollisionOptionsModificationType))
+    enum_<CollisionOptionsOperation>(m, "CollisionOptionsOperation", py::arithmetic() DOXY_ENUM(CollisionOptionsOperation))
 #else
-    enum_<CollisionOptionsModificationType>("CollisionOptionsModificationType" DOXY_ENUM(CollisionOptionsModificationType))
+    enum_<CollisionOptionsOperation>("CollisionOptionsOperation" DOXY_ENUM(CollisionOptionsOperation))
 #endif
-    .value("Add",COMT_Add)
-    .value("Remove",COMT_Remove)
-    .value("Set",COMT_Set)
+    .value("Add",COO_Add)
+    .value("Remove",COO_Remove)
+    .value("Set",COO_Set)
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     .export_values()
 #endif

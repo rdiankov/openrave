@@ -45,10 +45,10 @@ class CollisionOptionsStateSaver(object):
     def __init__(self,checkerOrEnv,options=None,required=True,modificationType=None):
         if hasattr(checkerOrEnv, 'GetCollisionCheckers'):
             self.checkers = checkerOrEnv.GetCollisionCheckers()
-            self.modificationType = openravepy_int.CollisionOptionsModificationType.Set if modificationType is None else modificationType
+            self.modificationType = openravepy_int.CollisionOptionsOperation.Set if modificationType is None else modificationType
         else:
             self.checkers = [checkerOrEnv]
-            self.modificationType = openravepy_int.CollisionOptionsModificationType.Set if modificationType is None else modificationType
+            self.modificationType = openravepy_int.CollisionOptionsOperation.Set if modificationType is None else modificationType
         self.oldoptions = None
         self.newoptions=options
         self.required = required
@@ -56,9 +56,9 @@ class CollisionOptionsStateSaver(object):
         if self.newoptions is not None:
             self.oldoptions = [checker.GetCollisionOptions() for checker in self.checkers]
             for oldoptions, checker in zip(self.oldoptions, self.checkers):
-                if self.modificationType == openravepy_int.CollisionOptionsModificationType.Add:
+                if self.modificationType == openravepy_int.CollisionOptionsOperation.Add:
                     newoptions = oldoptions | self.newoptions
-                elif self.modificationType == openravepy_int.CollisionOptionsModificationType.Remove:
+                elif self.modificationType == openravepy_int.CollisionOptionsOperation.Remove:
                     newoptions = oldoptions & (~self.newoptions)
                 else:
                     newoptions = self.newoptions
