@@ -40,15 +40,15 @@ class CollisionOptionsStateSaver(object):
     """Saves/restores the state of the collision checker options.
 
     checkerOrEnv may be a single collision checker, or an environment (then all of its collision checkers are saved).
-    options is applied per checker according to modificationType (Add/Remove/Set); default Set.
+    options is applied per checker according to operation (Add/Remove/Set); default Set.
     """
-    def __init__(self,checkerOrEnv,options=None,required=True,modificationType=None):
+    def __init__(self,checkerOrEnv,options=None,required=True,operation=None):
         if hasattr(checkerOrEnv, 'GetCollisionCheckers'):
             self.checkers = checkerOrEnv.GetCollisionCheckers()
-            self.modificationType = openravepy_int.CollisionOptionsOperation.Set if modificationType is None else modificationType
+            self.operation = openravepy_int.CollisionOptionsOperation.Set if operation is None else operation
         else:
             self.checkers = [checkerOrEnv]
-            self.modificationType = openravepy_int.CollisionOptionsOperation.Set if modificationType is None else modificationType
+            self.operation = openravepy_int.CollisionOptionsOperation.Set if operation is None else operation
         self.oldoptions = None
         self.newoptions=options
         self.required = required
@@ -56,9 +56,9 @@ class CollisionOptionsStateSaver(object):
         if self.newoptions is not None:
             self.oldoptions = [checker.GetCollisionOptions() for checker in self.checkers]
             for oldoptions, checker in zip(self.oldoptions, self.checkers):
-                if self.modificationType == openravepy_int.CollisionOptionsOperation.Add:
+                if self.operation == openravepy_int.CollisionOptionsOperation.Add:
                     newoptions = oldoptions | self.newoptions
-                elif self.modificationType == openravepy_int.CollisionOptionsOperation.Remove:
+                elif self.operation == openravepy_int.CollisionOptionsOperation.Remove:
                     newoptions = oldoptions & (~self.newoptions)
                 else:
                     newoptions = self.newoptions
