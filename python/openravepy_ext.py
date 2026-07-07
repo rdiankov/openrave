@@ -43,12 +43,11 @@ class CollisionOptionsStateSaver(object):
     options is applied per checker according to operation (Add/Remove/Set); default Set.
     """
     def __init__(self,checkerOrEnv,options=None,required=True,operation=None):
-        if hasattr(checkerOrEnv, 'GetCollisionCheckers'):
+        if isinstance(checkerOrEnv, openravepy_int.Environment):
             self.checkers = checkerOrEnv.GetCollisionCheckers()
-            self.operation = openravepy_int.CollisionOptionsOperation.Set if operation is None else operation
         else:
             self.checkers = [checkerOrEnv]
-            self.operation = openravepy_int.CollisionOptionsOperation.Set if operation is None else operation
+        self.operation = openravepy_int.CollisionOptionsOperation.Set if operation is None else operation
         self.oldoptions = None
         self.newoptions=options
         self.required = required
