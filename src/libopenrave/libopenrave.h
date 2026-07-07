@@ -310,9 +310,6 @@ void CallGetStateFns(const std::vector< std::pair<PlannerBase::PlannerParameters
 void subtractstates(std::vector<dReal>& q1, const std::vector<dReal>& q2);
 
 /// \brief hashes the contents of a GeometryInfo into the provided hash context.
-///
-/// Shared by KinBody::Geometry::DigestHash and the extra/safety geometry hashing in KinBody::Link::DigestHash
-/// so both paths produce identical hashes for the same geometry data.
 void DigestHashGeometryInfo(HashContext& hash, const KinBody::GeometryInfo& info, int options);
 
 /// -1 v1 is smaller than v2
