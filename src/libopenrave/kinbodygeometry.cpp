@@ -1925,7 +1925,7 @@ AABB KinBody::Geometry::ComputeAABB(const Transform& t) const
 /// paths produce identical hashes for the same geometry data.
 void DigestHashGeometryInfo(HashContext& hash, const KinBody::GeometryInfo& info, int options)
 {
-    hash << info.GetTransform();
+    hash << info._t;
     hash << static_cast<int>(info._type);
     hash << info._vRenderScale;
     if (info._type == GT_TriMesh) {
