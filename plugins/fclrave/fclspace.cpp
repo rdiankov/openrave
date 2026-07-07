@@ -77,19 +77,28 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
     pinfo->vlinks.clear();
     pinfo->vlinks.reserve(pbody->GetLinks().size());
 
-    const bool bIsSafetyGroup = pbody->IsSafetyGeometryGroup(pinfo->_geometrygroup);
+    // whether this checker is dedicated to safety geometry is recorded on the checker itself (set at creation by
+    // KinBody's safety collision checker creation), so the classification does not depend on the body being reloaded:
+    // in a safety geometry checker, bodies that do not carry the group contribute no geometry instead of falling
+    // back to their active geometry.
+    const bool bIsSafetyChecker = _bIsSafetyGeometryChecker;
     FOREACHC(itlink, pbody->GetLinks()) {
         const KinBody::LinkPtr& plink = *itlink;
         boost::shared_ptr<FCLKinBodyInfo::LinkInfo> linkinfo(new FCLKinBodyInfo::LinkInfo(plink));
 
         fcl::AABB enclosingBV;
 
+        // -1 means this link does not carry the group at all. If the link carries the group, its safety
+        // classification (0: non-safety, 1: safety) must match the checker: a safety geometry checker resolving a
+        // non-safety group, or a non-safety checker resolving a safety group, would silently mix safety and
+        // non-safety geometry.
+        const int nLinkGroupSafetyState = plink->GetGroupSafetyState(pinfo->_geometrygroup);
+        if( nLinkGroupSafetyState >= 0 && (nLinkGroupSafetyState == 1) != bIsSafetyChecker ) {
+            throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, geometry group '%s' of body '%s' link '%s': the link's safety classification (%d) of the group does not match the collision checker (isSafetyGeometryChecker=%d); safety geometry can only be checked by a safety geometry collision checker, and vice versa")%_penv->GetNameId()%pinfo->_geometrygroup%pbody->GetName()%plink->GetName()%nLinkGroupSafetyState%(int)bIsSafetyChecker), OpenRAVE::ORE_InvalidState);
+        }
+
         // Glue code for a unified access to geometries
-        if(pinfo->_geometrygroup.size() > 0 && plink->GetGroupNumGeometries(pinfo->_geometrygroup) >= 0) {
-            const bool bLinkIsSafetyGroup = plink->IsSafetyGeometryGroup(pinfo->_geometrygroup);
-            if( bIsSafetyGroup != bLinkIsSafetyGroup ) {
-                throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, geometry group '%s' of body '%s': the body-level safety classification (%d) does not match the one (%d) of link '%s'; a geometry group cannot mix safety and non-safety geometry")%_penv->GetNameId()%pinfo->_geometrygroup%pbody->GetName()%(int)bIsSafetyGroup%(int)bLinkIsSafetyGroup%plink->GetName()), OpenRAVE::ORE_InvalidState);
-            }
+        if(nLinkGroupSafetyState >= 0) {
             const std::vector<KinBody::GeometryInfoPtr>& vgeometryinfos = plink->GetGeometriesFromGroup(pinfo->_geometrygroup);
             FOREACH(itgeominfo, vgeometryinfos) {
                 const KinBody::GeometryInfoPtr& pgeominfo = *itgeominfo;
@@ -126,9 +135,9 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
             }
             linkinfo->bFromExtraGeometries = true;
         }
-        else if ( !bIsSafetyGroup ) {
+        else if ( !bIsSafetyChecker ) {
             // The link does not carry the requested group.
-            // For non-safety groups (including the empty/default group), fall back to the link's active geometry.
+            // For non-safety checkers (including the empty/default group), fall back to the link's active geometry.
             // e.g., a "padding" group of one body be checked against the "self"/active geometry of another.
             const std::vector<KinBody::Link::GeometryPtr> & vgeometries = plink->GetGeometries();
             FOREACH(itgeom, vgeometries) {
@@ -162,8 +171,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
             linkinfo->bFromExtraGeometries = false;
         }
         else {
-            // safety geometry group that this link does not carry.
-            // this collision checker skips this link.
+            // safety geometry checker and this link does not carry the group.
+            // this collision checker skips this link so that safety collision checking only happens between bodies that opt in by carrying the group.
         }
 
         if( linkinfo->vgeoms.size() == 0 ) {

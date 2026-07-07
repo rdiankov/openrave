@@ -131,6 +131,7 @@ static void _EnsureSafetyCollisionCheckers(const KinBody& body)
         if( !penv->GetCollisionCheckerByGroupName(groupName) ) {
             CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(penv, penv->GetCollisionChecker()->GetXMLId());
             pChecker->SetGeometryGroup(groupName);
+            pChecker->SetSafetyGeometryChecker(true);
             penv->SetCollisionCheckerByGroupName(groupName, pChecker);
         }
     }
@@ -139,9 +140,9 @@ static void _EnsureSafetyCollisionCheckers(const KinBody& body)
 /// \brief throws ORE_InvalidState if a geometry group name is stored as a safety group on one link and as a
 ///        non-safety group on another link of the same body.
 ///
-/// LinkInfo::CheckExtraGeometryGroupConflict enforces the invariant within one link, but the safety
-/// classification is consumed body-wide (KinBody::IsSafetyGeometryGroup), so the same group name must not be
-/// classified differently by different links.
+/// LinkInfo::CheckExtraGeometryGroupConflict enforces the invariant within one link, but a geometry group is
+/// consumed body-wide (e.g. by a safety geometry collision checker resolving the group on every link), so the same
+/// group name must not be classified differently by different links.
 static void _CheckExtraGeometryGroupConflictAcrossLinks(const KinBody& body)
 {
     // collect the safety geometry group names used by any link, remembering one carrier link per name for the error message
@@ -808,19 +809,6 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
         std::copy(geometries.begin(),geometries.end(),it->second.begin());
     }
     _PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
-}
-
-bool KinBody::IsSafetyGeometryGroup(const std::string& groupname) const
-{
-    if( groupname.empty() ) {
-        return false;
-    }
-    FOREACHC(itlink, _veclinks) {
-        if( (*itlink)->IsSafetyGeometryGroup(groupname) ) {
-            return true;
-        }
-    }
-    return false;
 }
 
 void KinBody::_InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo)

@@ -195,6 +195,11 @@ public:
 
     const std::string& GetBodyGeometryGroup(const KinBody &body) const;
 
+    /// \brief mirrors CollisionCheckerBase::SetSafetyGeometryChecker of the owning collision checker
+    void SetIsSafetyGeometryChecker(bool bIsSafetyGeometryChecker) {
+        _bIsSafetyGeometryChecker = bIsSafetyGeometryChecker;
+    }
+
     // Set the current bvhRepresentation and reinitializes all the KinbodyInfo if needed
     void SetBVHRepresentation(std::string const &type);
 
@@ -333,6 +338,7 @@ private:
     EnvironmentBasePtr _penv;
     std::string _userdatakey;
     std::string _geometrygroup;
+    bool _bIsSafetyGeometryChecker = false; ///< true if the owning collision checker is dedicated to safety geometry (see CollisionCheckerBase::SetSafetyGeometryChecker)
     //SynchronizeCallbackFn _synccallback;
 
     std::string _bvhRepresentation;

@@ -123,6 +123,12 @@ public:
         return _fclspace->GetBodyGeometryGroup(*pbody);
     }
 
+    void SetSafetyGeometryChecker(bool bIsSafetyGeometryChecker) override
+    {
+        CollisionCheckerBase::SetSafetyGeometryChecker(bIsSafetyGeometryChecker);
+        _fclspace->SetIsSafetyGeometryChecker(bIsSafetyGeometryChecker);
+    }
+
     virtual bool SetCollisionOptions(int collision_options);
 
     virtual int GetCollisionOptions() const

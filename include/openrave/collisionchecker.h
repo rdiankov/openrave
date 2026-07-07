@@ -224,6 +224,29 @@ public:
     /// \biref Gets the geometry group that a body is currently using
     virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
+    /// \brief marks this checker as dedicated to safety geometry.
+    ///
+    /// In a safety geometry checker, a body that does not carry the checker's geometry group contributes no
+    /// collision geometry, instead of falling back to its active geometry, so that safety collision checking only
+    /// happens between bodies that opt in by carrying the group. Set by KinBody's safety collision checker
+    /// creation; virtual so that checker implementations can propagate the flag into their internal state.
+    virtual void SetSafetyGeometryChecker(bool bIsSafetyGeometryChecker) {
+        _bIsSafetyGeometryChecker = bIsSafetyGeometryChecker;
+    }
+
+    /// \brief returns true if this checker is dedicated to safety geometry. see SetSafetyGeometryChecker.
+    inline bool IsSafetyGeometryChecker() const {
+        return _bIsSafetyGeometryChecker;
+    }
+
+    void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override {
+        InterfaceBase::Clone(preference, cloningoptions);
+        CollisionCheckerBaseConstPtr r = OPENRAVE_DYNAMIC_POINTER_CAST<CollisionCheckerBase const>(preference);
+        if( !!r ) {
+            SetSafetyGeometryChecker(r->IsSafetyGeometryChecker()); // virtual call so that derived checkers also update their internal state
+        }
+    }
+
     /// \brief initialize the checker with the current environment and gather all current bodies in the environment and put them in its collision space
     virtual bool InitEnvironment() = 0;
 
@@ -350,6 +373,8 @@ protected:
     inline CollisionCheckerBaseConstPtr shared_collisionchecker_const() const {
         return boost::static_pointer_cast<CollisionCheckerBase const>(shared_from_this());
     }
+
+    bool _bIsSafetyGeometryChecker = false; ///< true if this checker is dedicated to safety geometry. see SetSafetyGeometryChecker.
 
 private:
     virtual const char* GetHash() const override {

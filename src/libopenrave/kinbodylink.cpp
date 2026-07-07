@@ -913,12 +913,18 @@ void KinBody::Link::SetSafetyGroupGeometries(const std::string& groupname, const
     GetParent()->_PostprocessChangedParameters(Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
-bool KinBody::Link::IsSafetyGeometryGroup(const std::string& groupname) const
+int KinBody::Link::GetGroupSafetyState(const std::string& groupname) const
 {
     if( groupname.empty() ) {
-        return false;
+        return -1;
     }
-    return _info._mapExtraGeometriesSafety.find(groupname) != _info._mapExtraGeometriesSafety.end();
+    if( _info._mapExtraGeometries.find(groupname) != _info._mapExtraGeometries.end() ) {
+        return 0;
+    }
+    if( _info._mapExtraGeometriesSafety.find(groupname) != _info._mapExtraGeometriesSafety.end() ) {
+        return 1;
+    }
+    return -1;
 }
 
 int KinBody::Link::GetGroupNumGeometries(const std::string& groupname) const

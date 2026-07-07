@@ -2968,11 +2968,6 @@ void PyKinBody::SetLinkGroupGeometries(const std::string& geomname, object olink
     _pbody->SetLinkGroupGeometries(geomname, linkgeometries);
 }
 
-bool PyKinBody::IsSafetyGeometryGroup(const std::string& groupname) const
-{
-    return _pbody->IsSafetyGeometryGroup(groupname);
-}
-
 void PyKinBody::_ParseLinkInfos(object olinkinfos, std::vector<KinBody::LinkInfoConstPtr>& vlinkinfos)
 {
     vlinkinfos.resize(len(olinkinfos));
@@ -5913,7 +5908,6 @@ void KinBodyInitializer::init_openravepy_kinbody()
 #endif
                          .def("SetLinkGeometriesFromGroup",&PyKinBody::SetLinkGeometriesFromGroup, PY_ARGS("name", "propagateGroupNameToSelfCollisionChecker") DOXY_FN(KinBody,SetLinkGeometriesFromGroup))
                          .def("SetLinkGroupGeometries", &PyKinBody::SetLinkGroupGeometries, PY_ARGS("name", "linkgeometries") DOXY_FN(KinBody, SetLinkGroupGeometries))
-                         .def("IsSafetyGeometryGroup", &PyKinBody::IsSafetyGeometryGroup, PY_ARGS("groupname") DOXY_FN(KinBody, IsSafetyGeometryGroup))
                          .def("SetName", &PyKinBody::SetName,PY_ARGS("name") DOXY_FN(KinBody,SetName))
                          .def("GetName",&PyKinBody::GetName,DOXY_FN(KinBody,GetName))
                          .def("SetId", &PyKinBody::SetId,PY_ARGS("id") DOXY_FN(KinBody,SetId))
