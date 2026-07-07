@@ -6262,11 +6262,9 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         index += 1;
     }
 
-    if( !!(parameters & (Prop_LinkGeometryGroup|Prop_LinkGeometry)) ) {
-        if( !!(parameters & Prop_LinkGeometryGroup) ) {
-            // only Prop_LinkGeometryGroup changes group membership and is never posted from a destructor, so throwing here is safe.
-            _CheckExtraGeometryGroupConflictAcrossLinks(*this);
-        }
+    if( !!(parameters & Prop_LinkGeometryGroup) ) {
+        // only Prop_LinkGeometryGroup changes group membership and is never posted from a destructor, so throwing here is safe.
+        _CheckExtraGeometryGroupConflictAcrossLinks(*this);
         _EnsureSafetyCollisionCheckers(*this);
     }
 }
