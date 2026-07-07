@@ -1044,15 +1044,16 @@ public:
         }
 
         std::vector<GeometryInfoPtr> _vgeometryinfos;
-        /// extra-purpose geometries like. the user can store any pairs of group geometry name and extra geometries. For example,
+        /// extra-purpose geometries like
+        /// Key : geometry group name. Value : non-safety geometry.
         /// self -  self-collision specific geometry. By default, this type of geometry will be always set
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometries;
 
-        /// safety geometries, stored separately from _mapExtraGeometries (which holds non-safety extra
-        /// geometry groups). Keyed by geometry group name, the same way as _mapExtraGeometries. A given group
-        /// name must live in at most one of the two maps. The name-keyed group APIs (GetGeometriesFromGroup,
-        /// SetGeometriesFromGroup, GetGroupNumGeometries) and the group-name enumeration transparently consult
-        /// both maps, so callers (e.g. collision checkers) do not need to know which map a group lives in.
+        /// safety geometries, stored separately from _mapExtraGeometries
+        /// Key : geometry group name. Value : non-safety geometry.
+        /// A given group name must live in at most one of the two maps.
+        /// The name-keyed group APIs (GetGeometriesFromGroup etc) the group-name enumeration transparently consult both maps.
+        /// so, callers (e.g. collision checkers) do not need to know which map a group lives in.
         std::map< std::string, std::vector<GeometryInfoPtr> > _mapExtraGeometriesSafety;
 
         ///\brief unique id of the link
