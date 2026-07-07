@@ -774,15 +774,12 @@ void KinBody::SetLinkGroupGeometries(const std::string& geomname, const std::vec
     }
     FOREACH(itlink, _veclinks) {
         Link& link = **itlink;
-        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
         // a group name must live in at most one of the two maps -- reject if it already exists as a safety group
         if( link._info._mapExtraGeometriesSafety.find(geomname) != link._info._mapExtraGeometriesSafety.end() ) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("cannot set geometry group '%s' for body %s link %s: a safety geometry group with the same name already exists; a geometry group cannot mix safety and non-safety geometry"), geomname%GetName()%link.GetName(), ORE_InvalidArguments);
         }
-        // SetLinkGroupGeometries targets the regular (non-safety) extra geometry map. Safety geometry
-        // groups are managed separately via Link::SetSafetyGroupGeometries.
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >& targetMap = link._info._mapExtraGeometries;
-        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = targetMap.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+        std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = link._info._mapExtraGeometries.insert(make_pair(geomname,std::vector<KinBody::GeometryInfoPtr>())).first;
+        const std::vector<KinBody::GeometryInfoPtr>& geometries = linkgeometries.at(link.GetIndex());
         it->second.resize(geometries.size());
         std::copy(geometries.begin(),geometries.end(),it->second.begin());
     }
