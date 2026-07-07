@@ -1488,7 +1488,7 @@ public:
         return SetCollisionCheckerByGroupName("", pchecker);
     }
 
-    virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker, const std::string& name)
+    virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker, const std::string& groupname)
     {
         if( pOutputChecker == pInputChecker ) {
             return true;
@@ -1502,7 +1502,7 @@ public:
             pOutputChecker = RaveCreateCollisionChecker(shared_from_this(),"GenericCollisionChecker");
         }
         else {
-            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker with groupname='%s'", pOutputChecker->GetXMLId() % name);
+            RAVELOG_DEBUG_FORMAT("setting '%s' collision checker with groupname='%s'", pOutputChecker->GetXMLId() % groupname);
             SharedLock lock132(_mutexInterfaces);
             for (KinBodyPtr& pbody : _vecbodies) {
                 if (!pbody) {
@@ -1514,22 +1514,22 @@ public:
         return pOutputChecker->InitEnvironment();
     }
 
-    virtual bool SetCollisionCheckerByGroupName(const std::string& name, CollisionCheckerBasePtr pChecker) override
+    virtual bool SetCollisionCheckerByGroupName(const std::string& groupname, CollisionCheckerBasePtr pChecker) override
     {
         EnvironmentLock lockenv(GetMutex());
-        const std::vector<std::string>::iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), name);
+        const std::vector<std::string>::iterator itName = std::find(_vCollisionCheckerGroupNames.begin(), _vCollisionCheckerGroupNames.end(), groupname);
         if( itName != _vCollisionCheckerGroupNames.end() ) {
             const size_t iChecker = std::distance(_vCollisionCheckerGroupNames.begin(), itName);
-            return _SetCollisionChecker(_vCollisionCheckers.at(iChecker), pChecker, name);
+            return _SetCollisionChecker(_vCollisionCheckers.at(iChecker), pChecker, groupname);
         }
         else {
-            if( name.size() > 0 ) { // TODO : "self"? or ""?
+            if( groupname.size() > 0 ) { // TODO : "self"? or ""?
                 OPENRAVE_ASSERT_OP_FORMAT(_vCollisionCheckers.size(), >, 0, "env='%s' failed to add collision checker by group name since there is no default collision checker.", GetNameId(),ORE_InvalidArguments);
             }
             OPENRAVE_ASSERT_FORMAT((!!pChecker), "env='%s' failed to add collision checker by group name since null collision checker is specified..", GetNameId(),ORE_InvalidArguments);
             _vCollisionCheckers.push_back(CollisionCheckerBasePtr());
-            _vCollisionCheckerGroupNames.push_back(name);
-            return _SetCollisionChecker(_vCollisionCheckers.back(), pChecker, name);
+            _vCollisionCheckerGroupNames.push_back(groupname);
+            return _SetCollisionChecker(_vCollisionCheckers.back(), pChecker, groupname);
         }
     }
 
