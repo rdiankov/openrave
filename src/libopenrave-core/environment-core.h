@@ -1488,6 +1488,8 @@ public:
         return SetCollisionCheckerByGroupName("", pchecker);
     }
 
+    /// \brief set collision checker to pOutputChecker if necessary.
+    ///        require to lock GetMutex
     virtual bool _SetCollisionChecker(CollisionCheckerBasePtr& pOutputChecker, CollisionCheckerBasePtr pInputChecker, const std::string& groupname)
     {
         if( pOutputChecker == pInputChecker ) {
