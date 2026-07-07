@@ -100,34 +100,25 @@ protected:
     boost::function<void()> _fn;
 };
 
-// forward declaration; defined near the end of this file
 /// \brief Collect the distinct safety geometry group names across the given links whose name starts with the given prefix.
 ///
-/// Scans every link's LinkInfo::_mapExtraGeometriesSafety and appends each safety geometry group name that begins
-/// with groupName, skipping duplicates. Clears vGroupNames before filling it.
 /// \param[in] vlinks : links to scan.
 /// \param[out] vGroupNames : receives the matching safety geometry group names, deduplicated.
-/// \param[in] groupName : prefix that a safety geometry group name must start with to be included (for example, "envsafety_").
-static void _GetGeometryGroupNamesInLinks(const std::vector<KinBody::LinkPtr>& vlinks, std::vector<std::string>& vGroupNames, const char* groupName)
+static void _GetGeometryGroupNamesInLinks(const std::vector<KinBody::LinkPtr>& vlinks, std::vector<std::string>& vGroupNames)
 {
     vGroupNames.clear();
     FOREACHC(itlink, vlinks) {
         // also enumerate the safety geometry groups so that callers (e.g. collision checkers) see all groups
         FOREACHC(itExtraGeom, (*itlink)->GetInfo()._mapExtraGeometriesSafety) {
-            if( itExtraGeom->first.find(groupName) == 0 &&
-                (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
+            if( (std::find(vGroupNames.begin(), vGroupNames.end(), itExtraGeom->first) == vGroupNames.end()) ) {
                 vGroupNames.push_back(itExtraGeom->first);
             }
         }
     }
 }
 
-/// \brief Ensure the environment has a collision checker registered for each "envsafety_" safety geometry group used by the body.
-///
-/// For every safety geometry group name with the "envsafety_" prefix found across the body's links, if the
-/// environment does not already have a collision checker registered under that group name, creates one of the
-/// same type as the environment's default collision checker, binds it to that geometry group, and registers it
-/// through Environment::SetCollisionCheckerByGroupName. Idempotent: existing per-group checkers are left untouched.
+/// \brief Ensure the environment has a collision checker registered for each safety geometry group used by the body.
+///        Idempotent: existing per-group checkers are left untouched.
 /// \param[in] body : the body whose links' safety geometry groups drive the per-group checker creation.
 static void _EnsureSafetyCollisionCheckers(const KinBody& body)
 {
@@ -135,7 +126,7 @@ static void _EnsureSafetyCollisionCheckers(const KinBody& body)
     // for env-body safety geometries
     const EnvironmentBasePtr penv = body.GetEnv();
     std::vector<std::string> vSafetyGroupNames;
-    _GetGeometryGroupNamesInLinks(body.GetLinks(), vSafetyGroupNames, "envsafety_");
+    _GetGeometryGroupNamesInLinks(body.GetLinks(), vSafetyGroupNames);
     for(const std::string& groupName : vSafetyGroupNames) {
         if( !penv->GetCollisionCheckerByGroupName(groupName) ) {
             CollisionCheckerBasePtr pChecker = RaveCreateCollisionChecker(penv, penv->GetCollisionChecker()->GetXMLId());
@@ -750,11 +741,7 @@ void KinBody::SetLinkGeometriesFromGroup(const std::string& geomname, const bool
         else {
             std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = (*itlink)->_info._mapExtraGeometries.find(geomname);
             if( it == (*itlink)->_info._mapExtraGeometries.end() ) {
-                // fall back to the safety geometry groups
-                it = (*itlink)->_info._mapExtraGeometriesSafety.find(geomname);
-                if( it == (*itlink)->_info._mapExtraGeometriesSafety.end() ) {
-                    throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
-                }
+                throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),geomname%GetName(),ORE_InvalidArguments);
             }
             pvinfos = &it->second;
         }
