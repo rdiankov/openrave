@@ -77,11 +77,6 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
     pinfo->vlinks.clear();
     pinfo->vlinks.reserve(pbody->GetLinks().size());
 
-    // whether this checker is dedicated to safety geometry is recorded on the checker itself (set at creation by
-    // KinBody's safety collision checker creation), so the classification does not depend on the body being reloaded:
-    // in a safety geometry checker, bodies that do not carry the group contribute no geometry instead of falling
-    // back to their active geometry.
-    const bool bIsSafetyChecker = _bIsSafetyGeometryChecker;
     FOREACHC(itlink, pbody->GetLinks()) {
         const KinBody::LinkPtr& plink = *itlink;
         boost::shared_ptr<FCLKinBodyInfo::LinkInfo> linkinfo(new FCLKinBodyInfo::LinkInfo(plink));
@@ -90,8 +85,8 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
         // if the link carries the group (0: non-safety, 1: safety, -1: not carried), its safety classification must match the checker; otherwise safety and non-safety geometry would be silently mixed.
         const int nLinkGroupSafetyState = plink->GetGroupSafetyState(pinfo->_geometrygroup);
-        if( nLinkGroupSafetyState >= 0 && (nLinkGroupSafetyState == 1) != bIsSafetyChecker ) {
-            throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, geometry group '%s' of body '%s' link '%s': the link's safety classification (%d) of the group does not match the collision checker (isSafetyGeometryChecker=%d); safety geometry can only be checked by a safety geometry collision checker, and vice versa")%_penv->GetNameId()%pinfo->_geometrygroup%pbody->GetName()%plink->GetName()%nLinkGroupSafetyState%(int)bIsSafetyChecker), OpenRAVE::ORE_InvalidState);
+        if( nLinkGroupSafetyState >= 0 && (nLinkGroupSafetyState == 1) != _bIsSafetyGeometryChecker ) {
+            throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, geometry group '%s' of body '%s' link '%s': the link's safety classification (%d) of the group does not match the collision checker (isSafetyGeometryChecker=%d); safety geometry can only be checked by a safety geometry collision checker, and vice versa")%_penv->GetNameId()%pinfo->_geometrygroup%pbody->GetName()%plink->GetName()%nLinkGroupSafetyState%(int)_bIsSafetyGeometryChecker), OpenRAVE::ORE_InvalidState);
         }
 
         // Glue code for a unified access to geometries
@@ -132,7 +127,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
             }
             linkinfo->bFromExtraGeometries = true;
         }
-        else if ( !bIsSafetyChecker ) {
+        else if ( !_bIsSafetyGeometryChecker ) {
             // The link does not carry the requested group.
             // For non-safety checkers (including the empty/default group), fall back to the link's active geometry.
             // e.g., a "padding" group of one body be checked against the "self"/active geometry of another.
