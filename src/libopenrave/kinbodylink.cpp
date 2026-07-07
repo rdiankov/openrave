@@ -138,11 +138,6 @@ void KinBody::LinkInfo::ConvertUnitScale(dReal fUnitScale)
     _vinertiamoments *= fUnitScale*fUnitScale;
 }
 
-static bool _IsDefaultGeometryGroupName(const std::string& geometryGroupName)
-{
-    return geometryGroupName.empty() || geometryGroupName == "self";
-}
-
 void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options) const
 {
     value.SetObject();
@@ -223,8 +218,8 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
         value.AddMember("readableInterfaces", std::move(rReadableInterfaces), allocator);
     }
 
-    // Serialize the safety geometry groups (stored in _mapExtraGeometriesSafety). Non-safety extra geometry
-    // groups (_mapExtraGeometries) are intentionally not serialized here.
+    // Serialize the safety geometry groups (stored in _mapExtraGeometriesSafety).
+    // Non-safety extra geometry groups (_mapExtraGeometries) are intentionally not serialized here.
     if(_mapExtraGeometriesSafety.size() > 0 ) {
         rapidjson::Value extraGeometriesValue;
         extraGeometriesValue.SetArray();
@@ -259,7 +254,6 @@ void KinBody::LinkInfo::SerializeJSON(rapidjson::Value &value, rapidjson::Docume
 
 void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUnitScale, int options)
 {
-    // RAVELOG_DEBUG_FORMAT("Link::DeserializeJSON %s;%s;%s;%d", _id % _name % orjson::DumpJson(value) % _mapExtraGeometries.size());
     orjson::LoadJsonValueByKey(value, "id", _id);
     orjson::LoadJsonValueByKey(value, "name", _name);
 
@@ -359,10 +353,7 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
         }
     }
 
-    // Parse the "extraGeometries" section. The whole section is the safety partition: every group it
-    // contains is routed into _mapExtraGeometriesSafety. The non-safety _mapExtraGeometries is never
-    // serialized/deserialized (it is regenerated at runtime). The key is still named "extraGeometries"
-    // for backward compatibility; renaming it to "safetyGeometries" is a deferred cleanup.
+    // Deserialize safety geometries. Non-safety extra geometries are intentionally not deserialized here.
     if (value.HasMember("extraGeometries") && value["extraGeometries"].IsArray()) { // TODO : rename to safetyGeometries
         for(int iExtra = 0; iExtra < value["extraGeometries"].Size(); ++iExtra) {
             std::string extraId;
@@ -380,12 +371,6 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
             }
         }
     }
-    // RAVELOG_DEBUG_FORMAT("Link::DeserializeJSON done %s;%s;%s;%d", _id % _name % orjson::DumpJson(value) % _mapExtraGeometries.size());
-    // if( _name.find("envsafety") >= 0 ) {
-    //     rapidjson::Document r;
-    //     SerializeJSON(r, r.GetAllocator(), 1.0, 0);
-    //     RAVELOG_DEBUG_FORMAT("Link %s;%s", _name%orjson::DumpJson(r));
-    // }
 
     orjson::LoadJsonValueByKey(value, "isStatic", _bStatic);
     orjson::LoadJsonValueByKey(value, "isEnabled", _bIsEnabled);
@@ -1213,7 +1198,6 @@ void KinBody::Link::UpdateInfo()
 
 void KinBody::Link::ExtractInfo(KinBody::LinkInfo& info) const
 {
-    // RAVELOG_DEBUG_FORMAT("Link::Extract %s;%s", _info._id % _info._name);
     info = _info;
     info._modifiedFields = 0;
     info._vgeometryinfos.resize(_vGeometries.size());
