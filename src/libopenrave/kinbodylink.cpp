@@ -881,11 +881,7 @@ void KinBody::Link::SetGeometriesFromGroup(const std::string& groupname)
     else {
         std::map< std::string, std::vector<KinBody::GeometryInfoPtr> >::iterator it = _info._mapExtraGeometries.find(groupname);
         if( it == _info._mapExtraGeometries.end() ) {
-            // fall back to the safety geometry groups
-            it = _info._mapExtraGeometriesSafety.find(groupname);
-            if( it == _info._mapExtraGeometriesSafety.end() ) {
-                throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),groupname%GetName(),ORE_InvalidArguments);
-            }
+            throw OPENRAVE_EXCEPTION_FORMAT(_("could not find geometries %s for link %s"),groupname%GetName(),ORE_InvalidArguments);
         }
         pvinfos = &it->second;
     }
