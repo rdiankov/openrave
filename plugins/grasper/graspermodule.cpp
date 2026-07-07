@@ -1248,7 +1248,6 @@ protected:
     {
         RAY r;
         Vector com = graspcenter;
-        //GetEnv()->GetCollisionChecker()->SetCollisionOptions(CO_Contacts|CO_Distance);
         for(CollisionCheckerBasePtr pChecker : vCollisionCheckers) {
             pChecker->SetCollisionOptions(CO_Contacts|CO_Distance);
         }
