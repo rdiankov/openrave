@@ -88,10 +88,7 @@ void FCLSpace::ReloadKinBodyLinks(KinBodyConstPtr pbody, FCLKinBodyInfoPtr pinfo
 
         fcl::AABB enclosingBV;
 
-        // -1 means this link does not carry the group at all. If the link carries the group, its safety
-        // classification (0: non-safety, 1: safety) must match the checker: a safety geometry checker resolving a
-        // non-safety group, or a non-safety checker resolving a safety group, would silently mix safety and
-        // non-safety geometry.
+        // if the link carries the group (0: non-safety, 1: safety, -1: not carried), its safety classification must match the checker; otherwise safety and non-safety geometry would be silently mixed.
         const int nLinkGroupSafetyState = plink->GetGroupSafetyState(pinfo->_geometrygroup);
         if( nLinkGroupSafetyState >= 0 && (nLinkGroupSafetyState == 1) != bIsSafetyChecker ) {
             throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, geometry group '%s' of body '%s' link '%s': the link's safety classification (%d) of the group does not match the collision checker (isSafetyGeometryChecker=%d); safety geometry can only be checked by a safety geometry collision checker, and vice versa")%_penv->GetNameId()%pinfo->_geometrygroup%pbody->GetName()%plink->GetName()%nLinkGroupSafetyState%(int)bIsSafetyChecker), OpenRAVE::ORE_InvalidState);
