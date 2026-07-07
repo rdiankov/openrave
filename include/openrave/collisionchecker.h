@@ -224,12 +224,7 @@ public:
     /// \biref Gets the geometry group that a body is currently using
     virtual const std::string& GetBodyGeometryGroup(KinBodyConstPtr pbody) const OPENRAVE_DUMMY_IMPLEMENTATION;
 
-    /// \brief marks this checker as dedicated to safety geometry.
-    ///
-    /// In a safety geometry checker, a body that does not carry the checker's geometry group contributes no
-    /// collision geometry, instead of falling back to its active geometry, so that safety collision checking only
-    /// happens between bodies that opt in by carrying the group. Set by KinBody's safety collision checker
-    /// creation; virtual so that checker implementations can propagate the flag into their internal state.
+    /// \brief marks this checker as dedicated to safety geometry. the logic of the safety geometry check differs from that of non-safety geometry.
     virtual void SetSafetyGeometryChecker(bool bIsSafetyGeometryChecker) {
         _bIsSafetyGeometryChecker = bIsSafetyGeometryChecker;
     }
@@ -239,6 +234,7 @@ public:
         return _bIsSafetyGeometryChecker;
     }
 
+    /// \brief clone. propagate the IsSafetyGeometryChecker status.
     void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override {
         InterfaceBase::Clone(preference, cloningoptions);
         CollisionCheckerBaseConstPtr r = OPENRAVE_DYNAMIC_POINTER_CAST<CollisionCheckerBase const>(preference);
