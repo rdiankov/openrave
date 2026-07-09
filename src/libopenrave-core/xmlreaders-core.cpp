@@ -1943,7 +1943,7 @@ public:
             if( _pcustomreader->endElement(xmlname) ) {
                 _CheckInterface();
                 if( _readername.size() > 0 ) {
-                    _pinterface->SetReadableInterface(_readername, _pcustomreader->GetReadable());
+                    _pinterface->__mapReadableInterfaces[_readername] = _pcustomreader->GetReadable();
                 }
                 _pcustomreader.reset();
                 if( xmlname == _xmltag ) {

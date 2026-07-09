@@ -602,20 +602,6 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetBodiesMatchingFilter(std::vector<KinBodyPtr>& bodies, const std::function<bool(const KinBody&)>& filterFunction, uint64_t timeout = 0) const = 0;
 
-    /** \brief Get all bodies added to the environment that **might** currently have a non-null readable interface with the given id. <b>[multi-thread safe]</b>
-
-        The very first time a given id is requested, every body in the environment is scanned once to build a cache entry for that id.
-        From then on the cache for that id is maintained incrementally as bodies gain the interface or are removed, so subsequent
-        lookups do not scale with the total number of bodies in the environment, unlike scanning every body with GetBodies.
-        Ids that are never requested are never tracked, so environments that do not use this method pay no maintenance cost.
-        To avoid too many locks, bodies returned might not all have the readable interface.
-        \param[out] bodies filled with the bodies that contain or have contained in the past the readable interface with that id.
-        \param id the readable interface id to match
-        \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
-        \throw openrave_exception with ORE_Timeout error code
-    */
-    virtual void GetBodiesWithReadableInterface(std::vector<KinBodyPtr>& bodies, const std::string& id, uint64_t timeout=0) const = 0;
-
     /// \brief Maps a function over the set of bodies in the environment. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the bodies.
@@ -932,34 +918,21 @@ public:
     /// if parameter is not present, will return defaultValue
     virtual uint64_t GetUInt64Parameter(const std::string& parameterName, uint64_t defaultValue) const = 0;
 
-    /// \brief notifys name of kin body is changed.  <b>[not multi-thread safe]</b>
+    /// \brief notifys name of kin body is changed.
     ///
     /// Should be called when name of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
-    /// Should be called with GetMutex() locked.
     /// \param oldName name before change
     /// \param newName name after change
     /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
     virtual bool NotifyKinBodyNameChanged(const std::string& oldName, const std::string& newName) = 0;
 
-    /// \brief retries the named parameter to be tracked by the environment.  <b>[not multi-thread safe]</b>
+    /// \brief retries the named parameter to be tracked by the environment.
     ///
-    /// Should be called with GetMutex() locked.
     /// Should be called when id of body added to this env is modified. Should not be called when name of body in other env or not added to any env is modified.
     /// \param oldId id before change
     /// \param newId id after change
     /// \return true if can make the change, and the changes are notified. Otherwise false meaning there will be a conflict
     virtual bool NotifyKinBodyIdChanged(const std::string& oldId, const std::string& newId) = 0;
-
-    /// \brief notifies that a kin body added to this env may have gained one or more readable interfaces.  <b>[not multi-thread safe]</b>
-    ///
-    /// Called internally from a KinBody, should not KinBody::GetReadableInterfaceMutex() locked when this is called
-    /// Should be called with GetMutex() locked.
-    /// Should be called after any non-null readable interface is added to / updated on a body so that it can be indexed for GetBodiesWithReadableInterface.
-    /// Removals do not need to be reported: the cache is allowed to over-approximate.
-    /// If no id is currently being tracked, this returns immediately without taking any environment lock.
-    /// \param body must be added to this environment and its GetEnvironmentBodyIndex() should be > 0
-    /// \param vAddedIds the interfaces that were added
-    virtual void NotifyKinBodyReadableInterfacesAdded(int environmentBodyIndex, const std::vector<const char*>& vAddedIds) = 0;
 
     /// \brief info structure used to initialize environment
     class OPENRAVE_API EnvironmentBaseInfo : public InfoBase

@@ -2954,8 +2954,7 @@ py::list PyEnvironmentBase::GetBodies()
 py::list PyEnvironmentBase::GetBodiesWithReadableInterface(const std::string& readableInterfaceName)
 {
     std::vector<KinBodyPtr> vBodies;
-    // uses the environment's readable interface cache, so this does not scan every body in the environment
-    _penv->GetBodiesWithReadableInterface(vBodies, readableInterfaceName);
+    _penv->GetBodiesMatchingFilter(vBodies, std::bind(&KinBody::HasReadableInterface, std::placeholders::_1, std::ref(readableInterfaceName)));
     return _KinbodyVectorToPyArray(vBodies, shared_from_this());
 }
 

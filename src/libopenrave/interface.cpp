@@ -273,14 +273,9 @@ bool ReadablesContainer::HasReadableInterface(const std::string& id) const
     return it != __mapReadableInterfaces.end();
 }
 
-ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, const ReadablePtr& readable)
+ReadablePtr ReadablesContainer::SetReadableInterface(const std::string& id, ReadablePtr readable)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
-    return _SetReadableInterface(id, readable);
-}
-
-ReadablePtr ReadablesContainer::_SetReadableInterface(const std::string& id, const ReadablePtr& readable)
-{
     READERSMAP::iterator it = __mapReadableInterfaces.find(id);
     if( it == __mapReadableInterfaces.end() ) {
         if( !!readable ) {
@@ -301,11 +296,6 @@ ReadablePtr ReadablesContainer::_SetReadableInterface(const std::string& id, con
 void ReadablesContainer::SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
 {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
-    _SetReadableInterfaces(mapReadables, bClearAllExisting);
-}
-
-void ReadablesContainer::_SetReadableInterfaces(const InterfaceBase::READERSMAP& mapReadables, bool bClearAllExisting)
-{
     if( bClearAllExisting ) {
         __mapReadableInterfaces = mapReadables;
     }
@@ -325,14 +315,8 @@ void ReadablesContainer::ClearReadableInterface(const std::string& id) {
     __mapReadableInterfaces.erase(id);
 }
 
-bool ReadablesContainer::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces)
-{
+bool ReadablesContainer::UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) {
     std::unique_lock<boost::shared_mutex> lock(_mutexInterface);
-    return _UpdateReadableInterfaces(newReadableInterfaces, nullptr);
-}
-
-bool ReadablesContainer::_UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces, std::vector<const char*>* pvAddedIds)
-{
     bool bChanged = false;
     bool bNewAllFound = true;
     FOREACH(it, newReadableInterfaces) {
@@ -357,9 +341,6 @@ bool ReadablesContainer::_UpdateReadableInterfaces(const std::map<std::string, R
             if( !!it->second ) {
                 __mapReadableInterfaces[it->first] = it->second;
                 bChanged = true;
-                if( !!pvAddedIds ) {
-                    pvAddedIds->push_back(it->first.c_str());
-                }
                 RAVELOG_VERBOSE_FORMAT("readable interface %s added", it->first);
             }
             bNewAllFound = false;
