@@ -387,6 +387,7 @@ public:
             {
                 ExclusiveLock lock874(_mutexInterfaces);
                 vecbodies.swap(_vecbodies);
+                _vecrobots.clear(); // the local vecbodies still owns the robots, so this only drops the cache references while the bodies get destroyed outside the lock
                 listSensors.swap(_listSensors);
                 _vPublishedBodies.clear();
                 _nBodiesModifiedStamp++;
@@ -463,6 +464,7 @@ public:
                 }
             }
             _vecbodies.clear();
+            _vecrobots.clear();
 
             _mapBodyNameIndex.clear();
             _mapBodyIdIndex.clear();
@@ -1761,13 +1763,7 @@ public:
         if (!lock186) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
         }
-        robots.clear();
-        for (const KinBodyPtr& pbody : _vecbodies) {
-            if (!pbody || !pbody->IsRobot()) {
-                continue;
-            }
-            robots.push_back(RaveInterfaceCast<RobotBase>(pbody));
-        }
+        robots.assign(_vecrobots.begin(), _vecrobots.end());
     }
 
     virtual void GetSensors(std::vector<SensorBasePtr>& vsensors, uint64_t timeout) const
@@ -3751,6 +3747,17 @@ protected:
             RAVELOG_WARN_FORMAT("env=%s, pbody of id '%s' not found in _mapBodyIdIndex of size %d, this should not happen!", GetNameId()%id%_mapBodyIdIndex.size());
         }
         _UnregisterRemovedBodyReadableInterfaces(bodyIndex); // remove from GetBodiesWithReadableInterface cache before the env body index is unassigned
+
+        // Drop this body from the robots cache.
+        if (body.IsRobot()) {
+            for (std::vector<RobotBasePtr>::iterator itCachedRobot = _vecrobots.begin(); itCachedRobot != _vecrobots.end(); ++itCachedRobot) {
+                if (itCachedRobot->get() == &body) {
+                    _vecrobots.erase(itCachedRobot);
+                    break;
+                }
+            }
+        }
+
         _UnassignEnvironmentBodyIndex(body);
 
         KinBodyPtr pbody;
@@ -3829,6 +3836,7 @@ protected:
                     }
                 }
                 _vecbodies.clear();
+                _vecrobots.clear();
                 _mapBodyNameIndex.clear();
                 _mapBodyIdIndex.clear();
                 _ClearReadableInterfaceBodyIndices();
@@ -3909,6 +3917,7 @@ protected:
             if( bCheckSharedResources ) {
                 // delete any bodies/robots from mapBodies that are not in r->_vecbodies
                 vecbodies.swap(_vecbodies);
+                _vecrobots.clear(); // repopulated as the cloned robots are re-added through _AddKinBodyInternal below
                 mapBodyNameIndex.swap(_mapBodyNameIndex);
                 mapBodyIdIndex.swap(_mapBodyIdIndex);
             }
@@ -4203,6 +4212,24 @@ protected:
     {
         EnsureVectorSize(_vecbodies, envBodyIndex+1);
         _vecbodies.at(envBodyIndex) = pbody;
+
+        // Whether a body is a robot cannot change while it is in the environment, so track robots in a dedicated cache.
+        // This allows GetRobots to be O(robots) instead of O(bodies), which is important for larger scenes.
+        if (pbody->IsRobot()) {
+            RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
+            if (!!probot) {
+                // Insert preserving ascending env body index order; recycled indices can land anywhere in the vector
+                const std::vector<RobotBasePtr>::iterator itInsert = std::lower_bound(
+                    _vecrobots.begin(), _vecrobots.end(), envBodyIndex,
+                    [](const RobotBasePtr& pCachedRobot, int index) {
+                        return pCachedRobot->GetEnvironmentBodyIndex() < index;
+                    });
+                _vecrobots.insert(itInsert, std::move(probot));
+            }
+            else {
+                RAVELOG_WARN_FORMAT("env=%s, body '%s' claims to be a robot but its interface type is not PT_Robot, so it will not be returned by GetRobots", GetNameId() % pbody->GetName());
+            }
+        }
 
         {
             const std::string& name = pbody->GetName();
@@ -4707,6 +4734,8 @@ protected:
     }
 
     std::vector<KinBodyPtr> _vecbodies;     ///< all objects that are collidable (includes robots) sorted by env body index ascending order. Note that some element can be nullptr, and size of _vecbodies should be kept unchanged when body is removed from env. protected by _mutexInterfaces. [0] should always be kept null since 0 means no assignment.
+
+    std::vector<RobotBasePtr> _vecrobots; ///< cache of the entries in _vecbodies that are robots, sorted by env body index ascending so that GetRobots returns the same order as a scan of _vecbodies would. Since IsRobot() is a class-level property that cannot change during a body's lifetime, this cache only needs updating when bodies are added to or removed from the environment. protected by _mutexInterfaces.
 
     string_map<int> _mapBodyNameIndex; /// maps body name to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces.
     string_map<int> _mapBodyIdIndex; /// maps body id to env body index of bodies stored in _vecbodies sorted by name. used to lookup kin body by name. protected by _mutexInterfaces
