@@ -3660,10 +3660,7 @@ public:
 
     /// \name Readable interface overrides
     ///
-    /// We override the ReadablesContainer methods that might add readable interfaces so that, if this body is added to an environment, we can notify it about the addition.
-    /// This lets the environment maintain a cache of which bodies _might_ hold which readable interfaces, providing optimized GetBodiesWithReadableInterface lookups.
-    /// Removals are not inspected because the cache is allowed to overapproximate.
-    /// The base readable container behaviour is unchanged.
+    /// Kept for ABI compatibility. These simply forward to the base ReadablesContainer implementation.
     //@{
     ReadablePtr SetReadableInterface(const std::string& id, const ReadablePtr& readable) override;
     void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting) override;
