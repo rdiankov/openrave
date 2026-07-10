@@ -6236,11 +6236,18 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         _ComputeInternalInformation();
     }
     // do not change hash if geometry changed!
-    if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_JointMimic)) ) {
+    if( !!(parameters & (Prop_LinkDynamics|Prop_LinkGeometry|Prop_LinkGeometryGroup|Prop_JointMimic)) ) { // Prop_LinkGeometryGroup: safety geometry groups are folded into the hash
         __hashKinematicsGeometryDynamics.resize(0);
     }
 
     if( (parameters&Prop_LinkEnable) == Prop_LinkEnable ) {
+    }
+
+    if( !!(parameters & Prop_LinkGeometryGroup) ) {
+        // only Prop_LinkGeometryGroup changes group membership and is never posted from a destructor, so throwing here is safe.
+        // run before dispatching the change callbacks so that the callbacks observe the per-group safety checkers already created.
+        _CheckExtraGeometryGroupConflictAcrossLinks(*this);
+        _EnsureSafetyCollisionCheckers(*this);
     }
 
     std::list<UserDataWeakPtr> listRegisteredCallbacks;
@@ -6260,12 +6267,6 @@ void KinBody::_PostprocessChangedParameters(uint32_t parameters)
         }
         parameters >>= 1;
         index += 1;
-    }
-
-    if( !!(parameters & Prop_LinkGeometryGroup) ) {
-        // only Prop_LinkGeometryGroup changes group membership and is never posted from a destructor, so throwing here is safe.
-        _CheckExtraGeometryGroupConflictAcrossLinks(*this);
-        _EnsureSafetyCollisionCheckers(*this);
     }
 }
 

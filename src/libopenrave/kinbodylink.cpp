@@ -369,6 +369,10 @@ void KinBody::LinkInfo::DeserializeJSON(const rapidjson::Value &value, dReal fUn
             std::string extraId;
             const rapidjson::Value& rExtraGeometry = value["extraGeometries"][iExtra];
             orjson::LoadJsonValueByKey(rExtraGeometry, "id", extraId);
+            if (OpenRAVE::orjson::GetJsonValueByKey<bool>(rExtraGeometry, "__deleted__", false)) {
+                _mapExtraGeometriesSafety.erase(extraId);
+                continue;
+            }
             if( !rExtraGeometry.HasMember("geometries") || !rExtraGeometry["geometries"].IsArray() ) {
                 RAVELOG_WARN_FORMAT("ignored an entry (id '%s') in extraGeometries in link %s due to missing or invalid 'geometries' array", extraId%_id);
                 continue;
@@ -1329,6 +1333,14 @@ UpdateFromInfoResult KinBody::Link::UpdateFromInfo(const KinBody::LinkInfo& info
     if ( UpdateReadableInterfaces(info._mReadableInterfaces) ) {
         RAVELOG_VERBOSE_FORMAT("link %s updated due to readable interface change", _info._id);
         updateFromInfoResult = UFIR_Success;
+    }
+
+    // safety extra geometry groups missing from the new info have been removed, so the link must be rebuilt
+    for (const std::pair<const std::string, std::vector<GeometryInfoPtr> >& keyValue : _info._mapExtraGeometriesSafety) {
+        if (info._mapExtraGeometriesSafety.find(keyValue.first) == info._mapExtraGeometriesSafety.end()) {
+            RAVELOG_VERBOSE_FORMAT("link %s safety extra geometry group '%s' removed", _info._id % keyValue.first);
+            return UFIR_RequireReinitialize;
+        }
     }
 
     // safety extra geometries are reconciled here.
