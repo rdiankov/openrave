@@ -9,14 +9,14 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.9']
-        os: [ubuntu-20.04]
+        os: [ubuntu-22.04]
         architecture: ["x64"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
       if: ${{ matrix.python-version != 'pyston' }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
         architecture: ${{ matrix.architecture }}
