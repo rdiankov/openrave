@@ -725,7 +725,7 @@ protected:
             RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to uri '%s' found on originBodyId '%s', originBodyName '%s'", pReferenceUri%originBodyId%originBodyName);
             return -1;
         }
-        RAVELOG_DEBUG_FORMAT("env=%s, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetNameId()%pReferenceUri%circularReference.size()%currentFilename);
+        RAVELOG_VERBOSE_FORMAT("env=%s, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetNameId()%pReferenceUri%circularReference.size()%currentFilename);
         circularReference.insert(pReferenceUri);
 
         BOOST_ASSERT(rEnvInfo.IsObject());
@@ -836,12 +836,12 @@ protected:
             const char* pNextReferenceUri = orjson::GetCStringJsonValueByKey(rRefKinBodyInfo, "referenceUri", "");
 
             if (_IsExpandableReferenceUri(pNextReferenceUri)) {
-                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]'", _penv->GetId()%fullFilename%fragment%pNextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                RAVELOG_VERBOSE_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]'", _penv->GetId()%fullFilename%fragment%pNextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, *pReferenceScene, pNextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
             else {
-                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us]", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                RAVELOG_VERBOSE_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us]", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
             }
         }
         else {
@@ -876,7 +876,7 @@ protected:
 
         KinBody::KinBodyInfoPtr pNewKinBodyInfo;
         if( insertIndex >= 0 ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%pReferenceUri%currentFilename);
+            RAVELOG_VERBOSE_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%pReferenceUri%currentFilename);
             pNewKinBodyInfo = envInfo._vBodyInfos[insertIndex];
 
             const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
@@ -922,7 +922,7 @@ protected:
             // might get overwritten later, so ok if name is empty
             insertIndex = envInfo._vBodyInfos.size();
             envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
-            RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
+            RAVELOG_VERBOSE_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
         }
         return insertIndex;
     }
