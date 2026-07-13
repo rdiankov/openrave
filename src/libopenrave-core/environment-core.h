@@ -4218,13 +4218,7 @@ protected:
         if (pbody->IsRobot()) {
             RobotBasePtr probot = RaveInterfaceCast<RobotBase>(pbody);
             if (!!probot) {
-                // Insert preserving ascending env body index order; recycled indices can land anywhere in the vector
-                const std::vector<RobotBasePtr>::iterator itInsert = std::lower_bound(
-                    _vecrobots.begin(), _vecrobots.end(), envBodyIndex,
-                    [](const RobotBasePtr& pCachedRobot, int index) {
-                        return pCachedRobot->GetEnvironmentBodyIndex() < index;
-                    });
-                _vecrobots.insert(itInsert, std::move(probot));
+                _vecrobots.emplace_back(std::move(probot));
             }
             else {
                 RAVELOG_WARN_FORMAT("env=%s, body '%s' claims to be a robot but its interface type is not PT_Robot, so it will not be returned by GetRobots", GetNameId() % pbody->GetName());
