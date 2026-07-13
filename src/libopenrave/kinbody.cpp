@@ -2285,10 +2285,9 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         }
     }
     else {
-        // In the common full-vector path, the inputs are copied verbatim into _vTempJoints, so the
-        // current values fetched by GetDOFValues() would be fully overwritten. GetDOFValues() is expensive
-        // (it recomputes every joint angle from the link transforms - quatMultiply + atan2 per dof), so only
-        // call it when an input is NaN, which is the sentinel meaning "keep the current value for that dof".
+        // When setting values to all joints, the input pJointValues already holds every value so use it directly and
+        // skip the expensive GetDOFValues. Only when pJointValues contains NaN (meaning "keep the current value") do we
+        // fetch the current values and fill in the rest.
         const int ndof = GetDOF();
         _vTempJoints.resize(ndof);
         bool bHasNaN = false;
