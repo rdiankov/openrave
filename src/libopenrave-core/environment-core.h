@@ -1554,12 +1554,22 @@ public:
         vCheckers = _vCollisionCheckers;
     }
 
+    static inline void _InitializeForCollisionReportAccumulation(CollisionReportPtr& report, const bool bAllLinkCollisions)
+    {
+        if( bAllLinkCollisions && !!report && report->nKeepPrevious == 0 ) {
+            report->Reset();
+            report->nKeepPrevious = 1; // have to keep the previous since aggregating results
+        }
+    }
+
     virtual bool CheckCollision(KinBodyConstPtr pbody1, CollisionReportPtr report) override
     {
         EnvironmentLock lockenv(GetMutex());
         CHECK_COLLISION_BODY(pbody1);
         OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        CollisionReportKeepSaver reportsaver(report);
+        _InitializeForCollisionReportAccumulation(report, bAllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(pbody1, report) ) {
@@ -1579,6 +1589,8 @@ public:
         CHECK_COLLISION_BODY(pbody2);
         OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        CollisionReportKeepSaver reportsaver(report);
+        _InitializeForCollisionReportAccumulation(report, bAllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(pbody1,pbody2,report) ) {
@@ -1597,6 +1609,8 @@ public:
         CHECK_COLLISION_BODY(plink->GetParent());
         OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        CollisionReportKeepSaver reportsaver(report);
+        _InitializeForCollisionReportAccumulation(report, bAllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink,report) ) {
@@ -1616,6 +1630,8 @@ public:
         CHECK_COLLISION_BODY(plink2->GetParent());
         OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        CollisionReportKeepSaver reportsaver(report);
+        _InitializeForCollisionReportAccumulation(report, bAllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink1,plink2,report) ) {
@@ -1635,6 +1651,8 @@ public:
         CHECK_COLLISION_BODY(pbody);
         OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        CollisionReportKeepSaver reportsaver(report);
+        _InitializeForCollisionReportAccumulation(report, bAllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink,pbody,report) ) {
@@ -1653,6 +1671,8 @@ public:
         CHECK_COLLISION_BODY(plink->GetParent());
         OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        CollisionReportKeepSaver reportsaver(report);
+        _InitializeForCollisionReportAccumulation(report, bAllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(plink,vbodyexcluded,vlinkexcluded,report) ) {
@@ -1671,6 +1691,8 @@ public:
         CHECK_COLLISION_BODY(pbody);
         OPENRAVE_ASSERT_FORMAT(_vCollisionCheckers.size() > 0 && !!_vCollisionCheckers.front(), "CheckCollision is called without the default checker for env=%s.", GetNameId(), ORE_NotInitialized);
         const bool bAllLinkCollisions = !!(_vCollisionCheckers.front()->GetCollisionOptions()&CO_AllLinkCollisions);
+        CollisionReportKeepSaver reportsaver(report);
+        _InitializeForCollisionReportAccumulation(report, bAllLinkCollisions);
         bool bCollision = false;
         for(CollisionCheckerBasePtr pChecker : _vCollisionCheckers) {
             if( pChecker->CheckCollision(pbody,vbodyexcluded,vlinkexcluded,report) ) {
