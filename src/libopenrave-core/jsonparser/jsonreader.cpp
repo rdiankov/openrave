@@ -493,7 +493,7 @@ public:
 
         _penv->UpdateFromInfo(envInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies, updateMode);
         vRemovedBodies.insert(vRemovedBodies.end(), vRemovedBodiesExtra.begin(), vRemovedBodiesExtra.end());
-        RAVELOG_DEBUG_FORMAT("env=%d, loaded %d bodies in %u[us]", _penv->GetId()%envInfo._vBodyInfos.size()%(utils::GetMonotonicTime()-starttimeus));
+        RAVELOG_VERBOSE_FORMAT("env=%d, loaded %d bodies in %u[us]", _penv->GetId()%envInfo._vBodyInfos.size()%(utils::GetMonotonicTime()-starttimeus));
         return true;
     }
 

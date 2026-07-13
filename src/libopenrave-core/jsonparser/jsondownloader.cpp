@@ -225,7 +225,7 @@ bool JSONDownloaderScope::WaitForDownloads(bool bMustResolveURI, uint64_t timeou
     }
 
     const uint64_t stopTimestampUS = utils::GetMonotonicTime();
-    RAVELOG_DEBUG_FORMAT("%s downloaded %d files, took %d[us]", _contextdesc%numDownloads%(stopTimestampUS-startTimestampUS));
+    RAVELOG_VERBOSE_FORMAT("%s downloaded %d files, took %d[us]", _contextdesc%numDownloads%(stopTimestampUS-startTimestampUS));
     return !bHasInvalidURI;
 }
 
