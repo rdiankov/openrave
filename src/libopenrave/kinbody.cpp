@@ -2285,6 +2285,7 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                 _vTempJoints.at(dofindices[i]) = pJointValues[i];
             }
         }
+        pJointValues = &_vTempJoints[0];
     }
     else {
         // When setting values to all joints, the input pJointValues already holds every value so use it directly and
@@ -2305,14 +2306,9 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
                     _vTempJoints[i] = pJointValues[i];
                 }
             }
-        }
-        else {
-            for(int i = 0; i < expecteddof; ++i) {
-                _vTempJoints[i] = pJointValues[i];
-            }
+            pJointValues = &_vTempJoints[0];
         }
     }
-    pJointValues = &_vTempJoints[0];
 
     if( checklimits != CLA_Nothing ) {
         dReal* ptempjoints = &_vTempJoints[0];
