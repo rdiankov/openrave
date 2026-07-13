@@ -1763,7 +1763,7 @@ public:
         if (!lock186) {
             throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"), (1e-6 * static_cast<double>(timeout)), ORE_Timeout);
         }
-        robots.assign(_vecrobots.begin(), _vecrobots.end());
+        robots = _vecrobots;
     }
 
     virtual void GetSensors(std::vector<SensorBasePtr>& vsensors, uint64_t timeout) const
