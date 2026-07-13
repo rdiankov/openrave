@@ -2271,8 +2271,10 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
     if( dof == 0 || _veclinks.size() == 0) {
         return;
     }
-    int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
-    OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, body '%s' not enough values %d<%d", GetEnv()->GetNameId()%GetName()%dof%GetDOF(),ORE_InvalidArguments);
+    const int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
+    OPENRAVE_ASSERT_OP_FORMAT((int)dof, >=, expecteddof,
+                              "env=%s, body '%s' not enough values %d<%d", GetEnv()->GetNameId() % GetName() % dof % expecteddof,
+                              ORE_InvalidArguments);
 
     if( dofindices.size() > 0 ) {
         // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
@@ -2288,10 +2290,9 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         // When setting values to all joints, the input pJointValues already holds every value so use it directly and
         // skip the expensive GetDOFValues. Only when pJointValues contains NaN (meaning "keep the current value") do we
         // fetch the current values and fill in the rest.
-        const int ndof = GetDOF();
-        _vTempJoints.resize(ndof);
+        _vTempJoints.resize(expecteddof);
         bool bHasNaN = false;
-        for(int i = 0; i < ndof; ++i) {
+        for(int i = 0; i < expecteddof; ++i) {
             if( std::isnan(pJointValues[i]) ) {
                 bHasNaN = true;
                 break;
@@ -2299,14 +2300,14 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         }
         if( bHasNaN ) {
             GetDOFValues(_vTempJoints);
-            for(int i = 0; i < ndof; ++i) {
+            for(int i = 0; i < expecteddof; ++i) {
                 if( !std::isnan(pJointValues[i]) ) {
                     _vTempJoints[i] = pJointValues[i];
                 }
             }
         }
         else {
-            for(int i = 0; i < ndof; ++i) {
+            for(int i = 0; i < expecteddof; ++i) {
                 _vTempJoints[i] = pJointValues[i];
             }
         }
