@@ -3,6 +3,21 @@
 ChangeLog
 #########
 
+Version 0.174.1
+===============
+
+- Keep internal cache of robot bodies so that GetRobots is O(robots) not O(bodies)
+
+Version 0.174.0
+===============
+
+- Add EnvironmentBase::GetBodiesWithReadableInterface, which uses a cache of bodies keyed by their non-null readable interfaces so that looking up bodies by readable interface no longer scales with the number of bodies in the environment.
+
+Version 0.173.2
+===============
+
+- Expose PyGrabbedInfo from openravepy_int.h
+
 Version 0.173.1
 ===============
 
