@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.1
+===============
+
+- Keep internal cache of robot bodies so that GetRobots is O(robots) not O(bodies)
+
 Version 0.174.0
 ===============
 
