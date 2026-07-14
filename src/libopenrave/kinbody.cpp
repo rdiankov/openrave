@@ -6513,7 +6513,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             SetId(info._id);
         }
         else if( info._id.empty() ) {
-            RAVELOG_INFO_FORMAT("env=%d, body '%s' do not update id '%s' since update has empty id", GetEnv()->GetId()%GetName()%GetId());
+            RAVELOG_VERBOSE_FORMAT("env=%d, body '%s' do not update id '%s' since update has empty id", GetEnv()->GetId()%GetName()%GetId());
         }
         else {
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());

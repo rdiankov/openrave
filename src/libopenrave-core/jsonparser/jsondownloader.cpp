@@ -207,7 +207,7 @@ bool JSONDownloaderScope::WaitForDownloads(bool bMustResolveURI, uint64_t timeou
             // parse data
             _ParseDocument(pContext);
 
-            RAVELOG_DEBUG_FORMAT("%s successfully downloaded '%s', took %d[us]", _contextdesc%pContext->uri%(currentTimestampUS-pContext->startTimestampUS));
+            RAVELOG_VERBOSE_FORMAT("%s successfully downloaded '%s', took %d[us]", _contextdesc%pContext->uri%(currentTimestampUS-pContext->startTimestampUS));
             ++numDownloads;
 
             // reuse the context object later
@@ -225,7 +225,7 @@ bool JSONDownloaderScope::WaitForDownloads(bool bMustResolveURI, uint64_t timeou
     }
 
     const uint64_t stopTimestampUS = utils::GetMonotonicTime();
-    RAVELOG_DEBUG_FORMAT("%s downloaded %d files, took %d[us]", _contextdesc%numDownloads%(stopTimestampUS-startTimestampUS));
+    RAVELOG_VERBOSE_FORMAT("%s downloaded %d files, took %d[us]", _contextdesc%numDownloads%(stopTimestampUS-startTimestampUS));
     return !bHasInvalidURI;
 }
 
