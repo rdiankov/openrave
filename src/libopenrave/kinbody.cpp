@@ -2439,7 +2439,9 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         if( joint.IsStatic() ) {
             // if joint.IsStatic(), then joint._info._tRightNoOffset and tjoint are assigned identities
             const Transform t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * joint.GetInternalHierarchyLeftTransform();
-            childlink->SetTransform(t);
+            // store the transform directly instead of childlink->SetTransform(t), which would lock the parent
+            // weak_ptr and bump the update stamp once per link. The stamp is bumped once in _PostprocessChangedParameters below.
+            childlink->_info._t = t;
             vlinkscomputed[childlink->GetIndex()] = 1;
             continue;
         }
@@ -2623,7 +2625,8 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         }
 
         const Transform t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * (joint.GetInternalHierarchyLeftTransform() * tjoint * joint.GetInternalHierarchyRightTransform());
-        childlink->SetTransform(t);
+        // store directly (see note above) instead of childlink->SetTransform(t) to avoid the per-link weak_ptr lock + stamp bump.
+        childlink->_info._t = t;
         vlinkscomputed[childlink->GetIndex()] = 1;
     }
 
