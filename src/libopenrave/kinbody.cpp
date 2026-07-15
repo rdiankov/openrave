@@ -2291,7 +2291,7 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         // When setting values to all joints, the input pJointValues already holds every value so use it directly and
         // skip the expensive GetDOFValues. Only when pJointValues contains NaN (meaning "keep the current value") do we
         // fetch the current values and fill in the rest.
-        _vTempJoints.resize(expecteddof);
+        _vTempJoints.resize(expecteddof); // still need resizing because it may be used under checklimits != CLA_Nothing
         bool bHasNaN = false;
         for(int i = 0; i < expecteddof; ++i) {
             if( std::isnan(pJointValues[i]) ) {
