@@ -3,6 +3,41 @@
 ChangeLog
 #########
 
+Version 0.174.1
+===============
+
+- Keep internal cache of robot bodies so that GetRobots is O(robots) not O(bodies)
+
+Version 0.174.0
+===============
+
+- Add EnvironmentBase::GetBodiesWithReadableInterface, which uses a cache of bodies keyed by their non-null readable interfaces so that looking up bodies by readable interface no longer scales with the number of bodies in the environment.
+
+Version 0.173.2
+===============
+
+- Expose PyGrabbedInfo from openravepy_int.h
+
+Version 0.173.1
+===============
+
+- Fix a problem that active-link mask in FCL collision manager is not refreshed when tracked FCLKinBodyInfo is swapped.
+
+Version 0.173.0
+===============
+
+- Require that readable interface lookup is now case-sensitive to allow switching to a faster container type
+
+Version 0.172.0
+===============
+
+- Add MapBodies API for mapping functions across all bodies in the environment directly, without creating temporaries via GetBodies
+
+Version 0.171.0
+===============
+
+- Add RaveRegisterDefaultJSONReader to allow users to register a default fallback JSON reader if no specific reader is registered via RaveRegisterJSONReader
+
 Version 0.170.0
 ===============
 

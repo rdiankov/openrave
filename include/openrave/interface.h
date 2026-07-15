@@ -22,6 +22,8 @@
 #ifndef OPENRAVE_INTERFACE_BASE
 #define OPENRAVE_INTERFACE_BASE
 
+#include <unordered_map>
+
 #include <rapidjson/document.h>
 
 namespace OpenRAVE {
@@ -80,7 +82,7 @@ class OPENRAVE_API ReadablesContainer
 public:
     virtual ~ReadablesContainer() = default;
 
-    typedef std::map<std::string, ReadablePtr, CaseInsensitiveCompare> READERSMAP;
+    typedef std::unordered_map<std::string, ReadablePtr> READERSMAP;
 
     /// \brief Returns the raw map reference, this is \b not multithread safe and the GetReadableInterfaceMutex should be locked before using.
     inline const READERSMAP& GetReadableInterfaces() const
@@ -94,8 +96,8 @@ public:
     /// \brief Returns whether a readable interface exists. <b>[multi-thread safe]</b>
     virtual bool HasReadableInterface(const std::string& id) const;
 
-    /// \brief Set a new readable interface and return the previously set interface if it exists. <b>[multi-thread safe]</b>
-    virtual ReadablePtr SetReadableInterface(const std::string& id, ReadablePtr readable);
+    /// \brief Set a new readable interface and return the previously set interface if it exists.
+    virtual ReadablePtr SetReadableInterface(const std::string& id, const ReadablePtr& readable);
 
     /// \brief sets a set of readable interfaces all at once. The pointers are copied
     ///
@@ -115,12 +117,25 @@ public:
         return _mutexInterface;
     }
 
-    ReadablesContainer& operator= (const ReadablesContainer& other) {
+    ReadablesContainer& operator=(const ReadablesContainer& other) {
         if (this != &other) {
             __mapReadableInterfaces = other.__mapReadableInterfaces;
         }
         return *this;
     }
+
+protected:
+    /// \brief updates the readable interfaces. returns true if there are any changes
+    ///
+    /// assumes _mutexInterface is locked
+    /// \param[out] if not nullptr, then add newly added readable interfaces to the vector
+    virtual bool _UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces, std::vector<const char*>* pvAddedIds);
+
+    /// assumes _mutexInterface is locked
+    virtual ReadablePtr _SetReadableInterface(const std::string& id, const ReadablePtr& readable);
+
+    /// assumes _mutexInterface is locked
+    virtual void _SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting);
 
 private:
     mutable boost::shared_mutex _mutexInterface; ///< internal mutex for protecting data from methods that might be access from any thread (those methods should be commented).
