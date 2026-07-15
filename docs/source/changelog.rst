@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.2
+===============
+
+- Reduce logging level for file loading.
+
 Version 0.174.1
 ===============
 
