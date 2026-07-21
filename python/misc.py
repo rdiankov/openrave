@@ -667,7 +667,7 @@ class SpaceSamplerExtra:
     def sampleR3lattice(averagedist,boxdims):
         """low-discrepancy lattice sampling in using the roots of x^3-3x+1.
         The samples are evenly distributed with an average distance of averagedist inside the box with extents boxextents.
-        Algorithim from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
+        Algorithm from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
         roots = numpy.array([2.8793852415718155,0.65270364466613917,-0.53208888623795614])
         bases = numpy.c_[numpy.ones(3),roots,roots**2]
         tbases = numpy.transpose(bases)
@@ -696,7 +696,7 @@ class SpaceSamplerExtra:
     def sampleR3(averagedist,boxdims):
         """low-discrepancy sampling using primes.
         The samples are evenly distributed with an average distance of averagedist inside the box with dimensions boxdims.
-        Algorithim from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
+        Algorithm from "Geometric Discrepancy: An Illustrated Guide" by Jiri Matousek"""
         minaxis = numpy.argmin(boxdims)
         maxaxis = numpy.argmax(boxdims)
         meddimdist = numpy.sort(boxdims)[1]
