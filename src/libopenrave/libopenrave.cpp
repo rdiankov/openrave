@@ -813,7 +813,7 @@ protected:
         boost::filesystem::path fullfilename;
         boost::filesystem::path filename(_filename);
 
-        if( filename.is_complete() ) {
+        if( filename.is_absolute() ) {
             fullfilename = filename;
         }
         else if( curdir.size() > 0 ) {
@@ -1003,9 +1003,6 @@ protected:
 
     void _CustomNormalizePath(boost::filesystem::path& p)
     {
-#ifndef BOOST_FILESYSTEM_NO_DEPRECATED
-        p.normalize();
-#else
         boost::filesystem::path result;
         for(boost::filesystem::path::iterator it=p.begin(); it!=p.end(); ++it)
         {
@@ -1033,7 +1030,6 @@ protected:
             }
         }
         p = result;
-#endif
     }
 
     bool _ValidateFilename(const boost::filesystem::path& filename, const boost::filesystem::path& curdir)
