@@ -265,7 +265,7 @@ else()
   set(OPENRAVE_LIBRARY_SUFFIX "${OPENRAVE_SOVERSION}" CACHE STRING "Suffix to append to library names")
 endif()
 
-find_package(Boost REQUIRED COMPONENTS filesystem system thread iostreams)
+find_package(Boost REQUIRED COMPONENTS filesystem thread iostreams)
 set(OPENRAVE_BOOST_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 set(OPENRAVE_BOOST_LIB_DIRS ${Boost_LIBRARY_DIRS})
 
@@ -668,7 +668,7 @@ else()
 endif()
 set(CONVEXDECOMPOSITION_FOUND 1)
 
-if( Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+if( Boost_FILESYSTEM_FOUND )
   add_definitions(-DHAVE_BOOST_FILESYSTEM)
 endif()
 
