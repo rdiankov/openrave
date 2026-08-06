@@ -1,0 +1,108 @@
+# French translations for PACKAGE package
+# Traductions françaises du paquet PACKAGE.
+# Copyright (C) 2026 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-24 11:10-0400\n"
+"PO-Revision-Date: 2026-06-24 11:10-0400\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: plugins/rplanners/constraintparabolicsmoother.cpp:327
+msgid "Could not obtain a feasible trajectory from initial quadratic trajectory\n"
+msgstr "Impossible d'obtenir une trajectoire réalisable à partir de la trajectoire quadratique initiale\n"
+
+#: plugins/rplanners/constraintparabolicsmoother.cpp:398
+#, c-format
+msgid "Ramp %d/%d of original traj invalid"
+msgstr "Rampe %d/%d de la trajectoire d'origine invalide"
+
+#: plugins/rplanners/cubicretimer2.cpp:525 plugins/rplanners/quinticretimer.cpp:362
+msgid "_CheckAffine not implemented"
+msgstr "_CheckAffine non implémenté"
+
+#: plugins/rplanners/parabolicretimer.cpp:349 plugins/rplanners/parabolicretimer2.cpp:326 plugins/rplanners/cubicretimer2.cpp:259 plugins/rplanners/quinticretimer.cpp:265 plugins/rplanners/cubicretimer.cpp:273
+msgid "_ComputeMinimumTimeAffine not implemented"
+msgstr "_ComputeMinimumTimeAffine non implémenté"
+
+#: plugins/rplanners/cubicretimer.cpp:289
+msgid "_ComputeMinimumTimeIk not implemented"
+msgstr "_ComputeMinimumTimeIk non implémenté"
+
+#: plugins/rplanners/cubicretimer2.cpp:464 plugins/rplanners/quinticretimer.cpp:301
+msgid "_ComputeVelocitiesAccelerationsAffine not implemented"
+msgstr "_ComputeVelocitiesAccelerationsAffine non implémenté"
+
+#: plugins/rplanners/parabolicretimer.cpp:353 plugins/rplanners/parabolicretimer2.cpp:331 plugins/rplanners/cubicretimer.cpp:277
+msgid "_ComputeVelocitiesAffine not implemented"
+msgstr "_ComputeVelocitiesAffine non implémenté"
+
+#: plugins/rplanners/cubicretimer.cpp:293
+msgid "_ComputeVelocitiesIk not implemented"
+msgstr "_ComputeVelocitiesIk non implémenté"
+
+#: plugins/rplanners/parabolicretimer.cpp:361 plugins/rplanners/parabolicretimer2.cpp:341 plugins/rplanners/cubicretimer2.cpp:709 plugins/rplanners/cubicretimer.cpp:285
+msgid "_WriteAffine not implemented"
+msgstr "_WriteAffine non implémenté"
+
+#: plugins/rplanners/cubicretimer.cpp:302
+msgid "_WriteIk not implemented"
+msgstr "_WriteIk non implémenté"
+
+#: plugins/rplanners/parabolicretimer2.cpp:493 plugins/rplanners/parabolicretimer2.cpp:603 plugins/rplanners/parabolicretimer2.cpp:899 plugins/rplanners/parabolicretimer2.cpp:992 plugins/rplanners/linearretimer.cpp:222
+#, c-format
+msgid "env=%d, does not support parameterization 0x%x"
+msgstr "env=%d, ne prend pas en charge le paramétrage 0x%x"
+
+#: plugins/rplanners/trajectoryretimer.h:148
+#, c-format
+msgid "env=%d, lower limit for traj point %d dof %d is not followed (%.15e < %.15e)"
+msgstr "env=%d, la limite inférieure pour le point de trajectoire %d dof %d n'est pas respectée (%.15e < %.15e)"
+
+#: plugins/rplanners/trajectoryretimer.h:154
+#, c-format
+msgid "env=%d, upper limit for traj point %d dof %d is not followed (%.15e > %.15e)"
+msgstr "env=%d, la limite supérieure pour le point de trajectoire %d dof %d n'est pas respectée (%.15e > %.15e)"
+
+#: plugins/rplanners/cubicretimer2.cpp:379 plugins/rplanners/cubicretimer2.cpp:588 plugins/rplanners/cubicretimer2.cpp:819 plugins/rplanners/cubicretimer2.cpp:942 plugins/rplanners/cubicretimer2.cpp:1002
+#, c-format
+msgid "env=%s, cubic retimer does not support ikparam type 0x%x"
+msgstr "env=%s, le retimer cubique ne prend pas en charge le type d'ikparam 0x%x"
+
+#: plugins/rplanners/parabolicretimer.cpp:458 plugins/rplanners/parabolicretimer.cpp:563 plugins/rplanners/parabolicretimer.cpp:703 plugins/rplanners/parabolicretimer.cpp:868 plugins/rplanners/parabolicretimer2.cpp:780
+#, c-format
+msgid "env=%s, does not support parameterization 0x%x"
+msgstr "env=%s, ne prend pas en charge le paramétrage 0x%x"
+
+#: plugins/rplanners/rrt.h:537
+#, c-format
+msgid "env=%s, plan failed in %u[us], iter=%d, nMaxIterations=%d"
+msgstr "env=%s, échec de la planification en %u[us], iter=%d, nMaxIterations=%d"
+
+#: plugins/rplanners/rrt.h:555
+#, c-format
+msgid "env=%s, plan success, iters=%d, path=%d points, computation time=%u[us]\n"
+msgstr "env=%s, planification réussie, iters=%d, chemin=%d points, temps de calcul=%u[us]\n"
+
+#: plugins/rplanners/parabolicretimer.cpp:357 plugins/rplanners/parabolicretimer2.cpp:336 plugins/rplanners/cubicretimer.cpp:281 plugins/rplanners/cubicretimer.cpp:297
+msgid "not implemented"
+msgstr "non implémenté"
+
+#: plugins/rplanners/subparabolicsmoother.cpp:235
+msgid "original ramp is in collision!"
+msgstr "la rampe d'origine est en collision !"
+
+#: plugins/rplanners/constraintparabolicsmoother.cpp:504
+#, c-format
+msgid "parabolic planner failed: %s"
+msgstr "échec du planificateur parabolique : %s"
