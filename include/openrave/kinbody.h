@@ -3283,17 +3283,12 @@ public:
     /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
 
         \param[in] ilinkindex the index of the link to check
+        \param[in] vIncludedLinks vector of included links.
+                   Among the link pairs in GetNonAdjacentLinks, this API only checks the collisions with the pairs so that one of the link of the pair has ilinkindex, and the other link of the pair is included in vIncludedLinks. If vIncludedLinks is empty, it's specially treated as no limitation for the included links, e.g. this API checks all possible pairs if one link of the pair has ilinkindex.
+        \param[in] pLinkTransform The pointer of the transform of the link to check. If nullptr, do nothing about link transform. If valid pointer is specified, update the link transform and grabbed bodies transforms according to the pLinkTransform.
         \param[out] report [optional] collision report
      */
-    virtual bool CheckLinkSelfCollision(int ilinkindex, CollisionReportPtr report = CollisionReportPtr());
-
-    /** \brief checks self-collision of a robot link with the other robot links. Attached/Grabbed bodies to this link are also checked for self-collision. Rigidly attached links to the specified link are not checked for self-collision.
-
-        \param[in] ilinkindex the index of the link to check
-        \param[in] tlinktrans The transform of the link to check
-        \param[out] report [optional] collision report
-     */
-    virtual bool CheckLinkSelfCollision(int ilinkindex, const Transform& tlinktrans, CollisionReportPtr report = CollisionReportPtr());
+    virtual bool CheckLinkSelfCollision(int ilinkindex, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks, const TransformConstPtr& pLinkTransform, CollisionReportPtr report = CollisionReportPtr());
 
     //@}
 
@@ -3820,6 +3815,37 @@ protected:
 
     /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
     static int _GetSecondEnvironmentBodyIndexFromPair(const uint64_t pair);
+
+    /// \brief Check self collision for grabbed bodies: 1) check between grabber and grabbed, and 2) check between two grabbed bodies (inter-grabbed collision).
+    ///
+    /// \param collisionchecker : collision checker to use
+    /// \param[out] report : resultant report
+    /// \param[in] bAllLinkCollisions : true if all link should be checked.
+    /// \param[in] pGrabberLinkToCheck : link ptr of grabber's link to check.
+    ///                                  If nullptr, check all possible grabbed bodies.
+    ///                                  If valid ptr is specified,
+    ///                                     - grabber vs grabbed collision
+    ///                                       - check collision between grabber link and the grabbed body which pGrabbingLink is pGrabberLinkToCheck
+    ///                                       - check collision between the grabbed body and the grabber link which is pGrabberLinkToCheck
+    ///                                     - inter-grabbed collision
+    ///                                       - check collision if pGrabbingLink of one grabbed body is pGrabberLinkToCheck.
+    /// \param[in] vIncludedLinks : Vector of grabber links to check. This argument requires pGrabberLinkToCheck to be specified.
+    ///                                    If empty, vIncludedLinks is not used and check all possible grabber links.
+    ///                                    If non-empty, vIncludedLinks is used along with pGrabberLinkToCheck as follows:
+    ///                                     - grabber vs grabbed collision
+    ///                                       - check collision between grabber link included in vIncludedLinks and the grabbed body which pGrabbingLink is pGrabberLinkToCheck
+    ///                                       - check collision between the grabbed body which pGrabbingLink is included in vIncludedLinks and the grabber link which is pGrabberLinkToCheck
+    ///                                     - inter-grabbed collision
+    ///                                       - check collision if pGrabbingLink of one grabbed body is pGrabberLinkToCheck and pGrabbingLink of other grabbed body is included in vIncludedLinks.
+    /// \param[in] pLinkTransformForGrabberLinkToCheck : ptr of link transform for pGrabberLinkToCheck. This argument requires pGrabberLinkToCheck to be specified.
+    ///                                                  If nullptr is specified, no transform change for grabbed bodies. 
+    ///                                                  If valid ptr is specified, update the Transform of grabbed bodies, which are grabbed by pGrabberLinkToCheck
+    bool _CheckGrabbedBodiesSelfCollision(CollisionCheckerBasePtr& collisionchecker,
+                                          CollisionReportPtr& report,
+                                          const bool bAllLinkCollisions,
+                                          const LinkPtr& pGrabberLinkToCheck,
+                                          const std::vector<KinBody::LinkConstPtr>& vIncludedLinks,
+                                          const TransformConstPtr& pLinkTransformForGrabberLinkToCheck) const;
 
     std::string _name; ///< name of body
 

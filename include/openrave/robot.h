@@ -516,6 +516,9 @@ protected:
         bool _CheckEndEffectorCollision(const Transform& tEE, KinBodyConstPtr pbody, CollisionReportPtr report) const;
         /// \brief check end-effector collision with the given ikparam and the specified body. if pbody is null, check with the environment.
         bool _CheckEndEffectorCollision(const IkParameterization& ikparam, KinBodyConstPtr pbody, CollisionReportPtr report, int numredundantsamples) const;
+        /// \brief check end effector self collision.
+        /// \param[in] pTransformDelta : The pointer of the delta of link transform. If nullptr, do nothing about link transform. If valid pointer is specified, update the link transforms temporarily.
+        bool _CheckEndEffectorSelfCollision(const TransformConstPtr& pTransformDelta, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const;
 
         ManipulatorInfo _info; ///< user-set information
 private:

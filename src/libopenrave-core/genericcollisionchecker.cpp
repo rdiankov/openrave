@@ -102,7 +102,7 @@ public:
     virtual bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr) {
         return false;
     }
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr pbody, CollisionReportPtr) {
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr pbody, const std::vector<KinBody::LinkConstPtr>&, CollisionReportPtr) {
         return false;
     }
 

@@ -195,7 +195,7 @@ public:
 
     bool CheckStandaloneSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) override;
 
-    bool CheckStandaloneSelfCollision(LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) override;
+    bool CheckStandaloneSelfCollision(LinkConstPtr plink, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks = std::vector<KinBody::LinkConstPtr>(), CollisionReportPtr report = CollisionReportPtr()) override;
 
 
 private:
