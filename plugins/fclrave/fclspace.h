@@ -3,6 +3,7 @@
 #define OPENRAVE_FCL_SPACE
 
 #include <boost/shared_ptr.hpp>
+#include <map>
 #include <memory> // c++11
 #include <vector>
 
@@ -146,6 +147,7 @@ public:
         }
 
         KinBodyWeakPtr _pbody;
+        int nEnvBodyIndex = 0; ///< environment body index of _pbody, cached so change callbacks do not have to lock _pbody as well as the info
         int nLastStamp = 0; ///< KinBody::GetUpdateStamp() when last synchronized ("is transform up to date")
         int nLastLinkReloadStamp = 0; ///< KinBody::GetUpdateStamp() when we last ran ReloadKinBodyLinks
         int nLinkUpdateStamp = 0; ///< update stamp for link enable state (increases every time link enables change)
@@ -226,6 +228,23 @@ public:
         return _vecInitializedBodies;
     }
 
+    /// \brief revision of this space, incremented every time a body's FCLKinBodyInfo changes.
+    ///
+    /// Consumers that mirror FCLKinBodyInfo state in their own per-body caches record this value after
+    /// synchronizing, then pass it back to CollectBodyIndicesChangedAfter to revisit only what changed.
+    ///
+    /// Note this tracks changes to the *info*, not to the KinBody. Not every pose change reaches a change
+    /// callback (KinBody::Link::SetTransform bumps the body update stamp without firing one), so the mark
+    /// is set by _Synchronize when it actually refreshes an info, rather than at the point of mutation.
+    inline uint64_t GetCurrentRevision() const {
+        return _nCurrentRevision;
+    }
+
+    /// \brief replaces envBodyIndicesOut with the environment body indices recorded after sinceRevision.
+    /// Passing 0 returns every index this space has ever recorded, which is a superset of the currently
+    /// initialized bodies: indices of removed bodies stay in the log so consumers can drop their caches.
+    void CollectBodyIndicesChangedAfter(uint64_t sinceRevision, std::vector<int>& envBodyIndicesOut) const;
+
     inline CollisionObjectPtr GetLinkBV(const KinBody::Link &link) {
         return GetLinkBV(*link.GetParent(), link.GetIndex());
     }
@@ -284,6 +303,9 @@ private:
     /// \brief pass in info.GetBody() as a reference to avoid dereferencing the weak pointer in FCLKinBodyInfo
     void _Synchronize(FCLKinBodyInfo& info, const KinBody& body);
 
+    /// \brief record that the body at envBodyIndex changed, so cached consumers re-synchronize it
+    void _MarkBodyChanged(int envBodyIndex);
+
     /// \brief controls whether the kinbody info is removed during the destructor
     class FCLKinBodyInfoRemover
     {
@@ -313,6 +335,7 @@ private:
         FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nLinkUpdateStamp++;
+            _MarkBodyChanged(pinfo->nEnvBodyIndex);
         }
     }
 
@@ -320,6 +343,7 @@ private:
         FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nActiveDOFUpdateStamp++;
+            _MarkBodyChanged(pinfo->nEnvBodyIndex);
         }
     }
 
@@ -327,6 +351,7 @@ private:
         FCLKinBodyInfoPtr pinfo = _pinfo.lock();
         if( !!pinfo ) {
             pinfo->nAttachedBodiesUpdateStamp++;
+            _MarkBodyChanged(pinfo->nEnvBodyIndex);
         }
     }
 
@@ -344,6 +369,10 @@ private:
 
     std::vector<int> _vecAttachedEnvBodyIndicesCache; ///< cache
     std::vector<KinBodyPtr> _vecAttachedBodiesCache; ///< cache
+
+    uint64_t _nCurrentRevision = 0; ///< incremented every time any tracked body changes
+    std::vector<uint64_t> _vecBodyRevisions; ///< per environment body index, revision at which that body last changed. 0 means it has never been recorded
+    std::map<uint64_t, int> _mapChangedBodyIndices; ///< revision -> environment body index, one entry per recorded body. Ordered so that "changed after" queries only walk the tail
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };
