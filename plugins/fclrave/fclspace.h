@@ -2,9 +2,11 @@
 #ifndef OPENRAVE_FCL_SPACE
 #define OPENRAVE_FCL_SPACE
 
+#include <algorithm>
 #include <boost/shared_ptr.hpp>
 #include <map>
 #include <memory> // c++11
+#include <utility>
 #include <vector>
 
 namespace fclrave {
@@ -306,6 +308,14 @@ private:
     /// \brief record that the body at envBodyIndex changed, so cached consumers re-synchronize it
     void _MarkBodyChanged(int envBodyIndex);
 
+    /// \brief true if this entry is the body's latest, rather than one superseded by a later mark
+    inline bool _IsCurrentChangedBodyEntry(const std::pair<uint64_t, int>& entry) const {
+        return entry.second < (int)_vecBodyRevisions.size() && _vecBodyRevisions[entry.second] == entry.first;
+    }
+
+    /// \brief drop superseded entries from _vecChangedBodyIndices, keeping it sorted
+    void _CompactChangedBodyIndices();
+
     /// \brief controls whether the kinbody info is removed during the destructor
     class FCLKinBodyInfoRemover
     {
@@ -372,7 +382,8 @@ private:
 
     uint64_t _nCurrentRevision = 0; ///< incremented every time any tracked body changes
     std::vector<uint64_t> _vecBodyRevisions; ///< per environment body index, revision at which that body last changed. 0 means it has never been recorded
-    std::map<uint64_t, int> _mapChangedBodyIndices; ///< revision -> environment body index, one entry per recorded body. Ordered so that "changed after" queries only walk the tail
+    std::vector<std::pair<uint64_t, int> > _vecChangedBodyIndices; ///< (revision, environment body index) sorted by revision, so "changed after" queries binary search then walk the tail contiguously. Holds superseded entries, which _IsCurrentChangedBodyEntry skips
+    size_t _numCurrentChangedBodyEntries = 0; ///< number of bodies recorded at least once, i.e. how many entries of _vecChangedBodyIndices are not superseded
 
     bool _bIsSelfCollisionChecker; // Currently not used
 };

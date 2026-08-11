@@ -471,19 +471,46 @@ void FCLSpace::_MarkBodyChanged(int envBodyIndex)
     }
     EnsureVectorSize(_vecBodyRevisions, envBodyIndex + 1);
     uint64_t& bodyRevision = _vecBodyRevisions.at(envBodyIndex);
-    if( bodyRevision > 0 ) {
-        _mapChangedBodyIndices.erase(bodyRevision); // keep exactly one entry per body, at its latest revision
+    if( bodyRevision == 0 ) {
+        ++_numCurrentChangedBodyEntries; // first time this body is recorded
     }
     bodyRevision = ++_nCurrentRevision;
-    // the new revision is always the largest, so the entry always belongs at the end
-    _mapChangedBodyIndices.emplace_hint(_mapChangedBodyIndices.end(), bodyRevision, envBodyIndex);
+    // revisions only increase, so appending keeps _vecChangedBodyIndices sorted. The body's previous
+    // entry is left behind and skipped on read, which is cheaper than erasing from the middle.
+    _vecChangedBodyIndices.emplace_back(bodyRevision, envBodyIndex);
+
+    if( _vecChangedBodyIndices.size() > 2 * _numCurrentChangedBodyEntries + 16 ) {
+        _CompactChangedBodyIndices();
+    }
+}
+
+void FCLSpace::_CompactChangedBodyIndices()
+{
+    // drop the superseded entries, keeping only each body's latest. Scanning in order preserves the
+    // sort, and dropping a superseded entry is safe because the entry that replaced it has a higher
+    // revision, so any cursor that would have seen the old one also sees the new one.
+    size_t writeIndex = 0;
+    for (size_t readIndex = 0; readIndex < _vecChangedBodyIndices.size(); ++readIndex) {
+        const std::pair<uint64_t, int>& entry = _vecChangedBodyIndices[readIndex];
+        if( _IsCurrentChangedBodyEntry(entry) ) {
+            _vecChangedBodyIndices[writeIndex++] = entry;
+        }
+    }
+    _vecChangedBodyIndices.resize(writeIndex);
 }
 
 void FCLSpace::CollectBodyIndicesChangedAfter(uint64_t sinceRevision, std::vector<int>& envBodyIndicesOut) const
 {
     envBodyIndicesOut.resize(0);
-    for (std::map<uint64_t, int>::const_iterator it = _mapChangedBodyIndices.upper_bound(sinceRevision); it != _mapChangedBodyIndices.end(); ++it) {
-        envBodyIndicesOut.push_back(it->second);
+    const std::vector<std::pair<uint64_t, int> >::const_iterator itBegin = std::upper_bound(
+        _vecChangedBodyIndices.begin(), _vecChangedBodyIndices.end(), sinceRevision,
+        [](uint64_t revision, const std::pair<uint64_t, int>& entry) {
+        return revision < entry.first;
+    });
+    for (std::vector<std::pair<uint64_t, int> >::const_iterator it = itBegin; it != _vecChangedBodyIndices.end(); ++it) {
+        if( _IsCurrentChangedBodyEntry(*it) ) {
+            envBodyIndicesOut.push_back(it->second);
+        }
     }
 }
 
