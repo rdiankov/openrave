@@ -139,6 +139,8 @@ void FCLCollisionManagerInstance::InitBodyManager(KinBodyConstPtr pbody, bool bT
     for (KinBodyCache& bodyCache : _vecCachedBodies) {
         bodyCache.Invalidate();
     }
+    _nLastSyncRevision = 0; // every cache entry was just invalidated, so the next Synchronize has to revisit all bodies
+    _nLastEnsureBodiesRevision = 0; // likewise for the next EnsureBodies
     const EnvironmentBase& env = *pbody->GetEnv();
     int maxBodyIndex = env.GetMaxEnvironmentBodyIndex();
     EnsureVectorSize(_vecCachedBodies, maxBodyIndex + 1);
@@ -154,7 +156,9 @@ void FCLCollisionManagerInstance::InitBodyManager(KinBodyConstPtr pbody, bool bT
         const KinBody& attachedBody = *pAttachedBody;
         const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(attachedBody);
         if (!pinfo) {
-            // don't init something that isn't initialized in this checker.
+            // don't init something that isn't initialized in this checker. Come back on the next Synchronize,
+            // since nothing else revisits the attached bodies until nAttachedBodiesUpdateStamp changes
+            _bRetryAttachedBodies = true;
             RAVELOG_VERBOSE_FORMAT(
                 "body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName() % attachedBody.GetName());
             continue;
@@ -227,6 +231,8 @@ void FCLCollisionManagerInstance::InitEnvironment(const std::vector<int8_t>& exc
     for (KinBodyCache& bodyCache : _vecCachedBodies) {
         bodyCache.Invalidate();
     }
+    _nLastSyncRevision = 0; // every cache entry was just invalidated, so the next Synchronize has to revisit all bodies
+    _nLastEnsureBodiesRevision = 0; // likewise for the next EnsureBodies
 
     _vecExcludeBodyIndices = excludedEnvBodyIndices;
     pmanager->setup();
@@ -242,43 +248,62 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
     // Clear our scratch buffer
     _tmpSortedBuffer.resize(0);
 
-    // We need to make sure we resize _vecCachedBodies to allow direct lookup by body index, which we can do the first time we encounter a non-null body.
-    bool ensuredVecCachedBodies = false;
+    // Visit only the bodies FCLSpace recorded as changed since this function last ran, instead of every
+    // body in the environment: a body can only need adding here if something changed it, and every path
+    // that fills its info marks it (InitKinBody in particular). vbodies is FCLSpace::GetEnvBodies(),
+    // which is indexed by environment body index.
+    // This cursor is separate from _nLastSyncRevision on purpose: Synchronize runs right after this from
+    // _GetEnvManager and has to see the same marks, so the two must not consume from one cursor.
+    const uint64_t currentSpaceRevision = _fclspace.GetCurrentRevision();
+    _fclspace.CollectBodyIndicesChangedAfter(_nLastEnsureBodiesRevision, _vecChangedBodyIndicesCache);
 
-    // For each tracked body, ensure that we have all necessary collision info
-    for (const KinBodyConstPtr& pbody : vbodies) {
+    // resize for direct lookup by body index. vbodies covers every index this loop can touch
+    EnsureVectorSize(_vecCachedBodies, vbodies.size());
+
+    // For each changed body, ensure that we have all necessary collision info
+    for (const int bodyIndex : _vecChangedBodyIndicesCache) {
+        if (bodyIndex < 1 || bodyIndex >= (int)vbodies.size()) {
+            // stale mark for an index the space no longer has a body at; nothing to add
+            continue;
+        }
+        const KinBodyConstPtr& pbody = vbodies[bodyIndex];
         // Null bodies can be ignored
         if (!pbody) {
             continue;
         }
         const KinBody& body = *pbody;
 
-        // If this is our first real body, use it to get the max body index from the env and resize our body cache
-        if (!ensuredVecCachedBodies) {
-            EnsureVectorSize(_vecCachedBodies, body.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
-            ensuredVecCachedBodies = true;
-        }
-
         // If this body index is excluded, skip it.
-        const int bodyIndex = body.GetEnvironmentBodyIndex();
-        if (bodyIndex < _vecExcludeBodyIndices.size() && _vecExcludeBodyIndices[bodyIndex]) {
+        if (bodyIndex < (int)_vecExcludeBodyIndices.size() && _vecExcludeBodyIndices[bodyIndex]) {
             continue;
         }
 
         // If our cache of this body is still valid, then we don't need to recompute.
-        const bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
-        if (bIsValid) {
-            continue;
+        KinBodyCache& existingCache = _vecCachedBodies.at(bodyIndex);
+        if (existingCache.IsValid()) {
+            if (existingCache.pwbody.lock() == pbody) {
+                // already cached; Synchronize picks up whatever changed on it
+                continue;
+            }
+            // the index was reused by a new body while the previously cached one is still alive. The mark
+            // is consumed now, so dropping the stale entry here is the only chance to add the new body
+            _UnregisterCachedCollisionObjects(existingCache);
         }
 
         // Calculate the collision objects for this body.
         // Note that if there are no collision volumes for an entity, _AddBody will return false.
         // We still want to cache the _absence_ of collision data however, to avoid expensive recomputes on non-colliding bodies, so cache the returned data even if it's empty.
         const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
+        if (!pinfo) {
+            // not initialized in this checker, and _AddBody and SetBodyData would both dereference it.
+            // consuming the mark is fine: every path that later fills the info records a new one
+            RAVELOG_VERBOSE_FORMAT(
+                "env=%s, body %s is not initialized in this checker, ignoring for now", body.GetEnv()->GetNameId() % body.GetName());
+            continue;
+        }
         _AddBody(body, pinfo, _ensureBodiesCollisionObjectsCache, _linkEnableStatesBitmasks, false);
-        KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-        cache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
-        cache.vcolobjs.swap(_ensureBodiesCollisionObjectsCache);
+        existingCache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
+        existingCache.vcolobjs.swap(_ensureBodiesCollisionObjectsCache);
     }
 
     if (_tmpSortedBuffer.size() > 0) {
@@ -290,6 +315,10 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
 
     // Clear our cached collision body vector to ensure we don't prolong the lifetime of any collision objects
     _ensureBodiesCollisionObjectsCache.clear();
+
+    // only advance once the loop and the bulk register finished, for the same reason Synchronize advances
+    // its cursor last: a throw part way through must leave the unprocessed marks for the next call
+    _nLastEnsureBodiesRevision = currentSpaceRevision;
 }
 
 bool FCLCollisionManagerInstance::RemoveBody(const KinBody& body) {
@@ -299,13 +328,7 @@ bool FCLCollisionManagerInstance::RemoveBody(const KinBody& body) {
     if ((int)_vecCachedBodies.size() > bodyIndex && bodyIndex > 0) {
         KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
         if (cache.IsValid()) {
-            for (CollisionObjectPtr& col : cache.vcolobjs) {
-                if (!!col.get()) {
-                    pmanager->unregisterObject(col.get());
-                }
-            }
-            cache.vcolobjs.resize(0);
-            cache.Invalidate();
+            _UnregisterCachedCollisionObjects(cache);
 
             return true;
         } else {
@@ -357,10 +380,13 @@ void FCLCollisionManagerInstance::Synchronize() {
         } else {
             FCLSpace::FCLKinBodyInfoPtr pinfo = trackingCache.pwinfo.lock();
             const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
+            // A null pnewinfo means the space stopped tracking the body while it is still in the environment,
+            // which is what DestroyEnvironment leaves behind. There is no active-DOF state left to refresh;
+            // the loop below drops the cache entry.
             // Also refresh when the tracked FCLKinBodyInfo object itself was swapped (e.g. a geometry-group
             // switch via SetBodyGeometryGroup): each per-group info has an independent nActiveDOFUpdateStamp
             // counter, so equal stamps across two different infos must not be read as "no active-DOF change".
-            if (trackingCache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp || pinfo != pnewinfo) {
+            if (!!pnewinfo && (trackingCache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp || pinfo != pnewinfo)) {
                 if (trackingbody.IsRobot()) {
                     RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
                     if (!!probot) {
@@ -411,12 +437,16 @@ void FCLCollisionManagerInstance::Synchronize() {
                                         pmanager->registerObject(pColObjRaw);
 #endif
                                         bcallsetup = true;
+                                        trackingCache.vcolobjs.at(ilink) = pcolobj;
                                     } else {
                                         if (!!trackingCache.vcolobjs.at(ilink)) {
                                             pmanager->unregisterObject(trackingCache.vcolobjs.at(ilink).get());
                                         }
+                                        // a non-null vcolobjs entry means the object is registered in pmanager,
+                                        // so an object this branch did not register must not be stored here,
+                                        // otherwise the next unregister of this entry has nothing to remove
+                                        trackingCache.vcolobjs.at(ilink).reset();
                                     }
-                                    trackingCache.vcolobjs.at(ilink) = pcolobj;
                                 } else {
                                     if (!bIsActiveLinkEnabled && !!trackingCache.vcolobjs.at(ilink)) {
                                         // RAVELOG_VERBOSE_FORMAT("env=%d %x resetting cached colobj %s %d",
@@ -438,20 +468,26 @@ void FCLCollisionManagerInstance::Synchronize() {
 
     FCLSpace::FCLKinBodyInfoPtr pinfo;
     KinBodyConstPtr pbody;
-    for (int bodyIndexCached = 1; bodyIndexCached < (int)_vecCachedBodies.size(); ++bodyIndexCached) {
+    // Visit only the bodies FCLSpace recorded as changed since this manager last synchronized, rather
+    // than every cached body. The first call after construction or after Init*Manager passes 0, which
+    // returns every index FCLSpace has ever recorded, so nothing is missed on a cold cache.
+    const uint64_t currentSpaceRevision = _fclspace.GetCurrentRevision();
+    _fclspace.CollectBodyIndicesChangedAfter(_nLastSyncRevision, _vecChangedBodyIndicesCache);
+    for (const int bodyIndexCached : _vecChangedBodyIndicesCache) {
+        if (bodyIndexCached < 1 || bodyIndexCached >= (int)_vecCachedBodies.size()) {
+            // dropping the mark for an out-of-range index is safe: growing _vecCachedBodies only appends
+            // invalid entries with no registered collision objects, and every place that fills a slot
+            // (EnsureBodies, InitBodyManager, the attached-bodies tail below) reads the stamps at that
+            // moment, so there is nothing left for this loop to catch up on
+            continue;
+        }
         KinBodyCache& cache = _vecCachedBodies[bodyIndexCached];
         pbody = cache.pwbody.lock();
         if (!pbody || pbody->GetEnvironmentBodyIndex() == 0) {
             // should happen when parts are removed
             // RAVELOG_VERBOSE_FORMAT("env=%d, %u manager contains invalid body %s, removing for now", _fclspace.GetEnvironmentId()%_lastSyncTimeStamp%(!pbody ?
             // std::string() : pbody->GetName()));
-            FOREACH(itcolobj, cache.vcolobjs) {
-                if (!!itcolobj->get()) {
-                    pmanager->unregisterObject(itcolobj->get());
-                }
-            }
-            cache.vcolobjs.resize(0);
-            cache.Invalidate();
+            _UnregisterCachedCollisionObjects(cache);
             continue;
         }
 
@@ -467,6 +503,22 @@ void FCLCollisionManagerInstance::Synchronize() {
 
         pinfo = cache.pwinfo.lock();
         const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(body); // necessary in case pinfos were swapped!
+        if (!pnewinfo) {
+            // the space no longer tracks this body even though it is still in the environment, which is what
+            // DestroyEnvironment leaves behind. The LinkInfos backing our collision objects are gone, so drop them.
+            // a body manager has no other way back: it only revisits its attached bodies when
+            // nAttachedBodiesUpdateStamp changes, and re-initializing the body in the space does not change it.
+            // an environment manager needs nothing here: re-initializing the body in the space records a new
+            // mark (InitKinBody), which EnsureBodies' own cursor picks up and re-adds the body from
+            if (!!ptrackingbody) {
+                _bRetryAttachedBodies = true;
+            }
+            RAVELOG_VERBOSE_FORMAT(
+                "env=%s, %u body %s is no longer tracked by the fcl space, dropping its cached collision objects",
+                body.GetEnv()->GetNameId() % _lastSyncTimeStamp % body.GetName());
+            _UnregisterCachedCollisionObjects(cache);
+            continue;
+        }
         if (pinfo != pnewinfo) {
             // everything changed!
             RAVELOG_VERBOSE_FORMAT("%u body %s entire FCLKinBodyInfo changed", _lastSyncTimeStamp % pbody->GetName());
@@ -695,8 +747,12 @@ void FCLCollisionManagerInstance::Synchronize() {
             cache.nAttachedBodiesUpdateStamp = kinBodyInfo.nAttachedBodiesUpdateStamp;
         }
     }
-
-    if (bAttachedBodiesChanged && !!ptrackingbody) {
+    if ((bAttachedBodiesChanged || _bRetryAttachedBodies) && !!ptrackingbody) {
+        // latch the retry for the whole block: cache.nAttachedBodiesUpdateStamp was already advanced in the
+        // loop above, so if _AddBody throws part way through, nothing else would bring the rest of the
+        // attached bodies back and they would stay out of the manager
+        _bRetryAttachedBodies = true;
+        bool bSkippedUninitializedAttachedBody = false;
         // since tracking have to update all the bodies
         std::vector<KinBodyPtr>& vecAttachedEnvBodies = _vecAttachedEnvBodiesCache;
         std::vector<int>& vecAttachedEnvBodyIndices = _vecAttachedEnvBodyIndicesCache;
@@ -722,6 +778,15 @@ void FCLCollisionManagerInstance::Synchronize() {
             }
 
             const FCLSpace::FCLKinBodyInfoPtr& pInfo = _fclspace.GetInfo(attached);
+            if (!pInfo) {
+                // not initialized in this checker, same as the skip in InitBodyManager. Come back on the next
+                // Synchronize, since nAttachedBodiesUpdateStamp was already consumed and will not change again
+                bSkippedUninitializedAttachedBody = true;
+                RAVELOG_VERBOSE_FORMAT(
+                    "env=%s, attached body %s is not initialized in this checker, ignoring for now",
+                    attached.GetEnv()->GetNameId() % attached.GetName());
+                continue;
+            }
             if (_AddBody(attached, pInfo, cache.vcolobjs, _linkEnableStatesBitmasks, _bTrackActiveDOF && (pattached == ptrackingbody))) {
                 bcallsetup = true;
             }
@@ -758,17 +823,13 @@ void FCLCollisionManagerInstance::Synchronize() {
                     RAVELOG_VERBOSE_FORMAT("env=%s, %x, %u removing old cache %d", pBody->GetEnv()->GetNameId() % this % _lastSyncTimeStamp % cachedBodyIndex);
                 }
                 // not in attached bodies so should remove
-                FOREACH(itcol, cache.vcolobjs) {
-                    if (!!itcol->get()) {
-                        pmanager->unregisterObject(itcol->get());
-                    }
-                }
-                cache.vcolobjs.resize(0);
-                cache.Invalidate();
+                _UnregisterCachedCollisionObjects(cache);
             }
         }
+        // the block finished, so keep retrying only if it skipped an attached body the space had not
+        // initialized yet
+        _bRetryAttachedBodies = bSkippedUninitializedAttachedBody;
     }
-
     if (_tmpSortedBuffer.size() > 0) {
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
         SaveCollisionObjectDebugInfos();
@@ -778,6 +839,10 @@ void FCLCollisionManagerInstance::Synchronize() {
     if (bcallsetup) {
         pmanager->setup();
     }
+    // only advance once everything above succeeded: the loops index with at(), and _AddBody, registerObjects
+    // and setup all allocate, so any of them can throw. Advancing earlier would drop every body after the
+    // throwing one from all future calls, leaving their collision objects out of the manager for good
+    _nLastSyncRevision = currentSpaceRevision;
 }
 
 bool FCLCollisionManagerInstance::_AddBody(
@@ -818,6 +883,16 @@ bool FCLCollisionManagerInstance::_AddBody(
         }
     }
     return bsetUpdateStamp;
+}
+
+void FCLCollisionManagerInstance::_UnregisterCachedCollisionObjects(KinBodyCache& cache) {
+    FOREACH(itcolobj, cache.vcolobjs) {
+        if (!!itcolobj->get()) {
+            pmanager->unregisterObject(itcolobj->get());
+        }
+    }
+    cache.vcolobjs.resize(0); // has to happen before Invalidate, which warns on a non-empty vcolobjs
+    cache.Invalidate();
 }
 
 void FCLCollisionManagerInstance::_UpdateActiveLinks(const RobotBase& robot) {

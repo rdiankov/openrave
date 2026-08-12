@@ -21,6 +21,9 @@ void FCLSpace::FCLKinBodyInfo::Reset()
         (*itlink)->Reset();
     }
     vlinks.resize(0);
+    // _activeDOFsCallback and _bodyAttachedCallback stay registered here, so clear the cached index to stop
+    // them marking whichever body now holds it. InitKinBody re-fills it right after calling Reset
+    nEnvBodyIndex = 0;
     _geometrycallback.reset();
     _geometrygroupcallback.reset();
     _linkenablecallback.reset();
@@ -51,13 +54,23 @@ FCLSpace::FCLSpace(EnvironmentBasePtr penv, const std::string& userdatakey)
 void FCLSpace::DestroyEnvironment()
 {
     RAVELOG_VERBOSE_FORMAT("destroying fcl collision environment (env %d) (userdatakey %s)", _penv->GetId()%_userdatakey);
-    for (KinBodyConstPtr pbody : _vecInitializedBodies) {
+    for (int envBodyIndex = 0; envBodyIndex < (int)_vecInitializedBodies.size(); ++envBodyIndex) {
+        const KinBodyConstPtr& pbody = _vecInitializedBodies[envBodyIndex];
         if (!pbody) {
             continue;
         }
-        FCLKinBodyInfoPtr& pinfo = GetInfo(*pbody);
-        if( !!pinfo ) {
-            pinfo->Reset();
+        // managers outlive DestroyEnvironment and still hold collision objects from these infos, so mark
+        // before resetting to force them to revisit every body. The position in _vecInitializedBodies is the
+        // environment body index the body was initialized under, which is also the index the managers cached
+        // it under and the index it still has: Prop_BodyRemoved runs RemoveUserData before the environment
+        // unassigns the index, so a body whose index changed is no longer in _vecInitializedBodies at all.
+        // Index both the mark and the info off that position so the two cannot drift apart.
+        _MarkBodyChanged(envBodyIndex);
+        if (envBodyIndex < (int)_currentpinfo.size()) {
+            FCLKinBodyInfoPtr& pinfo = _currentpinfo.at(envBodyIndex);
+            if( !!pinfo ) {
+                pinfo->Reset();
+            }
         }
     }
     // even after DestroyEnvironment is called, users of this class still try to access _currentpinfo
@@ -183,8 +196,14 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
     }
 
     RAVELOG_VERBOSE_FORMAT("env=%s, self=%d, init body %s (%d)", _penv->GetNameId()%_bIsSelfCollisionChecker%pbody->GetName()%pbody->GetEnvironmentBodyIndex());
+    // mark before mutating, like every other mark site: ReloadKinBodyLinks below can throw and would
+    // otherwise leave the info gutted with no revision recorded for it
+    _MarkBodyChanged(pbody->GetEnvironmentBodyIndex());
     pinfo->Reset();
     pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
+    // restore the index Reset cleared before ReloadKinBodyLinks can throw, otherwise the callbacks that
+    // survive Reset would keep marking index 0 and managers would stop seeing this body change
+    pinfo->nEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
     // make sure that synchronization do occur !
     pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
     pinfo->nLastLinkReloadStamp = pbody->GetUpdateStamp() - 1;
@@ -259,13 +278,13 @@ bool FCLSpace::SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& gr
         return true;
     }
 
-    poldinfo->nGeometryUpdateStamp += 1;
-
     const int maxBodyIndex = _penv->GetMaxEnvironmentBodyIndex();
     EnsureVectorSize(_cachedpinfo, maxBodyIndex + 1);
 
     const int bodyIndex = body.GetEnvironmentBodyIndex();
     OPENRAVE_ASSERT_OP_FORMAT(bodyIndex, !=, 0, "env=%s, body %s", _penv->GetNameId()%body.GetName(), OpenRAVE::ORE_InvalidState);
+    _MarkBodyChanged(bodyIndex); // mark before mutating, so a throw below still leaves the body marked
+    poldinfo->nGeometryUpdateStamp += 1;
     std::map< std::string, FCLKinBodyInfoPtr >& cache = _cachedpinfo.at(bodyIndex);
     cache[poldinfo->_geometrygroup] = poldinfo;
 
@@ -281,6 +300,7 @@ bool FCLSpace::SetBodyGeometryGroup(KinBodyConstPtr pbody, const std::string& gr
         // Set the current info to use the FCLKinBodyInfoPtr associated to groupname
         EnsureVectorSize(_currentpinfo, maxBodyIndex + 1);
         _currentpinfo.at(bodyIndex) = pinfo;
+        _MarkBodyChanged(bodyIndex); // swapping pinfo does not go through any change callback
 
         // Revoke the information inside the cache so that a potentially outdated object does not survive
         cache.erase(groupname);
@@ -354,7 +374,15 @@ std::string const& FCLSpace::GetBVHRepresentation() const {
 
 void FCLSpace::Synchronize()
 {
-    // We synchronize only the initialized bodies, which differs from oderave
+    // We synchronize only the initialized bodies, which differs from oderave.
+    //
+    // This stays a full scan on purpose. Not every pose change reaches a change callback: several places
+    // bump the body update stamp by writing it directly, without going through
+    // _PostprocessChangedParameters (KinBody::Link::SetTransform and KinBody::IncrementUpdateStamp among
+    // them). Comparing the update stamp here is the only thing that catches those, and it is just an
+    // integer compare per body.
+    // _Synchronize records a revision for the bodies it actually refreshes, which is what lets the
+    // collision managers skip the far more expensive walk over their own caches.
     for (const KinBodyConstPtr& pbody : _vecInitializedBodies) {
         if (!pbody) {
             continue;
@@ -446,28 +474,91 @@ const FCLSpace::FCLKinBodyInfoPtr& FCLSpace::GetInfo(const KinBody &body) const
     return _currentpinfo.at(0);
 }
 
+void FCLSpace::_MarkBodyChanged(int envBodyIndex)
+{
+    if( envBodyIndex <= 0 ) {
+        return;
+    }
+    EnsureVectorSize(_vecBodyRevisions, envBodyIndex + 1);
+    uint64_t& bodyRevision = _vecBodyRevisions.at(envBodyIndex);
+    if( bodyRevision == 0 ) {
+        ++_numCurrentChangedBodyEntries; // first time this body is recorded
+    }
+    bodyRevision = ++_nCurrentRevision;
+    // revisions only increase, so appending keeps _vecChangedBodyIndices sorted. The body's previous
+    // entry is left behind and skipped on read, which is cheaper than erasing from the middle.
+    _vecChangedBodyIndices.emplace_back(bodyRevision, envBodyIndex);
+
+    if( _vecChangedBodyIndices.size() > 2 * _numCurrentChangedBodyEntries + 16 ) {
+        _CompactChangedBodyIndices();
+    }
+}
+
+void FCLSpace::_CompactChangedBodyIndices()
+{
+    // drop the superseded entries, keeping only each body's latest. Scanning in order preserves the
+    // sort, and dropping a superseded entry is safe because the entry that replaced it has a higher
+    // revision, so any cursor that would have seen the old one also sees the new one.
+    size_t writeIndex = 0;
+    for (size_t readIndex = 0; readIndex < _vecChangedBodyIndices.size(); ++readIndex) {
+        const std::pair<uint64_t, int>& entry = _vecChangedBodyIndices[readIndex];
+        if( _IsCurrentChangedBodyEntry(entry) ) {
+            _vecChangedBodyIndices[writeIndex++] = entry;
+        }
+    }
+    _vecChangedBodyIndices.resize(writeIndex);
+}
+
+void FCLSpace::CollectBodyIndicesChangedAfter(uint64_t sinceRevision, std::vector<int>& envBodyIndicesOut) const
+{
+    envBodyIndicesOut.resize(0);
+    const std::vector<std::pair<uint64_t, int> >::const_iterator itBegin = std::upper_bound(
+        _vecChangedBodyIndices.begin(), _vecChangedBodyIndices.end(), sinceRevision,
+        [](uint64_t revision, const std::pair<uint64_t, int>& entry) {
+        return revision < entry.first;
+    });
+    for (std::vector<std::pair<uint64_t, int> >::const_iterator it = itBegin; it != _vecChangedBodyIndices.end(); ++it) {
+        if( _IsCurrentChangedBodyEntry(*it) ) {
+            envBodyIndicesOut.push_back(it->second);
+        }
+    }
+}
+
 void FCLSpace::RemoveUserData(KinBodyConstPtr pbody) {
     if( !!pbody ) {
         RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
         const int envId = pbody->GetEnvironmentBodyIndex();
-        if (envId < (int) _vecInitializedBodies.size()) {
-            _vecInitializedBodies.at(envId).reset();
-        }
-        FCLKinBodyInfoPtr& pinfo = GetInfo(*pbody);
-        if( !!pinfo ) {
-            pinfo->Reset();
-        }
-
         if( envId == 0 ) {
             RAVELOG_WARN_FORMAT("env=%s, body '%s' has bodyIndex=0, so not adding to the environment!", _penv->GetNameId()%pbody->GetName());
         }
-
-        if (envId < (int) _currentpinfo.size()) {
-            _currentpinfo.at(envId).reset();
-            //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
+        // everything this body left behind is stored under the index it was initialized with, so when the body
+        // no longer has an index, find that one and tear down there. index 0 holds no body, so nothing to do
+        int initializedBodyIndex = envId;
+        if( initializedBodyIndex <= 0 ) {
+            for (int bodyIndex = 1; bodyIndex < (int)_vecInitializedBodies.size(); ++bodyIndex) {
+                if (_vecInitializedBodies[bodyIndex] == pbody) {
+                    initializedBodyIndex = bodyIndex;
+                    break;
+                }
+            }
         }
-        if (envId < (int) _cachedpinfo.size()) {
-            _cachedpinfo.at(envId).clear();
+        if( initializedBodyIndex <= 0 ) {
+            return;
+        }
+        _MarkBodyChanged(initializedBodyIndex); // consumers must drop their cached collision objects for this body
+        if (initializedBodyIndex < (int) _vecInitializedBodies.size()) {
+            _vecInitializedBodies.at(initializedBodyIndex).reset();
+        }
+        if (initializedBodyIndex < (int) _currentpinfo.size()) {
+            FCLKinBodyInfoPtr& pinfo = _currentpinfo.at(initializedBodyIndex);
+            if( !!pinfo ) {
+                pinfo->Reset();
+            }
+            pinfo.reset();
+            //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", initializedBodyIndex%_currentpinfo.size());
+        }
+        if (initializedBodyIndex < (int) _cachedpinfo.size()) {
+            _cachedpinfo.at(initializedBodyIndex).clear();
         }
     }
 }
@@ -662,6 +753,13 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
 {
     //KinBodyPtr pbody = info.GetBody();
     if( info.nLastStamp != body.GetUpdateStamp()) {
+        // the collision objects of this info are about to move, so any manager caching them has to revisit it.
+        // mark before mutating, like every other mark site.
+        // the body is right here, so read the index off it rather than off info.nEnvBodyIndex
+        _MarkBodyChanged(body.GetEnvironmentBodyIndex());
+        // advance the stamp before the check below, so a body with a stale vlinks throws once rather than on
+        // every call: Synchronize() has no per-body try/catch, so a repeating throw would stop every body
+        // after this one in _vecInitializedBodies from ever synchronizing again
         info.nLastStamp = body.GetUpdateStamp();
         if( body.GetLinks().size() != info.vlinks.size() ) {
             throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, the current number of links in body '%s' are %d, and are not the same as the number cached links %d")%_penv->GetNameId()%body.GetName()%body.GetLinks().size()%info.vlinks.size()), OpenRAVE::ORE_InvalidState);
@@ -704,12 +802,19 @@ private:
 void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
 {
     FCLKinBodyInfoPtr pinfo = _pinfo.lock();
+    if( !pinfo ) {
+        return;
+    }
     KinBodyPtr pbody = pinfo->GetBody();
+    if( !pbody ) {
+        return;
+    }
     const int bodyIndex = pbody->GetEnvironmentBodyIndex();
     if (0 < bodyIndex && bodyIndex < (int)_currentpinfo.size()) {
         const FCLKinBodyInfoPtr& pcurrentinfo = _currentpinfo.at(bodyIndex);
 
-        if (!!pinfo && pinfo == pcurrentinfo) { //pinfo->_geometrygroup.size() == 0 ) {
+        if (pinfo == pcurrentinfo) { //pinfo->_geometrygroup.size() == 0 ) {
+            _MarkBodyChanged(bodyIndex); // ahead of the mutation below, so a throwing reload still leaves a mark
             // pinfo is current set to the current one, so should InitKinBody into _currentpinfo
             //RAVELOG_VERBOSE_FORMAT("env=%d, resetting current geometry for kinbody %s nGeometryUpdateStamp=%d, (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
             pinfo->nGeometryUpdateStamp++;
@@ -728,21 +833,26 @@ void FCLSpace::_ResetCurrentGeometryCallback(boost::weak_ptr<FCLKinBodyInfo> _pi
 void FCLSpace::_ResetGeometryGroupsCallback(boost::weak_ptr<FCLKinBodyInfo> _pinfo)
 {
     FCLKinBodyInfoPtr pinfo = _pinfo.lock();
+    if( !pinfo ) {
+        return;
+    }
     KinBodyPtr pbody = pinfo->GetBody();
+    if( !pbody ) {
+        return; // ReloadKinBodyLinks below dereferences pbody
+    }
+    _MarkBodyChanged(pbody->GetEnvironmentBodyIndex());
 
     //FCLKinBodyInfoPtr pcurrentinfo = _currentpinfo.at(pbody->GetEnvironmentBodyIndex());
 
-    if( !!pinfo ) {// && pinfo->_geometrygroup.size() > 0 ) {
-        //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
-        pinfo->nGeometryUpdateStamp++;
+    //RAVELOG_VERBOSE_FORMAT("env=%d, resetting geometry groups for kinbody %s, nGeometryUpdateStamp=%d (key %s, self=%d)", _penv->GetId()%pbody->GetName()%pinfo->nGeometryUpdateStamp%_userdatakey%_bIsSelfCollisionChecker);
+    pinfo->nGeometryUpdateStamp++;
 
-        // In order to ensure that the body is removed from the FCL space if something goes wrong during the reload process,
-        // create a scoped remover that will clear our user data for this body on scope exit. If the reload succeeds, we
-        // reset the scoped remover to prevent it clearing the data.
-        ScopedUserDataRemover userDataGuard{*this, pbody};
-        ReloadKinBodyLinks(pbody, pinfo);
-        userDataGuard.Reset();
-    }
+    // In order to ensure that the body is removed from the FCL space if something goes wrong during the reload process,
+    // create a scoped remover that will clear our user data for this body on scope exit. If the reload succeeds, we
+    // reset the scoped remover to prevent it clearing the data.
+    ScopedUserDataRemover userDataGuard{*this, pbody};
+    ReloadKinBodyLinks(pbody, pinfo);
+    userDataGuard.Reset();
 
 //   FCLKinBodyInfoPtr pinfoCurrentGeometry = _cachedpinfo[pbody->GetEnvironmentBodyIndex()][std::string()];
 //   _cachedpinfo.erase(pbody->GetEnvironmentBodyIndex());
