@@ -155,7 +155,9 @@ void FCLCollisionManagerInstance::InitBodyManager(KinBodyConstPtr pbody, bool bT
         const KinBody& attachedBody = *pAttachedBody;
         const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(attachedBody);
         if (!pinfo) {
-            // don't init something that isn't initialized in this checker.
+            // don't init something that isn't initialized in this checker. Come back on the next Synchronize,
+            // since nothing else revisits the attached bodies until nAttachedBodiesUpdateStamp changes
+            _bRetryAttachedBodies = true;
             RAVELOG_VERBOSE_FORMAT(
                 "body %s has attached body %s which is not initialized in this checker, ignoring for now", pbody->GetName() % attachedBody.GetName());
             continue;
@@ -481,6 +483,12 @@ void FCLCollisionManagerInstance::Synchronize() {
         if (!pnewinfo) {
             // the space no longer tracks this body even though it is still in the environment, which is what
             // DestroyEnvironment leaves behind. The LinkInfos backing our collision objects are gone, so drop them.
+            // a body manager has no other way back: it only revisits its attached bodies when
+            // nAttachedBodiesUpdateStamp changes, and re-initializing the body in the space does not change it.
+            // an environment manager needs nothing here, EnsureBodies already re-adds the body on every call
+            if (!!ptrackingbody) {
+                _bRetryAttachedBodies = true;
+            }
             RAVELOG_VERBOSE_FORMAT(
                 "env=%s, %u body %s is no longer tracked by the fcl space, dropping its cached collision objects",
                 body.GetEnv()->GetNameId() % _lastSyncTimeStamp % body.GetName());
@@ -715,12 +723,12 @@ void FCLCollisionManagerInstance::Synchronize() {
             cache.nAttachedBodiesUpdateStamp = kinBodyInfo.nAttachedBodiesUpdateStamp;
         }
     }
-    // only advance once every collected body was processed: the loop above can throw part way through
-    // (GetLinkBV and _AddBody both index with at(), and registering objects allocates), and advancing up
-    // front would drop the bodies after the throwing one from every future call
-    _nLastSyncRevision = currentSpaceRevision;
-
-    if (bAttachedBodiesChanged && !!ptrackingbody) {
+    if ((bAttachedBodiesChanged || _bRetryAttachedBodies) && !!ptrackingbody) {
+        // latch the retry for the whole block: cache.nAttachedBodiesUpdateStamp was already advanced in the
+        // loop above, so if _AddBody throws part way through, nothing else would bring the rest of the
+        // attached bodies back and they would stay out of the manager
+        _bRetryAttachedBodies = true;
+        bool bSkippedUninitializedAttachedBody = false;
         // since tracking have to update all the bodies
         std::vector<KinBodyPtr>& vecAttachedEnvBodies = _vecAttachedEnvBodiesCache;
         std::vector<int>& vecAttachedEnvBodyIndices = _vecAttachedEnvBodyIndicesCache;
@@ -747,7 +755,9 @@ void FCLCollisionManagerInstance::Synchronize() {
 
             const FCLSpace::FCLKinBodyInfoPtr& pInfo = _fclspace.GetInfo(attached);
             if (!pInfo) {
-                // not initialized in this checker, same as the skip in InitBodyManager
+                // not initialized in this checker, same as the skip in InitBodyManager. Come back on the next
+                // Synchronize, since nAttachedBodiesUpdateStamp was already consumed and will not change again
+                bSkippedUninitializedAttachedBody = true;
                 RAVELOG_VERBOSE_FORMAT(
                     "env=%s, attached body %s is not initialized in this checker, ignoring for now",
                     attached.GetEnv()->GetNameId() % attached.GetName());
@@ -792,8 +802,10 @@ void FCLCollisionManagerInstance::Synchronize() {
                 _UnregisterCachedCollisionObjects(cache);
             }
         }
+        // the block finished, so keep retrying only if it skipped an attached body the space had not
+        // initialized yet
+        _bRetryAttachedBodies = bSkippedUninitializedAttachedBody;
     }
-
     if (_tmpSortedBuffer.size() > 0) {
 #ifdef FCLRAVE_DEBUG_COLLISION_OBJECTS
         SaveCollisionObjectDebugInfos();
@@ -803,6 +815,10 @@ void FCLCollisionManagerInstance::Synchronize() {
     if (bcallsetup) {
         pmanager->setup();
     }
+    // only advance once everything above succeeded: the loops index with at(), and _AddBody, registerObjects
+    // and setup all allocate, so any of them can throw. Advancing earlier would drop every body after the
+    // throwing one from all future calls, leaving their collision objects out of the manager for good
+    _nLastSyncRevision = currentSpaceRevision;
 }
 
 bool FCLCollisionManagerInstance::_AddBody(

@@ -206,6 +206,7 @@ private:
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
     uint64_t _nLastSyncRevision = 0; ///< FCLSpace revision at the last Synchronize. 0 means the next Synchronize revisits every body
     std::vector<int> _vecChangedBodyIndicesCache; ///< cache, environment body indices changed since _nLastSyncRevision
+    bool _bRetryAttachedBodies = false; ///< true when Synchronize skipped an attached body that FCLSpace had not initialized yet. Nothing else brings it back, since the attached bodies are only revisited when nAttachedBodiesUpdateStamp changes again
 
     std::vector<int8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode. includes environment body index of of bodies who should be excluded.
     CollisionGroup _tmpSortedBuffer; ///< cache, sorted so that we can efficiently search

@@ -21,6 +21,9 @@ void FCLSpace::FCLKinBodyInfo::Reset()
         (*itlink)->Reset();
     }
     vlinks.resize(0);
+    // _activeDOFsCallback and _bodyAttachedCallback stay registered here, so clear the cached index to stop
+    // them marking whichever body now holds it. InitKinBody re-fills it right after calling Reset
+    nEnvBodyIndex = 0;
     _geometrycallback.reset();
     _geometrygroupcallback.reset();
     _linkenablecallback.reset();
@@ -57,12 +60,17 @@ void FCLSpace::DestroyEnvironment()
             continue;
         }
         // managers outlive DestroyEnvironment and still hold collision objects from these infos, so mark
-        // before resetting to force them to revisit every body. The position in _vecInitializedBodies is
-        // the environment body index the managers cached this body under.
+        // before resetting to force them to revisit every body. The position in _vecInitializedBodies is the
+        // environment body index the body was initialized under, which is also the index the managers cached
+        // it under and the index it still has: Prop_BodyRemoved runs RemoveUserData before the environment
+        // unassigns the index, so a body whose index changed is no longer in _vecInitializedBodies at all.
+        // Index both the mark and the info off that position so the two cannot drift apart.
         _MarkBodyChanged(envBodyIndex);
-        FCLKinBodyInfoPtr& pinfo = GetInfo(*pbody);
-        if( !!pinfo ) {
-            pinfo->Reset();
+        if (envBodyIndex < (int)_currentpinfo.size()) {
+            FCLKinBodyInfoPtr& pinfo = _currentpinfo.at(envBodyIndex);
+            if( !!pinfo ) {
+                pinfo->Reset();
+            }
         }
     }
     // even after DestroyEnvironment is called, users of this class still try to access _currentpinfo
@@ -193,13 +201,15 @@ FCLSpace::FCLKinBodyInfoPtr FCLSpace::InitKinBody(KinBodyConstPtr pbody, FCLKinB
     _MarkBodyChanged(pbody->GetEnvironmentBodyIndex());
     pinfo->Reset();
     pinfo->_pbody = boost::const_pointer_cast<KinBody>(pbody);
+    // restore the index Reset cleared before ReloadKinBodyLinks can throw, otherwise the callbacks that
+    // survive Reset would keep marking index 0 and managers would stop seeing this body change
+    pinfo->nEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
     // make sure that synchronization do occur !
     pinfo->nLastStamp = pbody->GetUpdateStamp() - 1;
     pinfo->nLastLinkReloadStamp = pbody->GetUpdateStamp() - 1;
 
     ReloadKinBodyLinks(pbody, pinfo);
 
-    pinfo->nEnvBodyIndex = pbody->GetEnvironmentBodyIndex();
     pinfo->_geometrycallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometry, boost::bind(&FCLSpace::_ResetCurrentGeometryCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
     pinfo->_geometrygroupcallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkGeometryGroup, boost::bind(&FCLSpace::_ResetGeometryGroupsCallback,boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()),boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
     pinfo->_linkenablecallback = pbody->RegisterChangeCallback(KinBody::Prop_LinkEnable, boost::bind(&FCLSpace::_ResetLinkEnableCallback, boost::bind(&OpenRAVE::utils::sptr_from<FCLSpace>, weak_space()), boost::weak_ptr<FCLKinBodyInfo>(pinfo)));
@@ -518,25 +528,37 @@ void FCLSpace::RemoveUserData(KinBodyConstPtr pbody) {
     if( !!pbody ) {
         RAVELOG_VERBOSE(str(boost::format("FCL User data removed from env %d (userdatakey %s) : %s") % _penv->GetId() % _userdatakey % pbody->GetName()));
         const int envId = pbody->GetEnvironmentBodyIndex();
-        _MarkBodyChanged(envId); // consumers must drop their cached collision objects for this body
-        if (envId < (int) _vecInitializedBodies.size()) {
-            _vecInitializedBodies.at(envId).reset();
-        }
-        FCLKinBodyInfoPtr& pinfo = GetInfo(*pbody);
-        if( !!pinfo ) {
-            pinfo->Reset();
-        }
-
         if( envId == 0 ) {
             RAVELOG_WARN_FORMAT("env=%s, body '%s' has bodyIndex=0, so not adding to the environment!", _penv->GetNameId()%pbody->GetName());
         }
-
-        if (envId < (int) _currentpinfo.size()) {
-            _currentpinfo.at(envId).reset();
-            //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", envId%_currentpinfo.size());
+        // everything this body left behind is stored under the index it was initialized with, so when the body
+        // no longer has an index, find that one and tear down there. index 0 holds no body, so nothing to do
+        int initializedBodyIndex = envId;
+        if( initializedBodyIndex <= 0 ) {
+            for (int bodyIndex = 1; bodyIndex < (int)_vecInitializedBodies.size(); ++bodyIndex) {
+                if (_vecInitializedBodies[bodyIndex] == pbody) {
+                    initializedBodyIndex = bodyIndex;
+                    break;
+                }
+            }
         }
-        if (envId < (int) _cachedpinfo.size()) {
-            _cachedpinfo.at(envId).clear();
+        if( initializedBodyIndex <= 0 ) {
+            return;
+        }
+        _MarkBodyChanged(initializedBodyIndex); // consumers must drop their cached collision objects for this body
+        if (initializedBodyIndex < (int) _vecInitializedBodies.size()) {
+            _vecInitializedBodies.at(initializedBodyIndex).reset();
+        }
+        if (initializedBodyIndex < (int) _currentpinfo.size()) {
+            FCLKinBodyInfoPtr& pinfo = _currentpinfo.at(initializedBodyIndex);
+            if( !!pinfo ) {
+                pinfo->Reset();
+            }
+            pinfo.reset();
+            //RAVELOG_INFO_FORMAT("erased %d but didn't pop back, size is %d", initializedBodyIndex%_currentpinfo.size());
+        }
+        if (initializedBodyIndex < (int) _cachedpinfo.size()) {
+            _cachedpinfo.at(initializedBodyIndex).clear();
         }
     }
 }
@@ -731,10 +753,14 @@ void FCLSpace::_Synchronize(FCLKinBodyInfo& info, const KinBody& body)
 {
     //KinBodyPtr pbody = info.GetBody();
     if( info.nLastStamp != body.GetUpdateStamp()) {
-        info.nLastStamp = body.GetUpdateStamp();
         // the collision objects of this info are about to move, so any manager caching them has to revisit it.
+        // mark before mutating, like every other mark site.
         // the body is right here, so read the index off it rather than off info.nEnvBodyIndex
         _MarkBodyChanged(body.GetEnvironmentBodyIndex());
+        // advance the stamp before the check below, so a body with a stale vlinks throws once rather than on
+        // every call: Synchronize() has no per-body try/catch, so a repeating throw would stop every body
+        // after this one in _vecInitializedBodies from ever synchronizing again
+        info.nLastStamp = body.GetUpdateStamp();
         if( body.GetLinks().size() != info.vlinks.size() ) {
             throw OpenRAVE::OpenRAVEException(str(boost::format("env=%s, the current number of links in body '%s' are %d, and are not the same as the number cached links %d")%_penv->GetNameId()%body.GetName()%body.GetLinks().size()%info.vlinks.size()), OpenRAVE::ORE_InvalidState);
         }
