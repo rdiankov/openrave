@@ -205,6 +205,7 @@ private:
     std::vector<KinBodyCache> _vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
     uint64_t _nLastSyncRevision = 0; ///< FCLSpace revision at the last Synchronize. 0 means the next Synchronize revisits every body
+    uint64_t _nLastEnsureBodiesRevision = 0; ///< FCLSpace revision at the last EnsureBodies. Separate from _nLastSyncRevision because both run back to back on the same marks
     std::vector<int> _vecChangedBodyIndicesCache; ///< cache, environment body indices changed since _nLastSyncRevision
     bool _bRetryAttachedBodies = false; ///< true when Synchronize skipped an attached body that FCLSpace had not initialized yet. Nothing else brings it back, since the attached bodies are only revisited when nAttachedBodiesUpdateStamp changes again
 

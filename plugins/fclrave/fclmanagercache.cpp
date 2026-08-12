@@ -140,6 +140,7 @@ void FCLCollisionManagerInstance::InitBodyManager(KinBodyConstPtr pbody, bool bT
         bodyCache.Invalidate();
     }
     _nLastSyncRevision = 0; // every cache entry was just invalidated, so the next Synchronize has to revisit all bodies
+    _nLastEnsureBodiesRevision = 0; // likewise for the next EnsureBodies
     const EnvironmentBase& env = *pbody->GetEnv();
     int maxBodyIndex = env.GetMaxEnvironmentBodyIndex();
     EnsureVectorSize(_vecCachedBodies, maxBodyIndex + 1);
@@ -231,6 +232,7 @@ void FCLCollisionManagerInstance::InitEnvironment(const std::vector<int8_t>& exc
         bodyCache.Invalidate();
     }
     _nLastSyncRevision = 0; // every cache entry was just invalidated, so the next Synchronize has to revisit all bodies
+    _nLastEnsureBodiesRevision = 0; // likewise for the next EnsureBodies
 
     _vecExcludeBodyIndices = excludedEnvBodyIndices;
     pmanager->setup();
@@ -246,33 +248,46 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
     // Clear our scratch buffer
     _tmpSortedBuffer.resize(0);
 
-    // We need to make sure we resize _vecCachedBodies to allow direct lookup by body index, which we can do the first time we encounter a non-null body.
-    bool ensuredVecCachedBodies = false;
+    // Visit only the bodies FCLSpace recorded as changed since this function last ran, instead of every
+    // body in the environment: a body can only need adding here if something changed it, and every path
+    // that fills its info marks it (InitKinBody in particular). vbodies is FCLSpace::GetEnvBodies(),
+    // which is indexed by environment body index.
+    // This cursor is separate from _nLastSyncRevision on purpose: Synchronize runs right after this from
+    // _GetEnvManager and has to see the same marks, so the two must not consume from one cursor.
+    const uint64_t currentSpaceRevision = _fclspace.GetCurrentRevision();
+    _fclspace.CollectBodyIndicesChangedAfter(_nLastEnsureBodiesRevision, _vecChangedBodyIndicesCache);
 
-    // For each tracked body, ensure that we have all necessary collision info
-    for (const KinBodyConstPtr& pbody : vbodies) {
+    // resize for direct lookup by body index. vbodies covers every index this loop can touch
+    EnsureVectorSize(_vecCachedBodies, vbodies.size());
+
+    // For each changed body, ensure that we have all necessary collision info
+    for (const int bodyIndex : _vecChangedBodyIndicesCache) {
+        if (bodyIndex < 1 || bodyIndex >= (int)vbodies.size()) {
+            // stale mark for an index the space no longer has a body at; nothing to add
+            continue;
+        }
+        const KinBodyConstPtr& pbody = vbodies[bodyIndex];
         // Null bodies can be ignored
         if (!pbody) {
             continue;
         }
         const KinBody& body = *pbody;
 
-        // If this is our first real body, use it to get the max body index from the env and resize our body cache
-        if (!ensuredVecCachedBodies) {
-            EnsureVectorSize(_vecCachedBodies, body.GetEnv()->GetMaxEnvironmentBodyIndex() + 1);
-            ensuredVecCachedBodies = true;
-        }
-
         // If this body index is excluded, skip it.
-        const int bodyIndex = body.GetEnvironmentBodyIndex();
-        if (bodyIndex < _vecExcludeBodyIndices.size() && _vecExcludeBodyIndices[bodyIndex]) {
+        if (bodyIndex < (int)_vecExcludeBodyIndices.size() && _vecExcludeBodyIndices[bodyIndex]) {
             continue;
         }
 
         // If our cache of this body is still valid, then we don't need to recompute.
-        const bool bIsValid = _vecCachedBodies.at(bodyIndex).IsValid();
-        if (bIsValid) {
-            continue;
+        KinBodyCache& existingCache = _vecCachedBodies.at(bodyIndex);
+        if (existingCache.IsValid()) {
+            if (existingCache.pwbody.lock() == pbody) {
+                // already cached; Synchronize picks up whatever changed on it
+                continue;
+            }
+            // the index was reused by a new body while the previously cached one is still alive. The mark
+            // is consumed now, so dropping the stale entry here is the only chance to add the new body
+            _UnregisterCachedCollisionObjects(existingCache);
         }
 
         // Calculate the collision objects for this body.
@@ -280,15 +295,15 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
         // We still want to cache the _absence_ of collision data however, to avoid expensive recomputes on non-colliding bodies, so cache the returned data even if it's empty.
         const FCLSpace::FCLKinBodyInfoPtr& pinfo = _fclspace.GetInfo(body);
         if (!pinfo) {
-            // not initialized in this checker, and _AddBody and SetBodyData would both dereference it
+            // not initialized in this checker, and _AddBody and SetBodyData would both dereference it.
+            // consuming the mark is fine: every path that later fills the info records a new one
             RAVELOG_VERBOSE_FORMAT(
                 "env=%s, body %s is not initialized in this checker, ignoring for now", body.GetEnv()->GetNameId() % body.GetName());
             continue;
         }
         _AddBody(body, pinfo, _ensureBodiesCollisionObjectsCache, _linkEnableStatesBitmasks, false);
-        KinBodyCache& cache = _vecCachedBodies.at(bodyIndex);
-        cache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
-        cache.vcolobjs.swap(_ensureBodiesCollisionObjectsCache);
+        existingCache.SetBodyData(pbody, pinfo, _linkEnableStatesBitmasks);
+        existingCache.vcolobjs.swap(_ensureBodiesCollisionObjectsCache);
     }
 
     if (_tmpSortedBuffer.size() > 0) {
@@ -300,6 +315,10 @@ void FCLCollisionManagerInstance::EnsureBodies(const std::vector<KinBodyConstPtr
 
     // Clear our cached collision body vector to ensure we don't prolong the lifetime of any collision objects
     _ensureBodiesCollisionObjectsCache.clear();
+
+    // only advance once the loop and the bulk register finished, for the same reason Synchronize advances
+    // its cursor last: a throw part way through must leave the unprocessed marks for the next call
+    _nLastEnsureBodiesRevision = currentSpaceRevision;
 }
 
 bool FCLCollisionManagerInstance::RemoveBody(const KinBody& body) {
@@ -489,7 +508,8 @@ void FCLCollisionManagerInstance::Synchronize() {
             // DestroyEnvironment leaves behind. The LinkInfos backing our collision objects are gone, so drop them.
             // a body manager has no other way back: it only revisits its attached bodies when
             // nAttachedBodiesUpdateStamp changes, and re-initializing the body in the space does not change it.
-            // an environment manager needs nothing here, EnsureBodies already re-adds the body on every call
+            // an environment manager needs nothing here: re-initializing the body in the space records a new
+            // mark (InitKinBody), which EnsureBodies' own cursor picks up and re-adds the body from
             if (!!ptrackingbody) {
                 _bRetryAttachedBodies = true;
             }
