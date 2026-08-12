@@ -418,12 +418,16 @@ void FCLCollisionManagerInstance::Synchronize() {
                                         pmanager->registerObject(pColObjRaw);
 #endif
                                         bcallsetup = true;
+                                        trackingCache.vcolobjs.at(ilink) = pcolobj;
                                     } else {
                                         if (!!trackingCache.vcolobjs.at(ilink)) {
                                             pmanager->unregisterObject(trackingCache.vcolobjs.at(ilink).get());
                                         }
+                                        // a non-null vcolobjs entry means the object is registered in pmanager,
+                                        // so an object this branch did not register must not be stored here,
+                                        // otherwise the next unregister of this entry has nothing to remove
+                                        trackingCache.vcolobjs.at(ilink).reset();
                                     }
-                                    trackingCache.vcolobjs.at(ilink) = pcolobj;
                                 } else {
                                     if (!bIsActiveLinkEnabled && !!trackingCache.vcolobjs.at(ilink)) {
                                         // RAVELOG_VERBOSE_FORMAT("env=%d %x resetting cached colobj %s %d",
