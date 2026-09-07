@@ -2271,27 +2271,71 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
     if( dof == 0 || _veclinks.size() == 0) {
         return;
     }
-    int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
-    OPENRAVE_ASSERT_OP_FORMAT((int)dof,>=,expecteddof, "env=%s, body '%s' not enough values %d<%d", GetEnv()->GetNameId()%GetName()%dof%GetDOF(),ORE_InvalidArguments);
+    const int expecteddof = dofindices.size() > 0 ? (int)dofindices.size() : GetDOF();
+    OPENRAVE_ASSERT_OP_FORMAT((int)dof, >=, expecteddof,
+                              "env=%s, body '%s' not enough values %d<%d", GetEnv()->GetNameId() % GetName() % dof % expecteddof,
+                              ORE_InvalidArguments);
 
-    GetDOFValues(_vTempJoints);
     if( dofindices.size() > 0 ) {
-        // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
-        // and then overwrite with the user set values
-        for(size_t i = 0; i < dofindices.size(); ++i) {
-            if( !std::isnan(pJointValues[i]) ) {
+        // When dofindices covers every dof of the body and the input has no NaN, every element of _vTempJoints gets
+        // overwritten, so can skip the expensive GetDOFValues. To check the coverage, pre-fill _vTempJoints with NaN
+        // before writing the input values into it. If no NaN remains, all dofs were covered.
+        bool bNeedCurrentValues = ((int)dofindices.size() != GetDOF());
+        if( !bNeedCurrentValues ) {
+            for(int i = 0; i < expecteddof; ++i) {
+                if( std::isnan(pJointValues[i]) ) {
+                    bNeedCurrentValues = true;
+                    break;
+                }
+            }
+        }
+        if( !bNeedCurrentValues ) {
+            _vTempJoints.assign(GetDOF(), std::numeric_limits<dReal>::quiet_NaN());
+            for(size_t i = 0; i < dofindices.size(); ++i) {
                 _vTempJoints.at(dofindices[i]) = pJointValues[i];
             }
-        }
-    }
-    else {
-        for(size_t i = 0; i < _vTempJoints.size(); ++i) {
-            if( !std::isnan(pJointValues[i]) ) {
-                _vTempJoints[i] = pJointValues[i];
+            for(const dReal dofvalue : _vTempJoints) {
+                if( std::isnan(dofvalue) ) {
+                    // dofindices has duplicates, so some dof was not covered. Need current values after all.
+                    bNeedCurrentValues = true;
+                    break;
+                }
             }
         }
+        if( bNeedCurrentValues ) {
+            // user only set a certain number of indices, so have to fill the temporary array with the full set of values first
+            // and then overwrite with the user set values
+            GetDOFValues(_vTempJoints);
+            for(size_t i = 0; i < dofindices.size(); ++i) {
+                if( !std::isnan(pJointValues[i]) ) {
+                    _vTempJoints.at(dofindices[i]) = pJointValues[i];
+                }
+            }
+        }
+        pJointValues = &_vTempJoints[0];
     }
-    pJointValues = &_vTempJoints[0];
+    else {
+        // When setting values to all joints, the input pJointValues already holds every value so use it directly and
+        // skip the expensive GetDOFValues. Only when pJointValues contains NaN (meaning "keep the current value") do we
+        // fetch the current values and fill in the rest.
+        _vTempJoints.resize(expecteddof); // still need resizing because it may be used under checklimits != CLA_Nothing
+        bool bHasNaN = false;
+        for(int i = 0; i < expecteddof; ++i) {
+            if( std::isnan(pJointValues[i]) ) {
+                bHasNaN = true;
+                break;
+            }
+        }
+        if( bHasNaN ) {
+            GetDOFValues(_vTempJoints);
+            for(int i = 0; i < expecteddof; ++i) {
+                if( !std::isnan(pJointValues[i]) ) {
+                    _vTempJoints[i] = pJointValues[i];
+                }
+            }
+            pJointValues = &_vTempJoints[0];
+        }
+    }
 
     if( checklimits != CLA_Nothing ) {
         dReal* ptempjoints = &_vTempJoints[0];
