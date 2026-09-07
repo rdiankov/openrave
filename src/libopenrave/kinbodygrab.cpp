@@ -1013,6 +1013,12 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
 
 void KinBody::_UpdateGrabbedBodies()
 {
+    // The caller is in a scope that will restore this body's pose before anything can observe the grabbed bodies in an invalid state.
+    // Skip propagating changes that we would only have to revert later.
+    if( _bSuppressLinkTransformPropagation ) {
+        return;
+    }
+
     std::pair<Vector, Vector> velocity;
     Transform tGrabbedBody; // cache
     for (MapGrabbedByEnvironmentIndex::iterator grabIt = _grabbedBodiesByEnvironmentIndex.begin(); grabIt != _grabbedBodiesByEnvironmentIndex.end(); /* nop */) {

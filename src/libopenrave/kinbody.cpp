@@ -6183,6 +6183,13 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 void KinBody::_PostprocessChangedParameters(uint32_t parameters)
 {
     _nUpdateStampId++;
+
+    // If _bSuppressLinkTransformPropagation is set, the caller is in the middle of an operation that might leave the transforms in an incomplete state.
+    // Prevent any link transform callbacks from firing when this is the case.
+    if (_bSuppressLinkTransformPropagation) {
+        parameters &= ~Prop_LinkTransforms;
+    }
+
     if( _nHierarchyComputed == 1 ) {
         _nParametersChanged |= parameters;
         return;
@@ -6425,6 +6432,32 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     __hashKinematicsGeometryDynamics.resize(0);
 }
 
+namespace {
+
+/// \brief Marks the enclosing scope as one that moves a body only transiently, and is guaranteed to restore its link transforms before returning.
+///
+/// While this scope is active, a body will not transform any bodies it grabs if moved, and suppresses all Prop_LinkTransforms callbacks.
+class ScopedLinkTransformPropagationSuppressor final
+{
+public:
+    explicit ScopedLinkTransformPropagationSuppressor(bool& suppressLinkTransformPropagation)
+        : _suppressLinkTransformPropagation(suppressLinkTransformPropagation), _previouslySuppressed(suppressLinkTransformPropagation)
+    {
+        _suppressLinkTransformPropagation = true;
+    }
+
+    ~ScopedLinkTransformPropagationSuppressor()
+    {
+        _suppressLinkTransformPropagation = _previouslySuppressed;
+    }
+
+private:
+    bool& _suppressLinkTransformPropagation;
+    const bool _previouslySuppressed;
+};
+
+} // end anonymous namespace
+
 void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 {
     info._modifiedFields = 0;
@@ -6452,6 +6485,11 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     GetGrabbedInfo(info._vGrabbedInfos);
 
     info._transform = GetTransform();
+
+    // Extraction moves the body to the origin so that the link transforms can be read in the body reference frame.
+    // Since we move it back again, this isn't a 'real' modification to the body, so we can skip propagating it to grabbed bodies / callbacks.
+    // Declared before stateSaver so that it also covers the restore.
+    ScopedLinkTransformPropagationSuppressor linkTransformPropagationSuppressor(_bSuppressLinkTransformPropagation);
 
     // in order for link transform comparision to make sense
     KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
@@ -6623,6 +6661,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     {
+        // Link::UpdateFromInfo only compares the link transforms and asks for a reinitialize when they differ, so no link transform change survives this scope.
+        // Skip propagating the changes only to move them back again.
+        // Declared before stateSaver so that it also covers the restore.
+        ScopedLinkTransformPropagationSuppressor linkTransformPropagationSuppressor(_bSuppressLinkTransformPropagation);
+
         // in order for link transform comparision to make sense, have to change the kinbody to the identify.
         // First check if any of the link infos have modified transforms
         KinBody::KinBodyStateSaverPtr stateSaver;
