@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.174.3
+===============
+
+- KinBody::ExtractInfo and KinBody::UpdateFromKinBodyInfo no longer teleport the whole grabbed sub-tree to the origin and back, and no longer call the Prop_LinkTransforms callbacks, for the temporary pose they use to compare link transforms.
+
+Version 0.174.2
+===============
+
+- Reduce logging level for file loading.
+
 Version 0.174.1
 ===============
 

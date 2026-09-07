@@ -2439,7 +2439,9 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         if( joint.IsStatic() ) {
             // if joint.IsStatic(), then joint._info._tRightNoOffset and tjoint are assigned identities
             const Transform t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * joint.GetInternalHierarchyLeftTransform();
-            childlink->SetTransform(t);
+            // store the transform directly instead of childlink->SetTransform(t), which would lock the parent
+            // weak_ptr and bump the update stamp once per link. The stamp is bumped once in _PostprocessChangedParameters below.
+            childlink->_info._t = t;
             vlinkscomputed[childlink->GetIndex()] = 1;
             continue;
         }
@@ -2623,7 +2625,8 @@ void KinBody::SetDOFValues(const dReal* pJointValues, int dof, uint32_t checklim
         }
 
         const Transform t = (!!parentlink ? parentlink->GetTransform() : _veclinks.at(0)->GetTransform()) * (joint.GetInternalHierarchyLeftTransform() * tjoint * joint.GetInternalHierarchyRightTransform());
-        childlink->SetTransform(t);
+        // store directly (see note above) instead of childlink->SetTransform(t) to avoid the per-link weak_ptr lock + stamp bump.
+        childlink->_info._t = t;
         vlinkscomputed[childlink->GetIndex()] = 1;
     }
 
@@ -6136,6 +6139,13 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
 void KinBody::_PostprocessChangedParameters(uint32_t parameters)
 {
     _nUpdateStampId++;
+
+    // If _bSuppressLinkTransformPropagation is set, the caller is in the middle of an operation that might leave the transforms in an incomplete state.
+    // Prevent any link transform callbacks from firing when this is the case.
+    if (_bSuppressLinkTransformPropagation) {
+        parameters &= ~Prop_LinkTransforms;
+    }
+
     if( _nHierarchyComputed == 1 ) {
         _nParametersChanged |= parameters;
         return;
@@ -6378,6 +6388,32 @@ void KinBody::_InitAndAddJoint(JointPtr pjoint)
     __hashKinematicsGeometryDynamics.resize(0);
 }
 
+namespace {
+
+/// \brief Marks the enclosing scope as one that moves a body only transiently, and is guaranteed to restore its link transforms before returning.
+///
+/// While this scope is active, a body will not transform any bodies it grabs if moved, and suppresses all Prop_LinkTransforms callbacks.
+class ScopedLinkTransformPropagationSuppressor final
+{
+public:
+    explicit ScopedLinkTransformPropagationSuppressor(bool& suppressLinkTransformPropagation)
+        : _suppressLinkTransformPropagation(suppressLinkTransformPropagation), _previouslySuppressed(suppressLinkTransformPropagation)
+    {
+        _suppressLinkTransformPropagation = true;
+    }
+
+    ~ScopedLinkTransformPropagationSuppressor()
+    {
+        _suppressLinkTransformPropagation = _previouslySuppressed;
+    }
+
+private:
+    bool& _suppressLinkTransformPropagation;
+    const bool _previouslySuppressed;
+};
+
+} // end anonymous namespace
+
 void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 {
     info._modifiedFields = 0;
@@ -6405,6 +6441,11 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     GetGrabbedInfo(info._vGrabbedInfos);
 
     info._transform = GetTransform();
+
+    // Extraction moves the body to the origin so that the link transforms can be read in the body reference frame.
+    // Since we move it back again, this isn't a 'real' modification to the body, so we can skip propagating it to grabbed bodies / callbacks.
+    // Declared before stateSaver so that it also covers the restore.
+    ScopedLinkTransformPropagationSuppressor linkTransformPropagationSuppressor(_bSuppressLinkTransformPropagation);
 
     // in order for link transform comparision to make sense
     KinBody::KinBodyStateSaver stateSaver(shared_kinbody(), Save_LinkTransformation);
@@ -6513,7 +6554,7 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
             SetId(info._id);
         }
         else if( info._id.empty() ) {
-            RAVELOG_INFO_FORMAT("env=%d, body '%s' do not update id '%s' since update has empty id", GetEnv()->GetId()%GetName()%GetId());
+            RAVELOG_VERBOSE_FORMAT("env=%d, body '%s' do not update id '%s' since update has empty id", GetEnv()->GetId()%GetName()%GetId());
         }
         else {
             RAVELOG_INFO_FORMAT("env=%d, body %s update info ids do not match this '%s' != update '%s'. current links=%d, new links=%d", GetEnv()->GetId()%GetName()%_id%info._id%_veclinks.size()%info._vLinkInfos.size());
@@ -6576,6 +6617,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
     }
 
     {
+        // Link::UpdateFromInfo only compares the link transforms and asks for a reinitialize when they differ, so no link transform change survives this scope.
+        // Skip propagating the changes only to move them back again.
+        // Declared before stateSaver so that it also covers the restore.
+        ScopedLinkTransformPropagationSuppressor linkTransformPropagationSuppressor(_bSuppressLinkTransformPropagation);
+
         // in order for link transform comparision to make sense, have to change the kinbody to the identify.
         // First check if any of the link infos have modified transforms
         KinBody::KinBodyStateSaverPtr stateSaver;

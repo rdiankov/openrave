@@ -3716,6 +3716,7 @@ protected:
     ///
     /// This function in calls every registers calledback that is tracking the changes. It also
     /// recomputes the hashes if geometry changed.
+    /// The Prop_LinkTransforms callbacks are not called while _bSuppressLinkTransformPropagation is set.
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
@@ -3742,6 +3743,8 @@ protected:
     bool _RemoveAttachedBody(KinBody &body);
 
     /// \brief Update transforms and velocities of the grabbed bodies
+    ///
+    /// Does nothing while _bSuppressLinkTransformPropagation is set.
     void _UpdateGrabbedBodies();
 
     /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
@@ -3883,6 +3886,7 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+    bool _bSuppressLinkTransformPropagation = false; ///< if true, then a change to the link transforms is not propagated outside of this body: the grabbed bodies are not moved to follow it and the Prop_LinkTransforms callbacks are not called. Only meant to be set by ScopedLinkTransformPropagationSuppressor, for the duration of a scope that is guaranteed to restore the link transforms before returning, so that nothing outside can observe the intermediate pose anyway.
 
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
