@@ -5833,6 +5833,20 @@ void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
     _ResetInternalCollisionCache();
 }
 
+void KinBody::_ClearForcedAdjacentLinksOfLink(int linkindex)
+{
+    const int numLinks = GetLinks().size();
+    for (int otherLinkIndex = 0; otherLinkIndex < numLinks; ++otherLinkIndex) {
+        if (otherLinkIndex == linkindex) {
+            continue;
+        }
+        const size_t index = _GetIndex1d(linkindex, otherLinkIndex);
+        if (index < _vForcedAdjacentLinks.size()) {
+            _vForcedAdjacentLinks[index] = 0;
+        }
+    }
+}
+
 void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
 {
     const int numLinks = GetLinks().size();
