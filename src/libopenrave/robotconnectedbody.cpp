@@ -1171,6 +1171,15 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
         connectedBody._dummyPassiveJointName.clear();
     }
 
+    // Whatever is activated next reuses the indices these links occupy, so a forced adjacency
+    // recorded against one of them would apply to an unrelated pair. Clear them here, where the
+    // indices still refer to the links they were recorded for.
+    for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
+        if( vConnectedLinks[ilink] ) {
+            _ClearForcedAdjacentLinksOfLink(ilink);
+        }
+    }
+
     int iwritelink = 0;
     for(int ireadlink = 0; ireadlink < (int)vConnectedLinks.size(); ++ireadlink) {
         if( !vConnectedLinks[ireadlink] ) {
