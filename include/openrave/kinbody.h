@@ -3779,7 +3779,13 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
-    /// \brief clears every forced adjacency recorded against linkindex, for callers about to reuse that index for a different link
+    /// \brief clears the _vForcedAdjacentLinks entries of every pair {linkindex, other}.
+    ///
+    /// The table is keyed by link index and is never shrunk, and _ComputeInternalInformation re-seeds
+    /// _vAdjacentLinks from it, so an entry left behind gets re-applied to whichever pair later occupies those
+    /// indices. Callers removing or reordering links must call this before _veclinks is compacted.
+    /// _vAdjacentLinks and the collision cache are left to that recomputation.
+    /// \param[in] linkindex : link to drop, in [0, GetLinks().size()).
     void _ClearForcedAdjacentLinksOfLink(int linkindex);
 
     /// \brief Restore kinbody's states from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
