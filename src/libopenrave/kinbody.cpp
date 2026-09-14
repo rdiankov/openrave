@@ -5311,6 +5311,12 @@ void KinBody::_DeinitializeInternalInformation()
 
     // Clear all-pairs shortest path table to force recomputation
     _vAllPairsShortestPaths.clear();
+
+    // Both adjacency tables are indexed by link index, and the links they describe may not be the
+    // ones a later composition puts at those indices. _ComputeInternalInformation rebuilds them from
+    // each link's LinkInfo, so dropping them costs nothing and leaves nothing to alias.
+    _vForcedAdjacentLinks.clear();
+    _vAdjacentLinks.clear();
 }
 
 void KinBody::GetDirectlyAttachedBodies(std::vector<KinBodyPtr>& vBodies) const
@@ -5831,25 +5837,6 @@ void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
     _SetAdjacentLinksInternal(linkindex0, linkindex1);
 
     _ResetInternalCollisionCache();
-}
-
-void KinBody::_ClearForcedAdjacentLinksOfLink(int linkindex)
-{
-    const int numLinks = GetLinks().size();
-    OPENRAVE_ASSERT_OP(linkindex,>=,0);
-    OPENRAVE_ASSERT_OP(linkindex,<,numLinks);
-
-    // _ComputeInternalInformation sizes the table for the current links, so a smaller one means the hierarchy was
-    // never computed. Checking it here covers every index the loop touches.
-    const size_t requiredTableSize = (size_t)numLinks * (numLinks - 1) / 2;
-    OPENRAVE_ASSERT_OP(_vForcedAdjacentLinks.size(),>=,requiredTableSize);
-
-    for (int otherLinkIndex = 0; otherLinkIndex < numLinks; ++otherLinkIndex) {
-        if (otherLinkIndex == linkindex) {
-            continue;
-        }
-        _vForcedAdjacentLinks[_GetIndex1d(linkindex, otherLinkIndex)] = 0;
-    }
 }
 
 void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
