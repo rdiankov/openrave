@@ -3,6 +3,13 @@
 ChangeLog
 #########
 
+Version 0.175.0
+===============
+
+- KinBody::SetAdjacentLinks records the pair on both links' LinkInfo, so a forced adjacency set at runtime survives the adjacency tables being rebuilt. It is therefore written out by LinkInfo::SerializeJSON and compared by LinkInfo::operator==, which it was not before.
+- KinBody::_DeinitializeInternalInformation drops the forced and computed adjacency tables, which are indexed by link index and do not describe the links a later composition puts at those indices.
+- Activating a connected body keeps the forced adjacencies recorded against its links since they were last resolved, and deactivating one drops the names it leaves behind on the links that stay.
+
 Version 0.174.3
 ===============
 
