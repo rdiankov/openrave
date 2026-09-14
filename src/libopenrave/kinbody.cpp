@@ -5855,8 +5855,8 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
 
     // record the pair by name on both links so it is re-derived whenever the table is rebuilt. Both
     // directions, because either link can be the one that outlives the other.
-    _veclinks[linkindex0]->_info.SetNoncollidingLink(_veclinks[linkindex1]->GetName());
-    _veclinks[linkindex1]->_info.SetNoncollidingLink(_veclinks[linkindex0]->GetName());
+    _veclinks.at(linkindex0)->_info.SetNoncollidingLink(_veclinks.at(linkindex1)->GetName());
+    _veclinks.at(linkindex1)->_info.SetNoncollidingLink(_veclinks.at(linkindex0)->GetName());
 }
 
 void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
