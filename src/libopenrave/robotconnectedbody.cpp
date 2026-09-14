@@ -800,11 +800,18 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !plink ) {
                 plink.reset(new KinBody::Link(shared_kinbody()));
             }
+            // names already resolved on a previous activation are kept, so a forced adjacency set on
+            // this link through SetAdjacentLinks outlives the link being rebuilt here. They are
+            // re-added after the prefix pass rather than through it: they carry the prefix already.
+            const std::vector<std::string> vResolvedForcedAdjacentLinks = plink->_info._vForcedAdjacentLinks;
             plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // shallow copy
             plink->_info._name = connectedBody._nameprefix + plink->_info._name;
             plink->_info.SetTransform(tBaseLinkInWorld * plink->_info.GetTransform());
             for( std::string& forcedAdjacentLink : plink->_info._vForcedAdjacentLinks ) {
                 forcedAdjacentLink = connectedBody._nameprefix + forcedAdjacentLink;
+            }
+            for( const std::string& resolvedForcedAdjacentLink : vResolvedForcedAdjacentLinks ) {
+                plink->_info.SetNoncollidingLink(resolvedForcedAdjacentLink);
             }
 
             _InitAndAddLink(plink);
