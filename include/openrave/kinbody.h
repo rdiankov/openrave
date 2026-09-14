@@ -1101,6 +1101,16 @@ public:
             }
         }
 
+        /// \brief drops a forced adjacency recorded against a link that no longer exists, so the rebuild does not look it up
+        inline void RemoveNoncollidingLink(const std::string& name) {
+            std::vector<std::string>::const_iterator it = lower_bound(_vForcedAdjacentLinks.begin(),
+                                                                      _vForcedAdjacentLinks.end(),
+                                                                      name);
+            if (it != _vForcedAdjacentLinks.end() && *it == name) {
+                _vForcedAdjacentLinks.erase(it);
+            }
+        }
+
 private:
         Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
@@ -3778,7 +3788,6 @@ protected:
     void _SetForcedAdjacentLinks(int linkindex0, int linkindex1);
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
-
 
     /// \brief Restore kinbody's states from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
     ///        _RestoreGrabbedBodiesFromSavedData with bCalledFromClone=true allows to restore grabbed bodies from one env to another env.
