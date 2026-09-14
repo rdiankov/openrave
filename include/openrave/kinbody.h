@@ -3785,7 +3785,8 @@ protected:
     /// _vAdjacentLinks from it, so an entry left behind gets re-applied to whichever pair later occupies those
     /// indices. Callers removing or reordering links must call this before _veclinks is compacted.
     /// _vAdjacentLinks and the collision cache are left to that recomputation.
-    /// \param[in] linkindex : link to drop, in [0, GetLinks().size()).
+    /// \param[in] linkindex : link to drop, in [0, GetLinks().size()). Throws ORE_Assert if out of range, or if the
+    ///                        table is not sized for the current links, i.e. the hierarchy was never computed.
     void _ClearForcedAdjacentLinksOfLink(int linkindex);
 
     /// \brief Restore kinbody's states from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.

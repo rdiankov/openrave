@@ -5836,14 +5836,19 @@ void KinBody::SetAdjacentLinks(int linkindex0, int linkindex1)
 void KinBody::_ClearForcedAdjacentLinksOfLink(int linkindex)
 {
     const int numLinks = GetLinks().size();
+    OPENRAVE_ASSERT_OP(linkindex,>=,0);
+    OPENRAVE_ASSERT_OP(linkindex,<,numLinks);
+
+    // _ComputeInternalInformation sizes the table for the current links, so a smaller one means the hierarchy was
+    // never computed. Checking it here covers every index the loop touches.
+    const size_t requiredTableSize = (size_t)numLinks * (numLinks - 1) / 2;
+    OPENRAVE_ASSERT_OP(_vForcedAdjacentLinks.size(),>=,requiredTableSize);
+
     for (int otherLinkIndex = 0; otherLinkIndex < numLinks; ++otherLinkIndex) {
         if (otherLinkIndex == linkindex) {
             continue;
         }
-        const size_t index = _GetIndex1d(linkindex, otherLinkIndex);
-        if (index < _vForcedAdjacentLinks.size()) {
-            _vForcedAdjacentLinks[index] = 0;
-        }
+        _vForcedAdjacentLinks[_GetIndex1d(linkindex, otherLinkIndex)] = 0;
     }
 }
 
