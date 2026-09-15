@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.4
+===============
+
+- Associate cached BodyState objects with the body they represent, and only cache their capacity so long as they track the same body to avoid retaining stale buffer capacity.
+
 Version 0.174.3
 ===============
 
