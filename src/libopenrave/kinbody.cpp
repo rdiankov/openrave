@@ -5311,6 +5311,12 @@ void KinBody::_DeinitializeInternalInformation()
 
     // Clear all-pairs shortest path table to force recomputation
     _vAllPairsShortestPaths.clear();
+
+    // Both adjacency tables are indexed by link index, and the links they describe may not be the
+    // ones a later composition puts at those indices. _ComputeInternalInformation rebuilds them from
+    // each link's LinkInfo, so dropping them costs nothing and leaves nothing to alias.
+    _vForcedAdjacentLinks.clear();
+    _vAdjacentLinks.clear();
 }
 
 void KinBody::GetDirectlyAttachedBodies(std::vector<KinBodyPtr>& vBodies) const
@@ -5846,6 +5852,11 @@ void KinBody::_SetAdjacentLinksInternal(int linkindex0, int linkindex1)
 
     _ResizeVectorFor2DTable(_vForcedAdjacentLinks, numLinks);
     _vForcedAdjacentLinks.at(index) = 1;
+
+    // record the pair by name on both links so it is re-derived whenever the table is rebuilt. Both
+    // directions, because either link can be the one that outlives the other.
+    _veclinks.at(linkindex0)->_info.SetNoncollidingLink(_veclinks.at(linkindex1)->GetName());
+    _veclinks.at(linkindex1)->_info.SetNoncollidingLink(_veclinks.at(linkindex0)->GetName());
 }
 
 void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)

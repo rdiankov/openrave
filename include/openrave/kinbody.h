@@ -1101,6 +1101,16 @@ public:
             }
         }
 
+        /// \brief drops a forced adjacency recorded against a link that no longer exists, so the rebuild does not look it up
+        inline void RemoveNoncollidingLink(const std::string& name) {
+            std::vector<std::string>::const_iterator it = lower_bound(_vForcedAdjacentLinks.begin(),
+                                                                      _vForcedAdjacentLinks.end(),
+                                                                      name);
+            if (it != _vForcedAdjacentLinks.end() && *it == name) {
+                _vForcedAdjacentLinks.erase(it);
+            }
+        }
+
 private:
         Transform _t; ///< the current transformation of the link with respect to the world coordinate system
 
