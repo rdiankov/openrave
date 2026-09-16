@@ -10,6 +10,11 @@ Version 0.175.0
 - KinBody::_DeinitializeInternalInformation drops the forced and computed adjacency tables, which are indexed by link index and do not describe the links a later composition puts at those indices.
 - Activating a connected body keeps the forced adjacencies recorded against its links since they were last resolved, and deactivating one drops the names it leaves behind on the links that stay.
 
+Version 0.174.4
+===============
+
+- Associate cached BodyState objects with the body they represent, and only cache their capacity so long as they track the same body to avoid retaining stale buffer capacity.
+
 Version 0.174.3
 ===============
 
