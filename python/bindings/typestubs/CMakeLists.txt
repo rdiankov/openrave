@@ -46,12 +46,23 @@ if (PYBIND11_STUBGEN)
         COMMAND ${CMAKE_COMMAND} -E echo "from ._openravepy_ import __license__ as __license__" >> ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/__init__.pyi
         COMMAND ${CMAKE_COMMAND} -E echo "from ._openravepy_ import __version__ as __version__" >> ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/__init__.pyi
         COMMAND ${CMAKE_COMMAND} -E echo "from ._openravepy_.misc import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/misc.pyi
-        COMMAND ${CMAKE_COMMAND} -E echo "from ._openravepy_.openrave_ext import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/openravepy_ext.pyi
-        COMMAND ${CMAKE_COMMAND} -E echo "from ._openravepy_.openrave_int import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/openravepy_int.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from ._openravepy_.openravepy_ext import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/openravepy_ext.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from ._openravepy_.openravepy_int import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/openravepy_int.pyi
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/__init__.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases.convexdecomposition import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/convexdecomposition.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases.grasping import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/grasping.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases.inversekinematics import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/inversekinematics.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases.inversereachability import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/inversereachability.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases.kinematicreachability import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/kinematicreachability.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases.linkstatistics import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/linkstatistics.pyi
+        COMMAND ${CMAKE_COMMAND} -E echo "from .._openravepy_.databases.visibilitymodel import *" > ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/databases/visibilitymodel.pyi
         COMMAND ${Python3_EXECUTABLE} -c [=[from mypy.stubgen import main\; main\(\)]=] -o ${CMAKE_CURRENT_BINARY_DIR}/python -m openravepy.misc
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy/misc.pyi ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/_openravepy_/misc/__init__.pyi
         COMMAND ${Python3_EXECUTABLE} -c [=[from mypy.stubgen import main\; main\(\)]=] -o ${CMAKE_CURRENT_BINARY_DIR}/python -m openravepy.openravepy_ext
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy/openravepy_ext.pyi ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/_openravepy_/openravepy_ext/__init__.pyi
+        COMMAND ${Python3_EXECUTABLE} -c [=[from mypy.stubgen import main\; main\(\)]=] -o ${CMAKE_CURRENT_BINARY_DIR}/python -m openravepy.databases
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy/databases/__init__.pyi ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/_openravepy_/databases/__init__.pyi
         COMMAND ${Python3_EXECUTABLE} -c [=[from mypy.stubgen import main\; main\(\)]=] -o ${CMAKE_CURRENT_BINARY_DIR}/python -m openravepy.databases.convexdecomposition
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy/databases/convexdecomposition.pyi ${CMAKE_CURRENT_BINARY_DIR}/python/openravepy-stubs/_openravepy_/databases/convexdecomposition/__init__.pyi
         COMMAND ${Python3_EXECUTABLE} -c [=[from mypy.stubgen import main\; main\(\)]=] -o ${CMAKE_CURRENT_BINARY_DIR}/python -m openravepy.databases.grasping
