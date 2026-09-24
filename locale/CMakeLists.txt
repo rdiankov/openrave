@@ -1,6 +1,7 @@
 set(LANGUAGES
     en_US
     ja_JP
+    fr_FR
 )
 
 find_program(GETTEXT_MSGFMT_EXECUTABLE msgfmt)

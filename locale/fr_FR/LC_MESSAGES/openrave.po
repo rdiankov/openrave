@@ -1,0 +1,1370 @@
+# French translations for PACKAGE package
+# Traductions françaises du paquet PACKAGE.
+# Copyright (C) 2026 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-24 11:10-0400\n"
+"PO-Revision-Date: 2026-06-24 11:10-0400\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: python/bindings/openravepy_spacesampler.cpp:88 python/bindings/openravepy_spacesampler.cpp:103 python/bindings/openravepy_spacesampler.cpp:118 python/bindings/openravepy_spacesampler.cpp:143 python/bindings/openravepy_spacesampler.cpp:158
+#, c-format
+msgid "%d sampling type not supported"
+msgstr "type d'échantillonnage %d non pris en charge"
+
+#: src/libopenrave-core/generictrajectory.cpp:956
+#, c-format
+msgid "%s interpolation group '%s' needs derivatives/integrals for sampling"
+msgstr "le groupe d'interpolation %s '%s' nécessite des dérivées/intégrales pour l'échantillonnage"
+
+#: python/bindings/openravepy_collisionchecker.cpp:456 python/bindings/openravepy_int.cpp:1609
+msgid "3rd argument should be linkexcluded, rather than CollisionReport! Try report="
+msgstr "le 3e argument doit être linkexcluded, plutôt que CollisionReport ! Essayez report="
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:170
+msgid "Assimp was built without compressed X support"
+msgstr "Assimp a été compilé sans la prise en charge du format X compressé"
+
+#: src/libopenrave/robot.cpp:280
+#, c-format
+msgid "Attached sensor name \"%s\" is not valid"
+msgstr "le nom du capteur attaché \"%s\" est invalide"
+
+#: python/bindings/openravepy_robot.cpp:511
+msgid "Bad AttachedSensorInfo"
+msgstr "AttachedSensorInfo invalide"
+
+#: python/bindings/openravepy_int.cpp:1118
+msgid "Bad BodyInfo"
+msgstr "BodyInfo invalide"
+
+#: python/bindings/openravepy_robot.cpp:540
+msgid "Bad ConnectedBodyInfo"
+msgstr "ConnectedBodyInfo invalide"
+
+#: python/bindings/openravepy_kinbody.cpp:162
+msgid "Bad GrabbedInfo"
+msgstr "GrabbedInfo invalide"
+
+#: python/bindings/openravepy_kinbody.cpp:123
+msgid "Bad JointInfo"
+msgstr "JointInfo invalide"
+
+#: python/bindings/openravepy_kinbody.cpp:97
+msgid "Bad LinkInfo"
+msgstr "LinkInfo invalide"
+
+#: python/bindings/openravepy_robot.cpp:482
+msgid "Bad ManipulatorInfo"
+msgstr "ManipulatorInfo invalide"
+
+#: src/libopenrave-core/environment-core.h:1015
+#, c-format
+msgid "Body name: '%s' is not valid"
+msgstr "nom du corps : '%s' est invalide"
+
+#: src/libopenrave/robot.cpp:2321
+#, c-format
+msgid "Cannot add gripperInfo to robot %s since its name is empty."
+msgstr "Impossible d'ajouter gripperInfo au robot %s car son nom est vide."
+
+#: src/libopenrave/robot.cpp:2318
+#, c-format
+msgid "Cannot add invalid gripperInfo to robot %s."
+msgstr "Impossible d'ajouter un gripperInfo invalide au robot %s."
+
+#: src/libopenrave/kinbodygeometry.cpp:934
+#, c-format
+msgid "Cannot convert JSON type %s to Geometry::SideWall"
+msgstr "Impossible de convertir le type JSON %s en Geometry::SideWall"
+
+#: src/libopenrave/libopenrave.cpp:2666
+msgid "Cannot decode non-object JSON value to IkParameterization"
+msgstr "Impossible de décoder une valeur JSON non-objet en IkParameterization"
+
+#: python/bindings/openravepy_collisionchecker.cpp:270 python/bindings/openravepy_collisionchecker.cpp:420 python/bindings/openravepy_collisionchecker.cpp:446 python/bindings/openravepy_int.cpp:1418 python/bindings/openravepy_int.cpp:1572 python/bindings/openravepy_int.cpp:1597
+msgid "CheckCollision(object) invalid argument"
+msgstr "CheckCollision(object) argument invalide"
+
+#: src/libopenrave/planningutils.cpp:559
+#, c-format
+msgid "CheckPathAllConstraints, failed at %d, wrote trajectory to %s"
+msgstr "CheckPathAllConstraints, échec à %d, trajectoire écrite dans %s"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1045
+msgid "Closing brace expected."
+msgstr "Accolade fermante attendue."
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:3275 src/libopenrave-core/colladaparser/colladawriter.cpp:3410
+msgid "ColladaWriter::Write(EnvironmentBasePtr) failed"
+msgstr "échec de ColladaWriter::Write(EnvironmentBasePtr)"
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:3299 src/libopenrave-core/colladaparser/colladawriter.cpp:3434
+msgid "ColladaWriter::Write(KinBodyPtr) failed"
+msgstr "échec de ColladaWriter::Write(KinBodyPtr)"
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:3361 src/libopenrave-core/colladaparser/colladawriter.cpp:3484
+msgid "ColladaWriter::Write(list<KinBodyPtr>) failed"
+msgstr "échec de ColladaWriter::Write(list<KinBodyPtr>)"
+
+#: src/libopenrave-core/environment-core.h:3031
+#, c-format
+msgid "Duplicate body info ID '%s' in call to UpdateFromInfo"
+msgstr "ID d'info de corps '%s' en double dans l'appel à UpdateFromInfo"
+
+#: src/libopenrave-core/environment-core.h:3034
+#, c-format
+msgid "Duplicate body info name '%s' in call to UpdateFromInfo"
+msgstr "nom d'info de corps '%s' en double dans l'appel à UpdateFromInfo"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1278
+msgid "Expected quotation mark and semicolon at the end of a string."
+msgstr "Guillemet et point-virgule attendus à la fin d'une chaîne."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1268
+msgid "Expected quotation mark."
+msgstr "Guillemet attendu."
+
+#: python/bindings/openravepy_int.cpp:149
+#, c-format
+msgid "Failed to convert rapidjson value '%s' to a python object."
+msgstr "échec de la conversion de la valeur rapidjson '%s' en objet python."
+
+#: src/libopenrave/collisionchecker.cpp:607
+#, c-format
+msgid "Failed to set collision options %d in checker %s\n"
+msgstr "échec de la définition des options de collision %d dans le vérificateur %s\n"
+
+#: src/libopenrave/robotconnectedbody.cpp:617
+#, c-format
+msgid "Failed to update info for connected body joint %s"
+msgstr "échec de la mise à jour des informations pour l'articulation du corps connecté %s"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:123
+msgid "Header mismatch, file is not an XFile."
+msgstr "incohérence d'en-tête, le fichier n'est pas un XFile."
+
+#: python/bindings/openravepy_trajectory.cpp:118
+msgid "Input data is not contiguous and cannot convert the input. Please flatten the input to make memory contiguous."
+msgstr "Les données d'entrée ne sont pas contiguës et l'entrée ne peut pas être convertie. Veuillez aplatir l'entrée pour rendre la mémoire contiguë."
+
+#: src/libopenrave/planningutils.cpp:1672
+msgid "InsertWaypointWithSmoothing only supports adding waypoints at the end"
+msgstr "InsertWaypointWithSmoothing ne prend en charge l'ajout de points de passage qu'à la fin"
+
+#: src/libopenrave-core/environment-core.h:995
+#, c-format
+msgid "Interface %d cannot be added to the environment"
+msgstr "l'interface %d ne peut pas être ajoutée à l'environnement"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:509
+msgid "Invalid index count %1% for face %2%."
+msgstr "nombre d'indices invalide %1% pour la face %2%."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:958
+msgid "Invalid number of arguments for matrix key in animation"
+msgstr "nombre d'arguments invalide pour la clé de matrice dans l'animation"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:920
+msgid "Invalid number of arguments for quaternion key in animation"
+msgstr "nombre d'arguments invalide pour la clé de quaternion dans l'animation"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:939
+msgid "Invalid number of arguments for vector key in animation"
+msgstr "nombre d'arguments invalide pour la clé de vecteur dans l'animation"
+
+#: src/libopenrave/libopenrave.cpp:837
+#, c-format
+msgid "Invalid type %d specified"
+msgstr "type invalide %d spécifié"
+
+#: python/bindings/openravepy_viewer.cpp:320
+msgid "KK needs to be of size 4"
+msgstr "KK doit être de taille 4"
+
+#: src/libopenrave-core/environment-core.h:2025 src/libopenrave-core/environment-core.h:2162 src/libopenrave-core/environment-core.h:2223
+#, c-format
+msgid "KinBody::Init for '%s', cannot Init a body while it is added to the environment\n"
+msgstr "KinBody::Init pour '%s', impossible d'initialiser un corps tant qu'il est ajouté à l'environnement\n"
+
+#: src/libopenrave-core/environment-core.h:1807 src/libopenrave-core/environment-core.h:1941 src/libopenrave-core/environment-core.h:2005
+#, c-format
+msgid "KinRobot::Init for '%s', cannot Init a robot while it is added to the environment\n"
+msgstr "KinRobot::Init pour '%s', impossible d'initialiser un robot tant qu'il est ajouté à l'environnement\n"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1493
+#, c-format
+msgid "Line %d: %s"
+msgstr "Ligne %d : %s"
+
+#: python/bindings/openravepy_planningutils.cpp:457
+msgid "ManipulatorIKGoalSampler parameterizations need to be all IkParameterization objeccts"
+msgstr "les paramétrisations de ManipulatorIKGoalSampler doivent toutes être des objets IkParameterization"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:630
+msgid "Normal face count does not match vertex face count."
+msgstr "le nombre de faces normales ne correspond pas au nombre de faces de sommets."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1357
+msgid "Number expected."
+msgstr "Nombre attendu."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1097
+msgid "Opening brace expected."
+msgstr "Accolade ouvrante attendue."
+
+#: python/bindings/openravepy_kinbody.cpp:3861
+#, c-format
+msgid "Passed in values to SetDOFValues have %d elements, but robot has %d dof"
+msgstr "les valeurs passées à SetDOFValues ont %d éléments, mais le robot a %d dof"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:713
+msgid "Per-Face material index count does not match face count."
+msgstr "le nombre d'indices de matériau par face ne correspond pas au nombre de faces."
+
+#: python/bindings/openravepy_planner.cpp:119
+msgid "PlannerParameters needs to be non-const"
+msgstr "PlannerParameters doit être non-const"
+
+#: src/libopenrave/robotconnectedbody.cpp:621
+#, c-format
+msgid "Robot %s does not have joint %s anymore"
+msgstr "le robot %s n'a plus l'articulation %s"
+
+#: src/libopenrave-core/environment-core.h:1056
+#, c-format
+msgid "Robot name: '%s' is not valid"
+msgstr "nom du robot : '%s' est invalide"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1056
+msgid "Semicolon expected."
+msgstr "Point-virgule attendu."
+
+#: src/libopenrave-core/environment-core.h:1094
+#, c-format
+msgid "Sensor name: '%s' is not valid"
+msgstr "nom du capteur : '%s' est invalide"
+
+#: python/bindings/openravepy_sensor.cpp:583
+msgid "SensorData failed"
+msgstr "échec de SensorData"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1068
+msgid "Separator character (';' or ',') expected."
+msgstr "Caractère séparateur (';' ou ',') attendu."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:658
+msgid "Texture coord count does not match vertex count"
+msgstr "le nombre de coordonnées de texture ne correspond pas au nombre de sommets"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:672
+msgid "Too many colorsets"
+msgstr "Trop de jeux de couleurs"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:652
+msgid "Too many sets of texture coordinates"
+msgstr "Trop de jeux de coordonnées de texture"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:416
+msgid "Unexpected end of file reached while parsing frame"
+msgstr "Fin de fichier inattendue atteinte lors de l'analyse de l'image"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:364
+msgid "Unexpected end of file reached while parsing template definition"
+msgstr "Fin de fichier inattendue atteinte lors de l'analyse de la définition de modèle"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:842
+msgid "Unexpected end of file while parsing animation set."
+msgstr "Fin de fichier inattendue lors de l'analyse du jeu d'animations."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:871
+msgid "Unexpected end of file while parsing animation."
+msgstr "Fin de fichier inattendue lors de l'analyse de l'animation."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:792
+msgid "Unexpected end of file while parsing mesh material"
+msgstr "Fin de fichier inattendue lors de l'analyse du matériau du maillage"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:737
+msgid "Unexpected end of file while parsing mesh material list."
+msgstr "Fin de fichier inattendue lors de l'analyse de la liste des matériaux du maillage."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:525
+msgid "Unexpected end of file while parsing mesh structure"
+msgstr "Fin de fichier inattendue lors de l'analyse de la structure du maillage"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1265 src/libopenrave-core/xfileparser/XFileParser.cpp:1275
+msgid "Unexpected end of file while parsing string"
+msgstr "Fin de fichier inattendue lors de l'analyse de la chaîne"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:1016 src/libopenrave-core/xfileparser/XFileParser.cpp:1030
+msgid "Unexpected end of file while parsing unknown segment."
+msgstr "Fin de fichier inattendue lors de l'analyse d'un segment inconnu."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:161
+msgid "Unknown float size %1% specified in xfile header."
+msgstr "taille de flottant inconnue %1% spécifiée dans l'en-tête du xfile."
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:978
+msgid "Unknown key type %1% in animation."
+msgstr "type de clé inconnu %1% dans l'animation."
+
+#: python/bindings/openravepy_global.cpp:505
+msgid "Unsupported indices type"
+msgstr "type d'indices non pris en charge"
+
+#: python/bindings/openravepy_int.cpp:453
+#, c-format
+msgid "Unsupported python class '%s' for object %s"
+msgstr "classe python '%s' non prise en charge pour l'objet %s"
+
+#: python/bindings/openravepy_int.cpp:446
+#, c-format
+msgid "Unsupported python scalar '%s'"
+msgstr "scalaire python '%s' non pris en charge"
+
+#: python/bindings/openravepy_global.cpp:452
+msgid "Unsupported vertices type"
+msgstr "type de sommets non pris en charge"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:151
+#, c-format
+msgid "Unsupported xfile format '%c%c%c%c'"
+msgstr "format de xfile '%c%c%c%c' non pris en charge"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:677
+msgid "Vertex color count does not match vertex count"
+msgstr "le nombre de couleurs de sommets ne correspond pas au nombre de sommets"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:684
+msgid "Vertex color index out of bounds"
+msgstr "indice de couleur de sommet hors limites"
+
+#: src/libopenrave/kinbody.cpp:5949
+#, c-format
+msgid "When cloning body '%s' from env=%s, could not find grabbed object '%s' in env=%s"
+msgstr "lors du clonage du corps '%s' depuis env=%s, impossible de trouver l'objet saisi '%s' dans env=%s"
+
+#: src/libopenrave/robot.cpp:78
+#, c-format
+msgid "When loading gripperInfo '%s' with id '%s', 'chuckingDirection' needs to be an array, currently it is '%s'"
+msgstr "lors du chargement de gripperInfo '%s' avec l'id '%s', 'chuckingDirection' doit être un tableau, actuellement c'est '%s'"
+
+#: src/libopenrave/robotmanipulator.cpp:77
+#, c-format
+msgid "When loading tool '%s' with id '%s', 'chuckingDirections' needs to be an array, currently it is '%s'"
+msgstr "lors du chargement de l'outil '%s' avec l'id '%s', 'chuckingDirections' doit être un tableau, actuellement c'est '%s'"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:248
+msgid "X: Failed to decompress MSZIP-compressed data"
+msgstr "X : échec de la décompression des données compressées en MSZIP"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:216
+msgid "X: Invalid offset to next MSZIP compressed block"
+msgstr "X : décalage invalide vers le prochain bloc compressé MSZIP"
+
+#: src/libopenrave-core/xfileparser/XFileParser.cpp:223
+msgid "X: Unsupported compressed format, expected MSZIP header"
+msgstr "X : format compressé non pris en charge, en-tête MSZIP attendu"
+
+#: python/bindings/include/openravepy/openravepy_int.h:64
+#, c-format
+msgid "[%s:%d]: invalid pointer"
+msgstr "[%s:%d] : pointeur invalide"
+
+#: src/libopenrave/iksolver.cpp:337
+#, c-format
+msgid "_CallFilters on robot %s manip %s need to start with robot configuration set to the solution, most likely a problem with internal ik solver call. %s"
+msgstr "_CallFilters sur le robot %s manip %s doit commencer avec la configuration du robot réglée sur la solution, il s'agit probablement d'un problème avec l'appel interne du solveur ik. %s"
+
+#: src/libopenrave-core/colladaparser/colladareader.cpp:5533
+#, c-format
+msgid "_ExtractMathML: %s function in <apply> tag not supported"
+msgstr "_ExtractMathML : la fonction %s dans la balise <apply> n'est pas prise en charge"
+
+#: src/libopenrave-core/colladaparser/colladareader.cpp:5297
+#, c-format
+msgid "_ExtractMathML: do not support element %s in mathml"
+msgstr "_ExtractMathML : l'élément %s n'est pas pris en charge dans mathml"
+
+#: python/bindings/openravepy_int.cpp:2838 python/bindings/openravepy_int.cpp:2858
+msgid "_vtexture is empty"
+msgstr "_vtexture est vide"
+
+#: python/bindings/openravepy_int.cpp:2847 python/bindings/openravepy_int.cpp:2871
+#, c-format
+msgid "_vtexture[%d] size is different"
+msgstr "la taille de _vtexture[%d] est différente"
+
+#: python/bindings/openravepy_int.cpp:2875
+#, c-format
+msgid "_vtexture[%d][%d] size is different"
+msgstr "la taille de _vtexture[%d][%d] est différente"
+
+#: python/bindings/openravepy_int.cpp:2842 python/bindings/openravepy_int.cpp:2862
+msgid "_vtexture[0] is empty"
+msgstr "_vtexture[0] est vide"
+
+#: python/bindings/openravepy_int.cpp:2866
+msgid "_vtexture[0][0] is empty"
+msgstr "_vtexture[0][0] est vide"
+
+#: src/libopenrave/robotconnectedbody.cpp:643 src/libopenrave/robot.cpp:2275
+#, c-format
+msgid "attached sensor with name %s already exists"
+msgstr "un capteur attaché portant le nom %s existe déjà"
+
+#: python/bindings/openravepy_sensor.cpp:363
+msgid "bad image data"
+msgstr "données d'image invalides"
+
+#: src/libopenrave-core/xmlreaders-core.cpp:1720
+#, c-format
+msgid "bad joint type: 0x%x"
+msgstr "type d'articulation invalide : 0x%x"
+
+#: src/libopenrave/configurationspecification.cpp:1065 src/libopenrave/configurationspecification.cpp:1107 src/libopenrave/configurationspecification.cpp:1157
+msgid "bad time derivative"
+msgstr "dérivée temporelle invalide"
+
+#: src/libopenrave/configurationspecification.cpp:950 src/libopenrave/configurationspecification.cpp:982
+#, c-format
+msgid "bad time derivative %d"
+msgstr "dérivée temporelle invalide %d"
+
+#: python/bindings/openravepy_collisionchecker.cpp:768 python/bindings/openravepy_collisionchecker.cpp:788 python/bindings/openravepy_kinbody.cpp:1439 python/bindings/openravepy_kinbody.cpp:2863
+msgid "bad trimesh"
+msgstr "trimesh invalide"
+
+#: python/bindings/openravepy_kinbody.cpp:2798 python/bindings/openravepy_kinbody.cpp:2818
+msgid "boxes needs to be a Nx6 vector\n"
+msgstr "boxes doit être un vecteur Nx6\n"
+
+#: python/bindings/openravepy_int.cpp:2366 python/bindings/openravepy_int.cpp:2378 python/bindings/openravepy_viewer.cpp:265 python/bindings/openravepy_viewer.cpp:277 python/bindings/openravepy_planner.cpp:370 python/bindings/openravepy_iksolver.cpp:313
+msgid "callback not specified"
+msgstr "callback non spécifié"
+
+#: python/bindings/openravepy_robot.cpp:1677
+msgid "cannot cast to KinBody.AttachedsensorInfo"
+msgstr "impossible de convertir en KinBody.AttachedsensorInfo"
+
+#: python/bindings/openravepy_kinbody.cpp:1851 python/bindings/openravepy_kinbody.cpp:1862 python/bindings/openravepy_kinbody.cpp:1871 python/bindings/openravepy_kinbody.cpp:1901 python/bindings/openravepy_kinbody.cpp:2873 python/bindings/openravepy_kinbody.cpp:2917
+msgid "cannot cast to KinBody.GeometryInfo"
+msgstr "impossible de convertir en KinBody.GeometryInfo"
+
+#: python/bindings/openravepy_kinbody.cpp:2943
+msgid "cannot cast to KinBody.JointInfo"
+msgstr "impossible de convertir en KinBody.JointInfo"
+
+#: python/bindings/openravepy_kinbody.cpp:2886 python/bindings/openravepy_kinbody.cpp:2931
+msgid "cannot cast to KinBody.LinkInfo"
+msgstr "impossible de convertir en KinBody.LinkInfo"
+
+#: python/bindings/openravepy_robot.cpp:1669
+msgid "cannot cast to KinBody.ManipulatorInfo"
+msgstr "impossible de convertir en KinBody.ManipulatorInfo"
+
+#: python/bindings/openravepy_kinbody.cpp:4256
+msgid "cannot cast to Robot.GrabbedInfo"
+msgstr "impossible de convertir en Robot.GrabbedInfo"
+
+#: src/libopenrave/planningutils.cpp:1421 src/libopenrave/planningutils.cpp:1565
+msgid "cannot extend waypoints in middle of trajectories"
+msgstr "impossible d'étendre les points de passage au milieu des trajectoires"
+
+#: src/libopenrave-core/generictrajectory.cpp:664
+msgid "cannot read first 2 bytes for deserializing traj, stream might be empty "
+msgstr "impossible de lire les 2 premiers octets pour désérialiser la trajectoire, le flux est peut-être vide "
+
+#: src/libopenrave-core/xmlreaders-core.cpp:1581
+msgid "cannot specify <limits> with <lostop> and <histop>, choose one"
+msgstr "impossible de spécifier <limits> avec <lostop> et <histop>, choisissez-en un"
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:298
+#, c-format
+msgid "collada writer failed to create child %s from parent %s"
+msgstr "le rédacteur collada n'a pas réussi à créer l'enfant %s à partir du parent %s"
+
+#: python/bindings/openravepy_int.cpp:2594
+#, c-format
+msgid "colors dim %d needs to be 3 or 4"
+msgstr "la dimension des couleurs %d doit être 3 ou 4"
+
+#: python/bindings/openravepy_int.cpp:2600
+#, c-format
+msgid "colors has %d dimensions"
+msgstr "colors a %d dimensions"
+
+#: python/bindings/openravepy_int.cpp:2608
+#, c-format
+msgid "colors has incorrect number of values %d"
+msgstr "colors a un nombre de valeurs incorrect %d"
+
+#: src/libopenrave/interface.cpp:142 src/libopenrave/interface.cpp:225
+#, c-format
+msgid "command '%s' already registered"
+msgstr "la commande '%s' est déjà enregistrée"
+
+#: src/libopenrave/interface.cpp:139 src/libopenrave/interface.cpp:222
+#, c-format
+msgid "command '%s' invalid"
+msgstr "commande '%s' invalide"
+
+#: src/libopenrave-core/multicontroller.cpp:67
+msgid "controller already attached for transformation"
+msgstr "contrôleur déjà attaché pour la transformation"
+
+#: src/libopenrave-core/multicontroller.cpp:71
+#, c-format
+msgid "controller already attached to dof %d"
+msgstr "contrôleur déjà attaché au dof %d"
+
+#: src/libopenrave-core/xmlreaders-core.cpp:3570
+#, c-format
+msgid "could not create interface of type %d"
+msgstr "impossible de créer une interface de type %d"
+
+#: src/libopenrave/kinbodylink.cpp:802 src/libopenrave/kinbody.cpp:708
+#, c-format
+msgid "could not find geometries %s for link %s"
+msgstr "impossible de trouver les géométries %s pour le corps %s"
+
+#: src/libopenrave/planningutils.cpp:1439
+#, c-format
+msgid "could not find group %s in trajectory"
+msgstr "impossible de trouver le groupe %s dans la trajectoire"
+
+#: src/libopenrave-core/generictrajectory.cpp:1414 src/libopenrave-core/generictrajectory.cpp:1547 src/libopenrave-core/generictrajectory.cpp:1598 src/libopenrave-core/generictrajectory.cpp:1668
+msgid "cubic interpolation does not have all data"
+msgstr "l'interpolation cubique ne dispose pas de toutes les données"
+
+#: src/libopenrave/planningutils.cpp:1500
+#, c-format
+msgid "currently do not support retiming for %s interpolations"
+msgstr "le retiming n'est actuellement pas pris en charge pour les interpolations %s"
+
+#: python/bindings/openravepy_int.cpp:2672
+msgid "data have bad dimension"
+msgstr "les données ont une dimension invalide"
+
+#: python/bindings/openravepy_int.cpp:2630 python/bindings/openravepy_int.cpp:2678
+#, c-format
+msgid "data have bad size %d"
+msgstr "les données ont une taille invalide %d"
+
+#: python/bindings/openravepy_int.cpp:2652
+#, c-format
+msgid "data have bad size %dx%d"
+msgstr "les données ont une taille invalide %dx%d"
+
+#: src/libopenrave-core/generictrajectory.cpp:1473
+#, c-format
+msgid "derivoffset=%d; ddoffset=%d; integoffset=%d; iioffset=%d not implemented yet."
+msgstr "derivoffset=%d; ddoffset=%d; integoffset=%d; iioffset=%d pas encore implémenté."
+
+#: src/libopenrave/planningutils.cpp:1476
+#, c-format
+msgid "do no support inserting waypoint at %d in middle of trajectory (size=%d)"
+msgstr "l'insertion d'un point de passage à %d au milieu de la trajectoire (size=%d) n'est pas prise en charge"
+
+#: src/libopenrave/planningutils.cpp:1600
+msgid "do no support inserting waypoints in middle of trajectories yet"
+msgstr "l'insertion de points de passage au milieu des trajectoires n'est pas encore prise en charge"
+
+#: src/libopenrave/configurationspecification.cpp:917
+#, c-format
+msgid "do not know how to merge group '%s' into '%s'"
+msgstr "ne sait pas comment fusionner le groupe '%s' dans '%s'"
+
+#: python/bindings/openravepy_int.cpp:363
+#, c-format
+msgid "do not support array object float with %d type size"
+msgstr "les objets tableau float avec une taille de type %d ne sont pas pris en charge"
+
+#: python/bindings/openravepy_int.cpp:400
+#, c-format
+msgid "do not support array object integer with %d type size"
+msgstr "les objets tableau integer avec une taille de type %d ne sont pas pris en charge"
+
+#: python/bindings/openravepy_int.cpp:218
+#, c-format
+msgid "do not support array object with %d dims"
+msgstr "les objets tableau avec %d dimensions ne sont pas pris en charge"
+
+#: python/bindings/openravepy_int.cpp:404
+#, c-format
+msgid "do not support array object with %d type size"
+msgstr "les objets tableau avec une taille de type %d ne sont pas pris en charge"
+
+#: src/libopenrave/xmlreaders.cpp:553
+#, c-format
+msgid "does not support actuator '%s' type"
+msgstr "le type d'actionneur '%s' n'est pas pris en charge"
+
+#: src/libopenrave/robot.cpp:2082
+#, c-format
+msgid "does not support adjacentoptions %d"
+msgstr "adjacentoptions %d non pris en charge"
+
+#: src/libopenrave/libopenrave.cpp:2685
+#, c-format
+msgid "does not support parameterization %s"
+msgstr "la paramétrisation %s n'est pas prise en charge"
+
+#: src/libopenrave/libopenrave.cpp:1675 src/libopenrave/libopenrave.cpp:1786
+#, c-format
+msgid "does not support parameterization 0x%x"
+msgstr "la paramétrisation 0x%x n'est pas prise en charge"
+
+#: src/libopenrave/kinbody.cpp:1825
+#, c-format
+msgid "dof indices mismatch joint %s, toadd=%d"
+msgstr "les indices de dof ne correspondent pas à l'articulation %s, toadd=%d"
+
+#: src/libopenrave-core/environment-core.h:4199
+#, c-format
+msgid "env=%d, body '%s' does not have a valid id '%s'"
+msgstr "env=%d, le corps '%s' n'a pas d'id valide '%s'"
+
+#: src/libopenrave-core/environment-core.h:4221
+#, c-format
+msgid "env=%d, body (name='%s', envBodyIndex=%d) has same id '%s' as existing body (name='%s', envBodyIndex=%d)"
+msgstr "env=%d, le corps (name='%s', envBodyIndex=%d) a le même id '%s' qu'un corps existant (name='%s', envBodyIndex=%d)"
+
+#: src/libopenrave/kinbody.cpp:1634
+#, c-format
+msgid "env=%d, dof %d velocity is not in limits %.15e<%.15e"
+msgstr "env=%d, la vitesse du dof %d n'est pas dans les limites %.15e<%.15e"
+
+#: src/libopenrave/kinbody.cpp:1643
+#, c-format
+msgid "env=%d, dof %d velocity is not in limits %.15e>%.15e"
+msgstr "env=%d, la vitesse du dof %d n'est pas dans les limites %.15e>%.15e"
+
+#: src/libopenrave/kinbody.cpp:2453
+#, c-format
+msgid "env=%d, joint %s: lower limit (%e) is not followed: %e"
+msgstr "env=%d, articulation %s : la limite inférieure (%e) n'est pas respectée : %e"
+
+#: src/libopenrave/kinbody.cpp:2462
+#, c-format
+msgid "env=%d, joint %s: upper limit (%e) is not followed: %e"
+msgstr "env=%d, articulation %s : la limite supérieure (%e) n'est pas respectée : %e"
+
+#: src/libopenrave/kinbody.cpp:1726
+#, c-format
+msgid "env=%d, joint 0x%x not supported for querying velocities"
+msgstr "env=%d, l'articulation 0x%x n'est pas prise en charge pour interroger les vitesses"
+
+#: src/libopenrave-core/environment-core.h:4231
+#, c-format
+msgid "env=%d, sensor '%s' does not have unique name"
+msgstr "env=%d, le capteur '%s' n'a pas de nom unique"
+
+#: src/libopenrave-core/environment-core.h:4243
+#, c-format
+msgid "env=%d, viewer '%s' does not have unique name"
+msgstr "env=%d, le viewer '%s' n'a pas de nom unique"
+
+#: src/libopenrave-core/environment-core.h:38
+#, c-format
+msgid "env=%s, Interface %s:%s is from a different environment (env=%s) than the current one."
+msgstr "env=%s, l'interface %s:%s provient d'un environnement différent (env=%s) de l'environnement actuel."
+
+#: src/libopenrave/kinbody.cpp:981
+#, c-format
+msgid "env=%s, body '%s' (%d) dof indices mismatch joint '%s' (dofindex=%d), toadd=%d, v.size()=%d in call GetDOFValues with %s"
+msgstr "env=%s, les indices de dof du corps '%s' (%d) ne correspondent pas à l'articulation '%s' (dofindex=%d), toadd=%d, v.size()=%d dans l'appel GetDOFValues avec %s"
+
+#: src/libopenrave-core/environment-core.h:4158
+#, c-format
+msgid "env=%s, body '%s' has environmentBodyIndex=%d, which is greater than the number of bodies %d, _mapBodyNameIndex=%d."
+msgstr "env=%s, le corps '%s' a environmentBodyIndex=%d, qui est supérieur au nombre de corps %d, _mapBodyNameIndex=%d."
+
+#: src/libopenrave-core/environment-core.h:4155
+#, c-format
+msgid "env=%s, body '%s' is not added to the environment."
+msgstr "env=%s, le corps '%s' n'est pas ajouté à l'environnement."
+
+#: src/libopenrave/kinbody.cpp:2305
+#, c-format
+msgid "env=%s, body '%s' joint '%s' dofindex %d value %.16e is greater than the upper limit %.16e"
+msgstr "env=%s, corps '%s' articulation '%s' dofindex %d valeur %.16e est supérieure à la limite supérieure %.16e"
+
+#: src/libopenrave/kinbody.cpp:2294
+#, c-format
+msgid "env=%s, body '%s' joint '%s' dofindex %d value %.16e is smaller than the lower limit %.16e"
+msgstr "env=%s, corps '%s' articulation '%s' dofindex %d valeur %.16e est inférieure à la limite inférieure %.16e"
+
+#: src/libopenrave-core/environment-core.h:4169
+#, c-format
+msgid "env=%s, body (id='%s', envBodyIndex=%d) has same name '%s' as existing body (id='%s', envBodyIndex=%d)"
+msgstr "env=%s, le corps (id='%s', envBodyIndex=%d) a le même nom '%s' qu'un corps existant (id='%s', envBodyIndex=%d)"
+
+#: src/libopenrave/kinbodystatesaver.cpp:81
+#, c-format
+msgid "env=%s, could not find grabbing link '%s' for grabbed body '%s' since %s does not have the link (body num links is %d)"
+msgstr "env=%s, impossible de trouver le corps de saisie '%s' pour le corps saisi '%s' car %s n'a pas le corps (le nombre de corps du body est %d)"
+
+#: src/libopenrave/kinbodystatesaver.cpp:76
+#, c-format
+msgid "env=%s, could not find grabbing link for grabbed body '%s'"
+msgstr "env=%s, impossible de trouver le corps de saisie pour le corps saisi '%s'"
+
+#: src/libopenrave-core/environment-core.h:4267
+#, c-format
+msgid "env=%s, environmentBodyIndex=%d is used by existing body=%s while trying to add new body=%s"
+msgstr "env=%s, environmentBodyIndex=%d est utilisé par le corps existant body=%s lors de la tentative d'ajout du nouveau corps body=%s"
+
+#: src/libopenrave/planningutils.cpp:1309
+#, c-format
+msgid "env=%s, failed to initialize planner %s with affine trajectory spec: %s"
+msgstr "env=%s, échec de l'initialisation du planificateur %s avec la spécification de trajectoire affine : %s"
+
+#: src/libopenrave/kinbodylink.cpp:825
+#, c-format
+msgid "env=%s, geometry group '%s' does not exist for body '%s' link '%s', current number of geometries=%d, extra groups=[%s], isEnabled=%d."
+msgstr "env=%s, le groupe de géométrie '%s' n'existe pas pour le corps '%s' corps '%s', nombre actuel de géométries=%d, groupes supplémentaires=[%s], isEnabled=%d."
+
+#: src/libopenrave/robotmanipulator.cpp:309
+#, c-format
+msgid "env=%s, robot '%s' manipulator '%s' has no end effector with name '%s'"
+msgstr "env=%s, le manipulateur '%s' du robot '%s' n'a pas d'effecteur terminal portant le nom '%s'"
+
+#: src/libopenrave-core/environment-core.h:2973
+#, c-format
+msgid "env=%s, started out with %d bodies, but could only iterate over %d valid ones."
+msgstr "env=%s, a commencé avec %d corps, mais n'a pu itérer que sur %d corps valides."
+
+#: src/libopenrave/planner.cpp:61
+#, c-format
+msgid "error, failed to find </PlannerParameters> in %s"
+msgstr "erreur, échec de la recherche de </PlannerParameters> dans %s"
+
+#: src/libopenrave/configurationspecification.cpp:1989
+#, c-format
+msgid "error, failed to find </configuration> in %s"
+msgstr "erreur, échec de la recherche de </configuration> dans %s"
+
+#: src/libopenrave/trajectory.cpp:71
+#, c-format
+msgid "error, failed to find </trajectory> in %s"
+msgstr "erreur, échec de la recherche de </trajectory> dans %s"
+
+#: src/libopenrave/xmlreaders.cpp:142
+#, c-format
+msgid "failed reading %d numbers from trajectory <data> element"
+msgstr "échec de la lecture de %d nombres depuis l'élément <data> de la trajectoire"
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:302
+#, c-format
+msgid "failed to add attribute %s to element %s"
+msgstr "échec de l'ajout de l'attribut %s à l'élément %s"
+
+#: src/libopenrave-core/environment-core.h:3731
+#, c-format
+msgid "failed to clone collision checker '%s': %s"
+msgstr "échec du clonage du vérificateur de collisions '%s' : %s"
+
+#: src/libopenrave-core/environment-core.h:3749
+#, c-format
+msgid "failed to clone physics engine '%s': %s"
+msgstr "échec du clonage du moteur physique '%s' : %s"
+
+#: src/libopenrave-core/xmlreaders-core.cpp:3604
+#, c-format
+msgid "failed to create interface %s"
+msgstr "échec de la création de l'interface %s"
+
+#: src/libopenrave/interface.cpp:247
+#, c-format
+msgid "failed to find JSON command '%s' in interface %s\n"
+msgstr "échec de la recherche de la commande JSON '%s' dans l'interface %s\n"
+
+#: src/libopenrave/interface.cpp:114
+#, c-format
+msgid "failed to find command '%s' in interface %s\n"
+msgstr "échec de la recherche de la commande '%s' dans l'interface %s\n"
+
+#: src/libopenrave/planningutils.cpp:1762
+msgid "failed to find connecting trajectory"
+msgstr "échec de la recherche de la trajectoire de connexion"
+
+#: src/libopenrave/configurationspecification.cpp:238 src/libopenrave/configurationspecification.cpp:266
+#, c-format
+msgid "failed to find group %s"
+msgstr "échec de la recherche du groupe %s"
+
+#: src/libopenrave/robot.cpp:2205
+#, c-format
+msgid "failed to find manipulator with name: %s"
+msgstr "échec de la recherche du manipulateur portant le nom : %s"
+
+#: python/bindings/openravepy_viewer.cpp:325
+msgid "failed to get camera image"
+msgstr "échec de l'obtention de l'image de la caméra"
+
+#: src/libopenrave/planningutils.cpp:1182
+#, c-format
+msgid "failed to init planner %s with affine trajectory spec: %s, msg=%s"
+msgstr "échec de l'initialisation du planificateur %s avec la spécification de trajectoire affine : %s, msg=%s"
+
+#: src/libopenrave/planningutils.cpp:659 src/libopenrave/planningutils.cpp:705 src/libopenrave/planningutils.cpp:732 src/libopenrave/planningutils.cpp:758 src/libopenrave/planningutils.cpp:780
+#, c-format
+msgid "failed to init planner %s with robot %s:%s"
+msgstr "échec de l'initialisation du planificateur %s avec le robot %s:%s"
+
+#: src/libopenrave/planningutils.cpp:1063 src/libopenrave/planningutils.cpp:1663
+#, c-format
+msgid "failed to init planner %s:%s"
+msgstr "échec de l'initialisation du planificateur %s:%s"
+
+#: src/libopenrave/planningutils.cpp:1608
+msgid "failed to plan path"
+msgstr "échec de la planification du chemin"
+
+#: src/libopenrave-core/xfileparser/XFileBindings.cpp:38 src/libopenrave-core/xfileparser/XFileBindings.cpp:61
+#, c-format
+msgid "failed to read %s filename"
+msgstr "échec de la lecture du nom de fichier %s"
+
+#: src/libopenrave/kinbodyjoint.cpp:1468 src/libopenrave/kinbodyjoint.cpp:1472
+#, c-format
+msgid "failed to sample trajectory for joint %s"
+msgstr "échec de l'échantillonnage de la trajectoire pour l'articulation %s"
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:495
+#, c-format
+msgid "failed to save collada file to %s"
+msgstr "échec de l'enregistrement du fichier collada dans %s"
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:503
+msgid "failed to save collada to memory"
+msgstr "échec de l'enregistrement du collada en mémoire"
+
+#: src/libopenrave/planner.cpp:988
+#, c-format
+msgid "failed to set body %s configuration to %s"
+msgstr "échec de la définition de la configuration du corps %s sur %s"
+
+#: src/libopenrave/kinbodyjoint.cpp:2239
+#, c-format
+msgid "failed to set equation '%s' on %s:%s, at %d. Error is %s"
+msgstr "échec de la définition de l'équation '%s' sur %s:%s, à %d. L'erreur est %s"
+
+#: src/libopenrave/kinbodyjoint.cpp:2147
+#, c-format
+msgid "failed to set equation '%s' on %s:%s, at %d. Error is %s\n"
+msgstr "échec de la définition de l'équation '%s' sur %s:%s, à %d. L'erreur est %s\n"
+
+#: src/libopenrave/planningutils.cpp:905
+#, c-format
+msgid "failed to set state in PlannerStateSaver, return=%d"
+msgstr "échec de la définition de l'état dans PlannerStateSaver, return=%d"
+
+#: src/libopenrave/planningutils.cpp:444
+msgid "failed to set state values"
+msgstr "échec de la définition des valeurs d'état"
+
+#: src/libopenrave-core/colladaparser/colladawriter.cpp:309
+#, c-format
+msgid "failed to write char data to element %s: %s"
+msgstr "échec de l'écriture des données de caractères dans l'élément %s : %s"
+
+#: python/bindings/openravepy_iksolver.cpp:235 python/bindings/openravepy_iksolver.cpp:247 python/bindings/openravepy_iksolver.cpp:269 python/bindings/openravepy_iksolver.cpp:281 python/bindings/openravepy_iksolver.cpp:300
+msgid "first argument to IkSolver.Solve needs to be IkParameterization"
+msgstr "le premier argument de IkSolver.Solve doit être IkParameterization"
+
+#: src/libopenrave/kinbodylink.cpp:910
+#, c-format
+msgid "geometry group %s does not exist for link %s"
+msgstr "le groupe de géométrie %s n'existe pas pour le corps %s"
+
+#: src/libopenrave/kinbody.cpp:113 src/libopenrave/kinbodygeometry.cpp:283
+#, c-format
+msgid "geometry(name=\"%s\";id=\"%s\";type=%d) has incorrect mesh indices %d in \"%s\", which is out of range of vertices which size is %d."
+msgstr "geometry(name=\"%s\";id=\"%s\";type=%d) a des indices de maillage incorrects %d dans \"%s\", qui est hors de la plage des sommets dont la taille est %d."
+
+#: python/bindings/openravepy_int.cpp:539
+#, c-format
+msgid "geometryInfo[%d] is invalid"
+msgstr "geometryInfo[%d] est invalide"
+
+#: src/libopenrave/robot.cpp:2331
+#, c-format
+msgid "gripper with name %s already exists"
+msgstr "un préhenseur portant le nom %s existe déjà"
+
+#: src/libopenrave/planner.cpp:1026 src/libopenrave/configurationspecification.cpp:1321 src/libopenrave/configurationspecification.cpp:1406
+#, c-format
+msgid "group %s not supported for for planner parameters configuration"
+msgstr "le groupe %s n'est pas pris en charge pour la configuration des paramètres du planificateur"
+
+#: src/libopenrave/configurationspecification.cpp:1723 src/libopenrave/configurationspecification.cpp:1729
+#, c-format
+msgid "ikparam type not present '%s'\n"
+msgstr "type ikparam non présent '%s'\n"
+
+#: python/bindings/openravepy_ikparameterization.cpp:76
+#, c-format
+msgid "incorrect ik parameterization type 0x%x"
+msgstr "type de paramétrisation ik incorrect 0x%x"
+
+#: python/bindings/openravepy_global.cpp:469
+msgid "indices must be a Nx3 int array"
+msgstr "indices doit être un tableau d'entiers Nx3"
+
+#: src/libopenrave-core/xmlreaders-core.cpp:3364 src/libopenrave-core/xmlreaders-core.cpp:3600
+msgid "interface should not be initialized"
+msgstr "l'interface ne doit pas être initialisée"
+
+#: python/bindings/openravepy_collisionchecker.cpp:294 python/bindings/openravepy_int.cpp:1441
+msgid "invalid argument"
+msgstr "argument invalide"
+
+#: python/bindings/openravepy_collisionchecker.cpp:351 python/bindings/openravepy_collisionchecker.cpp:400 python/bindings/openravepy_collisionchecker.cpp:491 python/bindings/openravepy_collisionchecker.cpp:536 python/bindings/openravepy_int.cpp:1502 python/bindings/openravepy_int.cpp:1549 python/bindings/openravepy_int.cpp:1642 python/bindings/openravepy_int.cpp:1686
+msgid "invalid argument 1"
+msgstr "argument 1 invalide"
+
+#: python/bindings/openravepy_collisionchecker.cpp:326 python/bindings/openravepy_collisionchecker.cpp:349 python/bindings/openravepy_collisionchecker.cpp:378 python/bindings/openravepy_collisionchecker.cpp:395 python/bindings/openravepy_int.cpp:1476 python/bindings/openravepy_int.cpp:1500 python/bindings/openravepy_int.cpp:1528 python/bindings/openravepy_int.cpp:1544
+msgid "invalid argument 2"
+msgstr "argument 2 invalide"
+
+#: src/libopenrave/interface.cpp:87
+msgid "invalid cloning reference"
+msgstr "référence de clonage invalide"
+
+#: src/libopenrave/interface.cpp:107
+msgid "invalid command"
+msgstr "commande invalide"
+
+#: src/libopenrave/robotmanipulator.cpp:627 src/libopenrave/robotmanipulator.cpp:773
+#, c-format
+msgid "invalid ik type 0x%x"
+msgstr "type ik invalide 0x%x"
+
+#: src/libopenrave-core/xmlreaders-core.cpp:3610
+#, c-format
+msgid "invalid interface tag %s"
+msgstr "balise d'interface invalide %s"
+
+#: python/bindings/openravepy_global.cpp:1082
+msgid "invalid interface type"
+msgstr "type d'interface invalide"
+
+#: python/bindings/openravepy_collisionchecker.cpp:859
+msgid "invalid parameters to CheckSelfCollision"
+msgstr "paramètres invalides pour CheckSelfCollision"
+
+#: src/libopenrave/configurationspecification.cpp:594
+msgid "invalid timederivative"
+msgstr "timederivative invalide"
+
+#: src/libopenrave-core/environment-core.h:1971 src/libopenrave-core/environment-core.h:2192
+msgid "iv data not supported"
+msgstr "données iv non prises en charge"
+
+#: src/libopenrave/kinbody.cpp:4514
+#, c-format
+msgid "joint %s depends on a mimic joint %s that also depends on %s; circular dependency!!!"
+msgstr "l'articulation %s dépend d'une articulation mimic %s qui dépend elle aussi de %s ; dépendance circulaire !!!"
+
+#: src/libopenrave/kinbody.cpp:5881
+#, c-format
+msgid "joint %s doesn't belong to anythong?"
+msgstr "l'articulation %s n'appartient à rien ?"
+
+#: src/libopenrave/kinbody.cpp:5910
+#, c-format
+msgid "joint %s in closed loop doesn't belong to anything?"
+msgstr "l'articulation %s dans une boucle fermée n'appartient à rien ?"
+
+#: src/libopenrave/kinbody.cpp:6282
+#, c-format
+msgid "joint %s is declared more than once in body %s"
+msgstr "l'articulation %s est déclarée plus d'une fois dans le corps %s"
+
+#: src/libopenrave/kinbody.cpp:3644 src/libopenrave/kinbody.cpp:3682 src/libopenrave/kinbody.cpp:3869 src/libopenrave/kinbody.cpp:3883
+#, c-format
+msgid "joint 0x%x not supported"
+msgstr "articulation 0x%x non prise en charge"
+
+#: src/libopenrave/kinbody.cpp:5046
+#, c-format
+msgid "joint indices %d and %d share the same name '%s'"
+msgstr "les indices d'articulation %d et %d partagent le même nom '%s'"
+
+#: src/libopenrave/kinbody.cpp:4182
+#, c-format
+msgid "joint type 0x%x not supported for getting link acceleration"
+msgstr "le type d'articulation 0x%x n'est pas pris en charge pour obtenir l'accélération du corps"
+
+#: src/libopenrave-core/environment-core.h:1052
+#, c-format
+msgid "kinbody '%s' is not a robot"
+msgstr "le kinbody '%s' n'est pas un robot"
+
+#: python/bindings/openravepy_kinbody.cpp:2201 python/bindings/openravepy_kinbody.cpp:2208 python/bindings/openravepy_kinbody.cpp:2215 python/bindings/openravepy_kinbody.cpp:2222 python/bindings/openravepy_kinbody.cpp:2229 python/bindings/openravepy_kinbody.cpp:2236 python/bindings/openravepy_kinbody.cpp:2243 python/bindings/openravepy_kinbody.cpp:2250
+msgid "limits are wrong dimensions"
+msgstr "les limites ont des dimensions incorrectes"
+
+#: src/libopenrave/planningutils.cpp:435
+#, c-format
+msgid "limits exceeded configuration %d dof %d: %f in [%f,%f]"
+msgstr "limites dépassées configuration %d dof %d : %f dans [%f,%f]"
+
+#: src/libopenrave/kinbody.cpp:792 src/libopenrave/kinbody.cpp:6263
+#, c-format
+msgid "link '%s' is declared more than once in body '%s', uri is '%s'"
+msgstr "le corps '%s' est déclaré plus d'une fois dans le corps '%s', l'uri est '%s'"
+
+#: src/libopenrave-core/xmlreaders-core.cpp:2199
+msgid "link should be valid"
+msgstr "le corps doit être valide"
+
+#: src/libopenrave/libopenrave_c.cpp:216
+msgid "locking with boost version < 1.35 is not supported"
+msgstr "le verrouillage avec une version de boost < 1.35 n'est pas pris en charge"
+
+#: src/libopenrave/robotmanipulator.cpp:1706
+#, c-format
+msgid "manipulator \"%s\" is not valid. end effector link \"%s\" is not affected by joint \"%s\""
+msgstr "le manipulateur \"%s\" est invalide. le corps de l'effecteur terminal \"%s\" n'est pas affecté par l'articulation \"%s\""
+
+#: src/libopenrave/robotmanipulator.cpp:1648
+#, c-format
+msgid "manipulator name \"%s\" is not valid"
+msgstr "le nom du manipulateur \"%s\" est invalide"
+
+#: src/libopenrave/robotmanipulator.cpp:299
+#, c-format
+msgid "manipulator name change '%s'->'%s' is colliding with other manipulator"
+msgstr "le changement de nom du manipulateur '%s'->'%s' entre en collision avec un autre manipulateur"
+
+#: src/libopenrave/robot.cpp:2232
+#, c-format
+msgid "manipulator with name %s already exists"
+msgstr "un manipulateur portant le nom %s existe déjà"
+
+#: src/libopenrave/libopenrave.cpp:910
+msgid "need to compile with boost::filesystem"
+msgstr "nécessite une compilation avec boost::filesystem"
+
+#: src/libopenrave/planner.cpp:406
+msgid "need to set PlannerParameters::_setstatevaluesfn"
+msgstr "il faut définir PlannerParameters::_setstatevaluesfn"
+
+#: src/libopenrave-core/xmlreaders-core.cpp:3325
+msgid "need valid environment"
+msgstr "nécessite un environnement valide"
+
+#: src/libopenrave/planningutils.cpp:459
+#, c-format
+msgid "neighstatefn is rejecting configuration %d, wrote trajectory %s"
+msgstr "neighstatefn rejette la configuration %d, trajectoire écrite %s"
+
+#: src/libopenrave/configurationspecification.cpp:655
+#, c-format
+msgid "new group '%s' conflicts with existing group '%s'"
+msgstr "le nouveau groupe '%s' est en conflit avec le groupe existant '%s'"
+
+#: src/libopenrave/kinbodylink.cpp:882 src/libopenrave/kinbodylink.cpp:915
+#, c-format
+msgid "newly added geometry %s for group %s has conflicting name for link %s"
+msgstr "la géométrie nouvellement ajoutée %s pour le groupe %s a un nom en conflit pour le corps %s"
+
+#: src/libopenrave/kinbodylink.cpp:869 src/libopenrave/kinbodylink.cpp:875
+#, c-format
+msgid "newly added geometry %s has conflicting name for link %s"
+msgstr "la géométrie nouvellement ajoutée %s a un nom en conflit pour le corps %s"
+
+#: src/libopenrave/libopenrave.cpp:1562
+#, c-format
+msgid "no ik exists of unique id 0x%x"
+msgstr "aucun ik n'existe avec l'id unique 0x%x"
+
+#: python/bindings/openravepy_viewer.cpp:269 python/bindings/openravepy_viewer.cpp:281 python/bindings/openravepy_planner.cpp:374
+msgid "no registration callback returned"
+msgstr "aucun callback d'enregistrement renvoyé"
+
+#: src/libopenrave/kinbody.cpp:5732
+#, c-format
+msgid "no support for adjacentoptions %d"
+msgstr "aucune prise en charge pour adjacentoptions %d"
+
+#: python/bindings/openravepy_controller.cpp:98
+msgid "no values specified"
+msgstr "aucune valeur spécifiée"
+
+#: python/bindings/openravepy_int.cpp:2622
+#, c-format
+msgid "num col must be 3 or 4: %d"
+msgstr "num col doit être 3 ou 4 : %d"
+
+#: python/bindings/openravepy_kinbody.cpp:3463
+msgid "number of input transforms not equal to links"
+msgstr "le nombre de transformations d'entrée n'est pas égal au nombre de corps"
+
+#: python/bindings/openravepy_int.cpp:2705
+#, c-format
+msgid "number of points (%d) need to match number of colors (%d)"
+msgstr "le nombre de points (%d) doit correspondre au nombre de couleurs (%d)"
+
+#: src/libopenrave/iksolver.cpp:379
+#, c-format
+msgid "one of the filters set on robot %s manip %s did not restore the robot configuraiton. %s"
+msgstr "l'un des filtres définis sur le robot %s manip %s n'a pas restauré la configuration du robot. %s"
+
+#: src/libopenrave/planner.cpp:157
+#, c-format
+msgid "planner status code (0x%x) is not supported by planner status default constructor"
+msgstr "le code de statut du planificateur (0x%x) n'est pas pris en charge par le constructeur par défaut du statut du planificateur"
+
+#: python/bindings/openravepy_int.cpp:2702
+msgid "points cannot be empty"
+msgstr "points ne peut pas être vide"
+
+#: python/bindings/openravepy_int.cpp:2570
+msgid "points have bad dimension"
+msgstr "les points ont une dimension invalide"
+
+#: python/bindings/openravepy_int.cpp:2557 python/bindings/openravepy_int.cpp:2576
+#, c-format
+msgid "points have bad size %d"
+msgstr "les points ont une taille invalide %d"
+
+#: python/bindings/openravepy_int.cpp:2565
+#, c-format
+msgid "points have bad size %dx%d"
+msgstr "les points ont une taille invalide %dx%d"
+
+#: src/libopenrave/robot.cpp:1320 src/libopenrave/robot.cpp:1380
+msgid "quaternions not supported"
+msgstr "quaternions non pris en charge"
+
+#: python/bindings/openravepy_collisionchecker.cpp:659 python/bindings/openravepy_int.cpp:1813
+msgid "rays has to be a float array\n"
+msgstr "rays doit être un tableau de flottants\n"
+
+#: python/bindings/openravepy_collisionchecker.cpp:648 python/bindings/openravepy_int.cpp:1804
+msgid "rays object needs to be a Nx6 vector\n"
+msgstr "l'objet rays doit être un vecteur Nx6\n"
+
+#: python/bindings/openravepy_int.cpp:2370 python/bindings/openravepy_int.cpp:2382
+msgid "registration handle is NULL"
+msgstr "le handle d'enregistrement est NULL"
+
+#: src/libopenrave/libopenrave.cpp:1877
+#, c-format
+msgid "requested index out of bounds %d (affinemask=0x%x)"
+msgstr "indice demandé hors limites %d (affinemask=0x%x)"
+
+#: src/libopenrave/robot.cpp:1942 src/libopenrave/robot.cpp:2019
+#, c-format
+msgid "robot %s quaternion not supported, affine=%d"
+msgstr "robot %s quaternion non pris en charge, affine=%d"
+
+#: src/libopenrave/robot.cpp:1938 src/libopenrave/robot.cpp:2016
+#, c-format
+msgid "robot %s rotation 3d not supported, affine=%d"
+msgstr "robot %s rotation 3d non prise en charge, affine=%d"
+
+#: src/libopenrave/robot.cpp:2470
+#, c-format
+msgid "sensor name \"%s\" is not valid"
+msgstr "le nom du capteur \"%s\" est invalide"
+
+#: src/libopenrave/planningutils.cpp:453
+#, c-format
+msgid "setstate/getstate inconsistent configuration %d dof %d: %f != %f, wrote trajectory to %s"
+msgstr "setstate/getstate configuration incohérente %d dof %d : %f != %f, trajectoire écrite dans %s"
+
+#: src/libopenrave/configurationspecification.cpp:1603
+#, c-format
+msgid "source affine information not present '%s'\n"
+msgstr "information affine source non présente '%s'\n"
+
+#: src/libopenrave/configurationspecification.cpp:1746
+#, c-format
+msgid "source tokens '%s' do not have %d dof indices, guessing...."
+msgstr "les tokens source '%s' n'ont pas %d indices de dof, supposition...."
+
+#: python/bindings/openravepy_kinbody.cpp:2843
+msgid "spheres needs to be a Nx4 vector\n"
+msgstr "spheres doit être un vecteur Nx4\n"
+
+#: python/bindings/openravepy_trajectory.cpp:471
+msgid "step cannot be 0"
+msgstr "step ne peut pas être 0"
+
+#: src/libopenrave/configurationspecification.cpp:1617
+#, c-format
+msgid "target affine information not present '%s'\n"
+msgstr "information affine cible non présente '%s'\n"
+
+#: src/libopenrave/configurationspecification.cpp:1754
+#, c-format
+msgid "target tokens '%s' do not match dof '%d', guessing...."
+msgstr "les tokens cible '%s' ne correspondent pas au dof '%d', supposition...."
+
+#: src/libopenrave/planningutils.cpp:523
+#, c-format
+msgid "time %fs-%fs, CheckPathAllConstraints failed, wrote trajectory to %s"
+msgstr "temps %fs-%fs, échec de CheckPathAllConstraints, trajectoire écrite dans %s"
+
+#: src/libopenrave/planningutils.cpp:535
+#, c-format
+msgid "time %fs-%fs, failed to set state values"
+msgstr "temps %fs-%fs, échec de la définition des valeurs d'état"
+
+#: src/libopenrave/planningutils.cpp:539
+#, c-format
+msgid "time %fs-%fs, neighstatefn is rejecting configurations from CheckPathAllConstraints, wrote trajectory to %s"
+msgstr "temps %fs-%fs, neighstatefn rejette les configurations de CheckPathAllConstraints, trajectoire écrite dans %s"
+
+#: src/libopenrave/kinbodyjoint.cpp:2418
+#, c-format
+msgid "timederiv %d not supported"
+msgstr "timederiv %d non pris en charge"
+
+#: src/libopenrave-core/environment-core.h:584 src/libopenrave-core/environment-core.h:1652 src/libopenrave-core/environment-core.h:1668 src/libopenrave-core/environment-core.h:1687 src/libopenrave-core/environment-core.h:1702 src/libopenrave-core/environment-core.h:1717 src/libopenrave-core/environment-core.h:2798 src/libopenrave-core/environment-core.h:2807 src/libopenrave-core/environment-core.h:2823 src/libopenrave-core/environment-core.h:2839 src/libopenrave-core/environment-core.h:2858
+#, c-format
+msgid "timeout of %f s failed"
+msgstr "échec du délai d'attente de %f s"
+
+#: src/libopenrave/planningutils.cpp:931 src/libopenrave/planningutils.cpp:1087
+#, c-format
+msgid "traj values (%d) do not match maxvelocity size (%d) or maxaccelerations size (%d)"
+msgstr "les valeurs de trajectoire (%d) ne correspondent pas à la taille maxvelocity (%d) ou à la taille maxaccelerations (%d)"
+
+#: src/libopenrave/planningutils.cpp:1816
+msgid "trajectory does not seem to have time stamps, so derivatives cannot be computed"
+msgstr "la trajectoire ne semble pas avoir d'horodatages, les dérivées ne peuvent donc pas être calculées"
+
+#: src/libopenrave/planningutils.cpp:1387 src/libopenrave/planningutils.cpp:1552
+msgid "trajectory is void"
+msgstr "la trajectoire est vide"
+
+#: src/libopenrave/kinbodyjoint.cpp:1415
+msgid "trajectory joint requires Joint::_trajfollow to be initialized"
+msgstr "l'articulation de trajectoire nécessite que Joint::_trajfollow soit initialisé"
+
+#: src/libopenrave/kinbodylink.cpp:861 src/libopenrave/kinbodylink.cpp:903
+#, c-format
+msgid "tried to add improper geometry to link %s"
+msgstr "tentative d'ajout d'une géométrie incorrecte au corps %s"
+
+#: python/bindings/openravepy_kinbody.cpp:878 python/bindings/openravepy_kinbody.cpp:885 python/bindings/openravepy_kinbody.cpp:892 python/bindings/openravepy_kinbody.cpp:899 python/bindings/openravepy_kinbody.cpp:906 python/bindings/openravepy_kinbody.cpp:1007 python/bindings/openravepy_kinbody.cpp:1023 python/bindings/openravepy_kinbody.cpp:1039 python/bindings/openravepy_kinbody.cpp:1055 python/bindings/openravepy_kinbody.cpp:1071 python/bindings/openravepy_kinbody.cpp:1220 python/bindings/openravepy_kinbody.cpp:1230 python/bindings/openravepy_kinbody.cpp:1236 python/bindings/openravepy_kinbody.cpp:1242 python/bindings/openravepy_kinbody.cpp:1248 python/bindings/openravepy_kinbody.cpp:1254 python/bindings/openravepy_kinbody.cpp:1260 python/bindings/openravepy_kinbody.cpp:1266 python/bindings/openravepy_kinbody.cpp:1272 python/bindings/openravepy_kinbody.cpp:1278 python/bindings/openravepy_kinbody.cpp:1284 python/bindings/openravepy_kinbody.cpp:1290 python/bindings/openravepy_kinbody.cpp:1296 python/bindings/openravepy_kinbody.cpp:1302
+msgid "unexpected size"
+msgstr "taille inattendue"
+
+#: python/bindings/include/openravepy/openravepy_int.h:292
+msgid "unexpected vector size"
+msgstr "taille de vecteur inattendue"
+
+#: python/bindings/include/openravepy/openravepy_int.h:300
+#, c-format
+msgid "unexpected vector size %d"
+msgstr "taille de vecteur inattendue %d"
+
+#: src/libopenrave/kinbodygeometry.cpp:1886
+#, c-format
+msgid "unknown geometry type %d"
+msgstr "type de géométrie inconnu %d"
+
+#: src/libopenrave/kinbodyjoint.cpp:904 src/libopenrave/kinbodyjoint.cpp:990 src/libopenrave/kinbodyjoint.cpp:1269 src/libopenrave/kinbodyjoint.cpp:1304
+#, c-format
+msgid "unknown joint type 0x%x"
+msgstr "type d'articulation inconnu 0x%x"
+
+#: src/libopenrave/kinbodyjoint.cpp:1209
+#, c-format
+msgid "unknown joint type 0x%x axis %d\n"
+msgstr "type d'articulation inconnu 0x%x axe %d\n"
+
+#: python/bindings/openravepy_sensor.cpp:560 python/bindings/openravepy_sensor.cpp:613
+#, c-format
+msgid "unknown sensor data type %d\n"
+msgstr "type de données de capteur inconnu %d\n"
+
+#: src/libopenrave/libopenrave_c.cpp:225
+msgid "unlocking with boost version < 1.35 is not supported"
+msgstr "le déverrouillage avec une version de boost < 1.35 n'est pas pris en charge"
+
+#: src/libopenrave/kinbodygeometry.cpp:745
+#, c-format
+msgid "unrecognized geom type %d!"
+msgstr "type de géométrie non reconnu %d !"
+
+#: src/libopenrave/kinbodyjoint.cpp:1420
+#, c-format
+msgid "unrecognized joint type 0x%x"
+msgstr "type d'articulation non reconnu 0x%x"
+
+#: src/libopenrave/kinbodygeometry.cpp:890
+#, c-format
+msgid "unrecognized sidewall type %d for saving to json"
+msgstr "type de sidewall non reconnu %d pour l'enregistrement en json"
+
+#: src/libopenrave/kinbodygeometry.cpp:910
+#, c-format
+msgid "unrecognized sidewall type enum range %d for loading from json"
+msgstr "plage d'énumération de type de sidewall non reconnue %d pour le chargement depuis json"
+
+#: src/libopenrave/kinbodygeometry.cpp:930
+#, c-format
+msgid "unrecognized sidewall type string %s for loading from json"
+msgstr "chaîne de type de sidewall non reconnue %s pour le chargement depuis json"
+
+#: src/libopenrave/libopenrave.cpp:1843
+#, c-format
+msgid "unspecified dof 0x%x, 0x%x"
+msgstr "dof non spécifié 0x%x, 0x%x"
+
+#: src/libopenrave/kinbodyjoint.cpp:1335
+#, c-format
+msgid "unsupported joint type 0x%x"
+msgstr "type d'articulation non pris en charge 0x%x"
+
+#: src/libopenrave/kinbodyjoint.cpp:2075
+#, c-format
+msgid "unsupported math format %s"
+msgstr "format mathématique non pris en charge %s"
+
+#: src/libopenrave/configurationspecification.cpp:1782
+#, c-format
+msgid "unsupported token conversion: %s"
+msgstr "conversion de token non prise en charge : %s"
+
+#: src/libopenrave-core/generictrajectory.cpp:676 src/libopenrave-core/generictrajectory.cpp:768
+#, c-format
+msgid "unsupported trajectory format version %d "
+msgstr "version de format de trajectoire non prise en charge %d "
+
+#: python/bindings/openravepy_kinbody.cpp:3732 python/bindings/openravepy_kinbody.cpp:3744 python/bindings/openravepy_kinbody.cpp:3757 python/bindings/openravepy_kinbody.cpp:3777 python/bindings/openravepy_kinbody.cpp:3789 python/bindings/openravepy_kinbody.cpp:3801 python/bindings/openravepy_kinbody.cpp:3813 python/bindings/openravepy_kinbody.cpp:3825 python/bindings/openravepy_kinbody.cpp:3837 python/bindings/openravepy_kinbody.cpp:3849 python/bindings/openravepy_kinbody.cpp:3865 python/bindings/openravepy_kinbody.cpp:3877
+msgid "values do not equal to body degrees of freedom"
+msgstr "les valeurs ne sont pas égales aux degrés de liberté du corps"
+
+#: src/libopenrave/planningutils.cpp:440
+#, c-format
+msgid "velocity exceeded configuration %d dof %d: %f>%f"
+msgstr "vitesse dépassée configuration %d dof %d : %f>%f"
+
+#: python/bindings/openravepy_global.cpp:423
+msgid "vertices must be a 2D array"
+msgstr "vertices doit être un tableau 2D"
+
+#: python/bindings/openravepy_global.cpp:426
+msgid "vertices must be in float"
+msgstr "vertices doit être en flottant"
