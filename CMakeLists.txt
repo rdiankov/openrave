@@ -765,13 +765,13 @@ if (OPT_PYTHON)
   find_package(pybind11 2.9.2) # 2.9.2 is the last version of pybind11 to support Python 2.
 
   if (pybind11_FOUND)
-    target_link_libraries(openravepy2_meta INTERFACE rt Python2::Module Python2::NumPy pybind11::module libopenrave libopenrave-core)
+    target_link_libraries(openravepy2_meta INTERFACE rt Python2::Python Python2::NumPy pybind11::module libopenrave libopenrave-core)
     target_compile_options(openravepy2_meta INTERFACE "-fvisibility=hidden") # pybind11 requires less visibility
     target_compile_definitions(openravepy2_meta INTERFACE "OPENRAVE_CORE_DLL=1" "USE_PYBIND11_PYTHON_BINDINGS=1")
     set(USE_PYBIND11_PYTHON_BINDINGS ON)
   else()
     find_package(Boost REQUIRED COMPONENTS python thread)
-    target_link_libraries(openravepy2_meta INTERFACE rt Python2::Module Python2::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
+    target_link_libraries(openravepy2_meta INTERFACE rt Python2::Python Python2::NumPy Boost::python Boost::thread libopenrave libopenrave-core)
     target_compile_definitions(openravepy2_meta INTERFACE "OPENRAVE_CORE_DLL=1")
     set(USE_PYBIND11_PYTHON_BINDINGS OFF)
   endif()
