@@ -61,6 +61,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <condition_variable>
 
 #include <boost/bind.hpp>
 #include <boost/assert.hpp>
