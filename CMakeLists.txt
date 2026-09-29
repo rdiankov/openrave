@@ -426,7 +426,7 @@ else()
   message(FATAL_ERROR "rapidjson library not found")
 endif()
 
-add_library(openrave-msgpack INTERFACE IMPORTED)
+add_library(openrave-msgpack INTERFACE)
 find_package(msgpack-cxx 6.0.0)
 if (NOT msgpack-cxx_FOUND)
   pkg_check_modules(msgpack msgpack)
