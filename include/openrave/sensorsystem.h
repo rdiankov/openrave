@@ -23,6 +23,7 @@
 #define OPENRAVE_SENSORSYSTEM_H
 
 #include <thread>
+#include <mutex>
 
 namespace OpenRAVE {
 
