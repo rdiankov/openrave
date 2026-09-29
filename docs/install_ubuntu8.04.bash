@@ -1,5 +1,5 @@
 #!/bin/bash
-sudo apt-get install g++ libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-dev liblame-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew-dev  libboost-graph-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libpcre3-dev libboost-thread-dev libmpfr-dev libboost-date-time-dev libqhull-dev libswscale-dev lapack3-dev
+sudo apt-get install g++ libqt4-dev qt4-dev-tools ffmpeg libavcodec-dev libavformat-dev libxvidcore-dev libx264-dev libfaac-dev libogg-dev libvorbis-dev libdc1394-dev liblame-dev libgsm1-dev libboost-dev libboost-regex-dev libxml2-dev libglew-dev  libboost-graph-dev libboost-wave-dev libboost-serialization-dev libboost-filesystem-dev libboost-thread-dev libmpfr-dev libboost-date-time-dev libqhull-dev libswscale-dev lapack3-dev
 sudo apt-get remove cmake qt3-dev-tools libqt3-headers libode0debian1 python-sympy
 
 # cmake - need to use version >=2.6.0, default cmake in ubuntu 8.04 is 2.47, which will not work.

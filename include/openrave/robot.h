@@ -493,8 +493,8 @@ public:
         /// Note that the return type is by-value, so should not be used in iteration
         ConfigurationSpecification GetIkConfigurationSpecification(IkParameterizationType iktype, const std::string& interpolation="") const;
 
-        /// \brief returns the serialization of the manipulator. If options & SO_InverseKinematics, then use iktype
-        void serialize(std::ostream& o, int options, IkParameterizationType iktype=IKP_None) const;
+        /// \brief hashes the state of the manipulator. If options & SO_InverseKinematics, then use iktype
+        void DigestHash(HashContext& hash, int options, IkParameterizationType iktype = IKP_None) const;
 
         /// \brief Return hash of just the manipulator definition.
         const std::string& GetStructureHash() const;
@@ -660,7 +660,8 @@ public:
 
         void SetRelativeTransform(const Transform& t);
 
-        void serialize(std::ostream& o, int options) const;
+        /// \brief Generate a hash of this structure into the provided hash context
+        void DigestHash(HashContext& hash, int options) const;
 
         /// \brief return hash of the sensor definition
         const std::string& GetStructureHash() const;
@@ -842,8 +843,6 @@ public:
             return _info._name;
         }
 
-        // void serialize(std::ostream& o, int options) const;
-
         /// \brief return hash of the connected body info
         const std::string& GetInfoHash() const;
 
@@ -862,7 +861,11 @@ public:
         bool CanProvideManipulator(const std::string& resolvedManipulatorName) const;
 
 private:
+        /// \brief A callback function to update _info when the robot's properties change.
+        void _UpdateConnectedBodyInfo();
+
         ConnectedBodyInfo _info; ///< user specified data (to be serialized and saved), should not contain dynamically generated parameters.
+        UserDataPtr _updateInfoCallback; ///< callback registered to the robot to update _info whenever the robot properties (such as joint velocity/acceleration limits) change.
 
         std::string _nameprefix; ///< the name prefix to use for all the resolved link names. Initialized regardless of the active state of the connected body.
         std::string _dummyPassiveJointName; ///< the joint that is used to attach the connected body to the robot link
@@ -927,7 +930,7 @@ public:
         /// \brief release the body state. _pbody will not get restored on destruction
         ///
         /// After this call, it will still be possible to use \ref Restore.
-        virtual void Release();
+        virtual void Release() override;
 
 protected:
         RobotBasePtr _probot;
@@ -1268,9 +1271,10 @@ private:
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
         \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData) override;
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string()) override;
 
     /** \brief Grab the body with the specified link.
 
@@ -1279,18 +1283,20 @@ private:
         \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed.
      */
-    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData) override;
+    bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string()) override;
 
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
         \param[in] pRobotLinkToGrabWith the link of this robot that will perform the grab
         \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed/
      */
-    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData) override;
+    bool Grab(KinBodyPtr body, LinkPtr pRobotLinkToGrabWith, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string()) override;
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
@@ -1298,9 +1304,10 @@ private:
         \param[in] setRobotLinksToIgnore Additional robot link indices that collision checker ignore
         when checking collisions between the grabbed body and the robot.
         \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(KinBodyPtr body, const std::set<int>& setRobotLinksToIgnore, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string());
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
@@ -1308,17 +1315,19 @@ private:
         \param[in] setIgnoreBodyLinkNames Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(KinBodyPtr body, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string());
 
     /** \brief Grabs the body with the active manipulator's end effector.
 
         \param[in] body the body to be grabbed
         \param[in] rGrabbedUserData custom data to keep in Grabbed
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed
      */
-    virtual bool Grab(KinBodyPtr body, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(KinBodyPtr body, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string());
 
     //@}
 
@@ -1336,7 +1345,8 @@ private:
         return true;
     }
 
-    virtual void serialize(std::ostream& o, int options) const override;
+    /// \brief Generate a hash of this structure into the provided hash context
+    void DigestHash(HashContext& hash, int options) const override;
 
     /// A md5 hash unique to the particular robot structure that involves manipulation and sensing components
     /// The serialization for the attached sensors will not involve any sensor specific properties (since they can change through calibration)
@@ -1384,6 +1394,16 @@ protected:
     virtual void _PostprocessChangedParameters(uint32_t parameters) override;
 
     virtual void _UpdateAttachedSensors();
+
+    /// \brief preprocess for restore for Save_GrabbedBodies.
+    /// \param[out] grabbedDataByEnvironmentIndex : original data for grabbedDataByEnvironmentIndex. if connected body change is observed, invalidate the collision related cache in it.
+    /// \param[in] vConnectedBodyActiveStates : connected bodies states, which is compared with this robot's connected bodies states.
+    virtual void _PreprocessRestoreGrabbedBodies(std::unordered_map<int, KinBody::SavedGrabbedData>& grabbedDataByEnvironmentIndex,
+                                                 const std::vector<int8_t>& vConnectedBodyActiveStates) const;
+
+    /// \brief Restore states from other robot. Please also see KinBody::_RestoreStateForClone as well.
+    /// \param[in] bRestoreGrabbedBodiesOnly : true if only restore grabbed bodies. otherwise, restore other states.
+    virtual void _RestoreStateForClone(const RobotBasePtr& pOriginalRobot, const bool bRestoreGrabbedBodiesOnly);
 
     std::vector<ManipulatorPtr> _vecManipulators; ///< \see GetManipulators
     ManipulatorPtr _pManipActive;

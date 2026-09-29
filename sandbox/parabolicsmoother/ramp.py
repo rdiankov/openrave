@@ -395,7 +395,7 @@ class ParabolicCurve(object):
                 
             aCur = self.ramps[0].a
             nmerged = 0 # the number of merged ramps
-            for i in xrange(1, len(self.ramps)):
+            for i in range(1, len(self.ramps)):
                 j = i - nmerged
                 if (Abs(self.ramps[j].a) > 1):
                     if Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.floor(mp.log10(Abs(self.ramps[j].a))))))) < Abs((Abs(mp.log10(Abs(self.ramps[j].a))) - (Abs(mp.ceil(mp.log10(Abs(self.ramps[j].a))))))):
@@ -826,7 +826,7 @@ class ParabolicCurvesND(object):
     def _GetPeaks(self, ta, tb):
         xmin = np.zeros(self.ndof)
         xmax = np.zeros(self.ndof)
-        for i in xrange(self.ndof):
+        for i in range(self.ndof):
             xmin[i], xmax[i] = self.curves[i]._GetPeaks(ta, tb)
         return [xmin, xmax]
 
@@ -838,7 +838,7 @@ class ParabolicCurvesND(object):
         
         ndof = len(x0Vect)
         curves = []
-        for i in xrange(ndof):
+        for i in range(ndof):
             curve = ParabolicCurve()
             curve.SetConstant(x0Vect[i], t)
             curves.append(curve)
@@ -858,7 +858,7 @@ class ParabolicCurvesND(object):
 
         ndof = len(x0Vect)
         curves = []
-        for i in xrange(ndof):
+        for i in range(ndof):
             curve = ParabolicCurve()
             curve.SetSegment(x0Vect[i], x1Vect[i], v0Vect[i], v1Vect[i], t)
             curves.append(curve)
@@ -872,7 +872,7 @@ class ParabolicCurvesND(object):
         v0Vect = ConvertFloatArrayToMPF(v0Vect_)
         ndof = len(x0Vect)
         curves = []
-        for i in xrange(ndof):
+        for i in range(ndof):
             curve = ParabolicCurve()
             curve.SetZeroDuration(x0Vect[i], v0Vect[i])
             curves.append(curve)
@@ -897,7 +897,7 @@ class ParabolicCurvesND(object):
 
         leftHalf = self.curves
         rightHalf = []
-        for i in xrange(self.ndof):
+        for i in range(self.ndof):
             rightHalf.append(leftHalf[i].Cut(t))
 
         self.Initialize(leftHalf)
@@ -917,7 +917,7 @@ class ParabolicCurvesND(object):
             return
 
         newCurves = self.curves
-        for i in xrange(self.ndof):
+        for i in range(self.ndof):
             newCurves[i].TrimFront(t)
         self.Initialize(newCurves)
         return
@@ -935,7 +935,7 @@ class ParabolicCurvesND(object):
             return
 
         newCurves = self.curves
-        for i in xrange(self.ndof):
+        for i in range(self.ndof):
             newCurves[i].TrimBack(t)
         self.Initialize(newCurves)
         return
@@ -951,7 +951,7 @@ class ParabolicCurvesND(object):
 
         xVect = [self.EvalPos(t) for t in tVect]
         plt.plot(tVect, xVect, linewidth=2, **kwargs)
-        handle = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
+        handle = ['joint {0}'.format(i + 1) for i in range(self.ndof)]
         plt.legend(handle)
 
         if includingSW:
@@ -970,7 +970,7 @@ class ParabolicCurvesND(object):
         for curve in self.curves:
             lines.append(curve.PlotVel(fignum=fignum, **kwargs))
 
-        handles = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
+        handles = ['joint {0}'.format(i + 1) for i in range(self.ndof)]
         plt.legend(lines, handles)
 
         if includingSW:
@@ -989,7 +989,7 @@ class ParabolicCurvesND(object):
         for curve in self.curves:
             lines.append(curve.PlotAcc(fignum=fignum, **kwargs))
 
-        handles = ['joint {0}'.format(i + 1) for i in xrange(self.ndof)]
+        handles = ['joint {0}'.format(i + 1) for i in range(self.ndof)]
         plt.legend(lines, handles)
         plt.show(False)
         return fig
@@ -1056,7 +1056,7 @@ def CheckRamps(rampsVect, xmin, xmax, vm, am):
     if not (ret == ParabolicCheckReturn.Normal):
         return ret
     
-    for i in xrange(1, len(rampsVect)):
+    for i in range(1, len(rampsVect)):
         if not FuzzyEquals(rampsVect[i - 1].v1, rampsVect[i].v0, epsilon):
             return ParabolicCheckReturn.VDiscrepancy
         ret = CheckRamp(rampsVect[i], xmin, xmax, vm, am)
@@ -1106,7 +1106,7 @@ def CheckParabolicCurvesND(curvesnd, xminVect, xmaxVect, vmVect, amVect, x0Vect,
     v1Vect_ = ConvertFloatArrayToMPF(v1Vect)
     x0Vect_ = ConvertFloatArrayToMPF(x0Vect)
     x1Vect_ = ConvertFloatArrayToMPF(x1Vect)
-    for i in xrange(curvesnd.ndof):
+    for i in range(curvesnd.ndof):
         ret = CheckParabolicCurve(curvesnd.curves[i], xminVect_[i], xmaxVect_[i], vmVect_[i], amVect_[i], x0Vect_[i], x1Vect_[i], v0Vect_[i], v1Vect_[i])
         if not (ret == ParabolicCheckReturn.Normal):
             return ret
@@ -1121,12 +1121,12 @@ def DynamicPathStringToParabolicCurvesND(dynamicpathstring):
     ndof = int(data[0])
     nlines = ndof + 2 # the number of lines containing the data for 1 ParabolicRampND
 
-    curves = [ParabolicCurve() for _ in xrange(ndof)]
+    curves = [ParabolicCurve() for _ in range(ndof)]
     nParabolicRampND = len(data)/(nlines)
 
-    for iramp in xrange(nParabolicRampND):
+    for iramp in range(nParabolicRampND):
         curoffset = iramp*nlines
-        for idof in xrange(ndof):
+        for idof in range(ndof):
             ramp1ddata = data[curoffset + 2 + idof]
             x0, v0, x1, v1, a1, v, a2, tswitch1, tswitch2, ttotal = [mp.mpf(x) for x in ramp1ddata.split(" ")]
             ramps = []
@@ -1185,14 +1185,14 @@ def ParabolicPathStringToParabolicCurvesND(parabolicpathstring):
     nchunks = len(rawdata)/nlines_chunk
 
     curvesnd = ParabolicCurvesND()
-    for ichunk in xrange(nchunks):
+    for ichunk in range(nchunks):
         curves = []
-        for idof in xrange(ndof):
+        for idof in range(ndof):
             curvedata = rawdata[(ichunk*nlines_chunk) + 2 + idof]
             curvedata = curvedata.strip().split(" ")
             curve = ParabolicCurve()
             nramps = len(curvedata)/4
-            for iramp in xrange(nramps):
+            for iramp in range(nramps):
                 v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
                 ramp = Ramp(v, a, t, x0)
                 nextCurve = ParabolicCurve([ramp])
@@ -1242,12 +1242,12 @@ def GetSpecificChunkFromParabolicPathString(parabolicpathstring, chunkindex):
     nchunks = len(rawdata)/nlines_chunk
 
     curves = []
-    for idof in xrange(ndof):
+    for idof in range(ndof):
         curvedata = rawdata[(chunkindex*nlines_chunk) + 2 + idof]
         curvedata = curvedata.strip().split(" ")
         curve = ParabolicCurve()
         nramps = len(curvedata)/4
-        for iramp in xrange(nramps):
+        for iramp in range(nramps):
             v, a, t, x0 = [float(dummy) for dummy in curvedata[(iramp*4):((iramp + 1)*4)]]
             ramp = Ramp(v, a, t, x0)
             nextCurve = ParabolicCurve([ramp])
@@ -1278,10 +1278,10 @@ def ConvertNewParabolicPathStringToParabolicCurvesND(parabolicpathstring):
 
     # check soundness
     ndof = int(rawdata[0].strip().split(" ")[0])
-    for i in xrange(nrampnds):
+    for i in range(nrampnds):
         assert( ndof == int((len(rawdata[i].strip().split(" ")) - 2)/5) )
 
-    for i in xrange(nrampnds):
+    for i in range(nrampnds):
         data = rawdata[i].strip().split(" ")
         data = [float(x) for x in data[1:]]
         offset = 0
@@ -1321,7 +1321,7 @@ def ConvertOpenRAVETrajectoryToParabolicCurvesND(traj):
     deltatimegroup = spec.GetGroupFromName('deltatime')
     toffset = deltatimegroup.offset
 
-    for iwaypoint in xrange(nwaypoints - 1):
+    for iwaypoint in range(nwaypoints - 1):
         x0 = traj.GetWaypoint(iwaypoint)[iwaypoint*xoffset: iwaypoint*xoffset + xdof]
         x1 = traj.GetWaypoint(iwaypoint + 1)[xoffset: xoffset + xdof]
         v0 = traj.GetWaypoint(iwaypoint)[voffset: voffset + vdof]
@@ -1343,7 +1343,7 @@ def ConvertNewParabolicPathStringToOpenRAVETrajectory(env, robot, parabolicpaths
 
     # check soundness
     ndof = int(rawdata[0].strip().split(" ")[0])
-    for i in xrange(nrampnds):
+    for i in range(nrampnds):
         assert( ndof == int((len(rawdata[i].strip().split(" ")) - 2)/5) )
     assert( robot.GetActiveDOF() == ndof )
     
@@ -1371,7 +1371,7 @@ def ConvertNewParabolicPathStringToOpenRAVETrajectory(env, robot, parabolicpaths
     waypoint = np.hstack([x0, v0, 0])
     traj.Insert(0, waypoint)
     
-    for i in xrange(nrampnds):
+    for i in range(nrampnds):
         data = rawdata[i].strip().split(" ")
         data = [float(x) for x in data[1:]]
         offset = 0
@@ -1414,7 +1414,7 @@ def ConvertParabolicCurvesNDToOpenRAVETrajectory(env, robot, curvesnd):
     traj.Insert(traj.GetNumWaypoints(), vtrajpoint)
     tprev = 0
 
-    for iswitchpoint in xrange(1, len(curvesnd.switchpointsList)):
+    for iswitchpoint in range(1, len(curvesnd.switchpointsList)):
         t = curvesnd.switchpointsList[iswitchpoint]
         deltatime = t - tprev
         q = curvesnd.EvalPos(t)

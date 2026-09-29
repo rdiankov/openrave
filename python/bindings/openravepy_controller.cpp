@@ -204,10 +204,16 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(Reset_overloads, Reset, 0, 1)
 #endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_controller(py::module& m)
+ControllerBaseInitializer::ControllerBaseInitializer(py::module& m_): m(m_),
+    controller(m, "Controller", DOXY_CLASS(ControllerBase))
 #else
-void init_openravepy_controller()
+ControllerBaseInitializer::ControllerBaseInitializer():
+    controller("Controller", DOXY_CLASS(ControllerBase), no_init)
 #endif
+{
+}
+
+void ControllerBaseInitializer::init_openravepy_controller()
 {
     {
         bool (PyControllerBase::*init1)(PyRobotBasePtr,const string &) = &PyControllerBase::Init;
@@ -216,10 +222,8 @@ void init_openravepy_controller()
         bool (PyControllerBase::*setdesired2)(object,object) = &PyControllerBase::SetDesired;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         using namespace py::literals;  // "..."_a
-        class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, PyInterfaceBase>(m, "Controller", DOXY_CLASS(ControllerBase))
-#else
-        class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, bases<PyInterfaceBase> >("Controller", DOXY_CLASS(ControllerBase), no_init)
 #endif
+        controller
         .def("Init",init1, DOXY_FN(ControllerBase,Init))
         .def("Init",init2, PY_ARGS("robot","dofindices","controltransform") DOXY_FN(ControllerBase,Init))
         .def("GetControlDOFIndices",&PyControllerBase::GetControlDOFIndices,DOXY_FN(ControllerBase,GetControlDOFIndices))

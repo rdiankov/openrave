@@ -210,10 +210,14 @@ PyPhysicsEngineBasePtr RaveCreatePhysicsEngine(PyEnvironmentBasePtr pyenv, const
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_physicsengine(py::module& m)
+PhysicsEngineBaseInitializer::PhysicsEngineBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_physicsengine()
+PhysicsEngineBaseInitializer::PhysicsEngineBaseInitializer()
 #endif
+{
+}
+
+void PhysicsEngineBaseInitializer::init_openravepy_physicsengine()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a

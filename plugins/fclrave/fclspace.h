@@ -13,7 +13,6 @@ typedef std::pair<LinkConstPtr, LinkConstPtr> LinkPair;
 typedef boost::weak_ptr<const KinBody> KinBodyConstWeakPtr;
 typedef KinBody::GeometryConstPtr GeometryConstPtr;
 typedef std::pair<GeometryConstPtr, GeometryConstPtr> GeomPair;
-typedef boost::weak_ptr<KinBody::Geometry> GeometryWeakPtr;
 typedef std::pair<LinkPair, GeomPair> LinkGeomPairs;
 using OpenRAVE::ORE_Assert;
 
@@ -79,18 +78,11 @@ public:
         {
 public:
             FCLGeometryInfo();
-            FCLGeometryInfo(KinBody::GeometryPtr pgeom);
 
             virtual ~FCLGeometryInfo() {
             }
 
-            inline KinBody::GeometryPtr GetGeometry() {
-                return _pgeom.lock();
-            }
-
-            GeometryWeakPtr _pgeom;
-            std::string bodylinkgeomname; // for debugging purposes
-            bool bFromKinBodyGeometry; ///< if true, then from kinbodygeometry. Otherwise from standalone object that does not have any KinBody associations
+            std::string geomname; // for debugging purposes
         };
 
         class LinkInfo
@@ -132,11 +124,12 @@ public:
             KinBody::LinkWeakPtr _plink;
             vector< boost::shared_ptr<FCLGeometryInfo> > vgeominfos; ///< info for every geometry of the link
 
-            //int nLastStamp; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision
+            int nLastStamp = 0; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision. This should be the same as FCLKinBodyInfo.nLastStamp or newer
             TranslationCollisionPair linkBV; ///< pair of the translation and collision object corresponding to a bounding OBB for the link
             std::vector<TransformCollisionPair> vgeoms; ///< vector of transformations and collision object; one per geometries
             std::string bodylinkname; // for debugging purposes
             bool bFromKinBodyLink; ///< if true, then from kinbodylink. Otherwise from standalone object that does not have any KinBody associations
+            bool bFromExtraGeometries = false; ///< if true, geometries come from extraGeometries. otherwise, KinBody::Link::GetGeometries.
         };
 
         FCLKinBodyInfo() {}
@@ -213,6 +206,15 @@ public:
 
     void SynchronizeWithAttached(const KinBody &body);
 
+    /// \brief Synchronize all bodies except the specified body.
+    ///
+    /// Useful to avoid redundant synchronization
+    /// while ensuring the rest of the bodies is up to date.
+    void SynchronizeExcluded(const KinBodyConstPtr& pbodyexcluded);
+
+    /// \brief Synchronize only the specified link's collision geometry.
+    void SynchronizeLink(const KinBody::Link &link);
+
     FCLKinBodyInfoPtr& GetInfo(const KinBody &body);
 
     const FCLKinBodyInfoPtr& GetInfo(const KinBody &body) const;
@@ -268,6 +270,16 @@ private:
 
     // what about the tests on non-zero size (eg. box extents) ?
     CollisionGeometryPtr _CreateFCLGeomFromGeometryInfo(const KinBody::GeometryInfo &info);
+
+    /// \brief Synchronize one link.
+    ///
+    /// If the link’s lastStamp differs from the body’s updateStamp,
+    /// its collision geometry is synchronized
+    ///
+    /// \param info The FCLKinBodyInfo for the parent body.
+    /// \param body The KinBody of the parent body.
+    /// \param linkIndex The integer index of the link within `body`.
+    void _SynchronizeLink(FCLKinBodyInfo& info, const KinBody& body, int linkIndex);
 
     /// \brief pass in info.GetBody() as a reference to avoid dereferencing the weak pointer in FCLKinBodyInfo
     void _Synchronize(FCLKinBodyInfo& info, const KinBody& body);

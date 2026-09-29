@@ -24,10 +24,9 @@ Some packages (like pkg-config) are required just in case your using Ubuntu Mate
 5.	sudo apt-get install build-essential -y
 6.	sudo apt-get install libboost-python-dev python python-dev python-numpy ipython python-sympy python-scipy
 7.	sudo apt-get install liblinearmath2.81
-8.	sudo apt-get install libpcre++-dev
-9.	sudo apt-get install libboost-all-dev
-10.	sudo apt-get install libassimp-dev
-11.	sudo apt-get install pkg-config
+8.	sudo apt-get install libboost-all-dev
+9.	sudo apt-get install libassimp-dev
+10.	sudo apt-get install pkg-config
 
 Install Bullet (optional, needs version 2.80, ubuntu official repo has ver. 2.81)
 ---------------------------------------------------------------------------------
@@ -40,7 +39,7 @@ Install Ode(optional, manually installed)
 -----------------------------------------
 1.	sudo apt-get install libode1 (then remove, just needed .so files)
 2.	wget https://bitbucket.org/odedevs/ode/downloads/ode-0.13.tar.gz
-3.	tar -zxvf ode-0.13.tar.gz 
+3.	tar -zxvf ode-0.13.tar.gz
 4.	cd ode-0.13/
 5.	./configure --enable-double-precision --enable-shared
 6.	make

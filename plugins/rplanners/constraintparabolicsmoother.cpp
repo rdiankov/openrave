@@ -43,6 +43,14 @@ class ConstraintParabolicSmoother : public PlannerBase, public ParabolicRamp::Fe
         bool binitialized=false;
         AABB ab;
         FOREACHC(itlink,linklist) {
+            if( !(*itlink)->IsEnabled() ) {
+                // Links being disabled mean they are intentionally ignored. These links should not affect tool speed/accel computation.
+                continue;
+            }
+            if( (*itlink)->GetGeometries().empty() ) {
+                // Virtual links should also not be considered.
+                continue;
+            }
             ab = (*itlink)->ComputeAABB(); // AABB of the link in the global coordinates
             if((ab.extents.x == 0)&&(ab.extents.y == 0)&&(ab.extents.z == 0)) {
                 continue;

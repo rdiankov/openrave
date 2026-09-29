@@ -72,15 +72,13 @@ __license__ = 'Apache License, Version 2.0'
 import time
 import os.path
 
-if not __openravepy_build_doc__:
-    from ..openravepy_int import *
-    from ..openravepy_ext import *
-    from numpy import *
-else:
-    from numpy import array
+from numpy import array, e, r_, zeros, linalg, dot, argsort, eye, random, flatnonzero, loadtxt, sum
 
+from .. import planning_error
 from ..openravepy_int import RaveGetDefaultViewerType
 from ..openravepy_int import IkParameterization
+from ..openravepy_int import RaveFindDatabaseFile, RobotStateSaver, RaveGetHomeDirectory, InvertPose, poseMult, matrixFromPose, poseFromMatrix, RaveDestroy, Environment, Sensor, invertPoses, InvertPoses
+from ..openravepy_ext import poseMultArrayT
 from . import DatabaseGenerator
 from . import inversekinematics
 from . import kinematicreachability
@@ -286,12 +284,12 @@ class VisibilityModel(DatabaseGenerator):
                             self.env.UpdatePublishedBodies()
                         msg='%d/%d visibility=%d, press any key to continue: '%(i,len(self.visibilitytransforms),visibility)
                         if options is not None and options.showimage:
-                            pilutil=__import__('scipy.misc',fromlist=['pilutil'])
+                            from matplotlib.pyplot import imshow
                             I=self.getCameraImage()
                             print(msg)
-                            pilutil.imshow(I)
+                            imshow(I)
                         else:
-                            raw_input(msg)
+                            input(msg)
         finally:
             # have to destroy the plot handle
             h = None
@@ -331,12 +329,12 @@ class VisibilityModel(DatabaseGenerator):
                         self.env.UpdatePublishedBodies()
                     msg='visibility=%d, press any key to continue: '%(visibility)
                     if options is not None and options.showimage:
-                        pilutil=__import__('scipy.misc',fromlist=['pilutil'])
+                        from matplotib.pyplot import imshow
                         I=self.getCameraImage()
                         print(msg)
-                        pilutil.imshow(I)
+                        imshow(I)
                     else:
-                        raw_input(msg)
+                        input(msg)
         finally:
             # have to destroy the plot handle
             h = None
@@ -371,7 +369,7 @@ class VisibilityModel(DatabaseGenerator):
             if randomize:
                 order = random.permutation(len(self.visibilitytransforms))
             else:
-                order = xrange(len(self.visibilitytransforms))
+                order = range(len(self.visibilitytransforms))
             for i in order:
                 pose = self.visibilitytransforms[i]
                 Trelative = dot(linalg.inv(self.attachedsensor.GetTransform()),self.manip.GetTransform())
@@ -411,7 +409,8 @@ class VisibilityModel(DatabaseGenerator):
 #         numpy.savetxt(options.savefile,Imask,'%d')
 #         print 'mask saved to ' + options.savefile
 #         try:
-#             scipy.misc.pilutil.imshow(array(Imask*255,'uint8'))
+#             from matplotlib.pyplot import imshow
+#             imshow(array(Imask*255,'uint8'))
 #         except:
 #             pass
 

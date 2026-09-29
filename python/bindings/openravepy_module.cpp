@@ -75,10 +75,14 @@ PyModuleBasePtr RaveCreateModule(PyEnvironmentBasePtr pyenv, const std::string& 
 }
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_module(py::module& m)
+ModuleBaseInitializer::ModuleBaseInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_module()
+ModuleBaseInitializer::ModuleBaseInitializer()
 #endif
+{
+}
+
+void ModuleBaseInitializer::init_openravepy_module()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals; // "..."_a

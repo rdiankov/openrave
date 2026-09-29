@@ -180,12 +180,12 @@ void ANNkd_split::ann_pri_search(ANNdist box_dist)
 
 void ANNkd_leaf::ann_pri_search(ANNdist box_dist)
 {
-	register ANNdist dist;				// distance to data point
-	register ANNcoord* pp;				// data coordinate pointer
-	register ANNcoord* qq;				// query coordinate pointer
-	register ANNdist min_dist;			// distance to k-th closest point
-	register ANNcoord t;
-	register int d;
+	ANNdist dist;				// distance to data point
+	ANNcoord* pp;				// data coordinate pointer
+	ANNcoord* qq;				// query coordinate pointer
+	ANNdist min_dist;			// distance to k-th closest point
+	ANNcoord t;
+	int d;
 
 	min_dist = ANNprPointMK->max_key(); // k-th smallest distance so far
 

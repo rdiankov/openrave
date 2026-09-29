@@ -123,7 +123,7 @@ bool PPRamp::SolveMinTime2(Real amax,Real timeLowerBound)
     }
     _a2 = -_a1;
     PARABOLIC_RAMP_ASSERT(ttotal >= timeLowerBound);
-    Real ts1,ts2;
+    Real ts1 = -1.0, ts2 = -1.0;
     int res = CalcSwitchTimes(_a1,ts1,ts2);
     PARABOLIC_RAMP_ASSERT(res > 0);
     if(res == 1) {
@@ -195,7 +195,7 @@ bool PPRamp::SolveFixedTime(Real amax,Real endTime)
     Real c2 = 0.25 * endTime * endTime;
     Real c1 = x0 - x1 + 0.5*endTime*(dx0+dx1);
     Real c0 = -0.25*(dx0-dx1)*(dx0-dx1);
-    Real aroots[2];
+    Real aroots[2] = { 0.0, 0.0 };
     int numroots = SolveQuadratic(c2, c1, c0, aroots[0], aroots[1]);
     if( numroots ==2 && Abs(aroots[0]) > Abs(aroots[1]) ) {
         swap(aroots[0],aroots[1]);
@@ -254,7 +254,7 @@ bool PPRamp::SolveFixedTime(Real amax,Real endTime)
 
 bool PPRamp::SolveMinAccel(Real endTime)
 {
-    Real switch1,switch2;
+    Real switch1 = 0.0,switch2 = 0.0;
     Real apn = CalcMinAccel(endTime,1.0,switch1);
     Real anp = CalcMinAccel(endTime,-1.0,switch2);
     //cout<<"Accel for parabola +-: "<<apn<<", parabola -+: "<<anp<<endl;
@@ -352,7 +352,7 @@ Real PPRamp::CalcTotalTime(Real a) const
 
 int PPRamp::CalcTotalTimes(Real a,Real& t1,Real& t2) const
 {
-    Real ts1,ts2;
+    Real ts1 = -1.0, ts2 = -1.0;
     int res=CalcSwitchTimes(a,ts1,ts2);
     if(res == 0) return res;
     else if(res == 1) {
@@ -429,7 +429,7 @@ int PPRamp::CalcSwitchTimes(Real a,Real& t1,Real& t2) const
 
 Real PPRamp::CalcSwitchTime(Real a) const
 {
-    Real t1 = 0.0, t2 = 0.0;
+    Real t1 = -1.0, t2 = -1.0;
     int res = CalcSwitchTimes(a,t1,t2);
     if(res == 0) {
         return -1;
@@ -478,8 +478,11 @@ Real PPRamp::CalcMinAccel(Real endTime,Real sign,Real& switchTime) const
     Real a = -(dx1 - dx0)/endTime;
     Real b = (2.0*(dx0+dx1)+4.0*(x0-x1)/endTime);
     Real c = (dx1 - dx0)*endTime;
-    Real rat1,rat2;
+    Real rat1 = 0.0, rat2 = 0.0;
     int res=SolveQuadratic(a,b,c,rat1,rat2);
+    if (res == 0) {
+        return -1.0;
+    }
     Real accel1 = (dx1-dx0)/rat1;
     Real accel2 = (dx1-dx0)/rat2;
     Real switchTime1 = endTime*0.5+0.5*rat1;
@@ -607,7 +610,7 @@ Real PPRamp::CalcMinAccel(Real endTime,Real sign,Real& switchTime) const
        b = b/Abs(dx1-dx0);
        c = -Abs(dx1-dx0)/endTime;
        }
-       Real accel1,accel2;
+       Real accel1 = 0.0, accel2 = 0.0;
        int res=SolveQuadratic(a,b,c,accel1,accel2);
        //remove negative accelerations
        if(res >= 1 && accel1 < 0) {

@@ -5,7 +5,7 @@ set(logging_SOURCES logging.cpp plugindefs.h)
 set(ENABLE_VIDEORECORDING)
 
 if( OPT_VIDEORECORDING )
-  pkg_check_modules(FFMPEG libavformat libavcodec)
+  pkg_check_modules(FFMPEG libavformat libavcodec libavutil)
   if (NOT MSVC AND FFMPEG_FOUND)
     message(STATUS "enabling FFMPEG support")
     pkg_check_modules(FFMPEG_SWSCALE libswscale)

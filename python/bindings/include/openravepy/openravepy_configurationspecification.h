@@ -34,7 +34,7 @@ public:
     virtual ~PyConfigurationSpecification();
 
     void DeserializeJSON(py::object obj);
-    py::object SerializeJSON();
+    py::dict SerializeJSON();
 
     int GetDOF() const;
 
@@ -105,7 +105,7 @@ public:
 
     std::string __repr__();
     std::string __str__();
-    object __unicode__();
+    py::str __unicode__();
 
     // members
     ConfigurationSpecification _spec;

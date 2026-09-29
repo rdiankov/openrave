@@ -11,7 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, ComputePoseDistance, transdist, g_epsilon, expected_failure, g_robotfiles, g_jacobianstep, g_envfiles, randlimits, randtrans, axisangledist, izip, pickle
+from openravepy import planningutils, databases, misc
+from openravepy import GeometryType, KinBody, RaveCreateKinBody, poseFromMatrix, SerializationOptions, axisAngleFromRotationMatrix, rotationMatrixFromAxisAngle, TriMesh, quatFromRotationMatrix, transformPoints, raveLogDebug, poseFromMatrices
+from numpy import array, ones, pi, eye, dot, zeros, linalg, random, arange, cross, cos, arccos, polyfit, transpose, diag, abs, sum, any, all
+import numpy
+
+from itertools import combinations
 
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
@@ -707,7 +713,7 @@ class TestKinematics(EnvironmentSetup):
 
     def test_hashes(self):
         robot = self.LoadRobot(g_robotfiles[0])
-        s = robot.serialize(SerializationOptions.Kinematics)
+        s = robot.DigestHash(SerializationOptions.Kinematics)
         hash0 = robot.GetKinematicsGeometryHash()
         robot.SetLinkTransformations([randtrans() for link in robot.GetLinks()],zeros(robot.GetDOF()))
         hash1 = robot.GetKinematicsGeometryHash()
@@ -1078,14 +1084,15 @@ class TestKinematics(EnvironmentSetup):
             link0._vgeometryinfos = [infobox0, infobox1]
             link0._name = 'link0'
             link0._mapFloatParameters = {'param0':[1,2.3]}
-            link0._mapIntParameters = {'param0':[4,5.6]}
+            link0._mapIntParameters = {'param0':[4,5,6]}
             link0._mapStringParameters = {'jp':u'日本語', 'test':'has spaces'}
             link1 = KinBody.LinkInfo()
             link1._vgeometryinfos = [infobox2]
             link1._name = 'link1'
             link1._mapFloatParameters = {'param0':[1,2.3]}
-            link1._mapIntParameters = {'param0':[4,5.6]}
+            link1._mapIntParameters = {'param0':[4,5,6]}
             link1._t[0,3] = 0.5
+            link1.DeserializeJSON({'stringParameters': [{'id': 'jp3', 'value': u'日本語'}]})
 
             joint0 = KinBody.JointInfo()
             joint0._name = 'j0'
@@ -1107,6 +1114,7 @@ class TestKinematics(EnvironmentSetup):
             assert(transdist(body.GetLinks()[1].GetTransform(), array([[ 0.69670671, -0.71735609,  0.        ,  0.34835335], [ 0.71735609,  0.69670671,  0.        ,  0.35867805], [ 0.        ,  0.        ,  1.        ,  0.        ], [ 0.        ,  0.        ,  0.        ,  1.        ]])) <= 1e-7)
             assert(body.GetLinks()[0].GetStringParameters('jp') == u'\u65e5\u672c\u8a9e')
             assert(body.GetJoints()[0].GetStringParameters('test2') == 'has spaces')
+            assert(body.GetLinks()[1].GetStringParameters('jp3') == u'\u65e5\u672c\u8a9e')  # https://github.com/rdiankov/openrave/pull/1491
 
     def test_paddinggeometry(self):
         env=self.env

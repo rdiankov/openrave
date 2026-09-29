@@ -2,12 +2,12 @@
     \brief Generates a md5 hash from the lexical tokens of a C++ ignoring directives and whitespace.
     \author Rosen Diankov
     \anchor cpp-gen-md5
-    
+
     Usage:
     \verbatim
     cpp-gen-md5 [filename1 define1] [filename2 define2] ...
     \endverbatim
-    
+
     If only a filename is given, will output a 16 byte string. If both filename and define are given
     will output a file consisting of the hashes:
     \verbatim
@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
              << "If only a filename is given, will output a 16 byte string" << endl
              << "If both filename and define are given will output #define @define2@ \"@md5hash@\"" << endl;
         return 2;
-    }    
-    
+    }
+
     vector<char> vbasedata;
     vbasedata.resize(strlen(argv[1]));
     if( vbasedata.size() > 0 ) {
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
             cout << md5hash << endl;
         }
     }
-    
+
     return 0;
 }
 
@@ -73,7 +73,7 @@ void getTokenData(const char* fname,vector<char>& vdata)
         cerr << "Cannot open input file: " << fname << endl;
         return;
     }
-    
+
     fseek(f, 0, SEEK_END);
     int const size = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -117,7 +117,7 @@ void getTokenData(const char* fname,vector<char>& vdata)
                 vdata.push_back(token.text[i]);
             }
         }
-               
+
         ++first;
     }
 }
@@ -134,7 +134,7 @@ string getmd5hash(const char* fname, const vector<char>& vbasedata)
 	md5_init(&state);
 	md5_append(&state, (const md5_byte_t *)&vdata[0], vdata.size());
 	md5_finish(&state, digest);
-    char hex_output[16*2+1]; 
+    char hex_output[16*2+1];
     for (int di = 0; di < 16; ++di) {
 	    sprintf(hex_output + di * 2, "%02x", digest[di]);
     }

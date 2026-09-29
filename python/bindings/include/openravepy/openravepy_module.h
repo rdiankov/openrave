@@ -35,5 +35,17 @@ public:
     bool SimulationStep(dReal fElapsedTime);
 };
 
+struct ModuleBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    ModuleBaseInitializer(py::module& m_);
+    void init_openravepy_module();
+    py::module& m;
+#else
+    ModuleBaseInitializer();
+    void init_openravepy_module();
+#endif
+};
+
 } // namespace openravepy
 #endif // OPENRAVEPY_INTERNAL_MODULE_H

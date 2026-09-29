@@ -493,8 +493,11 @@ public:
 
     /// \brief return true if any element of transform is different by mor ethan epsilon, otherwise false.
     inline bool CompareTransform(const RaveTransform<T>& rhs, T epsilon) const {
-        return RaveFabs(trans.x - rhs.trans.x) > epsilon || RaveFabs(trans.y - rhs.trans.y) > epsilon || RaveFabs(trans.z - rhs.trans.z) > epsilon ||
-               RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon;
+        return (RaveFabs(trans.x - rhs.trans.x) > epsilon
+		|| RaveFabs(trans.y - rhs.trans.y) > epsilon
+		|| RaveFabs(trans.z - rhs.trans.z) > epsilon
+		|| ((RaveFabs(rot.x - rhs.rot.x) > epsilon || RaveFabs(rot.y - rhs.rot.y) > epsilon || RaveFabs(rot.z - rhs.rot.z) > epsilon || RaveFabs(rot.w - rhs.rot.w) > epsilon)
+		    && ((RaveFabs(rot.x + rhs.rot.x) > epsilon || RaveFabs(rot.y + rhs.rot.y) > epsilon || RaveFabs(rot.z + rhs.rot.z) > epsilon || RaveFabs(rot.w + rhs.rot.w) > epsilon))));
     }
 
     inline RaveTransform<T> inverse() const {

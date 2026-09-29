@@ -297,16 +297,22 @@ def DrawAxes(env,target,dist=1.0,linewidth=1,colormode='rgb',coloradd=None):
     """
     if isinstance(target,six.string_types):
         T = env.GetKinBody(target).GetTransform()
+    elif isinstance(target,dict) and 'type' in target:
+        ikparam = openravepy_int.IkParameterization()
+        ikparam.DeserializeJSON(target)
+        return DrawAxes(env,ikparam,dist,linewidth,colormode,coloradd)
+    
     elif hasattr(target,'GetTransform'):
         T = target.GetTransform()
     elif hasattr(target,'GetTransform6D'):
         T = target.GetTransform6D()
     elif hasattr(target,'GetTransformPose'):
         T = openravepy_int.matrixFromPose(target.GetTransformPose())
+    elif isinstance(target,list) and len(target) > 0 and not isinstance(target[0], (int, float)):
+        return [DrawAxes(env,subtarget,dist,linewidth,colormode,coloradd) for subtarget in target]
+    
     elif len(target) == 7:
         T = openravepy_int.matrixFromPose(target)
-    elif isinstance(target,list):
-        return [DrawAxes(env,subtarget,dist,linewidth,colormode,coloradd) for subtarget in target]
     
     else:
         T = numpy.array(target)

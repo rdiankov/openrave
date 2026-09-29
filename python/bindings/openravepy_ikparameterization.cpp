@@ -93,7 +93,7 @@ std::string PyIkParameterization::GetId() const {
     return _param.GetId();
 }
 
-object PyIkParameterization::GetName() const {
+py::str PyIkParameterization::GetName() const {
     return ConvertStringToUnicode(_param.GetName());
 }
 
@@ -129,29 +129,29 @@ int PyIkParameterization::GetNumberOfValues(object o) {
     return IkParameterization::GetNumberOfValues((IkParameterizationType)extract<IkParameterizationType>(o));
 }
 
-object PyIkParameterization::GetConfigurationSpecification() {
-    return py::to_object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification()));
+PyConfigurationSpecificationPtr PyIkParameterization::GetConfigurationSpecification() {
+    return openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification());
 }
 
-object PyIkParameterization::GetConfigurationSpecification(object ointerpolation, const std::string& robotname, const std::string& manipname) {
+PyConfigurationSpecificationPtr PyIkParameterization::GetConfigurationSpecification(object ointerpolation, const std::string& robotname, const std::string& manipname) {
     extract_<PyIkParameterization*> pyik(ointerpolation);
     if( pyik.check() ) {
-        return py::to_object(openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
+        return openravepy::toPyConfigurationSpecification(((PyIkParameterization*)pyik)->_param.GetConfigurationSpecification(std::string(), robotname, manipname));
     }
     extract_<OPENRAVE_SHARED_PTR<PyIkParameterization> > pyikptr(ointerpolation);
     if( pyikptr.check() ) {
-        return py::to_object(openravepy::toPyConfigurationSpecification(((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname)));
+        return openravepy::toPyConfigurationSpecification(((OPENRAVE_SHARED_PTR<PyIkParameterization>)pyikptr)->_param.GetConfigurationSpecification(std::string(), robotname, manipname));
     }
     extract_<IkParameterizationType> pyiktype(ointerpolation);
     if( pyiktype.check() ) {
-        return py::to_object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype, std::string(), robotname, manipname)));
+        return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification((IkParameterizationType)pyiktype, std::string(), robotname, manipname));
     }
-    return py::to_object(openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification((std::string)extract<std::string>(ointerpolation), robotname, manipname)));
+    return openravepy::toPyConfigurationSpecification(_param.GetConfigurationSpecification((std::string)extract<std::string>(ointerpolation), robotname, manipname));
 }
 
-object PyIkParameterization::GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation, const std::string& robotname, const std::string& manipname)
+PyConfigurationSpecificationPtr PyIkParameterization::GetConfigurationSpecificationFromType(IkParameterizationType iktype, const std::string& interpolation, const std::string& robotname, const std::string& manipname)
 {
-    return py::to_object(openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype,interpolation, robotname, manipname)));
+    return openravepy::toPyConfigurationSpecification(IkParameterization::GetConfigurationSpecification(iktype,interpolation, robotname, manipname));
 }
 
 void PyIkParameterization::SetTransform6D(object o) {
@@ -203,69 +203,69 @@ void PyIkParameterization::SetTranslationZAxisAngleYNorm4D(object otrans, dReal 
     _param.SetTranslationZAxisAngleYNorm4D(ExtractVector3(otrans),angle);
 }
 
-object PyIkParameterization::GetTransform6D() {
+py::array_t<dReal> PyIkParameterization::GetTransform6D() {
     return ReturnTransform(_param.GetTransform6D());
 }
-object PyIkParameterization::GetTransform6DPose() {
+py::array_t<dReal> PyIkParameterization::GetTransform6DPose() {
     return toPyArray(_param.GetTransform6D());
 }
-object PyIkParameterization::GetRotation3D() {
+py::array_t<dReal> PyIkParameterization::GetRotation3D() {
     return toPyVector4(_param.GetRotation3D());
 }
-object PyIkParameterization::GetTranslation3D() {
+py::array_t<dReal> PyIkParameterization::GetTranslation3D() {
     return toPyVector3(_param.GetTranslation3D());
 }
-object PyIkParameterization::GetDirection3D() {
+py::array_t<dReal> PyIkParameterization::GetDirection3D() {
     return toPyVector3(_param.GetDirection3D());
 }
 PyRay PyIkParameterization::GetRay4D() {
     return PyRay(_param.GetRay4D());
 }
-object PyIkParameterization::GetLookat3D() {
+py::array_t<dReal> PyIkParameterization::GetLookat3D() {
     return toPyVector3(_param.GetLookat3D());
 }
 PyRay PyIkParameterization::GetTranslationDirection5D() {
     return PyRay(_param.GetTranslationDirection5D());
 }
-object PyIkParameterization::GetTranslationXY2D() {
+py::array_t<dReal> PyIkParameterization::GetTranslationXY2D() {
     return toPyVector2(_param.GetTranslationXY2D());
 }
-object PyIkParameterization::GetTranslationXYOrientation3D() {
+py::array_t<dReal> PyIkParameterization::GetTranslationXYOrientation3D() {
     return toPyVector3(_param.GetTranslationXYOrientation3D());
 }
-object PyIkParameterization::GetTranslationLocalGlobal6D() {
+py::tuple PyIkParameterization::GetTranslationLocalGlobal6D() {
     return py::make_tuple(toPyVector3(_param.GetTranslationLocalGlobal6D().first),toPyVector3(_param.GetTranslationLocalGlobal6D().second));
 }
-object PyIkParameterization::GetTranslationXAxisAngle4D() {
+py::tuple PyIkParameterization::GetTranslationXAxisAngle4D() {
     std::pair<Vector,dReal> p = _param.GetTranslationXAxisAngle4D();
     return py::make_tuple(toPyVector3(p.first), py::to_object(p.second));
 }
-object PyIkParameterization::GetTranslationYAxisAngle4D() {
+py::tuple PyIkParameterization::GetTranslationYAxisAngle4D() {
     std::pair<Vector,dReal> p = _param.GetTranslationYAxisAngle4D();
     return py::make_tuple(toPyVector3(p.first), py::to_object(p.second));
 }
-object PyIkParameterization::GetTranslationZAxisAngle4D() {
+py::tuple PyIkParameterization::GetTranslationZAxisAngle4D() {
     std::pair<Vector,dReal> p = _param.GetTranslationZAxisAngle4D();
     return py::make_tuple(toPyVector3(p.first), py::to_object(p.second));
 }
-object PyIkParameterization::GetTranslationXAxisAngleZNorm4D() {
+py::tuple PyIkParameterization::GetTranslationXAxisAngleZNorm4D() {
     std::pair<Vector,dReal> p = _param.GetTranslationXAxisAngleZNorm4D();
     return py::make_tuple(toPyVector3(p.first), py::to_object(p.second));
 }
-object PyIkParameterization::GetTranslationYAxisAngleXNorm4D() {
+py::tuple PyIkParameterization::GetTranslationYAxisAngleXNorm4D() {
     std::pair<Vector,dReal> p = _param.GetTranslationYAxisAngleXNorm4D();
     return py::make_tuple(toPyVector3(p.first), py::to_object(p.second));
 }
-object PyIkParameterization::GetTranslationZAxisAngleYNorm4D() {
+py::tuple PyIkParameterization::GetTranslationZAxisAngleYNorm4D() {
     std::pair<Vector,dReal> p = _param.GetTranslationZAxisAngleYNorm4D();
     return py::make_tuple(toPyVector3(p.first), py::to_object(p.second));
 }
-dReal PyIkParameterization::ComputeDistanceSqr(OPENRAVE_SHARED_PTR<PyIkParameterization> pyikparam)
+dReal PyIkParameterization::ComputeDistanceSqr(PyIkParameterizationPtr pyikparam)
 {
     return _param.ComputeDistanceSqr(pyikparam->_param);
 }
 
-object PyIkParameterization::Transform(object otrans) const
+PyIkParameterizationPtr PyIkParameterization::Transform(object otrans) const
 {
     return toPyIkParameterization(ExtractTransform(otrans) * _param);
 }
@@ -326,11 +326,11 @@ void PyIkParameterization::MultiplyTransformRight(object otrans)
     _param.MultiplyTransformRight(ExtractTransform(otrans));
 }
 
-py::object PyIkParameterization::SerializeJSON(dReal fUnitScale)
+py::dict PyIkParameterization::SerializeJSON(dReal fUnitScale)
 {
     rapidjson::Document doc;
     _param.SerializeJSON(doc, doc.GetAllocator(), fUnitScale);
-    return toPyObject(doc);
+    return py::dict(toPyObject(doc));
 }
 void PyIkParameterization::DeserializeJSON(py::object obj, dReal fUnitScale)
 {
@@ -358,7 +358,7 @@ std::string PyIkParameterization::__str__() {
     ss << _param;
     return ss.str();
 }
-object PyIkParameterization::__unicode__() {
+py::str PyIkParameterization::__unicode__() {
     return ConvertStringToUnicode(__str__());
 }
 PyIkParameterizationPtr PyIkParameterization::__mul__(object otrans)
@@ -380,14 +380,14 @@ bool ExtractIkParameterization(object o, IkParameterization& ikparam) {
     return false;
 }
 
-object toPyIkParameterization(const IkParameterization &ikparam)
+PyIkParameterizationPtr toPyIkParameterization(const IkParameterization &ikparam)
 {
-    return py::to_object(PyIkParameterizationPtr(new PyIkParameterization(ikparam)));
+    return PyIkParameterizationPtr(new PyIkParameterization(ikparam));
 }
 
-object toPyIkParameterization(const std::string& serializeddata)
+PyIkParameterizationPtr toPyIkParameterization(const std::string& serializeddata)
 {
-    return py::to_object(PyIkParameterizationPtr(new PyIkParameterization(serializeddata)));
+    return PyIkParameterizationPtr(new PyIkParameterization(serializeddata));
 }
 
 class IkParameterization_pickle_suite
@@ -414,10 +414,14 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(PyIkParameterization_DeserializeJSON_over
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_ikparameterization(py::module& m)
+IkParameterizationInitializer::IkParameterizationInitializer(py::module& m_): m(m_)
 #else
-void init_openravepy_ikparameterization()
+IkParameterizationInitializer::IkParameterizationInitializer()
 #endif
+{
+}
+
+void IkParameterizationInitializer::init_openravepy_ikparameterization()
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     using namespace py::literals;  // "..."_a
@@ -474,8 +478,8 @@ void init_openravepy_ikparameterization()
         int (PyIkParameterization::*getnumberofvalues1)() = &PyIkParameterization::GetNumberOfValues;
         int (PyIkParameterization::*getnumberofvalues2)(object) = &PyIkParameterization::GetNumberOfValues;
         int (*getnumberofvaluesstatic)(IkParameterizationType) = IkParameterization::GetNumberOfValues;
-        object (PyIkParameterization::*GetConfigurationSpecification1)() = &PyIkParameterization::GetConfigurationSpecification;
-        object (PyIkParameterization::*GetConfigurationSpecification2)(object, const std::string&, const std::string&) = &PyIkParameterization::GetConfigurationSpecification;
+        PyConfigurationSpecificationPtr (PyIkParameterization::*GetConfigurationSpecification1)() = &PyIkParameterization::GetConfigurationSpecification;
+        PyConfigurationSpecificationPtr (PyIkParameterization::*GetConfigurationSpecification2)(object, const std::string&, const std::string&) = &PyIkParameterization::GetConfigurationSpecification;
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         scope_ ikparameterization = class_<PyIkParameterization, PyIkParameterizationPtr >(m, "IkParameterization", DOXY_CLASS(IkParameterization))
                                     .def(init<>())

@@ -195,7 +195,6 @@ public:
             _logginguniformsampler->SetSeed(utils::GetMicroTime());
         }
         _usingNewHeuristics = 1;
-        _vVisitedDiscretizationCache.resize(0x1000*0x1000,0); // pre-allocate in order to keep memory growth predictable
         _feasibilitychecker.SetEnvID(GetEnv()->GetId()); // set envid for logging purpose
     }
 
@@ -2003,6 +2002,7 @@ protected:
 
         dReal fiMinDiscretization = 4.0/(mintimestep);
         std::vector<bool>& vVisitedDiscretization = _vVisitedDiscretizationCache;
+        vVisitedDiscretization.reserve(0x100000); // pre-allocate 1 MB in order to keep memory growth predictable
         vVisitedDiscretization.clear();
 
         std::vector<ParabolicRamp::ParabolicRampND>& ramps = dynamicpath.ramps;

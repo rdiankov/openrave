@@ -828,6 +828,9 @@ int CacheTree::SaveCache(std::string filename)
 
     FILE* pfile;
     pfile = fopen(_fulldirname.c_str(),"wb");
+    if( pfile == NULL) {
+        return 0;
+    }
 
     fwrite(&_statedof, sizeof(_statedof), 1, pfile);
     fwrite(&_weights[0], sizeof(_weights[0])*_weights.size(), 1, pfile);

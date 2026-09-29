@@ -22,6 +22,11 @@
 #ifndef OPENRAVE_KINBODY_H
 #define OPENRAVE_KINBODY_H
 
+#include <unordered_map>
+#include <unordered_set>
+
+#include <openrave/hashcontext.h>
+
 namespace OpenRAVE {
 
 class OpenRAVEFunctionParserReal;
@@ -297,7 +302,8 @@ class OPENRAVE_API KinBody : public InterfaceBase
 {
 public:
     /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
-    enum KinBodyProperty {
+    enum KinBodyProperty
+    {
         Prop_JointMimic=0x1,     ///< joint mimic equations
         Prop_JointLimits=0x2,     ///< regular limits
         Prop_JointOffset=0x4,
@@ -380,7 +386,8 @@ public:
                    && _vNegativeCropContainerMargins == other._vNegativeCropContainerMargins
                    && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins
                    && _vNegativeCropContainerEmptyMargins == other._vNegativeCropContainerEmptyMargins
-                   && _vPositiveCropContainerEmptyMargins == other._vPositiveCropContainerEmptyMargins;
+                   && _vPositiveCropContainerEmptyMargins == other._vPositiveCropContainerEmptyMargins
+                   && _friction == other._friction;
         }
         bool operator!=(const GeometryInfo& other) const {
             return !operator==(other);
@@ -483,6 +490,14 @@ public:
             _vGeomData2 = innerExtents;
         }
 
+        inline float GetFriction() const {
+            return _friction;
+        }
+
+        inline void SetFriction(const float& friction) {
+            _friction = friction;
+        }
+
         ///< for sphere it is radius
         ///< for cylinder, first 2 values are radius and height
         ///< for trimesh, none
@@ -544,6 +559,8 @@ public:
         std::string _id;   ///< unique id of the geometry
         std::string _name; ///< the name of the geometry
 
+        float _friction = -1.0; ///< friction of the geometry (used for simulations to set per-surface friction)
+
         /// \brief filename for render model (optional)
         ///
         /// Should be transformed by _t before rendering.
@@ -566,7 +583,8 @@ public:
         Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
         Vector _vPositiveCropContainerEmptyMargins = Vector(0,0,0); ///< The positive crop empty margins component
 
-        struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
+        struct CalibrationBoardParameters///< used by GT_CalibrationBoard
+        {
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
             } ///< constructor
             int numDotsX; ///< number of dots in x direction, minimum 3
@@ -811,6 +829,10 @@ public:
             return _info._meshcollision;
         }
 
+        inline float GetFriction() const {
+            return _info._friction;
+        }
+
         inline const KinBody::GeometryInfo& GetInfo() const {
             return _info;
         }
@@ -849,7 +871,8 @@ public:
             return _info.GetSideWallExists();
         }
 
-        void serialize(std::ostream& o, int options) const;
+        /// \brief Generate a hash of this structure into the provided hash context
+        void DigestHash(HashContext& hash, int options) const;
 
         /// \brief sets a new collision mesh and notifies every registered callback about it
         void SetCollisionMesh(const TriMesh& mesh);
@@ -893,6 +916,9 @@ public:
 
         /// \brief set the positive crop empty margin of the geometry
         void SetPositiveCropContainerEmptyMargins(const Vector& positiveCropContainerEmptyMargins);
+
+        /// \brief sets the friction of the geometry
+        void SetFriction(const float& friction);
 
         /// \brief generates the dot mesh of a calibration board
         inline void GetCalibrationBoardDotMesh(TriMesh& tri) {
@@ -1297,8 +1323,8 @@ public:
         /// This gives a user control for dynamically changing the object geometry. Note that the kinbody/robot hash could change.
         /// \param geometries a list of geometry infos to be initialized into new geometry objects, note that the geometry info data is copied
         /// \param bForceRecomputeMeshCollision if true, then recompute mesh collision for all non-tri meshes
-        void InitGeometries(std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
-        void InitGeometries(std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
+        void InitGeometries(const std::vector<KinBody::GeometryInfoConstPtr>& geometries, bool bForceRecomputeMeshCollision=true);
+        void InitGeometries(const std::list<KinBody::GeometryInfo>& geometries, bool bForceRecomputeMeshCollision=true);
 
 private:
         /// \brief _vGeometries is expected to be filled with the new Geometries already. This will initialize them.
@@ -1380,7 +1406,8 @@ public:
         /// \param vattachedlinks the array to insert all links attached to linkindex with the link itself.
         void GetRigidlyAttachedLinks(std::vector<boost::shared_ptr<Link> >& vattachedlinks) const;
 
-        void serialize(std::ostream& o, int options) const;
+        /// \brief Generate a hash of this structure into the provided hash context
+        void DigestHash(HashContext& hash, int options) const;
 
         /// \brief return a map of custom float parameters
         inline const std::map<std::string, std::vector<dReal> >& GetFloatParameters() const {
@@ -1489,7 +1516,8 @@ private:
 
         For multi-dof joints, the order is transform(parentlink) * transform(axis0) * transform(axis1) ...
      */
-    enum JointType {
+    enum JointType
+    {
         JointNone = 0,
         JointHinge = 0x01,
         JointRevolute = 0x01,
@@ -2017,7 +2045,8 @@ public:
         /// \brief \see GetWrapOffset
         void SetWrapOffset(dReal offset, int iaxis=0);
 
-        void serialize(std::ostream& o, int options) const;
+        /// \brief Generate a hash of this structure into the provided hash context
+        void DigestHash(HashContext& hash, int options) const;
 
         /// @name Internal Hierarchy Methods
         //@{
@@ -2197,6 +2226,16 @@ protected:
         /// \brief Return the velocity of the specified joint axis only.
         dReal _GetVelocity(int axis, const std::pair<Vector,Vector>&linkparentvelocity, const std::pair<Vector,Vector>&linkchildvelocity) const;
 
+        /// \brief compute torque limit from speed torque points.
+        /// \param[in] iaxis : index of axis.
+        /// \param[in] electricMotorActuatorInfo : electrical motor actuator info.
+        /// \param[in] vSpeedTorquePoints : vector of pairs of speed and torque, which is coming from electrical motor actuator info.
+        /// \param[in] fDefaultTorqueLimit : if vSpeedTorquePoints is empty, this value is used.
+        dReal _GetTorqueLimitFromSpeedTorquePoints(const int iaxis,
+                                                   const ElectricMotorActuatorInfo& electricMotorActuatorInfo,
+                                                   const std::vector<std::pair<dReal, dReal> >& vSpeedTorquePoints,
+                                                   const dReal fDefaultTorqueLimit) const;
+
         boost::array<dReal,3> _doflastsetvalues; ///< the last set value by the kinbody (_voffsets not applied). For revolute joints that have a range greater than 2*pi, it is only possible to recover the joint value from the link positions mod 2*pi. In order to recover the branch, multiplies of 2*pi are added/subtracted to this value that is closest to _doflastsetvalues. For circular joints, the last set value can be ignored since they always return a value from [-pi,pi)
 
 private:
@@ -2258,12 +2297,13 @@ public:
         void SerializeJSON(rapidjson::Value& value, rapidjson::Document::AllocatorType& allocator, dReal fUnitScale, int options=0) const override;
         void DeserializeJSON(const rapidjson::Value& value, dReal fUnitScale, int options) override;
 
-        void serialize(std::ostream& o) const; ///< used only for hash computation
+        void DigestHash(HashContext& hash) const;
         std::string GetGrabbedInfoHash() const;
 
         std::string _id; ///< unique id of the grabbed info
         std::string _grabbedname; ///< the name of the body to grab
         std::string _robotlinkname;  ///< the name of the body link that is grabbing the body
+        std::string _grippername;  ///< the name of the gripper that is grabbing the body
         Transform _trelative; ///< transform of first link of body relative to _robotlinkname's transform. In other words, grabbed->GetTransform() == bodylink->GetTransform()*trelative
         std::set<std::string> _setIgnoreRobotLinkNames; ///< names of links of the body to force ignoring because of pre-existing collions at the time of grabbing. Note that this changes depending on the configuration of the body and the relative position of the grabbed body.
         rapidjson::Document _rGrabbedUserData; ///< user-defined data to be updated when kinbody grabs and releases objects
@@ -2276,8 +2316,6 @@ public:
     {
 public:
         BodyState() : updatestamp(0), environmentid(0) {
-        }
-        ~BodyState() {
         }
 
         /// \brief clears any previous set state
@@ -2294,6 +2332,16 @@ public:
             activeManipulatorName.clear();
             activeManipulatorTransform = Transform();
             vGrabbedInfos.clear();
+        }
+
+        /// \brief clears any previous set state and releases any held memory
+        ///
+        /// Reset keeps any allocated buffer capacity so that the next body written into this state can reuse it.
+        /// However, if the state starts describing a _different_ body, this risks growing capacity that is never re-used.
+        /// If large bodies transiently appear and disappear across many states, more and more memory is tied up in unused buffer capacity.
+        /// When a body leaves a slot, the grown buffers should be reclaimed so they can be resized more appropriately.
+        inline void ResetAndReleaseMemory() {
+            *this = BodyState();
         }
 
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
@@ -2367,7 +2415,7 @@ private:
         Save_JointResolutions                = 0x00000040, ///< saves the dof resolutions
         Save_ActiveDOF                       = 0x00010000, ///< [robot only], saves and restores the current active degrees of freedom
         Save_ActiveManipulator               = 0x00020000, ///< [robot only], saves the active manipulator
-        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies.
+        Save_GrabbedBodies                   = 0x00040000, ///< saves the grabbed state of the bodies. This does not affect the configuraiton of those bodies. Although saver support restoring to the kinbody in other env in general, this Save_GrabbedBodies option does not support for restoring to the kinbody in other env. This is because it cannot successfuly identify the grabbed bodies in other env based on environment body index.
         Save_ActiveManipulatorToolTransform  = 0x00080000, ///< [robot only], saves the active manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ManipulatorsToolTransform       = 0x00100000, ///< [robot only], saves every manipulator's LocalToolTransform, LocalToolDirection, and IkSolver
         Save_ConnectedBodies                 = 0x00200000, ///< [robot only], saves the connected body states
@@ -2408,7 +2456,8 @@ public:
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
-        enum KinBodyInfoField {
+        enum KinBodyInfoField
+        {
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
             KBIF_URI = (1 << 2), // _uri field
@@ -2434,6 +2483,22 @@ protected:
     };
     typedef boost::shared_ptr<KinBodyInfo> KinBodyInfoPtr;
     typedef boost::shared_ptr<KinBodyInfo const> KinBodyInfoConstPtr;
+
+    /// \brief Alias for list of non-colliding link pairs, mainly used for collision checking for Grabbed.
+    using ListNonCollidingLinkPairs = std::list<std::pair<KinBody::LinkConstPtr, KinBody::LinkConstPtr> >;
+
+    /// \brief Saved data for Grabbed used in KinBodyStateSaver and KinBodyStateSaverRef
+    ///        When KinBody::Grab, KinBody::Release, ...etc are called, new Grabbed instance is created in KinBody and the original ptr for the original Grabbed instance is swapped.
+    ///        Thus, the original information of Grabbed instance is unchanged and holding the ptr of it as pGrabbed is enough for the saver.
+    ///        However, some of the grab-related API mutates the internal states of Grabbed instance.
+    ///        To restore the original information even such case, each saver should have copied values of such internal states.
+    struct SavedGrabbedData
+    {
+        GrabbedPtr pGrabbed; ///< pointer of original Grabbed instance, which originally in KinBody's _grabbedBodiesByEnvironmentIndex.
+        ListNonCollidingLinkPairs listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed; ///< copied values of Grabbed's _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed. See also the documentation of Grabbed class.
+        std::set<int> setGrabberLinkIndicesToIgnore; ///< copied values of Grabbed's _setGrabberLinkIndicesToIgnore. See also the documentation of Grabbed class.
+        bool listNonCollidingIsValid = false; ///< copied values of Grabbed's _listNonCollidingIsValid. See also the documentation of Grabbed class.
+    };
 
     /// \brief Helper class to save and restore the entire kinbody state.
     ///
@@ -2468,7 +2533,8 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
+        std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
         bool _bRestoreOnDestructor;
 private:
         virtual void _RestoreKinBody(boost::shared_ptr<KinBody> body);
@@ -2514,7 +2580,8 @@ protected:
         std::vector<std::pair<Vector,Vector> > _vLinkVelocities;
         std::vector<dReal> _vdoflastsetvalues;
         std::vector<dReal> _vMaxVelocities, _vMaxAccelerations, _vMaxJerks, _vDOFWeights, _vDOFLimits[2], _vDOFResolutions;
-        std::vector<GrabbedPtr> _vGrabbedBodies;
+        std::unordered_map<int, SavedGrabbedData> _grabbedDataByEnvironmentIndex;
+        std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
         bool _bRestoreOnDestructor;
         bool _bReleased; ///< if true, then body should not be restored
 private:
@@ -2935,6 +3002,20 @@ private:
      */
     virtual void SetTransform(const Transform& transform);
 
+    /// \brief Set both the transform and velocity of the body in one update
+    //
+    /// This call is more efficient than separately calling SetTransform/SetVelocity, especially if the body is grabbing other bodies
+    /// See SetTransform, SetVelocity
+    void SetTransformAndVelocity(const Transform& bodyTransform, const Vector& linearvel, const Vector& angularvel);
+
+private:
+    /// Set the transform of the body without invoking any post-processing. Internal use only.
+    void _SetTransformNoPostProcess(const Transform& transform);
+
+    /// Set the velocity of the body without invoking any post-processing. Internal use only.
+    bool _SetVelocityNoPostProcess(const Vector& linearvel, const Vector& angularvel);
+
+public:
     /// \brief Return an axis-aligned bounding box of the entire object in the world coordinate system.
     ///
     /// \brief bEnabledOnlyLinks if true, will only count links that are enabled. By default this is false
@@ -3160,7 +3241,7 @@ private:
     virtual void SetSelfCollisionChecker(CollisionCheckerBasePtr collisionchecker);
 
     /// \brief Returns the self-collision checker set specifically for this robot. If none has been set, return empty.
-    virtual CollisionCheckerBasePtr GetSelfCollisionChecker() const;
+    virtual const CollisionCheckerBasePtr& GetSelfCollisionChecker() const;
 
     /// Collision checking utilities that use internal structures of the kinbody like grabbed info or the self-collision checker.
     /// @name Collision Checking Utilities
@@ -3246,6 +3327,12 @@ private:
     ///
     /// \param[out] vAttached fills with the environment body index of attached bodies sorted in ascending order.
     void GetAttachedEnvironmentBodyIndices(std::vector<int>& vAttached) const;
+
+    /// \brief Non-recursively get all bodies that are directly attached to this body.
+    /// No guarantees are made about the ordering of the returned bodies.
+    ///
+    /// \param[out] vBodies filled with all bodies that are directly attached to this body
+    void GetDirectlyAttachedBodies(std::vector<KinBodyPtr>& vBodies) const;
 
     /// \brief return true if there are attached bodies. Used in place of GetAttached for quicker computation.
     inline bool HasAttached() const {
@@ -3337,7 +3424,7 @@ private:
         _nUpdateStampId += inc;
     }
 
-    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions);
+    virtual void Clone(InterfaceBaseConstPtr preference, int cloningoptions) override;
 
     /// \brief Register a callback with the interface.
     ///
@@ -3348,7 +3435,7 @@ private:
     /// \param properties a mask of the \ref KinBodyProperty values that the callback should be called for when they change
     virtual UserDataPtr RegisterChangeCallback(uint32_t properties, const boost::function<void()>& callback) const;
 
-    void Serialize(BaseXMLWriterPtr writer, int options=0) const;
+    void Serialize(BaseXMLWriterPtr writer, int options=0) const override;
 
     /// \brief A md5 hash unique to the particular kinematic and geometric structure of a KinBody.
     ///
@@ -3409,9 +3496,10 @@ private:
         \param[in] setBodyLinksToIgnore Additional body link indices that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \param[in] rGrabbedUserData custom data to keep in the body
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string());
 
     /** \brief Grab the body with the specified link.
 
@@ -3420,18 +3508,20 @@ private:
         \param[in] setBodyLinksToIgnore Additional body link names that collision checker ignore
         when checking collisions between the grabbed body and the body.
         \param[in] rGrabbedUserData custom data to keep in the body
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed.
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const std::set<std::string>& setIgnoreBodyLinkNames, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string());
 
     /** \brief Grab a body with the specified link.
 
         \param[in] body the body to be grabbed
         \param[in] pBodyLinkToGrabWith the link of this body that will perform the grab
         \param[in] rGrabbedUserData custom data to keep in the body
+        \param[in] grippername the name of the gripper that is grabbing the body
         \return true if successful and body is grabbed/
      */
-    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const rapidjson::Value& rGrabbedUserData);
+    virtual bool Grab(KinBodyPtr body, LinkPtr pBodyLinkToGrabWith, const rapidjson::Value& rGrabbedUserData, const std::string& grippername=std::string());
 
     /** \brief Release the body if grabbed.
 
@@ -3475,16 +3565,6 @@ private:
         GICR_UserDataNotMatch = 4, ///< Specified body is grabbed, grabbing link matches, and ignored links match, but user data do not match
     };
 
-    /** \brief Checks whether a body is grabbed with the given robot link.
-     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
-     */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith) const;
-
-    /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
-     *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
-     */
-    int CheckGrabbedInfo(const KinBody& body, const KinBody::Link& bodyLinkToGrabWith, const std::set<int>& setBodyLinksToIgnore, const rapidjson::Value& rGrabbedUserData) const;
-
     /** \brief Checks whether a body is grabbed with the given robot link and the ignored robot links match.
      *  \return One of GrabbedInfoComparisonResult codes. 0 (=GICR_Identical) if all given information match.
      */
@@ -3496,15 +3576,16 @@ private:
      */
     void GetGrabbed(std::vector<KinBodyPtr>& vbodies) const;
 
-    /// \brief returns number of grabbed targets
-    inline int GetNumGrabbed() const {
-        return (int)_vGrabbedBodies.size();
-    }
+    /** \brief get the set of body names that are grabbed by this body
 
-    /// \brief return the valid grabbed body. If the grabbed body is not in the environment, will just return empty
-    ///
-    /// \param[in] iGrabbed index into the grabbed bodies. Max is GetNumGrabbed()-1
-    KinBodyPtr GetGrabbedBody(int iGrabbed) const;
+        \param[out] set to fill with the grabbed body names
+     */
+    void GetGrabbedBodyNames(std::unordered_set<std::string>& bodyNames) const;
+
+    /// \brief returns number of grabbed targets
+    int GetNumGrabbed() const {
+        return _grabbedBodiesByEnvironmentIndex.size();
+    }
 
     /** \brief gets info of all grabbed bodies
 
@@ -3558,8 +3639,8 @@ private:
 
     //@}
 
-    /// only used for hashes...
-    virtual void serialize(std::ostream& o, int options) const;
+    /// \brief Generate a hash of this structure into the provided hash context
+    virtual void DigestHash(HashContext& hash, int options) const;
 
     inline KinBodyPtr shared_kinbody() {
         return boost::static_pointer_cast<KinBody>(shared_from_this());
@@ -3585,7 +3666,21 @@ private:
         return _prAssociatedFileEntries;
     }
 
+    /// \name Readable interface overrides
+    ///
+    /// We override the ReadablesContainer methods that might add readable interfaces so that, if this body is added to an environment, we can notify it about the addition.
+    /// This lets the environment maintain a cache of which bodies _might_ hold which readable interfaces, providing optimized GetBodiesWithReadableInterface lookups.
+    /// Removals are not inspected because the cache is allowed to overapproximate.
+    /// The base readable container behaviour is unchanged.
+    //@{
+    ReadablePtr SetReadableInterface(const std::string& id, const ReadablePtr& readable) override;
+    void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting) override;
+    bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) override;
+    //@}
+
 protected:
+    using MapGrabbedByEnvironmentIndex = std::unordered_map<int, GrabbedPtr>;
+
     /// \brief constructors declared protected so that user always goes through environment to create bodies
     KinBody(InterfaceType type, EnvironmentBasePtr penv);
 
@@ -3629,6 +3724,7 @@ protected:
     ///
     /// This function in calls every registers calledback that is tracking the changes. It also
     /// recomputes the hashes if geometry changed.
+    /// The Prop_LinkTransforms callbacks are not called while _bSuppressLinkTransformPropagation is set.
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
@@ -3655,10 +3751,12 @@ protected:
     bool _RemoveAttachedBody(KinBody &body);
 
     /// \brief Update transforms and velocities of the grabbed bodies
+    ///
+    /// Does nothing while _bSuppressLinkTransformPropagation is set.
     void _UpdateGrabbedBodies();
 
     /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
-    std::vector<GrabbedPtr>::iterator _RemoveGrabbedBody(std::vector<GrabbedPtr>::iterator itGrabbed);
+    MapGrabbedByEnvironmentIndex::iterator _RemoveGrabbedBody(MapGrabbedByEnvironmentIndex::iterator itGrabbed);
 
     /// \brief resets cached information dependent on the collision checker (usually called when the collision checker is switched or some big mode is set.
     virtual void _ResetInternalCollisionCache();
@@ -3668,6 +3766,16 @@ protected:
     /// Assumes plink has _info initialized correctly, so will be initializing the other data depending on it.
     /// Can only be called before internal robot hierarchy is initialized.
     void _InitAndAddLink(LinkPtr plink);
+
+    /// \brief initializes the internal link vector with the provided link infos.
+    ///
+    /// Internal method called as part of Init() or InitFromLinkInfos()
+    /// LinkInfoT may be a LinkInfo struct or a pointer to a LinkInfo
+    template <typename LinkInfoT>
+    void _InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos);
+
+    /// Initialize a valid link pointer from the specified link info
+    static void _InitLinkFromInfo(KinBody::LinkPtr& linkPtr, const KinBody::LinkInfo& linkInfo);
 
     /// \brief initializes and adds a link to internal hierarchy.
     ///
@@ -3679,18 +3787,66 @@ protected:
 
     void _SetAdjacentLinksInternal(int linkindex0, int linkindex1);
 
+    /// \brief Restore kinbody's states from other kinbody. This is sets bCalledFromClone=true for _RestoreGrabbedBodiesFromSavedData.
+    ///        _RestoreGrabbedBodiesFromSavedData with bCalledFromClone=true allows to restore grabbed bodies from one env to another env.
+    ///        To do so, it's referring that _environmentBodyIndex is consistent between two envs. Otherwise, we cannnot identify the correct bodies.
+    ///        This should be called from Clone where we can assume that _environmentBodyIndex is configured consistent between two envs.
+    ///        Please do not call this from other use cases.
+    /// \param[in] pOriginalBody : This function restores the states from pOriginalBody to 'this'.
+    void _RestoreStateForClone(const KinBodyPtr& pOriginalBody);
+
+    /// \brief Restore kinbody's grabbed bodies information from saved data.
+    /// \param[in] savedBody : saved KinBody inside of saver.
+    /// \param[in] options : SaveParameters inside of saver.
+    /// \param[in] savedGrabbedBodiesByEnvironmentIndex : _grabbedBodiesByEnvironmentIndex held in saver.
+    /// \param[in] savedMapListNonCollidingInterGrabbedLinkPairsWhenGrabbed : _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed held in saver.
+    /// \param[in] bCalledFromClone : true this is called from clone, e.g. called from _RestoreGrabbedBodiesForClone. false if  Assumes that this is called from _RestoreKinBody of saver classes.
+    void _RestoreGrabbedBodiesFromSavedData(const KinBody& savedBody,
+                                            const int options,
+                                            const std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex,
+                                            const std::unordered_map<uint64_t, ListNonCollidingLinkPairs>& savedMapListNonCollidingInterGrabbedLinkPairsWhenGrabbed,
+                                            const bool bCalledFromClone = false);
+
+    /// \brief Save this kinbody's information.
+    /// \param[out] savedGrabbedDataByEnvironmentIndex : saved information about _grabbedBodiesByEnvironmentIndex.
+    void _SaveKinBodySavedGrabbedData(std::unordered_map<int, SavedGrabbedData>& savedGrabbedDataByEnvironmentIndex) const;
+
+    /// Ensures that _vAllPairsShortestPaths is initialized if it is not already
+    void _EnsureAllPairsShortestPaths() const;
+
+    /// \brief Check if IsListNonCollidingLinksValid is true for the Grabbed instance with the given envBodyIndex.
+    /// \param[int] envBodyIndex : env body index.
+    bool _IsListNonCollidingLinksValidFromEnvironmentBodyIndex(const int envBodyIndex) const;
+
+    /// \brief Compute environment body indices pair. pack the two bodies' envBodyIndices (32bit int) into one environment body indices pair (uint64_t).
+    ///        Here, environment body indices pair is uint64_t, which higher 32bits are for body2 envBodyIndex, and which lower 32bits are for body1 envBodyIndex.
+    ///        Note that index1 < index2.
+    static uint64_t _ComputeEnvironmentBodyIndicesPair(const uint64_t index1, const uint64_t index2);
+
+    /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
+    static int _GetFirstEnvironmentBodyIndexFromPair(const uint64_t pair);
+
+    /// \brief Extract the first body's environmentBodyIndex from environment body indices pair.
+    static int _GetSecondEnvironmentBodyIndexFromPair(const uint64_t pair);
+
     std::string _name; ///< name of body
 
     std::vector<JointPtr> _vecjoints; ///< \see GetJoints
     std::vector<JointPtr> _vTopologicallySortedJoints; ///< \see GetDependencyOrderedJoints
-    std::vector<JointPtr> _vTopologicallySortedJointsAll; ///< Similar to _vDependencyOrderedJoints except includes _vecjoints and _vPassiveJoints
+    std::vector<JointPtr> _vTopologicallySortedJointsAll; ///< Similar to _vDependencyOrderedJoints except includes _vecjoints and _vPassiveJoints. See GetDependencyOrderedJointsAll.
     std::vector<int> _vTopologicallySortedJointIndicesAll; ///< the joint indices of the joints in _vTopologicallySortedJointsAll. Passive joint indices have _vecjoints.size() added to them.
     std::vector<JointPtr> _vDOFOrderedJoints; ///< all joints of the body ordered on how they are arranged within the degrees of freedom
     std::vector<LinkPtr> _veclinks; ///< \see GetLinks
     std::vector<int> _vDOFIndices; ///< cached start joint indices, indexed by dof indices
     std::vector<uint64_t> _vLinkEnableStatesMask; /// bit mask containing enabled info of links. If bit 0 of _vLinkEnableBitMap[0] is 1, link 0 is enabled. If bit 2 of _vLinkEnableBitMap[1] is 0, link 66 is disabled. Used for fast access to the LinkInfo::_bIsEnabled
 
-    std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths; ///< all-pairs shortest paths through the link hierarchy. The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints. If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
+    /// All-pairs shortest paths through the link hierarchy.
+    /// The first value describes the parent link index, and the second value is an index into _vecjoints or _vPassiveJoints.
+    /// If the second value is greater or equal to  _vecjoints.size() then it indexes into _vPassiveJoints.
+    /// Note that this value is lazily calculated - accesses to this variable must be fenced by a call to _EnsureAllPairsShortestPaths
+    /// This value is mutable, as due to the lazy calculation it may need to be generated as part of a const method call.
+    mutable std::vector<std::pair<int16_t,int16_t> > _vAllPairsShortestPaths;
+
     std::vector<int8_t> _vJointsAffectingLinks; ///< joint x link: (jointindex*_veclinks.size()+linkindex). entry is non-zero if the joint affects the link in the forward kinematics. If negative, the partial derivative of ds/dtheta should be negated.
     std::vector< std::vector< std::pair<LinkPtr,JointPtr> > > _vClosedLoops; ///< \see GetClosedLoops
     std::vector< std::vector< std::pair<int16_t,int16_t> > > _vClosedLoopIndices; ///< \see GetClosedLoops
@@ -3701,7 +3857,14 @@ protected:
 
     std::vector<Transform*> _vLinkTransformPointers; ///< holds a pointers to the Transform Link::_t  in _veclinks. Used for fast access fo the custom kinematics
 
-    std::vector<GrabbedPtr> _vGrabbedBodies; ///< vector of grabbed bodies
+    /// Map of grabbed body record indexed by the environment index of the grabbed body to provide faster lookup
+    /// It is assumed that bodies cannot have their environment index change while they are grabbed.
+    MapGrabbedByEnvironmentIndex _grabbedBodiesByEnvironmentIndex;
+
+    /// Flag to track whether this body has ever been grabbed.
+    /// If it has, then when it is removed from the environment, we need to make sure to also remove it from any non-environment collision checkers
+    /// For bodies that were never grabbed, we can skip iterating all of the other bodies in the env.
+    bool _wasEverGrabbed = false;
 
     mutable std::vector<std::list<UserDataWeakPtr> > _vlistRegisteredCallbacks; ///< callbacks to call when particular properties of the body change. _vlistRegisteredCallbacks[index] is the list of change callbacks where 1<<index is part of KinBodyProperty, this makes it easy to find out if any particular bits have callbacks. The registration/de-registration of the lists can happen at any point and does not modify the kinbody state exposed to the user, hence it is mutable.
 
@@ -3731,6 +3894,7 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+    bool _bSuppressLinkTransformPropagation = false; ///< if true, then a change to the link transforms is not propagated outside of this body: the grabbed bodies are not moved to follow it and the Prop_LinkTransforms callbacks are not called. Only meant to be set by ScopedLinkTransformPropagationSuppressor, for the duration of a scope that is guaranteed to restore the link transforms before returning, so that nothing outside can observe the intermediate pose anyway.
 
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo
@@ -3740,10 +3904,22 @@ protected:
     mutable std::string __hashKinematicsGeometryDynamics; ///< hash serializing kinematics, dynamics and geometry properties of the KinBody
     int64_t _lastModifiedAtUS=0; ///< us, linux epoch, last modified time of the kinbody when it was originally loaded from the environment.
     int64_t _revisionId = 0; ///< the webstack revision for this loaded kinbody
+    /// _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed maps a pair of envBodyIndices of two grabbed bodies
+    /// (encoded into one uint64_t via _ComputeEnvironmentBodyIndicesPair) to a list of initially non-colliding link
+    /// pairs between the two. The ListNonCollidingLinkPairs for body1 and body2 is computed from state when the latest
+    /// body between body1 and body2 has been grabbed. Since these links in each pair are not colliding with each other
+    /// at the time of grabbing, they should remain non-colliding throughout (i.e. until either of them is released).
+    /// Notes:
+    /// - The enable states of links do *not* affect the membership of this ListNonCollidingLinkPair.
+    /// - ListNonCollidingLinkPair, which is the values of this map, only contains link pairs of *grabbed* bodies (i.e.
+    ///   not grabber's links).
+    /// - Each link pair (grabbed1Link, grabbed2Link) in ListNonCollidingLinkPair must be such that the first element
+    ///   corresponds to the grabbed body with lower environment body index.
+    std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
 
 private:
     mutable std::vector<dReal> _vTempJoints;
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_KINBODY_HASH;
     }
 
@@ -3797,12 +3973,7 @@ public:
     ///        valid until the grabbed body is released.
     void ComputeListNonCollidingLinks();
 
-    inline void InvalidateListNonCollidingLinks()
-    {
-        _listNonCollidingIsValid = false;
-    }
-
-    inline void _SetLinkNonCollidingIsValid(bool bIsValid)
+    inline void SetLinkNonCollidingIsValid(bool bIsValid)
     {
         _listNonCollidingIsValid = bIsValid;
     }
@@ -3820,11 +3991,22 @@ public:
     // Member Variables
     KinBodyWeakPtr _pGrabbedBody; ///< the body being grabbed
     KinBody::LinkPtr _pGrabbingLink; ///< the link used for grabbing _pGrabbedBody. Its transform (as well as the transforms of other links rigidly attached to _pGrabbingLink) relative to the grabbed body remains constant until the grabbed body is released.
-    std::list<KinBody::LinkConstPtr> _listNonCollidingLinksWhenGrabbed; ///< list of links of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list.
+    std::string _grippername;  ///< the name of the gripper that is grabbing the body
+    KinBody::ListNonCollidingLinkPairs _listNonCollidingGrabbedGrabberLinkPairsWhenGrabbed; ///< list of link pairs of the grabber that are not touching the grabbed body *at the time of grabbing*. Since these links are not colliding with the grabbed body at the time of grabbing, they should remain non-colliding with the grabbed body throughout. If, while grabbing, they collide with the grabbed body at some point, CheckSelfCollision should return true. It is important to note that the enable state of a link does *not* affect its membership of this list. Each pair in the list should be [Grabbed-link, Grabber-link]. Note that this does not contain link pairs from two grabbed bodies, c.f. KinBody::_mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed.
     Transform _tRelative; ///< the relative transform between the grabbed body and the grabbing link. tGrabbingLink*tRelative = tGrabbedBody.
     std::set<int> _setGrabberLinkIndicesToIgnore; ///< indices to the links of the grabber whose collisions with the grabbed bodies should be ignored.
     rapidjson::Document _rGrabbedUserData; ///< user-defined data to be updated when kinbody grabs and releases objects
 private:
+
+    /// \brief update grabber's _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed. if there is the existing list, push the inter-grabbed link pairs to it. otherwise, create the new list in the map and push the inter-grabbed link pairs to it.
+    /// \param[out] pGrabber : updated grabber.
+    /// \param[out] pchecker : collision checker
+    /// \param[in] grabbedBody, otherGrabbedBody : grabbed body by this class, and other grabbed body to check.
+    void _UpdateMapListNonCollidingInterGrabbedLinkPairs(KinBodyPtr& pGrabber,
+                                                         CollisionCheckerBasePtr& pchecker,
+                                                         const KinBody& grabbedBody,
+                                                         const KinBody& otherGrabbedBody);
+
     bool _listNonCollidingIsValid = false; ///< a flag indicating whether the current _listNonCollidingLinksWhenGrabbed is valid or not.
     std::vector<KinBody::LinkPtr> _vAttachedToGrabbingLink; ///< vector of all links that are rigidly attached to _pGrabbingLink
     KinBody::KinBodyStateSaverPtr _pGrabberSaver; ///< statesaver that saves the snapshot of the grabber at the time Grab is called. The saved state will be used (i.e. restored) temporarily when computation of _listNonCollidingLinksWhenGrabbed is necessary.

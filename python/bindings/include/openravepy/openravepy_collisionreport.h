@@ -29,7 +29,7 @@ struct PYCONTACT
     PYCONTACT(const CONTACT& c);
 
     std::string __str__() const;
-    object __unicode__() const;
+    py::str __unicode__() const;
     object pos = py::none_();
     object norm = py::none_();
     dReal depth;
@@ -40,10 +40,10 @@ class OPENRAVEPY_API PyCollisionPairInfo
 public:
     PyCollisionPairInfo(const CollisionPairInfo& cpinfo);
     std::string __str__() const;
-    object __unicode__() const;
+    py::str __unicode__() const;
 
-    py::object ExtractFirstBodyLinkGeomNames();
-    py::object ExtractSecondBodyLinkGeomNames();
+    py::tuple ExtractFirstBodyLinkGeomNames();
+    py::tuple ExtractSecondBodyLinkGeomNames();
 
     std::string bodyLinkGeom1Name;
     std::string bodyLinkGeom2Name;
@@ -59,7 +59,7 @@ public:
     void Init(const CollisionReport& report);
 
     std::string __str__() const;
-    object __unicode__() const;
+    py::str __unicode__() const;
     void Reset(int coloptions=0);
 
     py::list collisionInfos; // list of PyCollisionPairInfo
@@ -67,6 +67,20 @@ public:
     OpenRAVE::dReal minDistance = 1e20;
     int numWithinTol = 0;
     uint32_t nKeepPrevious = 0;
+};
+
+struct CollisionReportInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    CollisionReportInitializer(py::module& m_);
+    void init_openravepy_collisionreport();
+    py::module& m;
+    py::class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> > collisionreport;
+#else
+    CollisionReportInitializer();
+    void init_openravepy_collisionreport();
+    py::class_<PyCollisionReport, OPENRAVE_SHARED_PTR<PyCollisionReport> > collisionreport;
+#endif
 };
 
 } // namespace openravepy

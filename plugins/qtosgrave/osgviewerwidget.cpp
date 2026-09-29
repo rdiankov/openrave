@@ -1263,6 +1263,20 @@ void QOSGViewerWidget::_MoveCameraPointOfView(const osg::Vec3d& axis)
     osg::Matrixd newViewMatrix;
     osg::Vec3d newCameraPos = boundingBox.center() + axis * cameraDistance;
     newViewMatrix.makeLookAt(newCameraPos, newCameraPos - axis, worldUpVector);
+
+    // If the scene was _empty_, then our bounding box will end up being +-FLT_MAX in all directions.
+    // When this happens, we will end up calculating a camera transform with NAN values, which then causes OSG to swamp stderr complaining that the view matrix is invalid.
+    // If we ended up with NAN values in our matrix, just warn and make no changes to the current view.
+    if (newViewMatrix.isNaN()) {
+        RAVELOG_WARN(boost::str(boost::format("scene has bounds [%f, %f, %f] to [%f, %f, %f] for a size of %f, camera distance %f, resulting in new camera position of [%f, %f, %f] which produces an invalid view matrix; refusing to set new view matrix") %
+                                boundingBox.xMin() % boundingBox.yMin() % boundingBox.zMin() %
+                                boundingBox.xMax() % boundingBox.yMax() % boundingBox.zMax() %
+                                sceneSize %
+                                cameraDistance %
+                                newCameraPos.x() % newCameraPos.y() % newCameraPos.z()));
+        return;
+    }
+
     GetCurrentCameraManipulator()->setByInverseMatrix(newViewMatrix);
 }
 

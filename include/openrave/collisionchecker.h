@@ -164,10 +164,10 @@ public:
     int AddCollision();
     int AddLinkCollision(const KinBody::Link& link1);
     int AddLinkCollision(const KinBody::Link& link1, const KinBody::Link& link2);
-    int AddLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const KinBody::GeometryConstPtr& pgeom1, const KinBody::LinkConstPtr& plink2, const KinBody::GeometryConstPtr& pgeom2);
+    int AddLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const std::string& geomname1, const KinBody::LinkConstPtr& plink2, const std::string& geomname2);
 
     // set only one collision
-    int SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const KinBody::GeometryConstPtr& pgeom1, const KinBody::LinkConstPtr& plink2, const KinBody::GeometryConstPtr& pgeom2);
+    int SetLinkGeomCollision(const KinBody::LinkConstPtr& plink1, const std::string& geomname1, const KinBody::LinkConstPtr& plink2, const std::string& geomname2);
 
     std::vector<CollisionPairInfo> vCollisionInfos; ///< all geometry collision pairs. Set when CO_AllGeometryCollisions or CO_AllLinkCollisions or CO_AllGeometryContacts is enabled. The size of the array is not indicative of how many valid collisions there are! See nNumValidCollisions instead. Due to caching and memory constraints, should not resize this vector, instead change nNumValidCollisions
     int nNumValidCollisions = 0; ///< how many infos are valid in vCollisionInfos
@@ -352,7 +352,7 @@ protected:
     }
 
 private:
-    virtual const char* GetHash() const {
+    virtual const char* GetHash() const override {
         return OPENRAVE_COLLISIONCHECKER_HASH;
     }
 

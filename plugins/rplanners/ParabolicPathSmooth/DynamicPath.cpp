@@ -652,7 +652,7 @@ bool DynamicPath::TryShortcut(Real t1,Real t2,RampFeasibilityChecker& check)
     if(t1 > t2) {
         Swap(t1,t2);
     }
-    Real u1,u2;
+    Real u1 = -1.0, u2 = -1.0;
     int i1 = GetSegment(t1,u1);
     int i2 = GetSegment(t2,u2);
     if(i1 == i2) {

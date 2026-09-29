@@ -46,9 +46,9 @@ ANNdist annDist(						// interpoint squared distance
 	ANNpoint			p,
 	ANNpoint			q)
 {
-	register int d;
-	register ANNcoord diff;
-	register ANNcoord dist;
+	int d;
+	ANNcoord diff;
+	ANNcoord dist;
 
 	dist = 0;
 	for (d = 0; d < dim; d++) {

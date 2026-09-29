@@ -18,6 +18,8 @@
 #include <openravepy/openravepy_int.h>
 #include <openravepy/openravepy_sensorbase.h>
 #include <openravepy/openravepy_environmentbase.h>
+#include <openravepy/openravepy_viewer.h>
+#include <openravepy/openravepy_jointinfo.h>
 #include <csignal>
 
 #if defined(_WIN32) && !defined(sighandler_t)
@@ -103,243 +105,241 @@ using py::error_already_set;
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 namespace numeric = py::numeric;
 
-class PyViewerBase : public PyInterfaceBase
+bool PyViewerBase::_ViewerCallback(object fncallback, PyEnvironmentBasePtr pyenv, KinBody::LinkPtr plink,RaveVector<float> position,RaveVector<float> direction)
 {
-protected:
-    ViewerBasePtr _pviewer;
-    UserDataPtr _viewercallback;
-    int64_t _sig_thread_id;
-
-    static bool _ViewerCallback(object fncallback, PyEnvironmentBasePtr pyenv, KinBody::LinkPtr plink,RaveVector<float> position,RaveVector<float> direction)
-    {
-        object res;
-        PyGILState_STATE gstate = PyGILState_Ensure();
-        try {
-            res = fncallback(openravepy::toPyKinBodyLink(plink,pyenv),toPyVector3(position),toPyVector3(direction));
-        }
-        catch(...) {
-            RAVELOG_ERROR("exception occured in python viewer callback:\n");
-            PyErr_Print();
-        }
-        PyGILState_Release(gstate);
-        extract_<bool> xb(res);
-        if( xb.check() ) {
-            return (bool)xb;
-        }
-        extract_<int> xi(res);
-        if( xi.check() ) {
-            return (int)xi;
-        }
-        extract_<double> xd(res);
-        if( xd.check() ) {
-            return (double)xd>0;
-        }
-        return true;
+    object res;
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    try {
+        res = fncallback(openravepy::toPyKinBodyLink(plink,pyenv),toPyVector3(position),toPyVector3(direction));
     }
+    catch(...) {
+        RAVELOG_ERROR("exception occured in python viewer callback:\n");
+        PyErr_Print();
+    }
+    PyGILState_Release(gstate);
+    extract_<bool> xb(res);
+    if( xb.check() ) {
+        return (bool)xb;
+    }
+    extract_<int> xi(res);
+    if( xi.check() ) {
+        return (int)xi;
+    }
+    extract_<double> xd(res);
+    if( xd.check() ) {
+        return (double)xd>0;
+    }
+    return true;
+}
 
-    void _ThreadCallback()
-    {
-        if( openravepy::s_nInterruptCount > 0 ) {
-            --openravepy::s_nInterruptCount;
-            if( _sig_thread_id != 0 ) {
-                // calling handler for other thread
-                PyGILState_STATE gstate = PyGILState_Ensure();
-                int count = PyThreadState_SetAsyncExc(_sig_thread_id, PyExc_KeyboardInterrupt);
-                if( count == 0 ) {
-                    RAVELOG_WARN("PyThreadState_SetAsyncExc invalid thread id %d\n",_sig_thread_id);
-                }
-                else if(count != 1 ) {
-                    RAVELOG_WARN("we're in trouble!\n");
-                    PyThreadState_SetAsyncExc(_sig_thread_id, NULL);
-                }
-                PyGILState_Release(gstate);
+void PyViewerBase::_ThreadCallback()
+{
+    if( openravepy::s_nInterruptCount > 0 ) {
+        --openravepy::s_nInterruptCount;
+        if( _sig_thread_id != 0 ) {
+            // calling handler for other thread
+            PyGILState_STATE gstate = PyGILState_Ensure();
+            int count = PyThreadState_SetAsyncExc(_sig_thread_id, PyExc_KeyboardInterrupt);
+            if( count == 0 ) {
+                RAVELOG_WARN("PyThreadState_SetAsyncExc invalid thread id %d\n",_sig_thread_id);
+            }
+            else if(count != 1 ) {
+                RAVELOG_WARN("we're in trouble!\n");
+                PyThreadState_SetAsyncExc(_sig_thread_id, NULL);
+            }
+            PyGILState_Release(gstate);
 
 #ifndef _WIN32
-                // restore the viewer signal handler
-                memset(&openravepy::s_signalActionPrev,0,sizeof(openravepy::s_signalActionPrev));
-                struct sigaction act;
-                memset(&act,0,sizeof(act));
-                //sigfillset(&act.sa_mask);
-                sigemptyset(&act.sa_mask);
-                act.sa_flags = 0;
-                act.sa_handler = &openravepy_viewer_sigint_handler;
-                int ret = sigaction(SIGINT,&act,&openravepy::s_signalActionPrev);
-                if( ret < 0 ) {
-                    RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
-                }
+            // restore the viewer signal handler
+            memset(&openravepy::s_signalActionPrev,0,sizeof(openravepy::s_signalActionPrev));
+            struct sigaction act;
+            memset(&act,0,sizeof(act));
+            //sigfillset(&act.sa_mask);
+            sigemptyset(&act.sa_mask);
+            act.sa_flags = 0;
+            act.sa_handler = &openravepy_viewer_sigint_handler;
+            int ret = sigaction(SIGINT,&act,&openravepy::s_signalActionPrev);
+            if( ret < 0 ) {
+                RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
+            }
 #else
-                openravepy::s_signalActionPrev = signal(SIGINT,&openravepy_viewer_sigint_handler);
+            openravepy::s_signalActionPrev = signal(SIGINT,&openravepy_viewer_sigint_handler);
 #endif
-            }
-            else {
-                RAVELOG_INFO("destroying viewer and openrave runtime\n");
-                _pviewer->quitmainloop();
-                RaveDestroy();
-            }
+        }
+        else {
+            RAVELOG_INFO("destroying viewer and openrave runtime\n");
+            _pviewer->quitmainloop();
+            RaveDestroy();
         }
     }
+}
 
-public:
-
-    PyViewerBase(ViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv) : PyInterfaceBase(pviewer, pyenv), _pviewer(pviewer) {
-        _sig_thread_id = 0;
-        if( !!_pviewer ) {
-            _viewercallback = _pviewer->RegisterViewerThreadCallback(boost::bind(&PyViewerBase::_ThreadCallback,this));
-        }
-    }
-    virtual ~PyViewerBase() {
-    }
-
-    ViewerBasePtr GetViewer() {
-        return _pviewer;
-    }
-
-    int main(bool bShow, int64_t sig_thread_id=0)
-    {
-        _sig_thread_id = sig_thread_id;
-        openravepy::s_listViewersToQuit.push_back(_pviewer);
-        // very helpful: https://www.securecoding.cert.org/confluence/display/cplusplus/SIG01-CPP.+Understand+implementation-specific+details+regarding+signal+handler+persistence
+int PyViewerBase::main(bool bShow, int64_t sig_thread_id)
+{
+    _sig_thread_id = sig_thread_id;
+    openravepy::s_listViewersToQuit.push_back(_pviewer);
+    // very helpful: https://www.securecoding.cert.org/confluence/display/cplusplus/SIG01-CPP.+Understand+implementation-specific+details+regarding+signal+handler+persistence
 #ifndef _WIN32
-        memset(&openravepy::s_signalActionPrev,0,sizeof(openravepy::s_signalActionPrev));
-        struct sigaction act;
-        memset(&act,0,sizeof(act));
-        //sigfillset(&act.sa_mask);
-        sigemptyset(&act.sa_mask);
-        act.sa_flags = 0;
-        act.sa_handler = &openravepy_viewer_sigint_handler;
-        int ret = sigaction(SIGINT,&act,&openravepy::s_signalActionPrev);
-        if( ret < 0 ) {
-            RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
-        }
+    memset(&openravepy::s_signalActionPrev,0,sizeof(openravepy::s_signalActionPrev));
+    struct sigaction act;
+    memset(&act,0,sizeof(act));
+    //sigfillset(&act.sa_mask);
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    act.sa_handler = &openravepy_viewer_sigint_handler;
+    int ret = sigaction(SIGINT,&act,&openravepy::s_signalActionPrev);
+    if( ret < 0 ) {
+        RAVELOG_WARN("failed to set sigaction, might not be able to use Ctrl-C\n");
+    }
 #else
-        openravepy::s_signalActionPrev = signal(SIGINT,&openravepy_viewer_sigint_handler);
+    openravepy::s_signalActionPrev = signal(SIGINT,&openravepy_viewer_sigint_handler);
 #endif
-        //s_prevsignal = signal(SIGINT,viewer_sigint_handler); // control C
-        // have to release the GIL since this is an infinite loop
-        openravepy::PythonThreadSaverPtr statesaver(new openravepy::PythonThreadSaver());
-        bool bSuccess=false;
-        try {
-            bSuccess = _pviewer->main(bShow);
-        }
+    //s_prevsignal = signal(SIGINT,viewer_sigint_handler); // control C
+    // have to release the GIL since this is an infinite loop
+    openravepy::PythonThreadSaverPtr statesaver(new openravepy::PythonThreadSaver());
+    bool bSuccess=false;
+    try {
+        bSuccess = _pviewer->main(bShow);
+    }
 #ifndef USE_PYBIND11_PYTHON_BINDINGS
-        catch(const error_already_set& e) {
-            RAVELOG_WARN("received python error\n");
-        }
+    catch(const error_already_set& e) {
+        RAVELOG_WARN("received python error\n");
+    }
 #endif
-        catch(...) {
-            RAVELOG_WARN("received other error\n");
-        }
-        openravepy::s_listViewersToQuit.remove(_pviewer); // might not be in list anymore
+    catch(...) {
+        RAVELOG_WARN("received other error\n");
+    }
+    openravepy::s_listViewersToQuit.remove(_pviewer); // might not be in list anymore
 #ifndef _WIN32
-        // restore again?
-        sigaction(SIGINT,&openravepy::s_signalActionPrev,NULL);
+    // restore again?
+    sigaction(SIGINT,&openravepy::s_signalActionPrev,NULL);
 #else
-        signal(SIGINT,openravepy::s_signalActionPrev);
+    signal(SIGINT,openravepy::s_signalActionPrev);
 #endif
-        return bSuccess;
-    }
+    return bSuccess;
+}
 
-    void quitmainloop() {
-        return _pviewer->quitmainloop();
-    }
+void PyViewerBase::quitmainloop()
+{
+    return _pviewer->quitmainloop();
+}
 
-    void SetSize(const double w, const double h) {
-        _pviewer->SetSize((int) w, (int) h);
-    }
-    void Move(const double x, const double y) {
-        _pviewer->Move((int) x, (int) y);
-    }
-    void Show(int showtype) {
-        _pviewer->Show(showtype);
-    }
-    void SetName(const std::string &title) {
-        _pviewer->SetName(title);
-    }
-    void SetUserText(const std::string &userText) {
-        _pviewer->SetUserText(userText);
-    }
-    void SetTextSize(const double size) {
-        _pviewer->SetTextSize(size);
-    }
-    std::string GetName() {
-        return _pviewer->GetName();
-    }
+void PyViewerBase::SetSize(const double w, const double h)
+{
+    _pviewer->SetSize((int) w, (int) h);
+}
 
-    object RegisterCallback(object properties, object fncallback)
-    {
-        if( !fncallback ) {
-            throw openrave_exception(_("callback not specified"));
-        }
-        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
-        if( !p ) {
-            throw openrave_exception(_("no registration callback returned"));
-        }
-        return openravepy::GetUserData(p);
-    }
+void PyViewerBase::Move(const double x, const double y)
+{
+    _pviewer->Move((int) x, (int) y);
+}
 
-    object RegisterItemSelectionCallback(object fncallback)
-    {
-        if( !fncallback ) {
-            throw openrave_exception(_("callback not specified"));
-        }
-        UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
-        if( !p ) {
-            throw openrave_exception(_("no registration callback returned"));
-        }
-        return openravepy::GetUserData(p);
-    }
+void PyViewerBase::Show(int showtype)
+{
+    _pviewer->Show(showtype);
+}
 
-    void EnvironmentSync() {
-        return _pviewer->EnvironmentSync();
-    }
+void PyViewerBase::SetName(const std::string &title)
+{
+    _pviewer->SetName(title);
+}
 
-    void SetCamera(object transform) {
-        _pviewer->SetCamera(ExtractTransform(transform));
-    }
-    void SetCamera(object transform, float focalDistance) {
-        _pviewer->SetCamera(ExtractTransform(transform),focalDistance);
-    }
+void PyViewerBase::SetUserText(const std::string &userText)
+{
+    _pviewer->SetUserText(userText);
+}
 
-    void SetBkgndColor(object ocolor) {
-        _pviewer->SetBkgndColor(ExtractVector3(ocolor));
-    }
+void PyViewerBase::SetTextSize(const double size)
+{
+    _pviewer->SetTextSize(size);
+}
 
-    object GetCameraTransform() {
-        return ReturnTransform(_pviewer->GetCameraTransform());
-    }
+std::string PyViewerBase::GetName()
+{
+    return _pviewer->GetName();
+}
 
-    float GetCameraDistanceToFocus() {
-        return _pviewer->GetCameraDistanceToFocus();
+object PyViewerBase::RegisterCallback(object properties, object fncallback)
+{
+    if( !fncallback ) {
+        throw openrave_exception(_("callback not specified"));
     }
+    UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+    if( !p ) {
+        throw openrave_exception(_("no registration callback returned"));
+    }
+    return openravepy::GetUserData(p);
+}
 
-    object GetCameraImage(int width, int height, object extrinsic, object oKK)
-    {
-        std::vector<float> vKK = ExtractArray<float>(oKK);
-        if( vKK.size() != 4 ) {
-            throw openrave_exception(_("KK needs to be of size 4"));
-        }
-        SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
-        std::vector<uint8_t> memory;
-        if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) ) {
-            throw openrave_exception(_("failed to get camera image"));
-        }
-        std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
-        return toPyArray(memory,dims);
+object PyViewerBase::RegisterItemSelectionCallback(object fncallback)
+{
+    if( !fncallback ) {
+        throw openrave_exception(_("callback not specified"));
     }
+    UserDataPtr p = _pviewer->RegisterItemSelectionCallback(boost::bind(&PyViewerBase::_ViewerCallback,fncallback,_pyenv,_1,_2,_3));
+    if( !p ) {
+        throw openrave_exception(_("no registration callback returned"));
+    }
+    return openravepy::GetUserData(p);
+}
 
-    object GetCameraIntrinsics() {
-        return py::to_object(toPyCameraIntrinsics(_pviewer->GetCameraIntrinsics()));
+void PyViewerBase::EnvironmentSync()
+{
+    return _pviewer->EnvironmentSync();
+}
+
+void PyViewerBase::SetCamera(object transform)
+{
+    _pviewer->SetCamera(ExtractTransform(transform));
+}
+
+void PyViewerBase::SetCamera(object transform, float focalDistance)
+{
+    _pviewer->SetCamera(ExtractTransform(transform),focalDistance);
+}
+
+void PyViewerBase::SetBkgndColor(object ocolor)
+{
+    _pviewer->SetBkgndColor(ExtractVector3(ocolor));
+}
+
+py::array_t<dReal> PyViewerBase::GetCameraTransform()
+{
+    return ReturnTransform(_pviewer->GetCameraTransform());
+}
+
+float PyViewerBase::GetCameraDistanceToFocus()
+{
+    return _pviewer->GetCameraDistanceToFocus();
+}
+
+py::array_t<uint8_t> PyViewerBase::GetCameraImage(int width, int height, object extrinsic, object oKK)
+{
+    std::vector<float> vKK = ExtractArray<float>(oKK);
+    if( vKK.size() != 4 ) {
+        throw openrave_exception(_("KK needs to be of size 4"));
     }
-};
+    SensorBase::CameraIntrinsics KK(vKK[0],vKK[1],vKK[2],vKK[3]);
+    std::vector<uint8_t> memory;
+    if( !_pviewer->GetCameraImage(memory, width,height,RaveTransform<float>(ExtractTransform(extrinsic)), KK) ) {
+        throw openrave_exception(_("failed to get camera image"));
+    }
+    std::vector<npy_intp> dims(3); dims[0] = height; dims[1] = width; dims[2] = 3;
+    return toPyArray(memory,dims);
+}
+
+PyCameraIntrinsicsPtr PyViewerBase::GetCameraIntrinsics() {
+    return toPyCameraIntrinsics(_pviewer->GetCameraIntrinsics());
+}
 
 ViewerBasePtr GetViewer(PyViewerBasePtr pyviewer)
 {
     return !pyviewer ? ViewerBasePtr() : pyviewer->GetViewer();
 }
 
-PyInterfaceBasePtr toPyViewer(ViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv)
+PyViewerBasePtr toPyViewer(ViewerBasePtr pviewer, PyEnvironmentBasePtr pyenv)
 {
-    return !pviewer ? PyInterfaceBasePtr() : PyInterfaceBasePtr(new PyViewerBase(pviewer,pyenv));
+    return !pviewer ? PyViewerBasePtr() : PyViewerBasePtr(new PyViewerBase(pviewer,pyenv));
 }
 
 PyViewerBasePtr RaveCreateViewer(PyEnvironmentBasePtr pyenv, const std::string& name)

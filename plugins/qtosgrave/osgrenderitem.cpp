@@ -481,6 +481,9 @@ void KinBodyItem::Load()
                     }
                     geom->addPrimitiveSet(geom_prim);
 
+                    // Enable VBOs for performance
+                    geom->setUseVertexBufferObjects(true);
+
                     osgUtil::SmoothingVisitor::smooth(*geom); // compute vertex normals
                     osg::ref_ptr<osg::Geode> geode = new osg::Geode;
                     geode->addDrawable(geom);

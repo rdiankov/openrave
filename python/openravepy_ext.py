@@ -13,7 +13,9 @@
 # limitations under the License. 
 from __future__ import with_statement # for python 2.5
 from . import openravepy_int
+from typing import Union
 import numpy
+
 try:
     import cPickle as pickle
 except:
@@ -95,7 +97,7 @@ _registerEnumPicklers()
 import atexit
 atexit.register(openravepy_int.RaveDestroy)
 
-def normalizeZRotation(qarray):
+def normalizeZRotation(qarray: numpy.ndarray) -> tuple[numpy.ndarray, float]:
     """for each quaternion, find the rotation about z that minimizes the distance between the identify (1,0,0,0).
     Return the transformed the quaternions along with the angle around the z-axis eliminated.
     qarray is a Nx4 array."""
@@ -104,21 +106,21 @@ def normalizeZRotation(qarray):
     cosangles = numpy.cos(zangles)
     return numpy.c_[cosangles*qarray[:,0]-sinangles*qarray[:,3], cosangles*qarray[:,1]-sinangles*qarray[:,2], cosangles*qarray[:,2]+sinangles*qarray[:,1], cosangles*qarray[:,3]+sinangles*qarray[:,0]],-2.0*zangles
 
-def quatArrayTMult(qarray,q):
+def quatArrayTMult(qarray: numpy.ndarray, q: Union[numpy.ndarray, list]) -> numpy.ndarray:
     """ multiplies a Nx4 array of quaternions with a quaternion"""
     return numpy.c_[(qarray[:,0]*q[0] - qarray[:,1]*q[1] - qarray[:,2]*q[2] - qarray[:,3]*q[3],
                      qarray[:,0]*q[1] + qarray[:,1]*q[0] + qarray[:,2]*q[3] - qarray[:,3]*q[2],
                      qarray[:,0]*q[2] + qarray[:,2]*q[0] + qarray[:,3]*q[1] - qarray[:,1]*q[3],
                      qarray[:,0]*q[3] + qarray[:,3]*q[0] + qarray[:,1]*q[2] - qarray[:,2]*q[1])]
 
-def quatMultArrayT(q,qarray):
+def quatMultArrayT(q: Union[numpy.ndarray, list], qarray: numpy.ndarray) -> numpy.ndarray:
     """ multiplies a quaternion q with each quaternion in the Nx4 array qarray"""
     return numpy.c_[(q[0]*qarray[:,0] - q[1]*qarray[:,1] - q[2]*qarray[:,2] - q[3]*qarray[:,3],
                      q[0]*qarray[:,1] + q[1]*qarray[:,0] + q[2]*qarray[:,3] - q[3]*qarray[:,2],
                      q[0]*qarray[:,2] + q[2]*qarray[:,0] + q[3]*qarray[:,1] - q[1]*qarray[:,3],
                      q[0]*qarray[:,3] + q[3]*qarray[:,0] + q[1]*qarray[:,2] - q[2]*qarray[:,1])]
 
-def quatArrayRotate(qarray,trans):
+def quatArrayRotate(qarray: numpy.ndarray, trans: Union[numpy.ndarray, list]) -> numpy.ndarray:
     """rotates a point by an array of 4xN quaternions. Returns a 3xN vector"""
     xx = qarray[1,:] * qarray[1,:]
     xy = qarray[1,:] * qarray[2,:]
@@ -131,7 +133,7 @@ def quatArrayRotate(qarray,trans):
     zw = qarray[3,:] * qarray[0,:]
     return 2*numpy.vstack(((0.5-yy-zz)*trans[0]+(xy-zw)*trans[1]+(xz+yw)*trans[2], (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2], (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]))
 
-def quatArrayTRotate(qarray,trans):
+def quatArrayTRotate(qarray: numpy.ndarray, trans: Union[numpy.ndarray, list]) -> numpy.ndarray:
     """rotates a point by an array of Nx4 quaternions. Returns a Nx3 vector"""
     xx = qarray[:,1] * qarray[:,1]
     xy = qarray[:,1] * qarray[:,2]
@@ -144,7 +146,7 @@ def quatArrayTRotate(qarray,trans):
     zw = qarray[:,3] * qarray[:,0]
     return 2*numpy.c_[(0.5-yy-zz)*trans[0]+(xy-zw)*trans[1]+(xz+yw)*trans[2], (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2], (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]]
 
-def quatRotate(q,trans):
+def quatRotate(q: Union[numpy.ndarray, list],trans: Union[numpy.ndarray, list]) -> numpy.ndarray:
     """rotates a point by a 4-elt quaternion. Returns a 3 elt vector"""
     xx = q[1] * q[1]
     xy = q[1] * q[2]
@@ -159,7 +161,7 @@ def quatRotate(q,trans):
                           (xy+zw)*trans[0]+(0.5-xx-zz)*trans[1]+(yz-xw)*trans[2],
                           (xz-yw)*trans[0]+(yz+xw)*trans[1]+(0.5-xx-yy)*trans[2]))
 
-def quatRotateArrayT(q,transarray):
+def quatRotateArrayT(q: Union[numpy.ndarray, list], transarray: numpy.ndarray) -> numpy.ndarray:
     """rotates a set of points in Nx3 transarray by a quaternion. Returns a Nx3 vector"""
     xx = q[1] * q[1]
     xy = q[1] * q[2]
@@ -174,27 +176,27 @@ def quatRotateArrayT(q,transarray):
                        (xy+zw)*transarray[:,0]+(0.5-xx-zz)*transarray[:,1]+(yz-xw)*transarray[:,2],
                        (xz-yw)*transarray[:,0]+(yz+xw)*transarray[:,1]+(0.5-xx-yy)*transarray[:,2])]
 
-def poseMultArrayT(pose,posearray):
+def poseMultArrayT(pose: Union[numpy.ndarray, list], posearray: numpy.ndarray) -> numpy.ndarray:
     """multiplies a pose with an array of poses (each pose is a quaterion + translation)"""
     return numpy.c_[quatMultArrayT(pose[0:4],posearray[:,0:4]),quatRotateArrayT(pose[0:4],posearray[:,4:7])+numpy.tile(pose[4:7],(len(posearray),1))]
     
-def quatArrayTDist(q,qarray):
+def quatArrayTDist(q: Union[numpy.ndarray, list], qarray: numpy.ndarray) -> numpy.ndarray:
     """computes the natural distance (Haar measure) for quaternions, q is a 4-element array, qarray is Nx4"""
     return numpy.arccos(numpy.minimum(1.0,numpy.abs(numpy.dot(qarray,q))))
 
-def TransformPoints(T,points):
+def TransformPoints(T: numpy.ndarray, points: Union[numpy.ndarray, list]) -> numpy.ndarray:
     """Transforms a Nxk array of points by an affine matrix"""
     return numpy.dot(points,numpy.transpose(T[0:-1,0:-1]))+T[0:-1,-1]
 
 transformPoints = TransformPoints # deprecated
 
-def TransformInversePoints(T,points):
+def TransformInversePoints(T: numpy.ndarray, points: Union[numpy.ndarray, list]) -> numpy.ndarray:
     """Transforms a Nxk array of points by the inverse of an affine matrix"""
     return numpy.dot(points-T[0:-1,-1],T[0:-1,0:-1])
 
 transformInversePoints = TransformInversePoints # deprecated
 
-def ComputePoseArrayDistSqr(pose0, posearray, quatweight=1.0):
+def ComputePoseArrayDistSqr(pose0: Union[numpy.ndarray, list], posearray: numpy.ndarray, quatweight=1.0) -> numpy.ndarray:
     """computes the squared distance between pose0 and all poses in posearray
     """
     pose0tiled = numpy.tile(pose0, (len(posearray),1))

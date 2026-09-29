@@ -9,7 +9,7 @@ Contributors
 * Shohei Fujii - new features for motion planning.
 * Cuong Pham - motion planning algorithms
 * Huan Liu - general system features and buf fixes.
-* Chris Dellin - planning and system fixes 
+* Chris Dellin - planning and system fixes
 * Puttichai Lertkultanon - motion planning algorithms.
 
 * Achint Aggarwal - dual manipulation

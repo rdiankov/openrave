@@ -1796,12 +1796,16 @@ bool ParabolicRampND::SolveMinTime(const Vector& amax,const Vector& vmax)
                 SaveRamp("ParabolicRampND_SolveMinAccel_failure.dat",ramps[i].x0,ramps[i].dx0,ramps[i].x1,ramps[i].dx1,-1,vmax[i],endTime);
                 PARABOLIC_RAMP_PLOG("Saving to failed_ramps.txt\n");
                 FILE* f=fopen("failed_ramps.txt","w+");
-                fprintf(f,"MinAccel T=%.15e, vmax=%.15e\n",endTime,vmax[i]);
-                fprintf(f,"x0=%.15e, dx0=%.15e\n",ramps[i].x0,ramps[i].dx0);
-                fprintf(f,"x1=%.15e, dx1=%.15e\n",ramps[i].x1,ramps[i].dx1);
-                fprintf(f,"MinTime solution v=%.15e, t1=%.15e, t2=%.15e, T=%.15e\n",ramps[i].v,ramps[i].tswitch1,ramps[i].tswitch2,ramps[i].ttotal);
-                fprintf(f,"\n");
-                fclose(f);
+                if( f != NULL ) {
+                    fprintf(f,"MinAccel T=%.15e, vmax=%.15e\n",endTime,vmax[i]);
+                    fprintf(f,"x0=%.15e, dx0=%.15e\n",ramps[i].x0,ramps[i].dx0);
+                    fprintf(f,"x1=%.15e, dx1=%.15e\n",ramps[i].x1,ramps[i].dx1);
+                    fprintf(f,"MinTime solution v=%.15e, t1=%.15e, t2=%.15e, T=%.15e\n",ramps[i].v,ramps[i].tswitch1,ramps[i].tswitch2,ramps[i].ttotal);
+                    fprintf(f,"\n");
+                    fclose(f);
+                } else {
+                    PARABOLIC_RAMP_PLOG("Failed to open failed_ramps.txt\n");
+                }
                 return false;
             }
             if(Abs(ramps[i].a1) > EpsilonA+amax[i] || Abs(ramps[i].a2) > EpsilonA+amax[i] || Abs(ramps[i].v) > EpsilonV+vmax[i]) {
@@ -2802,7 +2806,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
         if(bmin < xmin[i]-EpsilonX || bmax > xmax[i]+EpsilonX) {
             Real originaltime = ramps[i][0].ttotal;
             bool bSuccess = false;
-            for(Real itimemult = 1; itimemult <= 5; ++itimemult) {
+            for(int itimemult = 1; itimemult <= 5; ++itimemult) {
                 Real timemult = 1+itimemult*0.5; // perhaps should test different values?
                 if( SolveMinAccelBounded(x0[i], v0[i], x1[i], v1[i], originaltime*timemult, amax[i], vmax[i], xmin[i], xmax[i], ramps[i]) ) {////////Puttichai
                     bSuccess = true;
@@ -2898,7 +2902,7 @@ Real SolveMinTimeBounded(const Vector& x0,const Vector& v0,const Vector& x1,cons
                     solved = false;
                     if( 1 ) { // disable to avoid changing time
                         PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; endTime = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
-                        Real newEndTime;
+                        Real newEndTime = 0.0;
                         Real maxNewEndTime = -1;
                         bool result;
                         for (size_t k = 0; k < ramps.size(); ++k) {
@@ -3147,7 +3151,7 @@ bool SolveAccelBounded(const Vector& x0,const Vector& v0,const Vector& x1,const 
                 PARABOLIC_RAMP_PLOG("ParabolicRamp1D info: x0 = %.15e; x1 = %.15e; v0 = %.15e; v1 = %.15e; vm = %.15e; am = %.15e; newDuration = %.15e", x0[i], x1[i], v0[i], v1[i], vmax[i], amax[i], endTime);
 
                 if (numDilationTries > 0) {
-                    Real newEndTime;
+                    Real newEndTime = 0.0;
                     Real maxNewEndTime = -1;
                     bool result;
                     for (size_t k = 0; k < ramps.size(); ++k) {

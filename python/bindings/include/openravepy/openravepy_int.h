@@ -103,6 +103,7 @@ class PyGeometryInfo;
 class PyManipulatorInfo;
 class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
+class PyGrabbedInfo;
 class PyLink;
 class PyGeometry;
 class PyJoint;
@@ -153,6 +154,7 @@ typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyManipulatorInfo> PyManipulatorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
+typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink> PyLinkPtr;
 typedef OPENRAVE_SHARED_PTR<PyGeometry> PyGeometryPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
@@ -163,15 +165,15 @@ typedef OPENRAVE_SHARED_PTR<PyJoint const> PyJointConstPtr;
 //@{
 OPENRAVEPY_API Transform ExtractTransform(const py::object& oraw);
 OPENRAVEPY_API TransformMatrix ExtractTransformMatrix(const py::object& oraw);
-OPENRAVEPY_API py::object toPyArray(const TransformMatrix& t);
-OPENRAVEPY_API py::object toPyArray(const Transform& t);
-OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfo>& infos);
-OPENRAVEPY_API py::object toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
+OPENRAVEPY_API py::array_t<dReal> toPyArray(const TransformMatrix& t);
+OPENRAVEPY_API py::array_t<dReal> toPyArray(const Transform& t);
+OPENRAVEPY_API py::list toPyArray(const std::vector<KinBody::GeometryInfo>& infos);
+OPENRAVEPY_API py::list toPyArray(const std::vector<KinBody::GeometryInfoPtr>& infos);
 OPENRAVEPY_API ReadablePtr ExtractReadable(py::object o);
-OPENRAVEPY_API py::object toPyReadable(ReadablePtr p);
+OPENRAVEPY_API py::typing::Optional<PyReadablePtr> toPyReadable(ReadablePtr p);
 OPENRAVEPY_API bool ExtractIkParameterization(py::object o, IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const IkParameterization& ikparam);
-OPENRAVEPY_API py::object toPyIkParameterization(const std::string& serializeddata);
+OPENRAVEPY_API PyIkParameterizationPtr toPyIkParameterization(const IkParameterization& ikparam);
+OPENRAVEPY_API PyIkParameterizationPtr toPyIkParameterization(const std::string& serializeddata);
 OPENRAVEPY_API py::object toPyObject(const PyGeometryInfoPtr& pygeom);
 //@}
 
@@ -340,7 +342,7 @@ inline RaveTransformMatrix<T> ExtractTransformMatrixType(const py::object& o)
     return t;
 }
 
-inline py::object toPyArrayRotation(const TransformMatrix& t)
+inline py::array_t<dReal> toPyArrayRotation(const TransformMatrix& t)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvalues({3, 3});
@@ -368,7 +370,7 @@ inline py::object toPyArrayRotation(const TransformMatrix& t)
 }
 
 template <typename T>
-inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
+inline py::array_t<dReal> toPyArray3(const std::vector<RaveVector<T> >& v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvalues({(int)v.size(), 3});
@@ -395,7 +397,7 @@ inline py::object toPyArray3(const std::vector<RaveVector<T> >& v)
 #endif // USE_PYBIND11_PYTHON_BINDINGS
 }
 
-inline py::object toPyVector2(Vector v)
+inline py::array_t<dReal> toPyVector2(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvec(2);
@@ -410,7 +412,7 @@ inline py::object toPyVector2(Vector v)
 #endif
 }
 
-inline py::object toPyVector3(Vector v)
+inline py::array_t<dReal> toPyVector3(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvec(3);
@@ -426,7 +428,7 @@ inline py::object toPyVector3(Vector v)
 #endif
 }
 
-inline py::object toPyVector4(Vector v)
+inline py::array_t<dReal> toPyVector4(Vector v)
 {
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     py::array_t<dReal> pyvec(4);
@@ -444,13 +446,13 @@ inline py::object toPyVector4(Vector v)
 }
 
 /// \brief converts dictionary of keyvalue pairs
-AttributesList toAttributesList(py::dict odict);
+OPENRAVEPY_API AttributesList toAttributesList(py::dict odict);
 /// \brief converts list of tuples [(key,value),(key,value)], it is possible for keys to repeat
-AttributesList toAttributesList(py::list olist);
-AttributesList toAttributesList(py::object oattributes);
+OPENRAVEPY_API AttributesList toAttributesList(py::list olist);
+OPENRAVEPY_API AttributesList toAttributesList(py::object oattributes);
 
 template <typename T>
-inline py::object ReturnTransform(const T& t)
+inline py::array_t<dReal> ReturnTransform(const T& t)
 {
     return toPyArray(TransformMatrix(t));
 }
@@ -533,11 +535,11 @@ public:
         StringSerializableData(const std::string& data) : _data(data) {
         }
 
-        virtual void Serialize(std::ostream& O, int options=0) const {
+        virtual void Serialize(std::ostream& O, int options=0) const override {
             O << _data;
         }
 
-        virtual void Deserialize(std::istream& I) {
+        virtual void Deserialize(std::istream& I) override {
             // need to read the entire input
             stringbuf buf;
             I.get(buf, 0);
@@ -554,7 +556,7 @@ public:
     }
     PySerializableData(SerializableDataPtr handle) : _handle(handle) {
     }
-    void Close() {
+    void Close() override {
         _handle.reset();
     }
     py::object Serialize(int options) {
@@ -583,25 +585,69 @@ class OPENRAVEPY_API PyRay
 public:
     PyRay() {
     }
+    virtual ~PyRay() {}
     PyRay(py::object newpos, py::object newdir);
     PyRay(const RAY& newr) : r(newr) {
     }
-    py::object dir();
-    py::object pos();
+    py::array_t<dReal> dir();
+    py::array_t<dReal> pos();
     virtual std::string __repr__();
     virtual std::string __str__();
-    virtual py::object __unicode__();
+    virtual py::str __unicode__();
     RAY r;
+};
+
+class OPENRAVEPY_API PyReadable
+{
+public:
+    PyReadable(ReadablePtr readable) : _readable(readable) {
+    }
+    virtual ~PyReadable() {}
+    std::string GetXMLId() const;
+    py::typing::Optional<py::str> SerializeXML(int options=0);
+    py::object SerializeJSON(dReal fUnitScale=1.0, int options=0) const;
+    bool DeserializeJSON(py::object obj, dReal fUnitScale=1.0);
+    ReadablePtr GetReadable();
+protected:
+    ReadablePtr _readable;
+};
+
+class PyAABB;
+typedef OPENRAVE_SHARED_PTR<PyAABB> PyAABBPtr;
+
+class OPENRAVEPY_API PyAABB
+{
+public:
+    PyAABB() {
+    }
+    virtual ~PyAABB() {}
+    PyAABB(py::object newpos, py::object newextents) {
+        ab.pos = ExtractVector3(newpos);
+        ab.extents = ExtractVector3(newextents);
+    }
+    PyAABB(const AABB& newab) : ab(newab) {
+    }
+
+    py::array_t<dReal> extents();
+    py::array_t<dReal> pos();
+
+    py::dict toDict();
+
+    PyAABBPtr GetCombined(const PyAABB& rhs);
+
+    PyAABBPtr GetTransformed(py::object otrans);
+
+    virtual std::string __repr__();
+    virtual std::string __str__();
+    virtual py::str __unicode__();
+
+    AABB ab;
 };
 
 OPENRAVEPY_API py::object toPyGraphHandle(const GraphHandlePtr p);
 OPENRAVEPY_API py::object toPyUserData(UserDataPtr p);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_ikparameterization(py::module& m);
-#else
-void init_openravepy_ikparameterization();
-#endif
-OPENRAVEPY_API py::object toPyAABB(const AABB& ab);
+
+OPENRAVEPY_API PyAABBPtr toPyAABB(const AABB& ab);
 /// \brief PyAABB -> AABB
 OPENRAVEPY_API AABB ExtractAABB(py::object o);
 OPENRAVEPY_API py::object toPyOrientedBox(const OrientedBox& obb);
@@ -638,8 +684,9 @@ public:
     }
     virtual ~PyReadablesContainer() = default;
 
-    virtual py::object GetReadableInterfaces();
-    virtual py::object GetReadableInterface(const std::string& xmltag);
+    virtual py::dict GetReadableInterfaces();
+    virtual py::typing::Optional<PyReadablePtr> GetReadableInterface(const std::string& xmltag);
+    virtual bool HasReadableInterface(const std::string& xmltag);
 
     virtual void SetReadableInterface(const std::string& xmltag, py::object oreadable);
 };
@@ -663,7 +710,7 @@ public:
     std::string GetPluginName() const {
         return _pbase->GetPluginName();
     }
-    py::object GetDescription() const {
+    py::str GetDescription() const {
         return ConvertStringToUnicode(_pbase->GetDescription());
     }
     void SetDescription(const std::string& s) {
@@ -705,7 +752,7 @@ public:
     virtual string __str__() {
         return boost::str(boost::format("<%s:%s>")%RaveGetInterfaceName(_pbase->GetInterfaceType())%_pbase->GetXMLId());
     }
-    virtual py::object __unicode__() {
+    virtual py::str __unicode__() {
         return ConvertStringToUnicode(__str__());
     }
     virtual long __hash__() {
@@ -750,94 +797,58 @@ OPENRAVEPY_API void UnlockEnvironment(PyEnvironmentBasePtr);
 OPENRAVEPY_API int RaveGetEnvironmentId(PyEnvironmentBasePtr pyenv);
 OPENRAVEPY_API PyEnvironmentBasePtr RaveGetEnvironment(int id);
 
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_collisionchecker(py::module& m);
-#else
-void init_openravepy_collisionchecker();
-#endif
 OPENRAVEPY_API CollisionCheckerBasePtr GetCollisionChecker(PyCollisionCheckerBasePtr);
-OPENRAVEPY_API PyInterfaceBasePtr toPyCollisionChecker(CollisionCheckerBasePtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PyCollisionCheckerBasePtr toPyCollisionChecker(CollisionCheckerBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API bool IsCollisionReport(py::object);
 OPENRAVEPY_API bool UpdateCollisionReport(py::object, const CollisionReport&);
 OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(const CollisionReportPtr& p);
 OPENRAVEPY_API PyCollisionReportPtr toPyCollisionReport(const CollisionReport&);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_controller(py::module& m);
-#else
-void init_openravepy_controller();
-#endif
 OPENRAVEPY_API ControllerBasePtr GetController(PyControllerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyController(ControllerBasePtr, PyEnvironmentBasePtr);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_iksolver(py::module& m);
-#else
-void init_openravepy_iksolver();
-#endif
+
 OPENRAVEPY_API IkSolverBasePtr GetIkSolver(py::object);
 OPENRAVEPY_API IkSolverBasePtr GetIkSolver(PyIkSolverBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyIkSolver(IkSolverBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPyIkSolver(IkSolverBasePtr, py::object);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_kinbody(py::module& m);
-#else
-void init_openravepy_kinbody();
-#endif
+
 OPENRAVEPY_API KinBodyPtr GetKinBody(py::object);
 OPENRAVEPY_API KinBodyPtr GetKinBody(PyKinBodyPtr);
 OPENRAVEPY_API PyEnvironmentBasePtr GetPyEnvFromPyKinBody(py::object okinbody);
-OPENRAVEPY_API PyInterfaceBasePtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API py::object toPyKinBody(KinBodyPtr, py::object opyenv);
-OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
-OPENRAVEPY_API py::object toPyKinBodyLink(KinBody::LinkPtr plink, py::object opyenv);
-OPENRAVEPY_API py::object toPyKinBodyGeometry(KinBody::GeometryPtr pgeom);
+OPENRAVEPY_API PyKinBodyPtr toPyKinBody(KinBodyPtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PyKinBodyPtr toPyKinBody(KinBodyPtr, py::object opyenv);
+OPENRAVEPY_API PyLinkPtr toPyKinBodyLink(KinBody::LinkPtr plink, PyEnvironmentBasePtr);
+OPENRAVEPY_API PyLinkPtr toPyKinBodyLink(KinBody::LinkPtr plink, py::object opyenv);
+OPENRAVEPY_API PyGeometryPtr toPyKinBodyGeometry(KinBody::GeometryPtr pgeom);
 OPENRAVEPY_API KinBody::LinkPtr GetKinBodyLink(py::object);
 OPENRAVEPY_API KinBody::LinkConstPtr GetKinBodyLinkConst(py::object);
-OPENRAVEPY_API py::object toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr);
+OPENRAVEPY_API KinBody::LinkPtr GetKinBodyLink(PyLinkPtr);
+OPENRAVEPY_API KinBody::LinkConstPtr GetKinBodyLinkConst(PyLinkPtr);
+OPENRAVEPY_API PyJointPtr toPyKinBodyJoint(KinBody::JointPtr pjoint, PyEnvironmentBasePtr);
 OPENRAVEPY_API KinBody::JointPtr GetKinBodyJoint(py::object);
 OPENRAVEPY_API std::string reprPyKinBodyJoint(py::object);
 OPENRAVEPY_API std::string strPyKinBodyJoint(py::object);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_module(py::module& m);
-#else
-void init_openravepy_module();
-#endif
+
 OPENRAVEPY_API ModuleBasePtr GetModule(PyModuleBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyModule(ModuleBasePtr, PyEnvironmentBasePtr);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_physicsengine(py::module& m);
-#else
-void init_openravepy_physicsengine();
-#endif
+
 OPENRAVEPY_API PhysicsEngineBasePtr GetPhysicsEngine(PyPhysicsEngineBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyPhysicsEngine(PhysicsEngineBasePtr, PyEnvironmentBasePtr);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_planner(py::module& m);
-#else
-void init_openravepy_planner();
-#endif
+
 OPENRAVEPY_API PlannerBasePtr GetPlanner(PyPlannerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPyPlanner(PlannerBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API PlannerBase::PlannerParametersPtr GetPlannerParameters(py::object);
 OPENRAVEPY_API PlannerBase::PlannerParametersConstPtr GetPlannerParametersConst(py::object);
 
 OPENRAVEPY_API py::object toPyPlannerParameters(PlannerBase::PlannerParametersPtr params);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_robot(py::module& m);
-#else
-void init_openravepy_robot();
-#endif
+
 OPENRAVEPY_API RobotBasePtr GetRobot(py::object);
 OPENRAVEPY_API RobotBasePtr GetRobot(PyRobotBasePtr);
-OPENRAVEPY_API PyInterfaceBasePtr toPyRobot(RobotBasePtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PyRobotBasePtr toPyRobot(RobotBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API RobotBase::ManipulatorPtr GetRobotManipulator(py::object);
 OPENRAVEPY_API py::object toPyRobotManipulator(RobotBase::ManipulatorPtr, PyEnvironmentBasePtr);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_sensor(py::module& m);
-#else
-void init_openravepy_sensor();
-#endif
+
 OPENRAVEPY_API SensorBasePtr GetSensor(PySensorBasePtr);
-OPENRAVEPY_API PyInterfaceBasePtr toPySensor(SensorBasePtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PySensorBasePtr toPySensor(SensorBasePtr, PyEnvironmentBasePtr);
 OPENRAVEPY_API py::object toPySensorData(SensorBasePtr, PyEnvironmentBasePtr);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_sensorsystem(py::module& m);
@@ -853,18 +864,14 @@ void init_openravepy_spacesampler();
 #endif
 OPENRAVEPY_API SpaceSamplerBasePtr GetSpaceSampler(PySpaceSamplerBasePtr);
 OPENRAVEPY_API PyInterfaceBasePtr toPySpaceSampler(SpaceSamplerBasePtr, PyEnvironmentBasePtr);
-#ifdef USE_PYBIND11_PYTHON_BINDINGS
-void init_openravepy_trajectory(py::module& m);
-#else
-void init_openravepy_trajectory();
-#endif
+
 OPENRAVEPY_API TrajectoryBasePtr GetTrajectory(py::object);
 OPENRAVEPY_API TrajectoryBasePtr GetTrajectory(PyTrajectoryBasePtr);
-OPENRAVEPY_API PyInterfaceBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
-OPENRAVEPY_API py::object toPyTrajectory(TrajectoryBasePtr, py::object opyenv);
+OPENRAVEPY_API PyTrajectoryBasePtr toPyTrajectory(TrajectoryBasePtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PyTrajectoryBasePtr toPyTrajectory(TrajectoryBasePtr, py::object opyenv);
 OPENRAVEPY_API PyEnvironmentBasePtr toPyEnvironment(PyTrajectoryBasePtr);
 // input can be class derived from PyInterfaceBase
-OPENRAVEPY_API py::object toPyEnvironment(py::object opyinterface);
+OPENRAVEPY_API PyEnvironmentBasePtr toPyEnvironment(py::object opyinterface);
 OPENRAVEPY_API PyEnvironmentBasePtr toPyEnvironment(PyKinBodyPtr);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void init_openravepy_viewer(py::module& m);
@@ -872,7 +879,7 @@ void init_openravepy_viewer(py::module& m);
 void init_openravepy_viewer();
 #endif
 OPENRAVEPY_API ViewerBasePtr GetViewer(PyViewerBasePtr);
-OPENRAVEPY_API PyInterfaceBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
+OPENRAVEPY_API PyViewerBasePtr toPyViewer(ViewerBasePtr, PyEnvironmentBasePtr);
 
 OPENRAVEPY_API int pyGetIntFromPy(py::object olevel, int defaultvalue);
 OPENRAVEPY_API py::object toPyPlannerStatus(const PlannerStatus&);
@@ -891,12 +898,17 @@ OPENRAVEPY_API PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& g
 OPENRAVEPY_API PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo);
 OPENRAVEPY_API PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo);
 OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo);
+OPENRAVEPY_API PyGrabbedInfoPtr toPyGrabbedInfo(const KinBody::GrabbedInfo& grabbedInfo);
 
 OPENRAVEPY_API PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_openravepy_global_basic(py::module& m);
 void init_openravepy_global(py::module& m);
+void init_openravepy_global_functions(py::module& m);
 #else
+void init_openravepy_global_basic();
 void init_openravepy_global();
+void init_openravepy_global_functions();
 #endif
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
 void InitPlanningUtils(py::module& m);

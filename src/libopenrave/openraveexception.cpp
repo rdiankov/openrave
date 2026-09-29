@@ -60,22 +60,25 @@ const char* RaveGetErrorCodeString(OpenRAVEErrorCode error)
     case ORE_Timeout: return "Timeout";
     case ORE_InvalidURI: return "InvalidURI";
     case ORE_BodyNameConflict: return "BodyNameConflict";
+    case ORE_SensorNameConflict: return "SensorNameConflict";
+    case ORE_BodyIdConflict: return "BodyIdConflict";
 
     case ORE_LengthUnitInvalid: return "LengthUnitInvalid";
     case ORE_MassUnitInvalid: return "MassUnitInvalid";
     case ORE_TimeDurationUnitInvalid: return "TimeDurationUnitInvalid";
     case ORE_AngleUnitInvalid: return "AngleUnitInvalid";
     case ORE_TimeStampUnitInvalid: return "TimeStampUnitInvalid";
+    case ORE_EnvironmentBodyIndexConflict: return "EnvironmentBodyIndexConflict";
 
-    case ORE_SensorNameConflict: return "SensorNameConflict";
-    case ORE_BodyIdConflict: return "BodyIdConflict";
     case ORE_EnvironmentFormatUnrecognized: return "EnvironmentFormatUnrecognized";
+    
     case ORE_CurlTimeout: return "CurlTimeout";
     case ORE_CurlInvalidHandle: return "CurlInvalidHandle";
     case ORE_CurlInvalidResponse: return "CurlInvalidResponse";
+
     }
     // should throw an exception?
-    return "";
+    return "(unknown)";
 }
 
 } // end namespace OpenRAVE

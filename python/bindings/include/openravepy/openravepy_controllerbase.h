@@ -23,7 +23,7 @@
 namespace openravepy {
 using py::object;
 
-class PyControllerBase : public PyInterfaceBase
+class OPENRAVEPY_API PyControllerBase : public PyInterfaceBase
 {
 protected:
     ControllerBasePtr _pcontroller;
@@ -57,7 +57,7 @@ public:
     object GetTorque();
 };
 
-class PyMultiControllerBase : public PyControllerBase
+class OPENRAVEPY_API PyMultiControllerBase : public PyControllerBase
 {
 private:
     MultiControllerBasePtr _pmulticontroller;
@@ -71,6 +71,20 @@ public:
     void RemoveController(PyControllerBasePtr ocontroller);
 
     object GetController(int dof);
+};
+
+struct ControllerBaseInitializer
+{
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    ControllerBaseInitializer(py::module& m_);
+    void init_openravepy_controller();
+    py::module& m;
+    py::class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, PyInterfaceBase> controller;
+#else
+    ControllerBaseInitializer();
+    void init_openravepy_controller();
+    py::class_<PyControllerBase, OPENRAVE_SHARED_PTR<PyControllerBase>, bases<PyInterfaceBase> > controller;
+#endif
 };
 
 } // namespace openravepy

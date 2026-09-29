@@ -5,6 +5,7 @@ set(openrave_lib_SOURCES
   controller.cpp
   environment.cpp
   fparsermulti.h
+  hashcontext.cpp
   iksolver.cpp
   interface.cpp
   kinbody.cpp
@@ -70,6 +71,11 @@ target_link_libraries(libopenrave
   PRIVATE boost_assertion_failed static_plugins openrave-md5 ${openrave_static_libraries} openrave-msgpack
   PUBLIC LibXml2::LibXml2 Boost::filesystem Boost::thread ${CMAKE_DL_LIBS} ${openrave_libraries}
 )
+if (OPT_ENVIRONMENT_RECURSIVE_LOCK_WITH_GIL_CHECK)
+  target_link_libraries(libopenrave PUBLIC ${Python3_LIBRARIES})
+  target_include_directories(libopenrave PUBLIC ${Python3_INCLUDE_DIRS})
+endif()
+
 install(TARGETS libopenrave
   EXPORT openrave-targets
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${OPENRAVE_INCLUDE_INSTALL_DIR}

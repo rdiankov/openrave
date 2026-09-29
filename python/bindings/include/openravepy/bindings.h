@@ -212,7 +212,7 @@ struct select_npy_type<bool>
 
 namespace openravepy {
 
-class PyVoidHandle
+class OPENRAVEPY_API PyVoidHandle
 {
 public:
     PyVoidHandle() {
@@ -225,7 +225,7 @@ public:
     OPENRAVE_SHARED_PTR<void> _handle;
 };
 
-class PyVoidHandleConst
+class OPENRAVEPY_API PyVoidHandleConst
 {
 public:
     PyVoidHandleConst() {
@@ -253,6 +253,9 @@ inline std::vector<int8_t> ExtractArrayInt8(const py::object& o)
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for int");
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        throw;
+#endif
     }
     return v;
 }
@@ -273,6 +276,10 @@ inline std::vector<T> ExtractArray(const py::object& o)
     }
     catch(...) {
         RAVELOG_WARN("Cannot do ExtractArray for " + std::string(typeid(T).name()));
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+        // pybind11 converts C++ exception to Python exception after returning from the function, so the exception has to be rethrown
+        throw;
+#endif
     }
     return v;
 }
@@ -314,7 +321,11 @@ inline std::string GetPyErrorString()
 }
 
 /// should call in the beginning of all BOOST_PYTHON_MODULE
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+void init_python_bindings(py::module& m);
+#else
 void init_python_bindings();
+#endif
 
 } // namespace openravepy
 

@@ -11,7 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from common_test_openrave import *
+from common_test_openrave import EnvironmentSetup, ComputePoseDistance, g_epsilon, transdist, expected_failure, g_robotfiles, randlimits
+from openravepy import misc, databases, interfaces, planningutils
+from openravepy import CollisionOptions, CollisionReport, RaveCreateCollisionChecker, RaveCreateRobot, IkFilterOptions, IkParameterization, IkParameterizationType, RaveCreateKinBody, Environment, RaveCreateTrajectory, Robot, KinBody, DOFAffine, PlannerStatusCode, IkReturnAction, rotationMatrixFromAxisAngle
+from numpy import array, r_, random, dot, cross, zeros, eye, pi, ones, float64, float32, arccos, linalg, copy, abs, all
+import numpy
 
 class RunRobot(EnvironmentSetup):
     def __init__(self,collisioncheckername):
@@ -521,7 +525,7 @@ class RunRobot(EnvironmentSetup):
         manipinfo._tLocalTool[2,3] = 1.0
         manipinfo._vGripperJointNames = ['l_gripper_l_finger_joint']
         manipinfo._vdirection = [0,1,0]
-        manipinfo._vClosingDirection = [1.0]
+        manipinfo._vClosingDirection = [1]
         newmanip = robot.AddManipulator(manipinfo)
         assert(newmanip.GetBase().GetName() == manip.GetBase().GetName())
         assert(newmanip.GetEndEffector().GetName() == manip.GetEndEffector().GetName())
@@ -726,8 +730,8 @@ class RunRobot(EnvironmentSetup):
                 assert abs(origwangle - randl[1]) < 1e-10
                 assert abs(origwangle - origl[1]) < 1e-10
                 if not isNorm:
-                   manipGlobalDir = dot(manip.GetTransform()[:3,:3], manip.GetDirection())
-                   assert abs(origwangle - arccos(dot(manipGlobalDir, robot.GetTransform()[:3, xyzindex]))) < 1e-10
+                    manipGlobalDir = dot(manip.GetTransform()[:3,:3], manip.GetDirection())
+                    assert abs(origwangle - arccos(dot(manipGlobalDir, robot.GetTransform()[:3, xyzindex]))) < 1e-10
 
                 # translation check
                 assert linalg.norm(dot(origt, r_[origl[0], 1])[:3] - origw[0]) < 1e-10

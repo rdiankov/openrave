@@ -8,15 +8,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ['3.9']
-        os: [ubuntu-20.04]
+        python-version: ['3.13']
+        os: [ubuntu-24.04]
         architecture: ["x64"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       if: ${{ matrix.python-version != 'pyston' }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         architecture: ${{ matrix.architecture }}
@@ -24,22 +24,28 @@ jobs:
       run: |
         sudo apt-get update -y
         sudo apt-get -y install dirmngr gnupg apt-transport-https liblog4cxx-dev libopenscenegraph-dev libcoin-dev libsoqt520-dev
-        sudo apt-get -y install g++ gfortran git pkg-config debhelper gettext zlib1g-dev libminizip-dev libxml2-dev liburiparser-dev libpcre3-dev libgmp-dev libmpfr-dev qtbase5-dev libqt5opengl5-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libqhull-dev libann-dev libhdf5-serial-dev liblapack-dev libboost-iostreams-dev libboost-regex-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libboost-date-time-dev libboost-test-dev libmpfi-dev ffmpeg libtinyxml-dev libflann-dev sqlite3 libccd-dev libeigen3-dev libgpgme-dev libgpgmepp-dev
+        sudo apt-get -y install g++ gfortran git pkg-config debhelper gettext zlib1g-dev libminizip-dev libxml2-dev liburiparser-dev libgmp-dev libmpfr-dev qtbase5-dev libqt5opengl5-dev libavcodec-dev libavformat-dev libswscale-dev libsimage-dev libode-dev libqhull-dev libann-dev libhdf5-serial-dev liblapack-dev libboost-iostreams-dev libboost-regex-dev libboost-filesystem-dev libboost-system-dev libboost-thread-dev libboost-date-time-dev libboost-test-dev libmpfi-dev ffmpeg libtinyxml-dev libflann-dev sqlite3 libccd-dev libeigen3-dev libgpgme-dev libgpgmepp-dev
         sudo apt-get update -y
         sudo apt-get -y install cmake-data cmake cmake-curses-gui ninja-build
+    - name: Print cmake info
+      run: |
+        rm /usr/local/bin/cmake  # use cmake from apt # we need this after github runner goes to cmake 4.0.0
+        cmake --version
+        which cmake
     - name: Set up Python modules
       run: |
-        python3 -m pip install nose==1.3.7 six==1.16.0
-        python3 -m pip install numpy==1.26.4 IPython==8.14.0
-        python3 -m pip install mpmath==0.19 sympy==1.11.1
-        python3 -m pip install scipy==1.10.1
+        python3 -m pip install setuptools==75.8.0  # explicitly installing setuptools causes installing distutils-precedence.pth
+        python3 -m pip install pynose==1.5.4 six==1.17.0
+        python3 -m pip install numpy==2.1.3 IPython==8.18.1
+        python3 -m pip install mpmath==1.3.0 sympy==1.13.3
+        python3 -m pip install scipy==1.14.1
     - name: Install RapidJSON
       run: |
         set -e
         git clone https://github.com/Tencent/rapidjson.git && mkdir rapidjson/build
         cd rapidjson/build
         # there are no stable version available
-        cmake .. -GNinja -DRAPIDJSON_HAS_STDSTRING=ON -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DRAPIDJSON_HAS_STDSTRING=ON -DRAPIDJSON_BUILD_DOC=OFF -DRAPIDJSON_BUILD_EXAMPLES=OFF -DRAPIDJSON_BUILD_TESTS=OFF
         ninja -j4
         sudo ninja install
         cd ../..
@@ -48,8 +54,8 @@ jobs:
         set -e
         git clone https://github.com/assimp/assimp.git && mkdir assimp/build
         cd assimp/build
-        git checkout v5.2.5
-        cmake .. -GNinja
+        git checkout v5.4.3
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo
         ninja -j4
         sudo ninja install
         cd ../..
@@ -59,7 +65,7 @@ jobs:
         git clone https://github.com/rdiankov/fcl.git && mkdir fcl/build
         cd fcl/build
         git checkout origin/trimeshContactPoints20200813
-        cmake .. -GNinja -DFCL_BUILD_TESTS=OFF
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFCL_BUILD_TESTS=OFF
         ninja -j4
         sudo ninja install
         cd ../..
@@ -77,9 +83,9 @@ jobs:
         # git fetch woody
         git remote add ciel https://github.com/cielavenir/pybind11.git
         git fetch ciel
-        git checkout ciel/v2.9_ty
+        git checkout ciel/v2.13_ty
 
-        cmake .. -GNinja -DPYBIND11_TEST=OFF -DPythonLibsNew_FIND_VERSION=3
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DPYBIND11_TEST=OFF -DPythonLibsNew_FIND_VERSION=3
         ninja -j4
         sudo ninja install
         cd ../..
@@ -90,7 +96,7 @@ jobs:
         cd msgpack-c/build
         git checkout cpp-6.0.0
 
-        cmake .. -GNinja -DMSGPACK_BUILD_EXAMPLES=OFF -DMSGPACK_BUILD_TESTS=OFF
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DMSGPACK_BUILD_EXAMPLES=OFF -DMSGPACK_BUILD_TESTS=OFF
         ninja -j4
         sudo ninja install
         cd ../..
@@ -99,7 +105,7 @@ jobs:
         set -e
         mkdir -p build
         cd build
-        cmake .. -GNinja -DUSE_PYBIND11_PYTHON_BINDINGS=ON -DOPT_PYTHON=OFF
+        cmake .. -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUSE_PYBIND11_PYTHON_BINDINGS=ON -DOPT_PYTHON=OFF
         ninja -j4
         sudo ninja install
         cd ..
@@ -108,4 +114,4 @@ jobs:
       # todo: check other tests
       run: |
         cd test
-        PYTHONPATH=/usr/local/lib/python3.9/site-packages OPENRAVE_DATA=$PWD/../src python3 -m nose test_binary_trajectory.py test_collada.py test_collision.py test_configurationcache.py test_controller.py test_environment.py test_geometry.py test_iksolver.py test_kinematics.py test_physics.py test_planning.py test_robot.py test_sampling.py test_trajectory.py
+        PYTHONPATH=/usr/local/lib/python3.13/site-packages OPENRAVE_DATA=$PWD/../src python3 -m nose test_binary_trajectory.py test_collada.py test_collision.py test_configurationcache.py test_controller.py test_environment.py test_geometry.py test_iksolver.py test_kinematics.py test_physics.py test_planning.py test_robot.py test_sampling.py test_trajectory.py
