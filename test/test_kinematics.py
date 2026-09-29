@@ -22,6 +22,7 @@ from itertools import combinations
 class TestKinematics(EnvironmentSetup):
     def test_bodybasic(self):
         self.log.info('check if the joint-link set-get functions are consistent along with jacobians')
+        random.seed(100)  # This seed value is randomly selected and no preference about itself.
         env=self.env
         with env:
             for envfile in g_envfiles:#+['testdata/bobcat.robot.xml']:
@@ -536,6 +537,7 @@ class TestKinematics(EnvironmentSetup):
 
     def test_hessian(self):
         self.log.info('check the jacobian and hessian computation')
+        random.seed(100)  # This seed value is randomly selected and no preference about itself.
         env=self.env
         for envfile in ['robots/barrettwam.robot.xml']:#g_robotfiles:
             env.Reset()
