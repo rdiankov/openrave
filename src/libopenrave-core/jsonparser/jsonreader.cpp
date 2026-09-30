@@ -280,6 +280,7 @@ public:
 #if OPENRAVE_CURL
             JSONDownloaderScope jsonDownload(_contextdesc, *_pDownloader, alloc, !(_deserializeOptions & IDO_IgnoreReferenceUri));
             jsonDownload.QueueDownloadReferenceURIs(_bMustResolveURI, rEnvInfo);
+            jsonDownload.QueueDownloadURI(pReferenceUri);
             if( !jsonDownload.WaitForDownloads(_bMustResolveURI, _downloadTimeoutUS) ) {
                 RAVELOG_VERBOSE("failed downloads");
                 //return false;
