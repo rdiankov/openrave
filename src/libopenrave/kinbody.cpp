@@ -127,6 +127,7 @@ bool KinBody::KinBodyInfo::operator==(const KinBodyInfo& other) const {
            && _dofValues == other._dofValues
            && _transform == other._transform
            && _isRobot == other._isRobot
+           && _renderingEnabled == other._renderingEnabled
            && AreVectorsDeepEqual(_vLinkInfos, other._vLinkInfos)
            && AreVectorsDeepEqual(_vJointInfos, other._vJointInfos)
            && AreVectorsDeepEqual(_vGrabbedInfos, other._vGrabbedInfos)
@@ -149,6 +150,7 @@ void KinBody::KinBodyInfo::Reset()
     _mReadableInterfaces.clear();
     _prAssociatedFileEntries.reset();
     _isRobot = false;
+    _renderingEnabled = true;
     _isPartial = true;
 }
 
@@ -183,6 +185,9 @@ void KinBody::KinBodyInfo::SerializeJSON(rapidjson::Value& rKinBodyInfo, rapidjs
         orjson::SetJsonValueByKey(rKinBodyInfo, "transform", transform, allocator);
     }
     orjson::SetJsonValueByKey(rKinBodyInfo, "isRobot", _isRobot, allocator);
+    if( !_renderingEnabled ) { // default is true
+        orjson::SetJsonValueByKey(rKinBodyInfo, "renderingEnabled", _renderingEnabled, allocator);
+    }
 
     if (_dofValues.size() > 0) {
         rapidjson::Value dofValues;
@@ -288,6 +293,10 @@ void KinBody::KinBodyInfo::DeserializeJSON(const rapidjson::Value& value, dReal 
 
     orjson::LoadJsonValueByKey(value, "interfaceType", _interfaceType);
     orjson::LoadJsonValueByKey(value, "isRobot", _isRobot);
+    if (value.HasMember("renderingEnabled")) {
+        orjson::LoadJsonValueByKey(value, "renderingEnabled", _renderingEnabled);
+        AddModifiedField(KinBodyInfo::KBIF_RenderingEnabled);
+    }
 
     if (value.HasMember("grabbed")) {
         _vGrabbedInfos.reserve(value["grabbed"].Size() + _vGrabbedInfos.size());
@@ -863,6 +872,7 @@ bool KinBody::InitFromKinBodyInfo(const KinBodyInfo& info)
     _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
+    _bRenderingEnabled = info._renderingEnabled;
     if( info._vLinkInfos.size() > 0 ) {
         _baseLinkInBodyTransform = info._vLinkInfos[0]->GetTransform();
         _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
@@ -5669,6 +5679,16 @@ bool KinBody::IsVisible() const
     return false;
 }
 
+bool KinBody::SetRenderingEnabled(bool renderingEnabled)
+{
+    if( _bRenderingEnabled == renderingEnabled ) {
+        return false;
+    }
+    _bRenderingEnabled = renderingEnabled;
+    _PostprocessChangedParameters(Prop_LinkDraw);
+    return true;
+}
+
 int8_t KinBody::DoesAffect(int jointindex, int linkindex ) const
 {
     CHECK_INTERNAL_COMPUTATION0;
@@ -5857,6 +5877,7 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     _pCurrentKinematicsFunctions.reset();
     _name = r->_name;
     _referenceUri = r->_referenceUri;
+    _bRenderingEnabled = r->_bRenderingEnabled;
     _nHierarchyComputed = r->_nHierarchyComputed;
     _bMakeJoinedLinksAdjacent = r->_bMakeJoinedLinksAdjacent;
     __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;
@@ -6421,6 +6442,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._uri = GetURI();
     info._name = _name;
     info._referenceUri = _referenceUri;
+    info._renderingEnabled = _bRenderingEnabled;
     info._interfaceType = GetXMLId();
     info._isPartial = false; // extracting everything
 
@@ -6674,6 +6696,11 @@ UpdateFromInfoResult KinBody::UpdateFromKinBodyInfo(const KinBodyInfo& info)
         _referenceUri = info._referenceUri;
         updateFromInfoResult = UFIR_Success;
         RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated referenceUri to '%s'", GetEnv()->GetNameId()%info._name%info._referenceUri);
+    }
+
+    if( info.IsModifiedField(KinBodyInfo::KBIF_RenderingEnabled) && SetRenderingEnabled(info._renderingEnabled) ) {
+        updateFromInfoResult = UFIR_Success;
+        RAVELOG_VERBOSE_FORMAT("env=%s, body '%s' updated renderingEnabled to %d", GetEnv()->GetNameId()%info._name%info._renderingEnabled);
     }
 
     // transform

@@ -123,7 +123,7 @@ void KinBodyItem::Load()
 
         FOREACHC(itgeom, (*it)->GetGeometries()) {
             KinBody::Link::GeometryPtr geom = *itgeom;
-            if( !geom->IsVisible() &&(_viewmode == VG_RenderOnly)) {
+            if( !geom->IsVisibleInHierarchy() &&(_viewmode == VG_RenderOnly)) {
                 continue;
             }
             SoSeparator* psep = NULL;
@@ -212,7 +212,7 @@ void KinBodyItem::Load()
                 mtrl->ambientColor = SbColor(&geom->GetAmbientColor().x);
                 mtrl->setOverride(true);
                 mtrl->transparency = geom->GetTransparency();
-                if((_viewmode == VG_RenderCollision)&& (bSucceeded || !geom->IsVisible()) ) {
+                if((_viewmode == VG_RenderCollision)&& (bSucceeded || !geom->IsVisibleInHierarchy()) ) {
                     mtrl->transparency = 0.5f;
                     mtrl->diffuseColor = SbColor(0.6f,0.6f,1.0f);
                     mtrl->ambientColor = SbColor(0.4f,0.4f,1.0f);
