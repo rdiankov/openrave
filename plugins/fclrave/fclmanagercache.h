@@ -168,6 +168,9 @@ private:
     /// should not add anything to _vecCachedBodies! insert to _tmpSortedBuffer
     bool _AddBody(const KinBody& body, const FCLSpace::FCLKinBodyInfoPtr& pinfo, std::vector<CollisionObjectPtr>& vcolobjs, std::vector<uint64_t>& linkEnableStatesBitmasks, bool bTrackActiveDOF);
 
+    /// \brief unregisters the collision objects this manager cached for a body and invalidates the cache entry
+    void _UnregisterCachedCollisionObjects(KinBodyCache& cache);
+
     void _UpdateActiveLinks(const RobotBase& robot);
 
 //    void CheckCount()
@@ -201,6 +204,10 @@ private:
     BroadPhaseCollisionManagerPtr pmanager;
     std::vector<KinBodyCache> _vecCachedBodies; ///< vector of KinBodyCache(weak body, updatestamp)) where index is KinBody::GetEnvironmentBodyIndex. Index 0 has invalid entry because valid env id starts from 1.
     uint32_t _lastSyncTimeStamp; ///< timestamp when last synchronized
+    uint64_t _nLastSyncRevision = 0; ///< FCLSpace revision at the last Synchronize. 0 means the next Synchronize revisits every body
+    uint64_t _nLastEnsureBodiesRevision = 0; ///< FCLSpace revision at the last EnsureBodies. Separate from _nLastSyncRevision because both run back to back on the same marks
+    std::vector<int> _vecChangedBodyIndicesCache; ///< cache, environment body indices changed since _nLastSyncRevision
+    bool _bRetryAttachedBodies = false; ///< true when Synchronize skipped an attached body that FCLSpace had not initialized yet. Nothing else brings it back, since the attached bodies are only revisited when nAttachedBodiesUpdateStamp changes again
 
     std::vector<int8_t> _vecExcludeBodyIndices; ///< any bodies that should not be considered inside the manager, used with environment mode. includes environment body index of of bodies who should be excluded.
     CollisionGroup _tmpSortedBuffer; ///< cache, sorted so that we can efficiently search
