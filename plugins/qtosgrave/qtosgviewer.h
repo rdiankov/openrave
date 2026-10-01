@@ -109,6 +109,9 @@ public:
 
     /// \brief Set title of the viewer window
     virtual void SetName(const string& name);
+    virtual inline const std::string& GetName() const {
+        return _name;
+    }
 
     /// \brief Set User-defined text to be displayed in the viewer window
     virtual void SetUserText(const string& userText);
@@ -422,6 +425,7 @@ public:
     bool _PanCameraYDirectionCommand(ostream& sout, istream& sinput);
     bool _SetCropContainerMarginsVisibleCommand(ostream& sout, istream& sinput);
 
+    std::string _name;
     QCoreApplication* _pQtApp = nullptr; // the main application, do not delete
     //@{ Message Queue
     std::map<ViewerCommandPriority, list<GUIThreadFunctionPtr> > _mapGUIFunctionLists; ///< map between priority and sublist for given priority level. protected by _mutexGUIFunctions
