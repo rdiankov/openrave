@@ -1968,6 +1968,19 @@ bool KinBody::Geometry::SetVisible(bool visible)
     return false;
 }
 
+bool KinBody::Geometry::IsVisibleInHierarchy() const
+{
+    if( !_info._bVisible ) {
+        return false;
+    }
+    LinkPtr parent = _parent.lock();
+    if( !parent ) {
+        return true;
+    }
+    KinBodyPtr pbody = parent->GetParent(true);
+    return !pbody || pbody->IsRenderingEnabled();
+}
+
 void KinBody::Geometry::SetTransparency(float f)
 {
     LinkPtr parent(_parent);

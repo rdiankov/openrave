@@ -1496,6 +1496,9 @@ bool PyGeometry::IsDraw() {
 bool PyGeometry::IsVisible() {
     return _pgeometry->IsVisible();
 }
+bool PyGeometry::IsVisibleInHierarchy() {
+    return _pgeometry->IsVisibleInHierarchy();
+}
 bool PyGeometry::IsModifiable() {
     return _pgeometry->IsModifiable();
 }
@@ -2657,6 +2660,7 @@ KinBody::KinBodyInfoPtr PyKinBody::PyKinBodyInfo::GetKinBodyInfo() const {
     pInfo->_transform = ExtractTransform(_transform);
     pInfo->_dofValues = ExtractDOFValuesArray(_dofValues);
     pInfo->_isRobot = _isRobot;
+    pInfo->_renderingEnabled = _renderingEnabled;
     pInfo->_isPartial = _isPartial;
 
     pInfo->_mReadableInterfaces = ExtractReadableInterfaces(_readableInterfaces);
@@ -2726,6 +2730,7 @@ void PyKinBody::PyKinBodyInfo::_Update(const KinBody::KinBodyInfo& info) {
     _vGrabbedInfos = vGrabbedInfos;
     _transform = ReturnTransform(info._transform);
     _isRobot = info._isRobot;
+    _renderingEnabled = info._renderingEnabled;
     _isPartial = info._isPartial;
     _dofValues = ReturnDOFValues(info._dofValues);
     _readableInterfaces = ReturnReadableInterfaces(info._mReadableInterfaces);
@@ -3709,6 +3714,14 @@ bool PyKinBody::SetVisible(bool visible)
 bool PyKinBody::IsVisible() const
 {
     return _pbody->IsVisible();
+}
+bool PyKinBody::SetRenderingEnabled(bool renderingEnabled)
+{
+    return _pbody->SetRenderingEnabled(renderingEnabled);
+}
+bool PyKinBody::IsRenderingEnabled() const
+{
+    return _pbody->IsRenderingEnabled();
 }
 
 bool PyKinBody::IsDOFRevolute(int dofindex) const
@@ -5705,6 +5718,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                          .def_readwrite("_files", &PyKinBody::PyKinBodyInfo::_files)
                          .def_readwrite("_transform", &PyKinBody::PyKinBodyInfo::_transform)
                          .def_readwrite("_isRobot", &PyKinBody::PyKinBodyInfo::_isRobot)
+                         .def_readwrite("_renderingEnabled", &PyKinBody::PyKinBodyInfo::_renderingEnabled)
                          .def("__str__",&PyKinBody::PyKinBodyInfo::__str__)
                          .def("__unicode__",&PyKinBody::PyKinBodyInfo::__unicode__)
                          .def("__copy__", [](const PyKinBody::PyKinBodyInfo& self){
@@ -6051,6 +6065,8 @@ void KinBodyInitializer::init_openravepy_kinbody()
                          .def("IsEnabled",&PyKinBody::IsEnabled, DOXY_FN(KinBody,IsEnabled))
                          .def("SetVisible",&PyKinBody::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody,SetVisible))
                          .def("IsVisible",&PyKinBody::IsVisible, DOXY_FN(KinBody,IsVisible))
+                         .def("SetRenderingEnabled",&PyKinBody::SetRenderingEnabled,PY_ARGS("renderingEnabled") DOXY_FN(KinBody,SetRenderingEnabled))
+                         .def("IsRenderingEnabled",&PyKinBody::IsRenderingEnabled, DOXY_FN(KinBody,IsRenderingEnabled))
                          .def("IsDOFRevolute",&PyKinBody::IsDOFRevolute, PY_ARGS("dofindex") DOXY_FN(KinBody,IsDOFRevolute))
                          .def("IsDOFPrismatic",&PyKinBody::IsDOFPrismatic, PY_ARGS("dofindex") DOXY_FN(KinBody,IsDOFPrismatic))
                          .def("SetTransform",&PyKinBody::SetTransform,PY_ARGS("transform") DOXY_FN(KinBody,SetTransform))
@@ -6398,6 +6414,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                                   .def("SetVisible",&PyGeometry::SetVisible,PY_ARGS("visible") DOXY_FN(KinBody::Link::Geometry,SetVisible))
                                   .def("IsDraw",&PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                   .def("IsVisible",&PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
+                                  .def("IsVisibleInHierarchy",&PyGeometry::IsVisibleInHierarchy, DOXY_FN(KinBody::Link::Geometry,IsVisibleInHierarchy))
                                   .def("IsModifiable",&PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
                                   .def("GetType",&PyGeometry::GetType, DOXY_FN(KinBody::Link::Geometry,GetType))
                                   .def("GetTransform",&PyGeometry::GetTransform, DOXY_FN(KinBody::Link::Geometry,GetTransform))

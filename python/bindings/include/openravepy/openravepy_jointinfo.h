@@ -295,6 +295,7 @@ public:
     void SetFriction(const float& friction);
     bool IsDraw();
     bool IsVisible();
+    bool IsVisibleInHierarchy();
     bool IsModifiable();
     GeometryType GetType();
     py::array_t<dReal> GetTransform();

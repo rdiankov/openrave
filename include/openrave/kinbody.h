@@ -750,6 +750,10 @@ public:
         inline bool IsVisible() const {
             return _info._bVisible;
         }
+        /// \brief true if the geometry should be rendered, taking the parent body into account.
+        ///
+        /// Unlike IsVisible, which only returns the geometry's own state, this also returns false when the parent body has rendering disabled. \see KinBody::SetRenderingEnabled
+        bool IsVisibleInHierarchy() const;
         inline bool IsModifiable() const {
             return _info._bModifiable;
         }
@@ -2454,6 +2458,7 @@ public:
         boost::shared_ptr<rapidjson::Document> _prAssociatedFileEntries; ///< files tag maintaining entries of data files associated with this object
 
         bool _isRobot = false; ///< true if should create a RobotBasePtr
+        bool _renderingEnabled = true; ///< if false, none of the body's geometries are rendered regardless of their own visible state. \see KinBody::SetRenderingEnabled
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
         enum KinBodyInfoField
@@ -2462,6 +2467,7 @@ public:
             KBIF_DOFValues = (1 << 1), // _dofValues field
             KBIF_URI = (1 << 2), // _uri field
             KBIF_ReferenceURI = (1 << 3), // _referenceUri field
+            KBIF_RenderingEnabled = (1 << 4), // _renderingEnabled field
         };
         inline bool IsModifiedField(KinBodyInfoField field) const {
             return !!(_modifiedFields & field);
@@ -3059,11 +3065,23 @@ public:
 
     /// \brief Sets all the links as visible or not visible.
     ///
+    /// This overwrites the visible state of every geometry. To hide the body while keeping the visible state of each geometry, use SetRenderingEnabled.
     /// \return true if changed
     bool SetVisible(bool visible);
 
     /// \return true if any link of the KinBody is visible.
     bool IsVisible() const;
+
+    /// \brief Enables or disables rendering of the whole body without touching the visible state of its geometries.
+    ///
+    /// A geometry is rendered only if both the body has rendering enabled and the geometry itself is visible. \see Geometry::IsVisibleInHierarchy
+    /// \return true if changed
+    bool SetRenderingEnabled(bool renderingEnabled);
+
+    /// \return true if the body has rendering enabled (default is true).
+    inline bool IsRenderingEnabled() const {
+        return _bRenderingEnabled;
+    }
 
     /// \brief Sets the joint values of the robot.
     ///
@@ -3894,6 +3912,7 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+    bool _bRenderingEnabled = true; ///< \see SetRenderingEnabled
     bool _bSuppressLinkTransformPropagation = false; ///< if true, then a change to the link transforms is not propagated outside of this body: the grabbed bodies are not moved to follow it and the Prop_LinkTransforms callbacks are not called. Only meant to be set by ScopedLinkTransformPropagationSuppressor, for the duration of a scope that is guaranteed to restore the link transforms before returning, so that nothing outside can observe the intermediate pose anyway.
 
     std::string _id; ///< unique id of the KinBody
