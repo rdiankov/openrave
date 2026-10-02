@@ -626,8 +626,11 @@ public:
         inline SensorBasePtr GetSensor() const {
             return _psensor;
         }
+        /// \brief returns the link this sensor is attached to, or null if that link is not in the
+        /// environment (removed, or never resolved). Uses weak_ptr::lock() so an absent link yields null
+        /// instead of throwing boost::bad_weak_ptr; callers must null-check the result.
         inline LinkPtr GetAttachingLink() const {
-            return LinkPtr(pattachedlink);
+            return pattachedlink.lock();
         }
         inline const Transform& GetRelativeTransform() const {
             return _info._trelative;
@@ -812,8 +815,11 @@ public:
         /// Has one-to-one correspondence with _info._vGripperInfos
         void GetResolvedGripperInfos(std::vector<RobotBase::GripperInfoPtr>& gripperInfos);
 
+        /// \brief returns the link this connected body is attached to, or null if that link is not in the
+        /// environment (removed after this connected body was initialized). Uses weak_ptr::lock() so an
+        /// absent link yields null instead of throwing boost::bad_weak_ptr; callers must null-check.
         inline LinkPtr GetAttachingLink() const {
-            return LinkPtr(_pattachedlink);
+            return _pattachedlink.lock();
         }
         inline const Transform& GetRelativeTransform() const {
             return _info._trelative;
