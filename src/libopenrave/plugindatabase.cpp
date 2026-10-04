@@ -237,6 +237,13 @@ bool DynamicRaveDatabase::LoadPlugin(const std::string& libraryname)
     return _LoadPlugin(canonicalizedLibraryname);
 }
 
+/// \brief Whether a path names a loadable plugin, i.e. ends in the platform's shared object extension.
+static bool _HasPluginExtension(const std::string& strpath)
+{
+    return strpath.size() >= PLUGIN_EXT.size()
+           && 0 == strpath.compare(strpath.size() - PLUGIN_EXT.size(), PLUGIN_EXT.size(), PLUGIN_EXT);
+}
+
 void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool recurse) try
 {
 #ifdef HAVE_BOOST_FILESYSTEM
@@ -249,15 +256,20 @@ void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool 
 #else
         for (const fs::directory_entry& entry : fs::directory_iterator(path)) {
 #endif
-            if (fs::is_directory(entry) && recurse) {
-                _LoadPluginsFromPath(entry.path().string(), true);
-            } else {
-                _LoadPluginsFromPath(entry.path().string(), false);
+            const std::string entrypath = entry.path().string();
+            if (fs::is_directory(entry)) {
+                _LoadPluginsFromPath(entrypath, recurse);
+            }
+            // Skip anything that cannot be a plugin before touching it. A dangling symlink -- the
+            // *.debug link every stripped shared object leaves behind, pointing into a debug tree the
+            // image does not ship -- makes the is_empty() below throw, and the extension check would
+            // reject the name regardless.
+            else if (_HasPluginExtension(entrypath)) {
+                _LoadPluginsFromPath(entrypath, false);
             }
         }
     } else if (fs::is_regular_file(path)) {
-        // Check that the file has a platform-appropriate extension
-        if (0 == strpath.compare(strpath.size() - PLUGIN_EXT.size(), PLUGIN_EXT.size(), PLUGIN_EXT)) {
+        if (_HasPluginExtension(strpath)) {
             _LoadPlugin(path.string());
         }
     } else {
