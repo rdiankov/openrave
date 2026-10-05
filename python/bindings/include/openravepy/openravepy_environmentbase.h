@@ -365,7 +365,7 @@ public:
     UnitInfo GetUnitInfo() const;
     int GetId() const;
 
-    object ExtractInfo() const;
+    PyEnvironmentBaseInfoPtr ExtractInfo() const;
     object UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode);
 
     int GetRevision() const;

@@ -139,9 +139,9 @@ public:
         py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
         KinBody::KinBodyInfoPtr GetKinBodyInfo() const;
-        py::object _vLinkInfos = py::none_();
-        py::object _vJointInfos = py::none_();
-        py::object _vGrabbedInfos = py::none_();
+        py::typing::Optional<py::typing::List<PyLinkInfo>> _vLinkInfos = py::none_();
+        py::typing::Optional<py::typing::List<PyJointInfo>> _vJointInfos = py::none_();
+        py::typing::Optional<py::typing::List<PyGrabbedInfo>> _vGrabbedInfos = py::none_();
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
         std::string _uri;
         std::string _id;
@@ -348,7 +348,7 @@ public:
     int64_t GetLastModifiedAtUS() const;
     int64_t GetRevisionId() const;
 
-    py::object ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
+    PyKinBodyInfoPtr ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
 
     PyInterfaceBasePtr GetBasicCalculator(const std::string& sKinematicsGeometry);
     virtual PyStateRestoreContextBase* CreateStateSaver(py::object options);

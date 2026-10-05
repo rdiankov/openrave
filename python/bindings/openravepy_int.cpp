@@ -3131,10 +3131,10 @@ int PyEnvironmentBase::GetId() const
     return _penv->GetId();
 }
 
-object PyEnvironmentBase::ExtractInfo() const {
+PyEnvironmentBase::PyEnvironmentBaseInfoPtr PyEnvironmentBase::ExtractInfo() const {
     EnvironmentBase::EnvironmentBaseInfo info;
     _penv->ExtractInfo(info);
-    return py::to_object(boost::shared_ptr<PyEnvironmentBase::PyEnvironmentBaseInfo>(new PyEnvironmentBase::PyEnvironmentBaseInfo(info)));
+    return PyEnvironmentBase::PyEnvironmentBaseInfoPtr(new PyEnvironmentBase::PyEnvironmentBaseInfo(info));
 }
 
 object PyEnvironmentBase::UpdateFromInfo(PyEnvironmentBaseInfoPtr info, UpdateFromInfoMode updateMode)

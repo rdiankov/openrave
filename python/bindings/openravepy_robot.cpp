@@ -1681,18 +1681,18 @@ bool PyRobotBase::Init(object olinkinfos, object ojointinfos, object omanipinfos
     return _probot->Init(vlinkinfos, vjointinfos, vmanipinfos, vattachedsensorinfos, uri);
 }
 
-py::list PyRobotBase::GetManipulators()
+py::typing::List<PyManipulatorPtr> PyRobotBase::GetManipulators()
 {
-    py::list manips;
+    py::typing::List<PyManipulatorPtr> manips;
     FOREACH(it, _probot->GetManipulators()) {
         manips.append(_GetManipulator(*it));
     }
     return manips;
 }
 
-py::list PyRobotBase::GetManipulators(const string& manipname)
+py::typing::List<PyManipulatorPtr> PyRobotBase::GetManipulators(const string& manipname)
 {
-    py::list manips;
+    py::typing::List<PyManipulatorPtr> manips;
     FOREACH(it, _probot->GetManipulators()) {
         if( (*it)->GetName() == manipname ) {
             manips.append(_GetManipulator(*it));
@@ -1710,11 +1710,11 @@ PyManipulatorPtr PyRobotBase::GetManipulator(const string& manipname)
     return PyManipulatorPtr();
 }
 
-object PyRobotBase::ExtractInfo(ExtractInfoOptions options) const
+PyRobotBase::PyRobotBaseInfoPtr PyRobotBase::ExtractInfo(ExtractInfoOptions options) const
 {
     RobotBase::RobotBaseInfo info;
     _probot->ExtractInfo(info, options);
-    return py::to_object(boost::shared_ptr<PyRobotBase::PyRobotBaseInfo>(new PyRobotBase::PyRobotBaseInfo(info)));
+    return PyRobotBase::PyRobotBaseInfoPtr(new PyRobotBase::PyRobotBaseInfo(info));
 }
 
 PyManipulatorPtr PyRobotBase::SetActiveManipulator(const std::string& manipname) {
@@ -1743,27 +1743,27 @@ bool PyRobotBase::RemoveAttachedSensor(PyAttachedSensorPtr pyattsensor) {
     return _probot->RemoveAttachedSensor(*pyattsensor->GetAttachedSensor());
 }
 
-py::list PyRobotBase::GetSensors()
+py::typing::List<PyAttachedSensorPtr> PyRobotBase::GetSensors()
 {
     RAVELOG_WARN("GetSensors is deprecated, please use GetAttachedSensors\n");
     return GetAttachedSensors();
 }
 
-py::list PyRobotBase::GetAttachedSensors()
+py::typing::List<PyAttachedSensorPtr> PyRobotBase::GetAttachedSensors()
 {
-    py::list sensors;
+    py::typing::List<PyAttachedSensorPtr> sensors;
     FOREACH(itsensor, _probot->GetAttachedSensors()) {
         sensors.append(OPENRAVE_SHARED_PTR<PyAttachedSensor>(new PyAttachedSensor(*itsensor,_pyenv)));
     }
     return sensors;
 }
-OPENRAVE_SHARED_PTR<PyRobotBase::PyAttachedSensor> PyRobotBase::GetSensor(const std::string& sensorname)
+PyAttachedSensorPtr PyRobotBase::GetSensor(const std::string& sensorname)
 {
     RAVELOG_WARN("GetSensor is deprecated, please use GetAttachedSensor\n");
     return GetAttachedSensor(sensorname);
 }
 
-OPENRAVE_SHARED_PTR<PyRobotBase::PyAttachedSensor> PyRobotBase::GetAttachedSensor(const std::string& sensorname)
+PyAttachedSensorPtr PyRobotBase::GetAttachedSensor(const std::string& sensorname)
 {
     return _GetAttachedSensor(_probot->GetAttachedSensor(sensorname));
 }
@@ -2672,8 +2672,8 @@ void RobotBaseInitializer::init_openravepy_robot()
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator2)(const std::string&) = &PyRobotBase::SetActiveManipulator;
         PyRobotBase::PyManipulatorPtr (PyRobotBase::*setactivemanipulator3)(PyRobotBase::PyManipulatorPtr) = &PyRobotBase::SetActiveManipulator;
 
-        py::list (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
-        py::list (PyRobotBase::*GetManipulators2)(const string &) = &PyRobotBase::GetManipulators;
+        py::typing::List<PyRobotBase::PyManipulatorPtr> (PyRobotBase::*GetManipulators1)() = &PyRobotBase::GetManipulators;
+        py::typing::List<PyRobotBase::PyManipulatorPtr> (PyRobotBase::*GetManipulators2)(const string &) = &PyRobotBase::GetManipulators;
         bool (PyRobotBase::*setcontroller1)(PyControllerBasePtr,const string &) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller2)(PyControllerBasePtr,object,int) = &PyRobotBase::SetController;
         bool (PyRobotBase::*setcontroller3)(PyControllerBasePtr) = &PyRobotBase::SetController;
