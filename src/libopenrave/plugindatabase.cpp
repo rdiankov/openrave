@@ -256,15 +256,13 @@ void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool 
 #else
         for (const fs::directory_entry& entry : fs::directory_iterator(path)) {
 #endif
-            const std::string entrypath = entry.path().string();
             if (fs::is_directory(entry)) {
-                _LoadPluginsFromPath(entrypath, recurse);
+                _LoadPluginsFromPath(entry.path().string(), recurse);
+                continue;
             }
-            // Skip anything that cannot be a plugin before touching it. A dangling symlink -- the
-            // *.debug link every stripped shared object leaves behind, pointing into a debug tree the
-            // image does not ship -- makes the is_empty() below throw, and the extension check would
-            // reject the name regardless.
-            else if (_HasPluginExtension(entrypath)) {
+            // Skip anything that cannot be a plugin before touching it.
+            const std::string entrypath = entry.path().string();
+            if (_HasPluginExtension(entrypath)) {
                 _LoadPluginsFromPath(entrypath, false);
             }
         }
