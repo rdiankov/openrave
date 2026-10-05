@@ -888,10 +888,10 @@ void KinBody::Link::AddGeometry(KinBody::GeometryInfoPtr pginfo, bool addToGroup
 
     _vGeometries.push_back(GeometryPtr(new Geometry(shared_from_this(),*pginfo)));
     _vGeometries.back()->InitCollisionMesh();
-    _info._vgeometryinfos.push_back(pginfo);
+    _info._vgeometryinfos.push_back(KinBody::GeometryInfoPtr(new KinBody::GeometryInfo(*pginfo)));
     if( addToGroups ) {
         FOREACH(itgeometrygroup, _info._mapExtraGeometries) {
-            itgeometrygroup->second.push_back(pginfo);
+            itgeometrygroup->second.push_back(KinBody::GeometryInfoPtr(new KinBody::GeometryInfo(*pginfo)));
         }
     }
     _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
@@ -917,7 +917,7 @@ void KinBody::Link::AddGeometryToGroup(KinBody::GeometryInfoPtr pginfo, const st
         }
     }
 
-    it->second.push_back(pginfo);
+    it->second.push_back(KinBody::GeometryInfoPtr(new KinBody::GeometryInfo(*pginfo)));
     _Update(true, Prop_LinkGeometryGroup); // have to notify collision checkers that the geometry info they are caching could have changed.
 }
 
