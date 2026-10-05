@@ -39,10 +39,10 @@ public:
         py::dict SerializeJSON(dReal fUnitScale=1.0, py::object options=py::none_());
         void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
-        py::object _vManipulatorInfos = py::none_();
-        py::object _vAttachedSensorInfos = py::none_();
-        py::object _vConnectedBodyInfos = py::none_();
-        py::object _vGripperInfos = py::none_();
+        py::typing::Optional<py::list> _vManipulatorInfos = py::none_();
+        py::typing::Optional<py::list> _vAttachedSensorInfos = py::none_();
+        py::typing::Optional<py::list> _vConnectedBodyInfos = py::none_();
+        py::typing::Optional<py::list> _vGripperInfos = py::none_();
         virtual std::string __str__();
         virtual py::str __unicode__();
 
@@ -310,9 +310,9 @@ public:
 
     bool Init(object olinkinfos, object ojointinfos, object omanipinfos, object oattachedsensorinfos, const std::string& uri=std::string());
 
-    py::list GetManipulators();
+    py::typing::List<PyManipulatorPtr> GetManipulators();
 
-    py::list GetManipulators(const std::string& manipname);
+    py::typing::List<PyManipulatorPtr> GetManipulators(const std::string& manipname);
     PyManipulatorPtr GetManipulator(const std::string& manipname);
     PyManipulatorPtr SetActiveManipulator(const std::string& manipname);
     PyManipulatorPtr SetActiveManipulator(PyManipulatorPtr pmanip);
@@ -324,9 +324,9 @@ public:
     PyAttachedSensorPtr AddAttachedSensor(PyAttachedSensorInfoPtr pattsensorinfo, bool removeduplicate=false);
     bool RemoveAttachedSensor(PyAttachedSensorPtr pyattsensor);
 
-    py::list GetSensors();
+    py::typing::List<PyAttachedSensorPtr> GetSensors();
 
-    py::list GetAttachedSensors();
+    py::typing::List<PyAttachedSensorPtr> GetAttachedSensors();
     OPENRAVE_SHARED_PTR<PyAttachedSensor> GetSensor(const std::string& sensorname);
 
     OPENRAVE_SHARED_PTR<PyAttachedSensor> GetAttachedSensor(const std::string& sensorname);
@@ -455,7 +455,7 @@ public:
     PyStateRestoreContextBase* CreateRobotStateSaver(object options=py::none_());
     bool InitFromRobotInfo(const py::object pyRobotBaseInfo);
 
-    py::object ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
+    PyRobotBaseInfoPtr ExtractInfo(ExtractInfoOptions options=EIO_Everything) const;
 
     virtual std::string __repr__();
     virtual std::string __str__();

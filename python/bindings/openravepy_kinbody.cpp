@@ -4378,14 +4378,14 @@ PyStateRestoreContextBase* PyKinBody::CreateKinBodyStateSaver(object options)
     return CreateStateSaver(options);
 }
 
-object PyKinBody::ExtractInfo(ExtractInfoOptions options) const
+PyKinBody::PyKinBodyInfoPtr PyKinBody::ExtractInfo(ExtractInfoOptions options) const
 {
     KinBody::KinBodyInfo info;
     {
         openravepy::PythonThreadSaver threadsaver;
         _pbody->ExtractInfo(info, options);
     }
-    return py::to_object(boost::shared_ptr<PyKinBody::PyKinBodyInfo>(new PyKinBody::PyKinBodyInfo(info)));
+    return PyKinBody::PyKinBodyInfoPtr(new PyKinBody::PyKinBodyInfo(info));
 }
 
 py::object PyKinBody::GetAssociatedFileEntries() const
