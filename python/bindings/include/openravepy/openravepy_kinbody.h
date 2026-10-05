@@ -118,7 +118,7 @@ public:
     py::object _robotlinkname = py::none_();
     py::object _grippername = py::none_();
 #endif
-    py::object _trelative = ReturnTransform(Transform());
+    py::array_t<dReal> _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     std::vector<std::string> _setIgnoreRobotLinkNames;
 #else
@@ -155,7 +155,7 @@ public:
         py::object _name = py::none_();
         py::object _interfaceType = py::none_();
 #endif
-        py::object _transform = ReturnTransform(Transform());
+        py::array_t<dReal> _transform = ReturnTransform(Transform());
         bool _isRobot = false;
         bool _isPartial = true;
         py::object _dofValues = py::none_();

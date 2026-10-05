@@ -31,8 +31,8 @@ public:
     PySideWall(const KinBody::GeometryInfo::SideWall& sidewall);
     void Get(KinBody::GeometryInfo::SideWall& sidewall);
 
-    object transf = ReturnTransform(Transform());
-    object vExtents = toPyVector3(Vector());
+    py::array_t<dReal> transf = ReturnTransform(Transform());
+    py::array_t<dReal> vExtents = toPyVector3(Vector());
     int type = 0;
 };
 
@@ -84,29 +84,29 @@ public:
     std::string __repr__();
     std::string __str__();
 
-    object _t = ReturnTransform(Transform());
-    object _vGeomData = toPyVector4(Vector());
-    object _vGeomData2 = toPyVector4(Vector());
-    object _vGeomData3 = toPyVector4(Vector());
-    object _vGeomData4 = toPyVector4(Vector());
-    object _vDiffuseColor = toPyVector3(Vector(1,1,1));
-    object _vAmbientColor = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _t = ReturnTransform(Transform());
+    py::array_t<dReal> _vGeomData = toPyVector4(Vector());
+    py::array_t<dReal> _vGeomData2 = toPyVector4(Vector());
+    py::array_t<dReal> _vGeomData3 = toPyVector4(Vector());
+    py::array_t<dReal> _vGeomData4 = toPyVector4(Vector());
+    py::array_t<dReal> _vDiffuseColor = toPyVector3(Vector(1,1,1));
+    py::array_t<dReal> _vAmbientColor = toPyVector3(Vector(0,0,0));
     object _meshcollision = py::none_();
     GeometryType _type = GT_None;
     object _id = py::none_();
     object _name = py::none_();
     object _filenamerender = py::none_();
     object _filenamecollision = py::none_();
-    object _vRenderScale = toPyVector3(Vector(1,1,1));
-    object _vCollisionScale = toPyVector3(Vector(1,1,1));
+    py::array_t<dReal> _vRenderScale = toPyVector3(Vector(1,1,1));
+    py::array_t<dReal> _vCollisionScale = toPyVector3(Vector(1,1,1));
     float _fTransparency = 0.0;
     bool _bVisible = true;
     bool _bModifiable = true;
 
-    object _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
-    object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
-    object _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
-    object _vPositiveCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vNegativeCropContainerMargins = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vPositiveCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
 
     py::list _vSideWalls;
     py::list _vAxialSlices;
@@ -127,13 +127,18 @@ public:
     py::dict SerializeJSON(dReal fUnitScale=1.0, object options=py::none_());
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
-    py::list _vgeometryinfos;
+    py::typing::Optional<py::typing::List<PyGeometryInfo>> _vgeometryinfos;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string _id;
+    std::string _name;
+#else
     object _id = py::none_();
     object _name = py::none_();
-    object _t = ReturnTransform(Transform());
-    object _tMassFrame = ReturnTransform(Transform());
+#endif
+    py::array_t<dReal> _t = ReturnTransform(Transform());
+    py::array_t<dReal> _tMassFrame = ReturnTransform(Transform());
     dReal _mass = 1e-10;
-    object _vinertiamoments = toPyVector3(Vector(1,1,1));
+    py::array_t<dReal> _vinertiamoments = toPyVector3(Vector(1,1,1));
     py::dict _mapFloatParameters;
     py::dict _mapIntParameters;
     py::dict _mapStringParameters;
@@ -233,26 +238,31 @@ public:
     void DeserializeJSON(object obj, dReal fUnitScale=1.0, object options=py::none_());
 
     KinBody::JointType _type = KinBody::JointNone;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    std::string _id;
+    std::string _name;
+#else
     object _id = py::none_();
     object _name = py::none_();
+#endif
     object _linkname0 = py::none_(), _linkname1 = py::none_();
-    object _vanchor = toPyVector3(Vector());
+    py::array_t<dReal> _vanchor = toPyVector3(Vector());
     object _vaxes = py::list();
     object _vcurrentvalues = py::none_();
-    object _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
-    object _vmaxvel = toPyVector3(Vector(10,10,10));
-    object _vhardmaxvel = toPyVector3(Vector(0,0,0));
-    object _vmaxaccel = toPyVector3(Vector(50,50,50));
-    object _vhardmaxaccel = toPyVector3(Vector(0,0,0));
-    object _vmaxjerk = toPyVector3(Vector(5e4, 5e4, 5e4));  // default value should keep the same as Joint in cpp
-    object _vhardmaxjerk= toPyVector3(Vector(0, 0, 0));
-    object _vmaxtorque = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
-    object _vmaxinertia = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
-    object _vweights = toPyVector3(Vector(1,1,1));
-    object _voffsets = toPyVector3(Vector(0,0,0));
-    object _vlowerlimit = toPyVector3(Vector(0,0,0));
-    object _vupperlimit = toPyVector3(Vector(0,0,0));
-    object _trajfollow = py::none_();
+    py::array_t<dReal> _vresolution = toPyVector3(Vector(0.02,0.02,0.02));
+    py::array_t<dReal> _vmaxvel = toPyVector3(Vector(10,10,10));
+    py::array_t<dReal> _vhardmaxvel = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vmaxaccel = toPyVector3(Vector(50,50,50));
+    py::array_t<dReal> _vhardmaxaccel = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vmaxjerk = toPyVector3(Vector(5e4, 5e4, 5e4));  // default value should keep the same as Joint in cpp
+    py::array_t<dReal> _vhardmaxjerk= toPyVector3(Vector(0, 0, 0));
+    py::array_t<dReal> _vmaxtorque = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
+    py::array_t<dReal> _vmaxinertia = toPyVector3(Vector(0, 0, 0)); // default value should keep the same as Joint in cpp
+    py::array_t<dReal> _vweights = toPyVector3(Vector(1,1,1));
+    py::array_t<dReal> _voffsets = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vlowerlimit = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _vupperlimit = toPyVector3(Vector(0,0,0));
+    py::array_t<dReal> _trajfollow = py::none_();
     PyElectricMotorActuatorInfoPtr _infoElectricMotor;
     py::list _vmimic;
     py::dict _mapFloatParameters, _mapIntParameters, _mapStringParameters;
