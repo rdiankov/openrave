@@ -257,7 +257,9 @@ void DynamicRaveDatabase::_LoadPluginsFromPath(const std::string& strpath, bool 
         for (const fs::directory_entry& entry : fs::directory_iterator(path)) {
 #endif
             if (fs::is_directory(entry)) {
-                _LoadPluginsFromPath(entry.path().string(), recurse);
+                if (recurse) {
+                    _LoadPluginsFromPath(entry.path().string(), true);
+                }
                 continue;
             }
             // Skip anything that cannot be a plugin before touching it.
