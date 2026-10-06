@@ -2085,21 +2085,35 @@ const std::vector<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) cons
         // compute it
         if( compute.at(AO_Enabled) ) {
             _vNonAdjacentLinks.at(AO_Enabled).resize(0);
-            FOREACHC(itset, _vNonAdjacentLinks[0]) {
-                KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
-                if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _vNonAdjacentLinks[AO_Enabled].push_back(*itset);
+            for( const int pair : _vNonAdjacentLinks[0] ) {
+                const int linkindex1 = pair & 0xffff;
+                const int linkindex2 = pair >> 16;
+                if( _veclinks.at(linkindex1)->IsEnabled() && _veclinks.at(linkindex2)->IsEnabled() ) {
+                    _vNonAdjacentLinks[AO_Enabled].push_back(pair);
                 }
             }
             std::sort(_vNonAdjacentLinks[AO_Enabled].begin(), _vNonAdjacentLinks[AO_Enabled].end(), CompareNonAdjacentFarthest);
         }
         if( compute.at(AO_ActiveDOFs) ) {
             _vNonAdjacentLinks.at(AO_ActiveDOFs).resize(0);
-            FOREACHC(itset, _vNonAdjacentLinks[0]) {
-                FOREACHC(it, GetActiveDOFIndices()) {
-                    if( IsDOFInChain(*itset&0xffff,*itset>>16,*it) ) {
-                        _vNonAdjacentLinks[AO_ActiveDOFs].push_back(*itset);
-                        break;
+            {
+                // Expand the content of ISDOFInChain to avoid redundant checks
+                // CHECK_INTERNAL_COMPUTATION; // don't need this since KinBody::GetNonAdjacentLinks already calls it.
+                for( const int pair : _vNonAdjacentLinks[0] ) {
+                    const int linkindex1 = pair & 0xffff;
+                    const int linkindex2 = pair >> 16;
+                    const int numlinks = _veclinks.size();
+                    OPENRAVE_ASSERT_FORMAT(linkindex1 >= 0 && linkindex1 < numlinks, "body %s linkindex %d invalid (num links %d)", GetName()%linkindex1%numlinks, ORE_InvalidArguments);
+                    OPENRAVE_ASSERT_FORMAT(linkindex2 >= 0 && linkindex2 < numlinks, "body %s linkindex %d invalid (num links %d)", GetName()%linkindex2%numlinks, ORE_InvalidArguments);
+
+                    for( const int dofindex : GetActiveDOFIndices() ) {
+                        const int jointindex = _vDOFIndices.at(dofindex);
+                        OPENRAVE_ASSERT_FORMAT(jointindex >= 0 && jointindex < (int)_vecjoints.size(), "body %s jointindex %d invalid (num joints %d)", GetName()%jointindex%_vecjoints.size(), ORE_InvalidArguments);
+                        const int jointindexoffset = jointindex*numlinks;
+                        if( (_vJointsAffectingLinks.at(jointindexoffset + linkindex1) == 0) != (_vJointsAffectingLinks.at(jointindexoffset + linkindex2) == 0) ) {
+                            _vNonAdjacentLinks[AO_ActiveDOFs].push_back(pair);
+                            break;
+                        }
                     }
                 }
             }
@@ -2107,10 +2121,11 @@ const std::vector<int>& RobotBase::GetNonAdjacentLinks(int adjacentoptions) cons
         }
         if( compute.at(AO_Enabled|AO_ActiveDOFs) ) {
             _vNonAdjacentLinks.at(AO_Enabled|AO_ActiveDOFs).resize(0);
-            FOREACHC(itset, _vNonAdjacentLinks[AO_ActiveDOFs]) {
-                KinBody::LinkConstPtr plink1(_veclinks.at(*itset&0xffff)), plink2(_veclinks.at(*itset>>16));
-                if( plink1->IsEnabled() && plink2->IsEnabled() ) {
-                    _vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].push_back(*itset);
+            for( const int pair : _vNonAdjacentLinks[AO_ActiveDOFs] ) {
+                const int linkindex1 = pair & 0xffff;
+                const int linkindex2 = pair >> 16;
+                if( _veclinks.at(linkindex1)->IsEnabled() && _veclinks.at(linkindex2)->IsEnabled() ) {
+                    _vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].push_back(pair);
                 }
             }
             std::sort(_vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].begin(), _vNonAdjacentLinks[AO_Enabled|AO_ActiveDOFs].end(), CompareNonAdjacentFarthest);
