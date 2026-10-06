@@ -18,9 +18,6 @@ namespace qtosgrave {
 ObjectTree::ObjectTree() {
     setFixedSize(100,200);
     model = OsgTreeModel::create();
-    //setModel(model);
-    //setModel( * model);
-    //setMode
 }
 
 ObjectTree::~ObjectTree() {
