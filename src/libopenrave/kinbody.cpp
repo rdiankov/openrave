@@ -780,6 +780,11 @@ void KinBody::_InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos)
     CHECK_NO_INTERNAL_COMPUTATION;
     BOOST_ASSERT(_veclinks.empty()); // We assume we are the first call to initialize links
 
+    // If there are no links, nothing to init
+    if (linkInfos.empty()) {
+        return;
+    }
+
     // Keep track of link names as we go to deduplicate
     std::unordered_set<std::string> existingLinkNames;
     existingLinkNames.reserve(linkInfos.size());
@@ -801,6 +806,10 @@ void KinBody::_InitWithInitialLinks(const std::vector<LinkInfoT>& linkInfos)
         _InitLinkFromInfo(plink, info);
         _veclinks.push_back(std::move(plink));
     }
+
+    // If the first (base) link in the body has a non-zero transform, we need to make sure we latch it.
+    _baseLinkInBodyTransform = _ResolveLinkInfo(linkInfos[0]).GetTransform();
+    _invBaseLinkInBodyTransform = _baseLinkInBodyTransform.inverse();
 
     _vLinkTransformPointers.clear();
     __hashKinematicsGeometryDynamics.resize(0);
@@ -5862,6 +5871,8 @@ void KinBody::Clone(InterfaceBaseConstPtr preference, int cloningoptions)
     __hashKinematicsGeometryDynamics = r->__hashKinematicsGeometryDynamics;
     _vTempJoints = r->_vTempJoints;
 
+    _baseLinkInBodyTransform = r->_baseLinkInBodyTransform;
+    _invBaseLinkInBodyTransform = r->_invBaseLinkInBodyTransform;
     _vLinkTransformPointers.clear(); _vLinkTransformPointers.reserve(r->_veclinks.size());
     _veclinks.clear(); _veclinks.reserve(r->_veclinks.size());
     for (const LinkPtr& origLinkPtr : r->_veclinks) {
