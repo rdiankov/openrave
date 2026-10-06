@@ -381,9 +381,9 @@ public:
         return col;
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) {
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks = std::vector<KinBody::LinkConstPtr>(), CollisionReportPtr report = CollisionReportPtr()) {
 
-        return _pintchecker->CheckStandaloneSelfCollision(plink, report);
+        return _pintchecker->CheckStandaloneSelfCollision(plink, vIncludedLinks, report);
     }
 
 protected:

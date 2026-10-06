@@ -385,7 +385,7 @@ public:
         return false;
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks = std::vector<KinBody::LinkConstPtr>(), CollisionReportPtr report = CollisionReportPtr())
     {
         KinBodyPtr pbody = plink->GetParent();
         if( pbody->GetLinks().size() <= 1 ) {
@@ -402,8 +402,12 @@ public:
         const std::vector<int>& nonadjacent = pbody->GetNonAdjacentLinks(adjacentoptions);
         PQP_REAL R1[3][3], R2[3][3], T1[3], T2[3];
         FOREACHC(itset, nonadjacent) {
-            KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
-            if( plink == plink1 || plink == plink2 ) {
+            const int index1 = *itset&0xffff, index2 = *itset>>16;
+            KinBody::LinkConstPtr plink1(pbody->GetLinks().at(index1)), plink2(pbody->GetLinks().at(index2));
+            if( _ShouldSkipStandaloneSelfCollisionCheckPair(*plink, index1, index2, pbody, vIncludedLinks) ) {
+                continue;
+            }
+            {
                 GetPQPTransformFromTransform(plink1->GetTransform(),R1,T1);
                 GetPQPTransformFromTransform(plink2->GetTransform(),R2,T2);
                 if( DoPQP(plink1,R1,T1,plink2,R2,T2,report) ) {
