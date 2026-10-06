@@ -1427,7 +1427,7 @@ class IKFastSolver(AutoReloader):
                     return True
             return False
     
-    def __init__(self, kinbody=None,kinematicshash='',precision=None, checkpreemptfn=None):
+    def __init__(self, kinbody=None,kinematicshash='',precision=None, checkpreemptfn=lambda msg, progress: None):
         """
         :param checkpreemptfn: checkpreemptfn(msg, progress) called periodically at various points in ikfast. Takes in two arguments to notify user how far the process has completed.
         """
@@ -1465,8 +1465,7 @@ class IKFastSolver(AutoReloader):
     def _CheckPreemptFn(self, msg=u'', progress=0.25):
         """progress is a value from [0,1] where 0 is just starting and 1 is complete 
         """
-        if self._checkpreemptfn is not None:
-            self._checkpreemptfn(msg, progress=progress)
+        self._checkpreemptfn(msg, progress=progress)
     
     def convertRealToRational(self, x,precision=None):
         if precision is None:
@@ -2214,15 +2213,8 @@ class IKFastSolver(AutoReloader):
             else:
                 lang = next(iter(CodeGenerators.keys()))
         log.info('generating %s code...'%lang)
-        if self._checkpreemptfn is not None:
-            import weakref
-            weakself = weakref.proxy(self)
-            def _CheckPreemtCodeGen(msg, progress):
-                # put the progress in the latter half
-                weakself._checkpreemptfn(u'CodeGen %s'%msg, 0.5+0.5*progress)
-        else:
-            _CheckPreemtCodeGen = None
-        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype, checkpreemptfn=_CheckPreemtCodeGen).generate(chaintree)
+        func=self._checkpreemptfn
+        return CodeGenerators[lang](kinematicshash=self.kinematicshash,version=__version__,iktypestr=self._iktype, checkpreemptfn=lambda msg, progress: func(u'CodeGen %s'%msg, 0.5+0.5*progress)).generate(chaintree)
     
     def generateIkSolver(self, baselink, eelink, freeindices=None, solvefn=None, ikfastoptions=0):
         """
