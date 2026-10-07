@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.5
+===============
+
+- Skip plugin-directory entries whose name does not end in the plugin extension before stat'ing them.
+
 Version 0.174.4
 ===============
 
