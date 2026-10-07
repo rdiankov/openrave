@@ -297,7 +297,7 @@ void KinBodyItem::Load()
         for(size_t igeom = 0; igeom < porlink->GetGeometries().size(); ++igeom) {
             _vecgeoms[linkindex].push_back( GeomNodes(new osg::Group(), new osg::MatrixTransform()) );
             KinBody::Link::GeometryPtr orgeom = porlink->GetGeometries()[igeom];
-            if( !orgeom->IsVisible() && _viewmode == VG_RenderOnly ) {
+            if( !orgeom->IsVisibleInHierarchy() && _viewmode == VG_RenderOnly ) {
                 continue;
             }
 
@@ -345,7 +345,7 @@ void KinBodyItem::Load()
 
                 osg::ref_ptr<osg::Material> mat = new osg::Material;
                 float transparency = orgeom->GetTransparency();
-                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisible()) ) {
+                if( _viewmode == VG_RenderCollision && (bSucceeded || !orgeom->IsVisibleInHierarchy()) ) {
                     mat->setDiffuse(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.6f,0.6f,1.0f,1.0f));
                     mat->setAmbient(osg::Material::FRONT_AND_BACK,osg::Vec4f(0.4f,0.4f,1.0f,1.0f));
                     transparency = 0.5f;

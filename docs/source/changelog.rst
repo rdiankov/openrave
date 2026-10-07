@@ -3,6 +3,12 @@
 ChangeLog
 #########
 
+Version 0.175.0
+===============
+
+- Add KinBody::SetRenderingEnabled / IsRenderingEnabled and KinBodyInfo::_renderingEnabled (JSON ``renderingEnabled``) to hide a whole body without overwriting the visible state of its geometries.
+- Add KinBody::Geometry::IsVisibleInHierarchy, which is true only if both the geometry is visible and its body has rendering enabled. The qtosg and qtcoin viewers now use it to decide what to render.
+
 Version 0.174.4
 ===============
 

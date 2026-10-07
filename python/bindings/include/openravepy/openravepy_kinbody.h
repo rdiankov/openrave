@@ -157,6 +157,7 @@ public:
 #endif
         py::object _transform = ReturnTransform(Transform());
         bool _isRobot = false;
+        bool _renderingEnabled = true;
         bool _isPartial = true;
         py::object _dofValues = py::none_();
         py::object _readableInterfaces = py::none_();
@@ -273,6 +274,8 @@ public:
     bool IsEnabled() const;
     bool SetVisible(bool visible);
     bool IsVisible() const;
+    bool SetRenderingEnabled(bool renderingEnabled);
+    bool IsRenderingEnabled() const;
     bool IsDOFRevolute(int dofindex) const;
     bool IsDOFPrismatic(int dofindex) const;
     void SetTransform(py::object otransform);

@@ -939,6 +939,7 @@ bool RobotBase::InitFromRobotInfo(const RobotBaseInfo& info)
     _id = info._id;
     _name = info._name;
     _referenceUri = info._referenceUri;
+    _bRenderingEnabled = info._renderingEnabled;
 
     FOREACH(it, info._mReadableInterfaces) {
         SetReadableInterface(it->first, it->second);
