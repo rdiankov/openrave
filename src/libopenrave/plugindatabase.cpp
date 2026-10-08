@@ -200,7 +200,7 @@ void DynamicRaveDatabase::Init()
     }
     for (const std::string& entry : _vPluginDirs) {
         RAVELOG_DEBUG_FORMAT("Looking for plugins in %s", entry);
-        _LoadPluginsFromPath(entry);
+        _LoadPluginsFromPath(entry, /*recurse=*/ true);
     }
 }
 

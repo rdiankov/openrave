@@ -7,6 +7,7 @@ Version 0.174.5
 ===============
 
 - Skip plugin-directory entries whose name does not end in the plugin extension before stat'ing them.
+- ``_LoadPluginsFromPath`` honours its ``recurse`` flag; plugin discovery at startup passes ``true``, so subdirectories of a plugin directory are scanned as before.
 
 Version 0.174.4
 ===============
