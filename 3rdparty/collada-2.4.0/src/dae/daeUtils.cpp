@@ -18,7 +18,7 @@
 #endif
 
 #ifndef NO_BOOST
-#include <boost/filesystem/convenience.hpp>       // THIS WAS NOT COMMENTED.
+#include <boost/filesystem.hpp>       // THIS WAS NOT COMMENTED.
 #endif
 
 #include <cstdio> // for tmpnam

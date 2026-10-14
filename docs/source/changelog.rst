@@ -10,6 +10,12 @@ Version 0.175.0
 - KinBody::_DeinitializeInternalInformation drops the forced and computed adjacency tables, which are indexed by link index and do not describe the links a later composition puts at those indices.
 - Activating a connected body keeps the forced adjacencies recorded against its links since they were last resolved, and deactivating one drops the names it leaves behind on the links that stay.
 
+Version 0.174.5
+===============
+
+- Skip plugin-directory entries whose name does not end in the plugin extension before stat'ing them.
+- ``_LoadPluginsFromPath`` honours its ``recurse`` flag; plugin discovery at startup passes ``true``, so subdirectories of a plugin directory are scanned as before.
+
 Version 0.174.4
 ===============
 
