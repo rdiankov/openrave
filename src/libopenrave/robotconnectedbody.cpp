@@ -800,11 +800,18 @@ void RobotBase::_ComputeConnectedBodiesInformation()
             if( !plink ) {
                 plink.reset(new KinBody::Link(shared_kinbody()));
             }
+            // names already resolved on a previous activation are kept, so a forced adjacency set on
+            // this link through SetAdjacentLinks outlives the link being rebuilt here. They are
+            // re-added after the prefix pass rather than through it: they carry the prefix already.
+            const std::vector<std::string> vResolvedForcedAdjacentLinks = plink->_info._vForcedAdjacentLinks;
             plink->_info = *connectedBodyInfo._vLinkInfos[ilink]; // shallow copy
             plink->_info._name = connectedBody._nameprefix + plink->_info._name;
             plink->_info.SetTransform(tBaseLinkInWorld * plink->_info.GetTransform());
             for( std::string& forcedAdjacentLink : plink->_info._vForcedAdjacentLinks ) {
                 forcedAdjacentLink = connectedBody._nameprefix + forcedAdjacentLink;
+            }
+            for( const std::string& resolvedForcedAdjacentLink : vResolvedForcedAdjacentLinks ) {
+                plink->_info.SetNoncollidingLink(resolvedForcedAdjacentLink);
             }
 
             _InitAndAddLink(plink);
@@ -1108,6 +1115,7 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
         return;
     }
 
+    std::vector<std::string> vRemovedLinkNames;
     std::vector<uint8_t> vConnectedLinks; vConnectedLinks.resize(_veclinks.size(),0);
     std::vector<uint8_t> vConnectedJoints; vConnectedJoints.resize(_vecjoints.size(),0);
     std::vector<uint8_t> vConnectedPassiveJoints; vConnectedPassiveJoints.resize(_vPassiveJoints.size(),0);
@@ -1121,6 +1129,7 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
             LinkPtr presolvedlink = GetLink(connectedBody._vResolvedLinkNames[iresolvedlink].first);
             if( !!presolvedlink ) {
                 vConnectedLinks.at(presolvedlink->GetIndex()) = 1;
+                vRemovedLinkNames.push_back(presolvedlink->GetName());
             }
             connectedBody._vResolvedLinkNames[iresolvedlink].first.clear();
         }
@@ -1169,6 +1178,18 @@ void RobotBase::_DeinitializeConnectedBodiesInformation()
             }
         }
         connectedBody._dummyPassiveJointName.clear();
+    }
+
+    // A link that stays can hold a forced adjacency naming one of the links going away, recorded when
+    // SetAdjacentLinks joined the two. Drop those names: the link going away keeps its own copy of the
+    // pair, so re-activating the connected body restores it from that side.
+    for(int ilink = 0; ilink < (int)vConnectedLinks.size(); ++ilink) {
+        if( vConnectedLinks[ilink] ) {
+            continue; // this link goes away and keeps its own copy of the pair, which restores it
+        }
+        for(const std::string& removedLinkName : vRemovedLinkNames) {
+            _veclinks[ilink]->_info.RemoveNoncollidingLink(removedLinkName);
+        }
     }
 
     int iwritelink = 0;
