@@ -2919,9 +2919,22 @@ public:
     /// assumes GetMutex() and _mutexInterfaces are both exclusively locked
     virtual void _UpdatePublishedBodies()
     {
-        // updated the published bodies, resize dynamically in case an exception occurs
-        // when creating an item and bad data is left inside _vPublishedBodies
-        _vPublishedBodies.resize(_GetNumBodies());
+        // Published states are reused in place, so each one carries whatever buffers were grown previously.
+        // Slots are handed out by position among the bodies that currently exist, and that position shifts whenever a lower-indexed body is added or removed.
+        // Pin each state to the body it describes, otherwise large bodies permanently bloat reserved buffers for slots that might then only hold small bodies.
+        _vPublishedBodySlotsByEnvironmentBodyIndex.assign(_vecbodies.size(), -1);
+        for (int islot = 0; islot < (int)_vPublishedBodies.size(); ++islot) {
+            const int environmentBodyIndex = _vPublishedBodies[islot].environmentid;
+            if (environmentBodyIndex > 0 && environmentBodyIndex < (int)_vPublishedBodySlotsByEnvironmentBodyIndex.size()) {
+                _vPublishedBodySlotsByEnvironmentBodyIndex[environmentBodyIndex] = islot;
+            }
+        }
+
+        // Only grow here, in case an exception occurs when creating an item and bad data is left inside _vPublishedBodies.
+        // Any states past the last written one are deleted, and released below once the live ones have been moved.
+        if ((int)_vPublishedBodies.size() < _GetNumBodies()) {
+            _vPublishedBodies.resize(_GetNumBodies());
+        }
         int iwritten = 0;
 
         std::vector<dReal> vdoflastsetvalues;
@@ -2934,6 +2947,21 @@ public:
                 continue;
             }
 
+            // Move this body's own state down to the slot about to be written to.
+            // Everything already written is below iwritten, so the state holding this body is always at or above it if it exists.
+            const int environmentBodyIndex = pbody->GetEnvironmentBodyIndex();
+            const int ipreviousSlot = environmentBodyIndex < (int)_vPublishedBodySlotsByEnvironmentBodyIndex.size() ? _vPublishedBodySlotsByEnvironmentBodyIndex[environmentBodyIndex] : -1;
+            if (ipreviousSlot > iwritten) {
+                std::swap(_vPublishedBodies[ipreviousSlot], _vPublishedBodies[iwritten]);
+
+                // If we displaced a different body's data, update the index mapping for it
+                const int displacedEnvironmentBodyIndex = _vPublishedBodies[ipreviousSlot].environmentid;
+                if (displacedEnvironmentBodyIndex > 0 && displacedEnvironmentBodyIndex < (int)_vPublishedBodySlotsByEnvironmentBodyIndex.size()) {
+                    _vPublishedBodySlotsByEnvironmentBodyIndex[displacedEnvironmentBodyIndex] = ipreviousSlot;
+                }
+                _vPublishedBodySlotsByEnvironmentBodyIndex[environmentBodyIndex] = iwritten;
+            }
+
             KinBody::BodyState& state = _vPublishedBodies.at(iwritten);
 
             // If this state was already inititalized from this body, we might be able to skip updating it if the body itself hasn't changed.
@@ -2941,7 +2969,15 @@ public:
 
             // Only if the body is mismatched with the state do we need to do a full update
             if (!canSkipUpdate) {
-                state.Reset();
+                // If this state is being used for a different body than it was previously, do a full reset of the state.
+                // This prevents one large body from propagating oversized buffers across the entire cache.
+                if (state.pbody != pbody) {
+                    state.ResetAndReleaseMemory();
+                }
+                // If the body matches, then clear but keep any allocated capacity - the body is probably still about the same size.
+                else {
+                    state.Reset();
+                }
                 state.pbody = pbody;
                 pbody->GetLinkTransformations(state.vectrans, vdoflastsetvalues);
                 pbody->GetLinkEnableStates(state.vLinkEnableStates);
@@ -2967,6 +3003,8 @@ public:
             ++iwritten;
         }
 
+        // Any states left over describe bodies that are no longer in the environment.
+        // Destroy them instead of holding their buffers for whatever bodies might end up here next.
         if( iwritten < (int)_vPublishedBodies.size() ) {
             _vPublishedBodies.resize(iwritten);
         }
@@ -4775,6 +4813,7 @@ protected:
     mutable std::mutex _mutexInit;     ///< lock for destroying the environment
 
     vector<KinBody::BodyState> _vPublishedBodies; ///< protected by _mutexInterfaces
+    std::vector<int> _vPublishedBodySlotsByEnvironmentBodyIndex; ///< maps environment body index to the slot of _vPublishedBodies describing it, -1 when none does. Rebuilt from _vPublishedBodies on every update so it cannot go stale against it. Protected by _mutexInterfaces
     string _homedirectory;
     std::pair<std::string, dReal> _unit; ///< unit name mm, cm, inches, m and the conversion for meters
     UnitInfo _unitInfo; ///< unitInfo that describes length unit, mass unit, time unit and angle unit

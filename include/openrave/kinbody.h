@@ -2317,8 +2317,6 @@ public:
 public:
         BodyState() : updatestamp(0), environmentid(0) {
         }
-        ~BodyState() {
-        }
 
         /// \brief clears any previous set state
         inline void Reset() {
@@ -2334,6 +2332,16 @@ public:
             activeManipulatorName.clear();
             activeManipulatorTransform = Transform();
             vGrabbedInfos.clear();
+        }
+
+        /// \brief clears any previous set state and releases any held memory
+        ///
+        /// Reset keeps any allocated buffer capacity so that the next body written into this state can reuse it.
+        /// However, if the state starts describing a _different_ body, this risks growing capacity that is never re-used.
+        /// If large bodies transiently appear and disappear across many states, more and more memory is tied up in unused buffer capacity.
+        /// When a body leaves a slot, the grown buffers should be reclaimed so they can be resized more appropriately.
+        inline void ResetAndReleaseMemory() {
+            *this = BodyState();
         }
 
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.

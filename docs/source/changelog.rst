@@ -3,6 +3,17 @@
 ChangeLog
 #########
 
+Version 0.174.5
+===============
+
+- Skip plugin-directory entries whose name does not end in the plugin extension before stat'ing them.
+- ``_LoadPluginsFromPath`` honours its ``recurse`` flag; plugin discovery at startup passes ``true``, so subdirectories of a plugin directory are scanned as before.
+
+Version 0.174.4
+===============
+
+- Associate cached BodyState objects with the body they represent, and only cache their capacity so long as they track the same body to avoid retaining stale buffer capacity.
+
 Version 0.174.3
 ===============
 

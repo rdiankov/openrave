@@ -122,14 +122,14 @@ QtOSGViewer::QtOSGViewer(EnvironmentBasePtr penv, std::istream& sinput, QCoreApp
     // figure out window title
     //
 
-    std::string name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
+    _name = str(boost::format("OpenRAVE %s")%OPENRAVE_VERSION_STRING);
     if( (OPENRAVE_VERSION_MINOR%2) || (OPENRAVE_VERSION_PATCH%2) ) {
-        name += " (Development Version)";
+        _name += " (Development Version)";
     }
     else {
-        name += " (Stable Release)";
+        _name += " (Stable Release)";
     }
-    setWindowTitle(name.c_str());
+    setWindowTitle(_name.c_str());
 
     if(bCreateStatusBar) {
         statusBar()->showMessage(tr("Status Bar"));
@@ -2085,6 +2085,7 @@ void QtOSGViewer::_SetCropContainerMarginsVisible(const std::string& bodyName, c
 void QtOSGViewer::SetName(const string& name)
 {
     _PostToGUIThread(boost::bind(&QtOSGViewer::_SetName, this, name), ViewerCommandPriority::LOW);
+    _name = name;
 }
 
 void QtOSGViewer::_SetName(const string& name)
