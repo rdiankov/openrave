@@ -22,6 +22,7 @@
 #include <openrave/utils.h>
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/exception.hpp>
 
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
