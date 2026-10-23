@@ -122,6 +122,10 @@ public:
             }
 
             KinBody::LinkWeakPtr _plink;
+            /// Plain pointers to the link and its parent body, only valid while _plink is not expired. The broadphase
+            /// callback uses them so that no shared pointer is copied per pair.
+            const KinBody::Link* plinkRaw = nullptr;
+            const KinBody* pbodyRaw = nullptr;
             vector< boost::shared_ptr<FCLGeometryInfo> > vgeominfos; ///< info for every geometry of the link
 
             int nLastStamp = 0; ///< Tracks if the collision geometries are up to date wrt the body update stamp. This is for narrow phase collision. This should be the same as FCLKinBodyInfo.nLastStamp or newer

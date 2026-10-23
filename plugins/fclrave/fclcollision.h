@@ -60,6 +60,26 @@ inline bool IsIn(T const& x, std::vector<T> const &collection) {
     return std::find(collection.begin(), collection.end(), x) != collection.end();
 }
 
+/// \brief True if the body is one of the excluded bodies. Compares plain pointers so that nothing is copied.
+inline bool IsBodyIn(const KinBody* pbody, const std::vector<KinBodyConstPtr>& vbodies) {
+    for(const KinBodyConstPtr& pexcluded : vbodies) {
+        if( pexcluded.get() == pbody ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/// \brief True if the link is one of the excluded links. Compares plain pointers so that nothing is copied.
+inline bool IsLinkIn(const KinBody::Link* plink, const std::vector<LinkConstPtr>& vlinks) {
+    for(const LinkConstPtr& pexcluded : vlinks) {
+        if( pexcluded.get() == plink ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
 public:
@@ -85,6 +105,16 @@ public:
 
         bool _bHasCallbacks; ///< true if there's callbacks registered in the environment
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
+
+        /// One memoized answer of KinBody::IsAttached for a pair of bodies seen in this query.
+        struct AttachedBodyPairMemo {
+            const KinBody* pbody1 = nullptr;
+            const KinBody* pbody2 = nullptr;
+            bool bAttached = false;
+        };
+        static const size_t numMaxAttachedBodyPairMemos = 16;
+        AttachedBodyPairMemo _vAttachedBodyPairMemos[numMaxAttachedBodyPairMemos]; ///< see FCLCollisionChecker::_IsAttached
+        size_t _numAttachedBodyPairMemos = 0;
     };
 
     typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
@@ -225,6 +255,16 @@ private:
 #endif
 
     std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> GetCollisionLink(const fcl::CollisionObject &collObj);
+
+    /// \brief Same as GetCollisionLink but without copying shared pointers, for the broadphase callback.
+    ///
+    /// \param[out] plink the link of the object, or nullptr when the object is standalone or its link is gone
+    /// \return the LinkInfo stored in the object's user data, or nullptr when the object has none
+    FCLSpace::FCLKinBodyInfo::LinkInfo* _GetCollisionLinkRaw(const fcl::CollisionObject& collObj, const KinBody::Link*& plink);
+
+    /// \brief Same answer as body1.IsAttached(body2), memoized in the callback data since attachments do not change
+    /// during one query.
+    bool _IsAttached(const KinBody& body1, const KinBody& body2, CollisionCallbackData& callbackData);
 
     FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* GetCollisionGeometry(const fcl::CollisionObject &collObj);
 

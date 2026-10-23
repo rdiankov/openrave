@@ -815,26 +815,30 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
         return true;     // don't test anymore
     }
 
-//        _o1 = o1;
-//        _o2 = o2;
-    std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> o1info = GetCollisionLink(*o1), o2info = GetCollisionLink(*o2);
+    // The broadphase manager only calls back for pairs whose AABBs overlap, so the link level box test is already done.
+    // Most pairs are rejected by the geometry box test below, so everything up to there works on plain pointers. The
+    // shared pointers are only taken when a contact is reported.
+    const KinBody::Link* plink1 = nullptr;
+    const KinBody::Link* plink2 = nullptr;
+    FCLSpace::FCLKinBodyInfo::LinkInfo* pLINK1 = _GetCollisionLinkRaw(*o1, plink1);
+    FCLSpace::FCLKinBodyInfo::LinkInfo* pLINK2 = _GetCollisionLinkRaw(*o2, plink2);
 
-    if( !o1info.second ) {
-        if( !o1info.first ) {
+    if( !plink1 ) {
+        if( !pLINK1 ) {
             if( _bParentlessCollisionObject ) {
-                if( !!o2info.second ) {
-                    RAVELOG_WARN_FORMAT("env=%s, fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", GetEnv()->GetNameId()%o1%o2info.second->GetParent()->GetName()%o2info.second->GetName());
+                if( !!plink2 ) {
+                    RAVELOG_WARN_FORMAT("env=%s, fcl::CollisionObject o1 %x collides with link2 %s:%s, but collision ignored", GetEnv()->GetNameId()%o1%pLINK2->pbodyRaw->GetName()%plink2->GetName());
                 }
             }
             return false;
         }
         // o1 is standalone object
     }
-    if( !o2info.second ) {
-        if( !o2info.first ) {
+    if( !plink2 ) {
+        if( !pLINK2 ) {
             if( _bParentlessCollisionObject ) {
-                if( !!o1info.second ) {
-                    RAVELOG_WARN_FORMAT("env=%s, link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", GetEnv()->GetNameId()%o1info.second->GetParent()->GetName()%o1info.second->GetName()%o2);
+                if( !!plink1 ) {
+                    RAVELOG_WARN_FORMAT("env=%s, link1 %s:%s collides with fcl::CollisionObject o2 %x, but collision ignored", GetEnv()->GetNameId()%pLINK1->pbodyRaw->GetName()%plink1->GetName()%o2);
                 }
             }
             return false;
@@ -842,14 +846,11 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
         // o2 is standalone object
     }
 
-    LinkConstPtr& plink1 = o1info.second;
-    LinkConstPtr& plink2 = o2info.second;
-
     if( !!plink1 ) {
         if( !plink1->IsEnabled() ) {
             return false;
         }
-        if( IsIn<KinBodyConstPtr>(plink1->GetParent(), pcb->_vbodyexcluded) || IsIn<LinkConstPtr>(plink1, pcb->_vlinkexcluded) ) {
+        if( IsBodyIn(pLINK1->pbodyRaw, pcb->_vbodyexcluded) || IsLinkIn(plink1, pcb->_vlinkexcluded) ) {
             return false;
         }
     }
@@ -858,23 +859,21 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
         if( !plink2->IsEnabled() ) {
             return false;
         }
-        if( IsIn<KinBodyConstPtr>(plink2->GetParent(), pcb->_vbodyexcluded) || IsIn<LinkConstPtr>(plink2, pcb->_vlinkexcluded) ) {
+        if( IsBodyIn(pLINK2->pbodyRaw, pcb->_vbodyexcluded) || IsLinkIn(plink2, pcb->_vlinkexcluded) ) {
             return false;
         }
     }
 
     if( !!plink1 && !!plink2 ) {
-        if( !pcb->bselfCollision && plink1->GetParent()->IsAttached(*plink2->GetParent())) {
+        if( !pcb->bselfCollision && _IsAttached(*pLINK1->pbodyRaw, *pLINK2->pbodyRaw, *pcb) ) {
             return false;
         }
-
-        LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1), pLINK2 = _fclspace->GetLinkInfo(*plink2);
-
         //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
-        FOREACH(itgeompair1, pLINK1->vgeoms) {
-            FOREACH(itgeompair2, pLINK2->vgeoms) {
-                if( itgeompair1->second->getAABB().overlap(itgeompair2->second->getAABB()) ) {
-                    CheckNarrowPhaseGeomCollision(itgeompair1->second.get(), itgeompair2->second.get(), pcb);
+        for(const TransformCollisionPair& geompair1 : pLINK1->vgeoms) {
+            const fcl::AABB& aabb1 = geompair1.second->getAABB();
+            for(const TransformCollisionPair& geompair2 : pLINK2->vgeoms) {
+                if( aabb1.overlap(geompair2.second->getAABB()) ) {
+                    CheckNarrowPhaseGeomCollision(geompair1.second.get(), geompair2.second.get(), pcb);
                     if( pcb->_bStopChecking ) {
                         return true;
                     }
@@ -883,10 +882,10 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
         }
     }
     else if( !!plink1 ) {
-        LinkInfoPtr pLINK1 = _fclspace->GetLinkInfo(*plink1);
-        FOREACH(itgeompair1, pLINK1->vgeoms) {
-            if( itgeompair1->second->getAABB().overlap(o2->getAABB()) ) {
-                CheckNarrowPhaseGeomCollision(itgeompair1->second.get(), o2, pcb);
+        const fcl::AABB& aabb2 = o2->getAABB();
+        for(const TransformCollisionPair& geompair1 : pLINK1->vgeoms) {
+            if( geompair1.second->getAABB().overlap(aabb2) ) {
+                CheckNarrowPhaseGeomCollision(geompair1.second.get(), o2, pcb);
                 if( pcb->_bStopChecking ) {
                     return true;
                 }
@@ -894,10 +893,10 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
         }
     }
     else if( !!plink2 ) {
-        LinkInfoPtr pLINK2 = _fclspace->GetLinkInfo(*plink2);
-        FOREACH(itgeompair2, pLINK2->vgeoms) {
-            if( itgeompair2->second->getAABB().overlap(o1->getAABB()) ) {
-                CheckNarrowPhaseGeomCollision(o1, itgeompair2->second.get(), pcb);
+        const fcl::AABB& aabb1 = o1->getAABB();
+        for(const TransformCollisionPair& geompair2 : pLINK2->vgeoms) {
+            if( geompair2.second->getAABB().overlap(aabb1) ) {
+                CheckNarrowPhaseGeomCollision(o1, geompair2.second.get(), pcb);
                 if( pcb->_bStopChecking ) {
                     return true;
                 }
@@ -910,6 +909,51 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
     }
 
     return pcb->_bStopChecking;
+}
+
+FCLSpace::FCLKinBodyInfo::LinkInfo* FCLCollisionChecker::_GetCollisionLinkRaw(const fcl::CollisionObject& collObj, const KinBody::Link*& plink)
+{
+    // Same lookups and warnings as GetCollisionLink, but the link comes back as a plain pointer.
+    plink = nullptr;
+    FCLSpace::FCLKinBodyInfo::LinkInfo* pLINK = static_cast<FCLSpace::FCLKinBodyInfo::LinkInfo*>(collObj.getUserData());
+    if( !!pLINK ) {
+        if( !pLINK->_plink.expired() ) {
+            plink = pLINK->plinkRaw;
+        }
+        else if( pLINK->bFromKinBodyLink ) {
+            RAVELOG_WARN_FORMAT("env=%s, The link %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%pLINK->bodylinkname%_userdatakey);
+        }
+        return pLINK;
+    }
+    RAVELOG_WARN_FORMAT("env=%s, fcl collision object %x does not have a link attached (userdatakey %s)", GetEnv()->GetNameId()%(&collObj)%_userdatakey);
+    _bParentlessCollisionObject = true;
+    return nullptr;
+}
+
+bool FCLCollisionChecker::_IsAttached(const KinBody& body1, const KinBody& body2, CollisionCallbackData& callbackData)
+{
+    // KinBody::IsAttached walks the attachment graph and locks the environment when the body has attached bodies, so
+    // the cheap cases come first and the full answer is kept per body pair for the rest of the query.
+    if( &body1 == &body2 ) {
+        return true;
+    }
+    if( !body1.HasAttached() ) {
+        return false;
+    }
+    for(size_t imemo = 0; imemo < callbackData._numAttachedBodyPairMemos; ++imemo) {
+        const CollisionCallbackData::AttachedBodyPairMemo& memo = callbackData._vAttachedBodyPairMemos[imemo];
+        if( memo.pbody1 == &body1 && memo.pbody2 == &body2 ) {
+            return memo.bAttached;
+        }
+    }
+    const bool bAttached = body1.IsAttached(body2);
+    if( callbackData._numAttachedBodyPairMemos < CollisionCallbackData::numMaxAttachedBodyPairMemos ) {
+        CollisionCallbackData::AttachedBodyPairMemo& memo = callbackData._vAttachedBodyPairMemos[callbackData._numAttachedBodyPairMemos++];
+        memo.pbody1 = &body1;
+        memo.pbody2 = &body2;
+        memo.bAttached = bAttached;
+    }
+    return bAttached;
 }
 
 
