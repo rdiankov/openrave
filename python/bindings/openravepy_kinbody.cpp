@@ -309,6 +309,7 @@ void PyGeometryInfo::Init(const KinBody::GeometryInfo& info) {
     _vPositiveCropContainerMargins = toPyVector3(info._vPositiveCropContainerMargins);
     _vNegativeCropContainerEmptyMargins = toPyVector3(info._vNegativeCropContainerEmptyMargins);
     _vPositiveCropContainerEmptyMargins = toPyVector3(info._vPositiveCropContainerEmptyMargins);
+    _bIsContainerBaseSupported = info._bIsContainerBaseSupported;
 
     _vSideWalls = py::list();
     for (size_t i = 0; i < info._vSideWalls.size(); ++i) {
@@ -416,6 +417,7 @@ void PyGeometryInfo::FillGeometryInfo(KinBody::GeometryInfo& info)
     info._vPositiveCropContainerMargins = ExtractVector<dReal>(_vPositiveCropContainerMargins);
     info._vNegativeCropContainerEmptyMargins = ExtractVector<dReal>(_vNegativeCropContainerEmptyMargins);
     info._vPositiveCropContainerEmptyMargins = ExtractVector<dReal>(_vPositiveCropContainerEmptyMargins);
+    info._bIsContainerBaseSupported = _bIsContainerBaseSupported;
 
     info._vSideWalls.clear();
     for (size_t i = 0; i < (size_t)len(_vSideWalls); ++i) {
@@ -1498,6 +1500,9 @@ bool PyGeometry::IsVisible() {
 }
 bool PyGeometry::IsModifiable() {
     return _pgeometry->IsModifiable();
+}
+bool PyGeometry::IsContainerBaseSupported() {
+    return _pgeometry->IsContainerBaseSupported();
 }
 GeometryType PyGeometry::GetType() {
     return _pgeometry->GetType();
@@ -4639,7 +4644,8 @@ public:
             py::make_tuple(
                 r._vSideWalls,
                 r._vAxialSlices
-                )
+                ),
+            r._bIsContainerBaseSupported
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
@@ -4669,6 +4675,7 @@ public:
         r._vPositiveCropContainerEmptyMargins = state[13][py::to_object(3)];
         r._vSideWalls = state[14][py::to_object(0)];
         r._vAxialSlices = state[14][py::to_object(1)];
+        r._bIsContainerBaseSupported = py::extract<bool>(state[15]);
     }
 };
 
@@ -5223,6 +5230,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                           .def_readwrite("_vPositiveCropContainerMargins", &PyGeometryInfo::_vPositiveCropContainerMargins)
                           .def_readwrite("_vNegativeCropContainerEmptyMargins", &PyGeometryInfo::_vNegativeCropContainerEmptyMargins)
                           .def_readwrite("_vPositiveCropContainerEmptyMargins", &PyGeometryInfo::_vPositiveCropContainerEmptyMargins)
+                          .def_readwrite("_bIsContainerBaseSupported", &PyGeometryInfo::_bIsContainerBaseSupported)
                           .def_readwrite("_friction", &PyGeometryInfo::_friction)
                           .def("ComputeInnerEmptyVolume",&PyGeometryInfo::ComputeInnerEmptyVolume, DOXY_FN(GeomeryInfo,ComputeInnerEmptyVolume))
                           .def("ComputeAABB",&PyGeometryInfo::ComputeAABB, PY_ARGS("transform") DOXY_FN(GeomeryInfo,ComputeAABB))
@@ -6399,6 +6407,7 @@ void KinBodyInitializer::init_openravepy_kinbody()
                                   .def("IsDraw",&PyGeometry::IsDraw, DOXY_FN(KinBody::Link::Geometry,IsDraw))
                                   .def("IsVisible",&PyGeometry::IsVisible, DOXY_FN(KinBody::Link::Geometry,IsVisible))
                                   .def("IsModifiable",&PyGeometry::IsModifiable, DOXY_FN(KinBody::Link::Geometry,IsModifiable))
+                                  .def("IsContainerBaseSupported",&PyGeometry::IsContainerBaseSupported, DOXY_FN(KinBody::Link::Geometry,IsContainerBaseSupported))
                                   .def("GetType",&PyGeometry::GetType, DOXY_FN(KinBody::Link::Geometry,GetType))
                                   .def("GetTransform",&PyGeometry::GetTransform, DOXY_FN(KinBody::Link::Geometry,GetTransform))
                                   .def("GetTransformPose",&PyGeometry::GetTransformPose, DOXY_FN(KinBody::Link::Geometry,GetTransform))
