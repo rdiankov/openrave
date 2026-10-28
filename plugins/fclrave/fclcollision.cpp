@@ -865,7 +865,7 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
     }
 
     if( !!plink1 && !!plink2 ) {
-        if( !pcb->bselfCollision && _IsAttached(*pLINK1->pbodyRaw, *pLINK2->pbodyRaw, *pcb) ) {
+        if( !pcb->bselfCollision && _IsAttached(*pLINK1->pbodyRaw, *pLINK2->pbodyRaw) ) {
             return false;
         }
         //RAVELOG_VERBOSE_FORMAT("env=%d, link %s:%s with %s:%s", GetEnv()->GetId()%plink1->GetParent()->GetName()%plink1->GetName()%plink2->GetParent()->GetName()%plink2->GetName());
@@ -930,30 +930,16 @@ FCLSpace::FCLKinBodyInfo::LinkInfo* FCLCollisionChecker::_GetCollisionLinkRaw(co
     return nullptr;
 }
 
-bool FCLCollisionChecker::_IsAttached(const KinBody& body1, const KinBody& body2, CollisionCallbackData& callbackData)
+bool FCLCollisionChecker::_IsAttached(const KinBody& body1, const KinBody& body2)
 {
-    // KinBody::IsAttached walks the attachment graph and locks the environment when the body has attached bodies, so
-    // the cheap cases come first and the full answer is kept per body pair for the rest of the query.
+    // The same early exits as KinBody::IsAttached, answered here to save the call into libopenrave for most pairs.
     if( &body1 == &body2 ) {
         return true;
     }
     if( !body1.HasAttached() ) {
         return false;
     }
-    for(size_t imemo = 0; imemo < callbackData._numAttachedBodyPairMemos; ++imemo) {
-        const CollisionCallbackData::AttachedBodyPairMemo& memo = callbackData._vAttachedBodyPairMemos[imemo];
-        if( memo.pbody1 == &body1 && memo.pbody2 == &body2 ) {
-            return memo.bAttached;
-        }
-    }
-    const bool bAttached = body1.IsAttached(body2);
-    if( callbackData._numAttachedBodyPairMemos < CollisionCallbackData::numMaxAttachedBodyPairMemos ) {
-        CollisionCallbackData::AttachedBodyPairMemo& memo = callbackData._vAttachedBodyPairMemos[callbackData._numAttachedBodyPairMemos++];
-        memo.pbody1 = &body1;
-        memo.pbody2 = &body2;
-        memo.bAttached = bAttached;
-    }
-    return bAttached;
+    return body1.IsAttached(body2);
 }
 
 

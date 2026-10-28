@@ -105,16 +105,6 @@ public:
 
         bool _bHasCallbacks; ///< true if there's callbacks registered in the environment
         std::list<EnvironmentBase::CollisionCallbackFn> _listcallbacks;
-
-        /// One memoized answer of KinBody::IsAttached for a pair of bodies seen in this query.
-        struct AttachedBodyPairMemo {
-            const KinBody* pbody1 = nullptr;
-            const KinBody* pbody2 = nullptr;
-            bool bAttached = false;
-        };
-        static const size_t numMaxAttachedBodyPairMemos = 16;
-        AttachedBodyPairMemo _vAttachedBodyPairMemos[numMaxAttachedBodyPairMemos]; ///< see FCLCollisionChecker::_IsAttached
-        size_t _numAttachedBodyPairMemos = 0;
     };
 
     typedef boost::shared_ptr<CollisionCallbackData> CollisionCallbackDataPtr;
@@ -262,9 +252,8 @@ private:
     /// \return the LinkInfo stored in the object's user data, or nullptr when the object has none
     FCLSpace::FCLKinBodyInfo::LinkInfo* _GetCollisionLinkRaw(const fcl::CollisionObject& collObj, const KinBody::Link*& plink);
 
-    /// \brief Same answer as body1.IsAttached(body2), memoized in the callback data since attachments do not change
-    /// during one query.
-    bool _IsAttached(const KinBody& body1, const KinBody& body2, CollisionCallbackData& callbackData);
+    /// \brief Same answer as body1.IsAttached(body2), with the cheap cases answered inline.
+    bool _IsAttached(const KinBody& body1, const KinBody& body2);
 
     FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* GetCollisionGeometry(const fcl::CollisionObject &collObj);
 
