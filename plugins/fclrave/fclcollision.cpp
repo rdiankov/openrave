@@ -850,7 +850,7 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
         if( !plink1->IsEnabled() ) {
             return false;
         }
-        if( IsBodyIn(pLINK1->pbodyRaw, pcb->_vbodyexcluded) || IsLinkIn(plink1, pcb->_vlinkexcluded) ) {
+        if( IsInByPointer(pLINK1->pbodyRaw, pcb->_vbodyexcluded) || IsInByPointer(plink1, pcb->_vlinkexcluded) ) {
             return false;
         }
     }
@@ -859,7 +859,7 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
         if( !plink2->IsEnabled() ) {
             return false;
         }
-        if( IsBodyIn(pLINK2->pbodyRaw, pcb->_vbodyexcluded) || IsLinkIn(plink2, pcb->_vlinkexcluded) ) {
+        if( IsInByPointer(pLINK2->pbodyRaw, pcb->_vbodyexcluded) || IsInByPointer(plink2, pcb->_vlinkexcluded) ) {
             return false;
         }
     }
@@ -913,7 +913,6 @@ bool FCLCollisionChecker::CheckNarrowPhaseCollision(fcl::CollisionObject *o1, fc
 
 FCLSpace::FCLKinBodyInfo::LinkInfo* FCLCollisionChecker::_GetCollisionLinkRaw(const fcl::CollisionObject& collObj, const KinBody::Link*& plink)
 {
-    // Same lookups and warnings as GetCollisionLink, but the link comes back as a plain pointer.
     plink = nullptr;
     FCLSpace::FCLKinBodyInfo::LinkInfo* pLINK = static_cast<FCLSpace::FCLKinBodyInfo::LinkInfo*>(collObj.getUserData());
     if( !!pLINK ) {
@@ -929,19 +928,6 @@ FCLSpace::FCLKinBodyInfo::LinkInfo* FCLCollisionChecker::_GetCollisionLinkRaw(co
     _bParentlessCollisionObject = true;
     return nullptr;
 }
-
-bool FCLCollisionChecker::_IsAttached(const KinBody& body1, const KinBody& body2)
-{
-    // The same early exits as KinBody::IsAttached, answered here to save the call into libopenrave for most pairs.
-    if( &body1 == &body2 ) {
-        return true;
-    }
-    if( !body1.HasAttached() ) {
-        return false;
-    }
-    return body1.IsAttached(body2);
-}
-
 
 bool FCLCollisionChecker::CheckNarrowPhaseGeomCollision(fcl::CollisionObject *o1, fcl::CollisionObject *o2, void *data) {
     CollisionCallbackData* pcb = static_cast<CollisionCallbackData *>(data);
@@ -1174,19 +1160,9 @@ CollisionPair FCLCollisionChecker::MakeCollisionPair(fcl::CollisionObject* o1, f
 
 std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> FCLCollisionChecker::GetCollisionLink(const fcl::CollisionObject &collObj)
 {
-    FCLSpace::FCLKinBodyInfo::LinkInfo* link_raw = static_cast<FCLSpace::FCLKinBodyInfo::LinkInfo *>(collObj.getUserData());
-    if( !!link_raw ) {
-        const LinkConstPtr plink = link_raw->GetLink();
-        if( !plink ) {
-            if( link_raw->bFromKinBodyLink ) {
-                RAVELOG_WARN_FORMAT("env=%s, The link %s was lost from fclspace (userdatakey %s)", GetEnv()->GetNameId()%link_raw->bodylinkname%_userdatakey);
-            }
-        }
-        return std::make_pair(link_raw, plink);
-    }
-    RAVELOG_WARN_FORMAT("env=%s, fcl collision object %x does not have a link attached (userdatakey %s)", GetEnv()->GetNameId()%(&collObj)%_userdatakey);
-    _bParentlessCollisionObject = true;
-    return std::make_pair(link_raw, LinkConstPtr());
+    const KinBody::Link* plinkRaw = nullptr;
+    FCLSpace::FCLKinBodyInfo::LinkInfo* link_raw = _GetCollisionLinkRaw(collObj, plinkRaw);
+    return std::make_pair(link_raw, !!plinkRaw ? LinkConstPtr(link_raw->GetLink()) : LinkConstPtr());
 }
 
 FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* FCLCollisionChecker::GetCollisionGeometry(const fcl::CollisionObject &collObj)

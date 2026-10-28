@@ -122,8 +122,8 @@ public:
             }
 
             KinBody::LinkWeakPtr _plink;
-            /// Plain pointers to the link and its parent body, only valid while _plink is not expired. The broadphase
-            /// callback uses them so that no shared pointer is copied per pair.
+            /// Plain pointers to the link and its parent body, only valid while _plink is not expired and fclspace
+            /// still holds this body. The broadphase callback uses them so that no shared pointer is copied per pair.
             const KinBody::Link* plinkRaw = nullptr;
             const KinBody* pbodyRaw = nullptr;
             vector< boost::shared_ptr<FCLGeometryInfo> > vgeominfos; ///< info for every geometry of the link

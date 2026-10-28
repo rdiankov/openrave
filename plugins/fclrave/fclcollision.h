@@ -60,20 +60,11 @@ inline bool IsIn(T const& x, std::vector<T> const &collection) {
     return std::find(collection.begin(), collection.end(), x) != collection.end();
 }
 
-/// \brief True if the body is one of the excluded bodies. Compares plain pointers so that nothing is copied.
-inline bool IsBodyIn(const KinBody* pbody, const std::vector<KinBodyConstPtr>& vbodies) {
-    for(const KinBodyConstPtr& pexcluded : vbodies) {
-        if( pexcluded.get() == pbody ) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/// \brief True if the link is one of the excluded links. Compares plain pointers so that nothing is copied.
-inline bool IsLinkIn(const KinBody::Link* plink, const std::vector<LinkConstPtr>& vlinks) {
-    for(const LinkConstPtr& pexcluded : vlinks) {
-        if( pexcluded.get() == plink ) {
+/// \brief True if the object is one of the objects in the collection. Compares plain pointers, so nothing is copied.
+template<typename T>
+inline bool IsInByPointer(const T* pobject, const std::vector< boost::shared_ptr<T const> >& collection) {
+    for(const boost::shared_ptr<T const>& pother : collection) {
+        if( pother.get() == pobject ) {
             return true;
         }
     }
@@ -252,8 +243,18 @@ private:
     /// \return the LinkInfo stored in the object's user data, or nullptr when the object has none
     FCLSpace::FCLKinBodyInfo::LinkInfo* _GetCollisionLinkRaw(const fcl::CollisionObject& collObj, const KinBody::Link*& plink);
 
-    /// \brief Same answer as body1.IsAttached(body2), with the cheap cases answered inline.
-    bool _IsAttached(const KinBody& body1, const KinBody& body2);
+    /// \brief Same answer as body1.IsAttached(body2). The early exits of KinBody::IsAttached are repeated here so that
+    /// most pairs do not call into libopenrave.
+    inline bool _IsAttached(const KinBody& body1, const KinBody& body2)
+    {
+        if( &body1 == &body2 ) {
+            return true;
+        }
+        if( !body1.HasAttached() ) {
+            return false;
+        }
+        return body1.IsAttached(body2);
+    }
 
     FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* GetCollisionGeometry(const fcl::CollisionObject &collObj);
 
