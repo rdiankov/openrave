@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.6
+===============
+
+- Don't rewrite all pybind exceptions as RuntimeError
+
 Version 0.174.5
 ===============
 
