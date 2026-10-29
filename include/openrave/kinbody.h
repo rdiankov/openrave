@@ -387,6 +387,7 @@ public:
                    && _vPositiveCropContainerMargins == other._vPositiveCropContainerMargins
                    && _vNegativeCropContainerEmptyMargins == other._vNegativeCropContainerEmptyMargins
                    && _vPositiveCropContainerEmptyMargins == other._vPositiveCropContainerEmptyMargins
+                   && _bDoesContainerBaseProvideSupport == other._bDoesContainerBaseProvideSupport
                    && _friction == other._friction;
         }
         bool operator!=(const GeometryInfo& other) const {
@@ -582,6 +583,7 @@ public:
         Vector _vPositiveCropContainerMargins = Vector(0,0,0); ///< The positive crop margins component
         Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
         Vector _vPositiveCropContainerEmptyMargins = Vector(0,0,0); ///< The positive crop empty margins component
+        bool _bDoesContainerBaseProvideSupport = true; ///< used by GT_Cage. if false, the container base does not support placed objects (e.g. sawhorse), only inner obstacles do
 
         struct CalibrationBoardParameters///< used by GT_CalibrationBoard
         {
@@ -819,6 +821,9 @@ public:
         }
         inline const Vector& GetPositiveCropContainerEmptyMargins() const {
             return _info._vPositiveCropContainerEmptyMargins;
+        }
+        inline bool DoesContainerBaseProvideSupport() const {
+            return _info._bDoesContainerBaseProvideSupport;
         }
         inline int GetNumberOfAxialSlices() const {
             return _info._vAxialSlices.size();
