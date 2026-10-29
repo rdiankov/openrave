@@ -6,7 +6,7 @@ ChangeLog
 Version 0.175.0
 ===============
 
-- Add ``isContainerBaseSupported`` to cage geometry info (default true). When false, the cage base does not support placed objects and only the inner obstacles do, e.g. for sawhorse containers.
+- Add ``doesContainerBaseProvideSupport`` to cage geometry info (default true). When false, the cage base does not support placed objects and only the inner obstacles do, e.g. for sawhorse containers.
 
 Version 0.174.5
 ===============

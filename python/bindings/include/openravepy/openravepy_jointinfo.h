@@ -107,7 +107,7 @@ public:
     object _vPositiveCropContainerMargins = toPyVector3(Vector(0,0,0));
     object _vNegativeCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
     object _vPositiveCropContainerEmptyMargins = toPyVector3(Vector(0,0,0));
-    bool _bIsContainerBaseSupported = true;
+    bool _bDoesContainerBaseProvideSupport = true;
 
     py::list _vSideWalls;
     py::list _vAxialSlices;
@@ -297,7 +297,7 @@ public:
     bool IsDraw();
     bool IsVisible();
     bool IsModifiable();
-    bool IsContainerBaseSupported();
+    bool DoesContainerBaseProvideSupport();
     GeometryType GetType();
     py::array_t<dReal> GetTransform();
     py::array_t<dReal> GetTransformPose();
