@@ -2648,6 +2648,9 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info, ExtractInfoOptions options)
 {
     KinBody::ExtractInfo(info, options);
     info._isRobot = true;
+    if( IsSelectiveExtractInfo(options) && !(options & EIO_ExtractRobotStructureInfos) ) {
+        return;
+    }
     // need to avoid extracting info from connectedbodies
     std::vector<bool> isConnectedManipulator(_vecManipulators.size(), false);
     std::vector<bool> isConnectedAttachedSensor(_vecAttachedSensors.size(), false);

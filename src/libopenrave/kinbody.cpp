@@ -6416,17 +6416,27 @@ private:
 
 void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 {
+    const bool bSelective = IsSelectiveExtractInfo(options);
+    if( (options & EIO_SkipDOFValues) && (options & EIO_ExtractDOFValues) ) {
+        throw OPENRAVE_EXCEPTION_FORMAT("env=%s, body '%s' cannot both skip and extract dof values (options=%d)", GetEnv()->GetNameId()%_name%(int)options, ORE_InvalidArguments);
+    }
+    // without a selective bit, every part is extracted
+    const bool bExtractDOFValues = bSelective ? !!(options & EIO_ExtractDOFValues) : !(options & EIO_SkipDOFValues);
+    const bool bExtractLinkInfos = !bSelective || (options & EIO_ExtractLinkInfos);
+    const bool bExtractJointInfos = !bSelective || (options & EIO_ExtractJointInfos);
+
     info._modifiedFields = 0;
     info._id = _id;
     info._uri = GetURI();
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
-    info._isPartial = false; // extracting everything
+    info._isPartial = bSelective;
 
     info._dofValues.clear();
+    info._vGrabbedInfos.clear();
 
-    if( !(options & EIO_SkipDOFValues) ) {
+    if( bExtractDOFValues ) {
         CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized
         std::vector<dReal> vDOFValues;
         GetDOFValues(vDOFValues);
@@ -6437,11 +6447,41 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
         }
     }
 
-    info._vGrabbedInfos.clear();
-    GetGrabbedInfo(info._vGrabbedInfos);
+    if( !bSelective || (options & EIO_ExtractGrabbedInfos) ) {
+        GetGrabbedInfo(info._vGrabbedInfos);
+    }
 
-    info._transform = GetTransform();
+    const Transform tBody = GetTransform();
+    info._transform = (!bSelective || (options & EIO_ExtractTransform)) ? tBody : Transform();
 
+    if( bExtractLinkInfos || bExtractJointInfos ) {
+        _ExtractLinkAndJointInfos(info, options, tBody, bExtractLinkInfos, bExtractJointInfos);
+    }
+
+    if( !bSelective || (options & EIO_ExtractReadableInterfaces) ) {
+        boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
+        FOREACHC(it, GetReadableInterfaces()) {
+            if (!!it->second) {
+                // make a copy of the readable interface
+                // caller may modify and call UpdateFromInfo with modified readable interfaces
+                info._mReadableInterfaces[it->first] = it->second->CloneSelf();
+            }
+        }
+    }
+
+    if( !bSelective && !!_prAssociatedFileEntries ) {
+        if( !info._prAssociatedFileEntries ) {
+            info._prAssociatedFileEntries.reset(new rapidjson::Document());
+        }
+        else {
+            *info._prAssociatedFileEntries = rapidjson::Document();
+        }
+        info._prAssociatedFileEntries->CopyFrom(*_prAssociatedFileEntries, info._prAssociatedFileEntries->GetAllocator());
+    }
+}
+
+void KinBody::_ExtractLinkAndJointInfos(KinBodyInfo& info, ExtractInfoOptions options, const Transform& tBody, bool bExtractLinkInfos, bool bExtractJointInfos)
+{
     // Extraction moves the body to the origin so that the link transforms can be read in the body reference frame.
     // Since we move it back again, this isn't a 'real' modification to the body, so we can skip propagating it to grabbed bodies / callbacks.
     // Declared before stateSaver so that it also covers the restore.
@@ -6452,7 +6492,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     boost::shared_ptr<void> restoreTransformEvenWhenBodyIsNotAddedToEnv = nullptr;
     if( (options & EIO_SkipDOFValues) && GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN("resetting DOF to zeros");
-        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*) 0, std::bind(&KinBody::SetTransform, this, std::cref(info._transform)));
+        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*) 0, std::bind(&KinBody::SetTransform, this, std::cref(tBody)));
     }
 
     SetTransform(Transform()); // so that base link is at exactly _baseLinkInBodyTransform
@@ -6493,16 +6533,21 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
         }
     }
 
-    info._vLinkInfos.reserve(_veclinks.size());
-    for(size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
-        if (isConnectedLink[iLink]) {
-            continue;
+    if( bExtractLinkInfos ) {
+        info._vLinkInfos.reserve(_veclinks.size());
+        for(size_t iLink = 0; iLink < _veclinks.size(); ++iLink) {
+            if (isConnectedLink[iLink]) {
+                continue;
+            }
+            KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo());
+            info._vLinkInfos.push_back(pLinkInfo);
+            _veclinks[iLink]->ExtractInfo(*(info._vLinkInfos.back()));
         }
-        KinBody::LinkInfoPtr pLinkInfo(new KinBody::LinkInfo());
-        info._vLinkInfos.push_back(pLinkInfo);
-        _veclinks[iLink]->ExtractInfo(*(info._vLinkInfos.back()));
     }
 
+    if( !bExtractJointInfos ) {
+        return;
+    }
     info._vJointInfos.reserve(_vecjoints.size() + _vPassiveJoints.size());
     for(size_t iJoint = 0; iJoint < _vecjoints.size(); iJoint++) {
         if (isConnectedJoint[iJoint]) {
@@ -6520,28 +6565,6 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
         KinBody::JointInfoPtr pJointInfo(new KinBody::JointInfo());
         info._vJointInfos.push_back(pJointInfo);
         _vPassiveJoints[iJoint]->ExtractInfo(*(info._vJointInfos.back()));
-    }
-
-
-    {
-        boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
-        FOREACHC(it, GetReadableInterfaces()) {
-            if (!!it->second) {
-                // make a copy of the readable interface
-                // caller may modify and call UpdateFromInfo with modified readable interfaces
-                info._mReadableInterfaces[it->first] = it->second->CloneSelf();
-            }
-        }
-    }
-
-    if( !!_prAssociatedFileEntries ) {
-        if( !info._prAssociatedFileEntries ) {
-            info._prAssociatedFileEntries.reset(new rapidjson::Document());
-        }
-        else {
-            *info._prAssociatedFileEntries = rapidjson::Document();
-        }
-        info._prAssociatedFileEntries->CopyFrom(*_prAssociatedFileEntries, info._prAssociatedFileEntries->GetAllocator());
     }
 }
 
