@@ -5070,13 +5070,24 @@ void KinBodyInitializer::init_openravepy_kinbody()
     ;
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-    object pyExtractInfoOptions = enum_<ExtractInfoOptions>(m, "ExtractInfoOptions" DOXY_ENUM(ExtractInfoOptions))
+    // arithmetic: the EIO_Extract* bits are OR'd together, and the OR of two members is an int
+    object pyExtractInfoOptions = enum_<ExtractInfoOptions>(m, "ExtractInfoOptions", py::arithmetic() DOXY_ENUM(ExtractInfoOptions))
 #else
     object pyExtractInfoOptions = enum_<ExtractInfoOptions>("ExtractInfoOptions" DOXY_ENUM(ExtractInfoOptions))
 #endif
                                   .value("Everything",EIO_Everything)
                                   .value("SkipDOFValues",EIO_SkipDOFValues)
+                                  .value("ExtractDOFValues",EIO_ExtractDOFValues)
+                                  .value("ExtractTransform",EIO_ExtractTransform)
+                                  .value("ExtractGrabbedInfos",EIO_ExtractGrabbedInfos)
+                                  .value("ExtractLinkInfos",EIO_ExtractLinkInfos)
+                                  .value("ExtractJointInfos",EIO_ExtractJointInfos)
+                                  .value("ExtractReadableInterfaces",EIO_ExtractReadableInterfaces)
+                                  .value("ExtractRobotStructureInfos",EIO_ExtractRobotStructureInfos)
     ;
+#ifdef USE_PYBIND11_PYTHON_BINDINGS
+    py::implicitly_convertible<int, ExtractInfoOptions>();
+#endif
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
     object sidewalltype = enum_<KinBody::GeometryInfo::SideWallType>(m, "SideWallType" DOXY_ENUM(KinBody::GeometryInfo::SideWallType))
