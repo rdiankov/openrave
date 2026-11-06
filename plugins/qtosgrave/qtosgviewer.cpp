@@ -1036,8 +1036,10 @@ void QtOSGViewer::_FillObjectTree(QTreeWidget *treeWidget)
                 FOREACHC(itattsensor, robot->GetAttachedSensors()) {
                     RobotBase::AttachedSensorPtr pattsensor = *itattsensor;
                     QTreeWidgetItem* pqattsensor = new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pattsensor->GetName().c_str())));
-                    RAVELOG_VERBOSE_FORMAT("Attach sensor %s robotlink=%s", pattsensor->GetName()%pattsensor->GetAttachingLink()->GetName());
-                    pqattsensor->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(pattsensor->GetAttachingLink()->GetName().c_str()))));
+                    KinBody::LinkPtr attachingLink = pattsensor->GetAttachingLink();
+                    const std::string attachingLinkName = !!attachingLink ? attachingLink->GetName() : std::string();
+                    RAVELOG_VERBOSE_FORMAT("Attach sensor %s robotlink=%s", pattsensor->GetName()%attachingLinkName);
+                    pqattsensor->addChild(new QTreeWidgetItem((QTreeWidget*)0, QStringList(QString(attachingLinkName.c_str()))));
                     items[i]->child(nchild)->addChild(pqattsensor);
                 }
             }

@@ -2648,7 +2648,10 @@ private:
                 domTechniqueRef ptec = daeSafeCast<domTechnique>(pextra->add(COLLADA_ELEMENT_TECHNIQUE));
                 ptec->setProfile("OpenRAVE");
                 daeElementRef frame_origin = ptec->add("frame_origin");
-                frame_origin->setAttribute("link",vlinksidrefs.at((*itattachedsensor)->GetAttachingLink()->GetIndex()).c_str());
+                KinBody::LinkPtr attachingLink = (*itattachedsensor)->GetAttachingLink();
+                if( !!attachingLink ) {
+                    frame_origin->setAttribute("link",vlinksidrefs.at(attachingLink->GetIndex()).c_str());
+                }
                 _WriteTransformation(frame_origin,(*itattachedsensor)->GetRelativeTransform());
 
                 // write referenceAttachedSensorName to <reference_attach_sensor name="other_attached_sensor">
@@ -2755,7 +2758,10 @@ private:
                 ptec->setProfile("OpenRAVE");
 
                 daeElementRef frame_origin = ptec->add("frame_origin");
-                frame_origin->setAttribute("link",vlinksidrefs.at((*itConnectedBody)->GetAttachingLink()->GetIndex()).c_str());
+                KinBody::LinkPtr attachingLink = (*itConnectedBody)->GetAttachingLink();
+                if( !!attachingLink ) {
+                    frame_origin->setAttribute("link",vlinksidrefs.at(attachingLink->GetIndex()).c_str());
+                }
                 _WriteTransformation(frame_origin,(*itConnectedBody)->GetRelativeTransform());
 
                 daeElementRef instance_body = ptec->add("instance_body");

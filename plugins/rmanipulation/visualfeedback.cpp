@@ -384,7 +384,11 @@ public:
         {
             KinBody::KinBodyStateSaver saver1(_ptargetbox), saver2(_vf->_targetlink->GetParent());
             vector<KinBody::LinkPtr> vattachedlinks;
-            _vf->_psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
+            KinBody::LinkPtr attachingLink = _vf->_psensor->GetAttachingLink();
+            if( !attachingLink ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("sensor %s has no attaching link", _vf->_psensor->GetName(), ORE_InvalidState);
+            }
+            attachingLink->GetRigidlyAttachedLinks(vattachedlinks);
             RobotBase::RobotStateSaver robotsaver(_vf->_robot,RobotBase::Save_LinkTransformation|RobotBase::Save_LinkEnable);
             Transform tsensorinv = _vf->_psensor->GetTransform().inverse();
             FOREACHC(itlink,_vf->_robot->GetLinks()) {
@@ -839,9 +843,13 @@ Visibility computation checks occlusion with other objects using ray sampling in
         // check if there is a manipulator with the same end effector as camera
         if( _sensorrobot == _robot ) {
             std::vector<KinBody::LinkPtr> vattachedlinks;
-            psensor->GetAttachingLink()->GetRigidlyAttachedLinks(vattachedlinks);
+            KinBody::LinkPtr attachingLink = psensor->GetAttachingLink();
+            if( !attachingLink ) {
+                throw OPENRAVE_EXCEPTION_FORMAT("sensor %s has no attaching link", psensor->GetName(), ORE_InvalidState);
+            }
+            attachingLink->GetRigidlyAttachedLinks(vattachedlinks);
             if( !!pmanip ) {
-                if(( pmanip->GetEndEffector() != psensor->GetAttachingLink()) &&( find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end()) ) {
+                if(( pmanip->GetEndEffector() != attachingLink) &&( find(vattachedlinks.begin(),vattachedlinks.end(),pmanip->GetEndEffector()) == vattachedlinks.end()) ) {
                     RAVELOG_DEBUG(str(boost::format("specified manipulator %s end effector not attached to specified sensor %s\n")%pmanip->GetName()%psensor->GetName()));
                 }
                 else {
@@ -850,7 +858,7 @@ Visibility computation checks occlusion with other objects using ray sampling in
             }
             else {
                 FOREACHC(itmanip,_robot->GetManipulators()) {
-                    if(( (*itmanip)->GetEndEffector() == psensor->GetAttachingLink()) ||( find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end()) ) {
+                    if(( (*itmanip)->GetEndEffector() == attachingLink) ||( find(vattachedlinks.begin(),vattachedlinks.end(),(*itmanip)->GetEndEffector()) != vattachedlinks.end()) ) {
                         pmanip = *itmanip;
                         _bCameraOnManip = true;
                         break;
