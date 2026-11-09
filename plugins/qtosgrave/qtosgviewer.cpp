@@ -2135,7 +2135,19 @@ void QtOSGViewer::UpdateFromModel()
     }
 
     std::lock_guard<std::mutex> lock(_mutexUpdateModels);
-    vector<KinBody::BodyState> vecbodies;
+    vector<KinBody::BodyState>& vecbodies = _vecPublishedBodyStates;
+
+    // Only the buffers are meant to be reused across updates, so do not keep the bodies alive until the next update.
+    struct BodyPointerReleaser
+    {
+        ~BodyPointerReleaser()
+        {
+            for (KinBody::BodyState& bodyState : vecBodyStates) {
+                bodyState.pbody.reset();
+            }
+        }
+        vector<KinBody::BodyState>& vecBodyStates;
+    } bodyPointerReleaser{vecbodies};
 
     EnvironmentLock lockenv(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
 
