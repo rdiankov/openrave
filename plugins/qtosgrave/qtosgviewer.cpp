@@ -1074,7 +1074,14 @@ void QtOSGViewer::_UpdateViewport()
 
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
-    _posgWidget->SetViewport(width, height); // < need to do this since resizeGL is not properly called when using viewer in embedded apps (other than openrave standalone viewer)
+
+    // Need to poll since resizeGL is not properly called when using viewer in embedded apps (other than openrave standalone viewer).
+    // Only apply on change, since SetViewport queues a resize event that forces a new frame to be rendered.
+    if (width != _appliedViewportWidth || height != _appliedViewportHeight) {
+        _posgWidget->SetViewport(width, height);
+        _appliedViewportWidth = width;
+        _appliedViewportHeight = height;
+    }
 
     double fovy, aspectRatio, zNear, zFar;
     _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
