@@ -238,6 +238,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     BOOST_ASSERT( !!pbody );
     _pbody = pbody;
     bGrabbed = false;
+    _bSceneGraphModified = true;
     _bLastUpdateUsedDefaultHierarchy = false;
     _userdata = 0;
     _bReload = false;
@@ -870,6 +871,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
             if( _bReload || _bDrawStateChanged ) {
                 Load();
                 bReloaded = true;
+                _bSceneGraphModified = true;
             }
         }
     }
@@ -926,6 +928,7 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         SetMatrixTransform(*_veclinks.at(ilink).second, tlocal);
     }
 
+    _bSceneGraphModified = true;
     _bLastUpdateUsedDefaultHierarchy = bIsDefaultHierarchy;
     return true;
 }
@@ -1214,6 +1217,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         return false;
     }
     if( bGrabbed ) {
+        _bSceneGraphModified = true;
         // only updated when grabbing!
         //RaveTransform<float> transInvRoot = GetRaveTransform(*_osgWorldTransform).inverse();
 

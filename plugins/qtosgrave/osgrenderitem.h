@@ -145,6 +145,13 @@ public:
     /// \brief updates from openrave model
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
 
+    /// \brief returns whether the OSG nodes of this item were modified since the last call, and resets the flag.
+    bool PopSceneGraphModified() {
+        const bool bSceneGraphModified = _bSceneGraphModified;
+        _bSceneGraphModified = false;
+        return bSceneGraphModified;
+    }
+
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
 
     inline KinBodyPtr GetBody() const {
@@ -217,6 +224,7 @@ protected:
     std::vector<std::vector<GeomNodes> > _vecgeoms; ///< render items for each link's geometries, indexed same as geometries.
     bool bEnabled;
     bool bGrabbed, _bReload, _bDrawStateChanged;
+    bool _bSceneGraphModified; ///< true if the OSG nodes were modified since the last PopSceneGraphModified
     bool _bLastUpdateUsedDefaultHierarchy; ///< true if the last applied link transforms were computed while _IsDefaultHierarchy() was true
     ViewGeometry _viewmode;
     int _userdata;

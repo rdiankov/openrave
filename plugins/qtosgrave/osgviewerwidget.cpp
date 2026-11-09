@@ -693,8 +693,11 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         toon->addChild(_osgSceneRoot);
     }
 
-    connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
+    // Cull and draw are proportional to scene size and dominate the cost of the viewer thread for large scenes.
+    // Poll at a high rate so that we're responsive, but only render if something actually changed.
+    connect(&_timer, &QTimer::timeout, this, [this]() { _OnRepaintTimer(); });
     _timer.start( 10 );
+    _timeSinceLastFrame.start();
 
     RestoreCursor();
 }
@@ -1887,8 +1890,24 @@ void QOSGViewerWidget::initializeGL() {
     resizeGL(width(), height());
 }
 
+void QOSGViewerWidget::RequestRedraw()
+{
+    _osgview->requestRedraw();
+}
+
+void QOSGViewerWidget::_OnRepaintTimer()
+{
+    // OSG tracks pending input events, manipulator animations and explicit redraw requests.
+    // The periodic fallback bounds staleness for any scene modification that did not request a redraw.
+    static const qint64 maxFrameIntervalMilliseconds = 1000;
+    if (_osgviewer->checkNeedToDoFrame() || _timeSinceLastFrame.elapsed() >= maxFrameIntervalMilliseconds) {
+        update();
+    }
+}
+
 void QOSGViewerWidget::paintGL()
 {
+    _timeSinceLastFrame.restart();
     try {
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }
@@ -1978,7 +1997,26 @@ void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 bool QOSGViewerWidget::event(QEvent *event)
 {
     bool handled = QOpenGLWidget::event(event);
-    this->update();
+
+    // Repaint immediately on user input to keep interaction latency low.
+    // Other events (including paint and update requests) must not schedule a repaint, otherwise the widget re-renders continuously.
+    switch( event->type() ) {
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonRelease:
+    case QEvent::MouseButtonDblClick:
+    case QEvent::MouseMove:
+    case QEvent::Wheel:
+    case QEvent::KeyPress:
+    case QEvent::KeyRelease:
+    case QEvent::Resize:
+    case QEvent::Show:
+        RequestRedraw();
+        update();
+        break;
+    default:
+        break;
+    }
+
     return handled;
 }
 

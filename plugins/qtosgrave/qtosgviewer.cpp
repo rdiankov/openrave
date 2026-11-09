@@ -2126,8 +2126,10 @@ bool QtOSGViewer::LoadModel(const string& filename)
 
 void QtOSGViewer::UpdateFromModel()
 {
+    bool bSceneGraphModified = false; // if true, the scene needs to be rendered again
     {
         std::lock_guard<std::mutex> lock(_mutexItems);
+        bSceneGraphModified |= !_listRemoveItems.empty();
         FOREACH(it,_listRemoveItems) {
             delete *it;
         }
@@ -2254,6 +2256,7 @@ void QtOSGViewer::UpdateFromModel()
 
         //  Update viewer with core transforms
         pitem->UpdateFromModel(itbody->jointvalues, itbody->vectrans);
+        bSceneGraphModified |= pitem->PopSceneGraphModified();
     }
 
     FOREACH_NOINC(it, _mapbodies) {
@@ -2269,10 +2272,15 @@ void QtOSGViewer::UpdateFromModel()
             }
 
             _mapbodies.erase(it++);
+            bSceneGraphModified = true;
         }
         else {
             ++it;
         }
+    }
+
+    if ((bSceneGraphModified || newdata) && !!_posgWidget) {
+        _posgWidget->RequestRedraw();
     }
 
     _bModelsUpdated = true;
@@ -2327,6 +2335,10 @@ void QtOSGViewer::_UpdateEnvironment()
             mapGUIFunctionLists.swap(_mapGUIFunctionLists);
         }
 
+        // GUI functions are how other threads modify the scene, camera and figures, so any of them can change what is displayed.
+        if (!mapGUIFunctionLists.empty()) {
+            _posgWidget->RequestRedraw();
+        }
         FOREACH(itpriority, mapGUIFunctionLists) {
             list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
             FOREACH(itmsg, listGUIFunctions) {
