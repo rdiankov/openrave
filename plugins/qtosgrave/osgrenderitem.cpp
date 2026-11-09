@@ -238,6 +238,7 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     BOOST_ASSERT( !!pbody );
     _pbody = pbody;
     bGrabbed = false;
+    _bLastUpdateUsedDefaultHierarchy = false;
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
@@ -862,18 +863,30 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         return false;
     }
 
+    bool bReloaded = false;
     if( _bReload || _bDrawStateChanged ) {
         EnvironmentLock lockenv(_pbody->GetEnv()->GetMutex());
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
+                bReloaded = true;
             }
         }
     }
 
     std::lock_guard<std::mutex> lock(_mutexjoints);
+
+    // Applying a transform with setMatrix dirties the bounds all the way to the scene root, even if the transform was the same.
+    // Since most bodies aren't changing on any given cycle, only reapply transforms for the bodies that did to limit the invalidation.
+    // Otherwise, everything has to be recomputed on the next cull pass.
+    const bool bIsDefaultHierarchy = _IsDefaultHierarchy();
+    if (!bReloaded && bIsDefaultHierarchy && _bLastUpdateUsedDefaultHierarchy && !_vtrans.empty() && _AreLinkStatesVisuallyEqual(_vjointvalues, _vtrans, vjointvalues, vtrans)) {
+        return true;
+    }
+
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
+    _bLastUpdateUsedDefaultHierarchy = false;
 
     if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() ) {
         // something's wrong, so just return
@@ -913,6 +926,59 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         SetMatrixTransform(*_veclinks.at(ilink).second, tlocal);
     }
 
+    _bLastUpdateUsedDefaultHierarchy = bIsDefaultHierarchy;
+    return true;
+}
+
+/// \brief returns true if the values differ by no more than floating point noise, relative to their magnitude.
+static bool _AreValuesNearlyEqual(dReal value0, dReal value1)
+{
+    static const dReal relativeEpsilon = 1e-10;
+    return RaveFabs(value0 - value1) <= relativeEpsilon * (1 + RaveFabs(value0));
+}
+
+bool KinBodyItem::_AreLinkStatesVisuallyEqual(const std::vector<dReal>& vjointvalues0, const std::vector<Transform>& vtrans0, const std::vector<dReal>& vjointvalues1, const std::vector<Transform>& vtrans1)
+{
+    // We can't do a simple exact comparison because the transforms are recomputed each publish and have some floating point jitter.
+    // Comparing with a bit of epsilon is fine, since OSG renders everything with single precision anyway.
+    if (vjointvalues0.size() != vjointvalues1.size() || vtrans0.size() != vtrans1.size()) {
+        return false;
+    }
+    for (size_t ijoint = 0; ijoint < vjointvalues0.size(); ++ijoint) {
+        if (!_AreValuesNearlyEqual(vjointvalues0[ijoint], vjointvalues1[ijoint])) {
+            return false;
+        }
+    }
+    for (size_t ilink = 0; ilink < vtrans0.size(); ++ilink) {
+        const Transform& transform0 = vtrans0[ilink];
+        const Transform& transform1 = vtrans1[ilink];
+        for (int iaxis = 0; iaxis < 4; ++iaxis) {
+            if (!_AreValuesNearlyEqual(transform0.rot[iaxis], transform1.rot[iaxis])) {
+                return false;
+            }
+        }
+        for (int iaxis = 0; iaxis < 3; ++iaxis) {
+            if (!_AreValuesNearlyEqual(transform0.trans[iaxis], transform1.trans[iaxis])) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool KinBodyItem::_IsDefaultHierarchy() const
+{
+    // Draggers are inserted as a MatrixTransform parent of either the body root or a link's group node.
+    if (_osgWorldTransform->getNumParents() != 1 || _osgWorldTransform->getParent(0) != _osgSceneRoot.get()) {
+        return false;
+    }
+    for (const LinkNodes& linkNodes : _veclinks) {
+        for (unsigned int iparent = 0; iparent < linkNodes.first->getNumParents(); ++iparent) {
+            if (!!linkNodes.first->getParent(iparent)->asTransform()) {
+                return false;
+            }
+        }
+    }
     return true;
 }
 
