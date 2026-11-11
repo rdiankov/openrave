@@ -34,7 +34,7 @@ FCLSpace::FCLKinBodyInfo::LinkInfo::LinkInfo() : bFromKinBodyLink(false)
 {
 }
 
-FCLSpace::FCLKinBodyInfo::LinkInfo::LinkInfo(KinBody::LinkPtr plink) : _plink(plink), bFromKinBodyLink(true)
+FCLSpace::FCLKinBodyInfo::LinkInfo::LinkInfo(KinBody::LinkPtr plink) : _plink(plink), plinkRaw(plink.get()), pbodyRaw(plink->GetParent().get()), bFromKinBodyLink(true)
 {
 }
 
