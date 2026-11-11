@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.7
+===============
+
+- KinBody::SetDOFValues no longer calls GetDOFValues when the given values cover every dof and contain no NaN.
+
 Version 0.174.6
 ===============
 
