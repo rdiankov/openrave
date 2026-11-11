@@ -805,6 +805,8 @@ void QOSGViewerWidget::SetDraggerMode(const std::string& draggerName)
 
 void QOSGViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
 {
+    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    RequestRedraw();
     if( _selectedItem != item ) {
         if( !!_selectedItem ) {
             _selectedItem->SetGrab(false);
@@ -852,6 +854,8 @@ void QOSGViewerWidget::SetSceneData()
 
 void QOSGViewerWidget::ResetViewToHome()
 {
+    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    RequestRedraw();
     SetHome();
     _osgview->home();
 }
@@ -898,6 +902,8 @@ void QOSGViewerWidget::SetFacesMode(bool enabled)
 
 void QOSGViewerWidget::SetPolygonMode(int mode)
 {
+    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    RequestRedraw();
     osg::ref_ptr<osg::PolygonMode> poly(new osg::PolygonMode());
     osg::ref_ptr<osg::ShadeModel> sm(new osg::ShadeModel());
     switch (mode)
@@ -1163,6 +1169,8 @@ double QOSGViewerWidget::GetCameraNearPlane()
 
 void QOSGViewerWidget::SetViewType(int isorthogonal)
 {
+    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    RequestRedraw();
     int width = _osgview->getCamera()->getViewport()->width();
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
@@ -1374,6 +1382,8 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
 
 void QOSGViewerWidget::MoveCameraPointOfView(const std::string& axis)
 {
+    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    RequestRedraw();
     static const std::map<std::string, osg::Vec3d> axes = {
         { "+x", osg::Vec3d(1,0,0) },
         { "-x", osg::Vec3d(-1,0,0) },
@@ -1406,6 +1416,8 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 // see header, this function never changes focal point position
 void QOSGViewerWidget::Zoom(float factor)
 {
+    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    RequestRedraw();
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
         _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
