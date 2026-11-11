@@ -20,6 +20,7 @@
 #include "osgskybox.h"
 
 #include <QTime>
+#include <QtCore/QElapsedTimer>
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
@@ -202,6 +203,11 @@ public:
     /// \brief Get osg composite viewer
     osg::ref_ptr<osgViewer::CompositeViewer> GetViewer();
 
+    /// \brief Marks the scene as needing to be rendered on the next repaint timer tick.
+    ///
+    /// Frames are only rendered on demand, so anything that modifies the scene graph outside of OSG's own event handling must call this.
+    void RequestRedraw();
+
     /// \brief
     void SetKeyboardModifiers(QInputEvent* event);
 
@@ -257,8 +263,8 @@ protected:
     /// \brief Loads the stored matrix transform to the camera
     void _LoadMatrixTransform();
 
-    /// \brief update hud display axis from current manipulator transform
-    void _UpdateHUDAxisTransform(int width, int height);
+    /// \brief update hud display axis from the main camera view matrix and HUD viewport size
+    void _UpdateHUDAxisTransform();
 
     /// \brief set camera projection matrix as orthogonal using the given projection plane size
     void _SetCameraViewOrthoProjectionPlaneSize(double size);
@@ -309,6 +315,12 @@ protected:
 
     virtual bool event(QEvent *event);
 
+    /// \brief Called periodically, schedules a repaint only if OSG reports that a new frame is needed.
+    void _OnRepaintTimer();
+
+    /// \brief Returns true if the active camera manipulator is playing an animation that needs new frames to progress.
+    bool _IsCameraAnimating() const;
+
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
     OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner
@@ -344,7 +356,8 @@ protected:
 
     osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
-    QTimer _timer; ///< Timer for repaint
+    QTimer _timer; ///< Timer for checking whether a repaint is needed
+    QElapsedTimer _timeSinceLastFrame; ///< Time since the last rendered frame, used to bound how stale the displayed frame can get
     EnvironmentBasePtr _penv;
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)

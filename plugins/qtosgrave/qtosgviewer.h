@@ -448,11 +448,17 @@ public:
     geometry::RaveCameraIntrinsics<float> _camintrinsics; ///< intrinsics of the camera representing the current view, updated periodically, read only.
     RaveTransform<float> _cameraTransform; ///< transform of the view camera, read only.
     float _cameraDistanceToFocus = 0.0; ///< distance to focus of the view camera, read only.
+    int _appliedViewportWidth = -1; ///< width last passed to QOSGViewerWidget::SetViewport, -1 if never applied
+    int _appliedViewportHeight = -1; ///< height last passed to QOSGViewerWidget::SetViewport, -1 if never applied
     //@}
 
     std::mutex _mutexUpdating; ///< when inside an update function, even if just checking if the viewer should be updated, this will be locked.
     std::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
     std::condition_variable _condUpdateModels; ///< signaled everytime environment models are updated
+
+    /// Reused across UpdateFromModel calls so the per-body buffers are not reallocated every update.
+    /// Body pointers are cleared after each update. Protected by _mutexUpdateModels
+    std::vector<KinBody::BodyState> _vecPublishedBodyStates;
 
     ViewGeometry _viewGeometryMode; ///< the visualization mode of the geometries
 
