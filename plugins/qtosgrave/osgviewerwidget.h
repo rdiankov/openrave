@@ -318,6 +318,9 @@ protected:
     /// \brief Called periodically, schedules a repaint only if OSG reports that a new frame is needed.
     void _OnRepaintTimer();
 
+    /// \brief Returns true if the active camera manipulator is playing an animation that needs new frames to progress.
+    bool _IsCameraAnimating() const;
+
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
     OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner

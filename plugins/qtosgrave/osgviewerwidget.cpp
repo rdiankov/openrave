@@ -87,6 +87,12 @@ public:
         return osgGA::NodeTrackerManipulator::handle(ea, us);
     }
 
+    /// \brief true while the camera is transitioning to the tracked node. Each rendered frame advances the transition.
+    bool IsTransitionAnimating() const
+    {
+        return !_IsTransitionAnimationFinished();
+    }
+
     virtual osg::Matrixd getMatrix() const
     {
         osg::Vec3d nodeCenter;
@@ -1924,12 +1930,26 @@ void QOSGViewerWidget::RequestRedraw()
     _osgview->requestRedraw();
 }
 
+bool QOSGViewerWidget::_IsCameraAnimating() const
+{
+    // Camera animations only advance when a frame is rendered.
+    // OSG's continuous update request cannot be relied on to keep them going, since the manipulators clear it on every mouse push and release.
+    const osgGA::CameraManipulator* currentManipulator = _osgview->getCameraManipulator();
+    if (currentManipulator == _osgDefaultManipulator.get()) {
+        return _osgDefaultManipulator->isAnimating();
+    }
+    if (currentManipulator == _osgTrackModeManipulator.get()) {
+        return _osgTrackModeManipulator->IsTransitionAnimating();
+    }
+    return false;
+}
+
 void QOSGViewerWidget::_OnRepaintTimer()
 {
-    // OSG tracks pending input events, manipulator animations and explicit redraw requests.
+    // OSG tracks pending input events and explicit redraw requests.
     // The periodic fallback bounds staleness for any scene modification that did not request a redraw.
     static const qint64 maxFrameIntervalMilliseconds = 1000;
-    if (_osgviewer->checkNeedToDoFrame() || _timeSinceLastFrame.elapsed() >= maxFrameIntervalMilliseconds) {
+    if (_osgviewer->checkNeedToDoFrame() || _IsCameraAnimating() || _timeSinceLastFrame.elapsed() >= maxFrameIntervalMilliseconds) {
         update();
     }
 }
