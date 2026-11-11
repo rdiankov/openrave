@@ -2246,15 +2246,15 @@ void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, const Transfo
     if( _veclinks.size() == 0 ) {
         return;
     }
-    Transform baseLinkTransform = bodyTransform * _baseLinkInBodyTransform;
-    Transform tbase = baseLinkTransform*_veclinks.at(0)->GetTransform().inverse();
-    _veclinks.at(0)->SetTransform(baseLinkTransform);
-
-    // apply the relative transformation to all links!! (needed for passive joints)
-    for(size_t i = 1; i < _veclinks.size(); ++i) {
-        _veclinks[i]->SetTransform(tbase*_veclinks[i]->GetTransform());
-    }
-    SetDOFValues(vJointValues,checklimits);
+    // _SetTransformNoPostProcess applies tapply = baseLinkTransform * link[0].inverse() to every
+    // link, including link[0] itself. Routing link[0] through tapply (rather than assigning it
+    // baseLinkTransform exactly) makes link[0] absorb the same floating-point epsilon as the other
+    // links, so on a repeated identical call tapply is approximately (identity - epsilon) and the
+    // round-trip drift cancels instead of accumulating across calls. For DOF>0 bodies the
+    // SetDOFValues call below recomputes link[i>0] via forward kinematics, so this matters mainly
+    // for 0-DOF multi-link bodies.
+    _SetTransformNoPostProcess(bodyTransform);
+    SetDOFValues(vJointValues, checklimits);
 }
 
 void KinBody::SetDOFValues(const std::vector<dReal>& vJointValues, uint32_t checklimits, const std::vector<int>& dofindices)
