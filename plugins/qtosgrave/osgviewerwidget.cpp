@@ -695,7 +695,7 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
 
     // Cull and draw are proportional to scene size and dominate the cost of the viewer thread for large scenes.
     // Poll at a high rate so that we're responsive, but only render if something actually changed.
-    connect(&_timer, &QTimer::timeout, this, [this]() { _OnRepaintTimer(); });
+    connect(&_timer, &QTimer::timeout, this, &QOSGViewerWidget::_OnRepaintTimer);
     _timer.start( 10 );
     _timeSinceLastFrame.start();
 
