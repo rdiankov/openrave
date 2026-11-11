@@ -15,6 +15,8 @@
 #include "osgcartoon.h"
 #include "osgskybox.h"
 
+#include <functional>
+
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
@@ -513,6 +515,25 @@ private:
     bool _bInSeekMode; ///< if true, in seek mode
 };
 
+/// \brief Node callback that invokes an arbitrary function every time the node is traversed
+class FunctionNodeCallback : public osg::NodeCallback
+{
+public:
+    FunctionNodeCallback(const std::function<void()>& function)
+        : _function(function)
+    {
+    }
+
+    virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+    {
+        _function();
+        traverse(node, nv);
+    }
+
+protected:
+    std::function<void()> _function;
+};
+
 // \ brief rigid transformation dragger (does not allow scale)
 class DualDraggerTransformCallback : public osgManipulator::DraggerCallback
 {
@@ -659,6 +680,10 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         lightSource->setLight(light.get());
 
         _osgCameraHUD->addChild(lightSource.get());
+        // The axis follows the camera orientation, so it needs to be updated on every rendered frame.
+        // Use a cull callback, since an update callback would make OSG consider every frame as needing to be rendered.
+        // It is attached to the parent of the axis, since a transform's matrix is read before its own cull callback runs.
+        _osgCameraHUD->setCullCallback(new FunctionNodeCallback([this]() { _UpdateHUDAxisTransform(); }));
         lightSource->addChild(_osgWorldAxis.get());
 
         _osgHudText = new osgText::Text();
@@ -1170,7 +1195,6 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     hudcamera->setViewport(0, 0, width * scale, height * scale);
 
     SetHUDTextSize(_hudTextSize);
-    _UpdateHUDAxisTransform(width, height);
 }
 
 void QOSGViewerWidget::SetHUDTextSize(double size)
@@ -1209,15 +1233,20 @@ void QOSGViewerWidget::SetHUDTextOffset(double xOffset, double yOffset)
     _osgHudText->setMaximumWidth(_osgview->getCamera()->getViewport()->width() - 10 - _vecTextScreenOffset.x());
 }
 
-void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
+void QOSGViewerWidget::_UpdateHUDAxisTransform()
 {
-    float scale = this->devicePixelRatio();
-    osg::Matrix m = GetCurrentCameraManipulator()->getInverseMatrix();
-    m.setTrans(width*scale/2 - 40, -height*scale/2 + 40, -50);
+    // Viewport dimensions are already scaled by the device pixel ratio.
+    const osg::Viewport* hudViewport = _osghudview->getCamera()->getViewport();
+    if (!hudViewport) {
+        return;
+    }
+    // By cull time, the camera manipulator has already applied this frame's view matrix to the main camera.
+    osg::Matrix m = _osgview->getCamera()->getViewMatrix();
+    m.setTrans(hudViewport->width() / 2 - 40, -hudViewport->height() / 2 + 40, -50);
     _osgWorldAxis->setMatrix(m);
 }
 
-void QOSGViewerWidget::_SetCameraViewOrthoProjectionPlaneSize(double size) 
+void QOSGViewerWidget::_SetCameraViewOrthoProjectionPlaneSize(double size)
 {
     const int width = _osgview->getCamera()->getViewport()->width();
     const int height = _osgview->getCamera()->getViewport()->height();

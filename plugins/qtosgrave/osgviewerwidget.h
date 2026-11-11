@@ -263,8 +263,8 @@ protected:
     /// \brief Loads the stored matrix transform to the camera
     void _LoadMatrixTransform();
 
-    /// \brief update hud display axis from current manipulator transform
-    void _UpdateHUDAxisTransform(int width, int height);
+    /// \brief update hud display axis from the main camera view matrix and HUD viewport size
+    void _UpdateHUDAxisTransform();
 
     /// \brief set camera projection matrix as orthogonal using the given projection plane size
     void _SetCameraViewOrthoProjectionPlaneSize(double size);
