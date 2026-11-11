@@ -3,6 +3,16 @@
 ChangeLog
 #########
 
+Version 0.174.7
+===============
+
+- KinBody::SetDOFValues no longer calls GetDOFValues when the given values cover every dof and contain no NaN.
+
+Version 0.174.6
+===============
+
+- Don't rewrite all pybind exceptions as RuntimeError
+
 Version 0.174.5
 ===============
 

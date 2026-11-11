@@ -3509,6 +3509,9 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         return oret;
     });
 
+    // This translator is global and shared with every other pybind11 module, and runs before pybind11's default translator.
+    // Do not catch std::runtime_error here: pybind11 already maps it to RuntimeError, and catching it would also swallow
+    // its subclasses, i.e. pybind11's builtin exceptions (IndexError, KeyError, StopIteration, ...) and exceptions other modules register.
     py::register_exception_translator([](std::exception_ptr p) {
         try {
             if (p) {
@@ -3522,11 +3525,6 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         }
         catch( const boost::filesystem::filesystem_error& e ) {
             py::str pyerrdata = ConvertStringToUnicode(std::string(e.what())+" ("+e.path1().native()+")");
-            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
-            PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
-        }
-        catch( const std::runtime_error& e ) {
-            py::str pyerrdata = ConvertStringToUnicode(e.what());
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
             PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
         }
