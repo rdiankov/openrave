@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.8
+===============
+
+- Stepping the simulation no longer re-applies the pose of grabbed bodies that did not move. Previously every simulation step incremented the update stamp of every grabbed body (and its own grabbed bodies), so anything tracking update stamps treated them as changed on every step.
+
 Version 0.174.7
 ===============
 

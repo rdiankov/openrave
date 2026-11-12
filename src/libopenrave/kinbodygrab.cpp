@@ -1019,7 +1019,7 @@ void KinBody::_UpdateGrabbedBodies()
         return;
     }
 
-    std::pair<Vector, Vector> velocity;
+    std::pair<Vector, Vector> velocity, currentVelocity;
     Transform tGrabbedBody; // cache
     for (MapGrabbedByEnvironmentIndex::iterator grabIt = _grabbedBodiesByEnvironmentIndex.begin(); grabIt != _grabbedBodiesByEnvironmentIndex.end(); /* nop */) {
         GrabbedPtr pgrabbed = grabIt->second;
@@ -1029,6 +1029,18 @@ void KinBody::_UpdateGrabbedBodies()
             tGrabbedBody = tGrabbingLink * pgrabbed->_tRelative;
             pgrabbed->_pGrabbingLink->GetVelocity(velocity.first, velocity.second);
             velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
+
+            // Re-applying an unchanged pose still increments the grabbed body's update stamp, so everything tracking the stamp (viewers, published bodies, caches) sees it as moved.
+            // This runs on every simulation step, so skip it if the body is already where this would put it.
+            // Compare with a tolerance, since setting a body transform does not read back bit-identically. The rounding error grows with the distance from the origin.
+            if( TransformDistanceFast(pGrabbedBody->GetTransform(), tGrabbedBody) <= g_fEpsilonLinear*(1 + RaveSqrt(tGrabbedBody.trans.lengthsqr3())) ) {
+                pGrabbedBody->GetLinks().at(0)->GetVelocity(currentVelocity.first, currentVelocity.second);
+                if( (currentVelocity.first - velocity.first).lengthsqr3() <= g_fEpsilonLinear && (currentVelocity.second - velocity.second).lengthsqr3() <= g_fEpsilonLinear ) {
+                    ++grabIt;
+                    continue;
+                }
+            }
+
             // Set the transform and velocity in one go so that we only cause one update of the grab sub-tree of this body
             // If we update them separately, we duplicate work / can cause exponential wasted time for deeply nested grabs
             pGrabbedBody->SetTransformAndVelocity(tGrabbedBody, velocity.first, velocity.second);
