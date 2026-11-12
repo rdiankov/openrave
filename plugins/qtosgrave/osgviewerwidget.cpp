@@ -80,17 +80,17 @@ public:
                 return true;
             }
 
+        case osgGA::GUIEventAdapter::FRAME:
+            // The transition advances whenever a frame reads the camera matrix, so keep frames coming until it finishes.
+            // FRAME is the last event of each traversal, so this also restores the request after mouse handling clears it.
+            us.requestContinuousUpdate(!_IsTransitionAnimationFinished());
+            break;
+
         default:
             break;
         }
 
         return osgGA::NodeTrackerManipulator::handle(ea, us);
-    }
-
-    /// \brief true while the camera is transitioning to the tracked node. Each rendered frame advances the transition.
-    bool IsTransitionAnimating() const
-    {
-        return !_IsTransitionAnimationFinished();
     }
 
     virtual osg::Matrixd getMatrix() const
@@ -338,6 +338,14 @@ public:
         {
         case osgGA::GUIEventAdapter::DOUBLECLICK:
             return handleMouseDoubleClick( ea, us );
+
+        case osgGA::GUIEventAdapter::FRAME:
+            if( isAnimating() ) {
+                // Keep frames coming while the animation plays. StandardManipulator turns this off when the animation finishes.
+                // FRAME is the last event of each traversal, so this also restores the request after mouse handling clears it.
+                us.requestContinuousUpdate(true);
+            }
+            break;
 
         case osgGA::GUIEventAdapter::SCROLL:
             {
@@ -724,12 +732,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         toon->addChild(_osgSceneRoot);
     }
 
-    // Cull and draw are proportional to scene size and dominate the cost of the viewer thread for large scenes.
-    // Poll at a high rate so that we're responsive, but only render if something actually changed.
-    connect(&_timer, &QTimer::timeout, this, &QOSGViewerWidget::_OnRepaintTimer);
-    _timer.start( 10 );
-    _timeSinceLastFrame.start();
-
     RestoreCursor();
 }
 
@@ -805,7 +807,7 @@ void QOSGViewerWidget::SetDraggerMode(const std::string& draggerName)
 
 void QOSGViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
 {
-    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    // Changes what is drawn, outside of OSG event handling.
     RequestRedraw();
     if( _selectedItem != item ) {
         if( !!_selectedItem ) {
@@ -854,8 +856,6 @@ void QOSGViewerWidget::SetSceneData()
 
 void QOSGViewerWidget::ResetViewToHome()
 {
-    // Can be called directly from Qt UI actions, outside of OSG event handling.
-    RequestRedraw();
     SetHome();
     _osgview->home();
 }
@@ -902,7 +902,7 @@ void QOSGViewerWidget::SetFacesMode(bool enabled)
 
 void QOSGViewerWidget::SetPolygonMode(int mode)
 {
-    // Can be called directly from Qt UI actions, outside of OSG event handling.
+    // Changes what is drawn, outside of OSG event handling.
     RequestRedraw();
     osg::ref_ptr<osg::PolygonMode> poly(new osg::PolygonMode());
     osg::ref_ptr<osg::ShadeModel> sm(new osg::ShadeModel());
@@ -1169,8 +1169,6 @@ double QOSGViewerWidget::GetCameraNearPlane()
 
 void QOSGViewerWidget::SetViewType(int isorthogonal)
 {
-    // Can be called directly from Qt UI actions, outside of OSG event handling.
-    RequestRedraw();
     int width = _osgview->getCamera()->getViewport()->width();
     int height = _osgview->getCamera()->getViewport()->height();
     double aspect = static_cast<double>(width)/static_cast<double>(height);
@@ -1382,8 +1380,6 @@ void QOSGViewerWidget::_PanCameraTowardsDirection(double delta, const osg::Vec3d
 
 void QOSGViewerWidget::MoveCameraPointOfView(const std::string& axis)
 {
-    // Can be called directly from Qt UI actions, outside of OSG event handling.
-    RequestRedraw();
     static const std::map<std::string, osg::Vec3d> axes = {
         { "+x", osg::Vec3d(1,0,0) },
         { "-x", osg::Vec3d(-1,0,0) },
@@ -1416,8 +1412,6 @@ void QOSGViewerWidget::MoveCameraZoom(float factor, bool isPan, float panDelta)
 // see header, this function never changes focal point position
 void QOSGViewerWidget::Zoom(float factor)
 {
-    // Can be called directly from Qt UI actions, outside of OSG event handling.
-    RequestRedraw();
     if (IsInOrthoMode()) {
         // if we increase _currentOrthoFrustumSize, we zoom out since a bigger frustum maps object to smaller part of screen
         _currentOrthoFrustumSize = _currentOrthoFrustumSize / factor;
@@ -1944,40 +1938,33 @@ void QOSGViewerWidget::initializeGL() {
 void QOSGViewerWidget::RequestRedraw()
 {
     _osgview->requestRedraw();
+    update(); // coalesced by Qt and painted at the next display refresh
 }
 
-bool QOSGViewerWidget::_IsCameraAnimating() const
+void QOSGViewerWidget::RequestRedrawIfCameraChanged()
 {
-    // Camera animations only advance when a frame is rendered.
-    // OSG's continuous update request cannot be relied on to keep them going, since the manipulators clear it on every mouse push and release.
-    const osgGA::CameraManipulator* currentManipulator = _osgview->getCameraManipulator();
-    if (currentManipulator == _osgDefaultManipulator.get()) {
-        return _osgDefaultManipulator->isAnimating();
-    }
-    if (currentManipulator == _osgTrackModeManipulator.get()) {
-        return _osgTrackModeManipulator->IsTransitionAnimating();
-    }
-    return false;
-}
-
-void QOSGViewerWidget::_OnRepaintTimer()
-{
-    // OSG tracks pending input events and explicit redraw requests.
-    // The periodic fallback bounds staleness for any scene modification that did not request a redraw.
-    static const qint64 maxFrameIntervalMilliseconds = 1000;
-    if (_osgviewer->checkNeedToDoFrame() || _IsCameraAnimating() || _timeSinceLastFrame.elapsed() >= maxFrameIntervalMilliseconds) {
-        update();
+    // The camera can be moved from anywhere (toolbar, GUI functions, scripts), so detect it instead of relying on every caller to request a redraw.
+    const osgGA::CameraManipulator* manipulator = _osgview->getCameraManipulator();
+    if ((!!manipulator && manipulator->getInverseMatrix() != _lastRenderedViewMatrix) || _osgview->getCamera()->getProjectionMatrix() != _lastRenderedProjectionMatrix) {
+        RequestRedraw();
     }
 }
 
 void QOSGViewerWidget::paintGL()
 {
-    _timeSinceLastFrame.restart();
     try {
         _osgviewer->frame(); // osgViewer::CompositeViewer
     }
     catch(const std::exception& ex) {
         RAVELOG_WARN_FORMAT("got exception in paint event: %s", ex.what());
+    }
+    _lastRenderedViewMatrix = _osgview->getCamera()->getViewMatrix();
+    _lastRenderedProjectionMatrix = _osgview->getCamera()->getProjectionMatrix();
+
+    // Frames are only rendered on demand, and Qt paces update() to the display.
+    // Manipulators request continuous updates while they animate, so keep scheduling frames until nothing needs one.
+    if (_osgviewer->checkNeedToDoFrame()) {
+        update();
     }
 }
 
@@ -2076,7 +2063,6 @@ bool QOSGViewerWidget::event(QEvent *event)
     case QEvent::Resize:
     case QEvent::Show:
         RequestRedraw();
-        update();
         break;
     default:
         break;
