@@ -1460,6 +1460,10 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
     _osgGraphicWindow = dynamic_cast<osgViewer::GraphicsWindowEmbedded*>( camera->getGraphicsContext() );
     hudcamera->setGraphicsContext(_osgGraphicWindow);
     hudcamera->setViewport(0,0,_osgGraphicWindow->getTraits()->width, _osgGraphicWindow->getTraits()->height);
+
+    // Input events are timestamped by the event queues, and camera animations progress by the viewer's frame time.
+    // Start all of them from the same tick, otherwise animations started by input events finish on their first frame.
+    _osgviewer->setStartTick(osg::Timer::instance()->tick());
 }
 
 void QOSGViewerWidget::_GetRAVEEnvironmentUpVector(osg::Vec3d& upVector)
