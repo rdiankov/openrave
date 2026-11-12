@@ -163,7 +163,7 @@ public:
     KinBody::Link::GeometryPtr GetGeomFromOSG(OSGNodePtr pgeomnode) const;
 
     /// \brief gets the geom from the index
-    OSGMatrixTransformPtr GetOSGGeom(int linkindex, int geomindex) const {
+    OSGGroupPtr GetOSGGeom(int linkindex, int geomindex) const {
         return _vecgeoms.at(linkindex).at(geomindex).second;
     }
 
@@ -200,7 +200,7 @@ protected:
     virtual void _HandleDrawChangedCallback();
 
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LinkNodes;
-    typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> GeomNodes;
+    typedef std::pair<OSGGroupPtr, OSGGroupPtr> GeomNodes; ///< (geometry data, node attached to the link), the latter is a MatrixTransform only if the geometry offset could not be baked into the vertices
 
     KinBodyPtr _pbody;
     int _environmentid;        ///< _pbody->GetEnvironmentBodyIndex()
