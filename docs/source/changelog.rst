@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.175.0
+===============
+
+- Add EnvironmentBase::SyncPublishedBodies, which updates a caller-owned copy of the published bodies and only copies the states whose body or update stamp changed since the previous call. GetPublishedBodies is unchanged and still copies every state.
+
 Version 0.174.7
 ===============
 
