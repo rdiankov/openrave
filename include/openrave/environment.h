@@ -639,6 +639,15 @@ public:
     /// \throw openrave_exception with ORE_Timeout error code
     virtual void GetPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout=0) = 0;
 
+    /// \brief Updates a caller-owned copy of the published bodies, only copying the states that changed since the previous call. <b>[multi-thread safe]</b>
+    ///
+    /// Same result as GetPublishedBodies, but meant to be called repeatedly with the same vector.
+    /// An entry that already describes the same body at the same update stamp is left as is, so its contents must not be modified by the caller.
+    /// The entries hold the published bodies until the next call.
+    /// \param timeout microseconds to wait before throwing an exception, if 0, will block indefinitely.
+    /// \throw openrave_exception with ORE_Timeout error code
+    virtual void SyncPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout=0) = 0;
+
     /// \brief Retrieve published body of specified name, completes even if environment is locked. <b>[multi-thread safe]</b>
     ///
     /// A separate **interface mutex** is locked for reading the modules.
