@@ -20,7 +20,6 @@
 #include "osgskybox.h"
 
 #include <QTime>
-#include <QtCore/QElapsedTimer>
 #include <QtCore/QTimer>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QLayout>
@@ -203,10 +202,16 @@ public:
     /// \brief Get osg composite viewer
     osg::ref_ptr<osgViewer::CompositeViewer> GetViewer();
 
-    /// \brief Marks the scene as needing to be rendered on the next repaint timer tick.
+    /// \brief Schedules a frame at the next display refresh.
     ///
     /// Frames are only rendered on demand, so anything that modifies the scene graph outside of OSG's own event handling must call this.
+    /// Camera changes are detected by RequestRedrawIfCameraChanged instead.
     void RequestRedraw();
+
+    /// \brief Schedules a frame if the camera view or projection differs from the last rendered frame. Called periodically.
+    ///
+    /// Only covers the camera: changes to bodies and figures request a redraw where they are applied (QtOSGViewer::UpdateFromModel, GUI functions).
+    void RequestRedrawIfCameraChanged();
 
     /// \brief
     void SetKeyboardModifiers(QInputEvent* event);
@@ -315,12 +320,6 @@ protected:
 
     virtual bool event(QEvent *event);
 
-    /// \brief Called periodically, schedules a repaint only if OSG reports that a new frame is needed.
-    void _OnRepaintTimer();
-
-    /// \brief Returns true if the active camera manipulator is playing an animation that needs new frames to progress.
-    bool _IsCameraAnimating() const;
-
     OSGGroupPtr _osgSceneRoot; ///< root scene node
     OSGGroupPtr _osgFigureRoot; ///< the node that all the figures are drawn into
     OSGMatrixTransformPtr _osgWorldAxis; ///< the node that draws the rgb axes on the lower right corner
@@ -356,8 +355,8 @@ protected:
 
     osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
-    QTimer _timer; ///< Timer for checking whether a repaint is needed
-    QElapsedTimer _timeSinceLastFrame; ///< Time since the last rendered frame, used to bound how stale the displayed frame can get
+    osg::Matrixd _lastRenderedViewMatrix; ///< camera view matrix of the last rendered frame
+    osg::Matrixd _lastRenderedProjectionMatrix; ///< camera projection matrix of the last rendered frame
     EnvironmentBasePtr _penv;
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)

@@ -481,7 +481,11 @@ void QtOSGViewer::_UpdateViewerCallback()
 {
     try {
         _UpdateEnvironment();
-        //UpdateFromModel();
+        // Body and figure changes request a redraw from UpdateFromModel and the GUI functions above.
+        // The camera is moved directly by toolbar actions, GUI functions and scripts, so it is compared against the last rendered frame instead.
+        if( !!_posgWidget ) {
+            _posgWidget->RequestRedrawIfCameraChanged();
+        }
 
         {
             std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
