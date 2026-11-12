@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.8
+===============
+
+- qtosgrave: bake each geometry's offset in its link into its vertices instead of keeping a MatrixTransform per geometry, and share identical state sets across geometries. This roughly halves the matrix transforms and cuts the state graphs that cull has to process every frame.
+
 Version 0.174.7
 ===============
 
