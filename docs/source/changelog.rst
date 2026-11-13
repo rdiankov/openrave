@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.174.8
+===============
+
+- ``ExtractInfoOptions`` gets skip bits next to ``EIO_SkipDOFValues``: ``EIO_SkipLinkInfos``, ``EIO_SkipJointInfos``, ``EIO_SkipGrabbedInfos``, ``EIO_SkipReadableInterfaces``, ``EIO_SkipRobotStructureInfos`` (manipulators, attached sensors, connected bodies, gripper infos) and ``EIO_SkipAssociatedFileEntries``. Any of them marks the extracted info partial; the body's identity and transform are always extracted, and the body moves to its zero pose only when link or joint infos are kept. ``EIO_Everything`` and ``EIO_SkipDOFValues`` behave as before. In Python the bits combine with ``|`` and an int converts to ``ExtractInfoOptions``.
+
 Version 0.174.7
 ===============
 
