@@ -45,6 +45,13 @@ enum ExtractInfoOptions : uint8_t
 {
     EIO_Everything = 0, ///< extract everything
     EIO_SkipDOFValues = 1, ///< extracts everything but dof values, this allows extraction even when body is not added to the environment
+    // Every other bit skips one part and marks the info partial. The body's identity (id, uri, name, referenceUri, interfaceType) and its transform are always extracted.
+    EIO_SkipLinkInfos = 2, ///< link infos; with EIO_SkipJointInfos also set, the body is not moved to its zero pose
+    EIO_SkipJointInfos = 4, ///< joint infos; with EIO_SkipLinkInfos also set, the body is not moved to its zero pose
+    EIO_SkipGrabbedInfos = 8, ///< grabbed infos
+    EIO_SkipReadableInterfaces = 16, ///< readable interfaces
+    EIO_SkipRobotStructureInfos = 32, ///< robot only: manipulators, attached sensors, connected bodies, gripper infos
+    EIO_SkipAssociatedFileEntries = 64, ///< associated file entries
 };
 
 /// \brief The type of geometry primitive.
@@ -3653,6 +3660,7 @@ public:
     ///
     /// if bSkipDOFValues is false, body needs to be added to the environment in order to work.
     /// \param bSkipDOFValues if true, then will skip extracting the DOF values of the kinbody and initializing _dofValues. This allows the fucntion to be called even if the body is not added to the environment.
+    /// \param options EIO_Skip* bits other than EIO_SkipDOFValues skip their part and mark the info partial (\see ExtractInfoOptions)
     virtual void ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options);
 
     /// \brief update KinBody according to new KinBodyInfo, returns false if update cannot be performed and requires InitFromInfo
@@ -3918,6 +3926,11 @@ protected:
     std::unordered_map<uint64_t, ListNonCollidingLinkPairs> _mapListNonCollidingInterGrabbedLinkPairsWhenGrabbed;
 
 private:
+    /// \brief ExtractInfo's link and joint walk: moves the body to the origin and its zero pose, reads the requested infos, restores it.
+    ///
+    /// info._transform must already hold the body transform: it is what gets restored, even when the body is not added to the environment.
+    void _ExtractLinkAndJointInfos(KinBodyInfo& info, ExtractInfoOptions options, bool bExtractLinkInfos, bool bExtractJointInfos);
+
     mutable std::vector<dReal> _vTempJoints;
     virtual const char* GetHash() const override {
         return OPENRAVE_KINBODY_HASH;
