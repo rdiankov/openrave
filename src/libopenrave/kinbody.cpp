@@ -6460,14 +6460,8 @@ private:
 
 void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
 {
-    const bool bSelective = IsSelectiveExtractInfo(options);
-    if( (options & EIO_SkipDOFValues) && (options & EIO_ExtractDOFValues) ) {
-        throw OPENRAVE_EXCEPTION_FORMAT("env=%s, body '%s' cannot both skip and extract dof values (options=%d)", GetEnv()->GetNameId()%_name%(int)options, ORE_InvalidArguments);
-    }
-    // without a selective bit, every part is extracted
-    const bool bExtractDOFValues = bSelective ? !!(options & EIO_ExtractDOFValues) : !(options & EIO_SkipDOFValues);
-    const bool bExtractLinkInfos = !bSelective || (options & EIO_ExtractLinkInfos);
-    const bool bExtractJointInfos = !bSelective || (options & EIO_ExtractJointInfos);
+    const bool bExtractLinkInfos = !(options & EIO_SkipLinkInfos);
+    const bool bExtractJointInfos = !(options & EIO_SkipJointInfos);
 
     info._modifiedFields = 0;
     info._id = _id;
@@ -6475,12 +6469,12 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     info._name = _name;
     info._referenceUri = _referenceUri;
     info._interfaceType = GetXMLId();
-    info._isPartial = bSelective;
+    info._isPartial = (options & ~EIO_SkipDOFValues) != 0; // a skipped part other than dof values leaves the info partial
 
     info._dofValues.clear();
     info._vGrabbedInfos.clear();
 
-    if( bExtractDOFValues ) {
+    if( !(options & EIO_SkipDOFValues) ) {
         CHECK_INTERNAL_COMPUTATION; // the GetDOFValues requires that internal information is initialized
         std::vector<dReal> vDOFValues;
         GetDOFValues(vDOFValues);
@@ -6491,18 +6485,17 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
         }
     }
 
-    if( !bSelective || (options & EIO_ExtractGrabbedInfos) ) {
+    if( !(options & EIO_SkipGrabbedInfos) ) {
         GetGrabbedInfo(info._vGrabbedInfos);
     }
 
-    const Transform tBody = GetTransform();
-    info._transform = (!bSelective || (options & EIO_ExtractTransform)) ? tBody : Transform();
+    info._transform = GetTransform();
 
     if( bExtractLinkInfos || bExtractJointInfos ) {
-        _ExtractLinkAndJointInfos(info, options, tBody, bExtractLinkInfos, bExtractJointInfos);
+        _ExtractLinkAndJointInfos(info, options, bExtractLinkInfos, bExtractJointInfos);
     }
 
-    if( !bSelective || (options & EIO_ExtractReadableInterfaces) ) {
+    if( !(options & EIO_SkipReadableInterfaces) ) {
         boost::shared_lock< boost::shared_mutex > lock(GetReadableInterfaceMutex());
         FOREACHC(it, GetReadableInterfaces()) {
             if (!!it->second) {
@@ -6513,7 +6506,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
         }
     }
 
-    if( !bSelective && !!_prAssociatedFileEntries ) {
+    if( !(options & EIO_SkipAssociatedFileEntries) && !!_prAssociatedFileEntries ) {
         if( !info._prAssociatedFileEntries ) {
             info._prAssociatedFileEntries.reset(new rapidjson::Document());
         }
@@ -6524,7 +6517,7 @@ void KinBody::ExtractInfo(KinBodyInfo& info, ExtractInfoOptions options)
     }
 }
 
-void KinBody::_ExtractLinkAndJointInfos(KinBodyInfo& info, ExtractInfoOptions options, const Transform& tBody, bool bExtractLinkInfos, bool bExtractJointInfos)
+void KinBody::_ExtractLinkAndJointInfos(KinBodyInfo& info, ExtractInfoOptions options, bool bExtractLinkInfos, bool bExtractJointInfos)
 {
     // Extraction moves the body to the origin so that the link transforms can be read in the body reference frame.
     // Since we move it back again, this isn't a 'real' modification to the body, so we can skip propagating it to grabbed bodies / callbacks.
@@ -6536,7 +6529,7 @@ void KinBody::_ExtractLinkAndJointInfos(KinBodyInfo& info, ExtractInfoOptions op
     boost::shared_ptr<void> restoreTransformEvenWhenBodyIsNotAddedToEnv = nullptr;
     if( (options & EIO_SkipDOFValues) && GetEnvironmentBodyIndex() == 0 ) {
         RAVELOG_WARN("resetting DOF to zeros");
-        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*) 0, std::bind(&KinBody::SetTransform, this, std::cref(tBody)));
+        restoreTransformEvenWhenBodyIsNotAddedToEnv = boost::shared_ptr<void>((void*) 0, std::bind(&KinBody::SetTransform, this, std::cref(info._transform)));
     }
 
     SetTransform(Transform()); // so that base link is at exactly _baseLinkInBodyTransform

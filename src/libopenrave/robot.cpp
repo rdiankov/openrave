@@ -2648,7 +2648,7 @@ void RobotBase::ExtractInfo(RobotBaseInfo& info, ExtractInfoOptions options)
 {
     KinBody::ExtractInfo(info, options);
     info._isRobot = true;
-    if( IsSelectiveExtractInfo(options) && !(options & EIO_ExtractRobotStructureInfos) ) {
+    if( options & EIO_SkipRobotStructureInfos ) {
         return;
     }
     // need to avoid extracting info from connectedbodies
