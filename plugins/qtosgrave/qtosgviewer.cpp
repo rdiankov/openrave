@@ -2213,6 +2213,11 @@ void QtOSGViewer::UpdateFromModel()
                             }
                         }
                         if( !lockenv ) {
+                            // Items updated earlier in this pass have already popped their modified flags,
+                            // so their changes would not be drawn unless the redraw is requested now.
+                            if( (bSceneGraphModified || newdata) && !!_posgWidget ) {
+                                _posgWidget->RequestRedraw();
+                            }
                             return; // couldn't acquire the lock, try next time. This prevents deadlock situations
                         }
                     }
