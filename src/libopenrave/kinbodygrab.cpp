@@ -1011,7 +1011,7 @@ void KinBody::GetIgnoredLinksOfGrabbed(KinBodyConstPtr body, std::list<KinBody::
     RAVELOG_WARN_FORMAT("env=%s, body '%s' is not currently grabbing '%s' so cannot get ignoreLinks", GetEnv()->GetNameId()%GetName()%body->GetName());
 }
 
-void KinBody::_UpdateGrabbedBodies()
+void KinBody::_UpdateGrabbedBodies(bool bSkipUnchanged)
 {
     // The caller is in a scope that will restore this body's pose before anything can observe the grabbed bodies in an invalid state.
     // Skip propagating changes that we would only have to revert later.
@@ -1031,11 +1031,11 @@ void KinBody::_UpdateGrabbedBodies()
             velocity.first += velocity.second.cross(tGrabbedBody.trans - tGrabbingLink.trans);
 
             // Re-applying an unchanged pose still increments the grabbed body's update stamp, so everything tracking the stamp (viewers, published bodies, caches) sees it as moved.
-            // This runs on every simulation step, so skip it if the body is already where this would put it.
+            // When asked, skip it if the body is already where this would put it.
             // Compare with a tolerance, since setting a body transform does not read back bit-identically. The rounding error grows with the distance from the origin.
-            if( TransformDistanceFast(pGrabbedBody->GetTransform(), tGrabbedBody) <= g_fEpsilonLinear*(1 + RaveSqrt(tGrabbedBody.trans.lengthsqr3())) ) {
+            if( bSkipUnchanged && TransformDistanceFast(pGrabbedBody->GetTransform(), tGrabbedBody) <= g_fEpsilonLinear*(1 + RaveSqrt(tGrabbedBody.trans.lengthsqr3())) ) {
                 pGrabbedBody->GetLinks().at(0)->GetVelocity(currentVelocity.first, currentVelocity.second);
-                if( (currentVelocity.first - velocity.first).lengthsqr3() <= g_fEpsilonLinear && (currentVelocity.second - velocity.second).lengthsqr3() <= g_fEpsilonLinear ) {
+                if( (currentVelocity.first - velocity.first).lengthsqr3() <= g_fEpsilonLinear*g_fEpsilonLinear && (currentVelocity.second - velocity.second).lengthsqr3() <= g_fEpsilonLinear*g_fEpsilonLinear ) {
                     ++grabIt;
                     continue;
                 }
