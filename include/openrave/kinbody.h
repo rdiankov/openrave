@@ -3753,7 +3753,8 @@ protected:
     /// \brief Update transforms and velocities of the grabbed bodies
     ///
     /// Does nothing while _bSuppressLinkTransformPropagation is set.
-    void _UpdateGrabbedBodies();
+    /// \param bSkipUnchanged if true, do not set grabbed bodies that are already at the transform and velocity they would be set to, so their update stamps do not change. Used for the periodic update in SimulationStep.
+    void _UpdateGrabbedBodies(bool bSkipUnchanged=false);
 
     /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
     MapGrabbedByEnvironmentIndex::iterator _RemoveGrabbedBody(MapGrabbedByEnvironmentIndex::iterator itGrabbed);
