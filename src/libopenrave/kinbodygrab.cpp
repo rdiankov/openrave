@@ -1034,8 +1034,12 @@ void KinBody::_UpdateGrabbedBodies(bool bSkipUnchanged)
             // When asked, skip it if the body is already where this would put it.
             // Compare with a tolerance, since setting a body transform does not read back bit-identically. The rounding error grows with the distance from the origin.
             if( bSkipUnchanged && TransformDistanceFast(pGrabbedBody->GetTransform(), tGrabbedBody) <= g_fEpsilonLinear*(1 + RaveSqrt(tGrabbedBody.trans.lengthsqr3())) ) {
-                pGrabbedBody->GetLinks().at(0)->GetVelocity(currentVelocity.first, currentVelocity.second);
-                if( (currentVelocity.first - velocity.first).lengthsqr3() <= g_fEpsilonLinear*g_fEpsilonLinear && (currentVelocity.second - velocity.second).lengthsqr3() <= g_fEpsilonLinear*g_fEpsilonLinear ) {
+                bool bVelocityUnchanged = true; // a body without links has no velocity to compare
+                if( !pGrabbedBody->GetLinks().empty() ) {
+                    pGrabbedBody->GetLinks()[0]->GetVelocity(currentVelocity.first, currentVelocity.second);
+                    bVelocityUnchanged = (currentVelocity.first - velocity.first).lengthsqr3() <= g_fEpsilonLinear*g_fEpsilonLinear && (currentVelocity.second - velocity.second).lengthsqr3() <= g_fEpsilonLinear*g_fEpsilonLinear;
+                }
+                if( bVelocityUnchanged ) {
                     ++grabIt;
                     continue;
                 }
