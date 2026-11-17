@@ -145,6 +145,16 @@ public:
     /// \brief updates from openrave model
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
 
+    /// \brief updates from a published body state, skipping it if the body did not change since the last applied state.
+    bool UpdateFromPublishedState(const KinBody::BodyState& bodyState) {
+        // Draggers change how link transforms are applied, so only skip if the hierarchy is the same as when the last state was applied.
+        if( bodyState.updatestamp == _lastAppliedUpdateStamp && !_bReload && !_bDrawStateChanged && _bLastUpdateUsedDefaultHierarchy && _IsDefaultHierarchy() ) {
+            return true;
+        }
+        _lastAppliedUpdateStamp = bodyState.updatestamp;
+        return UpdateFromModel(bodyState.jointvalues, bodyState.vectrans);
+    }
+
     /// \brief returns whether the OSG nodes of this item were modified since the last call, and resets the flag.
     bool PopSceneGraphModified() {
         const bool bSceneGraphModified = _bSceneGraphModified;
@@ -212,9 +222,6 @@ protected:
     /// The OSG transform therefore depends only on the link transforms.
     bool _IsDefaultHierarchy() const;
 
-    /// \brief returns true if the two link states would render identically
-    static bool _AreLinkStatesVisuallyEqual(const std::vector<dReal>& vjointvalues0, const std::vector<Transform>& vtrans0, const std::vector<dReal>& vjointvalues1, const std::vector<Transform>& vtrans1);
-
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LinkNodes;
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> GeomNodes;
 
@@ -226,6 +233,7 @@ protected:
     bool bGrabbed, _bReload, _bDrawStateChanged;
     bool _bSceneGraphModified; ///< true if the OSG nodes were modified since the last PopSceneGraphModified
     bool _bLastUpdateUsedDefaultHierarchy; ///< true if the last applied link transforms were computed while _IsDefaultHierarchy() was true
+    int _lastAppliedUpdateStamp = -1; ///< KinBody update stamp of the last state applied by UpdateFromPublishedState
     ViewGeometry _viewmode;
     int _userdata;
 
