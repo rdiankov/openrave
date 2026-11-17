@@ -85,52 +85,51 @@ public:
     }
 };
 
-class OPENRAVEPY_API PyKinBody : public PyInterfaceBase
+class OPENRAVEPY_API PyGrabbedInfo
 {
 public:
-    class OPENRAVEPY_API PyGrabbedInfo
-    {
-public:
-        PyGrabbedInfo();
-        PyGrabbedInfo(const RobotBase::GrabbedInfo& info);
+    PyGrabbedInfo();
+    PyGrabbedInfo(const RobotBase::GrabbedInfo& info);
 
-        RobotBase::GrabbedInfoPtr GetGrabbedInfo() const;
+    RobotBase::GrabbedInfoPtr GetGrabbedInfo() const;
 
-        py::dict SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
+    py::dict SerializeJSON(dReal fUnitScale=1.0, py::object ooptions=py::none_());
 
-        void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
+    void DeserializeJSON(py::object obj, dReal fUnitScale=1.0, py::object options=py::none_());
 
-        py::str GetGrabbedInfoHash() const;
+    py::str GetGrabbedInfoHash() const;
 
-        std::string __str__();
-        py::str __unicode__();
+    std::string __str__();
+    py::str __unicode__();
 
 private:
-        void _Update(const RobotBase::GrabbedInfo& info);
+    void _Update(const RobotBase::GrabbedInfo& info);
 
 public:
 
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        std::string _id;
-        std::string _grabbedname;
-        std::string _robotlinkname;
-        std::string _grippername;
+    std::string _id;
+    std::string _grabbedname;
+    std::string _robotlinkname;
+    std::string _grippername;
 #else
-        py::object _id = py::none_();
-        py::object _grabbedname = py::none_();
-        py::object _robotlinkname = py::none_();
-        py::object _grippername = py::none_();
+    py::object _id = py::none_();
+    py::object _grabbedname = py::none_();
+    py::object _robotlinkname = py::none_();
+    py::object _grippername = py::none_();
 #endif
-        py::object _trelative = ReturnTransform(Transform());
+    py::object _trelative = ReturnTransform(Transform());
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
-        std::vector<std::string> _setIgnoreRobotLinkNames;
+    std::vector<std::string> _setIgnoreRobotLinkNames;
 #else
-        py::object _setIgnoreRobotLinkNames = py::none_();
+    py::object _setIgnoreRobotLinkNames = py::none_();
 #endif
-        py::object _grabbedUserData = py::none_();
-    }; // class PyGrabbedInfo
-    typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
+    py::object _grabbedUserData = py::none_();
+}; // class PyGrabbedInfo
+typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 
+class OPENRAVEPY_API PyKinBody : public PyInterfaceBase
+{
 public:
     class PyKinBodyInfo
     {

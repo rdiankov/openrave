@@ -66,6 +66,7 @@
 
 #ifdef HAVE_BOOST_FILESYSTEM
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/directory.hpp>
 #endif
 
 #include <boost/numeric/ublas/matrix.hpp>

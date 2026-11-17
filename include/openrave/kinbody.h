@@ -302,7 +302,8 @@ class OPENRAVE_API KinBody : public InterfaceBase
 {
 public:
     /// \brief A set of properties for the kinbody. These properties are used to describe a set of variables used in KinBody.
-    enum KinBodyProperty {
+    enum KinBodyProperty
+    {
         Prop_JointMimic=0x1,     ///< joint mimic equations
         Prop_JointLimits=0x2,     ///< regular limits
         Prop_JointOffset=0x4,
@@ -582,7 +583,8 @@ public:
         Vector _vNegativeCropContainerEmptyMargins = Vector(0,0,0); ///< The negative crop empty margins component
         Vector _vPositiveCropContainerEmptyMargins = Vector(0,0,0); ///< The positive crop empty margins component
 
-        struct CalibrationBoardParameters { ///< used by GT_CalibrationBoard
+        struct CalibrationBoardParameters///< used by GT_CalibrationBoard
+        {
             CalibrationBoardParameters() : numDotsX(3), numDotsY(3), dotsDistanceX(1), dotsDistanceY(1), patternName("threeBigDotsDotGrid"), dotDiameterDistanceRatio(0.25), bigDotDiameterDistanceRatio(0.5) {
             } ///< constructor
             int numDotsX; ///< number of dots in x direction, minimum 3
@@ -1514,7 +1516,8 @@ private:
 
         For multi-dof joints, the order is transform(parentlink) * transform(axis0) * transform(axis1) ...
      */
-    enum JointType {
+    enum JointType
+    {
         JointNone = 0,
         JointHinge = 0x01,
         JointRevolute = 0x01,
@@ -2314,8 +2317,6 @@ public:
 public:
         BodyState() : updatestamp(0), environmentid(0) {
         }
-        ~BodyState() {
-        }
 
         /// \brief clears any previous set state
         inline void Reset() {
@@ -2331,6 +2332,16 @@ public:
             activeManipulatorName.clear();
             activeManipulatorTransform = Transform();
             vGrabbedInfos.clear();
+        }
+
+        /// \brief clears any previous set state and releases any held memory
+        ///
+        /// Reset keeps any allocated buffer capacity so that the next body written into this state can reuse it.
+        /// However, if the state starts describing a _different_ body, this risks growing capacity that is never re-used.
+        /// If large bodies transiently appear and disappear across many states, more and more memory is tied up in unused buffer capacity.
+        /// When a body leaves a slot, the grown buffers should be reclaimed so they can be resized more appropriately.
+        inline void ResetAndReleaseMemory() {
+            *this = BodyState();
         }
 
         KinBodyPtr pbody; ///< pointer to the body. if using this, make sure the environment is locked.
@@ -2445,7 +2456,8 @@ public:
         bool _isRobot = false; ///< true if should create a RobotBasePtr
         bool _isPartial = true; ///< true if this info contains partial information. false if the info contains the full body information and can ignore anything that is currently saved on the environment when updating.
 
-        enum KinBodyInfoField {
+        enum KinBodyInfoField
+        {
             KBIF_Transform = (1 << 0), // _transform field
             KBIF_DOFValues = (1 << 1), // _dofValues field
             KBIF_URI = (1 << 2), // _uri field
@@ -3654,6 +3666,18 @@ public:
         return _prAssociatedFileEntries;
     }
 
+    /// \name Readable interface overrides
+    ///
+    /// We override the ReadablesContainer methods that might add readable interfaces so that, if this body is added to an environment, we can notify it about the addition.
+    /// This lets the environment maintain a cache of which bodies _might_ hold which readable interfaces, providing optimized GetBodiesWithReadableInterface lookups.
+    /// Removals are not inspected because the cache is allowed to overapproximate.
+    /// The base readable container behaviour is unchanged.
+    //@{
+    ReadablePtr SetReadableInterface(const std::string& id, const ReadablePtr& readable) override;
+    void SetReadableInterfaces(const READERSMAP& mapReadables, bool bClearAllExisting) override;
+    bool UpdateReadableInterfaces(const std::map<std::string, ReadablePtr>& newReadableInterfaces) override;
+    //@}
+
 protected:
     using MapGrabbedByEnvironmentIndex = std::unordered_map<int, GrabbedPtr>;
 
@@ -3700,6 +3724,7 @@ protected:
     ///
     /// This function in calls every registers calledback that is tracking the changes. It also
     /// recomputes the hashes if geometry changed.
+    /// The Prop_LinkTransforms callbacks are not called while _bSuppressLinkTransformPropagation is set.
     virtual void _PostprocessChangedParameters(uint32_t parameters);
 
     /// \brief Return true if two bodies should be considered as one during collision (ie one is grabbing the other)
@@ -3726,7 +3751,10 @@ protected:
     bool _RemoveAttachedBody(KinBody &body);
 
     /// \brief Update transforms and velocities of the grabbed bodies
-    void _UpdateGrabbedBodies();
+    ///
+    /// Does nothing while _bSuppressLinkTransformPropagation is set.
+    /// \param bSkipUnchanged if true, do not set grabbed bodies that are already at the transform and velocity they would be set to, so their update stamps do not change. Used for the periodic update in SimulationStep.
+    void _UpdateGrabbedBodies(bool bSkipUnchanged=false);
 
     /// \brief removes grabbed body. cleans links from the grabbed body in _listNonCollidingLinksWhenGrabbed of other grabbed bodies.
     MapGrabbedByEnvironmentIndex::iterator _RemoveGrabbedBody(MapGrabbedByEnvironmentIndex::iterator itGrabbed);
@@ -3867,6 +3895,7 @@ protected:
     uint32_t _nHierarchyComputed; ///< 2 if the joint heirarchy and other cached information is computed. 1 if the hierarchy information is computing
     bool _bMakeJoinedLinksAdjacent; ///< if true, then automatically add adjacent links to the adjacency list so that their self-collisions are ignored.
     bool _bAreAllJoints1DOFAndNonCircular; ///< if true, then all controllable joints  of the robot are guaranteed to be either revolute or prismatic and non-circular. This allows certain functions that do operations on the joint values (like SubtractActiveDOFValues) to be optimized without calling Joint functions.
+    bool _bSuppressLinkTransformPropagation = false; ///< if true, then a change to the link transforms is not propagated outside of this body: the grabbed bodies are not moved to follow it and the Prop_LinkTransforms callbacks are not called. Only meant to be set by ScopedLinkTransformPropagationSuppressor, for the duration of a scope that is guaranteed to restore the link transforms before returning, so that nothing outside can observe the intermediate pose anyway.
 
     std::string _id; ///< unique id of the KinBody
     std::string _referenceUri; ///< reference uri saved from InitFromInfo

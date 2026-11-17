@@ -22,6 +22,7 @@
 #include <openrave/utils.h>
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/exception.hpp>
 
 #include <openravepy/openravepy_kinbody.h>
 #include <openravepy/openravepy_collisioncheckerbase.h>
@@ -2954,7 +2955,8 @@ py::list PyEnvironmentBase::GetBodies()
 py::list PyEnvironmentBase::GetBodiesWithReadableInterface(const std::string& readableInterfaceName)
 {
     std::vector<KinBodyPtr> vBodies;
-    _penv->GetBodiesMatchingFilter(vBodies, std::bind(&KinBody::HasReadableInterface, std::placeholders::_1, std::ref(readableInterfaceName)));
+    // uses the environment's readable interface cache, so this does not scan every body in the environment
+    _penv->GetBodiesWithReadableInterface(vBodies, readableInterfaceName);
     return _KinbodyVectorToPyArray(vBodies, shared_from_this());
 }
 
@@ -3507,6 +3509,9 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         return oret;
     });
 
+    // This translator is global and shared with every other pybind11 module, and runs before pybind11's default translator.
+    // Do not catch std::runtime_error here: pybind11 already maps it to RuntimeError, and catching it would also swallow
+    // its subclasses, i.e. pybind11's builtin exceptions (IndexError, KeyError, StopIteration, ...) and exceptions other modules register.
     py::register_exception_translator([](std::exception_ptr p) {
         try {
             if (p) {
@@ -3520,11 +3525,6 @@ OPENRAVE_PYTHON_MODULE(openravepy_int)
         }
         catch( const boost::filesystem::filesystem_error& e ) {
             py::str pyerrdata = ConvertStringToUnicode(std::string(e.what())+" ("+e.path1().native()+")");
-            pyerrdata.inc_ref(); // since passing to PyErr_SetObject
-            PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
-        }
-        catch( const std::runtime_error& e ) {
-            py::str pyerrdata = ConvertStringToUnicode(e.what());
             pyerrdata.inc_ref(); // since passing to PyErr_SetObject
             PyErr_SetObject(PyExc_RuntimeError, pyerrdata.ptr() );
         }

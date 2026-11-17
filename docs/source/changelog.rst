@@ -3,10 +3,91 @@
 ChangeLog
 #########
 
-Version 0.170.1
+Version 0.175.2
 ===============
 
 - Improve `parabolicsmoother2` computation for the robot with dynamic limits by considering the better initial guess of acceleration limits based on the dynamic acceleration limits at boundaries.
+
+Version 0.175.1
+===============
+
+- qtosgrave: bake each geometry's offset in its link into its vertices instead of keeping a MatrixTransform per geometry, and share identical state sets across geometries. This roughly halves the matrix transforms and cuts the state graphs that cull has to process every frame.
+
+Version 0.175.0
+===============
+
+- Add EnvironmentBase::SyncPublishedBodies, which updates a caller-owned copy of the published bodies and only copies the states whose body or update stamp changed since the previous call. GetPublishedBodies is unchanged and still copies every state.
+
+Version 0.174.8
+===============
+
+- Stepping the simulation no longer re-applies the pose of grabbed bodies that did not move. Previously every simulation step incremented the update stamp of every grabbed body (and its own grabbed bodies), so anything tracking update stamps treated them as changed on every step.
+
+Version 0.174.7
+===============
+
+- KinBody::SetDOFValues no longer calls GetDOFValues when the given values cover every dof and contain no NaN.
+
+Version 0.174.6
+===============
+
+- Don't rewrite all pybind exceptions as RuntimeError
+
+Version 0.174.5
+===============
+
+- Skip plugin-directory entries whose name does not end in the plugin extension before stat'ing them.
+- ``_LoadPluginsFromPath`` honours its ``recurse`` flag; plugin discovery at startup passes ``true``, so subdirectories of a plugin directory are scanned as before.
+
+Version 0.174.4
+===============
+
+- Associate cached BodyState objects with the body they represent, and only cache their capacity so long as they track the same body to avoid retaining stale buffer capacity.
+
+Version 0.174.3
+===============
+
+- KinBody::ExtractInfo and KinBody::UpdateFromKinBodyInfo no longer teleport the whole grabbed sub-tree to the origin and back, and no longer call the Prop_LinkTransforms callbacks, for the temporary pose they use to compare link transforms.
+
+Version 0.174.2
+===============
+
+- Reduce logging level for file loading.
+
+Version 0.174.1
+===============
+
+- Keep internal cache of robot bodies so that GetRobots is O(robots) not O(bodies)
+
+Version 0.174.0
+===============
+
+- Add EnvironmentBase::GetBodiesWithReadableInterface, which uses a cache of bodies keyed by their non-null readable interfaces so that looking up bodies by readable interface no longer scales with the number of bodies in the environment.
+
+Version 0.173.2
+===============
+
+- Expose PyGrabbedInfo from openravepy_int.h
+
+Version 0.173.1
+===============
+
+- Fix a problem that active-link mask in FCL collision manager is not refreshed when tracked FCLKinBodyInfo is swapped.
+
+Version 0.173.0
+===============
+
+- Require that readable interface lookup is now case-sensitive to allow switching to a faster container type
+
+Version 0.172.0
+===============
+
+- Add MapBodies API for mapping functions across all bodies in the environment directly, without creating temporaries via GetBodies
+
+Version 0.171.0
+===============
+
+- Add RaveRegisterDefaultJSONReader to allow users to register a default fallback JSON reader if no specific reader is registered via RaveRegisterJSONReader
 
 Version 0.170.0
 ===============

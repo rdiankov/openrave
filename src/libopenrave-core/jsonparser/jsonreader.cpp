@@ -493,7 +493,7 @@ public:
 
         _penv->UpdateFromInfo(envInfo, vCreatedBodies, vModifiedBodies, vRemovedBodies, updateMode);
         vRemovedBodies.insert(vRemovedBodies.end(), vRemovedBodiesExtra.begin(), vRemovedBodiesExtra.end());
-        RAVELOG_DEBUG_FORMAT("env=%d, loaded %d bodies in %u[us]", _penv->GetId()%envInfo._vBodyInfos.size()%(utils::GetMonotonicTime()-starttimeus));
+        RAVELOG_VERBOSE_FORMAT("env=%d, loaded %d bodies in %u[us]", _penv->GetId()%envInfo._vBodyInfos.size()%(utils::GetMonotonicTime()-starttimeus));
         return true;
     }
 
@@ -611,21 +611,30 @@ public:
 #endif
     }
 
-    boost::shared_ptr<const rapidjson::Document> OpenCachedDocument(const std::string resourceId, std::function<void(const std::string&, rapidjson::Document&)> loaderFunction, const std::string& fragment=std::string(""))
+    boost::shared_ptr<const rapidjson::Document> OpenCachedDocument(const std::string resourceId, std::function<void(const std::string&, rapidjson::Document&)> loaderFunction, const std::string& fragment=std::string(""), bool* pCacheHit=nullptr)
     {
         // Is this document in cache?
         if( !fragment.empty() ) {
             EnvironmentLoadContextJSON::MapRapidJsonDocuments::iterator documentIt = _loadContext.rapidjsonDocuments.find(resourceId + "#" + fragment);
             if (documentIt != _loadContext.rapidjsonDocuments.end()) {
+                if (pCacheHit != nullptr) {
+                    *pCacheHit = true;
+                }
                 return documentIt->second;
             }
         }
         EnvironmentLoadContextJSON::MapRapidJsonDocuments::iterator documentIt = _loadContext.rapidjsonDocuments.find(resourceId);
         if (documentIt != _loadContext.rapidjsonDocuments.end()) {
+            if (pCacheHit != nullptr) {
+                *pCacheHit = true;
+            }
             return documentIt->second;
         }
 
         // If not, attempt to load
+        if (pCacheHit != nullptr) {
+            *pCacheHit = false;
+        }
         boost::shared_ptr<rapidjson::Document> newDoc = boost::make_shared<rapidjson::Document>(&_loadContext.rapidjsonAllocator);
         loaderFunction(resourceId, *newDoc);
         _loadContext.rapidjsonDocuments[resourceId] = newDoc;
@@ -653,9 +662,9 @@ protected:
         return false;
     }
 
-    boost::shared_ptr<const rapidjson::Document> _GetDocumentFromFilename(const std::string& fullFilename, const std::string& fragment)
+    boost::shared_ptr<const rapidjson::Document> _GetDocumentFromFilename(const std::string& fullFilename, const std::string& fragment, bool* pCacheHit=nullptr)
     {
-        return OpenCachedDocument(fullFilename, OpenDocumentFromFilename, fragment);
+        return OpenCachedDocument(fullFilename, OpenDocumentFromFilename, fragment, pCacheHit);
     }
 
     void _ProcessEnvInfoBodies(EnvironmentBase::EnvironmentBaseInfo& envInfo, const rapidjson::Value& rEnvInfo, rapidjson::Document::AllocatorType& alloc, const char* pCurrentUri, const std::string& currentFilename, std::map<RobotBase::ConnectedBodyInfoPtr, std::string>& mapProcessedConnectedBodyUris)
@@ -725,7 +734,7 @@ protected:
             RAVELOG_ERROR_FORMAT("failed to load scene, circular reference to uri '%s' found on originBodyId '%s', originBodyName '%s'", pReferenceUri%originBodyId%originBodyName);
             return -1;
         }
-        RAVELOG_DEBUG_FORMAT("env=%s, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetNameId()%pReferenceUri%circularReference.size()%currentFilename);
+        RAVELOG_VERBOSE_FORMAT("env=%s, adding '%s' for tracking circular reference, so far %d uris tracked. Scope is '%s'", _penv->GetNameId()%pReferenceUri%circularReference.size()%currentFilename);
         circularReference.insert(pReferenceUri);
 
         BOOST_ASSERT(rEnvInfo.IsObject());
@@ -806,7 +815,8 @@ protected:
 
             uint64_t beforeOpenStampUS = utils::GetMonotonicTime();
 
-            boost::shared_ptr<const rapidjson::Document> pReferenceScene = _GetDocumentFromFilename(fullFilename, fragment);
+            bool bCacheHit = false;
+            boost::shared_ptr<const rapidjson::Document> pReferenceScene = _GetDocumentFromFilename(fullFilename, fragment, &bCacheHit);
             if (!pReferenceScene || !pReferenceScene->IsObject() ) {
                 RAVELOG_ERROR_FORMAT("referenced document from file '%s' cannot be loaded.", fullFilename);
                 return -1;
@@ -836,12 +846,22 @@ protected:
             const char* pNextReferenceUri = orjson::GetCStringJsonValueByKey(rRefKinBodyInfo, "referenceUri", "");
 
             if (_IsExpandableReferenceUri(pNextReferenceUri)) {
-                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]'", _penv->GetId()%fullFilename%fragment%pNextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                if (bCacheHit) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]' (cache hit)", _penv->GetId()%fullFilename%fragment%pNextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', and now processing its referenceUri='%s, took %u[us]' (cache miss)", _penv->GetId()%fullFilename%fragment%pNextReferenceUri%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                }
                 insertIndex = _ExpandRapidJSON(envInfo, originBodyId, originBodyName, *pReferenceScene, pNextReferenceUri, circularReference, fUnitScale, alloc, fullFilename);
                 // regardless of insertIndex, should fall through so can process rEnvInfo
             }
             else {
-                RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us]", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                if (bCacheHit) {
+                    RAVELOG_VERBOSE_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us] (cache hit)", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                }
+                else {
+                    RAVELOG_DEBUG_FORMAT("env=%d, opened file '%s', found body from fragment='%s', took %u[us] (cache miss)", _penv->GetId()%fullFilename%fragment%(utils::GetMonotonicTime()-beforeOpenStampUS));
+                }
             }
         }
         else {
@@ -876,7 +896,7 @@ protected:
 
         KinBody::KinBodyInfoPtr pNewKinBodyInfo;
         if( insertIndex >= 0 ) {
-            RAVELOG_DEBUG_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%pReferenceUri%currentFilename);
+            RAVELOG_VERBOSE_FORMAT("env=%d, loaded referenced body '%s' with id='%s' from uri '%s'. Scope is '%s'", _penv->GetId()%envInfo._vBodyInfos.at(insertIndex)->_name%originBodyId%pReferenceUri%currentFilename);
             pNewKinBodyInfo = envInfo._vBodyInfos[insertIndex];
 
             const bool isPartial = orjson::GetJsonValueByKey<bool>(rRefKinBodyInfo, "__isPartial__", true);
@@ -922,7 +942,7 @@ protected:
             // might get overwritten later, so ok if name is empty
             insertIndex = envInfo._vBodyInfos.size();
             envInfo._vBodyInfos.push_back(pNewKinBodyInfo);
-            RAVELOG_DEBUG_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
+            RAVELOG_VERBOSE_FORMAT("env=%d, could not find existing body with id='%s', name='%s', so inserting it. Scope is '%s'", _penv->GetId()%originBodyId%pNewKinBodyInfo->_name%currentFilename);
         }
         return insertIndex;
     }

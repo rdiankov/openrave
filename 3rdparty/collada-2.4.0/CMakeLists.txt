@@ -1,4 +1,4 @@
-if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND AND Boost_SYSTEM_FOUND )
+if( ZLIB_FOUND AND Boost_FILESYSTEM_FOUND )
 message(STATUS "Compiling with COLLADA support from sources!")
 
 if( LIBXML2_DEFINITIONS )
@@ -31,9 +31,6 @@ set_target_properties(collada15reader PROPERTIES COMPILE_FLAGS "-DDOM_INCLUDE_LI
 else()
 if( NOT Boost_FILESYSTEM_FOUND )
   message(STATUS "Need to install boost filesystem")
-endif()
-if( NOT Boost_SYSTEM_FOUND )
-  message(STATUS "Need to install boost system")
 endif()
 if( NOT ZLIB_FOUND )
   message(STATUS "Need to install zlib")

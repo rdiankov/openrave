@@ -357,7 +357,10 @@ void FCLCollisionManagerInstance::Synchronize() {
         } else {
             FCLSpace::FCLKinBodyInfoPtr pinfo = trackingCache.pwinfo.lock();
             const FCLSpace::FCLKinBodyInfoPtr& pnewinfo = _fclspace.GetInfo(trackingbody); // necessary in case pinfos were swapped!
-            if (trackingCache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp) {
+            // Also refresh when the tracked FCLKinBodyInfo object itself was swapped (e.g. a geometry-group
+            // switch via SetBodyGeometryGroup): each per-group info has an independent nActiveDOFUpdateStamp
+            // counter, so equal stamps across two different infos must not be read as "no active-DOF change".
+            if (trackingCache.nActiveDOFUpdateStamp != pnewinfo->nActiveDOFUpdateStamp || pinfo != pnewinfo) {
                 if (trackingbody.IsRobot()) {
                     RobotBaseConstPtr probot = OpenRAVE::RaveInterfaceConstCast<RobotBase>(ptrackingbody);
                     if (!!probot) {

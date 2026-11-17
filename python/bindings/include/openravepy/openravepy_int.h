@@ -103,6 +103,7 @@ class PyGeometryInfo;
 class PyManipulatorInfo;
 class PyAttachedSensorInfo;
 class PyConnectedBodyInfo;
+class PyGrabbedInfo;
 class PyLink;
 class PyGeometry;
 class PyJoint;
@@ -153,6 +154,7 @@ typedef OPENRAVE_SHARED_PTR<PyGeometryInfo> PyGeometryInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyManipulatorInfo> PyManipulatorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyAttachedSensorInfo> PyAttachedSensorInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyConnectedBodyInfo> PyConnectedBodyInfoPtr;
+typedef OPENRAVE_SHARED_PTR<PyGrabbedInfo> PyGrabbedInfoPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink> PyLinkPtr;
 typedef OPENRAVE_SHARED_PTR<PyGeometry> PyGeometryPtr;
 typedef OPENRAVE_SHARED_PTR<PyLink const> PyLinkConstPtr;
@@ -896,6 +898,7 @@ OPENRAVEPY_API PyGeometryInfoPtr toPyGeometryInfo(const KinBody::GeometryInfo& g
 OPENRAVEPY_API PyManipulatorInfoPtr toPyManipulatorInfo(const RobotBase::ManipulatorInfo& manipulatorinfo);
 OPENRAVEPY_API PyAttachedSensorInfoPtr toPyAttachedSensorInfo(const RobotBase::AttachedSensorInfo& attachedSensorinfo);
 OPENRAVEPY_API PyConnectedBodyInfoPtr toPyConnectedBodyInfo(const RobotBase::ConnectedBodyInfo& connectedBodyInfo);
+OPENRAVEPY_API PyGrabbedInfoPtr toPyGrabbedInfo(const KinBody::GrabbedInfo& grabbedInfo);
 
 OPENRAVEPY_API PyInterfaceBasePtr RaveCreateInterface(PyEnvironmentBasePtr pyenv, InterfaceType type, const std::string& name);
 #ifdef USE_PYBIND11_PYTHON_BINDINGS
