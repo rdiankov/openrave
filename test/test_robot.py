@@ -573,6 +573,46 @@ class RunRobot(EnvironmentSetup):
             assert(transdist(manipvelocity[0:3] + cross(manipvelocity[3:6],diff),bodyvelocity[0:3]) <= g_epsilon)
             assert(transdist(manipvelocity[3:6],bodyvelocity[3:6]) <= g_epsilon)
 
+    def test_grabsimulationstep(self):
+        self.log.info('test that stepping the simulation only re-applies grabbed body poses that changed')
+        env=self.env
+        with env:
+            robot=self.LoadRobot('robots/barrettwam.robot.xml')
+            body = env.ReadKinBodyURI('data/box3.kinbody.xml')
+            env.Add(body)
+            manip=robot.GetActiveManipulator()
+            body.SetTransform(manip.GetTransform())
+            robot.Grab(body)
+            env.StepSimulation(0.01)
+
+            # nothing moved, so the grabbed body should not be touched
+            updatestamp = body.GetUpdateStamp()
+            env.StepSimulation(0.01)
+            env.StepSimulation(0.01)
+            assert(body.GetUpdateStamp() == updatestamp)
+
+            # moving the grabber still moves the grabbed body
+            Tbody = body.GetTransform()
+            robot.SetDOFValues([0.5],manip.GetArmIndices()[:1])
+            assert(transdist(Tbody, body.GetTransform()) > g_epsilon)
+            env.StepSimulation(0.01)
+            updatestamp = body.GetUpdateStamp()
+            env.StepSimulation(0.01)
+            assert(body.GetUpdateStamp() == updatestamp)
+
+            # moving the grabbed body directly is undone by the next simulation step
+            Tgrabbed = body.GetTransform()
+            Tmoved = array(Tgrabbed)
+            Tmoved[0,3] += 0.1
+            body.SetTransform(Tmoved)
+            env.StepSimulation(0.01)
+            assert(transdist(Tgrabbed, body.GetTransform()) <= g_epsilon)
+
+            # changing the grabbed body velocity directly is also undone by the next simulation step
+            body.SetVelocity([1,0,0],[0,0,0])
+            env.StepSimulation(0.01)
+            assert(transdist(body.GetLinkVelocities()[0], zeros(6)) <= g_epsilon)
+
     def test_quaternionjacobian(self):
         self.log.info('test jacobiaquaternions')
         env=self.env        
