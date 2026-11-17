@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.175.2
+===============
+
+- Improve `parabolicsmoother2` computation for the robot with dynamic limits by considering the better initial guess of acceleration limits based on the dynamic acceleration limits at boundaries.
+
 Version 0.175.1
 ===============
 
