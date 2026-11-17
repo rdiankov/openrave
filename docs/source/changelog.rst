@@ -3,10 +3,15 @@
 ChangeLog
 #########
 
-Version 0.174.8
+Version 0.174.9
 ===============
 
 - qtosgrave: bake each geometry's offset in its link into its vertices instead of keeping a MatrixTransform per geometry, and share identical state sets across geometries. This roughly halves the matrix transforms and cuts the state graphs that cull has to process every frame.
+
+Version 0.174.8
+===============
+
+- Stepping the simulation no longer re-applies the pose of grabbed bodies that did not move. Previously every simulation step incremented the update stamp of every grabbed body (and its own grabbed bodies), so anything tracking update stamps treated them as changed on every step.
 
 Version 0.174.7
 ===============
