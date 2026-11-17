@@ -456,8 +456,7 @@ public:
     std::mutex _mutexUpdateModels; ///< locked when osg environment is being updated from the underlying openrave environment
     std::condition_variable _condUpdateModels; ///< signaled everytime environment models are updated
 
-    /// Reused across UpdateFromModel calls so the per-body buffers are not reallocated every update.
-    /// Body pointers are cleared after each update. Protected by _mutexUpdateModels
+    /// Reused across UpdateFromModel calls so that only changed body states are copied. Protected by _mutexUpdateModels
     std::vector<KinBody::BodyState> _vecPublishedBodyStates;
 
     ViewGeometry _viewGeometryMode; ///< the visualization mode of the geometries

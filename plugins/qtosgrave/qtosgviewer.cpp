@@ -2141,19 +2141,9 @@ void QtOSGViewer::UpdateFromModel()
     }
 
     std::lock_guard<std::mutex> lock(_mutexUpdateModels);
+    // Reused across updates so SyncPublishedBodies only copies the bodies that changed.
+    // This keeps the published bodies alive until the next update, same as the environment's own published state does.
     vector<KinBody::BodyState>& vecbodies = _vecPublishedBodyStates;
-
-    // Only the buffers are meant to be reused across updates, so do not keep the bodies alive until the next update.
-    struct BodyPointerReleaser
-    {
-        ~BodyPointerReleaser()
-        {
-            for (KinBody::BodyState& bodyState : vecBodyStates) {
-                bodyState.pbody.reset();
-            }
-        }
-        vector<KinBody::BodyState>& vecBodyStates;
-    } bodyPointerReleaser{vecbodies};
 
     EnvironmentLock lockenv(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
 
@@ -2169,10 +2159,10 @@ void QtOSGViewer::UpdateFromModel()
     }
 
     try {
-        GetEnv()->GetPublishedBodies(vecbodies,100000); // 0.1s
+        GetEnv()->SyncPublishedBodies(vecbodies,100000); // 0.1s
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN("timeout of GetPublishedBodies\n");
+        RAVELOG_WARN("timeout of SyncPublishedBodies\n");
         return;
     }
     FOREACH(it, _mapbodies) {
@@ -2264,7 +2254,7 @@ void QtOSGViewer::UpdateFromModel()
         pitem->SetUserData(1);
 
         //  Update viewer with core transforms
-        pitem->UpdateFromModel(itbody->jointvalues, itbody->vectrans);
+        pitem->UpdateFromPublishedState(*itbody);
         bSceneGraphModified |= pitem->PopSceneGraphModified();
     }
 
