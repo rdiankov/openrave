@@ -2856,6 +2856,23 @@ public:
         vbodies = _vPublishedBodies;
     }
 
+    virtual void SyncPublishedBodies(std::vector<KinBody::BodyState>& vbodies, uint64_t timeout)
+    {
+        TimedSharedLock lock(_mutexInterfaces, timeout);
+        if (!lock) {
+            throw OPENRAVE_EXCEPTION_FORMAT(_("timeout of %f s failed"),(1e-6*static_cast<double>(timeout)),ORE_Timeout);
+        }
+        // Same rule UpdatePublishedBodies uses to skip re-extracting a body: same body at the same update stamp means the state is unchanged.
+        vbodies.resize(_vPublishedBodies.size());
+        for (size_t ibody = 0; ibody < _vPublishedBodies.size(); ++ibody) {
+            const KinBody::BodyState& publishedState = _vPublishedBodies[ibody];
+            KinBody::BodyState& state = vbodies[ibody];
+            if (state.pbody != publishedState.pbody || state.updatestamp != publishedState.updatestamp) {
+                state = publishedState;
+            }
+        }
+    }
+
     virtual bool GetPublishedBody(const std::string &name, KinBody::BodyState& bodystate, uint64_t timeout=0)
     {
         TimedSharedLock lock306(_mutexInterfaces, timeout);

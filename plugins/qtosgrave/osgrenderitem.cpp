@@ -19,6 +19,9 @@
 #include "osgrenderitem.h"
 #include "osglodlabel.h"
 #include <osgUtil/SmoothingVisitor>
+#include <osgUtil/TransformAttributeFunctor>
+#include <osgDB/Registry>
+#include <osgDB/SharedStateManager>
 #include <osg/BlendFunc>
 #include <osg/PolygonOffset>
 #include <osg/LineStipple>
@@ -233,6 +236,49 @@ void Item::SetVisualizationMode(const std::string& visualizationmode)
 }
 
 /// KinBodyItem class
+/// \brief Applies matrix to the vertices and normals of every geometry under node, so no transform node is needed above it.
+///
+/// Returns false without modifying anything if the subgraph contains transforms or shared drawables, which cannot be baked in place.
+static bool _BakeTransformIntoGeometries(osg::Node& node, const osg::Matrix& matrix)
+{
+    class GeometryCollector : public osg::NodeVisitor
+    {
+public:
+        GeometryCollector() : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN) {
+        }
+        virtual void apply(osg::Transform& transform) {
+            bBakeable = false;
+        }
+        virtual void apply(osg::Drawable& drawable) {
+            osg::Geometry* geometry = drawable.asGeometry();
+            if( !geometry || geometry->getNumParents() != 1 ) {
+                bBakeable = false;
+                return;
+            }
+            vgeometries.push_back(geometry);
+        }
+        bool bBakeable = true;
+        std::vector<osg::Geometry*> vgeometries;
+    } collector;
+    node.accept(collector);
+    if( !collector.bBakeable ) {
+        return false;
+    }
+
+    osgUtil::TransformAttributeFunctor functor(matrix);
+    for(osg::Geometry* geometry : collector.vgeometries) {
+        geometry->accept(functor);
+        if( !!geometry->getVertexArray() ) {
+            geometry->getVertexArray()->dirty();
+        }
+        if( !!geometry->getNormalArray() ) {
+            geometry->getNormalArray()->dirty();
+        }
+        geometry->dirtyBound();
+    }
+    return true;
+}
+
 KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, KinBodyPtr pbody, ViewGeometry viewmode) : Item(osgSceneRoot, osgFigureRoot), _viewmode(viewmode)
 {
     BOOST_ASSERT( !!pbody );
@@ -610,12 +656,18 @@ void KinBodyItem::Load()
             if( !!pgeometrydata ) {
                 //RAVELOG_VERBOSE_FORMAT("creating geom %s:%d", (*itlink)->GetName()%igeom);
                 pgeometrydata->setName(str(boost::format("geomdata%d")%igeom));
-                pgeometryroot->addChild(pgeometrydata);
-                pgeometryroot->setName(str(boost::format("geom%d")%igeom));
-                //  Apply external transform to local transform
-                posglinktrans->addChild(pgeometryroot);
 
-                _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometryroot); // overwrite
+                // The geometry offset is fixed relative to the link, and Load runs again whenever the geometry changes, so bake it into the vertices.
+                // Every MatrixTransform costs a model view push and frustum transform on every cull, which dominates cull time for large scenes.
+                OSGGroupPtr pgeometrynode = pgeometrydata;
+                if( !_BakeTransformIntoGeometries(*pgeometrydata, pgeometryroot->getMatrix()) ) {
+                    pgeometryroot->addChild(pgeometrydata);
+                    pgeometryroot->setName(str(boost::format("geom%d")%igeom));
+                    pgeometrynode = pgeometryroot;
+                }
+                posglinktrans->addChild(pgeometrynode);
+
+                _vecgeoms[linkindex][igeom] = GeomNodes(pgeometrydata, pgeometrynode); // overwrite
             }
         }
     }
@@ -655,6 +707,12 @@ void KinBodyItem::Load()
             _osgdata->addChild(_veclinks.at(ilink).first);
         }
     }
+
+    // Geometries only use a handful of distinct materials across the whole scene.
+    // Sharing identical state sets lets cull group them into one state graph and lets draw skip redundant state changes.
+    osgDB::SharedStateManager* pSharedStateManager = osgDB::Registry::instance()->getOrCreateSharedStateManager();
+    pSharedStateManager->prune(); // drop state sets that only the manager still holds, e.g. from reloaded or removed bodies
+    pSharedStateManager->share(_osgdata.get());
 
     _bReload = false;
     _bDrawStateChanged = false;

@@ -1478,7 +1478,8 @@ void KinBody::SetDOFTorqueLimits(const std::vector<dReal>& v)
 
 void KinBody::SimulationStep(dReal fElapsedTime)
 {
-    _UpdateGrabbedBodies();
+    // Called on every simulation step, usually with nothing moved, so do not touch grabbed bodies that are already in place.
+    _UpdateGrabbedBodies(/*bSkipUnchanged*/ true);
 }
 
 void KinBody::SubtractDOFValues(std::vector<dReal>& q1, const std::vector<dReal>& q2, const std::vector<int>& dofindices) const
