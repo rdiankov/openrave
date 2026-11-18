@@ -1963,7 +1963,8 @@ void QOSGViewerWidget::paintGL()
 
     // Frames are only rendered on demand, and Qt paces update() to the display.
     // Manipulators request continuous updates while they animate, so keep scheduling frames until nothing needs one.
-    if (_osgviewer->checkNeedToDoFrame()) {
+    // The stats overlay (toggled with the 's' key) only refreshes when a frame is rendered, so keep rendering while it is shown.
+    if (_osgviewer->checkNeedToDoFrame() || _osgviewer->getViewerStats()->collectStats("frame_rate")) {
         update();
     }
 }
