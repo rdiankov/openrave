@@ -4649,7 +4649,7 @@ public:
             );
     }
     static void setstate(PyGeometryInfo& r, py::tuple state) {
-        //int num = len(state);
+        const int num = len(state);
         r._t = state[0];
         r._vGeomData = state[1][py::to_object(0)];
         r._vGeomData2 = state[1][py::to_object(1)];
@@ -4675,7 +4675,12 @@ public:
         r._vPositiveCropContainerEmptyMargins = state[13][py::to_object(3)];
         r._vSideWalls = state[14][py::to_object(0)];
         r._vAxialSlices = state[14][py::to_object(1)];
-        r._bDoesContainerBaseProvideSupport = py::extract<bool>(state[15]);
+        if( num > 15 ) {
+            r._bDoesContainerBaseProvideSupport = py::extract<bool>(state[15]);
+        }
+        else {
+            r._bDoesContainerBaseProvideSupport = true;
+        }
     }
 };
 
