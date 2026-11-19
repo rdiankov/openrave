@@ -15,6 +15,8 @@
 #include "osgcartoon.h"
 #include "osgskybox.h"
 
+#include <functional>
+
 #include <osg/ShadeModel>
 #include <osgDB/ReadFile>
 #include <osg/FrontFace>
@@ -77,6 +79,12 @@ public:
                 _posgviewerwidget->Zoom(factor);
                 return true;
             }
+
+        case osgGA::GUIEventAdapter::FRAME:
+            // The transition advances whenever a frame reads the camera matrix, so keep frames coming until it finishes.
+            // FRAME is the last event of each traversal, so this also restores the request after mouse handling clears it.
+            us.requestContinuousUpdate(!_IsTransitionAnimationFinished());
+            break;
 
         default:
             break;
@@ -331,6 +339,14 @@ public:
         case osgGA::GUIEventAdapter::DOUBLECLICK:
             return handleMouseDoubleClick( ea, us );
 
+        case osgGA::GUIEventAdapter::FRAME:
+            if( isAnimating() ) {
+                // Keep frames coming while the animation plays. StandardManipulator turns this off when the animation finishes.
+                // FRAME is the last event of each traversal, so this also restores the request after mouse handling clears it.
+                us.requestContinuousUpdate(true);
+            }
+            break;
+
         case osgGA::GUIEventAdapter::SCROLL:
             {
                 double factor = ea.getScrollingMotion() == osgGA::GUIEventAdapter::SCROLL_DOWN ? 1.1 : 0.9;
@@ -513,6 +529,25 @@ private:
     bool _bInSeekMode; ///< if true, in seek mode
 };
 
+/// \brief Node callback that invokes an arbitrary function every time the node is traversed
+class FunctionNodeCallback : public osg::NodeCallback
+{
+public:
+    FunctionNodeCallback(const std::function<void()>& function)
+        : _function(function)
+    {
+    }
+
+    virtual void operator()(osg::Node* node, osg::NodeVisitor* nv)
+    {
+        _function();
+        traverse(node, nv);
+    }
+
+protected:
+    std::function<void()> _function;
+};
+
 // \ brief rigid transformation dragger (does not allow scale)
 class DualDraggerTransformCallback : public osgManipulator::DraggerCallback
 {
@@ -659,6 +694,10 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         lightSource->setLight(light.get());
 
         _osgCameraHUD->addChild(lightSource.get());
+        // The axis follows the camera orientation, so it needs to be updated on every rendered frame.
+        // Use a cull callback, since an update callback would make OSG consider every frame as needing to be rendered.
+        // It is attached to the parent of the axis, since a transform's matrix is read before its own cull callback runs.
+        _osgCameraHUD->setCullCallback(new FunctionNodeCallback([this]() { _UpdateHUDAxisTransform(); }));
         lightSource->addChild(_osgWorldAxis.get());
 
         _osgHudText = new osgText::Text();
@@ -692,9 +731,6 @@ QOSGViewerWidget::QOSGViewerWidget(EnvironmentBasePtr penv, const std::string& u
         _osgLightsGroup->addChild(toon);
         toon->addChild(_osgSceneRoot);
     }
-
-    connect( &_timer, SIGNAL(timeout()), this, SLOT(update()) );
-    _timer.start( 10 );
 
     RestoreCursor();
 }
@@ -771,6 +807,8 @@ void QOSGViewerWidget::SetDraggerMode(const std::string& draggerName)
 
 void QOSGViewerWidget::SelectItem(KinBodyItemPtr item, KinBody::JointPtr joint)
 {
+    // Changes what is drawn, outside of OSG event handling.
+    RequestRedraw();
     if( _selectedItem != item ) {
         if( !!_selectedItem ) {
             _selectedItem->SetGrab(false);
@@ -864,6 +902,8 @@ void QOSGViewerWidget::SetFacesMode(bool enabled)
 
 void QOSGViewerWidget::SetPolygonMode(int mode)
 {
+    // Changes what is drawn, outside of OSG event handling.
+    RequestRedraw();
     osg::ref_ptr<osg::PolygonMode> poly(new osg::PolygonMode());
     osg::ref_ptr<osg::ShadeModel> sm(new osg::ShadeModel());
     switch (mode)
@@ -1167,7 +1207,6 @@ void QOSGViewerWidget::SetViewport(int width, int height)
     hudcamera->setViewport(0, 0, width * scale, height * scale);
 
     SetHUDTextSize(_hudTextSize);
-    _UpdateHUDAxisTransform(width, height);
 }
 
 void QOSGViewerWidget::SetHUDTextSize(double size)
@@ -1206,15 +1245,20 @@ void QOSGViewerWidget::SetHUDTextOffset(double xOffset, double yOffset)
     _osgHudText->setMaximumWidth(_osgview->getCamera()->getViewport()->width() - 10 - _vecTextScreenOffset.x());
 }
 
-void QOSGViewerWidget::_UpdateHUDAxisTransform(int width, int height)
+void QOSGViewerWidget::_UpdateHUDAxisTransform()
 {
-    float scale = this->devicePixelRatio();
-    osg::Matrix m = GetCurrentCameraManipulator()->getInverseMatrix();
-    m.setTrans(width*scale/2 - 40, -height*scale/2 + 40, -50);
+    // Viewport dimensions are already scaled by the device pixel ratio.
+    const osg::Viewport* hudViewport = _osghudview->getCamera()->getViewport();
+    if (!hudViewport) {
+        return;
+    }
+    // By cull time, the camera manipulator has already applied this frame's view matrix to the main camera.
+    osg::Matrix m = _osgview->getCamera()->getViewMatrix();
+    m.setTrans(hudViewport->width() / 2 - 40, -hudViewport->height() / 2 + 40, -50);
     _osgWorldAxis->setMatrix(m);
 }
 
-void QOSGViewerWidget::_SetCameraViewOrthoProjectionPlaneSize(double size) 
+void QOSGViewerWidget::_SetCameraViewOrthoProjectionPlaneSize(double size)
 {
     const int width = _osgview->getCamera()->getViewport()->width();
     const int height = _osgview->getCamera()->getViewport()->height();
@@ -1410,6 +1454,10 @@ void QOSGViewerWidget::_SetupCamera(osg::ref_ptr<osg::Camera> camera, osg::ref_p
     _osgGraphicWindow = dynamic_cast<osgViewer::GraphicsWindowEmbedded*>( camera->getGraphicsContext() );
     hudcamera->setGraphicsContext(_osgGraphicWindow);
     hudcamera->setViewport(0,0,_osgGraphicWindow->getTraits()->width, _osgGraphicWindow->getTraits()->height);
+
+    // Input events are timestamped by the event queues, and camera animations progress by the viewer's frame time.
+    // Start all of them from the same tick, otherwise animations started by input events finish on their first frame.
+    _osgviewer->setStartTick(osg::Timer::instance()->tick());
 }
 
 void QOSGViewerWidget::_GetRAVEEnvironmentUpVector(osg::Vec3d& upVector)
@@ -1887,6 +1935,21 @@ void QOSGViewerWidget::initializeGL() {
     resizeGL(width(), height());
 }
 
+void QOSGViewerWidget::RequestRedraw()
+{
+    _osgview->requestRedraw();
+    update(); // coalesced by Qt and painted at the next display refresh
+}
+
+void QOSGViewerWidget::RequestRedrawIfCameraChanged()
+{
+    // The camera can be moved from anywhere (toolbar, GUI functions, scripts), so detect it instead of relying on every caller to request a redraw.
+    const osgGA::CameraManipulator* manipulator = _osgview->getCameraManipulator();
+    if ((!!manipulator && manipulator->getInverseMatrix() != _lastRenderedViewMatrix) || _osgview->getCamera()->getProjectionMatrix() != _lastRenderedProjectionMatrix) {
+        RequestRedraw();
+    }
+}
+
 void QOSGViewerWidget::paintGL()
 {
     try {
@@ -1894,6 +1957,15 @@ void QOSGViewerWidget::paintGL()
     }
     catch(const std::exception& ex) {
         RAVELOG_WARN_FORMAT("got exception in paint event: %s", ex.what());
+    }
+    _lastRenderedViewMatrix = _osgview->getCamera()->getViewMatrix();
+    _lastRenderedProjectionMatrix = _osgview->getCamera()->getProjectionMatrix();
+
+    // Frames are only rendered on demand, and Qt paces update() to the display.
+    // Manipulators request continuous updates while they animate, so keep scheduling frames until nothing needs one.
+    // The stats overlay (toggled with the 's' key) only refreshes when a frame is rendered, so keep rendering while it is shown.
+    if (_osgviewer->checkNeedToDoFrame() || _osgviewer->getViewerStats()->collectStats("frame_rate")) {
+        update();
     }
 }
 
@@ -1978,7 +2050,25 @@ void QOSGViewerWidget::keyReleaseEvent(QKeyEvent *event)
 bool QOSGViewerWidget::event(QEvent *event)
 {
     bool handled = QOpenGLWidget::event(event);
-    this->update();
+
+    // Repaint immediately on user input to keep interaction latency low.
+    // Other events (including paint and update requests) must not schedule a repaint, otherwise the widget re-renders continuously.
+    switch( event->type() ) {
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonRelease:
+    case QEvent::MouseButtonDblClick:
+    case QEvent::MouseMove:
+    case QEvent::Wheel:
+    case QEvent::KeyPress:
+    case QEvent::KeyRelease:
+    case QEvent::Resize:
+    case QEvent::Show:
+        RequestRedraw();
+        break;
+    default:
+        break;
+    }
+
     return handled;
 }
 
