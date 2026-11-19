@@ -202,6 +202,17 @@ public:
     /// \brief Get osg composite viewer
     osg::ref_ptr<osgViewer::CompositeViewer> GetViewer();
 
+    /// \brief Schedules a frame at the next display refresh.
+    ///
+    /// Frames are only rendered on demand, so anything that modifies the scene graph outside of OSG's own event handling must call this.
+    /// Camera changes are detected by RequestRedrawIfCameraChanged instead.
+    void RequestRedraw();
+
+    /// \brief Schedules a frame if the camera view or projection differs from the last rendered frame. Called periodically.
+    ///
+    /// Only covers the camera: changes to bodies and figures request a redraw where they are applied (QtOSGViewer::UpdateFromModel, GUI functions).
+    void RequestRedrawIfCameraChanged();
+
     /// \brief
     void SetKeyboardModifiers(QInputEvent* event);
 
@@ -257,8 +268,8 @@ protected:
     /// \brief Loads the stored matrix transform to the camera
     void _LoadMatrixTransform();
 
-    /// \brief update hud display axis from current manipulator transform
-    void _UpdateHUDAxisTransform(int width, int height);
+    /// \brief update hud display axis from the main camera view matrix and HUD viewport size
+    void _UpdateHUDAxisTransform();
 
     /// \brief set camera projection matrix as orthogonal using the given projection plane size
     void _SetCameraViewOrthoProjectionPlaneSize(double size);
@@ -344,7 +355,8 @@ protected:
 
     osg::ref_ptr<Skybox> _osgSkybox;  ///< the skybox moving together with camera
 
-    QTimer _timer; ///< Timer for repaint
+    osg::Matrixd _lastRenderedViewMatrix; ///< camera view matrix of the last rendered frame
+    osg::Matrixd _lastRenderedProjectionMatrix; ///< camera projection matrix of the last rendered frame
     EnvironmentBasePtr _penv;
     boost::function<bool(int)> _onKeyDown; ///< call whenever key press is detected
     bool _bSwitchMouseLeftMiddleButton;  ///< whether to switch mouse left button and middle button (camera control mode)

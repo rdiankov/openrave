@@ -284,6 +284,8 @@ KinBodyItem::KinBodyItem(OSGGroupPtr osgSceneRoot, OSGGroupPtr osgFigureRoot, Ki
     BOOST_ASSERT( !!pbody );
     _pbody = pbody;
     bGrabbed = false;
+    _bSceneGraphModified = true;
+    _bLastUpdateUsedDefaultHierarchy = false;
     _userdata = 0;
     _bReload = false;
     _bDrawStateChanged = false;
@@ -925,13 +927,17 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         if( !!lockenv ) {
             if( _bReload || _bDrawStateChanged ) {
                 Load();
+                _bSceneGraphModified = true;
             }
         }
     }
 
     std::lock_guard<std::mutex> lock(_mutexjoints);
+
+    const bool bIsDefaultHierarchy = _IsDefaultHierarchy();
     _vjointvalues = vjointvalues;
     _vtrans = vtrans;
+    _bLastUpdateUsedDefaultHierarchy = false;
 
     if( _vtrans.size() == 0 || _veclinks.size() != _vtrans.size() ) {
         // something's wrong, so just return
@@ -971,6 +977,24 @@ bool KinBodyItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vecto
         SetMatrixTransform(*_veclinks.at(ilink).second, tlocal);
     }
 
+    _bSceneGraphModified = true;
+    _bLastUpdateUsedDefaultHierarchy = bIsDefaultHierarchy;
+    return true;
+}
+
+bool KinBodyItem::_IsDefaultHierarchy() const
+{
+    // Draggers are inserted as a MatrixTransform parent of either the body root or a link's group node.
+    if (_osgWorldTransform->getNumParents() != 1 || _osgWorldTransform->getParent(0) != _osgSceneRoot.get()) {
+        return false;
+    }
+    for (const LinkNodes& linkNodes : _veclinks) {
+        for (unsigned int iparent = 0; iparent < linkNodes.first->getNumParents(); ++iparent) {
+            if (!!linkNodes.first->getParent(iparent)->asTransform()) {
+                return false;
+            }
+        }
+    }
     return true;
 }
 
@@ -1206,6 +1230,7 @@ bool RobotItem::UpdateFromModel(const vector<dReal>& vjointvalues, const vector<
         return false;
     }
     if( bGrabbed ) {
+        _bSceneGraphModified = true;
         // only updated when grabbing!
         //RaveTransform<float> transInvRoot = GetRaveTransform(*_osgWorldTransform).inverse();
 
