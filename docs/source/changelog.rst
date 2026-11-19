@@ -3,6 +3,13 @@
 ChangeLog
 #########
 
+Version 0.175.2
+===============
+
+- qtosgrave: render frames on demand at the display refresh instead of continuously on a 10ms timer. A redraw is requested when bodies, figures, the camera, the viewport or the UI change, and while camera animations play.
+- qtosgrave: skip re-applying link transforms for bodies whose state did not change, avoiding dirtying bounds up to the scene root every update.
+- qtosgrave: reuse the published body state buffers across updates, and only apply the viewport when the widget size changes.
+
 Version 0.175.1
 ===============
 
