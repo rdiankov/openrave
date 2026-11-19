@@ -1793,7 +1793,7 @@ void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVecto
         osg::ref_ptr<osg::Box> box = new osg::Box();
         box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
         box->setCenter(osg::Vec3(pos.x, pos.y, pos.z));
-        
+
         osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
         if (size_mismatch) {
             sd->setColor(osg::Vec4f(vdefaultcolor.x, vdefaultcolor.y, vdefaultcolor.z, vdefaultcolor.w));
@@ -2131,6 +2131,27 @@ bool QtOSGViewer::LoadModel(const string& filename)
 void QtOSGViewer::UpdateFromModel()
 {
     bool bSceneGraphModified = false; // if true, the scene needs to be rendered again
+    bool newdata = false; // set to true if new object was created
+
+    // Item modified flags are popped as the scene is updated, so every exit path should request redraw if changes were applied.
+    struct RedrawOnExit
+    {
+        QOSGViewerWidget* pWidget;
+        const bool& bSceneGraphModified;
+        const bool& bNewData;
+        ~RedrawOnExit()
+        {
+            if ((bSceneGraphModified || bNewData) && !!pWidget) {
+                try {
+                    pWidget->RequestRedraw();
+                }
+                catch (...) {
+                    // Must not throw from a destructor, possibly during stack unwinding.
+                }
+            }
+        }
+    } redrawOnExit{_posgWidget, bSceneGraphModified, newdata};
+
     {
         std::lock_guard<std::mutex> lock(_mutexItems);
         bSceneGraphModified |= !_listRemoveItems.empty();
@@ -2169,7 +2190,6 @@ void QtOSGViewer::UpdateFromModel()
         it->second->SetUserData(0);
     }
 
-    bool newdata = false; // set to true if new object was created
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
@@ -2203,11 +2223,6 @@ void QtOSGViewer::UpdateFromModel()
                             }
                         }
                         if( !lockenv ) {
-                            // Items updated earlier in this pass have already popped their modified flags,
-                            // so their changes would not be drawn unless the redraw is requested now.
-                            if( (bSceneGraphModified || newdata) && !!_posgWidget ) {
-                                _posgWidget->RequestRedraw();
-                            }
                             return; // couldn't acquire the lock, try next time. This prevents deadlock situations
                         }
                     }
@@ -2276,10 +2291,6 @@ void QtOSGViewer::UpdateFromModel()
         else {
             ++it;
         }
-    }
-
-    if ((bSceneGraphModified || newdata) && !!_posgWidget) {
-        _posgWidget->RequestRedraw();
     }
 
     _bModelsUpdated = true;
