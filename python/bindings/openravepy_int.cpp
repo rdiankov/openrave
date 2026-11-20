@@ -2503,28 +2503,91 @@ bool PyEnvironmentBase::TryLock()
 }
 
 
+// EXPERIMENT ONLY: metrics of Lock(timeout), do not merge
+struct LockTimeoutMetrics
+{
+    bool isLegacy = false; ///< true if the original behavior (waiting with the GIL) is used
+    bool isLocked = false;
+    bool hasReleasedGil = false;
+    uint64_t envWaitMicroseconds = 0; ///< from the call until env is locked or the timeout
+    uint64_t gilReacquireMicroseconds = 0; ///< from the end of the env wait until the GIL is re-acquired
+};
+static thread_local LockTimeoutMetrics s_lastLockTimeoutMetrics;
+
+/// \brief OPENRAVE_LOCKTIMEOUT_LEGACY=1 uses the original Lock(timeout) waiting with the GIL
+static bool _IsLockTimeoutLegacy()
+{
+    static const bool s_isLegacy = getenv("OPENRAVE_LOCKTIMEOUT_LEGACY") != nullptr && atoi(getenv("OPENRAVE_LOCKTIMEOUT_LEGACY")) != 0;
+    return s_isLegacy;
+}
+
+/// \brief OPENRAVE_LOCKTIMEOUT_WARNGILUS sets the GIL re-acquire duration to warn, default 5000us
+static uint64_t _GetLockTimeoutWarnGilMicroseconds()
+{
+    static const uint64_t s_warnGilMicroseconds = getenv("OPENRAVE_LOCKTIMEOUT_WARNGILUS") != nullptr ? strtoull(getenv("OPENRAVE_LOCKTIMEOUT_WARNGILUS"), nullptr, 10) : 5000;
+    return s_warnGilMicroseconds;
+}
+
+py::dict RaveGetLastLockTimeoutMetrics()
+{
+    const LockTimeoutMetrics& metrics = s_lastLockTimeoutMetrics;
+    py::dict ometrics;
+    ometrics["isLegacy"] = metrics.isLegacy;
+    ometrics["isLocked"] = metrics.isLocked;
+    ometrics["hasReleasedGil"] = metrics.hasReleasedGil;
+    ometrics["envWaitMicroseconds"] = metrics.envWaitMicroseconds;
+    ometrics["gilReacquireMicroseconds"] = metrics.gilReacquireMicroseconds;
+    return ometrics;
+}
+
 bool PyEnvironmentBase::Lock(float timeout)
 {
     uint64_t nTimeoutMicroseconds = timeout*1000000;
     uint64_t basetime = OpenRAVE::utils::GetMicroTime();
+    LockTimeoutMetrics& metrics = s_lastLockTimeoutMetrics;
+    metrics = LockTimeoutMetrics();
+    metrics.isLegacy = _IsLockTimeoutLegacy();
+    const auto finish = [&](const bool isLocked) {
+        metrics.isLocked = isLocked;
+        if( !metrics.hasReleasedGil ) {
+            metrics.envWaitMicroseconds = OpenRAVE::utils::GetMicroTime() - basetime;
+        }
+        return isLocked;
+    };
     if( nTimeoutMicroseconds == 0 ) {
         if( TryLock() ) {
-            return true;
+            return finish(true);
         }
+    }
+
+    if( metrics.isLegacy ) {
+        return finish(_TryLockUntil(*this, basetime, nTimeoutMicroseconds));
     }
 
     // first try to lock without releasing the GIL since it is faster, same as Lock()
     const uint64_t nSpinMicroseconds = 2000; // 2ms
     if( nSpinMicroseconds >= nTimeoutMicroseconds ) {
-        return _TryLockUntil(*this, basetime, nTimeoutMicroseconds);
+        return finish(_TryLockUntil(*this, basetime, nTimeoutMicroseconds));
     }
     if( _TryLockUntil(*this, basetime, nSpinMicroseconds) ) {
-        return true;
+        return finish(true);
     }
 
     // release the GIL so that a python thread holding the env can finish, the GIL is re-acquired after the env lock (env -> GIL)
-    PythonThreadSaver saver;
-    return _TryLockUntil(*this, basetime, nTimeoutMicroseconds);
+    bool isLocked = false;
+    uint64_t envWaitEndTime = 0;
+    {
+        PythonThreadSaver saver;
+        isLocked = _TryLockUntil(*this, basetime, nTimeoutMicroseconds);
+        envWaitEndTime = OpenRAVE::utils::GetMicroTime();
+    }
+    metrics.hasReleasedGil = true;
+    metrics.envWaitMicroseconds = envWaitEndTime - basetime;
+    metrics.gilReacquireMicroseconds = OpenRAVE::utils::GetMicroTime() - envWaitEndTime;
+    if( metrics.gilReacquireMicroseconds >= _GetLockTimeoutWarnGilMicroseconds() ) {
+        RAVELOG_WARN_FORMAT("env=%s, Lock(timeout=%f) re-acquired the GIL in %d[us] after waiting %d[us] for env, isLocked=%d", _penv->GetNameId()%timeout%metrics.gilReacquireMicroseconds%metrics.envWaitMicroseconds%isLocked);
+    }
+    return finish(isLocked);
 }
 
 void PyEnvironmentBase::__enter__()
@@ -4464,11 +4527,13 @@ Because race conditions can pop up when trying to lock the openrave environment 
     m.def("RaveGetEnvironmentId", openravepy::RaveGetEnvironmentId, DOXY_FN1(RaveGetEnvironmentId));
     m.def("RaveGetEnvironment", openravepy::RaveGetEnvironment, DOXY_FN1(RaveGetEnvironment));
     m.def("RaveGetEnvironments", openravepy::RaveGetEnvironments, DOXY_FN1(RaveGetEnvironments));
+    m.def("RaveGetLastLockTimeoutMetrics", openravepy::RaveGetLastLockTimeoutMetrics); // EXPERIMENT ONLY
     m.def("RaveCreateInterface", openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
 #else
     def("RaveGetEnvironmentId",openravepy::RaveGetEnvironmentId,DOXY_FN1(RaveGetEnvironmentId));
     def("RaveGetEnvironment",openravepy::RaveGetEnvironment,DOXY_FN1(RaveGetEnvironment));
     def("RaveGetEnvironments",openravepy::RaveGetEnvironments,DOXY_FN1(RaveGetEnvironments));
+    def("RaveGetLastLockTimeoutMetrics",openravepy::RaveGetLastLockTimeoutMetrics); // EXPERIMENT ONLY
     def("RaveCreateInterface",openravepy::RaveCreateInterface, PY_ARGS("env","type","name") DOXY_FN1(RaveCreateInterface));
 #endif
 
