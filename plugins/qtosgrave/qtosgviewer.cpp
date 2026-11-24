@@ -481,7 +481,11 @@ void QtOSGViewer::_UpdateViewerCallback()
 {
     try {
         _UpdateEnvironment();
-        //UpdateFromModel();
+        // Body and figure changes request a redraw from UpdateFromModel and the GUI functions above.
+        // The camera is moved directly by toolbar actions, GUI functions and scripts, so it is compared against the last rendered frame instead.
+        if( !!_posgWidget ) {
+            _posgWidget->RequestRedrawIfCameraChanged();
+        }
 
         {
             std::list<UserDataWeakPtr> listRegisteredViewerThreadCallbacks;
@@ -1074,7 +1078,14 @@ void QtOSGViewer::_UpdateViewport()
 
     int width = centralWidget()->size().width();
     int height = centralWidget()->size().height();
-    _posgWidget->SetViewport(width, height); // < need to do this since resizeGL is not properly called when using viewer in embedded apps (other than openrave standalone viewer)
+
+    // Need to poll since resizeGL is not properly called when using viewer in embedded apps (other than openrave standalone viewer).
+    // Only apply on change, since SetViewport queues a resize event that forces a new frame to be rendered.
+    if (width != _appliedViewportWidth || height != _appliedViewportHeight) {
+        _posgWidget->SetViewport(width, height);
+        _appliedViewportWidth = width;
+        _appliedViewportHeight = height;
+    }
 
     double fovy, aspectRatio, zNear, zFar;
     _posgWidget->GetCamera()->getProjectionMatrixAsPerspective(fovy, aspectRatio, zNear, zFar);
@@ -1782,7 +1793,7 @@ void QtOSGViewer::_DrawBoxArray(OSGSwitchPtr handle, const std::vector<RaveVecto
         osg::ref_ptr<osg::Box> box = new osg::Box();
         box->setHalfLengths(osg::Vec3(vextents.x, vextents.y, vextents.z));
         box->setCenter(osg::Vec3(pos.x, pos.y, pos.z));
-        
+
         osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(box.get());
         if (size_mismatch) {
             sd->setColor(osg::Vec4f(vdefaultcolor.x, vdefaultcolor.y, vdefaultcolor.z, vdefaultcolor.w));
@@ -2119,8 +2130,31 @@ bool QtOSGViewer::LoadModel(const string& filename)
 
 void QtOSGViewer::UpdateFromModel()
 {
+    bool bSceneGraphModified = false; // if true, the scene needs to be rendered again
+    bool newdata = false; // set to true if new object was created
+
+    // Item modified flags are popped as the scene is updated, so every exit path should request redraw if changes were applied.
+    struct RedrawOnExit
+    {
+        QOSGViewerWidget* pWidget;
+        const bool& bSceneGraphModified;
+        const bool& bNewData;
+        ~RedrawOnExit()
+        {
+            if ((bSceneGraphModified || bNewData) && !!pWidget) {
+                try {
+                    pWidget->RequestRedraw();
+                }
+                catch (...) {
+                    // Must not throw from a destructor, possibly during stack unwinding.
+                }
+            }
+        }
+    } redrawOnExit{_posgWidget, bSceneGraphModified, newdata};
+
     {
         std::lock_guard<std::mutex> lock(_mutexItems);
+        bSceneGraphModified |= !_listRemoveItems.empty();
         FOREACH(it,_listRemoveItems) {
             delete *it;
         }
@@ -2128,7 +2162,9 @@ void QtOSGViewer::UpdateFromModel()
     }
 
     std::lock_guard<std::mutex> lock(_mutexUpdateModels);
-    vector<KinBody::BodyState> vecbodies;
+    // Reused across updates so SyncPublishedBodies only copies the bodies that changed.
+    // This keeps the published bodies alive until the next update, same as the environment's own published state does.
+    vector<KinBody::BodyState>& vecbodies = _vecPublishedBodyStates;
 
     EnvironmentLock lockenv(GetEnv()->GetMutex(), OpenRAVE::defer_lock_t());
 
@@ -2144,17 +2180,16 @@ void QtOSGViewer::UpdateFromModel()
     }
 
     try {
-        GetEnv()->GetPublishedBodies(vecbodies,100000); // 0.1s
+        GetEnv()->SyncPublishedBodies(vecbodies,100000); // 0.1s
     }
     catch(const std::exception& ex) {
-        RAVELOG_WARN("timeout of GetPublishedBodies\n");
+        RAVELOG_WARN("timeout of SyncPublishedBodies\n");
         return;
     }
     FOREACH(it, _mapbodies) {
         it->second->SetUserData(0);
     }
 
-    bool newdata = false; // set to true if new object was created
     FOREACH(itbody, vecbodies) {
         BOOST_ASSERT( !!itbody->pbody );
         KinBodyPtr pbody = itbody->pbody; // try to use only as an id, don't call any methods!
@@ -2234,7 +2269,8 @@ void QtOSGViewer::UpdateFromModel()
         pitem->SetUserData(1);
 
         //  Update viewer with core transforms
-        pitem->UpdateFromModel(itbody->jointvalues, itbody->vectrans);
+        pitem->UpdateFromPublishedState(*itbody);
+        bSceneGraphModified |= pitem->PopSceneGraphModified();
     }
 
     FOREACH_NOINC(it, _mapbodies) {
@@ -2250,6 +2286,7 @@ void QtOSGViewer::UpdateFromModel()
             }
 
             _mapbodies.erase(it++);
+            bSceneGraphModified = true;
         }
         else {
             ++it;
@@ -2308,6 +2345,10 @@ void QtOSGViewer::_UpdateEnvironment()
             mapGUIFunctionLists.swap(_mapGUIFunctionLists);
         }
 
+        // GUI functions are how other threads modify the scene, camera and figures, so any of them can change what is displayed.
+        if (!mapGUIFunctionLists.empty()) {
+            _posgWidget->RequestRedraw();
+        }
         FOREACH(itpriority, mapGUIFunctionLists) {
             list<GUIThreadFunctionPtr>& listGUIFunctions = itpriority->second;
             FOREACH(itmsg, listGUIFunctions) {

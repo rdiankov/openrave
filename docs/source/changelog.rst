@@ -3,10 +3,37 @@
 ChangeLog
 #########
 
-Version 0.175.0
+Version 0.176.0
 ===============
 
 - Add ``doesContainerBaseProvideSupport`` to cage geometry info (default true). When false, the cage base does not support placed objects and only the inner obstacles do, e.g. for sawhorse containers.
+
+Version 0.175.2
+===============
+
+- qtosgrave: render frames on demand at the display refresh instead of continuously on a 10ms timer. A redraw is requested when bodies, figures, the camera, the viewport or the UI change, and while camera animations play.
+- qtosgrave: skip re-applying link transforms for bodies whose state did not change, avoiding dirtying bounds up to the scene root every update.
+- qtosgrave: reuse the published body state buffers across updates, and only apply the viewport when the widget size changes.
+
+Version 0.175.1
+===============
+
+- qtosgrave: bake each geometry's offset in its link into its vertices instead of keeping a MatrixTransform per geometry, and share identical state sets across geometries. This roughly halves the matrix transforms and cuts the state graphs that cull has to process every frame.
+
+Version 0.175.0
+===============
+
+- Add EnvironmentBase::SyncPublishedBodies, which updates a caller-owned copy of the published bodies and only copies the states whose body or update stamp changed since the previous call. GetPublishedBodies is unchanged and still copies every state.
+
+Version 0.174.8
+===============
+
+- Stepping the simulation no longer re-applies the pose of grabbed bodies that did not move. Previously every simulation step incremented the update stamp of every grabbed body (and its own grabbed bodies), so anything tracking update stamps treated them as changed on every step.
+
+Version 0.174.7
+===============
+
+- KinBody::SetDOFValues no longer calls GetDOFValues when the given values cover every dof and contain no NaN.
 
 Version 0.174.6
 ===============

@@ -145,6 +145,23 @@ public:
     /// \brief updates from openrave model
     virtual bool UpdateFromModel(const vector<dReal>& vjointvalues, const vector<Transform>& vtrans);
 
+    /// \brief updates from a published body state, skipping it if the body did not change since the last applied state.
+    bool UpdateFromPublishedState(const KinBody::BodyState& bodyState) {
+        // Draggers change how link transforms are applied, so only skip if the hierarchy is the same as when the last state was applied.
+        if( bodyState.updatestamp == _lastAppliedUpdateStamp && !_bReload && !_bDrawStateChanged && _bLastUpdateUsedDefaultHierarchy && _IsDefaultHierarchy() ) {
+            return true;
+        }
+        _lastAppliedUpdateStamp = bodyState.updatestamp;
+        return UpdateFromModel(bodyState.jointvalues, bodyState.vectrans);
+    }
+
+    /// \brief returns whether the OSG nodes of this item were modified since the last call, and resets the flag.
+    bool PopSceneGraphModified() {
+        const bool bSceneGraphModified = _bSceneGraphModified;
+        _bSceneGraphModified = false;
+        return bSceneGraphModified;
+    }
+
     virtual void SetGrab(bool bGrab, bool bUpdate=true);
 
     inline KinBodyPtr GetBody() const {
@@ -163,7 +180,7 @@ public:
     KinBody::Link::GeometryPtr GetGeomFromOSG(OSGNodePtr pgeomnode) const;
 
     /// \brief gets the geom from the index
-    OSGMatrixTransformPtr GetOSGGeom(int linkindex, int geomindex) const {
+    OSGGroupPtr GetOSGGeom(int linkindex, int geomindex) const {
         return _vecgeoms.at(linkindex).at(geomindex).second;
     }
 
@@ -199,8 +216,14 @@ protected:
     virtual void _HandleGeometryChangedCallback();
     virtual void _HandleDrawChangedCallback();
 
+    /// \brief returns true if no dragger has been inserted above the body or any of its links.
+    ///
+    /// If this is true, then the world offsets compensated for in UpdateFromModel are all the identity matrix.
+    /// The OSG transform therefore depends only on the link transforms.
+    bool _IsDefaultHierarchy() const;
+
     typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> LinkNodes;
-    typedef std::pair<OSGGroupPtr, OSGMatrixTransformPtr> GeomNodes;
+    typedef std::pair<OSGGroupPtr, OSGGroupPtr> GeomNodes; ///< (geometry data, node attached to the link), the latter is a MatrixTransform only if the geometry offset could not be baked into the vertices
 
     KinBodyPtr _pbody;
     int _environmentid;        ///< _pbody->GetEnvironmentBodyIndex()
@@ -208,6 +231,9 @@ protected:
     std::vector<std::vector<GeomNodes> > _vecgeoms; ///< render items for each link's geometries, indexed same as geometries.
     bool bEnabled;
     bool bGrabbed, _bReload, _bDrawStateChanged;
+    bool _bSceneGraphModified; ///< true if the OSG nodes were modified since the last PopSceneGraphModified
+    bool _bLastUpdateUsedDefaultHierarchy; ///< true if the last applied link transforms were computed while _IsDefaultHierarchy() was true
+    int _lastAppliedUpdateStamp = -1; ///< KinBody update stamp of the last state applied by UpdateFromPublishedState
     ViewGeometry _viewmode;
     int _userdata;
 
