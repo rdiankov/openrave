@@ -356,7 +356,7 @@ class InverseKinematicsModel(DatabaseGenerator):
     def getversion(self):
         return int(self.ikfastVersion, 16)
     def getikname(self):
-        return 'ikfast ikfast.%s.%s.%s'%(self.manip.GetInverseKinematicsStructureHash(self.iktype),str(self.iktype),self.manip.GetName())
+        return 'ikfast ikfast.%s.%s.%s'%(self.manip.GetInverseKinematicsStructureHash(self.iktype),self.iktype.name,self.manip.GetName())
 
     def setrobot(self,freeinc=None):
         """Sets the ik solver on the robot.
@@ -568,7 +568,7 @@ class InverseKinematicsModel(DatabaseGenerator):
         index = -1
         allfreeindices = None
         while True:
-            basename = 'ikfast%s.%s.%s.'%(self.ikfastVersion,self.iktype,platform.machine()) + '_'.join(str(ind) for ind in sorted(solveindices))
+            basename = 'ikfast%s.%s.%s.'%(self.ikfastVersion,self.iktype.name,platform.machine()) + '_'.join(str(ind) for ind in sorted(solveindices))
             if len(freeindices)>0:
                 basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
             filename = RaveFindDatabaseFile(os.path.join('kinematics.'+self.manip.GetInverseKinematicsStructureHash(self.iktype),ccompiler.new_compiler().shared_object_filename(basename=basename)),read)
@@ -596,7 +596,7 @@ class InverseKinematicsModel(DatabaseGenerator):
             solveindices, freeindices = self.GetDefaultIndices()
         else:
             solveindices, freeindices = self.solveindices, self.freeindices
-        basename = 'ikfast%s.%s.'%(self.ikfastVersion,self.iktype)
+        basename = 'ikfast%s.%s.'%(self.ikfastVersion,self.iktype.name)
         basename += '_'.join(str(ind) for ind in sorted(solveindices))
         if len(freeindices)>0:
             basename += '_f'+'_'.join(str(ind) for ind in sorted(freeindices))
@@ -622,7 +622,7 @@ class InverseKinematicsModel(DatabaseGenerator):
                 freeindicesstrings.append(['',[]])
 
             for freeindicesstring, fi in freeindicesstrings:
-                basename = 'ikfast%s.%s.'%(self.ikfastVersion,self.iktype)
+                basename = 'ikfast%s.%s.'%(self.ikfastVersion,self.iktype.name)
                 basename += '_'.join(str(ind) for ind in sorted(solveindices))
                 basename += freeindicesstring
                 basename += '.pp'

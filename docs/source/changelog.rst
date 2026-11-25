@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.176.1
+===============
+
+- ``InverseKinematicsModel``: use the ik type name (e.g. ``Transform6D``) instead of ``str()`` of the pybind11 enum (``IkParameterizationType.Transform6D``) in the ikfast solver name and the source, library and stats file names, so existing solver caches are found again.
+
 Version 0.176.0
 ===============
 
