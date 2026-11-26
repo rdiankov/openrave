@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.176.1
+===============
+
+- ``openravepy_ext``: ``enum_to_dict`` returns only the enum members keyed by name (``__members__`` with pybind11, ``names`` with Boost.Python) instead of every non-dunder attribute of the enum type, and ``_tuple2enum`` no longer requires the Boost.Python-only ``values`` attribute, so unpickling enums such as ``IkParameterizationType`` works with pybind11 bindings.
+
 Version 0.176.0
 ===============
 
