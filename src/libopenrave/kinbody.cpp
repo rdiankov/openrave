@@ -5633,7 +5633,7 @@ bool KinBody::_RemoveAttachedBody(KinBody &body)
     // Locking costs two atomic operations per entry, which dominates bulk removal of grabbed bodies.
     const boost::weak_ptr<InterfaceBase> pWeakBody = body.weak_from_this();
     FOREACH(it, _listAttachedBodies) {
-        if (!it->owner_before(pWeakBody) && !pWeakBody.owner_before(*it)) {
+        if (!it->owner_before(pWeakBody) && !pWeakBody.owner_before(*it)) { // same as it->lock().get() == &body, but without locking
             _listAttachedBodies.erase(it);
             numremoved++;
             break;
