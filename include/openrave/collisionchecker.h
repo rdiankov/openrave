@@ -321,8 +321,9 @@ public:
     /// \brief Checks self collision of the link with the rest of the links with its parent
     ///
     /// Only checks KinBody::GetNonAdjacentLinks(), Links that are joined together are ignored.
+    /// \param[in] plink, vIncludedLinks : The pointer of target link and vector of included links. Among the link pairs in GetNonAdjacentLinks, this API only checks the collisions with the pairs so that one of the link of the pair is plink, and the other link of the pair is included in vIncludedLinks. If vIncludedLinks is empty, it's specially treated as no limitation for the included links, e.g. this API checks all possible pairs if one link of the pair is plink.
     /// \param[out] report [optional] collision report to be filled with data about the collision.
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) = 0;
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks = std::vector<KinBody::LinkConstPtr>(), CollisionReportPtr report = CollisionReportPtr()) = 0;
 
     /// \deprecated (13/04/09)
     virtual bool CheckSelfCollision(KinBodyConstPtr pbody, CollisionReportPtr report = CollisionReportPtr()) RAVE_DEPRECATED
@@ -335,7 +336,7 @@ public:
     virtual bool CheckSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report = CollisionReportPtr()) RAVE_DEPRECATED
     {
         //RAVELOG_WARN("CollisionCheckerBase::CheckSelfCollision has been deprecated, please use CollisionCheckerBase::CheckStandaloneSelfCollision\n");
-        return CheckStandaloneSelfCollision(plink,report);
+        return CheckStandaloneSelfCollision(plink, std::vector<KinBody::LinkConstPtr>(), report);
     }
 
 protected:
@@ -349,6 +350,33 @@ protected:
     }
     inline CollisionCheckerBaseConstPtr shared_collisionchecker_const() const {
         return boost::static_pointer_cast<CollisionCheckerBase const>(shared_from_this());
+    }
+
+    /// \brief check if the caller should skip the given standalone self collision check pair.
+    /// \param[in] targetLink, vIncludedLinks : target link to check and vector of included links.
+    ///                                         - if index1 and index2 are not same as targetLink's index, should skip.
+    ///                                         - if vIncludedLinks is empty, no check for another link in the pair and the given pair should be checked with collision check.
+    ///                                         - if vIncludedLinks is not empty, if another link in the pair is not included in vIncludedLinks, such pair should be skipped with collision check.
+    /// \param[in] index1, index2 : link indices of the pair.
+    /// \param[in] pBody : kinbody to check self collision
+    /// \return false if the given pair (index1 and index2) should be checked with standalone self collision checking. true if it should be skipped.
+    static inline bool _ShouldSkipStandaloneSelfCollisionCheckPair(const KinBody::Link& taretLink, const size_t index1, const size_t index2, const KinBodyPtr& pBody, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks)
+    {
+        const size_t targetLinkIndex = taretLink.GetIndex();
+        if( targetLinkIndex == index1 ) {
+            if( vIncludedLinks.size() > 0 && std::find(vIncludedLinks.begin(), vIncludedLinks.end(), pBody->GetLinks().at(index2)) == vIncludedLinks.end() ) {
+                return true;
+            }
+        }
+        else if( targetLinkIndex == index2 ) {
+            if( vIncludedLinks.size() > 0 && std::find(vIncludedLinks.begin(), vIncludedLinks.end(), pBody->GetLinks().at(index1)) == vIncludedLinks.end() ) {
+                return true;
+            }
+        }
+        else {
+            return true;
+        }
+        return false;
     }
 
 private:

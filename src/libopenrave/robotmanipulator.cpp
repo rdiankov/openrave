@@ -17,6 +17,34 @@
 #include "libopenrave.h"
 namespace OpenRAVE {
 
+/// \brief Get independent links from robot.
+/// \param[out] vlinks : vector of independent links.
+/// \param[in] proot, varmdofindices, vgripperdofindices : used to compute the independent links.
+template<typename LinkPtrT>
+void _GetIndependentLinks(std::vector<LinkPtrT>& vlinks, const RobotBasePtr& probot, const std::vector<int>& varmdofindices, const std::vector<int>& vgripperdofindices)
+{
+    vlinks.clear();
+    FOREACHC(itlink, probot->GetLinks()) {
+        bool bAffected = false;
+        FOREACHC(itindex,varmdofindices) {
+            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+        FOREACHC(itindex,vgripperdofindices) {
+            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
+                bAffected = true;
+                break;
+            }
+        }
+
+        if( !bAffected ) {
+            vlinks.push_back(*itlink);
+        }
+    }
+}
+
 void RobotBase::ManipulatorInfo::Reset()
 {
     _id.clear();
@@ -896,26 +924,7 @@ bool RobotBase::Manipulator::IsChildLink(const KinBody::Link &link) const
 void RobotBase::Manipulator::GetIndependentLinks(std::vector<LinkPtr>& vlinks) const
 {
     RobotBasePtr probot(__probot);
-    vlinks.clear();
-    FOREACHC(itlink, probot->GetLinks()) {
-        bool bAffected = false;
-        FOREACHC(itindex,__varmdofindices) {
-            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
-                bAffected = true;
-                break;
-            }
-        }
-        FOREACHC(itindex,__vgripperdofindices) {
-            if( probot->DoesAffect(probot->GetJointFromDOFIndex(*itindex)->GetJointIndex(),(*itlink)->GetIndex()) ) {
-                bAffected = true;
-                break;
-            }
-        }
-
-        if( !bAffected ) {
-            vlinks.push_back(*itlink);
-        }
-    }
+    _GetIndependentLinks(vlinks, probot, __varmdofindices, __vgripperdofindices);
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorCollision(CollisionReportPtr report) const
@@ -1034,77 +1043,19 @@ bool RobotBase::Manipulator::_CheckEndEffectorCollision(const Transform& tEE, Ki
 
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
 {
-    RobotBasePtr probot(__probot);
-
-    CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
-    bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
-    CollisionReportKeepSaver reportsaver(report);
-    if( !!report && bAllLinkCollisions && report->nKeepPrevious == 0 ) {
-        report->Reset();
-        report->nKeepPrevious = 1; // have to keep the previous since aggregating results
-    }
-
-    bool bincollision = false;
-
-    // parameters used only when bIgnoreManipulatorLinks is true
-    CollisionCheckerBasePtr pselfchecker;
-    std::vector<LinkPtr> vindependentinks;
-    if( bIgnoreManipulatorLinks ) {
-        GetIndependentLinks(vindependentinks);
-        pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
-    }
-
-    FOREACHC(itlink, probot->GetLinks()) {
-        int ilink = (*itlink)->GetIndex();
-        if( !(*itlink)->IsEnabled() ) {
-            continue;
-        }
-        // gripper needs to be affected by all joints
-        bool bGripperLink = true;
-        FOREACHC(itarmdof,__varmdofindices) {
-            if( !probot->DoesAffect(probot->GetJointFromDOFIndex(*itarmdof)->GetJointIndex(),ilink) ) {
-                bGripperLink = false;
-                break;
-            }
-        }
-        if( !bGripperLink ) {
-            continue;
-        }
-
-        // check all gripper links including
-        // 1. links that are rigidly attached to the end effector
-        // 2. links that are controlled by joints other than arm joints
-        // 3. links that are connected with passive but non-static joints
-        if( bIgnoreManipulatorLinks ) {
-            FOREACHC(itindependentlink,vindependentinks) {
-                if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                    if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                            RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
-                            return true;
-                        }
-                        bincollision = true;
-                    }
-                }
-            }
-        }
-        else {
-            if( probot->CheckLinkSelfCollision(ilink,report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                bincollision = true;
-            }
-        }
-    }
-    return bincollision;
+    return _CheckEndEffectorSelfCollision(nullptr, report, bIgnoreManipulatorLinks);
 }
 
 bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
 {
-    RobotBasePtr probot(__probot);
     const Transform toldEE = GetTransform();
-    const Transform tdelta = tEE*toldEE.inverse();
+    const TransformConstPtr pTransformDelta = boost::make_shared<Transform>(tEE*toldEE.inverse());
+    return _CheckEndEffectorSelfCollision(pTransformDelta, report, bIgnoreManipulatorLinks);
+}
+
+bool RobotBase::Manipulator::_CheckEndEffectorSelfCollision(const TransformConstPtr& pTransformDelta, CollisionReportPtr report, bool bIgnoreManipulatorLinks) const
+{
+    RobotBasePtr probot(__probot);
 
     CollisionCheckerBasePtr pchecker = probot->GetEnv()->GetCollisionChecker();
     bool bAllLinkCollisions = !!(pchecker->GetCollisionOptions()&CO_AllLinkCollisions);
@@ -1117,11 +1068,9 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
     bool bincollision = false;
 
     // parameters used only when bIgnoreManipulatorLinks is true
-    CollisionCheckerBasePtr pselfchecker;
-    std::vector<LinkPtr> vindependentinks;
+    std::vector<LinkConstPtr> vIncludedLinks; // this becomes empty if bIgnoreManipulatorLinks=false.
     if( bIgnoreManipulatorLinks ) {
-        GetIndependentLinks(vindependentinks);
-        pselfchecker = !!probot->GetSelfCollisionChecker() ? probot->GetSelfCollisionChecker() : probot->GetEnv()->GetCollisionChecker();
+        _GetIndependentLinks<LinkConstPtr>(vIncludedLinks, probot, __varmdofindices, __vgripperdofindices);
     }
 
     FOREACHC(itlink, probot->GetLinks()) {
@@ -1145,30 +1094,19 @@ bool RobotBase::Manipulator::CheckEndEffectorSelfCollision(const Transform& tEE,
         // 1. links that are rigidly attached to the end effector
         // 2. links that are controlled by joints other than arm joints
         // 3. links that are connected with passive but non-static joints
-        if( bIgnoreManipulatorLinks ) {
-            boost::shared_ptr<TransformSaver<LinkPtr> > linksaver(new TransformSaver<LinkPtr>(*itlink)); // gcc optimization bug when linksaver is on stack?
-            const Transform tlinktrans = tdelta*(*itlink)->GetTransform();
-            (*itlink)->SetTransform(tlinktrans);
-
-            FOREACHC(itindependentlink,vindependentinks) {
-                if( *itlink != *itindependentlink && (*itindependentlink)->IsEnabled() ) {
-                    if( pselfchecker->CheckCollision(*itlink, *itindependentlink,report) ) {
-                        if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                            RAVELOG_VERBOSE_FORMAT("gripper link self collision with link %s", (*itlink)->GetName());
-                            return true;
-                        }
-                        bincollision = true;
-                    }
-                }
-            }
+        bool bInLinkCollision;
+        if( !!pTransformDelta ) {
+            const TransformConstPtr pTransform = boost::make_shared<Transform>((*pTransformDelta)*(*itlink)->GetTransform());
+            bInLinkCollision = probot->CheckLinkSelfCollision(ilink, vIncludedLinks, pTransform, report);
         }
         else {
-            if( probot->CheckLinkSelfCollision(ilink,tdelta*(*itlink)->GetTransform(),report) ) {
-                if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
-                    return true;
-                }
-                bincollision = true;
+            bInLinkCollision = probot->CheckLinkSelfCollision(ilink, vIncludedLinks, nullptr, report);
+        }
+        if( bInLinkCollision ) {
+            if( !bAllLinkCollisions ) { // if checking all collisions, have to continue
+                return true;
             }
+            bincollision = true;
         }
     }
     return bincollision;

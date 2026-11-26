@@ -735,7 +735,7 @@ bool FCLCollisionChecker::CheckStandaloneSelfCollision(KinBodyConstPtr pbody, Co
     return query._bCollision;
 }
 
-bool FCLCollisionChecker::CheckStandaloneSelfCollision(LinkConstPtr plink, CollisionReportPtr report)
+bool FCLCollisionChecker::CheckStandaloneSelfCollision(LinkConstPtr plink, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks, CollisionReportPtr report)
 {
     START_TIMING_OPT(_statistics, "LinkSelf",_options,false);
     if( !!report ) {
@@ -769,7 +769,10 @@ bool FCLCollisionChecker::CheckStandaloneSelfCollision(LinkConstPtr plink, Colli
     FCLKinBodyInfoPtr pinfo = _fclspace->GetInfo(*pbody);
     FOREACH(itset, nonadjacent) {
         int index1 = *itset&0xffff, index2 = *itset>>16;
-        if( plink->GetIndex() == index1 || plink->GetIndex() == index2 ) {
+        if( _ShouldSkipStandaloneSelfCollisionCheckPair(*plink, index1, index2, pbody, vIncludedLinks) ) {
+            continue;
+        }
+        {
             const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK1 = *pinfo->vlinks.at(index1);
             const FCLSpace::FCLKinBodyInfo::LinkInfo& pLINK2 = *pinfo->vlinks.at(index2);
             if( !pLINK1.linkBV.second || !pLINK2.linkBV.second || !pLINK1.linkBV.second->getAABB().overlap(pLINK2.linkBV.second->getAABB()) ) {

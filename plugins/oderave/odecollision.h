@@ -782,7 +782,7 @@ public:
         return bCollision;
     }
 
-    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, CollisionReportPtr report)
+    virtual bool CheckStandaloneSelfCollision(KinBody::LinkConstPtr plink, const std::vector<KinBody::LinkConstPtr>& vIncludedLinks = std::vector<KinBody::LinkConstPtr>(), CollisionReportPtr report = CollisionReportPtr())
     {
         if( _options & OpenRAVE::CO_Distance ) {
             RAVELOG_WARN("ode doesn't support CO_Distance\n");
@@ -814,8 +814,12 @@ public:
         _odespace->Synchronize(); // call after GetNonAdjacentLinks since it can modify the body, even though it is const!
         bool bCollision = false;
         FOREACHC(itset, nonadjacent) {
-            KinBody::LinkConstPtr plink1(pbody->GetLinks().at(*itset&0xffff)), plink2(pbody->GetLinks().at(*itset>>16));
-            if( plink == plink1 || plink == plink2 ) {
+            const int index1 = *itset&0xffff, index2 = *itset>>16;
+            KinBody::LinkConstPtr plink1(pbody->GetLinks().at(index1)), plink2(pbody->GetLinks().at(index2));
+            if( _ShouldSkipStandaloneSelfCollisionCheckPair(*plink, index1, index2, pbody, vIncludedLinks) ) {
+                continue;
+            }
+            {
                 if( _CheckCollision(plink1,plink2, report) ) {
                     if( IS_DEBUGLEVEL(OpenRAVE::Level_Verbose) ) {
                         RAVELOG_VERBOSE(str(boost::format("selfcol %s, Links %s %s are colliding\n")%pbody->GetName()%plink1->GetName()%plink2->GetName()));
