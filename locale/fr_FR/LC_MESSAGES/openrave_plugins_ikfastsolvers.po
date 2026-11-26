@@ -1,0 +1,66 @@
+# French translations for PACKAGE package
+# Traductions françaises du paquet PACKAGE.
+# Copyright (C) 2026 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-24 11:10-0400\n"
+"PO-Revision-Date: 2026-06-24 11:10-0400\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:761
+msgid "bad real size"
+msgstr "taille de réel incorrecte"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:560
+#, c-format
+msgid "could not find iktype %s"
+msgstr "impossible de trouver l'iktype %s"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:1116 plugins/ikfastsolvers/ikfastsolver.cpp:1321
+#, c-format
+msgid "don't support ik parameterization 0x%x"
+msgstr "le paramétrage IK 0x%x n'est pas pris en charge"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:271
+#, c-format
+msgid "free parameter idx %d out of bounds\n"
+msgstr "l'index de paramètre libre %d est hors limites\n"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:743 plugins/ikfastsolvers/ikfastsolver.cpp:771
+msgid "free parameters not equal"
+msgstr "les paramètres libres ne sont pas égaux"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:2456 plugins/ikfastsolvers/ikfastsolver.cpp:2468
+#, c-format
+msgid "ik solver %s (dof=%d) does not support iktype 0x%x"
+msgstr "le solveur IK %s (dof=%d) ne prend pas en charge l'iktype 0x%x"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:213
+#, c-format
+msgid "ikfast version %d not supported"
+msgstr "la version ikfast %d n'est pas prise en charge"
+
+#: plugins/ikfastsolvers/ikfastsolver.cpp:308
+#, c-format
+msgid "manipulator '%s' not found in robot '%s' (%d) with manips [%s]"
+msgstr "manipulateur '%s' introuvable dans le robot '%s' (%d) avec les manips [%s]"
+
+#: plugins/ikfastsolvers/ikfastmodule.cpp:228 plugins/ikfastsolvers/ikfastmodule.cpp:256 plugins/ikfastsolvers/ikfastmodule.cpp:267
+msgid "uninitialized ikfast functions"
+msgstr "fonctions ikfast non initialisées"
+
+#: plugins/ikfastsolvers/jacobianinverse.h:574
+#, c-format
+msgid "unsupported ikparam '%s'."
+msgstr "ikparam '%s' non pris en charge."

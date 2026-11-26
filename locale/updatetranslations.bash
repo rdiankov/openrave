@@ -3,7 +3,7 @@ set -e
 
 SCRIPT=$(basename $0)
 ROOT=$(readlink -e $0 | xargs dirname | xargs dirname)
-LANGUAGES="en_US ja_JP"
+LANGUAGES="en_US ja_JP fr_FR"
 DOMAINS=""
 
 function usage
