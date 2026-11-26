@@ -26,8 +26,20 @@ log = logging.getLogger('openravepy')
 
 # https://github.com/pybind/pybind11/issues/253
 def enum_to_dict(enum):
-    import re
-    return {k: v for k, v in enum.__dict__.items() if not re.match("__(.*)__", str(k))}
+    """Returns the members of an openravepy enum keyed by name, including aliases.
+
+    Works with both pybind11 (``__members__``) and Boost.Python (``names``) bindings.
+
+    Args:
+        enum: The enum type, for example ``openravepy_int.InterfaceType``.
+
+    Returns:
+        dict: ``{name: member}``.
+    """
+    members = getattr(enum, '__members__', None)
+    if members is None:
+        members = enum.names # Boost.Python
+    return dict(members)
 
 def KinBodyStateSaver(body,options=None):
     log.warn('use body.CreateKinBodyStateSaver instead of KinBodyStateSaver')
@@ -71,7 +83,7 @@ def with_destroy(fn):
 # this is necessary due to broken boost python pickle support for enums
 def _tuple2enum(enum, value):
     enum = getattr(openravepy_int, enum)
-    e = enum.values.get(value,None)
+    e = enum.values.get(value,None) if hasattr(enum,'values') else None # Boost.Python: enum(value) is unnamed
     if e is None:
         e = enum(value)
     return e
