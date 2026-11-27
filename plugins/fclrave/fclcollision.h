@@ -60,6 +60,17 @@ inline bool IsIn(T const& x, std::vector<T> const &collection) {
     return std::find(collection.begin(), collection.end(), x) != collection.end();
 }
 
+/// \brief True if the object is one of the objects in the collection. Compares plain pointers, so nothing is copied.
+template<typename T>
+inline bool IsInByPointer(const T* pobject, const std::vector< boost::shared_ptr<T const> >& collection) {
+    for(const boost::shared_ptr<T const>& pother : collection) {
+        if( pother.get() == pobject ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 class FCLCollisionChecker : public OpenRAVE::CollisionCheckerBase
 {
 public:
@@ -225,6 +236,25 @@ private:
 #endif
 
     std::pair<FCLSpace::FCLKinBodyInfo::LinkInfo*, LinkConstPtr> GetCollisionLink(const fcl::CollisionObject &collObj);
+
+    /// \brief Same as GetCollisionLink but without copying shared pointers, for the broadphase callback.
+    ///
+    /// \param[out] plink the link of the object, or nullptr when the object is standalone or its link is gone
+    /// \return the LinkInfo stored in the object's user data, or nullptr when the object has none
+    FCLSpace::FCLKinBodyInfo::LinkInfo* _GetCollisionLinkRaw(const fcl::CollisionObject& collObj, const KinBody::Link*& plink);
+
+    /// \brief Same answer as body1.IsAttached(body2). The early exits of KinBody::IsAttached are repeated here so that
+    /// most pairs do not call into libopenrave.
+    inline bool _IsAttached(const KinBody& body1, const KinBody& body2)
+    {
+        if( &body1 == &body2 ) {
+            return true;
+        }
+        if( !body1.HasAttached() ) {
+            return false;
+        }
+        return body1.IsAttached(body2);
+    }
 
     FCLSpace::FCLKinBodyInfo::FCLGeometryInfo* GetCollisionGeometry(const fcl::CollisionObject &collObj);
 
