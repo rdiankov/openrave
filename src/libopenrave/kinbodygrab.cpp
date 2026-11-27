@@ -454,6 +454,17 @@ bool KinBody::Grab(KinBodyPtr pGrabbedBody, LinkPtr pGrabbingLink, const std::se
 
 void KinBody::Release(KinBody &body)
 {
+    // Grabs are keyed by environment body index, so look the body up directly.
+    // Grabbers can hold thousands of bodies, and scanning all of them on every release makes bulk removal quadratic.
+    MapGrabbedByEnvironmentIndex::iterator itGrabbedByIndex = _grabbedBodiesByEnvironmentIndex.find(body.GetEnvironmentBodyIndex());
+    if (itGrabbedByIndex != _grabbedBodiesByEnvironmentIndex.end() && itGrabbedByIndex->second->_pGrabbedBody.lock().get() == &body) {
+        _RemoveGrabbedBody(itGrabbedByIndex);
+        _RemoveAttachedBody(body);
+        _PostprocessChangedParameters(Prop_RobotGrabbed);
+        return;
+    }
+
+    // The index lookup missed, so fall back to a full scan in case the grab is stored under a stale index.
     FOREACH(itgrabbed, _grabbedBodiesByEnvironmentIndex) {
         GrabbedPtr pgrabbed = itgrabbed->second;
         KinBodyConstPtr pgrabbedbody = pgrabbed->_pGrabbedBody.lock();

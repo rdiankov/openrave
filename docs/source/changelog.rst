@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.176.1
+===============
+
+- Speed up ``KinBody::Release`` and removing a grabbed body from the environment when the grabber holds many bodies. The grab is looked up by environment body index instead of scanning all grabs, and the grabber's attached body list is searched without locking every entry.
+
 Version 0.176.0
 ===============
 

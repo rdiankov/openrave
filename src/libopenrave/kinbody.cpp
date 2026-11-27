@@ -5629,8 +5629,11 @@ void KinBody::_AttachBody(KinBodyPtr pbody)
 bool KinBody::_RemoveAttachedBody(KinBody &body)
 {
     int numremoved = 0;
-    FOREACH(it,_listAttachedBodies) {
-        if( it->lock().get() == &body ) {
+    // Grabbers can have thousands of attached bodies, so compare control blocks instead of locking every entry.
+    // Locking costs two atomic operations per entry, which dominates bulk removal of grabbed bodies.
+    const boost::weak_ptr<InterfaceBase> pWeakBody = body.weak_from_this();
+    FOREACH(it, _listAttachedBodies) {
+        if (!it->owner_before(pWeakBody) && !pWeakBody.owner_before(*it)) { // same as it->lock().get() == &body, but without locking
             _listAttachedBodies.erase(it);
             numremoved++;
             break;
