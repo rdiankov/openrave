@@ -2406,16 +2406,25 @@ bool PyEnvironmentBase::IsSimulationRunning() {
     return _penv->IsSimulationRunning();
 }
 
+/// \brief tries to lock the env until nTimeoutMicroseconds passes from basetime
+static bool _TryLockUntil(PyEnvironmentBase& pyenv, const uint64_t basetime, const uint64_t nTimeoutMicroseconds)
+{
+    while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
+        if( pyenv.TryLock() ) {
+            return true;
+        }
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
+    }
+    return false;
+}
+
 void PyEnvironmentBase::Lock()
 {
     // first try to lock without releasing the GIL since it is faster
     uint64_t nTimeoutMicroseconds = 2000; // 2ms
     uint64_t basetime = OpenRAVE::utils::GetMicroTime();
-    while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
-        if( TryLock() ) {
-            return;
-        }
-        std::this_thread::sleep_for(std::chrono::microseconds(10));
+    if( _TryLockUntil(*this, basetime, nTimeoutMicroseconds) ) {
+        return;
     }
 
     // failed, so must be a python thread blocking it...
@@ -2504,13 +2513,19 @@ bool PyEnvironmentBase::Lock(float timeout)
         }
     }
 
-    while(OpenRAVE::utils::GetMicroTime()-basetime<nTimeoutMicroseconds ) {
-        if( TryLock() ) {
-            return true;
-        }
-        std::this_thread::sleep_for(std::chrono::microseconds(10));
+    // same as Lock(), first try to lock for up to 2ms holding the GIL since it is faster when env is released soon, e.g. by a C++ thread.
+    // if timeout <= 2ms (including 0), never release the GIL since re-acquiring it can take longer than such a short timeout when other python threads are running.
+    const uint64_t nSpinMicroseconds = 2000; // 2ms
+    if( nSpinMicroseconds >= nTimeoutMicroseconds ) {
+        return _TryLockUntil(*this, basetime, nTimeoutMicroseconds);
     }
-    return false;
+    if( _TryLockUntil(*this, basetime, nSpinMicroseconds) ) {
+        return true;
+    }
+
+    // release the GIL so that a python thread holding the env can finish, the GIL is re-acquired after the env lock (env -> GIL)
+    PythonThreadSaver saver;
+    return _TryLockUntil(*this, basetime, nTimeoutMicroseconds);
 }
 
 void PyEnvironmentBase::__enter__()

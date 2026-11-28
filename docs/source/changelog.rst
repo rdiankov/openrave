@@ -3,6 +3,11 @@
 ChangeLog
 #########
 
+Version 0.176.2
+===============
+
+- openravepy: ``env.Lock(timeout)`` releases the GIL while waiting for the environment after spinning up to 2ms with the GIL, same as ``env.Lock()``. Previously it kept the GIL, so a thread holding the environment and needing the GIL could not release it until the timeout, and other Python threads were blocked meanwhile.
+
 Version 0.176.1
 ===============
 
