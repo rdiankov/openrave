@@ -2513,7 +2513,8 @@ bool PyEnvironmentBase::Lock(float timeout)
         }
     }
 
-    // first try to lock without releasing the GIL since it is faster, same as Lock()
+    // same as Lock(), first try to lock for up to 2ms holding the GIL since it is faster when env is released soon, e.g. by a C++ thread.
+    // if timeout <= 2ms (including 0), never release the GIL since re-acquiring it can take longer than such a short timeout when other python threads are running.
     const uint64_t nSpinMicroseconds = 2000; // 2ms
     if( nSpinMicroseconds >= nTimeoutMicroseconds ) {
         return _TryLockUntil(*this, basetime, nTimeoutMicroseconds);
