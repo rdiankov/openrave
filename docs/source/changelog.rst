@@ -3,10 +3,20 @@
 ChangeLog
 #########
 
-Version 0.175.3
+Version 0.176.2
 ===============
 
 - openravepy: ``env.Lock(timeout)`` releases the GIL while waiting for the environment after spinning up to 2ms with the GIL, same as ``env.Lock()``. Previously it kept the GIL, so a thread holding the environment and needing the GIL could not release it until the timeout, and other Python threads were blocked meanwhile.
+
+Version 0.176.1
+===============
+
+- Speed up ``KinBody::Release`` and removing a grabbed body from the environment when the grabber holds many bodies. The grab is looked up by environment body index instead of scanning all grabs, and the grabber's attached body list is searched without locking every entry.
+
+Version 0.176.0
+===============
+
+- Add ``doesContainerBaseProvideSupport`` to cage geometry info (default true). When false, the cage base does not support placed objects and only the inner obstacles do, e.g. for sawhorse containers.
 
 Version 0.175.2
 ===============

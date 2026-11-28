@@ -476,6 +476,9 @@ int KinBody::GeometryInfo::Compare(const GeometryInfo& rhs, dReal fUnitScale, dR
         if( !IsZeroWithEpsilon3(_vPositiveCropContainerEmptyMargins - rhs._vPositiveCropContainerEmptyMargins*fUnitScale, fEpsilon) ) {
             return 29;
         }
+        if( _bDoesContainerBaseProvideSupport != rhs._bDoesContainerBaseProvideSupport ) {
+            return 33;
+        }
         break;
     }
     case GT_ConicalFrustum:
@@ -1058,6 +1061,7 @@ void KinBody::GeometryInfo::Reset()
     _vPositiveCropContainerMargins = Vector(0,0,0);
     _vNegativeCropContainerEmptyMargins = Vector(0,0,0);
     _vPositiveCropContainerEmptyMargins = Vector(0,0,0);
+    _bDoesContainerBaseProvideSupport = true;
     _friction = -1.0;
 }
 
@@ -1176,6 +1180,9 @@ void KinBody::GeometryInfo::SerializeJSON(rapidjson::Value& rGeometryInfo, rapid
         }
         if( _vPositiveCropContainerEmptyMargins[0] != 0 || _vPositiveCropContainerEmptyMargins[1] != 0 || _vPositiveCropContainerEmptyMargins[2] != 0 ) {
             orjson::SetJsonValueByKey(rGeometryInfo, "positiveCropContainerEmptyMargins", _vPositiveCropContainerEmptyMargins*fUnitScale, allocator);
+        }
+        if( !_bDoesContainerBaseProvideSupport ) { // default is true
+            orjson::SetJsonValueByKey(rGeometryInfo, "doesContainerBaseProvideSupport", _bDoesContainerBaseProvideSupport, allocator);
         }
         break;
     }
@@ -1497,6 +1504,7 @@ void KinBody::GeometryInfo::DeserializeJSON(const rapidjson::Value &value, const
                 _vPositiveCropContainerEmptyMargins = vGeomDataTemp;
             }
         }
+        orjson::LoadJsonValueByKey(value, "doesContainerBaseProvideSupport", _bDoesContainerBaseProvideSupport);
         break;
     case GT_Sphere:
         vGeomDataTemp = _vGeomData;
@@ -2306,6 +2314,13 @@ UpdateFromInfoResult KinBody::Geometry::UpdateFromInfo(const KinBody::GeometryIn
     if(GetPositiveCropContainerEmptyMargins() != info._vPositiveCropContainerEmptyMargins) {
         SetPositiveCropContainerEmptyMargins(info._vPositiveCropContainerEmptyMargins);
         RAVELOG_VERBOSE_FORMAT("geometry %s positiveCropContainerEmptyMargins changed", _info._id);
+        updateFromInfoResult = UFIR_Success;
+    }
+
+    // doesContainerBaseProvideSupport
+    if(DoesContainerBaseProvideSupport() != info._bDoesContainerBaseProvideSupport) {
+        _info._bDoesContainerBaseProvideSupport = info._bDoesContainerBaseProvideSupport;
+        RAVELOG_VERBOSE_FORMAT("geometry %s doesContainerBaseProvideSupport changed", _info._id);
         updateFromInfoResult = UFIR_Success;
     }
 
